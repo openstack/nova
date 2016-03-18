@@ -31,17 +31,18 @@
 # Daisy <guoyingc@cn.ibm.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
+# Daisy <guoyingc@cn.ibm.com>, 2016. #zanata
 # Linda <duleish@cn.ibm.com>, 2016. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:25+0000\n"
+"POT-Creation-Date: 2016-03-17 05:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-06 02:45+0000\n"
+"PO-Revision-Date: 2016-03-16 12:54+0000\n"
 "Last-Translator: Linda <duleish@cn.ibm.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
@@ -87,6 +88,14 @@ msgstr ""
 #, python-format
 msgid "%(err)s"
 msgstr "%(err)s"
+
+#, python-format
+msgid ""
+"%(event_type)s is not a versioned notification and not whitelisted. See ./"
+"doc/source/notification.rst"
+msgstr ""
+"%(event_type)s 并非版本化通知，并且未列入白名单。请参阅 ./doc/source/"
+"notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -330,12 +339,23 @@ msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "聚合 %(aggregate_name)s 已经存在。"
 
 #, python-format
+msgid "Aggregate %s does not support empty named availability zone"
+msgstr "聚集 %s 不支持名称为空的可用区域"
+
+#, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "找不到主机 %(host)s 计数的汇总。"
 
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "聚合没有动作 %s"
+
+msgid "All hosts are already mapped to cell(s), exiting."
+msgstr "所有主机已映射至单元，正在退出。"
+
+#, python-format
+msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
+msgstr "提供了无效“name”值。name 必须为：%(reason)s"
 
 msgid "An unexpected error has occurred."
 msgstr "发生未预期的错误。"
@@ -1617,8 +1637,8 @@ msgstr "Glance 镜像 %s 在被杀死的状态"
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "组无效。原因：%(reason)s"
 
-msgid "Guest does not have a console available"
-msgstr "Guest 没有控制台可用"
+msgid "Guest does not have a console available."
+msgstr "访客没有可用控制台。"
 
 msgid "HOST"
 msgstr "HOST"
@@ -1629,6 +1649,10 @@ msgstr "主机"
 #, python-format
 msgid "Host %(host)s could not be found."
 msgstr "主机 %(host)s 没有找到。"
+
+#, python-format
+msgid "Host %(host)s is already mapped to cell %(uuid)s"
+msgstr "主机 %(host)s 已映射至单元 %(uuid)s"
 
 #, python-format
 msgid ""
@@ -2437,6 +2461,9 @@ msgid ""
 "<list entry name> sections"
 msgstr "列出在文件的 image_file_url:<list entry name>段配置的文件系统"
 
+msgid "Listing virtual interfaces is not supported by this cloud."
+msgstr "此云不支持列示虚拟接口。"
+
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "对应服务器 %(uuid)s 的实时迁移 %(id)s 未在进行。"
@@ -2884,6 +2911,9 @@ msgstr "对于实例 %(instance)s，未提供任何可用端口。"
 
 msgid "No host available on cluster"
 msgstr "没有可用的主机在集群中"
+
+msgid "No hosts found to map to cell, exiting."
+msgstr "找不到要映射至单元的主机，正在退出。"
 
 #, python-format
 msgid "No hypervisor matching '%s' could be found."
@@ -4050,7 +4080,7 @@ msgid ""
 "This service is older (v%(thisver)i) than the minimum (v%(minver)i) version "
 "of the rest of the deployment. Unable to continue."
 msgstr ""
-"此服务的版本r (v%(thisver)i) 低于部署的余下部分的最低版本 (v%(minver)i)。无法"
+"此服务的版本 (v%(thisver)i) 低于部署的余下部分的最低版本 (v%(minver)i)。无法"
 "继续。"
 
 #, python-format
@@ -4093,16 +4123,16 @@ msgid ""
 "Unable to associate floating IP %(address)s to any fixed IPs for instance "
 "%(id)s. Instance has no fixed IPv4 addresses to associate."
 msgstr ""
-"无法将浮动 IP %(address)s 关联至实例  %(id)s 的任何固定 IP。实例没有要关联的"
-"固定 IPv4 地址。"
+"无法将浮动 IP %(address)s 关联至实例 %(id)s 的任何固定 IP。实例没有要关联的固"
+"定 IPv4 地址。"
 
 #, python-format
 msgid ""
 "Unable to associate floating IP %(address)s to fixed IP %(fixed_address)s "
 "for instance %(id)s. Error: %(error)s"
 msgstr ""
-"无法将浮动 IP %(address)s 关联至实例  %(id)s 的任何固定 IP "
-"%(fixed_address)s。错误：%(error)s"
+"无法将浮动 IP %(address)s 关联至实例 %(id)s 的任何固定 IP %(fixed_address)s。"
+"错误：%(error)s"
 
 msgid "Unable to authenticate Ironic client."
 msgstr "不能认证Ironic客户端。"
@@ -5049,6 +5079,20 @@ msgstr "在具有 %s 的情况下，不支持搜索分区"
 
 msgid "pause not supported for vmwareapi"
 msgstr "vmwareapi 不支持暂停"
+
+msgid ""
+"printable characters except !, ., @, with at least one non space character"
+msgstr "除 !、. 和 @ 以外的可显示字符，带有至少一个非空格字符。"
+
+msgid ""
+"printable characters except !, ., @. Can not start or end with whitespace."
+msgstr "除 !、. 和 @ 以外的可显示字符。不能以空格开头或结尾。"
+
+msgid "printable characters with at least one non space character"
+msgstr "可显示字符，带有至少一个非空格字符"
+
+msgid "printable characters. Can not start or end with whitespace."
+msgstr "可显示字符。不能以空格开头或结尾。"
 
 msgid "project"
 msgstr "项目"

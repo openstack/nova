@@ -27,17 +27,18 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 # Gérald LONLAS <g.lonlas@gmail.com>, 2016. #zanata
+# Martine Marin <mmarin@fr.ibm.com>, 2016. #zanata
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:25+0000\n"
+"POT-Creation-Date: 2016-03-17 05:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-07 09:19+0000\n"
-"Last-Translator: Gérald LONLAS <g.lonlas@gmail.com>\n"
+"PO-Revision-Date: 2016-03-16 05:53+0000\n"
+"Last-Translator: Martine Marin <mmarin@fr.ibm.com>\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -86,6 +87,14 @@ msgid "%(err)s"
 msgstr "%(err)s"
 
 #, python-format
+msgid ""
+"%(event_type)s is not a versioned notification and not whitelisted. See ./"
+"doc/source/notification.rst"
+msgstr ""
+"%(event_type)s n'est pas une notification associée à une version et ne "
+"figure pas dans la liste approuvée. Voir ./doc/source/notification.rst"
+
+#, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s ne devrait pas faire partie des mises à jour."
 
@@ -129,6 +138,10 @@ msgstr "%(path)s n'est pas sur un stockage partagé : %(reason)s"
 #, python-format
 msgid "%(req)s is required to create a network."
 msgstr "%(req)s est requis pour créer un réseau."
+
+#, python-format
+msgid "%(total)i rows matched query %(meth)s, %(done)i migrated"
+msgstr "%(total)i lignes correspondent à la requête %(meth)s, %(done)i migrées"
 
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
@@ -340,12 +353,25 @@ msgid "Aggregate %(aggregate_name)s already exists."
 msgstr "L'agrégat %(aggregate_name)s existe déjà."
 
 #, python-format
+msgid "Aggregate %s does not support empty named availability zone"
+msgstr ""
+"L'agrégat de %s ne prend pas en charge la zone de disponibilité nommée vide"
+
+#, python-format
 msgid "Aggregate for host %(host)s count not be found."
 msgstr "Agrégat introuvable pour le nombre d'hôtes %(host)s"
 
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "Les agrégats n'ont pas d'action %s"
+
+msgid "All hosts are already mapped to cell(s), exiting."
+msgstr "Tous les hôtes sont déjà mappés à une ou plusieurs cellules. Sortie..."
+
+#, python-format
+msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
+msgstr ""
+"Une valeur  'name' non valide a été fournie. Le nom doit être : %(reason)s"
 
 msgid "An unexpected error has occurred."
 msgstr "Une erreur inattendue est survenue."
@@ -475,11 +501,25 @@ msgstr ""
 msgid "Block Device %(id)s is not bootable."
 msgstr "L'unité par bloc %(id)s n'est pas amorçable."
 
+#, python-format
+msgid ""
+"Block Device Mapping %(volume_id)s is a multi-attach volume and is not valid "
+"for this operation."
+msgstr ""
+"Le volume de mappage d'unité par bloc %(volume_id)s  est un volume multi-"
+"connexion et n'est pas valide pour cette opération."
+
 msgid "Block Device Mapping cannot be converted to legacy format. "
 msgstr "Le mappage d'unité par bloc ne peut être converti à l'ancien format."
 
 msgid "Block Device Mapping is Invalid."
 msgstr "Le mappage d'unité par bloc n'est pas valide."
+
+#, python-format
+msgid "Block Device Mapping is Invalid: %(auth_method)s is unsupported."
+msgstr ""
+"Le mappage d'unité par bloc n'est pas valide : %(auth_method)s n'est pas "
+"pris en charge."
 
 #, python-format
 msgid "Block Device Mapping is Invalid: %(details)s"
@@ -658,6 +698,15 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "Impossible de connecter un ou plusieurs volumes à plusieurs instances"
 
 #, python-format
+msgid ""
+"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
+"device migration feature requires libvirt version %(libvirt_ver)s"
+msgstr ""
+"Impossible de bloquer l'instance de migration %(uuid)s avec des volumes "
+"mappés. La fonction de migration d'unité de bloc sélective nécessite libvirt "
+"version %(libvirt_ver)s"
+
+#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Pas d'appel de %(method)s sur un objet %(objtype)s orphelin"
 
@@ -667,6 +716,18 @@ msgid ""
 msgstr ""
 "Impossible de créer une URL bittorrent par défaut sans définir l'option de "
 "configuration xenserver.torrent_base_url."
+
+#, python-format
+msgid ""
+"Cannot determine the parent storage pool for %s; cannot determine where to "
+"store images"
+msgstr ""
+"Impossible de déterminer le pool de stockage parent pour %s; impossible de "
+"déterminer où stocker les images"
+
+msgid "Cannot disassociate auto assigned floating IP"
+msgstr ""
+"Impossible de dissocier l'adresse IP flottante affectée automatiquement"
 
 msgid "Cannot execute /sbin/mount.sofs"
 msgstr "Impossible d'exécuter /sbin/mount.sofs"
@@ -679,6 +740,20 @@ msgstr "Impossible de trouver le SR pour lire/écrire le VDI."
 
 msgid "Cannot find image for rebuild"
 msgstr "Image introuvable pour la régénération"
+
+#, python-format
+msgid ""
+"Cannot load host manager from configuration scheduler_host_manager = "
+"%(conf)s."
+msgstr ""
+"Impossible de charger le gestionnaire hôte à partir de la configuration "
+"scheduler_host_manager = %(conf)s."
+
+#, python-format
+msgid "Cannot load scheduler driver from configuration %(conf)s."
+msgstr ""
+"Impossible de charger le module scheduler driver à partir de la "
+"configuration %(conf)s."
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
@@ -725,10 +800,21 @@ msgstr ""
 msgid "Cannot run any more instances of this type."
 msgstr "Impossible d'exécuter d'autres instances de ce type."
 
+msgid ""
+"Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
+msgstr ""
+"Impossible de définir une stratégie de réservation de thread de CPU dans une "
+"stratégie de réservation de CPU non dédiée"
+
 #, python-format
 msgid "Cannot set metadata %(metadata)s in aggregate %(id)s"
 msgstr ""
 "Impossible de définir les métadonnées %(metadata)s dans l'agrégat %(id)s"
+
+msgid "Cannot set realtime policy in a non dedicated cpu pinning policy"
+msgstr ""
+"Impossible de définir une stratégie en temps réel dans une stratégie de "
+"réservation de CPU non dédiée"
 
 #, python-format
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -784,6 +870,14 @@ msgid "Cell with name %(name)s already exists."
 msgstr "Cellule avec le nom %(name)s existe déjà."
 
 #, python-format
+msgid "Certificate is not valid after: %s UTC"
+msgstr "Certificat non valide après : %s UTC"
+
+#, python-format
+msgid "Certificate is not valid before: %s UTC"
+msgstr "Certificat non valide avant : %s UTC"
+
+#, python-format
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
@@ -824,6 +918,11 @@ msgstr "Le service de calcul de %(host)s est encore en cours d'utilisation."
 #, python-format
 msgid "Compute service of %(host)s is unavailable at this time."
 msgstr "Le service de calcul de %(host)s est indisponible pour l'instant."
+
+#, python-format
+msgid "Config drive format '%(format)s' is not supported."
+msgstr ""
+"Le format de l'unité de configuration '%(format)s' n'est pas pris en charge."
 
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
@@ -888,6 +987,14 @@ msgid ""
 msgstr ""
 "La console de l'instance %(instance_uuid)s dans le pool %(pool_id)s est "
 "introuvable."
+
+#, python-format
+msgid ""
+"Console log output could not be retrieved for instance %(instance_id)s. "
+"Reason: %(reason)s"
+msgstr ""
+"Impossible d'extraire la sortie du journal de la console pour l'instance "
+"%(instance_id)s. Raison : %(reason)s"
 
 #, python-format
 msgid "Console pool %(pool_id)s could not be found."
@@ -1043,6 +1150,10 @@ msgid "Device '%(device)s' not found."
 msgstr "Device '%(device)s' introuvable."
 
 #, python-format
+msgid "Device detach failed for %(device)s: %(reason)s)"
+msgstr "Echec de déconnexion du périphérique pour %(device)s : %(reason)s)"
+
+#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr ""
@@ -1054,6 +1165,10 @@ msgstr "Le nom du périphérique contient des espaces."
 
 msgid "Device name empty or too long."
 msgstr "Nom du périphérique vide ou trop long."
+
+#, python-format
+msgid "Device type mismatch for alias '%s'"
+msgstr "Type de périphérique non concordant pour l'alias '%s'"
 
 #, python-format
 msgid ""
@@ -1136,6 +1251,10 @@ msgstr ""
 "le type d'instance. "
 
 #, python-format
+msgid "Error attempting to run %(method)s"
+msgstr "Erreur lors de la tentative d'exécution de %(method)s"
+
+#, python-format
 msgid ""
 "Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
 "%(total)d"
@@ -1212,6 +1331,9 @@ msgstr ""
 msgid "Error mounting %(image)s with libguestfs (%(e)s)"
 msgstr "Erreur lors du montage de %(image)s avec libguestfs (%(e)s)"
 
+msgid "Error occurred while creating the verifier"
+msgstr "Une erreur s'est produite lors de la création du vérificateur"
+
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "Erreur lors de la création du moniteur de ressource : %(monitor)s"
@@ -1228,12 +1350,19 @@ msgstr "L'événement doit être une instance de nova.virt.event.Event"
 
 #, python-format
 msgid ""
+"Exceeded max scheduling attempts %(max_attempts)d for instance "
+"%(instance_uuid)s. Last exception: %(exc_reason)s"
+msgstr ""
+"Nombre de tentatives de planification max %(max_attempts)d pour l'instance "
+"%(instance_uuid)s dépassé. Dernière exception : %(exc_reason)s"
+
+#, python-format
+msgid ""
 "Exceeded max scheduling retries %(max_retries)d for instance "
 "%(instance_uuid)s during live migration"
 msgstr ""
 "Le nombre maximal de nouvelles tentatives de planification (%(max_retries)d) "
-"a été dépassé pour l'instance %(instance_uuid)s pendant la migration en "
-"temps réel"
+"a été dépassé pour l'instance %(instance_uuid)s pendant la migration à chaud"
 
 #, python-format
 msgid "Exceeded maximum number of retries. %(reason)s"
@@ -1523,6 +1652,14 @@ msgstr ""
 
 #, python-format
 msgid ""
+"Flavor %(id)s extra spec cannot be updated or created after %(retries)d "
+"retries."
+msgstr ""
+"Impossible de mettre à jour ou de créer la spécification supplémentaire "
+"%(id)s du gabarit après %(retries)d tentatives."
+
+#, python-format
+msgid ""
 "Flavor access already exists for flavor %(flavor_id)s and project "
 "%(project_id)s combination."
 msgstr ""
@@ -1596,9 +1733,17 @@ msgid "Floating IP %(address)s association has failed."
 msgstr "L'association de l'IP floattante %(address)s a échoué."
 
 #, python-format
+msgid "Floating IP %(address)s is associated."
+msgstr "L'adresse IP flottante %(address)s  est associée."
+
+#, python-format
 msgid "Floating IP %(address)s is not associated with instance %(id)s."
 msgstr ""
 "L'adresse IP flottante %(address)s n'est pas associée à l'instance %(id)s."
+
+#, python-format
+msgid "Floating IP %(address)s is not associated."
+msgstr "L'adresse IP flottante %(address)s n'est pas associée."
 
 msgid "Floating IP allocate failed."
 msgstr "L'allocation de l'IP flottante a échoué"
@@ -1611,12 +1756,19 @@ msgid "Floating IP not found for ID %(id)s."
 msgstr "Aucune IP dynamique trouvée pour l'id %(id)s."
 
 #, python-format
+msgid "Floating IP not found for ID %s"
+msgstr "Adresse IP flottante non trouvée pour l'ID %s"
+
+#, python-format
 msgid "Floating IP not found for address %(address)s."
 msgstr "Aucune IP dynamique trouvée pour l'adresse %(address)s."
 
 #, python-format
 msgid "Floating IP not found for host %(host)s."
 msgstr "Aucune IP dynamique trouvée pour l'hôte %(host)s."
+
+msgid "Floating IP pool not found."
+msgstr "Pool d'IP flottantes non trouvé."
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1662,8 +1814,8 @@ msgstr "Image Glance %s à l'état arrêté"
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "Groupe non valide. Cause : %(reason)s"
 
-msgid "Guest does not have a console available"
-msgstr "Aucune console n'est disponible pour l'invité"
+msgid "Guest does not have a console available."
+msgstr "Aucune console n'est disponible pour l'invité."
 
 msgid "HOST"
 msgstr "HOST"
@@ -1676,13 +1828,17 @@ msgid "Host %(host)s could not be found."
 msgstr "L'hôte %(host)s ne peut pas être trouvé."
 
 #, python-format
+msgid "Host %(host)s is already mapped to cell %(uuid)s"
+msgstr "L'hôte %(host)s est déjà mappé à la cellule %(uuid)s"
+
+#, python-format
 msgid ""
 "Host %(server)s is running an old version of Nova, live migrations involving "
 "that version may cause data loss. Upgrade Nova on %(server)s and try again."
 msgstr ""
 "L'hôte %(server)s fonctionne avec une ancienne version de Nova, les "
-"migrations live effectuée avec cette version peuvent causer des pertes de "
-"données. Mettez à jour Nova sur %(server)s et essayez à nouveau."
+"migrations à chaud effectuées avec cette version peuvent causer des pertes "
+"de données. Mettez à jour Nova sur %(server)s et essayez à nouveau."
 
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
@@ -1865,6 +2021,12 @@ msgstr "En cours d'utilisation"
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "Dans les états %(vm_state)s/%(task_state)s, non RESIZED/None"
 
+#, python-format
+msgid "In-progress live migration %(id)s is not found for server %(uuid)s."
+msgstr ""
+"La migration à chaud en cours %(id)s  est introuvable pour le serveur "
+"%(uuid)s."
+
 msgid ""
 "Incompatible settings: ephemeral storage encryption is supported only for "
 "LVM images."
@@ -1953,6 +2115,13 @@ msgid "Instance %(instance_uuid)s is locked"
 msgstr "L'instance %(instance_uuid)s est verrouillée"
 
 #, python-format
+msgid ""
+"Instance %(instance_uuid)s requires config drive, but it does not exist."
+msgstr ""
+"L'instance %(instance_uuid)s nécessite une unité de configuration,  mais "
+"cette unité n'existe pas."
+
+#, python-format
 msgid "Instance %(name)s already exists."
 msgstr "L'instance %(name)s existe déjà."
 
@@ -2008,6 +2177,10 @@ msgstr "L'instance n'a aucun hôte source"
 
 msgid "Instance has not been resized."
 msgstr "L'instance n'a pas été redimensionnée."
+
+#, python-format
+msgid "Instance hostname %(hostname)s is not a valid DNS name"
+msgstr "Le nom d'hôte de l'instance %(hostname)s n'est pas un nom DNS valide"
 
 #, python-format
 msgid "Instance is already in Rescue Mode: %s"
@@ -2113,6 +2286,10 @@ msgstr "Attribut invalide dans la requête"
 msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr ""
 "Valeur broker_hosts non valide : %s. Doit être dans le format nomhôte:port"
+
+#, python-format
+msgid "Invalid certificate format: %s"
+msgstr "Format de certificat non valide : %s"
 
 msgid "Invalid changes-since value"
 msgstr "Valeur changes-since non valide"
@@ -2301,6 +2478,10 @@ msgid "Invalid proxy request signature."
 msgstr "Signature de demande de proxy non valide."
 
 #, python-format
+msgid "Invalid public key type for signature key type: %s"
+msgstr "Type de clé publique non valide pour le type de clé de signature : %s"
+
+#, python-format
 msgid "Invalid range expression %r"
 msgstr "Valeur de %r invalide"
 
@@ -2321,6 +2502,10 @@ msgstr "Nom de groupe de sécurité non valide : %(name)s."
 
 msgid "Invalid service catalog json."
 msgstr "json de catalogue de service non valide."
+
+#, python-format
+msgid "Invalid signature hash method: %s"
+msgstr "Méthode de hachage de la signature non valide : %s"
 
 #, python-format
 msgid "Invalid signature key type: %s"
@@ -2510,17 +2695,27 @@ msgstr ""
 "Liste des systèmes de fichiers qui sont configurés dans ce fichier dans les "
 "sections image_file_url:<list entry name>"
 
+msgid "Listing virtual interfaces is not supported by this cloud."
+msgstr ""
+"L'affichage de la liste des interfaces virtuelles n'est pas pris en charge "
+"par ce cloud."
+
+#, python-format
+msgid "Live migration %(id)s for server %(uuid)s is not in progress."
+msgstr ""
+"La migration à chaud %(id)s pour le serveur %(uuid)s n'est pas en cours."
+
 msgid ""
 "Live migration can not be used without shared storage except a booted from "
 "volume VM which does not have a local disk."
 msgstr ""
-"La migration active ne peut pas être utilisée sans stockage partagé excepté "
+"La migration à chaud ne peut pas être utilisée sans stockage partagé excepté "
 "lors d'un amorçage depuis une machine virtuelle de volume sans disque local."
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
 msgstr ""
-"Echec de la migration en temps réel de l'instance %(id)s vers l'hôte %(host)s"
+"Echec de la migration à chaud de l'instance %(id)s vers l'hôte %(host)s"
 
 #, python-format
 msgid "Live migration of instance %s to another host failed"
@@ -2530,9 +2725,16 @@ msgid ""
 "Live migration of instances with config drives is not supported in libvirt "
 "unless libvirt instance path and drive data is shared across compute nodes."
 msgstr ""
-"La migration a chaud d'instances avec des stockage de configuration n'est "
-"pas supporté par libvirt a moins que le chemin de l'instance libvir et les "
-"données stockées soient partagées a travers les nœuds de calcul."
+"La migration à chaud d'instances avec des stockages de configuration n'est "
+"pas supportée par libvirt à moins que le chemin de l'instance libvir et les "
+"données stockées soient partagées à travers les nœuds de calcul."
+
+msgid ""
+"Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
+"before it is available."
+msgstr ""
+"La migration à chaud avec l'API v2.25 nécessite que toutes les mises à "
+"niveau Mitaka soient terminées pour être disponible."
 
 msgid "Malformed createBackup entity"
 msgstr "Format incorrect de l'entité createBackup"
@@ -2571,6 +2773,12 @@ msgstr "Le marqueur %(marker)s est introuvable."
 
 msgid "Maximum allowed length for 'label' is 255."
 msgstr "La longueur maximum autorisée pour 'label' est 255."
+
+msgid "Maximum number of fixed IPs exceeded"
+msgstr "Nombre maximal d'adresses IP fixes dépassé"
+
+msgid "Maximum number of floating IPs exceeded"
+msgstr "Nombre maximal d'adresses IP flottantes dépassé"
 
 msgid "Maximum number of key pairs exceeded"
 msgstr "Nombre maximal de paires de clés dépassé"
@@ -2614,8 +2822,25 @@ msgid "Migrate Send failed"
 msgstr "Echec d'envoi de la migration"
 
 #, python-format
+msgid "Migration %(id)s for server %(uuid)s is not live-migration."
+msgstr ""
+"La migration %(id)s pour le serveur %(uuid)s n'est pas une migration active."
+
+#, python-format
 msgid "Migration %(migration_id)s could not be found."
 msgstr "La migration %(migration_id)s ne peut être trouvée."
+
+#, python-format
+msgid "Migration %(migration_id)s not found for instance %(instance_id)s"
+msgstr "Migration %(migration_id)s introuvable pour l'instance %(instance_id)s"
+
+#, python-format
+msgid ""
+"Migration %(migration_id)s state of instance %(instance_uuid)s is %(state)s. "
+"Cannot %(method)s while the migration is in this state."
+msgstr ""
+"L'état de la migration %(migration_id)s de l'instance %(instance_uuid)s est "
+"%(state)s. Impossible de %(method)s tant que la migration est dans cet état."
 
 #, python-format
 msgid "Migration error: %(reason)s"
@@ -2636,6 +2861,10 @@ msgstr ""
 #, python-format
 msgid "Migration pre-check error: %(reason)s"
 msgstr "Erreur lors de la vérification de la migration: %(reason)s"
+
+#, python-format
+msgid "Migration select destinations error: %(reason)s"
+msgstr "Erreur de sélection de destinations de migration : %(reason)s"
 
 msgid "Missing 'address' argument for removeFixedIp"
 msgstr "Argument 'address' manquant pour removeFixedIp"
@@ -2904,6 +3133,12 @@ msgid "No compute host specified"
 msgstr "Aucun hôte de calcul spécifié"
 
 #, python-format
+msgid "No configuration information found for operating system %(os_name)s"
+msgstr ""
+"Aucune information de configuration n'a été trouvée pour le système "
+"d'exploitation %(os_name)s"
+
+#, python-format
 msgid "No device with MAC address %s exists on the VM"
 msgstr ""
 "Aucun périphérique ayant pour adresse MAC %s n'existe sur la machine "
@@ -2953,6 +3188,9 @@ msgstr "Aucun port disponible pour l'instance %(instance)s."
 msgid "No host available on cluster"
 msgstr "Aucun hôte disponible sur le cluster"
 
+msgid "No hosts found to map to cell, exiting."
+msgstr "Aucun hôte à mapper à la cellule n'a été trouvé. Sortie..."
+
 #, python-format
 msgid "No hypervisor matching '%s' could be found."
 msgstr "Aucun hyperviseur correspondant à '%s' n'a été trouvé."
@@ -2962,6 +3200,15 @@ msgstr "Aucun emplacement d'image n'est accessible"
 
 msgid "No instances found for any event"
 msgstr "Pas d'instances trouvés pour aucun événement"
+
+#, python-format
+msgid ""
+"No live migration URI configured and no default available for \"%(virt_type)s"
+"\" hypervisor virtualization type."
+msgstr ""
+"Aucun URI de migration à chaud n'est configuré et aucune valeur par défaut "
+"n'est disponible pour le type de virtualisation d'hyperviseur \"%(virt_type)s"
+"\"."
 
 #, python-format
 msgid "No matching ID for the URL %s was found."
@@ -3007,6 +3254,14 @@ msgstr "Aucun corps de demande"
 msgid "No root disk defined."
 msgstr "Aucun disque racine défini."
 
+#, python-format
+msgid ""
+"No specific network was requested and none are available for project "
+"'%(project_id)s'."
+msgstr ""
+"Aucun réseau spécifique n'a été demandé et il n'existe aucun réseau "
+"disponible pour le projet '%(project_id)s'."
+
 msgid "No suitable network for migrate"
 msgstr "Aucun réseau adéquat pour migrer"
 
@@ -3040,6 +3295,13 @@ msgstr "Pas capable d'acquérir un port libre pour %(host)s"
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "Pas capable de lier %(host)s : %(port)d, %(error)s "
 
+#, python-format
+msgid ""
+"Not all Virtual Functions of PF %(compute_node_id)s:%(address)s are free."
+msgstr ""
+"Les fonctions virtuelles de PF %(compute_node_id)s:%(address)s ne sont pas "
+"toutes libres."
+
 msgid "Not an rbd snapshot"
 msgstr "N'est pas un instantané rbd"
 
@@ -3063,9 +3325,15 @@ msgstr "Non implémenté sous Windows"
 msgid "Not stored in rbd"
 msgstr "Non stocké dans rbd"
 
+msgid "Nothing was archived."
+msgstr "Aucun élément archivé."
+
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
 msgstr "Nova nécessite libvirt %s ou une version ultérieure."
+
+msgid "Number of Rows Archived"
+msgstr "Nombre de lignes archivées"
 
 #, python-format
 msgid "Number of retries to plugin (%(num_retries)d) exceeded."
@@ -3078,6 +3346,10 @@ msgid ""
 msgstr ""
 "Le nombre de ports série '%(num_ports)s' spécifié dans '%(property)s' n'est "
 "pas valide."
+
+#, python-format
+msgid "OVS configuration failed with: %(inner_exception)s."
+msgstr "Echec de la configuration OVS avec : %(inner_exception)s."
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"
@@ -3232,6 +3504,14 @@ msgid "Personality file path too long"
 msgstr "Chemin d'accès de fichier de personnalité trop long"
 
 #, python-format
+msgid ""
+"Physical Function %(compute_node_id)s:%(address)s, related to VF "
+"%(compute_node_id)s:%(vf_address)s is %(status)s instead of %(hopestatus)s"
+msgstr ""
+"La fonction physique %(compute_node_id)s:%(address)s, associée à VF "
+"%(compute_node_id)s:%(vf_address)s est %(status)s au lieu de %(hopestatus)s"
+
+#, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
 msgstr "Réseau physique manquant pour le réseau %(network_uuid)s"
 
@@ -3260,6 +3540,16 @@ msgstr "Le port %(port_id)s est encore en cours d'utilisation."
 #, python-format
 msgid "Port %(port_id)s not usable for instance %(instance)s."
 msgstr "Port %(port_id)s inutilisable pour l'instance %(instance)s."
+
+#, python-format
+msgid ""
+"Port %(port_id)s not usable for instance %(instance)s. Value %(value)s "
+"assigned to dns_name attribute does not match instance's hostname "
+"%(hostname)s"
+msgstr ""
+"Le port %(port_id)s n'est pas utilisable pour l'instance %(instance)s. La "
+"valeur %(value)s affectée à l'attribut  dns_name ne correspond pas au nom "
+"d'hôte de l'instance %(hostname)s"
 
 #, python-format
 msgid "Port %(port_id)s requires a FixedIP in order to be used."
@@ -3405,6 +3695,17 @@ msgstr ""
 "Nombre maximal de nouvelles tentatives atteint pour le débranchement de VBD "
 "%s"
 
+msgid ""
+"Realtime policy needs vCPU(s) mask configured with at least 1 RT vCPU and 1 "
+"ordinary vCPU. See hw:cpu_realtime_mask or hw_cpu_realtime_mask"
+msgstr ""
+"La stratégie en temps réel nécessite le masque vCPU(s) configuré avec au "
+"moins 1 RT vCPU et 1 vCPU ordinaire. Voir hw:cpu_realtime_mask ou "
+"hw_cpu_realtime_mask"
+
+msgid "Realtime policy not supported by hypervisor"
+msgstr "La stratégie en temps réel n'est pas prise en charge par l'hyperviseur"
+
 #, python-format
 msgid ""
 "Relative blockcommit support was not detected. Libvirt '%s' or later is "
@@ -3428,6 +3729,20 @@ msgid ""
 msgstr ""
 "La demande doit inclure Timestamp ou Expires mais ne peut pas contenir les "
 "deux"
+
+#, python-format
+msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
+msgstr ""
+"La demande d'image %(image_id)s a reçu une réponse de demande incorrecte : "
+"%(response)s"
+
+#, python-format
+msgid "RequestSpec not found for instance %(instance_uuid)s"
+msgstr "RequestSpec non trouvé pour l'instance %(instance_uuid)s"
+
+msgid "Requested CPU control policy not supported by host"
+msgstr ""
+"La stratégie de contrôle d'UC demandée n'est pas prise en charge par l'hôte"
 
 #, python-format
 msgid "Requested cidr (%(cidr)s) conflicts with existing cidr (%(other)s)"
@@ -3470,6 +3785,14 @@ msgid ""
 msgstr ""
 "Les limites vCPU demandées %(sockets)d:%(cores)d:%(threads)d ne peuvent être "
 "satisfaite pour le nombre de vcpus %(vcpus)d"
+
+#, python-format
+msgid ""
+"Required image properties for signature verification do not exist. Cannot "
+"verify signature. Missing property: %s"
+msgstr ""
+"Les propriétés obligatoires de l'image pour la vérification de signature "
+"n'existent pas. Impossible de vérifier la signature. Propriété manquante : %s"
 
 #, python-format
 msgid "Rescue device does not exist for instance %s"
@@ -3529,6 +3852,10 @@ msgid ""
 msgstr ""
 "L'exécution de Nova avec virt_type qemu/kvm sur %(arch)s requiert la version "
 "libvirt %(libvirt_ver)s et la version qemu %(qemu_ver)s, ou ultérieures"
+
+#, python-format
+msgid "Running batches of %i until complete"
+msgstr "Exécution des lots de %i jusqu'à la fin"
 
 #, python-format
 msgid "Running cmd (subprocess): %s"
@@ -3660,6 +3987,12 @@ msgstr "ServerGroupAffinityFilter non configuré"
 msgid "ServerGroupAntiAffinityFilter not configured"
 msgstr "ServerGroupAntiAffinityFilter non configuré"
 
+msgid "ServerGroupSoftAffinityWeigher not configured"
+msgstr "ServerGroupSoftAffinityWeigher non configuré"
+
+msgid "ServerGroupSoftAntiAffinityWeigher not configured"
+msgstr "ServerGroupSoftAntiAffinityWeigher non configuré"
+
 #, python-format
 msgid "Service %(service)s on host %(host)s disabled."
 msgstr "Le service %(service)s sur l'hôte %(host)s est désactivé."
@@ -3718,6 +4051,10 @@ msgstr ""
 "disque."
 
 #, python-format
+msgid "Signature verification for the image failed: %(reason)s."
+msgstr "La vérification de l'image a échoué : %(reason)s."
+
+#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Le snapshot %(snapshot_id)s n'a pas été trouvé."
 
@@ -3726,6 +4063,15 @@ msgstr "Des champs sont invalides."
 
 msgid "Some required fields are missing"
 msgstr "Des champs requis sont manquants"
+
+#, python-format
+msgid ""
+"Something went wrong when deleting a volume snapshot: rebasing a "
+"%(protocol)s network disk using qemu-img has not been fully tested"
+msgstr ""
+"Une erreur s'est produite lors de la suppression d'un instantané de volume : "
+"relocaliser un disque réseau  %(protocol)s avec qemu-img n'a pas été "
+"entièrement testé"
 
 msgid "Sort direction size exceeds sort key size"
 msgstr "La taille du sens de tri dépasse la taille de la clé de tri"
@@ -3968,6 +4314,9 @@ msgstr "Les détails du type de console demandé ne sont pas accessibles"
 msgid "The requested functionality is not supported."
 msgstr "La fonctionnalité demandée n'est pas suportée"
 
+msgid "The signature data was not properly encoded using base64"
+msgstr "Les données de signature n'ont pas été codées correctement en base64"
+
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "Le cluster spécifié, '%s', est introuvable dans vCenter"
@@ -4084,6 +4433,14 @@ msgstr ""
 "Aucun enregistrement n'a été trouvé lorsque instance_uuid avait pour valeur "
 "NULL."
 
+#, python-format
+msgid ""
+"This compute node's hypervisor is older than the minimum supported version: "
+"%(version)s."
+msgstr ""
+"L'hyperviseur de ce noeud de calcul est plus ancien que la version minimale "
+"prise en charge : %(version)s."
+
 msgid "This default rule already exists."
 msgstr "Cette règle par défaut existe déjà."
 
@@ -4096,12 +4453,27 @@ msgstr "Ce pilote prend en charge uniquement le type 'a'."
 msgid "This driver only supports type 'a' entries."
 msgstr "Ce pilote prend en charge uniquement les entrées de type 'a'."
 
+msgid ""
+"This method needs to be called with either networks=None and port_ids=None "
+"or port_ids and networks as not none."
+msgstr ""
+"Cette méthode doit être appelée avec networks=None et port_ids=None ou avec "
+"des valeurs de port_ids et networks autres que None."
+
 msgid "This request was rate-limited."
 msgstr "Cette demande était limitée par la fréquence."
 
 #, python-format
 msgid "This rule already exists in group %s"
 msgstr "Cette règle existe déjà dans le groupe %s"
+
+#, python-format
+msgid ""
+"This service is older (v%(thisver)i) than the minimum (v%(minver)i) version "
+"of the rest of the deployment. Unable to continue."
+msgstr ""
+"Ce service est plus ancien  (v%(thisver)i) que la version minimale (v"
+"%(minver)i) du reste du déploiement. Impossible de continuer."
 
 #, python-format
 msgid "Timeout waiting for device %s to be created"
@@ -4129,6 +4501,9 @@ msgid ""
 msgstr ""
 "Trop adresses IPs vont être générés. Augmentez /%s pour réduire le nombre "
 "généré."
+
+msgid "Triggering crash dump is not supported"
+msgstr "Déclenchement de vidage sur incident non pris en charge"
 
 msgid "Type and Code must be integers for ICMP protocol type"
 msgstr ""
@@ -4172,6 +4547,17 @@ msgstr ""
 "Impossible d'appeler l'agent invité. L'appel suivant a mit trop de temps: "
 "%(method)s"
 
+#, python-format
+msgid "Unable to convert image to %(format)s: %(exp)s"
+msgstr "Impossible de convertir l'image en %(format)s : %(exp)s"
+
+#, python-format
+msgid "Unable to convert image to raw: %(exp)s"
+msgstr "Impossible de convertir l'image en raw : %(exp)s"
+
+msgid "Unable to create Barbican Client without project_id."
+msgstr "Impossible de créer le client Barbican sans project_id."
+
 msgid "Unable to create dns domain"
 msgstr "Incapable de créer un domaine dns"
 
@@ -4198,6 +4584,9 @@ msgstr "Impossible de supprimer le VBD %s"
 #, python-format
 msgid "Unable to destroy VDI %s"
 msgstr "Impossible de détruire VDI %s"
+
+msgid "Unable to detach from guest transient domain."
+msgstr "Déconnexion impossible du domaine transitoire invité."
 
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
@@ -4360,6 +4749,10 @@ msgstr "Impossible d'analyser les paires clé de métadonnées/valeur."
 msgid "Unable to resize disk down."
 msgstr "Impossible de redimensionner le disque à la baisse."
 
+#, python-format
+msgid "Unable to retrieve certificate with ID: %s"
+msgstr "Impossible de récupérer  le certificat avec l'ID : %s"
+
 msgid "Unable to set password on instance"
 msgstr "Impossible de définir le mot de passe sur l'instance"
 
@@ -4391,6 +4784,13 @@ msgstr "Paramètres inacceptables."
 #, python-format
 msgid "Unavailable console type %(console_type)s."
 msgstr "Type de console indisponible %(console_type)s."
+
+msgid ""
+"Undefined Block Device Mapping root: BlockDeviceMappingList contains Block "
+"Device Mappings from multiple instances."
+msgstr ""
+"Racine du mappage d'unité par bloc non définie : BlockDeviceMappingList "
+"contient des mappages d'unité par bloc provenant de plusieurs instances."
 
 #, python-format
 msgid ""
@@ -4432,6 +4832,10 @@ msgstr "Argument inconnu : port"
 
 msgid "Unknown argument: port"
 msgstr "Argument inconnu: port"
+
+#, python-format
+msgid "Unknown auth plugin: %s"
+msgstr "Plugin d'authentification inconnu : %s"
 
 #, python-format
 msgid "Unknown chain: %r"
@@ -4646,6 +5050,10 @@ msgid "VlanID"
 msgstr "ID réseau local virtuel"
 
 #, python-format
+msgid "Volume %(volume_id)s could not be attached. Reason: %(reason)s"
+msgstr "Impossible de connecter le volume %(volume_id)s. Raison : %(reason)s"
+
+#, python-format
 msgid "Volume %(volume_id)s could not be found."
 msgstr "Le volume %(volume_id)s n'a pas pu être trouvé."
 
@@ -4800,13 +5208,19 @@ msgid ""
 msgstr ""
 "Votre version de libvirt ne prend pas en charge l'indicateur de "
 "VIR_DOMAIN_XML_MIGRATABLE ou votre noeud de destination ne prend pas en "
-"charge l'extraction des adresses en mode écoute.  Pour que la migration "
-"active fonctionne correctement, vous devez configurer les adresses d'écoute "
+"charge l'extraction des adresses en mode écoute.  Pour que la migration à "
+"chaud fonctionne correctement, vous devez configurer les adresses d'écoute "
 "des graphiques (VNC et/ou SPICE) en tant qu'adresse fourre-tout (0.0.0.0 "
 "ou ::) ou qu'adresse locale (127.0.0.1 ou ::1)."
 
 msgid "Zero fixed IPs could be found."
 msgstr "Aucunes IPs fixes trouvées."
+
+msgid "Zero floating IPs available."
+msgstr "Aucune adresse IP flottante n'est disponible."
+
+msgid "Zero floating IPs exist."
+msgstr "Il  n'existe aucune adresse IP flottante."
 
 msgid "Zone"
 msgstr "Zone"
@@ -4878,6 +5292,9 @@ msgstr ""
 "La destination est %(target_cell)s mais le chemin de routage routing_path "
 "est %(routing_path)s"
 
+msgid "direct_snapshot() is not implemented"
+msgstr "direct_snapshot() n'est pas implémenté"
+
 msgid "disk"
 msgstr "disque"
 
@@ -4941,7 +5358,7 @@ msgid ""
 "migration."
 msgstr ""
 "L'hôte, block_migration et disk_over_commit doivent être spécifiés pour la "
-"migration en temps réel."
+"migration à chaud."
 
 msgid "hostname"
 msgstr "hostname"
@@ -4993,6 +5410,10 @@ msgstr "L'instance est hors tension et ne peut pas être interrompue."
 msgid "instance_id %s could not be found as device id on any ports"
 msgstr ""
 "l'instance_id %s est introuvable comme identificateur d'unité sur aucun port"
+
+#, python-format
+msgid "invalid %(property)s %(attr)s"
+msgstr "%(property)s %(attr)s non valide"
 
 msgid "is_public must be a boolean"
 msgstr "is_public doit être booléen."
@@ -5063,6 +5484,14 @@ msgstr "aucun hôte à retirer"
 msgid "no match found for %s"
 msgstr "aucune occurrence trouvée pour %s"
 
+#, python-format
+msgid "no usable parent snapshot for volume %s"
+msgstr "aucun instantané parent utilisable pour le volume %s"
+
+#, python-format
+msgid "no write permission on storage pool %s"
+msgstr "aucun droit en écriture sur le pool de stockage %s"
+
 msgid "node"
 msgstr "noeud"
 
@@ -5079,6 +5508,11 @@ msgstr ""
 "d'un système de fichier pour être utilisé avec les espaces de nommage "
 "utilisateur linux. Il peut uniquement être utilisé avec les conteneurs linux "
 "lxc. Voir la page de manuel pour plus d'information."
+
+msgid "old style configuration can use only dictionary or memcached backends"
+msgstr ""
+"une ancienne configuration ne peut utiliser que des backends de type "
+"dictionary ou  memcached"
 
 msgid "onSharedStorage must be specified."
 msgstr "onSharedStorage doit etre spécifié"
@@ -5100,8 +5534,32 @@ msgstr "recherche de partition non pris en charge avec %s"
 msgid "pause not supported for vmwareapi"
 msgstr "mise en pause non prise en charge pour vmwareapi"
 
+msgid ""
+"printable characters except !, ., @, with at least one non space character"
+msgstr ""
+"caractères imprimables à l'exception de !, ., @, avec au moins un caractère "
+"différent d'un espace"
+
+msgid ""
+"printable characters except !, ., @. Can not start or end with whitespace."
+msgstr ""
+"caractères imprimables à l'exception de !, ., @. Ne peut pas commencer ou se "
+"terminer par un espace."
+
+msgid "printable characters with at least one non space character"
+msgstr ""
+"caractères imprimables avec au moins un caractère différent d'un espace"
+
+msgid "printable characters. Can not start or end with whitespace."
+msgstr ""
+"caractères imprimables. Ne peut pas commencer ou se terminer par un espace."
+
 msgid "project"
 msgstr "projet"
+
+#, python-format
+msgid "qemu-img failed to execute on %(path)s : %(exp)s"
+msgstr "Echec d'exécution de qemu-img sur %(path)s  : %(exp)s"
 
 #, python-format
 msgid "qemu-nbd error: %s"
@@ -5204,6 +5662,9 @@ msgstr ""
 "vSwitch qui contient le groupe de port %(bridge)s n'est pas associé à "
 "l'adaptateur physique souhaité. VSwitch est %(expected)s, mais la principale "
 "association est %(actual)s."
+
+msgid "vcpu"
+msgstr "vcpu"
 
 msgid "version should be an integer"
 msgstr "la version doit être un entier"
