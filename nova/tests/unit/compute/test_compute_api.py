@@ -2488,6 +2488,66 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.snapshot,
                           self.context, instance, 'fake-name')
 
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_api.API, '_create_image')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'snapshot_instance')
+    def test_vm_deleting_while_creating_snapshot(self,
+                                                snapshot_instance,
+                                                _create_image, save):
+        instance = self._create_instance_obj()
+        save.side_effect = exception.UnexpectedDeletingTaskStateError(
+            "Exception")
+        _create_image.return_value = dict(id='fake-image-id')
+        with mock.patch.object(self.compute_api.image_api,
+                               'delete') as image_delete:
+            self.assertRaises(exception.InstanceInvalidState,
+                              self.compute_api.snapshot,
+                              self.context,
+                              instance, 'fake-image')
+            image_delete.assert_called_once_with(self.context,
+                                                 'fake-image-id')
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_api.API, '_create_image')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'snapshot_instance')
+    def test_vm_deleted_while_creating_snapshot(self,
+                                                snapshot_instance,
+                                                _create_image, save):
+        instance = self._create_instance_obj()
+        save.side_effect = exception.InstanceNotFound(
+            "Exception")
+        _create_image.return_value = dict(id='fake-image-id')
+        with mock.patch.object(self.compute_api.image_api,
+                               'delete') as image_delete:
+            self.assertRaises(exception.InstanceInvalidState,
+                              self.compute_api.snapshot,
+                              self.context,
+                              instance, 'fake-image')
+            image_delete.assert_called_once_with(self.context,
+                                                 'fake-image-id')
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_api.API, '_create_image')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'snapshot_instance')
+    def test_vm_deleted_while_snapshot_and_snapshot_delete_failed(self,
+                                                        snapshot_instance,
+                                                        _create_image, save):
+        instance = self._create_instance_obj()
+        save.side_effect = exception.InstanceNotFound(instance_id='fake')
+        _create_image.return_value = dict(id='fake-image-id')
+        with mock.patch.object(self.compute_api.image_api,
+                               'delete') as image_delete:
+            image_delete.side_effect = test.TestingException()
+            self.assertRaises(exception.InstanceInvalidState,
+                              self.compute_api.snapshot,
+                              self.context,
+                              instance, 'fake-image')
+            image_delete.assert_called_once_with(self.context,
+                                                 'fake-image-id')
+
     def test_snapshot_with_base_image_ref(self):
         self._test_snapshot_and_backup(with_base_ref=True)
 

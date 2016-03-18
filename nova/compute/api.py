@@ -2318,7 +2318,36 @@ class API(base.Base):
         # NOTE(comstud): Any changes to this method should also be made
         # to the snapshot_instance() method in nova/cells/messaging.py
         instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
-        instance.save(expected_task_state=[None])
+        try:
+            instance.save(expected_task_state=[None])
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError) as ex:
+            # Changing the instance task state to use in raising the
+            # InstanceInvalidException below
+            LOG.debug('Instance disappeared during snapshot.',
+                      instance=instance)
+            try:
+                image_id = image_meta['id']
+                self.image_api.delete(context, image_id)
+                LOG.info(_LI('Image %s deleted because instance '
+                             'deleted before snapshot started.'),
+                         image_id, instance=instance)
+            except exception.ImageNotFound:
+                pass
+            except Exception as exc:
+                msg = _LW("Error while trying to clean up image %(img_id)s: "
+                          "%(error_msg)s")
+                LOG.warning(msg, {"img_id": image_meta['id'],
+                                  "error_msg": six.text_type(exc)})
+            attr = 'task_state'
+            state = task_states.DELETING
+            if type(ex) == exception.InstanceNotFound:
+                attr = 'vm_state'
+                state = vm_states.DELETED
+            raise exception.InstanceInvalidState(attr=attr,
+                                           instance_uuid=instance.uuid,
+                                           state=state,
+                                           method='snapshot')
 
         self.compute_rpcapi.snapshot_instance(context, instance,
                                               image_meta['id'])
