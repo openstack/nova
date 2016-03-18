@@ -16,9 +16,11 @@
 from oslo_config import cfg
 
 opts = [
-    cfg.BoolOpt('record',
-                default=False,
-                help='Record sessions to FILE.[session_number]'),
+    cfg.StrOpt('record',
+                help='This is the filename that will be used for storing '
+                     'websocket frames received and sent by a proxy service '
+                     '(like VNC, spice, serial) running on this host. If this '
+                     'is not set (default), no recording will be done.'),
     cfg.BoolOpt('daemon',
                 default=False,
                 help='Become a daemon (background process)'),
