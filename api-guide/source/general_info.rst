@@ -249,7 +249,8 @@ on compute hosts rather than servers.
 
 -  **Aggregates**
 
-   Please see :doc:`aggregates.rst`
+   See `Aggregates developer information
+   <http://docs.openstack.org/developer/nova/aggregates.html>`_.
 
 -  **Migrations**
 

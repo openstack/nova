@@ -87,3 +87,8 @@ Contents
     paginated_collections
     polling_changes-since_parameter
     request_and_response_formats
+
+.. toctree::
+    :hidden:
+
+    extra_specs_and_properties
