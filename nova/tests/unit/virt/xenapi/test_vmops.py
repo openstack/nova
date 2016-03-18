@@ -1374,6 +1374,25 @@ class LiveMigrateTestCase(VMOpsTestBase):
                           self.vmops._get_host_uuid_from_aggregate,
                           context, hostname)
 
+    @mock.patch.object(vmops.VMOps, 'connect_block_device_volumes')
+    def test_pre_live_migration(self, mock_connect):
+        migrate_data = objects.XenapiLiveMigrateData()
+        migrate_data.block_migration = True
+        sr_uuid_map = {"sr_uuid": "sr_ref"}
+        mock_connect.return_value = {"sr_uuid": "sr_ref"}
+
+        result = self.vmops.pre_live_migration(
+                None, None, "bdi", None, None, migrate_data)
+
+        self.assertTrue(result.block_migration)
+        self.assertEqual(result.sr_uuid_map, sr_uuid_map)
+        mock_connect.assert_called_once_with("bdi")
+
+    def test_pre_live_migration_raises_with_no_data(self):
+        self.assertRaises(exception.InvalidParameterValue,
+                self.vmops.pre_live_migration,
+                None, None, "bdi", None, None, None)
+
 
 class LiveMigrateFakeVersionTestCase(VMOpsTestBase):
     @mock.patch.object(vmops.VMOps, '_pv_device_reported')
@@ -1472,31 +1491,59 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
                                                  "sr_uuid")
 
     def _call_live_migrate_command_with_migrate_send_data(self,
-                                                          migrate_send_data):
+                                                          migrate_data):
         command_name = 'test_command'
-        vm_ref = None
-        dest_check_data = objects.XenapiLiveMigrateData(
-            destination_sr_ref=None,
-            migrate_send_data=migrate_send_data)
+        vm_ref = "vm_ref"
 
         def side_effect(method, *args):
+            if method == "SR.get_by_uuid":
+                return "sr_ref_new"
             xmlrpclib.dumps(args, method, allow_none=1)
 
         with mock.patch.object(self.vmops,
                                "_generate_vdi_map") as mock_gen_vdi_map, \
                 mock.patch.object(self.vmops._session,
                                   'call_xenapi') as mock_call_xenapi:
-            mock_gen_vdi_map.return_value = {}
             mock_call_xenapi.side_effect = side_effect
+            mock_gen_vdi_map.side_effect = [
+                    {"vdi": "sr_ref"}, {"vdi": "sr_ref_2"}]
+
             self.vmops._call_live_migrate_command(command_name,
-                                                  vm_ref, dest_check_data)
+                                                  vm_ref, migrate_data)
 
-    def test_call_live_migrate_command_with_migrate_send_data_dict(self):
-        self._call_live_migrate_command_with_migrate_send_data({'foo': 'bar'})
+            expected_vdi_map = {'vdi': 'sr_ref'}
+            if 'sr_uuid_map' in migrate_data:
+                expected_vdi_map = {'vdi': 'sr_ref_2'}
+            self.assertEqual(mock_call_xenapi.call_args_list[-1],
+                mock.call('test_command', vm_ref,
+                    migrate_data.migrate_send_data, True,
+                    expected_vdi_map, {}, {}))
 
-    def test_call_live_migrate_command_with_migrate_send_data_null(self):
+            self.assertEqual(mock_gen_vdi_map.call_args_list[0],
+                mock.call(migrate_data.destination_sr_ref, vm_ref))
+            if 'sr_uuid_map' in migrate_data:
+                self.assertEqual(mock_gen_vdi_map.call_args_list[1],
+                    mock.call(migrate_data.sr_uuid_map["sr_uuid2"], vm_ref,
+                              "sr_ref_new"))
+
+    def test_call_live_migrate_command_with_full_data(self):
+        migrate_data = objects.XenapiLiveMigrateData()
+        migrate_data.migrate_send_data = {"foo": "bar"}
+        migrate_data.destination_sr_ref = "sr_ref"
+        migrate_data.sr_uuid_map = {"sr_uuid2": "sr_ref_3"}
+        self._call_live_migrate_command_with_migrate_send_data(migrate_data)
+
+    def test_call_live_migrate_command_with_no_sr_uuid_map(self):
+        migrate_data = objects.XenapiLiveMigrateData()
+        migrate_data.migrate_send_data = {"foo": "baz"}
+        migrate_data.destination_sr_ref = "sr_ref"
+        self._call_live_migrate_command_with_migrate_send_data(migrate_data)
+
+    def test_call_live_migrate_command_with_no_migrate_send_data(self):
+        migrate_data = objects.XenapiLiveMigrateData()
         self.assertRaises(exception.InvalidParameterValue,
-                self._call_live_migrate_command_with_migrate_send_data, None)
+                self._call_live_migrate_command_with_migrate_send_data,
+                migrate_data)
 
 
 class RollbackLiveMigrateDestinationTestCase(VMOpsTestBase):
