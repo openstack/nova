@@ -2725,7 +2725,9 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
+        xml_path = os.path.join(instance_dir, 'libvirt.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
+        libvirt_utils.write_to_file(xml_path, xml)
         guest = self._host.get_guest(instance)
 
         # TODO(sahid): We are converting all calls from a
