@@ -79,6 +79,7 @@ from nova.db import migration
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import flavor as flavor_obj
 from nova.openstack.common import cliutils
 from nova import quota
 from nova import rpc
@@ -924,6 +925,8 @@ class DbCommands(object):
         db.pcidevice_online_data_migration,
         db.computenode_uuids_online_data_migration,
         db.aggregate_uuids_online_data_migration,
+        flavor_obj.migrate_flavors,
+        flavor_obj.migrate_flavor_reset_autoincrement,
     )
 
     def __init__(self):

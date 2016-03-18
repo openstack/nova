@@ -14,9 +14,12 @@
 
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
+from oslo_log import log as logging
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
+from sqlalchemy.sql import func
+from sqlalchemy.sql import text
 from sqlalchemy.sql import true
 
 from nova import db
@@ -24,11 +27,13 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy.api import require_context
 from nova.db.sqlalchemy import api_models
 from nova import exception
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
 
+LOG = logging.getLogger(__name__)
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
 DEPRECATED_FIELDS = ['deleted', 'deleted_at']
 
@@ -654,3 +659,61 @@ class FlavorList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), objects.Flavor,
                                   api_db_flavors + db_flavors,
                                   expected_attrs=['extra_specs'])
+
+
+@db_api.main_context_manager.reader
+def _get_main_db_flavor_ids(context, limit):
+    # NOTE(danms): We don't need this imported at runtime, so
+    # keep it separate here
+    from nova.db.sqlalchemy import models
+    return [x[0] for x in context.session.query(models.InstanceTypes.id).
+            filter_by(deleted=0).
+            limit(limit)]
+
+
+def migrate_flavors(ctxt, count):
+    main_db_ids = _get_main_db_flavor_ids(ctxt, count)
+    if not main_db_ids:
+        return 0, 0
+
+    count_all = len(main_db_ids)
+    count_hit = 0
+
+    for flavor_id in main_db_ids:
+        try:
+            flavor = Flavor.get_by_id(ctxt, flavor_id)
+            flavor_values = {field: getattr(flavor, field)
+                             for field in flavor.fields}
+            flavor._flavor_create(ctxt, flavor_values)
+            count_hit += 1
+            db.flavor_destroy(ctxt, flavor.name)
+        except exception.FlavorNotFound:
+            LOG.warning(_LW('Flavor id %(id)i disappeared during migration'),
+                        {'id': flavor_id})
+        except (exception.FlavorExists, exception.FlavorIdExists) as e:
+            LOG.error(str(e))
+
+    return count_all, count_hit
+
+
+def _adjust_autoincrement(context, value):
+    engine = db_api.get_api_engine()
+    if engine.name == 'postgresql':
+        # NOTE(danms): If we migrated some flavors in the above function,
+        # then we will have confused postgres' sequence for the autoincrement
+        # primary key. MySQL does not care about this, but since postgres does,
+        # we need to reset this to avoid a failure on the next flavor creation.
+        engine.execute(
+            text('ALTER SEQUENCE flavors_id_seq RESTART WITH %i;' % (
+                value)))
+
+
+@db_api.api_context_manager.reader
+def _get_max_flavor_id(context):
+    return context.session.query(func.max(api_models.Flavors.id)).one()[0]
+
+
+def migrate_flavor_reset_autoincrement(ctxt, count):
+    max_id = _get_max_flavor_id(ctxt)
+    _adjust_autoincrement(ctxt, max_id + 1)
+    return 0, 0

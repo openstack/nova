@@ -16,6 +16,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
+from nova.objects import flavor as flavor_obj
 from nova import test
 from nova.tests import fixtures
 
@@ -229,3 +230,28 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         flavor.create()
         self.assertRaises(exception.MarkerNotFound,
                           self._test_get_all, 2, marker='noflavoratall')
+
+
+class FlavorMigrationTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(FlavorMigrationTestCase, self).setUp()
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.Database(database='api'))
+        self.context = context.get_admin_context()
+
+    def test_migration(self):
+        main_flavors = len(db.flavor_get_all(self.context))
+        match, done = flavor_obj.migrate_flavors(self.context, 50)
+        self.assertEqual(main_flavors, match)
+        self.assertEqual(main_flavors, done)
+        self.assertEqual(0, len(db.flavor_get_all(self.context)))
+        self.assertEqual(main_flavors,
+                         len(objects.FlavorList.get_all(self.context)))
+
+    def test_migrate_flavor_reset_autoincrement(self):
+        # NOTE(danms): Not much we can do here other than just make
+        # sure that the non-postgres case does not explode.
+        match, done = flavor_obj.migrate_flavor_reset_autoincrement(
+            self.context, 0)
+        self.assertEqual(0, match)
+        self.assertEqual(0, done)
