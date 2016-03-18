@@ -61,7 +61,7 @@ class BaseProxyTestCase(test.NoDBTestCase):
         mock_init.assert_called_once_with(
             listen_host='0.0.0.0', listen_port='6080', source_is_ipv6=False,
             verbose=False, cert='self.pem', key=None, ssl_only=False,
-            daemon=False, record=False, traffic=False,
+            daemon=False, record=None, traffic=False,
             web='/usr/share/spice-html5', file_only=True,
             RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
         mock_start.assert_called_once_with()
