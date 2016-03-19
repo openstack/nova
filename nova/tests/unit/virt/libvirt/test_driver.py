@@ -6640,7 +6640,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr.pre_live_migration(self.context, instance,
                                     block_device_info=None,
                                     network_info=[],
-                                    disk_info=disk_info,
+                                    disk_info=jsonutils.dumps(disk_info),
                                     migrate_data=migrate_data)
             write_to_file.assert_called_with(disk_info_path,
                                              jsonutils.dumps(image_disk_info))

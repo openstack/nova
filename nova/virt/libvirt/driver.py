@@ -5830,7 +5830,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # contents of each file when using the Raw backend.
             if disk_info:
                 image_disk_info = {}
-                for info in disk_info:
+                for info in jsonutils.loads(disk_info):
                     image_file = os.path.basename(info['path'])
                     image_path = os.path.join(instance_dir, image_file)
                     image_disk_info[image_path] = info['type']
