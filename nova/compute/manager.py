@@ -274,8 +274,8 @@ CONF.import_opt('enabled', 'nova.mks', group='mks')
 CONF.import_opt('mksproxy_base_url', 'nova.mks', group='mks')
 CONF.import_opt('destroy_after_evacuate', 'nova.utils', group='workarounds')
 CONF.import_opt('scheduler_tracks_instance_changes',
-                'nova.scheduler.host_manager')
-
+                'nova.scheduler.host_manager
+CONF.import_opt('disable_after_evacuate', 'nova.utils', group='workarounds')
 LOG = logging.getLogger(__name__)
 
 get_notifier = functools.partial(rpc.get_notifier, service='compute')
@@ -815,7 +815,6 @@ class ComputeManager(manager.Manager):
                 continue
             local_instances.append(instance)
         return local_instances
-
     def _destroy_evacuated_instances(self, context):
         """Destroys evacuated instances.
 
@@ -1235,7 +1234,48 @@ class ComputeManager(manager.Manager):
             retry_reboot = True
 
         return retry_reboot, reboot_type
+    
+    def _disable_evacuated_instances(self, context):
+        """Disable evacuated instances.
+        
+    Disabling it may have implications for the case where
+    instances *were* evacuated, given potential shared resources.
+    To counter that problem, this patch also makes _init_instance()
+    skip initialization of the instance if it appears to be owned
+    by another host, logging a prominent warning in that case.
+    """
+     filters = {
+            'source_compute': self.host,
+            'status': ['accepted', 'done'],
+            'migration_type': 'evacuation',
+        }
+         evacuations = objects.MigrationList.get_by_filters(context, filters)
+        if:
+            instance.host != self.host
+            return
+        evacuations = {mig.instance_uuid: mig for mig in evacuations}
 
+        filters = {'destroy': False}
+        local_instances = self._get_instances_on_driver(context, filters)
+        evacuated = [inst for inst in local_instances
+                     if inst.uuid in evacuations]
+        for instance in evacuated:
+            migration = evacuations[instance.uuid]
+            LOG.info(_LI('Disable instance as it has been evacuated from '
+                         'this host'), instance=instance)
+            try:
+                network_info = self.network_api.get_instance_nw_info(
+                    context, instance)
+                bdi = self._get_instance_block_device_info(context,
+                                                           instance)
+                destroy_disks = not (self._is_instance_storage_shared(
+                    context, instance))
+            except exception.InstanceNotFound:
+                network_info = network_model.NetworkInfo()
+                bdi = {}
+                LOG.info(_LI('Skip initialization of instance, '
+                             'appearto be owned by another host.'),
+                         instance=instance)
     def handle_lifecycle_event(self, event):
         LOG.info(_LI("VM %(state)s (Lifecycle Event)"),
                  {'state': event.get_name()},
