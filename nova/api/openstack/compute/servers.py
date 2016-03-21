@@ -17,7 +17,6 @@
 import base64
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
@@ -37,6 +36,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova.compute import flavors
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
@@ -47,10 +47,9 @@ from nova import utils
 ALIAS = 'servers'
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.legacy_v2.servers')
-CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 CONF.import_opt('extensions_blacklist', 'nova.api.openstack',
                 group='osapi_v21')
 CONF.import_opt('extensions_whitelist', 'nova.api.openstack',

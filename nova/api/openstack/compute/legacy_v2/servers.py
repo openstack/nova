@@ -35,6 +35,7 @@ from nova.api.openstack import wsgi
 from nova import block_device
 from nova import compute
 from nova.compute import flavors
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -51,9 +52,8 @@ server_opts = [
                      ' password injection then the password returned will'
                      ' not be correct'),
 ]
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(server_opts)
-CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 
 LOG = logging.getLogger(__name__)
 

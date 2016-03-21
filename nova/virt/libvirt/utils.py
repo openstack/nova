@@ -29,6 +29,7 @@ from oslo_log import log as logging
 
 from nova.compute import arch
 from nova.compute import vm_mode
+import nova.conf
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import utils
@@ -44,9 +45,8 @@ libvirt_opts = [
                      'currently applies exclusively to qcow2 images'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(libvirt_opts, 'libvirt')
-CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
 RESIZE_SNAPSHOT_NAME = 'nova-resize'

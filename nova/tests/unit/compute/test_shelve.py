@@ -12,20 +12,19 @@
 
 import mock
 from mox3 import mox
-from oslo_config import cfg
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
 from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import db
 from nova import objects
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
 
-CONF = cfg.CONF
-CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
+CONF = nova.conf.CONF
 
 
 def _fake_resources():

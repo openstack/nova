@@ -70,7 +70,6 @@ imagecache_opts = [
 
 CONF = nova.conf.CONF
 CONF.register_opts(imagecache_opts, 'libvirt')
-CONF.import_opt('instances_path', 'nova.compute.manager')
 
 
 def get_cache_fname(images, key):

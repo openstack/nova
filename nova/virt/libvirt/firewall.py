@@ -19,20 +19,19 @@ import uuid
 
 from eventlet import greenthread
 from lxml import etree
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
 from nova.cloudpipe import pipelib
+import nova.conf
 from nova.i18n import _LI
 from nova.i18n import _LW
 import nova.virt.firewall as base_firewall
 from nova.virt import netutils
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 
 libvirt = None
 
