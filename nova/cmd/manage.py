@@ -100,7 +100,7 @@ CONF.import_opt('connection', 'oslo_db.options', group='database')
 
 QUOTAS = quota.QUOTAS
 
-_DEFAULT_LOG_LEVELS = config._DEFAULT_LOG_LEVELS + ['oslo_db=INFO']
+_EXTRA_DEFAULT_LOG_LEVELS = ['oslo_db=INFO']
 
 
 # Decorators for actions
@@ -1513,7 +1513,9 @@ def main():
     CONF.register_cli_opt(category_opt)
     try:
         config.parse_args(sys.argv)
-        logging.set_defaults(default_log_levels=_DEFAULT_LOG_LEVELS)
+        logging.set_defaults(
+            default_log_levels=logging.get_default_log_levels() +
+            _EXTRA_DEFAULT_LOG_LEVELS)
         logging.setup(CONF, "nova")
     except cfg.ConfigFilesNotFoundError:
         cfgfile = CONF.config_file[-1] if CONF.config_file else None
