@@ -5910,7 +5910,6 @@ class ComputeTestCase(BaseTestCase):
         def _test(mock_nw_api, mock_lmcf):
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
-                                                  False,
                                                   migrate_data=migrate_data)
             mock_nw_api.setup_networks_on_host.assert_called_once_with(
                 c, instance, self.compute.host)
@@ -5934,7 +5933,6 @@ class ComputeTestCase(BaseTestCase):
         def _test(mock_nw_api, mock_lmcf):
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
-                                                  False,
                                                   migrate_data=migrate_data,
                                                   migration_status='fake')
             mock_nw_api.setup_networks_on_host.assert_called_once_with(

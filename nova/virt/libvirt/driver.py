@@ -6228,8 +6228,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           instance=instance)
                 libvirt_migrate.run_recover_tasks(self._host, guest, instance,
                                                   on_migration_failure)
-                recover_method(context, instance, dest, block_migration,
-                               migrate_data)
+                recover_method(context, instance, dest, migrate_data)
                 break
             elif info.type == libvirt.VIR_DOMAIN_JOB_CANCELLED:
                 # Migration was stopped by admin
@@ -6237,8 +6236,8 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 libvirt_migrate.run_recover_tasks(self._host, guest, instance,
                                                   on_migration_failure)
-                recover_method(context, instance, dest, block_migration,
-                               migrate_data, migration_status='cancelled')
+                recover_method(context, instance, dest, migrate_data,
+                               migration_status='cancelled')
                 break
             else:
                 LOG.warning(_LW("Unexpected migration job type: %d"),
