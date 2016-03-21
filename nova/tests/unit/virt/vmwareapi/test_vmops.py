@@ -1392,12 +1392,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock.patch.object(uuidutils, 'generate_uuid',
                                   return_value='tmp-uuid'),
                 mock.patch.object(images, 'fetch_image'),
+                mock.patch.object(vutil, 'get_inventory_path',
+                                  return_value=self._dc_info.name),
                 mock.patch.object(self._vmops, '_get_extra_specs',
                                   return_value=extra_specs),
                 mock.patch.object(self._vmops, '_get_instance_metadata',
                                   return_value='fake-metadata')
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
-              _get_extra_specs, _get_instance_metadata):
+              _get_inventory_path, _get_extra_specs, _get_instance_metadata):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
@@ -1470,6 +1472,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     upload_file_name,
                     cookies='Fake-CookieJar')
             self.assertTrue(len(_wait_for_task.mock_calls) > 0)
+            _get_inventory_path.call_count = 1
             extras = None
             if block_device_info and ('ephemerals' in block_device_info or
                                       'swap' in block_device_info):
@@ -2091,16 +2094,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 image_ds_loc.rel_path,
                 cookies=cookies)
 
+    @mock.patch.object(vutil, 'get_inventory_path')
     @mock.patch.object(images, 'fetch_image')
     @mock.patch.object(vmops.VMwareVMOps, '_get_esx_host_and_cookies')
     def test_fetch_image_as_file_exception(self,
                                  mock_get_esx_host_and_cookies,
-                                 mock_fetch_image):
+                                 mock_fetch_image,
+                                 mock_get_inventory_path):
         vi = self._make_vm_config_info()
         image_ds_loc = mock.Mock()
         dc_name = 'ha-datacenter'
         mock_get_esx_host_and_cookies.side_effect = \
             exception.HostNotFound(host='')
+        mock_get_inventory_path.return_value = self._dc_info.name
         self._vmops._fetch_image_as_file(self._context, vi, image_ds_loc)
         mock_get_esx_host_and_cookies.assert_called_once_with(
                 vi.datastore,

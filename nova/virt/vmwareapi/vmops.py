@@ -356,12 +356,12 @@ class VMwareVMOps(object):
         extra_specs.cores_per_socket = topology.cores
         return extra_specs
 
-    def _get_esx_host_and_cookies(self, datastore, dc_name, file_path):
+    def _get_esx_host_and_cookies(self, datastore, dc_path, file_path):
         hosts = datastore.get_connected_hosts(self._session)
         host = ds_obj.Datastore.choose_host(hosts)
         host_name = self._session._call_method(vutil, 'get_object_property',
                                                host, 'name')
-        url = ds_obj.DatastoreURL('https', host_name, file_path, dc_name,
+        url = ds_obj.DatastoreURL('https', host_name, file_path, dc_path,
                                   datastore.name)
         cookie_header = url.get_transfer_ticket(self._session, 'PUT')
         name, value = cookie_header.split('=')
@@ -384,13 +384,13 @@ class VMwareVMOps(object):
 
         # try to get esx cookie to upload
         try:
-            dc_name = 'ha-datacenter'
+            dc_path = 'ha-datacenter'
             host, cookies = self._get_esx_host_and_cookies(vi.datastore,
-                                                        dc_name,
-                                                        image_ds_loc.rel_path)
+                dc_path, image_ds_loc.rel_path)
         except Exception as e:
             LOG.warning(_LW("Get esx cookies failed: %s"), e)
-            dc_name = vi.dc_info.name
+            dc_path = vutil.get_inventory_path(session.vim, vi.dc_info.ref)
+
             host = self._session._host
             cookies = session.vim.client.options.transport.cookiejar
 
@@ -399,7 +399,7 @@ class VMwareVMOps(object):
             vi.instance,
             host,
             session._port,
-            dc_name,
+            dc_path,
             vi.datastore.name,
             image_ds_loc.rel_path,
             cookies=cookies)
