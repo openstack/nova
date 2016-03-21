@@ -84,14 +84,14 @@ def init(conf):
                                              serializer=serializer)
         NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                       serializer=serializer,
-                                      topic='versioned_notifications')
+                                      topics=['versioned_notifications'])
     else:
         LEGACY_NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                              serializer=serializer,
                                              driver='noop')
         NOTIFIER = messaging.Notifier(NOTIFICATION_TRANSPORT,
                                       serializer=serializer,
-                                      topic='versioned_notifications')
+                                      topics=['versioned_notifications'])
 
 
 def cleanup():
