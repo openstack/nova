@@ -71,25 +71,17 @@ def fake_destroy(flavorname):
     pass
 
 
-def fake_create(context, kwargs):
-    newflavor = fake_db_flavor()
-
-    flavorid = kwargs.get('flavorid')
-    if flavorid is None:
-        flavorid = 1234
-
-    newflavor['flavorid'] = flavorid
-    newflavor["name"] = kwargs.get('name')
-    newflavor["memory_mb"] = int(kwargs.get('memory_mb'))
-    newflavor["vcpus"] = int(kwargs.get('vcpus'))
-    newflavor["root_gb"] = int(kwargs.get('root_gb'))
-    newflavor["ephemeral_gb"] = int(kwargs.get('ephemeral_gb'))
-    newflavor["swap"] = kwargs.get('swap')
-    newflavor["rxtx_factor"] = float(kwargs.get('rxtx_factor'))
-    newflavor["is_public"] = bool(kwargs.get('is_public'))
-    newflavor["disabled"] = bool(kwargs.get('disabled'))
-
-    return newflavor
+def fake_create(newflavor):
+    newflavor['flavorid'] = 1234
+    newflavor["name"] = 'test'
+    newflavor["memory_mb"] = 512
+    newflavor["vcpus"] = 2
+    newflavor["root_gb"] = 1
+    newflavor["ephemeral_gb"] = 1
+    newflavor["swap"] = 512
+    newflavor["rxtx_factor"] = 1.0
+    newflavor["is_public"] = True
+    newflavor["disabled"] = False
 
 
 class FlavorManageTestV21(test.NoDBTestCase):
@@ -103,7 +95,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
                        "get_flavor_by_flavor_id",
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
-        self.stub_out("nova.objects.flavor._flavor_create", fake_create)
+        self.stub_out("nova.objects.Flavor.create", fake_create)
 
         self.request_body = {
             "flavor": {

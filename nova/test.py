@@ -49,6 +49,7 @@ from nova import db
 from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver
 from nova.objects import base as objects_base
+from nova.objects import flavor as flavor_obj
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
@@ -213,6 +214,11 @@ class TestCase(testtools.TestCase):
         if self.USES_DB:
             self.useFixture(nova_fixtures.Database())
             self.useFixture(nova_fixtures.Database(database='api'))
+            # NOTE(danms): Flavors are encoded in our original migration
+            # which means we have no real option other than to migrate them
+            # onlineish every time we build a new database (for now).
+            ctxt = context.get_admin_context()
+            flavor_obj.migrate_flavors(ctxt, 100, hard_delete=True)
         elif not self.USES_DB_SELF:
             self.useFixture(nova_fixtures.DatabasePoisonFixture())
 

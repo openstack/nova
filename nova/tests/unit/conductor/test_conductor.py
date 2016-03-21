@@ -405,6 +405,8 @@ class _BaseTaskTestCase(object):
     @mock.patch('nova.objects.Instance.refresh')
     def test_build_instances(self, mock_refresh):
         instance_type = flavors.get_default_flavor()
+        # NOTE(danms): Avoid datetime timezone issues with converted flavors
+        instance_type.created_at = None
         instances = [objects.Instance(context=self.context,
                                       id=i,
                                       uuid=uuid.uuid4(),

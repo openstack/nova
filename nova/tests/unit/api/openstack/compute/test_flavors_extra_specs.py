@@ -27,7 +27,8 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_flavor
 
 
-def return_create_flavor_extra_specs(context, flavor_id, extra_specs):
+def return_create_flavor_extra_specs(context, flavor_id, extra_specs,
+                                     *args, **kwargs):
     return stub_flavor_extra_specs()
 
 
