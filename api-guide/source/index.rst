@@ -55,18 +55,17 @@ be made available to most end users but this is fully configurable.
 API Versions
 ============
 
-Following the Liberty release, every Nova deployment should have
+Following the Mitaka release, every Nova deployment should have
 the following endpoints:
 
 * / - list of available versions
 * /v2 - the first version of the Compute API, uses extensions
         (we call this Compute API v2.0)
-* /v1.1 - an alias for v2.0 for backwards compatibility
 * /v2.1 - same API, except uses microversions
 
 While this guide concentrates on documenting the v2.1 API,
-please note that the v2.0 and v1.1 API are (almost) identical to first
-microversion of the v2.1 API and are also covered by this guide.
+please note that the v2.0 is (almost) identical to first microversion of
+the v2.1 API and are also covered by this guide.
 
 Contents
 ========
