@@ -432,7 +432,7 @@ class LibvirtGenericVIFDriver(object):
         vif_type = vif['type']
 
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
-                  'vif=%(vif)s virt_type%(virt_type)s',
+                  'vif=%(vif)s virt_type=%(virt_type)s',
                   {'vif_type': vif_type, 'instance': instance,
                    'vif': vif, 'virt_type': virt_type})
 
