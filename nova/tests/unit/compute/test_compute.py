@@ -5194,9 +5194,9 @@ class ComputeTestCase(BaseTestCase):
 
         # Confirm the instance size before the resize starts
         instance.refresh()
-        instance_type_ref = db.flavor_get(self.context,
+        flavor = objects.Flavor.get_by_id(self.context,
                                           instance.instance_type_id)
-        self.assertEqual(instance_type_ref['flavorid'], '1')
+        self.assertEqual(flavor.flavorid, '1')
 
         instance.vm_state = old_vm_state
         instance.power_state = p_state
@@ -5235,9 +5235,9 @@ class ComputeTestCase(BaseTestCase):
                     disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
-        instance_type_ref = db.flavor_get(self.context,
-                instance.instance_type_id)
-        self.assertEqual(instance_type_ref['flavorid'], '3')
+        flavor = objects.Flavor.get_by_id(self.context,
+                                          instance.instance_type_id)
+        self.assertEqual(flavor.flavorid, '3')
         # Prove that the NUMA topology has also been updated to that of the new
         # flavor - meaning None
         self.assertIsNone(instance.numa_topology)
@@ -5251,9 +5251,9 @@ class ComputeTestCase(BaseTestCase):
 
         instance.refresh()
 
-        instance_type_ref = db.flavor_get(self.context,
-                instance.instance_type_id)
-        self.assertEqual(instance_type_ref['flavorid'], '3')
+        flavor = objects.Flavor.get_by_id(self.context,
+                                          instance.instance_type_id)
+        self.assertEqual(flavor.flavorid, '3')
         self.assertEqual('fake-mini', migration.source_compute)
         self.assertEqual(old_vm_state, instance.vm_state)
         self.assertIsNone(instance.task_state)
@@ -5312,9 +5312,9 @@ class ComputeTestCase(BaseTestCase):
                                             block_device_mapping=[])
 
         instance.refresh()
-        instance_type_ref = db.flavor_get(self.context,
+        flavor = objects.Flavor.get_by_id(self.context,
                                           instance.instance_type_id)
-        self.assertEqual(instance_type_ref['flavorid'], '1')
+        self.assertEqual(flavor.flavorid, '1')
 
         old_vm_state = instance['vm_state']
 
@@ -5384,9 +5384,9 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertIsNone(instance.task_state)
 
-        instance_type_ref = db.flavor_get(self.context,
-                instance['instance_type_id'])
-        self.assertEqual(instance_type_ref['flavorid'], '1')
+        flavor = objects.Flavor.get_by_id(self.context,
+                                          instance['instance_type_id'])
+        self.assertEqual(flavor.flavorid, '1')
         self.assertEqual(instance.host, migration.source_compute)
         self.assertEqual(migration.dest_compute, migration.source_compute)
         self.assertIsInstance(instance.numa_topology, numa_topology.__class__)
