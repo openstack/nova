@@ -47,10 +47,8 @@ class FakeModel(object):
 
 def stub_out(test, funcs):
     """Set the stubs in mapping in the db api."""
-    for func in funcs:
-        func_name = '_'.join(func.__name__.split('_')[1:])
-        test.stub_out('nova.db.' + func_name, func)
-        test.stub_out('nova.db.api.' + func_name, func)
+    for module, func in funcs.items():
+        test.stub_out(module, func)
 
 
 fixed_ip_fields = {'id': 0,
@@ -339,6 +337,8 @@ def stub_out_db_network_api(test):
              fake_network_set_host,
              fake_network_update,
              fake_project_get_networks]
+    funcs = {'nova.db.%s' % fn.__name__.replace('fake_', ''): fn
+             for fn in funcs}
 
     stub_out(test, funcs)
 
@@ -430,13 +430,15 @@ def stub_out_db_instance_api(test, injected=True):
                        'address_v6': 'fe80::a00:3',
                        'network_id': 'fake_flat'}
 
-    def fake_flavor_get_all(context, inactive=0, filters=None):
+    def fake_flavor_get_all(*a, **k):
         return INSTANCE_TYPES.values()
 
-    def fake_flavor_get_by_name(context, name):
+    @classmethod
+    def fake_flavor_get_by_name(cls, context, name):
         return INSTANCE_TYPES[name]
 
-    def fake_flavor_get(context, id):
+    @classmethod
+    def fake_flavor_get(cls, context, id):
         for name, inst_type in six.iteritems(INSTANCE_TYPES):
             if str(inst_type['id']) == str(id):
                 return inst_type
@@ -445,8 +447,12 @@ def stub_out_db_instance_api(test, injected=True):
     def fake_fixed_ip_get_by_instance(context, instance_id):
         return [FakeModel(fixed_ip_fields)]
 
-    funcs = [fake_flavor_get_all,
-             fake_flavor_get_by_name,
-             fake_flavor_get,
-             fake_fixed_ip_get_by_instance]
+    funcs = {
+        'nova.objects.flavor._flavor_get_all_from_db': (
+            fake_flavor_get_all),
+        'nova.objects.Flavor._flavor_get_by_name_from_db': (
+            fake_flavor_get_by_name),
+        'nova.objects.Flavor._flavor_get_from_db': fake_flavor_get,
+        'nova.db.api.fixed_ip_get_by_instance': fake_fixed_ip_get_by_instance,
+    }
     stub_out(test, funcs)
