@@ -20,7 +20,6 @@ import collections
 import datetime
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 import six
@@ -28,6 +27,7 @@ import six
 import nova
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
@@ -41,9 +41,7 @@ from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova.tests import uuidsentinel as uuids
 
-CONF = cfg.CONF
-CONF.import_opt('scheduler_tracks_instance_changes',
-                'nova.scheduler.host_manager')
+CONF = nova.conf.CONF
 
 
 class FakeFilterClass1(filters.BaseHostFilter):

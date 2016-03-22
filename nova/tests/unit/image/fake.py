@@ -20,14 +20,13 @@ import copy
 import datetime
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import arch
+import nova.conf
 from nova import exception
 
-CONF = cfg.CONF
-CONF.import_opt('null_kernel', 'nova.compute.api')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID = '70a599e0-31e7-49b7-b260-868f441e862b'
 

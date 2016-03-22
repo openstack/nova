@@ -74,12 +74,6 @@ __imagebackend_opts = [
 CONF = nova.conf.CONF
 CONF.register_opts(__imagebackend_opts, 'libvirt')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
-CONF.import_opt('enabled', 'nova.compute.api',
-                group='ephemeral_storage_encryption')
-CONF.import_opt('cipher', 'nova.compute.api',
-                group='ephemeral_storage_encryption')
-CONF.import_opt('key_size', 'nova.compute.api',
-                group='ephemeral_storage_encryption')
 CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.net', group='libvirt')
 CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.net',
                 group='libvirt')
