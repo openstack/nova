@@ -22,6 +22,7 @@ from nova.tests import fixtures
 
 
 class ConnectionSwitchTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
     test_filename = 'foo.db'
 
     def setUp(self):

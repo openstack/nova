@@ -31,6 +31,8 @@ DISK_INVENTORY = dict(
 class ResourceProviderTestCase(test.NoDBTestCase):
     """Test resource-provider objects' lifecycles."""
 
+    USES_DB_SELF = True
+
     def setUp(self):
         super(ResourceProviderTestCase, self).setUp()
         self.useFixture(fixtures.Database())

@@ -22,6 +22,7 @@ import os
 import warnings
 
 import fixtures
+import mock
 from oslo_config import cfg
 from oslo_db.sqlalchemy import enginefacade
 from oslo_messaging import conffixture as messaging_conffixture
@@ -194,6 +195,22 @@ class Timeout(fixtures.Fixture):
         super(Timeout, self).setUp()
         if self.test_timeout > 0:
             self.useFixture(fixtures.Timeout(self.test_timeout, gentle=True))
+
+
+class DatabasePoisonFixture(fixtures.Fixture):
+    def setUp(self):
+        super(DatabasePoisonFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'oslo_db.sqlalchemy.enginefacade._TransactionFactory.'
+            '_create_session',
+            self._poison_configure))
+
+    def _poison_configure(self, *a, **k):
+        warnings.warn('This test uses methods that set internal oslo_db '
+                      'state, but it does not claim to use the database. '
+                      'This will conflict with the setup of tests that '
+                      'do use the database and cause failures later.')
+        return mock.MagicMock()
 
 
 class Database(fixtures.Fixture):

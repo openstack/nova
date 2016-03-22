@@ -24,6 +24,8 @@ from nova.tests.unit import fake_request_spec
 
 
 class BuildRequestTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(BuildRequestTestCase, self).setUp()
         # NOTE: This means that we're using a database for this test suite

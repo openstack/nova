@@ -34,6 +34,8 @@ def create_mapping(**kwargs):
 
 
 class InstanceMappingTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(InstanceMappingTestCase, self).setUp()
         self.useFixture(fixtures.Database(database='api'))

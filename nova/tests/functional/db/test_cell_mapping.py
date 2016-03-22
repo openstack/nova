@@ -20,6 +20,8 @@ from nova.tests import fixtures
 
 
 class CellMappingTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(CellMappingTestCase, self).setUp()
         self.useFixture(fixtures.Database(database='api'))

@@ -20,6 +20,8 @@ from nova.tests.unit import fake_request_spec
 
 
 class RequestSpecTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(RequestSpecTestCase, self).setUp()
         self.useFixture(fixtures.Database(database='api'))
