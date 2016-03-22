@@ -16,6 +16,8 @@ import mock
 from oslo_utils import timeutils
 
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova.objects import aggregate
 from nova.tests.unit import fake_notifier
@@ -36,16 +38,94 @@ fake_aggregate = {
     'metadetails': {'this': 'that'},
     }
 
+fake_api_aggregate = {
+    'created_at': NOW,
+    'updated_at': None,
+    'id': 123,
+    'uuid': uuidsentinel.fake_aggregate,
+    'name': 'fake-aggregate',
+    'hosts': ['foo', 'bar'],
+    'metadetails': {'this': 'that'},
+    }
+
 SUBS = {'metadata': 'metadetails'}
+
+fake_db_aggregate_values = {'name': 'fake_aggregate'}
+
+fake_db_aggregate_metadata = {'fake_key1': 'fake_value1',
+                              'fake_key2': 'fake_value2',
+                              'availability_zone': 'fake_avail_zone'}
+
+fake_db_aggregate_hosts = ['foo.openstack.org']
+
+
+@db_api.api_context_manager.writer
+def _create_aggregate(context, values=fake_db_aggregate_values,
+                               metadata=fake_db_aggregate_metadata):
+    aggregate = api_models.Aggregate()
+    aggregate.update(values)
+    aggregate.save(context.session)
+
+    for key, value in metadata.items():
+        aggregate_metadata = api_models.AggregateMetadata()
+        aggregate_metadata.update({'key': key,
+                                   'value': value,
+                                   'aggregate_id': aggregate['id']})
+        aggregate_metadata.save(context.session)
+
+    return aggregate
+
+
+@db_api.api_context_manager.writer
+def _create_aggregate_with_hosts(context, values=fake_db_aggregate_values,
+                                          metadata=fake_db_aggregate_metadata,
+                                          hosts=fake_db_aggregate_hosts):
+    aggregate = _create_aggregate(context, values, metadata)
+    for host in hosts:
+        host = api_models.AggregateHost()
+        host.update({'host': 'foo.openstack.org',
+                     'aggregate_id': aggregate.id})
+        host.save(context.session)
+
+    return aggregate
 
 
 class _TestAggregateObject(object):
-    def test_get_by_id(self):
-        self.mox.StubOutWithMock(db, 'aggregate_get')
-        db.aggregate_get(self.context, 123).AndReturn(fake_aggregate)
-        self.mox.ReplayAll()
+    def test_aggregate_get_from_db(self):
+        result = _create_aggregate_with_hosts(self.context)
+        expected = aggregate._aggregate_get_from_db(self.context, result['id'])
+        self.assertEqual(fake_db_aggregate_hosts, expected['hosts'])
+        self.assertEqual(fake_db_aggregate_metadata, expected['metadetails'])
+
+    def test_aggregate_get_from_db_raise_not_found(self):
+        aggregate_id = 5
+        self.assertRaises(exception.AggregateNotFound,
+                          aggregate._aggregate_get_from_db,
+                          self.context, aggregate_id)
+
+    @mock.patch('nova.objects.aggregate._aggregate_get_from_db')
+    @mock.patch('nova.db.aggregate_get')
+    def test_get_by_id_from_api(self, mock_get, mock_get_api):
+        mock_get_api.return_value = fake_api_aggregate
+
         agg = aggregate.Aggregate.get_by_id(self.context, 123)
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
+
+        mock_get_api.assert_called_once_with(self.context, 123)
+        mock_get.assert_not_called()
+
+    @mock.patch('nova.objects.aggregate._aggregate_get_from_db')
+    @mock.patch('nova.db.aggregate_get')
+    def test_get_by_id(self, mock_get, mock_get_api):
+        mock_get_api.side_effect = exception.AggregateNotFound(
+                aggregate_id=123)
+        mock_get.return_value = fake_aggregate
+
+        agg = aggregate.Aggregate.get_by_id(self.context, 123)
+        self.compare_obj(agg, fake_aggregate, subs=SUBS)
+
+        mock_get_api.assert_called_once_with(self.context, 123)
+        mock_get.assert_called_once_with(self.context, 123)
 
     @mock.patch('nova.objects.Aggregate.save')
     @mock.patch('nova.db.aggregate_get')

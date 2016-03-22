@@ -15,14 +15,35 @@
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 
+from sqlalchemy.orm import joinedload
+
 from nova.compute import utils as compute_utils
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
 LOG = logging.getLogger(__name__)
+
+DEPRECATED_FIELDS = ['deleted', 'deleted_at']
+
+
+@db_api.api_context_manager.reader
+def _aggregate_get_from_db(context, aggregate_id):
+    query = context.session.query(api_models.Aggregate).\
+            options(joinedload('_hosts')).\
+            options(joinedload('_metadata'))
+    query = query.filter(api_models.Aggregate.id == aggregate_id)
+
+    aggregate = query.first()
+
+    if not aggregate:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+
+    return aggregate
 
 
 @base.NovaObjectRegistry.register
@@ -49,6 +70,8 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                 db_key = 'metadetails'
             elif key == 'uuid':
                 continue
+            elif key in DEPRECATED_FIELDS and key not in db_aggregate:
+                continue
             else:
                 db_key = key
             setattr(aggregate, key, db_aggregate[db_key])
@@ -58,6 +81,12 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         # that all UUIDs in the database are not NULL.
         if db_aggregate.get('uuid'):
             aggregate.uuid = db_aggregate['uuid']
+
+        # NOTE: This can be removed when we remove compatibility with
+        # the old aggregate model.
+        if any(f not in db_aggregate for f in DEPRECATED_FIELDS):
+            aggregate.deleted_at = None
+            aggregate.deleted = False
 
         aggregate._context = context
         aggregate.obj_reset_changes()
@@ -82,7 +111,10 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_id(cls, context, aggregate_id):
-        db_aggregate = db.aggregate_get(context, aggregate_id)
+        try:
+            db_aggregate = _aggregate_get_from_db(context, aggregate_id)
+        except exception.AggregateNotFound:
+            db_aggregate = db.aggregate_get(context, aggregate_id)
         return cls._from_db_object(context, cls(), db_aggregate)
 
     @base.remotable
