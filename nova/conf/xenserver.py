@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
 from oslo_config import cfg
 
 xenserver_group = cfg.OptGroup('xenserver', title='Xenserver Options')
@@ -181,7 +183,21 @@ xenapi_agent_opts = [
                 """),
 ]
 
-ALL_XENSERVER_OPTS = xenapi_agent_opts
+
+xenapi_session_opts = [
+    cfg.IntOpt('login_timeout',
+               default=10,
+               help='Timeout in seconds for XenAPI login.'),
+    cfg.IntOpt('connection_concurrent',
+               default=5,
+               help='Maximum number of concurrent XenAPI connections. '
+                    'Used only if compute_driver=xenapi.XenAPIDriver'),
+]
+
+
+ALL_XENSERVER_OPTS = itertools.chain(
+                     xenapi_agent_opts,
+                     xenapi_session_opts)
 
 
 def register_opts(conf):
