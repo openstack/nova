@@ -66,12 +66,13 @@ def _create_aggregate(context, values=fake_db_aggregate_values,
     aggregate.update(values)
     aggregate.save(context.session)
 
-    for key, value in metadata.items():
-        aggregate_metadata = api_models.AggregateMetadata()
-        aggregate_metadata.update({'key': key,
-                                   'value': value,
-                                   'aggregate_id': aggregate['id']})
-        aggregate_metadata.save(context.session)
+    if metadata:
+        for key, value in metadata.items():
+            aggregate_metadata = api_models.AggregateMetadata()
+            aggregate_metadata.update({'key': key,
+                                       'value': value,
+                                       'aggregate_id': aggregate['id']})
+            aggregate_metadata.save(context.session)
 
     return aggregate
 
@@ -82,10 +83,10 @@ def _create_aggregate_with_hosts(context, values=fake_db_aggregate_values,
                                           hosts=fake_db_aggregate_hosts):
     aggregate = _create_aggregate(context, values, metadata)
     for host in hosts:
-        host = api_models.AggregateHost()
-        host.update({'host': 'foo.openstack.org',
-                     'aggregate_id': aggregate.id})
-        host.save(context.session)
+        host_model = api_models.AggregateHost()
+        host_model.update({'host': host,
+                           'aggregate_id': aggregate.id})
+        host_model.save(context.session)
 
     return aggregate
 
@@ -94,7 +95,7 @@ class _TestAggregateObject(object):
     def test_aggregate_get_from_db(self):
         result = _create_aggregate_with_hosts(self.context)
         expected = aggregate._aggregate_get_from_db(self.context, result['id'])
-        self.assertEqual(fake_db_aggregate_hosts, expected['hosts'])
+        self.assertEqual(fake_db_aggregate_hosts, expected.hosts)
         self.assertEqual(fake_db_aggregate_metadata, expected['metadetails'])
 
     def test_aggregate_get_from_db_raise_not_found(self):
@@ -102,6 +103,56 @@ class _TestAggregateObject(object):
         self.assertRaises(exception.AggregateNotFound,
                           aggregate._aggregate_get_from_db,
                           self.context, aggregate_id)
+
+    def test_aggregate_get_all_from_db(self):
+        for c in range(3):
+            _create_aggregate(self.context,
+                              values={'name': 'fake_aggregate_%d' % c})
+        results = aggregate._get_all_from_db(self.context)
+        self.assertEqual(len(results), 3)
+
+    def test_aggregate_get_by_host_from_db(self):
+        _create_aggregate_with_hosts(self.context,
+                                     values={'name': 'fake_aggregate_1'},
+                                     hosts=['host.1.openstack.org'])
+        _create_aggregate_with_hosts(self.context,
+                                     values={'name': 'fake_aggregate_2'},
+                                     hosts=['host.1.openstack.org'])
+        _create_aggregate(self.context,
+                          values={'name': 'no_host_aggregate'})
+        rh1 = aggregate._get_all_from_db(self.context)
+        rh2 = aggregate._get_by_host_from_db(self.context,
+                                             'host.1.openstack.org')
+        self.assertEqual(3, len(rh1))
+        self.assertEqual(2, len(rh2))
+
+    def test_aggregate_get_by_host_with_key_from_db(self):
+        ah1 = _create_aggregate_with_hosts(self.context,
+                                           values={'name': 'fake_aggregate_1'},
+                                           metadata={'goodkey': 'good'},
+                                           hosts=['host.1.openstack.org'])
+        _create_aggregate_with_hosts(self.context,
+                                     values={'name': 'fake_aggregate_2'},
+                                     hosts=['host.1.openstack.org'])
+        rh1 = aggregate._get_by_host_from_db(self.context,
+                                             'host.1.openstack.org',
+                                             key='goodkey')
+        self.assertEqual(1, len(rh1))
+        self.assertEqual(ah1['id'], rh1[0]['id'])
+
+    def test_aggregate_get_by_metadata_key_from_db(self):
+        _create_aggregate(self.context,
+                          values={'name': 'aggregate_1'},
+                          metadata={'goodkey': 'good'})
+        _create_aggregate(self.context,
+                          values={'name': 'aggregate_2'},
+                          metadata={'goodkey': 'bad'})
+        _create_aggregate(self.context,
+                          values={'name': 'aggregate_3'},
+                          metadata={'badkey': 'good'})
+        rl1 = aggregate._get_by_metadata_key_from_db(self.context,
+                                                     key='goodkey')
+        self.assertEqual(2, len(rl1))
 
     @mock.patch('nova.objects.aggregate._aggregate_get_from_db')
     @mock.patch('nova.db.aggregate_get')
@@ -247,29 +298,36 @@ class _TestAggregateObject(object):
         agg.metadata = {'availability_zone': 'foo'}
         self.assertEqual('foo', agg.availability_zone)
 
-    def test_get_all(self):
-        self.mox.StubOutWithMock(db, 'aggregate_get_all')
-        db.aggregate_get_all(self.context).AndReturn([fake_aggregate])
-        self.mox.ReplayAll()
+    @mock.patch('nova.objects.aggregate._get_all_from_db')
+    @mock.patch('nova.db.aggregate_get_all')
+    def test_get_all(self, mock_get_all, mock_api_get_all):
+        mock_get_all.return_value = [fake_aggregate]
+        mock_api_get_all.return_value = [fake_api_aggregate]
         aggs = aggregate.AggregateList.get_all(self.context)
-        self.assertEqual(1, len(aggs))
+        self.assertEqual(2, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
+        self.compare_obj(aggs[1], fake_api_aggregate, subs=SUBS)
 
-    def test_by_host(self):
-        self.mox.StubOutWithMock(db, 'aggregate_get_by_host')
-        db.aggregate_get_by_host(self.context, 'fake-host', key=None,
-                                 ).AndReturn([fake_aggregate])
-        self.mox.ReplayAll()
+    @mock.patch('nova.objects.aggregate._get_by_host_from_db')
+    @mock.patch('nova.db.aggregate_get_by_host')
+    def test_by_host(self, mock_get_by_host, mock_api_get_by_host):
+        mock_get_by_host.return_value = [fake_aggregate]
+        mock_api_get_by_host.return_value = [fake_api_aggregate]
         aggs = aggregate.AggregateList.get_by_host(self.context, 'fake-host')
-        self.assertEqual(1, len(aggs))
+        self.assertEqual(2, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
+        self.compare_obj(aggs[1], fake_api_aggregate, subs=SUBS)
 
+    @mock.patch('nova.objects.aggregate._get_by_metadata_key_from_db')
     @mock.patch('nova.db.aggregate_get_by_metadata_key')
-    def test_get_by_metadata_key(self, get_by_metadata_key):
-        get_by_metadata_key.return_value = [fake_aggregate]
+    def test_get_by_metadata_key(self,
+                                 mock_get_by_metadata_key,
+                                 mock_api_get_by_metadata_key):
+        mock_get_by_metadata_key.return_value = [fake_aggregate]
+        mock_api_get_by_metadata_key.return_value = [fake_api_aggregate]
         aggs = aggregate.AggregateList.get_by_metadata_key(
             self.context, 'this')
-        self.assertEqual(1, len(aggs))
+        self.assertEqual(2, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
     @mock.patch('nova.db.aggregate_get_by_metadata_key')

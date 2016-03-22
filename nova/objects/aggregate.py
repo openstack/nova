@@ -15,6 +15,7 @@
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 
+from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 
 from nova.compute import utils as compute_utils
@@ -212,6 +213,41 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         return self.metadata.get('availability_zone', None)
 
 
+@db_api.api_context_manager.reader
+def _get_all_from_db(context):
+    query = context.session.query(api_models.Aggregate).\
+            options(joinedload('_hosts')).\
+            options(joinedload('_metadata'))
+
+    return query.all()
+
+
+@db_api.api_context_manager.reader
+def _get_by_host_from_db(context, host, key=None):
+    query = context.session.query(api_models.Aggregate).\
+            options(joinedload('_hosts')).\
+            options(joinedload('_metadata'))
+    query = query.join('_hosts')
+    query = query.filter(api_models.AggregateHost.host == host)
+
+    if key:
+        query = query.join("_metadata").filter(
+            api_models.AggregateMetadata.key == key)
+
+    return query.all()
+
+
+@db_api.api_context_manager.reader
+def _get_by_metadata_key_from_db(context, key):
+    query = context.session.query(api_models.Aggregate)
+    query = query.join("_metadata")
+    query = query.filter(api_models.AggregateMetadata.key == key)
+    query = query.options(contains_eager("_metadata"))
+    query = query.options(joinedload("_hosts"))
+
+    return query.all()
+
+
 @base.NovaObjectRegistry.register
 class AggregateList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
@@ -223,6 +259,14 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Aggregate'),
         }
+
+    # NOTE(mdoff): Calls to this can be removed when we remove
+    # compatibility with the old aggregate model.
+    @staticmethod
+    def _fill_deprecated(db_aggregate):
+        db_aggregate['deleted_at'] = None
+        db_aggregate['deleted'] = False
+        return db_aggregate
 
     @classmethod
     def _filter_db_aggregates(cls, db_aggregates, hosts):
@@ -238,20 +282,28 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_all(cls, context):
+        api_db_aggregates = [cls._fill_deprecated(agg) for agg in
+                                _get_all_from_db(context)]
         db_aggregates = db.aggregate_get_all(context)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+                                  db_aggregates + api_db_aggregates)
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host, key=None):
+        api_db_aggregates = [cls._fill_deprecated(agg) for agg in
+                            _get_by_host_from_db(context, host, key=key)]
         db_aggregates = db.aggregate_get_by_host(context, host, key=key)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+                                  db_aggregates + api_db_aggregates)
 
     @base.remotable_classmethod
     def get_by_metadata_key(cls, context, key, hosts=None):
+        api_db_aggregates = [cls._fill_deprecated(agg) for agg in
+                            _get_by_metadata_key_from_db(context, key=key)]
         db_aggregates = db.aggregate_get_by_metadata_key(context, key=key)
+
+        all_aggregates = db_aggregates + api_db_aggregates
         if hosts is not None:
-            db_aggregates = cls._filter_db_aggregates(db_aggregates, hosts)
+            all_aggregates = cls._filter_db_aggregates(all_aggregates, hosts)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates)
+                                  all_aggregates)
