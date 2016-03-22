@@ -19,6 +19,7 @@ from six.moves import StringIO
 
 import cryptography
 import glanceclient.exc
+from glanceclient.v1 import images
 import mock
 from oslo_config import cfg
 from oslo_service import sslutils
@@ -241,145 +242,79 @@ class TestCreateGlanceClient(test.NoDBTestCase):
                                           **expected_params)
 
 
-class TestGlanceClientWrapper(test.NoDBTestCase):
+class TestGlanceClientWrapperRetries(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestGlanceClientWrapperRetries, self).setUp()
+        self.ctx = context.RequestContext('fake', 'fake')
+        api_servers = [
+            'host1:9292',
+            'https://host2:9293',
+            'http://host3:9294'
+        ]
+        self.flags(api_servers=api_servers, group='glance')
+
+    def assert_retry_attempted(self, sleep_mock, client, expected_url):
+        client.call(self.ctx, 1, 'get', 'meow')
+        sleep_mock.assert_called_once_with(1)
+        self.assertEqual(str(client.api_server), expected_url)
+
+    def assert_retry_not_attempted(self, sleep_mock, client):
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, self.ctx, 1, 'get', 'meow')
+        self.assertFalse(sleep_mock.called)
+
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_without_retries(self, create_client_mock,
                                            sleep_mock):
-        client_mock = mock.MagicMock()
-        images_mock = mock.MagicMock()
-        images_mock.get.side_effect = glanceclient.exc.ServiceUnavailable
-        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
-        create_client_mock.return_value = client_mock
+        side_effect = glanceclient.exc.ServiceUnavailable
+        self._mock_client_images_response(create_client_mock, side_effect)
         self.flags(num_retries=0, group='glance')
-
-        ctx = context.RequestContext('fake', 'fake')
-        host = 'host4'
-        port = 9295
-        endpoint = 'http://%s:%s' % (host, port)
-        client = glance.GlanceClientWrapper(context=ctx, endpoint=endpoint)
-        create_client_mock.assert_called_once_with(ctx, mock.ANY, 1)
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctx, 1, 'get', 'meow')
-        self.assertFalse(sleep_mock.called)
+        client = self._get_static_client(create_client_mock)
+        self.assert_retry_not_attempted(sleep_mock, client)
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_with_retries_negative(self, create_client_mock,
                                                  sleep_mock, mock_log):
-        client_mock = mock.Mock(spec=glanceclient.Client)
-        images_mock = mock.Mock()
-        images_mock.get.side_effect = glanceclient.exc.ServiceUnavailable
-        client_mock.images = images_mock
-        create_client_mock.return_value = client_mock
+        side_effect = glanceclient.exc.ServiceUnavailable
+        self._mock_client_images_response(create_client_mock, side_effect)
         self.flags(num_retries=-1, group='glance')
+        client = self._get_static_client(create_client_mock)
+        self.assert_retry_not_attempted(sleep_mock, client)
 
-        ctx = context.RequestContext('fake', 'fake')
-        host = 'host4'
-        port = 9295
-        endpoint = 'http://%s:%s' % (host, port)
-
-        client = glance.GlanceClientWrapper(context=ctx, endpoint=endpoint)
-
-        create_client_mock.assert_called_once_with(ctx, mock.ANY, 1)
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctx, 1, 'get', 'meow')
         self.assertTrue(mock_log.warning.called)
         msg = mock_log.warning.call_args_list[0]
         self.assertIn('Treating negative config value', msg[0][0])
-        self.assertFalse(sleep_mock.called)
 
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_with_retries(self, create_client_mock,
                                         sleep_mock):
-        self.flags(num_retries=1, group='glance')
-        client_mock = mock.MagicMock()
-        images_mock = mock.MagicMock()
-        images_mock.get.side_effect = [
+        side_effect = [
             glanceclient.exc.ServiceUnavailable,
             None
         ]
-        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
-        create_client_mock.return_value = client_mock
-
-        ctx = context.RequestContext('fake', 'fake')
-        host = 'host4'
-        port = 9295
-        endpoint = 'http://%s:%s' % (host, port)
-
-        client = glance.GlanceClientWrapper(context=ctx, endpoint=endpoint)
-        client.call(ctx, 1, 'get', 'meow')
-        sleep_mock.assert_called_once_with(1)
-
-    @mock.patch('random.shuffle')
-    @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
-    def test_default_client_without_retries(self, create_client_mock,
-                                            sleep_mock, shuffle_mock):
-        api_servers = [
-            'host1:9292',
-            'https://host2:9293',
-            'http://host3:9294'
-        ]
-        client_mock = mock.MagicMock()
-        images_mock = mock.MagicMock()
-        images_mock.get.side_effect = glanceclient.exc.ServiceUnavailable
-        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
-        create_client_mock.return_value = client_mock
-
-        shuffle_mock.return_value = api_servers
-        self.flags(num_retries=0, group='glance')
-        self.flags(api_servers=api_servers, group='glance')
-
-        # Here we are testing the behaviour that calling client.call() twice
-        # when there are no retries will cycle through the api_servers and not
-        # sleep (which would be an indication of a retry)
-        ctx = context.RequestContext('fake', 'fake')
-
-        client = glance.GlanceClientWrapper()
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctx, 1, 'get', 'meow')
-        self.assertEqual(str(client.api_server), "http://host1:9292")
-        self.assertFalse(sleep_mock.called)
-
-        self.assertRaises(exception.GlanceConnectionFailed,
-                client.call, ctx, 1, 'get', 'meow')
-        self.assertEqual(str(client.api_server), "https://host2:9293")
-        self.assertFalse(sleep_mock.called)
+        self._mock_client_images_response(create_client_mock, side_effect)
+        self.flags(num_retries=1, group='glance')
+        client = self._get_static_client(create_client_mock)
+        self.assert_retry_attempted(sleep_mock, client, 'http://host4:9295')
 
     @mock.patch('random.shuffle')
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_default_client_with_retries(self, create_client_mock,
                                          sleep_mock, shuffle_mock):
-        api_servers = [
-            'host1:9292',
-            'https://host2:9293',
-            'http://host3:9294'
-        ]
-        client_mock = mock.MagicMock()
-        images_mock = mock.MagicMock()
-        images_mock.get.side_effect = [
+        side_effect = [
             glanceclient.exc.ServiceUnavailable,
             None
         ]
-        type(client_mock).images = mock.PropertyMock(return_value=images_mock)
-        create_client_mock.return_value = client_mock
-
+        self._mock_client_images_response(create_client_mock, side_effect)
         self.flags(num_retries=1, group='glance')
-        self.flags(api_servers=api_servers, group='glance')
-
-        ctx = context.RequestContext('fake', 'fake')
-
-        # And here we're testing that if num_retries is not 0, then we attempt
-        # to retry the same connection action against the next client.
-
         client = glance.GlanceClientWrapper()
-        client.call(ctx, 1, 'get', 'meow')
-        self.assertEqual(str(client.api_server), "https://host2:9293")
-        sleep_mock.assert_called_once_with(1)
+        self.assert_retry_attempted(sleep_mock, client, 'https://host2:9293')
 
     @mock.patch('random.shuffle')
     @mock.patch('time.sleep')
@@ -388,31 +323,57 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
                                          sleep_mock, shuffle_mock):
         def some_generator(exception):
             if exception:
-                raise glanceclient.exc.CommunicationError('Boom!')
+                raise glanceclient.exc.ServiceUnavailable('Boom!')
             yield 'something'
 
-        api_servers = [
-            'https://host2:9292',
-            'https://host2:9293',
-            'http://host3:9294'
-        ]
-        client_mock = mock.MagicMock()
-        images_mock = mock.MagicMock()
-        images_mock.list.side_effect = [
+        side_effect = [
             some_generator(exception=True),
             some_generator(exception=False),
         ]
+        self._mock_client_images_response(create_client_mock, side_effect)
+        self.flags(num_retries=1, group='glance')
+        client = glance.GlanceClientWrapper()
+        self.assert_retry_attempted(sleep_mock, client, 'https://host2:9293')
+
+    @mock.patch('random.shuffle')
+    @mock.patch('time.sleep')
+    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
+    def test_default_client_without_retries(self, create_client_mock,
+                                            sleep_mock, shuffle_mock):
+        side_effect = glanceclient.exc.ServiceUnavailable
+        self._mock_client_images_response(create_client_mock, side_effect)
+        self.flags(num_retries=0, group='glance')
+        client = glance.GlanceClientWrapper()
+
+        # Here we are testing the behaviour that calling client.call() twice
+        # when there are no retries will cycle through the api_servers and not
+        # sleep (which would be an indication of a retry)
+
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, self.ctx, 1, 'get', 'meow')
+        self.assertEqual(str(client.api_server), 'http://host1:9292')
+        self.assertFalse(sleep_mock.called)
+
+        self.assertRaises(exception.GlanceConnectionFailed,
+                client.call, self.ctx, 1, 'get', 'meow')
+        self.assertEqual(str(client.api_server), 'https://host2:9293')
+        self.assertFalse(sleep_mock.called)
+
+    def _get_static_client(self, create_client_mock):
+        url = 'http://host4:9295'
+        client = glance.GlanceClientWrapper(context=self.ctx, endpoint=url)
+        create_client_mock.assert_called_once_with(self.ctx, mock.ANY, 1)
+        return client
+
+    def _mock_client_images_response(self, create_client_mock, side_effect):
+        client_mock = mock.MagicMock(spec=glanceclient.Client)
+        images_mock = mock.MagicMock(spec=images.ImageManager)
+        images_mock.get.side_effect = side_effect
         type(client_mock).images = mock.PropertyMock(return_value=images_mock)
         create_client_mock.return_value = client_mock
 
-        self.flags(num_retries=1, group='glance')
-        self.flags(api_servers=api_servers, group='glance')
 
-        ctx = context.RequestContext('fake', 'fake')
-        client = glance.GlanceClientWrapper()
-        client.call(ctx, 1, 'list', 'meow')
-        sleep_mock.assert_called_once_with(1)
-        self.assertEqual(str(client.api_server), 'https://host2:9293')
+class TestGlanceClientWrapper(test.NoDBTestCase):
 
     @mock.patch('oslo_service.sslutils.is_enabled')
     @mock.patch('glanceclient.Client')
