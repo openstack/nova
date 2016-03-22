@@ -11,6 +11,7 @@
 #    under the License.
 
 from oslo_versionedobjects import base as ovo
+from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
@@ -78,15 +79,11 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
     @db_api.api_context_manager.reader
     def _get_by_host_from_db(context, host):
         db_mapping = (context.session.query(api_models.HostMapping)
-                      .join(api_models.CellMapping)
-                      .with_entities(api_models.HostMapping,
-                                     api_models.CellMapping)
+                      .options(joinedload('cell_mapping'))
                       .filter(api_models.HostMapping.host == host)).first()
         if not db_mapping:
             raise exception.HostMappingNotFound(name=host)
-        host_mapping = db_mapping[0]
-        host_mapping["cell_mapping"] = db_mapping[1]
-        return host_mapping
+        return db_mapping
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host):
@@ -99,6 +96,11 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         db_mapping = api_models.HostMapping()
         db_mapping.update(updates)
         db_mapping.save(context.session)
+        # NOTE: This is done because a later access will trigger a lazy load
+        # outside of the db session so it will fail. We don't lazy load
+        # cell_mapping on the object later because we never need a HostMapping
+        # without the CellMapping.
+        db_mapping.cell_mapping
         return db_mapping
 
     @base.remotable

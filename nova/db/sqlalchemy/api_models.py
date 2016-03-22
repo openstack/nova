@@ -21,6 +21,7 @@ from sqlalchemy import ForeignKey
 from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import orm
+from sqlalchemy.orm import backref
 from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
@@ -47,6 +48,11 @@ class CellMapping(API_BASE):
     name = Column(String(255))
     transport_url = Column(Text())
     database_connection = Column(Text())
+    host_mapping = orm.relationship('HostMapping',
+                            backref=backref('cell_mapping', uselist=False),
+                            foreign_keys=id,
+                            primaryjoin=(
+                                  'CellMapping.id == HostMapping.cell_id'))
 
 
 class InstanceMapping(API_BASE):
@@ -90,6 +96,11 @@ class RequestSpec(API_BASE):
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36), nullable=False)
     spec = Column(Text, nullable=False)
+    build_request = orm.relationship('BuildRequest',
+                    back_populates='request_spec',
+                    uselist=False,
+                    primaryjoin=(
+                        'RequestSpec.id == BuildRequest.request_spec_id'))
 
 
 class Flavors(API_BASE):
@@ -163,6 +174,7 @@ class BuildRequest(API_BASE):
             nullable=False)
     request_spec = orm.relationship(RequestSpec,
             foreign_keys=request_spec_id,
+            back_populates='build_request',
             primaryjoin=request_spec_id == RequestSpec.id)
     project_id = Column(String(255), nullable=False)
     user_id = Column(String(255), nullable=False)

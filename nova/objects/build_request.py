@@ -14,6 +14,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
+from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -95,18 +96,13 @@ class BuildRequest(base.NovaObject):
     @db.api_context_manager.reader
     def _get_by_instance_uuid_from_db(context, instance_uuid):
         db_req = (context.session.query(api_models.BuildRequest)
-                .join(api_models.RequestSpec)
-                .with_entities(api_models.BuildRequest,
-                               api_models.RequestSpec)
+                .options(joinedload('request_spec'))
                 .filter(
                     api_models.RequestSpec.instance_uuid == instance_uuid)
                 ).first()
         if not db_req:
             raise exception.BuildRequestNotFound(uuid=instance_uuid)
-        # db_req is a tuple (api_models.BuildRequest, api_models.RequestSpect)
-        build_req = db_req[0]
-        build_req['request_spec'] = db_req[1]
-        return build_req
+        return db_req
 
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
