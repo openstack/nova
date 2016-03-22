@@ -572,7 +572,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self.job_tracker = instancejobtracker.InstanceJobTracker()
         self._remotefs = remotefs.RemoteFilesystem()
 
-        self._live_migration_flags = self._block_migration_flags = None
+        self._live_migration_flags = self._block_migration_flags = 0
 
     def _get_volume_drivers(self):
         return libvirt_volume_drivers
