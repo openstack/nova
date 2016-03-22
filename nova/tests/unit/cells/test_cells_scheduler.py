@@ -353,20 +353,11 @@ class CellsSchedulerTestCase(test.TestCase):
 
     def test_filter_schedule_skipping(self):
         # if a filter handles scheduling, short circuit
-
-        def _grab(filter_properties):
-            return None
-
-        self.stubs.Set(self.scheduler, '_grab_target_cells', _grab)
-
-        def _test(self, *args):
-            raise test.TestingException("shouldn't be called")
-
-        try:
-            self.scheduler._schedule_build_to_cells(None, None, None, _test,
-                                                    None)
-        except test.TestingException:
-            self.fail("Scheduling did not properly short circuit")
+        mock_func = mock.Mock()
+        self.scheduler._grab_target_cells = mock.Mock(return_value=None)
+        self.scheduler._schedule_build_to_cells(None, None, None,
+                                                mock_func, None)
+        mock_func.assert_not_called()
 
     def test_cells_filter_args_correct(self):
         # Re-init our fakes with some filters.
