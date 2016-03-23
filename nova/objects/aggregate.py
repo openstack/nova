@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import uuidutils
 from sqlalchemy.orm import contains_eager
@@ -61,6 +62,37 @@ def _aggregate_get_from_db_by_uuid(context, aggregate_uuid):
     return aggregate
 
 
+def _host_add_to_db(context, aggregate_id, host):
+    try:
+        with db_api.api_context_manager.writer.using(context):
+            # Check to see if the aggregate exists
+            _aggregate_get_from_db(context, aggregate_id)
+
+            host_ref = api_models.AggregateHost()
+            host_ref.update({"host": host, "aggregate_id": aggregate_id})
+            host_ref.save(context.session)
+            return host_ref
+    except db_exc.DBDuplicateEntry:
+        raise exception.AggregateHostExists(host=host,
+                                            aggregate_id=aggregate_id)
+
+
+def _host_delete_from_db(context, aggregate_id, host):
+    count = 0
+    with db_api.api_context_manager.writer.using(context):
+        # Check to see if the aggregate exists
+        _aggregate_get_from_db(context, aggregate_id)
+
+        query = context.session.query(api_models.AggregateHost)
+        query = query.filter(api_models.AggregateHost.aggregate_id ==
+                                aggregate_id)
+        count = query.filter_by(host=host).delete()
+
+    if count == 0:
+        raise exception.AggregateHostNotFound(aggregate_id=aggregate_id,
+                                              host=host)
+
+
 @base.NovaObjectRegistry.register
 class Aggregate(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
@@ -78,6 +110,10 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         }
 
     obj_extra_fields = ['availability_zone']
+
+    def __init__(self, *args, **kwargs):
+        super(Aggregate, self).__init__(*args, **kwargs)
+        self._in_api = False
 
     @staticmethod
     def _from_db_object(context, aggregate, db_aggregate):
@@ -124,6 +160,18 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(
                 action=action,
                 reason='hosts updated inline')
+
+    @property
+    def in_api(self):
+        if self._in_api:
+            return True
+        else:
+            try:
+                _aggregate_get_from_db(self._context, self.id)
+                self._in_api = True
+            except exception.AggregateNotFound:
+                pass
+            return self._in_api
 
     @base.remotable_classmethod
     def get_by_id(cls, context, aggregate_id):
@@ -220,7 +268,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def add_host(self, host):
-        db.aggregate_host_add(self._context, self.id, host)
+        if self.in_api:
+            _host_add_to_db(self._context, self.id, host)
+        else:
+            db.aggregate_host_add(self._context, self.id, host)
+
         if self.hosts is None:
             self.hosts = []
         self.hosts.append(host)
@@ -228,7 +280,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def delete_host(self, host):
-        db.aggregate_host_delete(self._context, self.id, host)
+        if self.in_api:
+            _host_delete_from_db(self._context, self.id, host)
+        else:
+            db.aggregate_host_delete(self._context, self.id, host)
+
         self.hosts.remove(host)
         self.obj_reset_changes(fields=['hosts'])
 
