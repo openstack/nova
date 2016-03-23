@@ -23,7 +23,7 @@ Request
   - server_id: server_id
   - evacuate: evacuate
   - host: host
-  - adminPass: adminPass
+  - adminPass: adminPass_evacuate_rebuild
 
 **Example Evacuate Server (Evacuate Action): JSON request**
 

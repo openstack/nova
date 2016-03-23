@@ -345,7 +345,7 @@ Request
   - rebuild: rebuild
   - imageRef: imageRef
   - name: name
-  - adminPass: adminPass
+  - adminPass: adminPass_evacuate_rebuild
   - metadata: metadata
   - personality: personality
   - preserve_ephemeral: preserve_ephemeral
@@ -460,7 +460,7 @@ Request
   - tenant_id: tenant_id
   - server_id: server_id
   - rescue: rescue
-  - adminPass: adminPass
+  - adminPass: adminPass_rescue
   - rescue_image_ref: rescue_image_ref
 
 **Example Rescue server: JSON request**
