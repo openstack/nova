@@ -2339,7 +2339,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         quiesced = [False, False]
 
-        # Check that the mappgins from the image properties are not included
+        # Check that the mappings from the image properties are not included
         self.compute_api.snapshot_volume_backed(
             self.context, instance, 'test-snapshot')
 
