@@ -135,7 +135,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         """Returns a dict describing specific flavor_id."""
         result = Flavor._flavor_get_query_from_db(context).\
                         filter_by(flavorid=flavor_id).\
-                        order_by(asc("id")).\
+                        order_by(asc(api_models.Flavors.id)).\
                         first()
         if not result:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
