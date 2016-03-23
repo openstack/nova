@@ -52,6 +52,12 @@ attachment_id:
   in: path
   required: true
   type: string
+binary:
+  description: |
+    The binary name of the service.
+  in: path
+  required: true
+  type: string
 cell_id:
   description: |
     The UUID of the cell.
@@ -75,6 +81,12 @@ console_id:
     The UUID of the console.
   in: path
   required: true
+  type: string
+disabled_reason:
+  description: |
+    The reason for disable a service.
+  in: path
+  required: false
   type: string
 domain:
   description: |
