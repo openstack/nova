@@ -40,7 +40,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server_groups: server_groups
-  - id: id
+  - id: server_group_id
   - name: name
   - policies: policies
   - members: members
@@ -76,7 +76,7 @@ Request
 
 **Example Create Server Group: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-group-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-post-req.json
    :language: javascript
 
 Response
@@ -85,7 +85,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server_groups: server_groups
-  - id: id
+  - id: server_group_id
   - name: name
   - policies: policies
   - members: members
@@ -95,7 +95,7 @@ Response
 
 **Example Create Server Group: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-group-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-post-resp.json
    :language: javascript
 
 Show Server Group Details
@@ -124,7 +124,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server_groups: server_groups
-  - id: id
+  - id: server_group_id
   - name: name
   - policies: policies
   - members: members
@@ -134,7 +134,7 @@ Response
 
 **Example Show Server Group Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-server-groups/server-group-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-get-resp.json
    :language: javascript
 
 Delete Server Group

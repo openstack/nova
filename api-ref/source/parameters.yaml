@@ -1083,12 +1083,6 @@ id_6:
   in: body
   required: true
   type: string
-id_7:
-  description: |
-    The UUID of the server group.
-  in: body
-  required: true
-  type: string
 virtual_interface_id:
   description: |
     The UUID of the virtual interface.
