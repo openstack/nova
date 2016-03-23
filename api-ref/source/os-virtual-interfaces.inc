@@ -19,8 +19,6 @@ The API v2 returns the network ID in the ``OS-EXT-VIF-NET:net_id`` response attr
 
 The API v2.1 base version does not return the network ID.
 
-The API v2.12 microversion returns the network ID in the ``net_id`` response attribute.
-
 Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
@@ -40,7 +38,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - virtual_interfaces: virtual_interfaces
-  - id: id
+  - id: virtual_interface_id
   - mac_address: mac_address
 
 **Example List Virtual Interfaces: JSON request**
