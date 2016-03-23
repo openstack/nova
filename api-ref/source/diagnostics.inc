@@ -33,6 +33,6 @@ Response
 
 **Example Server diagnostics: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/diagnostics/server-diagnostics-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-server-diagnostics/server-diagnostics-get-resp.json
    :language: javascript
 
