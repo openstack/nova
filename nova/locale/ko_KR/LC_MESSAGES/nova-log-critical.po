@@ -1,0 +1,19 @@
+# SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
+msgid ""
+msgstr ""
+"Project-Id-Version: nova 13.0.0.0rc2.dev10\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2016-03-22 12:07+0000\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-03-22 06:41+0000\n"
+"Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
+"Language-Team: Korean (South Korea)\n"
+"Language: ko-KR\n"
+"X-Generator: Zanata 3.7.3\n"
+"Plural-Forms: nplurals=1; plural=0\n"
+
+#, python-format
+msgid "Missing core API extensions: %s"
+msgstr "누락된 코어 API 확장기능: %s"

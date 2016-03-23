@@ -36,13 +36,13 @@
 # OpenStack Infra <zanata@openstack.org>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev10\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-17 05:38+0000\n"
+"POT-Creation-Date: 2016-03-22 12:07+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-16 12:54+0000\n"
+"PO-Revision-Date: 2016-03-22 10:23+0000\n"
 "Last-Translator: Linda <duleish@cn.ibm.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
@@ -3063,6 +3063,10 @@ msgid ""
 "Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
 "valid."
 msgstr "“%(property)s”中指定的串口数“%(num_ports)s”无效。"
+
+#, python-format
+msgid "OVS configuration failed with: %(inner_exception)s."
+msgstr "OVS 配置失败，产生以下异常：%(inner_exception)s。"
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"

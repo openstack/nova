@@ -15,13 +15,13 @@
 # SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev6\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev10\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-21 18:28+0000\n"
+"POT-Creation-Date: 2016-03-22 12:07+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-22 06:26+0000\n"
+"PO-Revision-Date: 2016-03-22 06:36+0000\n"
 "Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -646,6 +646,15 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "복수 인스턴스에 하나 이상의 볼륨을 첨부할 수 없음"
 
 #, python-format
+msgid ""
+"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
+"device migration feature requires libvirt version %(libvirt_ver)s"
+msgstr ""
+"맵핑된 볼륨으로 마이그레이션 인스턴스 %(uuid)s을(를) 차단할 수 없습니다. 선택"
+"적 차단 디바이스 마이그레이션 기능에는 libvirt 버전 %(libvirt_ver)s이(가) 필"
+"요합니다."
+
+#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "고아 %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
 
@@ -655,6 +664,14 @@ msgid ""
 msgstr ""
 "xenserver.torrent_base_url 구성 옵션 설정 없이 기본 bittorrent URL을 작성할 "
 "수 없습니다. "
+
+#, python-format
+msgid ""
+"Cannot determine the parent storage pool for %s; cannot determine where to "
+"store images"
+msgstr ""
+"%s;의 상위 스토리지 풀을 판별할 수 없습니다. 이미지 저장 위치를 판별할 수 없"
+"습니다."
 
 msgid "Cannot disassociate auto assigned floating IP"
 msgstr "자동 할당된 Floating IP의 연관을 해제할 수 없음"
@@ -1313,6 +1330,10 @@ msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "네트워크 어댑터 디바이스를 %(instance_uuid)s에 접속하는 데 실패함"
 
 #, python-format
+msgid "Failed to create vif %s"
+msgstr "vif %s을(를) 생성하는 데 실패"
+
+#, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
 msgstr "%(image_file)s 이미지 파일을 복호화하지 못했음: %(err)s"
 
@@ -1428,6 +1449,10 @@ msgstr "인스턴스 일시중단 실패: %(reason)s"
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "인스턴스 종료 실패: %(reason)s"
+
+#, python-format
+msgid "Failed to unplug vif %s"
+msgstr "vif %s의 플러그를 해제하는 데 실패"
 
 msgid "Failure prepping block device."
 msgstr "블록 디바이스 준비 실패"
@@ -2054,6 +2079,14 @@ msgid "Instance snapshots are not permitted at this time."
 msgstr "인스턴스 스냅샷은 지금 허용되지 않습니다. "
 
 #, python-format
+msgid ""
+"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
+"but %(size)d bytes required by volume %(lv)s."
+msgstr ""
+"%(vg)s 볼륨 그룹의 공간이 충분하지 않습니다. %(free_space)db만 사용할 수 있지"
+"만, %(lv)s 볼륨에 %(size)d바이트가 필요합니다."
+
+#, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Compute 리소스가 충분하지 않습니다: %(reason)s."
 
@@ -2501,6 +2534,9 @@ msgstr "볼륨 스냅샷을 온라인으로 삭제하려면 Libvirt '%s' 이상�
 
 msgid "Limit"
 msgstr "제한"
+
+msgid "Limits only supported from vCenter 6.0 and above"
+msgstr "vCenter 6.0 이상에서만 지원되는 한계"
 
 #, python-format
 msgid "Line %(linenum)d : %(line)s"
@@ -4329,6 +4365,9 @@ msgstr "VBD %s을(를) 영구 삭제할 수 없음"
 msgid "Unable to destroy VDI %s"
 msgstr "VDI %s을(를) 영구 삭제할 수 없음"
 
+msgid "Unable to detach from guest transient domain."
+msgstr "게스트 임시 도메인에서 연결을 해제할 수 없습니다."
+
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "'%s'의 디스크 버스를 판별할 수 없음"
@@ -5007,6 +5046,9 @@ msgstr "createImage 엔티티는 이름 속성이 필요함"
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
 msgstr "대상은 %(target_cell)s이지만 라우팅 경로는 %(routing_path)s임"
 
+msgid "direct_snapshot() is not implemented"
+msgstr "direct_snapshot()이 구현되지 않음"
+
 msgid "disk"
 msgstr "디스크"
 
@@ -5193,6 +5235,14 @@ msgstr "제거할 호스트가 없음"
 msgid "no match found for %s"
 msgstr "%s에 대한 일치 항목을 찾을 수 없음"
 
+#, python-format
+msgid "no usable parent snapshot for volume %s"
+msgstr "%s 볼륨에 사용 가능한 상위 스냅샷이 없음"
+
+#, python-format
+msgid "no write permission on storage pool %s"
+msgstr "스토리지 풀 %s에 쓰기 권한이 없음"
+
 msgid "node"
 msgstr "노드"
 
@@ -5366,6 +5416,10 @@ msgstr "vg %s은(는) LVM 볼륨 그룹이어야 함"
 #, python-format
 msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
 msgstr "vif %(vif_id)s의 vif_details에 vhostuser_sock_path가 표시되지 않음"
+
+#, python-format
+msgid "vif type %s not supported"
+msgstr "vif 유형 %s이(가) 지원되지 않음"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr "이 vif_driver 구현을 위해 vif_type 매개변수가 존재해야 함"
