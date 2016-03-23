@@ -17,7 +17,7 @@ image size in the ``OS-EXT-IMG-SIZE:size`` extended attribute.
 List Images
 ===========
 
-.. rest_method:: GET //v2.1/{tenant_id}/images
+.. rest_method:: GET /v2.1/{tenant_id}/images
 
 list images.
 
@@ -44,7 +44,7 @@ Response
 Show Image Details
 ==================
 
-.. rest_method:: GET //v2.1/{tenant_id}/images/{image_id}
+.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}
 
 Shows details for an image.
 
@@ -72,7 +72,7 @@ Response
 List Images With Details
 ==================
 
-.. rest_method:: GET //v2.1/{tenant_id}/images/detail
+.. rest_method:: GET /v2.1/{tenant_id}/images/detail
 
 List images with details.
 
@@ -100,7 +100,7 @@ Response
 Delete Image
 ============
 
-.. rest_method:: DELETE //v2.1/{tenant_id}/images/{image_id}
+.. rest_method:: DELETE /v2.1/{tenant_id}/images/{image_id}
 
 Deletes an image.
 
@@ -123,7 +123,7 @@ Response
 Create Image Metadata
 =====================
 
-.. rest_method:: POST //v2.1/{tenant_id}/images/{image_id}/metadata
+.. rest_method:: POST /v2.1/{tenant_id}/images/{image_id}/metadata
 
 Create an image metadata.
 
@@ -156,7 +156,7 @@ Response
 Update Image Metadata
 =====================
 
-.. rest_method:: PUT //v2.1/{tenant_id}/images/{image_id}/metadata
+.. rest_method:: PUT /v2.1/{tenant_id}/images/{image_id}/metadata
 
 Update an image metadata
 
@@ -189,7 +189,7 @@ Response
 Show Image Metadata Details
 ===========================
 
-.. rest_method:: GET //v2.1/{tenant_id}/images/{image_id}/metadata
+.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata
 
 Shows details for an image metadata.
 
@@ -217,7 +217,7 @@ Response
 Show Image Metadata Item Details
 ================================
 
-.. rest_method:: GET //v2.1/{tenant_id}/images/{image_id}/metadata/{key}
+.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
 
 Shows details for a metadata item, by key, for an image.
 
@@ -246,7 +246,7 @@ Response
 Create Or Update Image Metadata Item
 ====================================
 
-.. rest_method:: PUT //v2.1/{tenant_id}/images/{image_id}/metadata/{key}
+.. rest_method:: PUT /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
 
 Creates or updates a metadata item, by key, for an image.
 
@@ -280,7 +280,7 @@ Response
 Delete Image Metadata Item
 ==========================
 
-.. rest_method:: DELETE //v2.1/{tenant_id}/images/{image_id}/metadata/{key}
+.. rest_method:: DELETE /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
 
 Deletes a metadata item, by key, for an image.
 
