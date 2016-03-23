@@ -3413,16 +3413,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.PciDeviceDetachFailed(reason=reason,
                                                       dev=network_info)
 
-            image_meta = objects.ImageMeta.from_instance(instance)
+            # In case of SR-IOV vif types we create pci request per SR-IOV port
+            # Therefore we can trust that pci_slot value in the vif is correct.
             sriov_pci_addresses = [
-                self.vif_driver.get_config(instance,
-                                           vif,
-                                           image_meta,
-                                           instance.flavor,
-                                           CONF.libvirt.virt_type,
-                                           self._host).source_dev
+                vif['profile']['pci_slot']
                 for vif in network_info
-                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV
+                if vif['vnic_type'] in network_model.VNIC_TYPES_SRIOV and
+                   vif['profile'].get('pci_slot') is not None
             ]
 
             # use detach_pci_devices to avoid failure in case of
