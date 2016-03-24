@@ -678,13 +678,16 @@ class _BaseTaskTestCase(object):
         @mock.patch.object(objects.RequestSpec, 'to_legacy_request_spec_dict')
         @mock.patch.object(objects.RequestSpec,
                            'to_legacy_filter_properties_dict')
-        def do_test(to_filtprops, to_reqspec, sched_instances,
+        @mock.patch.object(objects.RequestSpec, 'reset_forced_destinations')
+        def do_test(reset_forced_destinations,
+                    to_filtprops, to_reqspec, sched_instances,
                     populate_retry, populate_filter_properties,
                     unshelve_instance):
             to_filtprops.return_value = filter_properties
             to_reqspec.return_value = request_spec
             sched_instances.return_value = [host]
             self.conductor.unshelve_instance(self.context, instance, fake_spec)
+            reset_forced_destinations.assert_called_once_with()
             sched_instances.assert_called_once_with(self.context, request_spec,
                                                     filter_properties)
             # NOTE(sbauza): Since the instance is dehydrated when passing thru
@@ -1038,15 +1041,17 @@ class _BaseTaskTestCase(object):
                               return_value=[{'host': expected_host,
                                              'nodename': expected_node,
                                              'limits': expected_limits}]),
+            mock.patch.object(fake_spec, 'reset_forced_destinations'),
             mock.patch.object(fake_spec, 'to_legacy_request_spec_dict',
                        return_value=request_spec),
             mock.patch.object(fake_spec, 'to_legacy_filter_properties_dict',
                        return_value=filter_properties),
-        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, to_reqspec,
-              to_filtprops):
+        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, reset_fd,
+              to_reqspec, to_filtprops):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
+            reset_fd.assert_called_once_with()
             to_reqspec.assert_called_once_with()
             to_filtprops.assert_called_once_with()
             fp_mock.assert_called_once_with(self.context, request_spec,

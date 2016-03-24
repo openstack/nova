@@ -254,6 +254,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_find_destination_works(self):
         self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
+        self.mox.StubOutWithMock(objects.RequestSpec,
+                                 'reset_forced_destinations')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
@@ -265,6 +267,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         fake_props = {'instance_properties': {'uuid': self.instance_uuid}}
         scheduler_utils.setup_instance_group(
             self.context, fake_props, {'ignore_hosts': [self.instance_host]})
+        self.fake_spec.reset_forced_destinations()
         self.task.scheduler_client.select_destinations(
             self.context, self.fake_spec).AndReturn(
                         [{'host': 'host1'}])

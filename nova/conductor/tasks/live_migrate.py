@@ -184,6 +184,10 @@ class LiveMigrationTask(base.TaskBase):
             )
         else:
             request_spec = self.request_spec
+            # NOTE(sbauza): Force_hosts/nodes needs to be reset
+            # if we want to make sure that the next destination
+            # is not forced to be the original host
+            request_spec.reset_forced_destinations()
 
         host = None
         while host is None:
