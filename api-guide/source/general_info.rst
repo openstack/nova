@@ -133,7 +133,7 @@ on compute hosts rather than servers.
 
    Services are provided by Nova components. Normally, the Nova component runs
    as a process on the controller/compute node to provide the service. These
-   services may be end-user facing, such as the the OpenStack Compute REST API
+   services may be end-user facing, such as the OpenStack Compute REST API
    service, but most just work with other Nova services. The status of each
    service is monitored by Nova, and if it is not responding normally, Nova
    will update its status so that requests are not sent to that service

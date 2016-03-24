@@ -86,7 +86,7 @@ class InstanceUsageAuditLogController(object):
         task_logs = self.host_api.task_log_get_all(context,
                                                    "instance_usage_audit",
                                                    begin, end)
-        # We do this this way to include disabled compute services,
+        # We do this in this way to include disabled compute services,
         # which can have instances on them. (mdragon)
         filters = {'topic': CONF.compute_topic}
         services = self.host_api.service_get_all(context, filters=filters)
