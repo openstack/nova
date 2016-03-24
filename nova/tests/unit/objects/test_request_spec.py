@@ -531,6 +531,18 @@ class _TestRequestSpecObject(object):
                 _test_save_args):
             req_obj.save()
 
+    def test_reset_forced_destinations(self):
+        req_obj = fake_request_spec.fake_spec_obj()
+        # Making sure the fake object has forced hosts and nodes
+        self.assertIsNotNone(req_obj.force_hosts)
+        self.assertIsNotNone(req_obj.force_nodes)
+
+        with mock.patch.object(req_obj, 'obj_reset_changes') as mock_reset:
+            req_obj.reset_forced_destinations()
+        self.assertIsNone(req_obj.force_hosts)
+        self.assertIsNone(req_obj.force_nodes)
+        mock_reset.assert_called_once_with(['force_hosts', 'force_nodes'])
+
 
 class TestRequestSpecObject(test_objects._LocalTest,
                             _TestRequestSpecObject):

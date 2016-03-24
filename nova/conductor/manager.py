@@ -482,6 +482,10 @@ class ComputeTaskManager(base.Base):
                         request_spec = scheduler_utils.build_request_spec(
                             context, image, [instance])
                     else:
+                        # NOTE(sbauza): Force_hosts/nodes needs to be reset
+                        # if we want to make sure that the next destination
+                        # is not forced to be the original host
+                        request_spec.reset_forced_destinations()
                         # TODO(sbauza): Provide directly the RequestSpec object
                         # when _schedule_instances(),
                         # populate_filter_properties and populate_retry()
@@ -543,6 +547,10 @@ class ComputeTaskManager(base.Base):
                     # the source host for avoiding the scheduler to pick it
                     request_spec.ignore_hosts = request_spec.ignore_hosts or []
                     request_spec.ignore_hosts.append(instance.host)
+                    # NOTE(sbauza): Force_hosts/nodes needs to be reset
+                    # if we want to make sure that the next destination
+                    # is not forced to be the original host
+                    request_spec.reset_forced_destinations()
                     # TODO(sbauza): Provide directly the RequestSpec object
                     # when _schedule_instances() and _set_vm_state_and_notify()
                     # accept it
