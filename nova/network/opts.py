@@ -32,8 +32,4 @@ def list_opts():
              nova.network.security_group.openstack_driver.security_group_opts,
          )),
         ('neutron', nova.network.neutronv2.api.neutron_opts),
-        ('upgrade_levels',
-         itertools.chain(
-             [nova.network.rpcapi.rpcapi_cap_opt],
-         )),
     ]

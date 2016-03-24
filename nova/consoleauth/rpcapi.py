@@ -16,16 +16,12 @@
 Client side of the consoleauth RPC API.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 
+import nova.conf
 from nova import rpc
 
-CONF = cfg.CONF
-
-rpcapi_cap_opt = cfg.StrOpt('consoleauth',
-        help='Set a version cap for messages sent to consoleauth services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 
 class ConsoleAuthAPI(object):

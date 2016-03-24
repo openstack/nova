@@ -19,6 +19,7 @@ Client side of the console RPC API.
 from oslo_config import cfg
 import oslo_messaging as messaging
 
+import nova.conf
 from nova import rpc
 
 rpcapi_opts = [
@@ -27,12 +28,8 @@ rpcapi_opts = [
                help='The topic console proxy nodes listen on'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(rpcapi_opts)
-
-rpcapi_cap_opt = cfg.StrOpt('console',
-        help='Set a version cap for messages sent to console services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
 class ConsoleAPI(object):

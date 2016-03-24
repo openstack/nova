@@ -35,32 +35,10 @@ Any string.
     None
 """)
 
-rpcapi_cap_opt = cfg.StrOpt("cert",
-        help="""
-Specifies the maximum version for messages sent from cert services. This should
-be the minimum value that is supported by all of the deployed cert services.
-
-Possible values:
-
-Any valid OpenStack release name, in lower case, such as 'mitaka' or 'liberty'.
-Alternatively, it can be any string representing a version number in the format
-'N.N'; for example, possible values might be '1.12' or '2.0'.
-
-* Services which consume this:
-
-    ``nova-cert``
-
-* Related options:
-
-    None
-""")
-
 
 def register_opts(conf):
     conf.register_opts([cert_topic_opt])
-    conf.register_opt(rpcapi_cap_opt, "upgrade_levels")
 
 
 def list_opts():
-    return {"DEFAULT": [cert_topic_opt],
-            "upgrade_levels": [rpcapi_cap_opt]}
+    return {"DEFAULT": [cert_topic_opt]}

@@ -78,12 +78,5 @@ def list_opts():
          itertools.chain(
              nova.cmd.spicehtml5proxy.opts,
              nova.spice.spice_opts,
-         )),
-        ('upgrade_levels',
-         itertools.chain(
-             [nova.baserpc.rpcapi_cap_opt],
-             [nova.conductor.rpcapi.rpcapi_cap_opt],
-             [nova.console.rpcapi.rpcapi_cap_opt],
-             [nova.consoleauth.rpcapi.rpcapi_cap_opt],
-         )),
+         ))
     ]

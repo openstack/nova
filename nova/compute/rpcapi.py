@@ -20,6 +20,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.i18n import _, _LI, _LE
@@ -35,23 +36,8 @@ rpcapi_opts = [
                help='The topic compute nodes listen on'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(rpcapi_opts)
-
-rpcapi_cap_opt = cfg.StrOpt('compute',
-        help='Set a version cap for messages sent to compute services. '
-             'Set this option to "auto" if you want to let the compute RPC '
-             'module automatically determine what version to use based on '
-             'the service versions in the deployment. '
-             'Otherwise, you can set this to a specific version to pin this '
-             'service to messages at a particular level. '
-             'All services of a single type (i.e. compute) should be '
-             'configured to use the same version, and it should be set '
-             'to the minimum commonly-supported version of all those '
-             'services in the deployment.')
-
-
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 LOG = logging.getLogger(__name__)
 LAST_VERSION = None

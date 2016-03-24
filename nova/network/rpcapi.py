@@ -20,6 +20,7 @@ from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova.objects import base as objects_base
 from nova import rpc
 
@@ -33,12 +34,8 @@ rpcapi_opts = [
                      'some rpc network calls will be sent directly to host.'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(rpcapi_opts)
-
-rpcapi_cap_opt = cfg.StrOpt('network',
-        help='Set a version cap for messages sent to network services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
 class NetworkAPI(object):
