@@ -62,6 +62,7 @@ class BarbicanKeyManager(key_mgr.KeyManager):
 
     def __init__(self):
         self._barbican_client = None
+        self._current_context = None
         self._base_url = None
 
     def _get_barbican_client(self, ctxt):
@@ -72,47 +73,56 @@ class BarbicanKeyManager(key_mgr.KeyManager):
         :raises Forbidden: if the ctxt is None
         """
 
-        if not self._barbican_client:
-            # Confirm context is provided, if not raise forbidden
-            if not ctxt:
-                msg = _("User is not authorized to use key manager.")
-                LOG.error(msg)
-                raise exception.Forbidden(msg)
+        # Confirm context is provided, if not raise forbidden
+        if not ctxt:
+            msg = _("User is not authorized to use key manager.")
+            LOG.error(msg)
+            raise exception.Forbidden(msg)
 
-            try:
-                _SESSION = session.Session.load_from_conf_options(
-                    CONF,
-                    BARBICAN_OPT_GROUP)
+        if not hasattr(ctxt, 'project_id') or ctxt.project_id is None:
+            msg = _("Unable to create Barbican Client without project_id.")
+            LOG.error(msg)
+            raise exception.KeyManagerError(msg)
 
-                auth = ctxt.get_auth_plugin()
-                service_type, service_name, interface = (CONF.
-                                                         barbican.
-                                                         catalog_info.
-                                                         split(':'))
-                region_name = CONF.barbican.os_region_name
-                service_parameters = {'service_type': service_type,
-                                      'service_name': service_name,
-                                      'interface': interface,
-                                      'region_name': region_name}
+        # If same context, return cached barbican client
+        if self._barbican_client and self._current_context == ctxt:
+            return self._barbican_client
 
-                if CONF.barbican.endpoint_template:
-                    self._base_url = (CONF.barbican.endpoint_template %
-                                      ctxt.to_dict())
-                else:
-                    self._base_url = _SESSION.get_endpoint(
-                        auth, **service_parameters)
+        try:
+            _SESSION = session.Session.load_from_conf_options(
+                CONF,
+                BARBICAN_OPT_GROUP)
 
-                # the barbican endpoint can't have the '/v1' on the end
-                self._barbican_endpoint = self._base_url.rpartition('/')[0]
+            auth = ctxt.get_auth_plugin()
+            service_type, service_name, interface = (CONF.
+                                                     barbican.
+                                                     catalog_info.
+                                                     split(':'))
+            region_name = CONF.barbican.os_region_name
+            service_parameters = {'service_type': service_type,
+                                  'service_name': service_name,
+                                  'interface': interface,
+                                  'region_name': region_name}
 
-                sess = session.Session(auth=auth)
-                self._barbican_client = barbican_client.Client(
-                    session=sess,
-                    endpoint=self._barbican_endpoint)
+            if CONF.barbican.endpoint_template:
+                self._base_url = (CONF.barbican.endpoint_template %
+                                  ctxt.to_dict())
+            else:
+                self._base_url = _SESSION.get_endpoint(
+                    auth, **service_parameters)
 
-            except Exception as e:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("Error creating Barbican client: %s"), e)
+            # the barbican endpoint can't have the '/v1' on the end
+            self._barbican_endpoint = self._base_url.rpartition('/')[0]
+
+            sess = session.Session(auth=auth)
+            self._barbican_client = barbican_client.Client(
+                session=sess,
+                endpoint=self._barbican_endpoint)
+            self._current_context = ctxt
+
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_LE("Error creating Barbican client: %s"), e)
 
         return self._barbican_client
 
