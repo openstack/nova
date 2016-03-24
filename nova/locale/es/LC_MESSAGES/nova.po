@@ -19,13 +19,13 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev10\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev13\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-22 12:07+0000\n"
+"POT-Creation-Date: 2016-03-23 23:07+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-22 04:56+0000\n"
+"PO-Revision-Date: 2016-03-23 08:57+0000\n"
 "Last-Translator: Eugènia Torrella <tester03@es.ibm.com>\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
@@ -690,6 +690,15 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "No se pueden conectar uno o más volúmenes a varias instancias"
 
 #, python-format
+msgid ""
+"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
+"device migration feature requires libvirt version %(libvirt_ver)s"
+msgstr ""
+"No se puede bloquear la instancia de  migración %(uuid)s con volúmenes "
+"correlacionados. La característica de migración de dispositivos de bloqueo "
+"selectivo requiere la versión libvirt %(libvirt_ver)s"
+
+#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "No se puede ejecutar %(method)s en un objecto huérfano %(objtype)s"
 
@@ -699,6 +708,14 @@ msgid ""
 msgstr ""
 "No se puede crear URL bittorrent por defecto sin la opcion xenserver."
 "torrent_base_url configurada. "
+
+#, python-format
+msgid ""
+"Cannot determine the parent storage pool for %s; cannot determine where to "
+"store images"
+msgstr ""
+"No se puede determinar la agrupación de almacenamiento padre para %s; no se "
+"puede determinar dónde se deben almacenar las imágenes"
 
 msgid "Cannot disassociate auto assigned floating IP"
 msgstr "No se puede desasociar la IP flotante asignada automáticamente"
@@ -1396,6 +1413,10 @@ msgid "Failed to attach network adapter device to %(instance_uuid)s"
 msgstr "Error al conectar el dispositivo adaptador de red a %(instance_uuid)s"
 
 #, python-format
+msgid "Failed to create vif %s"
+msgstr "Error al crear la VIF %s"
+
+#, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
 msgstr ""
 "No se ha podido descifrar el archivo de imagen %(image_file)s: %(err)s "
@@ -1517,6 +1538,10 @@ msgstr "Fallo al suspender instancia: %(reason)s"
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "Fallo al terminar la instancia: %(reason)s"
+
+#, python-format
+msgid "Failed to unplug vif %s"
+msgstr "No se ha podido desconectar la VIF  %s"
 
 msgid "Failure prepping block device."
 msgstr "Fallo al preparar el dispositivo de bloque."
@@ -2165,6 +2190,14 @@ msgid "Instance snapshots are not permitted at this time."
 msgstr "Las instantáneas de instancia no están permitidas en este momento."
 
 #, python-format
+msgid ""
+"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
+"but %(size)d bytes required by volume %(lv)s."
+msgstr ""
+"Espacio insuficiente en grupo de volumen %(vg)s. Sólo hay %(free_space)db "
+"disponibles, pero se necesitan %(size)d bytes para el volumen %(lv)s."
+
+#, python-format
 msgid "Insufficient compute resources: %(reason)s."
 msgstr "Recursos de cómputo insuficientes: %(reason)s."
 
@@ -2626,6 +2659,9 @@ msgstr ""
 
 msgid "Limit"
 msgstr "Límite"
+
+msgid "Limits only supported from vCenter 6.0 and above"
+msgstr "Sólo se admiten límites a partir de vCenter 6.0 "
 
 #, python-format
 msgid "Line %(linenum)d : %(line)s"
@@ -3800,6 +3836,10 @@ msgstr ""
 "libvirt %(libvirt_ver)s y la versión qemu %(qemu_ver)s o superiores"
 
 #, python-format
+msgid "Running batches of %i until complete"
+msgstr "Ejecutando lotes de %i hasta finalizar"
+
+#, python-format
 msgid "Running cmd (subprocess): %s"
 msgstr "Ejecutando cmd (subproceso): %s"
 
@@ -4007,6 +4047,15 @@ msgstr "Algunos campos no son válidos."
 
 msgid "Some required fields are missing"
 msgstr "Algunos campos obligatorios no están rellenos."
+
+#, python-format
+msgid ""
+"Something went wrong when deleting a volume snapshot: rebasing a "
+"%(protocol)s network disk using qemu-img has not been fully tested"
+msgstr ""
+"Ha habido algún problema al suprimir una instantánea de volumen: no se ha "
+"probado completamente el proceso de reorganizar un disco de red de "
+"%(protocol)s utilizando qemu-img"
 
 msgid "Sort direction size exceeds sort key size"
 msgstr ""
@@ -4521,6 +4570,9 @@ msgstr "Imposible destruir VBD %s"
 #, python-format
 msgid "Unable to destroy VDI %s"
 msgstr "No se puede destruir VDI %s"
+
+msgid "Unable to detach from guest transient domain."
+msgstr "No ha sido posible desconectar del dominio temporal invitado."
 
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
@@ -5231,6 +5283,9 @@ msgstr ""
 "el destino es %(target_cell)s pero la vía de acceso de direccionamiento es "
 "%(routing_path)s"
 
+msgid "direct_snapshot() is not implemented"
+msgstr "direct_snapshot() no está implementado"
+
 msgid "disk"
 msgstr "Disco"
 
@@ -5418,6 +5473,15 @@ msgstr "no hay hosts que eliminar"
 msgid "no match found for %s"
 msgstr "No se ha encontrado coincidencia para %s"
 
+#, python-format
+msgid "no usable parent snapshot for volume %s"
+msgstr "no hay ninguna instantánea padre para el volumen %s"
+
+#, python-format
+msgid "no write permission on storage pool %s"
+msgstr ""
+"no dispone de permiso de escritura en la agrupación de almacenamiento%s."
+
 msgid "node"
 msgstr "nodo"
 
@@ -5603,6 +5667,10 @@ msgstr "El grupo de volúmenes %s debe ser el grupo de volúmenes LVM"
 msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
 msgstr ""
 "vhostuser_sock_path no está presente en vif_details para vif %(vif_id)s"
+
+#, python-format
+msgid "vif type %s not supported"
+msgstr "El tipo VIF %s no está soportado"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr ""
