@@ -10,6 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from copy import deepcopy
+import mock
+from oslo_db import exception as db_exc
 from oslo_utils import timeutils
 
 from nova import context
@@ -19,6 +22,7 @@ from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import test
 from nova.tests import fixtures
+from nova.tests.unit import matchers
 from nova.tests import uuidsentinel
 
 import nova.objects.aggregate as aggregate_obj
@@ -93,6 +97,16 @@ def _create_aggregate_with_hosts(context,
 def _aggregate_host_get_all(context, aggregate_id):
     return context.session.query(api_models.AggregateHost).\
                        filter_by(aggregate_id=aggregate_id).all()
+
+
+@db_api.api_context_manager.reader
+def _aggregate_metadata_get_all(context, aggregate_id):
+    results = context.session.query(api_models.AggregateMetadata).\
+                                filter_by(aggregate_id=aggregate_id).all()
+    metadata = {}
+    for r in results:
+        metadata[r['key']] = r['value']
+    return metadata
 
 
 class AggregateObjectDbTestCase(test.NoDBTestCase):
@@ -251,3 +265,78 @@ class AggregateObjectDbTestCase(test.NoDBTestCase):
                           aggregate_obj._host_delete_from_db,
                           self.context, result['id'],
                           _get_fake_hosts(1)[0])
+
+    def test_aggregate_metadata_add(self):
+        result = _create_aggregate(self.context, metadata=None)
+        metadata = deepcopy(_get_fake_metadata(1))
+        aggregate_obj._metadata_add_to_db(self.context, result['id'], metadata)
+        expected = _aggregate_metadata_get_all(self.context, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
+    def test_aggregate_metadata_add_empty_metadata(self):
+        result = _create_aggregate(self.context, metadata=None)
+        metadata = {}
+        aggregate_obj._metadata_add_to_db(self.context, result['id'], metadata)
+        expected = _aggregate_metadata_get_all(self.context, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
+    def test_aggregate_metadata_add_and_update(self):
+        result = _create_aggregate(self.context)
+        metadata = deepcopy(_get_fake_metadata(1))
+        key = list(metadata.keys())[0]
+        new_metadata = {key: 'foo',
+                        'fake_new_key': 'fake_new_value'}
+        metadata.update(new_metadata)
+        aggregate_obj._metadata_add_to_db(self.context,
+                                          result['id'], new_metadata)
+        expected = _aggregate_metadata_get_all(self.context, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
+    def test_aggregate_metadata_add_retry(self):
+        result = _create_aggregate(self.context, metadata=None)
+        with mock.patch('nova.db.sqlalchemy.api_models.'
+                        'AggregateMetadata.__table__.insert') as insert_mock:
+            insert_mock.side_effect = db_exc.DBDuplicateEntry
+            self.assertRaises(db_exc.DBDuplicateEntry,
+                              aggregate_obj._metadata_add_to_db,
+                              self.context,
+                              result['id'],
+                              {'fake_key2': 'fake_value2'},
+                              max_retries=5)
+
+    def test_aggregate_metadata_update(self):
+        result = _create_aggregate(self.context)
+        metadata = deepcopy(_get_fake_metadata(1))
+        key = list(metadata.keys())[0]
+        aggregate_obj._metadata_delete_from_db(self.context, result['id'], key)
+        new_metadata = {key: 'foo'}
+        aggregate_obj._metadata_add_to_db(self.context,
+                                          result['id'], new_metadata)
+        expected = _aggregate_metadata_get_all(self.context, result['id'])
+        metadata[key] = 'foo'
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
+    def test_aggregate_metadata_delete(self):
+        result = _create_aggregate(self.context, metadata=None)
+        metadata = deepcopy(_get_fake_metadata(1))
+        aggregate_obj._metadata_add_to_db(self.context, result['id'], metadata)
+        aggregate_obj._metadata_delete_from_db(self.context, result['id'],
+                                           list(metadata.keys())[0])
+        expected = _aggregate_metadata_get_all(self.context, result['id'])
+        del metadata[list(metadata.keys())[0]]
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
+    def test_aggregate_remove_availability_zone(self):
+        result = _create_aggregate(self.context, metadata={'availability_zone':
+            'fake_avail_zone'})
+        aggregate_obj._metadata_delete_from_db(self.context,
+                                           result['id'],
+                                           'availability_zone')
+        aggr = aggregate_obj._aggregate_get_from_db(self.context, result['id'])
+        self.assertIsNone(aggr['availability_zone'])
+
+    def test_aggregate_metadata_delete_raise_not_found(self):
+        result = _create_aggregate(self.context)
+        self.assertRaises(exception.AggregateMetadataNotFound,
+                          aggregate_obj._metadata_delete_from_db,
+                          self.context, result['id'], 'foo_key')

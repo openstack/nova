@@ -162,9 +162,15 @@ class _TestAggregateObject(object):
         self.assertRaises(exception.ObjectActionError,
                           agg.save)
 
-    @mock.patch.object(db, 'aggregate_metadata_delete')
-    @mock.patch.object(db, 'aggregate_metadata_add')
-    def test_update_metadata(self, mock_add, mock_delete):
+    @mock.patch('nova.objects.aggregate._metadata_delete_from_db')
+    @mock.patch('nova.objects.aggregate._metadata_add_to_db')
+    @mock.patch('nova.db.aggregate_metadata_delete')
+    @mock.patch('nova.db.aggregate_metadata_add')
+    def test_update_metadata(self,
+                             mock_metadata_add,
+                             mock_metadata_delete,
+                             mock_api_metadata_add,
+                             mock_api_metadata_delete):
         fake_notifier.NOTIFICATIONS = []
         agg = aggregate.Aggregate()
         agg._context = self.context
@@ -182,10 +188,55 @@ class _TestAggregateObject(object):
         self.assertEqual({'todelete': None, 'toadd': 'myval'},
                          msg.payload['meta_data'])
         self.assertEqual({'foo': 'bar', 'toadd': 'myval'}, agg.metadata)
+        mock_metadata_add.assert_called_once_with(self.context, 123,
+                                                  {'toadd': 'myval'})
+        mock_metadata_delete.assert_called_once_with(self.context, 123,
+                                                     'todelete')
+        self.assertFalse(mock_api_metadata_add.called)
+        self.assertFalse(mock_api_metadata_delete.called)
 
-        mock_delete.assert_called_once_with(self.context, 123, 'todelete')
-        mock_add.assert_called_once_with(self.context, 123,
-                                         {'toadd': 'myval'})
+    @mock.patch('nova.objects.Aggregate.in_api')
+    @mock.patch('nova.objects.aggregate._metadata_delete_from_db')
+    @mock.patch('nova.objects.aggregate._metadata_add_to_db')
+    @mock.patch('nova.db.aggregate_metadata_delete')
+    @mock.patch('nova.db.aggregate_metadata_add')
+    def test_update_metadata_api(self,
+                                 mock_metadata_add,
+                                 mock_metadata_delete,
+                                 mock_api_metadata_add,
+                                 mock_api_metadata_delete,
+                                 mock_in_api):
+        mock_in_api.return_value = True
+        fake_notifier.NOTIFICATIONS = []
+        agg = aggregate.Aggregate()
+        agg._context = self.context
+        agg.id = 123
+        agg.metadata = {'foo': 'bar'}
+        agg.obj_reset_changes()
+        agg.update_metadata({'todelete': None, 'toadd': 'myval'})
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('aggregate.updatemetadata.start', msg.event_type)
+        self.assertEqual({'todelete': None, 'toadd': 'myval'},
+                         msg.payload['meta_data'])
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual('aggregate.updatemetadata.end', msg.event_type)
+        self.assertEqual({'todelete': None, 'toadd': 'myval'},
+                         msg.payload['meta_data'])
+        self.assertEqual({'foo': 'bar', 'toadd': 'myval'}, agg.metadata)
+        mock_api_metadata_delete.assert_called_once_with(self.context, 123,
+                                                         'todelete')
+        mock_api_metadata_add.assert_called_once_with(self.context, 123,
+                                                      {'toadd': 'myval'})
+        self.assertFalse(mock_metadata_add.called)
+        self.assertFalse(mock_metadata_delete.called)
+
+        mock_api_metadata_delete.assert_called_once_with(self.context,
+                                                         123,
+                                                         'todelete')
+        mock_api_metadata_add.assert_called_once_with(self.context,
+                                                      123,
+                                                      {'toadd': 'myval'})
 
     @mock.patch.object(db, 'aggregate_delete')
     def test_destroy(self, mock_aggregate_delete):

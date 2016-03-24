@@ -14,6 +14,7 @@
 
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
+from oslo_utils import excutils
 from oslo_utils import uuidutils
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
@@ -23,6 +24,7 @@ from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -91,6 +93,70 @@ def _host_delete_from_db(context, aggregate_id, host):
     if count == 0:
         raise exception.AggregateHostNotFound(aggregate_id=aggregate_id,
                                               host=host)
+
+
+def _metadata_add_to_db(context, aggregate_id, metadata, max_retries=10,
+                        set_delete=False):
+    all_keys = metadata.keys()
+    for attempt in range(max_retries):
+        try:
+            with db_api.api_context_manager.writer.using(context):
+                query = context.session.query(api_models.AggregateMetadata).\
+                            filter_by(aggregate_id=aggregate_id)
+
+                if set_delete:
+                    query.filter(~api_models.AggregateMetadata.key.
+                                 in_(all_keys)).\
+                                 delete(synchronize_session=False)
+
+                already_existing_keys = set()
+                if all_keys:
+                    query = query.filter(
+                        api_models.AggregateMetadata.key.in_(all_keys))
+                    for meta_ref in query.all():
+                        key = meta_ref.key
+                        meta_ref.update({"value": metadata[key]})
+                        already_existing_keys.add(key)
+
+                new_entries = []
+                for key, value in metadata.items():
+                    if key in already_existing_keys:
+                        continue
+                    new_entries.append({"key": key,
+                                        "value": value,
+                                        "aggregate_id": aggregate_id})
+                if new_entries:
+                    context.session.execute(
+                        api_models.AggregateMetadata.__table__.insert(),
+                        new_entries)
+
+                return metadata
+        except db_exc.DBDuplicateEntry:
+            # a concurrent transaction has been committed,
+            # try again unless this was the last attempt
+            with excutils.save_and_reraise_exception() as ctxt:
+                if attempt < max_retries - 1:
+                    ctxt.reraise = False
+                else:
+                    msg = _("Add metadata failed for aggregate %(id)s "
+                            "after %(retries)s retries") % \
+                              {"id": aggregate_id, "retries": max_retries}
+                    LOG.warning(msg)
+
+
+@db_api.api_context_manager.writer
+def _metadata_delete_from_db(context, aggregate_id, key):
+    # Check to see if the aggregate exists
+    _aggregate_get_from_db(context, aggregate_id)
+
+    query = context.session.query(api_models.AggregateMetadata)
+    query = query.filter(api_models.AggregateMetadata.aggregate_id ==
+                            aggregate_id)
+    count = query.filter_by(key=key).delete()
+
+    if count == 0:
+        raise exception.AggregateMetadataNotFound(
+                            aggregate_id=aggregate_id, metadata_key=key)
 
 
 @base.NovaObjectRegistry.register
@@ -237,6 +303,13 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def update_metadata(self, updates):
+        if self.in_api:
+            metadata_delete = _metadata_delete_from_db
+            metadata_add = _metadata_add_to_db
+        else:
+            metadata_delete = db.aggregate_metadata_delete
+            metadata_add = db.aggregate_metadata_add
+
         payload = {'aggregate_id': self.id,
                    'meta_data': updates}
         compute_utils.notify_about_aggregate_update(self._context,
@@ -246,7 +319,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         for key, value in updates.items():
             if value is None:
                 try:
-                    db.aggregate_metadata_delete(self._context, self.id, key)
+                    metadata_delete(self._context, self.id, key)
                 except exception.AggregateMetadataNotFound:
                     pass
                 try:
@@ -256,7 +329,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
             else:
                 to_add[key] = value
                 self.metadata[key] = value
-        db.aggregate_metadata_add(self._context, self.id, to_add)
+        metadata_add(self._context, self.id, to_add)
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updatemetadata.end",
                                                     payload)
