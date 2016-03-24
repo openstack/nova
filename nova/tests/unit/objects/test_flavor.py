@@ -157,10 +157,20 @@ class _TestFlavor(object):
 
     def test_add_access(self):
         elevated = self.context.elevated()
-        flavor = flavor_obj.Flavor(context=elevated, flavorid='123')
+        flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
         with mock.patch.object(db, 'flavor_access_add') as add:
             flavor.add_access('456')
             add.assert_called_once_with(elevated, '123', '456')
+
+    @mock.patch('nova.db.flavor_access_add')
+    @mock.patch('nova.objects.Flavor._flavor_add_project')
+    @mock.patch('nova.objects.Flavor.in_api', new=True)
+    def test_add_access_api(self, mock_api_add, mock_main_add):
+        elevated = self.context.elevated()
+        flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
+        flavor.add_access('456')
+        mock_api_add.assert_called_once_with(elevated, 12345, '456')
+        self.assertFalse(mock_main_add.called)
 
     def test_add_access_with_dirty_projects(self):
         flavor = flavor_obj.Flavor(context=self.context, projects=['1'])
@@ -169,10 +179,20 @@ class _TestFlavor(object):
 
     def test_remove_access(self):
         elevated = self.context.elevated()
-        flavor = flavor_obj.Flavor(context=elevated, flavorid='123')
+        flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
         with mock.patch.object(db, 'flavor_access_remove') as remove:
             flavor.remove_access('456')
             remove.assert_called_once_with(elevated, '123', '456')
+
+    @mock.patch('nova.db.flavor_access_add')
+    @mock.patch('nova.objects.Flavor._flavor_del_project')
+    @mock.patch('nova.objects.Flavor.in_api', new=True)
+    def test_remove_access_api(self, mock_api_del, mock_main_del):
+        elevated = self.context.elevated()
+        flavor = flavor_obj.Flavor(context=elevated, id=12345, flavorid='123')
+        flavor.remove_access('456')
+        mock_api_del.assert_called_once_with(elevated, 12345, '456')
+        self.assertFalse(mock_main_del.called)
 
     def test_create(self):
         flavor = flavor_obj.Flavor(context=self.context)
@@ -229,7 +249,7 @@ class _TestFlavor(object):
         ctxt = self.context.elevated()
         extra_specs = {'key1': 'value1', 'key2': 'value2'}
         projects = ['project-1', 'project-2']
-        flavor = flavor_obj.Flavor(context=ctxt, flavorid='foo',
+        flavor = flavor_obj.Flavor(context=ctxt, flavorid='foo', id=123,
                                    extra_specs=extra_specs, projects=projects)
         flavor.obj_reset_changes()
 
@@ -301,14 +321,73 @@ class _TestFlavor(object):
         self.assertEqual(['project-1'], projects)
         self.assertNotIn('projects', flavor.obj_what_changed())
 
+    @mock.patch('nova.objects.Flavor._get_projects_from_db')
+    def test_load_projects_from_api(self, mock_get_projects):
+        mock_get_projects.return_value = ['a', 'b']
+        flavor = objects.Flavor(context=self.context, flavorid='m1.foo')
+        self.assertEqual(['a', 'b'], flavor.projects)
+        mock_get_projects.assert_called_once_with(self.context, 'm1.foo')
+
     def test_load_anything_else(self):
         flavor = flavor_obj.Flavor()
         self.assertRaises(exception.ObjectActionError,
                           getattr, flavor, 'name')
 
+    def test_in_api(self):
+        flavor = objects.Flavor(context=self.context, id=123)
+        self.assertFalse(flavor._in_api)
+
+        # First call, flavor not found, should be false
+        with mock.patch.object(flavor, '_flavor_get_from_db') as mock_g:
+            mock_g.side_effect = exception.FlavorNotFound(flavor_id='123')
+            self.assertFalse(flavor.in_api)
+            mock_g.assert_called_once_with(self.context, 123)
+
+        # Second call, still not found, make sure we checked again
+        with mock.patch.object(flavor, '_flavor_get_from_db') as mock_g:
+            mock_g.side_effect = exception.FlavorNotFound(flavor_id='123')
+            self.assertFalse(flavor.in_api)
+            mock_g.assert_called_once_with(self.context, 123)
+
+        # Third, flavor found, should be true
+        with mock.patch.object(flavor, '_flavor_get_from_db') as mock_g:
+            self.assertTrue(flavor.in_api)
+            mock_g.assert_called_once_with(self.context, 123)
+
+        # Fourth, flavor was already found, shouldn't check again, still true
+        with mock.patch.object(flavor, '_flavor_get_from_db') as mock_g:
+            self.assertTrue(flavor.in_api)
+            self.assertFalse(mock_g.called)
+
+    def test_in_api_fixes_id(self):
+        flavor = objects.Flavor(context=self.context, flavorid='foo')
+        self.assertNotIn('id', flavor)
+        with mock.patch.object(
+                flavor, '_flavor_get_by_flavor_id_from_db') as m:
+            m.return_value = {'id': 123}
+            flavor.in_api
+            self.assertIn('id', flavor)
+            self.assertEqual(123, flavor.id)
+
 
 class TestFlavor(test_objects._LocalTest, _TestFlavor):
-    pass
+    # NOTE(danms): Run this test local-only because we would otherwise
+    # have to do a bunch of change-resetting to handle the way we do
+    # our change tracking for special attributes like projects. There is
+    # nothing remotely-concerning (see what I did there?) so this is fine.
+    def test_projects_in_db(self):
+        db_flavor = self._create_api_flavor(self.context)
+        flavor = objects.Flavor.get_by_id(self.context, db_flavor['id'])
+        flavor.add_access('project1')
+        flavor.add_access('project2')
+        flavor.add_access('project3')
+        flavor.remove_access('project2')
+        flavor = flavor.get_by_id(self.context, db_flavor['id'])
+        self.assertEqual(['project1', 'project3'], flavor.projects)
+        self.assertRaises(exception.FlavorAccessExists,
+                          flavor.add_access, 'project1')
+        self.assertRaises(exception.FlavorAccessNotFound,
+                          flavor.remove_access, 'project2')
 
 
 class TestFlavorRemote(test_objects._RemoteTest, _TestFlavor):
