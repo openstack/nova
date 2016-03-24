@@ -30,6 +30,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 TEST_HYPERS = [
@@ -98,10 +99,10 @@ TEST_HYPERS_OBJ = [objects.ComputeNode(**hyper_dct)
 TEST_HYPERS[0].update({'service': TEST_SERVICES[0]})
 TEST_HYPERS[1].update({'service': TEST_SERVICES[1]})
 
-TEST_SERVERS = [dict(name="inst1", uuid="uuid1", host="compute1"),
-                dict(name="inst2", uuid="uuid2", host="compute2"),
-                dict(name="inst3", uuid="uuid3", host="compute1"),
-                dict(name="inst4", uuid="uuid4", host="compute2")]
+TEST_SERVERS = [dict(name="inst1", uuid=uuids.instance_1, host="compute1"),
+                dict(name="inst2", uuid=uuids.instance_2, host="compute2"),
+                dict(name="inst3", uuid=uuids.instance_3, host="compute1"),
+                dict(name="inst4", uuid=uuids.instance_4, host="compute2")]
 
 
 def fake_compute_node_get_all(context):
@@ -228,10 +229,10 @@ class HypervisorsTestV21(test.NoDBTestCase):
                                                   False, self.TEST_SERVERS)
         expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
         expected_dict.update({'servers': [
-                                  dict(name="inst1", uuid="uuid1"),
-                                  dict(name="inst2", uuid="uuid2"),
-                                  dict(name="inst3", uuid="uuid3"),
-                                  dict(name="inst4", uuid="uuid4")]})
+                                  dict(name="inst1", uuid=uuids.instance_1),
+                                  dict(name="inst2", uuid=uuids.instance_2),
+                                  dict(name="inst3", uuid=uuids.instance_3),
+                                  dict(name="inst4", uuid=uuids.instance_4)]})
 
         self.assertEqual(result, expected_dict)
 
@@ -359,11 +360,11 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS)
         expected_dict[0].update({'servers': [
-                                     dict(uuid="uuid1"),
-                                     dict(uuid="uuid3")]})
+                                     dict(uuid=uuids.instance_1),
+                                     dict(uuid=uuids.instance_3)]})
         expected_dict[1].update({'servers': [
-                                     dict(uuid="uuid2"),
-                                     dict(uuid="uuid4")]})
+                                     dict(uuid=uuids.instance_2),
+                                     dict(uuid=uuids.instance_4)]})
 
         for output in result['hypervisors']:
             servers = output['servers']

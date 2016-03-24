@@ -24,13 +24,14 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_network
+from nova.tests import uuidsentinel as uuids
 
 
 fake_fixed_ips = [{'id': 1,
                    'address': '192.168.1.1',
                    'network_id': 1,
                    'virtual_interface_id': 1,
-                   'instance_uuid': '1',
+                   'instance_uuid': uuids.instance_1,
                    'allocated': False,
                    'leased': False,
                    'reserved': False,
@@ -45,7 +46,7 @@ fake_fixed_ips = [{'id': 1,
                    'address': '192.168.1.2',
                    'network_id': 1,
                    'virtual_interface_id': 2,
-                   'instance_uuid': '2',
+                   'instance_uuid': uuids.instance_2,
                    'allocated': False,
                    'leased': False,
                    'reserved': False,
@@ -60,7 +61,7 @@ fake_fixed_ips = [{'id': 1,
                    'address': '10.0.0.2',
                    'network_id': 1,
                    'virtual_interface_id': 3,
-                   'instance_uuid': '3',
+                   'instance_uuid': uuids.instance_3,
                    'allocated': False,
                    'leased': False,
                    'reserved': False,

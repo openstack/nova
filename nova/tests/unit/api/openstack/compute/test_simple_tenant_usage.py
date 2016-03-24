@@ -34,6 +34,7 @@ from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
+from nova.tests import uuidsentinel as uuids
 
 SERVERS = 5
 TENANTS = 2
@@ -70,7 +71,7 @@ def get_fake_db_instance(start, end, instance_id, tenant_id,
                          vm_state=vm_states.ACTIVE):
     inst = fakes.stub_instance(
             id=instance_id,
-            uuid='00000000-0000-0000-0000-00000000000000%02d' % instance_id,
+            uuid=getattr(uuids, 'instance_%d' % instance_id),
             image_ref='1',
             project_id=tenant_id,
             user_id='fakeuser',
@@ -198,15 +199,15 @@ class SimpleTenantUsageTestV21(test.TestCase):
         usage = res_dict['tenant_usage']
         servers = usage['server_usages']
         self.assertEqual(TENANTS * SERVERS, len(usage['server_usages']))
-        uuids = ['00000000-0000-0000-0000-00000000000000%02d' %
-                    x for x in range(SERVERS)]
+        server_uuids = [getattr(uuids, 'instance_%d' % x)
+                        for x in range(SERVERS)]
         for j in range(SERVERS):
             delta = STOP - START
             # NOTE(javeme): cast seconds from float to int for clarity
             uptime = int(delta.total_seconds())
             self.assertEqual(uptime, int(servers[j]['uptime']))
             self.assertEqual(HOURS, int(servers[j]['hours']))
-            self.assertIn(servers[j]['instance_id'], uuids)
+            self.assertIn(servers[j]['instance_id'], server_uuids)
 
     def test_verify_show_cannot_view_other_tenant(self):
         req = fakes.HTTPRequest.blank('?start=%s&end=%s' %

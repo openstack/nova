@@ -39,9 +39,11 @@ from nova.network.neutronv2 import api as neutron
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 import nova.utils
 
 CONF = cfg.CONF
+FAKE_NETWORK_PROJECT_ID = '6133f8b603924f45bc0c9e21f6df12fa'
 
 UTC = iso8601.iso8601.Utc()
 FAKE_NETWORKS = [
@@ -50,10 +52,10 @@ FAKE_NETWORKS = [
         'dhcp_start': '10.0.0.3', 'bridge_interface': 'eth0',
         'updated_at': datetime.datetime(2011, 8, 16, 9, 26, 13, 48257,
                                         tzinfo=UTC),
-        'id': 1, 'uuid': '20c8acc0-f747-4d71-a389-46d078ebf047',
+        'id': 1, 'uuid': uuids.network_1,
         'cidr_v6': None, 'deleted_at': None,
         'gateway': '10.0.0.1', 'label': 'mynet_0',
-        'project_id': '1234', 'rxtx_base': None,
+        'project_id': FAKE_NETWORK_PROJECT_ID, 'rxtx_base': None,
         'vpn_private_address': '10.0.0.2', 'deleted': False,
         'vlan': 100, 'broadcast': '10.0.0.7',
         'netmask': '255.255.255.248', 'injected': False,
@@ -70,7 +72,7 @@ FAKE_NETWORKS = [
         'bridge': 'br101', 'vpn_public_port': 1001,
         'dhcp_start': '10.0.0.11', 'bridge_interface': 'eth0',
         'updated_at': None, 'id': 2, 'cidr_v6': None,
-        'uuid': '20c8acc0-f747-4d71-a389-46d078ebf000',
+        'uuid': uuids.network_2,
         'deleted_at': None, 'gateway': '10.0.0.9',
         'label': 'mynet_1', 'project_id': None,
         'vpn_private_address': '10.0.0.10', 'deleted': False,
@@ -92,13 +94,13 @@ FAKE_USER_NETWORKS = [
         'id': 1, 'cidr': '10.0.0.0/29', 'netmask': '255.255.255.248',
         'gateway': '10.0.0.1', 'broadcast': '10.0.0.7', 'dns1': None,
         'dns2': None, 'cidr_v6': None, 'gateway_v6': None, 'label': 'mynet_0',
-        'netmask_v6': None, 'uuid': '20c8acc0-f747-4d71-a389-46d078ebf047',
+        'netmask_v6': None, 'uuid': uuids.network_1,
     },
     {
         'id': 2, 'cidr': '10.0.0.10/29', 'netmask': '255.255.255.248',
         'gateway': '10.0.0.9', 'broadcast': '10.0.0.15', 'dns1': None,
         'dns2': None, 'cidr_v6': None, 'gateway_v6': None, 'label': 'mynet_1',
-        'netmask_v6': None, 'uuid': '20c8acc0-f747-4d71-a389-46d078ebf000',
+        'netmask_v6': None, 'uuid': uuids.network_2,
     },
 ]
 
@@ -336,15 +338,19 @@ class NetworksTestV21(test.NoDBTestCase):
         fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.new_network = copy.deepcopy(NEW_NETWORK)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.non_admin_req = fakes.HTTPRequest.blank(
+            '', project_id=fakes.FAKE_PROJECT_ID)
+        self.admin_req = fakes.HTTPRequest.blank('',
+                              project_id=fakes.FAKE_PROJECT_ID,
+                              use_admin_context=True)
 
     def _setup(self):
         self.controller = networks_v21.NetworkController(
             self.fake_network_api)
         self.neutron_ctrl = networks_v21.NetworkController(
             neutron.API(skip_policy_check=True))
-        self.req = fakes.HTTPRequest.blank('')
+        self.req = fakes.HTTPRequest.blank('',
+                                           project_id=fakes.FAKE_PROJECT_ID)
 
     def _check_status(self, res, method, code):
         self.assertEqual(method.wsgi_code, code)
@@ -426,8 +432,10 @@ class NetworksTestV21(test.NoDBTestCase):
         uuid = FAKE_NETWORKS[1]['uuid']
         res = self.controller.add(self.req, body={'id': uuid})
         self._check_status(res, self.controller.add, 202)
-        res_dict = self.controller.show(self.admin_req, uuid)
-        self.assertEqual(res_dict['network']['project_id'], 'fake')
+        res_dict = self.controller.show(self.admin_req,
+                                        uuid)
+        self.assertEqual(res_dict['network']['project_id'],
+                         fakes.FAKE_PROJECT_ID)
 
     @mock.patch('nova.tests.unit.api.openstack.compute.test_networks.'
                 'FakeNetworkAPI.add_network_to_project',
@@ -439,7 +447,8 @@ class NetworksTestV21(test.NoDBTestCase):
 
     @mock.patch('nova.tests.unit.api.openstack.compute.test_networks.'
                 'FakeNetworkAPI.add_network_to_project',
-                side_effect=exception.NetworkNotFoundForUUID(uuid='fake_uuid'))
+                side_effect=exception.
+                NetworkNotFoundForUUID(uuid=fakes.FAKE_PROJECT_ID))
     def test_network_add_network_not_found_networks_fail(self, mock_add):
         uuid = FAKE_NETWORKS[1]['uuid']
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.add,
@@ -497,7 +506,9 @@ class NetworksTestV2(NetworksTestV21):
                                                      ext_mgr)
         self.neutron_ctrl = networks.NetworkController(
             neutron.API(skip_policy_check=False))
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        self.req = fakes.HTTPRequest.blank('',
+                              project_id=fakes.FAKE_PROJECT_ID,
+                              use_admin_context=True)
 
     def _check_status(self, res, method, code):
         self.assertEqual(res.status_int, code)

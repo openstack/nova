@@ -30,6 +30,7 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -117,7 +118,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
         self.mox.StubOutWithMock(compute_api.API, '_get_bdm_image_metadata')
         volume = {
-            'id': 1,
+            'id': uuids.volume_id,
             'status': 'active',
             'volume_image_metadata':
                 {'test_key': 'test_value'}

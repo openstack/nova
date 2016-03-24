@@ -23,6 +23,7 @@ from nova import network
 from nova.objects import virtual_interface as vif_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -35,12 +36,12 @@ def _generate_fake_vifs(context):
     vif = vif_obj.VirtualInterface(context=context)
     vif.address = '00-00-00-00-00-00'
     vif.net_uuid = 123
-    vif.uuid = '00000000-0000-0000-0000-00000000000000000'
+    vif.uuid = uuids.vif1_uuid
     fake_vifs = [vif]
     vif = vif_obj.VirtualInterface(context=context)
     vif.address = '11-11-11-11-11-11'
     vif.net_uuid = 456
-    vif.uuid = '11111111-1111-1111-1111-11111111111111111'
+    vif.uuid = uuids.vif2_uuid
     fake_vifs.append(vif)
     return fake_vifs
 
