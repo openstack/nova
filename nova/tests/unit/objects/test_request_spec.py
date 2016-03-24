@@ -314,6 +314,41 @@ class _TestRequestSpecObject(object):
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)
 
+    @mock.patch('nova.objects.RequestSpec._populate_group_info')
+    def test_from_components_with_instance_group(self, mock_pgi):
+        # This test makes sure that we don't overwrite instance group passed
+        # to from_components
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': 'fake-image-id', 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {'fake': 'property'}
+        instance_group = objects.InstanceGroup()
+
+        objects.RequestSpec.from_components(ctxt, instance, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, instance_group, instance.availability_zone)
+
+        self.assertFalse(mock_pgi.called)
+
+    @mock.patch('nova.objects.RequestSpec._populate_group_info')
+    def test_from_components_without_instance_group(self, mock_pgi):
+        # This test makes sure that we populate instance group if not
+        # present
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': 'fake-image-id', 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {'fake': 'property'}
+
+        objects.RequestSpec.from_components(ctxt, instance, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, None, instance.availability_zone)
+
+        mock_pgi.assert_called_once_with(filter_properties)
+
     def test_get_scheduler_hint(self):
         spec_obj = objects.RequestSpec(scheduler_hints={'foo_single': ['1'],
                                                         'foo_mul': ['1', '2']})

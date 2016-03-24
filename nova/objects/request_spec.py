@@ -350,6 +350,8 @@ class RequestSpec(base.NovaObject):
         spec_obj.num_instances = 1
         spec_obj.instance_uuid = instance_uuid
         spec_obj.instance_group = instance_group
+        if spec_obj.instance_group is None and filter_properties:
+            spec_obj._populate_group_info(filter_properties)
         spec_obj.project_id = context.project_id
         spec_obj._image_meta_from_image(image)
         spec_obj._from_flavor(flavor)
