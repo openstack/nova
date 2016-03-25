@@ -196,8 +196,4 @@ def register_cli_opts(conf):
 
 
 def list_opts():
-    # Because of bug 1395819 in oslo.config we cannot pass in the OptGroup.
-    # As soon as this bug is fixed is oslo.config and Nova uses the
-    # version which contains this fix, we can pass in the OptGroup instead
-    # of its name. This allows the generation of the group help too.
-    return {serial_opt_group.name: ALL_OPTS}
+    return {serial_opt_group: ALL_OPTS}
