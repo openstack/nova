@@ -24,6 +24,10 @@ api_paste_config_opt = cfg.StrOpt('api_paste_config',
          help='File name for the paste.deploy config for nova-api',
          deprecated_group='DEFAULT')
 
+# TODO(sfinucan): It is not possible to rename this to 'log_format'
+# yet, as doing so would cause a conflict if '[DEFAULT] log_format'
+# were used. When 'deprecated_group' is removed after Ocata, this
+# should be changed.
 wsgi_log_format_opt = cfg.StrOpt('wsgi_log_format',
          default='%(client_ip)s "%(request_line)s" status: %(status_code)s'
                  ' len: %(body_length)s time: %(wall_seconds).7f',
@@ -59,10 +63,11 @@ tcp_keepidle_opt = cfg.IntOpt('tcp_keepidle',
               "server socket. Not supported on OS X.",
          deprecated_group='DEFAULT')
 
-wsgi_default_pool_size_opt = cfg.IntOpt('wsgi_default_pool_size',
+default_pool_size_opt = cfg.IntOpt('default_pool_size',
          default=1000,
          help="Size of the pool of greenthreads used by wsgi",
-         deprecated_group='DEFAULT')
+         deprecated_group='DEFAULT',
+         deprecated_name='wsgi_default_pool_size')
 
 max_header_line_opt = cfg.IntOpt('max_header_line',
          default=16384,
@@ -72,11 +77,12 @@ max_header_line_opt = cfg.IntOpt('max_header_line',
               "Keystone v3 API with big service catalogs).",
          deprecated_group='DEFAULT')
 
-wsgi_keep_alive_opt = cfg.BoolOpt('wsgi_keep_alive',
+keep_alive_opt = cfg.BoolOpt('keep_alive',
          default=True,
          help="If False, closes the client socket connection "
               "explicitly.",
-         deprecated_group='DEFAULT')
+         deprecated_group='DEFAULT',
+         deprecated_name='wsgi_keep_alive')
 
 client_socket_timeout_opt = cfg.IntOpt('client_socket_timeout', default=900,
          help="Timeout for client connections' socket operations. "
@@ -92,9 +98,9 @@ ALL_OPTS = [api_paste_config_opt,
             ssl_cert_file_opt,
             ssl_key_file_opt,
             tcp_keepidle_opt,
-            wsgi_default_pool_size_opt,
+            default_pool_size_opt,
             max_header_line_opt,
-            wsgi_keep_alive_opt,
+            keep_alive_opt,
             client_socket_timeout_opt
             ]
 

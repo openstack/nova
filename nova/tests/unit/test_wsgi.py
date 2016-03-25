@@ -191,7 +191,7 @@ class TestWSGIServer(test.NoDBTestCase):
         # Resetting pool size to default
         server.reset()
         server.start()
-        self.assertEqual(server._pool.size, CONF.wsgi.wsgi_default_pool_size)
+        self.assertEqual(server._pool.size, CONF.wsgi.default_pool_size)
 
     def test_client_socket_timeout(self):
         self.flags(client_socket_timeout=5, group='wsgi')
@@ -208,18 +208,18 @@ class TestWSGIServer(test.NoDBTestCase):
                              kwargs['socket_timeout'])
             server.stop()
 
-    def test_wsgi_keep_alive(self):
-        self.flags(wsgi_keep_alive=False, group='wsgi')
+    def test_keep_alive(self):
+        self.flags(keep_alive=False, group='wsgi')
 
         # mocking eventlet spawn method to check it is called with
-        # configured 'wsgi_keep_alive' value.
+        # configured 'keep_alive' value.
         with mock.patch.object(eventlet,
                                'spawn') as mock_spawn:
             server = nova.wsgi.Server("test_app", None,
                                       host="127.0.0.1", port=0)
             server.start()
             _, kwargs = mock_spawn.call_args
-            self.assertEqual(CONF.wsgi.wsgi_keep_alive,
+            self.assertEqual(CONF.wsgi.keep_alive,
                              kwargs['keepalive'])
             server.stop()
 
