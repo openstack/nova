@@ -21,13 +21,13 @@ import sys
 import time
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
 
 from nova.api.metadata import password
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import context
 from nova import crypto
 from nova import exception
@@ -45,43 +45,7 @@ SKIP_FILES_AT_BOOT_SM_KEY = utils.SM_IMAGE_PROP_PREFIX \
                                         + SKIP_FILES_AT_BOOT_KEY
 
 LOG = logging.getLogger(__name__)
-
-xenapi_agent_opts = [
-    cfg.IntOpt('agent_timeout',
-               default=30,
-               help='Number of seconds to wait for agent reply'),
-    cfg.IntOpt('agent_version_timeout',
-               default=300,
-               help='Number of seconds to wait for agent '
-                    'to be fully operational'),
-    cfg.IntOpt('agent_resetnetwork_timeout',
-               default=60,
-               help='Number of seconds to wait for agent reply '
-                    'to resetnetwork request'),
-    cfg.StrOpt('agent_path',
-               default='usr/sbin/xe-update-networking',
-               help='Specifies the path in which the XenAPI guest agent '
-                    'should be located. If the agent is present, network '
-                    'configuration is not injected into the image. '
-                    'Used if compute_driver=xenapi.XenAPIDriver and '
-                    'flat_injected=True'),
-    cfg.BoolOpt('disable_agent',
-                default=False,
-                help='Disables the use of the XenAPI agent in any image '
-                     'regardless of what image properties are present.'),
-    cfg.BoolOpt('use_agent_default',
-                default=False,
-                help='Determines if the XenAPI agent should be used when '
-                     'the image used does not contain a hint to declare if '
-                     'the agent is present or not. '
-                     'The hint is a glance property "' + USE_AGENT_KEY + '" '
-                     'that has the value "True" or "False". '
-                     'Note that waiting for the agent when it is not present '
-                     'will significantly increase server boot times.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(xenapi_agent_opts, 'xenserver')
+CONF = nova.conf.CONF
 
 
 def _call_agent(session, instance, vm_ref, method, addl_args=None,

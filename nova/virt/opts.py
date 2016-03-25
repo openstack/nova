@@ -103,7 +103,6 @@ def list_opts():
         ('xenserver',
          itertools.chain(
              [nova.virt.xenapi.vif.xenapi_ovs_integration_bridge_opt],
-             nova.virt.xenapi.agent.xenapi_agent_opts,
              nova.virt.xenapi.client.session.xenapi_session_opts,
              nova.virt.xenapi.driver.xenapi_opts,
              nova.virt.xenapi.image.bittorrent.xenapi_torrent_opts,
