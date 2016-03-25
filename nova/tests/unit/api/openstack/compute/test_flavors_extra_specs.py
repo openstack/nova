@@ -21,6 +21,7 @@ from nova.api.openstack.compute import flavors_extraspecs \
 from nova.api.openstack.compute.legacy_v2.contrib import flavorextraspecs \
         as flavorextraspecs_v2
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_flavor
@@ -75,42 +76,43 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                       extra_specs={'key1': 'value1'})
 
         req = self._get_request('1/os-extra_specs')
-        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+        with mock.patch('nova.objects.Flavor._flavor_get_by_flavor_id_from_db'
+                ) as mock_get:
             mock_get.return_value = flavor
             res_dict = self.controller.index(req, 1)
 
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
-    def test_index_no_data(self):
-        self.stub_out('nova.db.flavor_extra_specs_get',
-                      return_empty_flavor_extra_specs)
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_index_no_data(self, mock_get):
+        flavor = objects.Flavor(flavorid='1', extra_specs={})
+        mock_get.return_value = flavor
 
         req = self._get_request('1/os-extra_specs')
         res_dict = self.controller.index(req, 1)
 
         self.assertEqual(0, len(res_dict['extra_specs']))
 
-    def test_index_flavor_not_found(self):
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_index_flavor_not_found(self, mock_get):
         req = self._get_request('1/os-extra_specs',
                                 use_admin_context=True)
-        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
-            mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
-            self.assertRaises(webob.exc.HTTPNotFound, self.controller.index,
-                              req, 1)
+        mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
+        self.assertRaises(webob.exc.HTTPNotFound, self.controller.index,
+                          req, 1)
 
     def test_show(self):
-        flavor = dict(test_flavor.fake_flavor,
-                      extra_specs={'key5': 'value5'})
+        flavor = objects.Flavor(flavorid='1', extra_specs={'key5': 'value5'})
         req = self._get_request('1/os-extra_specs/key5')
-        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as mock_get:
             mock_get.return_value = flavor
             res_dict = self.controller.show(req, 1, 'key5')
 
         self.assertEqual('value5', res_dict['key5'])
 
-    def test_show_spec_not_found(self):
-        self.stub_out('nova.db.flavor_extra_specs_get',
-                      return_empty_flavor_extra_specs)
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    def test_show_spec_not_found(self, mock_get):
+        mock_get.return_value = objects.Flavor(extra_specs={})
 
         req = self._get_request('1/os-extra_specs/key6')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
@@ -119,7 +121,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
     def test_not_found_because_flavor(self):
         req = self._get_request('1/os-extra_specs/key5',
                                 use_admin_context=True)
-        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as mock_get:
             mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
                               req, 1, 'key5')
@@ -129,25 +131,23 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                               req, 1, 'key5')
 
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
-        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
+        with mock.patch('nova.objects.Flavor.get_by_flavor_id') as mock_get:
             mock_get.side_effect = exception.FlavorNotFound(flavor_id='1')
             self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
                               req, 1, body={'extra_specs': {'key5': 'value5'}})
 
-    def test_delete(self):
+    @mock.patch('nova.objects.Flavor._flavor_get_by_flavor_id_from_db')
+    def test_delete(self, mock_get):
         flavor = dict(test_flavor.fake_flavor,
                       extra_specs={'key5': 'value5'})
-        self.stub_out('nova.db.flavor_extra_specs_delete',
-                      delete_flavor_extra_specs)
-
         req = self._get_request('1/os-extra_specs/key5',
                                 use_admin_context=True)
-        with mock.patch('nova.db.flavor_get_by_flavor_id') as mock_get:
-            mock_get.return_value = flavor
+        mock_get.return_value = flavor
+        with mock.patch('nova.objects.Flavor.save'):
             self.controller.delete(req, 1, 'key5')
 
     def test_delete_no_admin(self):
-        self.stub_out('nova.db.flavor_extra_specs_delete',
+        self.stub_out('nova.objects.flavor._flavor_extra_specs_del',
                       delete_flavor_extra_specs)
 
         req = self._get_request('1/os-extra_specs/key5')
@@ -161,8 +161,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                           req, 1, 'key6')
 
     def test_create(self):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      return_create_flavor_extra_specs)
         body = {"extra_specs": {"key1": "value1", "key2": 0.5, "key3": 5}}
 
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
@@ -173,8 +171,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self.assertEqual(5, res_dict['extra_specs']['key3'])
 
     def test_create_no_admin(self):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      return_create_flavor_extra_specs)
         body = {"extra_specs": {"key1": "value1"}}
 
         req = self._get_request('1/os-extra_specs')
@@ -182,29 +178,25 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                           req, 1, body=body)
 
     def test_create_flavor_not_found(self):
-        def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise exception.FlavorNotFound(flavor_id='')
-
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      fake_instance_type_extra_specs_update_or_create)
         body = {"extra_specs": {"key1": "value1"}}
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
-                          req, 1, body=body)
+        with mock.patch('nova.objects.Flavor.save',
+                        side_effect=exception.FlavorNotFound(flavor_id='')):
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
+                              req, 1, body=body)
 
     def test_create_flavor_db_duplicate(self):
-        def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise exception.FlavorExtraSpecUpdateCreateFailed(id=1, retries=5)
-
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      fake_instance_type_extra_specs_update_or_create)
         body = {"extra_specs": {"key1": "value1"}}
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
-                          req, 1, body=body)
+        with mock.patch(
+                'nova.objects.Flavor.save',
+                side_effect=exception.FlavorExtraSpecUpdateCreateFailed(
+                    id='', retries=10)):
+            self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
+                              req, 1, body=body)
 
     def _test_create_bad_request(self, body):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
+        self.stub_out('nova.objects.flavor._flavor_extra_specs_add',
                       return_create_flavor_extra_specs)
 
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
@@ -234,19 +226,15 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         value = "a" * 256
         self._test_create_bad_request({"extra_specs": {"key1": value}})
 
-    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
-    def test_create_really_long_integer_value(self, mock_flavor_extra_specs):
+    def test_create_really_long_integer_value(self):
         value = 10 ** 1000
-        mock_flavor_extra_specs.side_effects = return_create_flavor_extra_specs
 
         req = self._get_request('1/os-extra_specs', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, 1, body={"extra_specs": {"key1": value}})
 
-    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
-    def test_create_invalid_specs_key(self, mock_flavor_extra_specs):
+    def test_create_invalid_specs_key(self):
         invalid_keys = ("key1/", "<key>", "$$akey$", "!akey", "")
-        mock_flavor_extra_specs.side_effects = return_create_flavor_extra_specs
 
         for key in invalid_keys:
             body = {"extra_specs": {key: "value1"}}
@@ -254,7 +242,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             self.assertRaises(self.bad_request, self.controller.create,
                               req, 1, body=body)
 
-    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
+    @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
     def test_create_valid_specs_key(self, mock_flavor_extra_specs):
         valid_keys = ("key1", "month.price", "I_am-a Key", "finance:g2")
         mock_flavor_extra_specs.side_effects = return_create_flavor_extra_specs
@@ -265,9 +253,9 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
             res_dict = self.controller.create(req, 1, body=body)
             self.assertEqual('value1', res_dict['extra_specs'][key])
 
-    def test_update_item(self):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      return_create_flavor_extra_specs)
+    @mock.patch('nova.objects.flavor._flavor_extra_specs_add')
+    def test_update_item(self, mock_add):
+        mock_add.side_effect = return_create_flavor_extra_specs
         body = {"key1": "value1"}
 
         req = self._get_request('1/os-extra_specs/key1',
@@ -277,8 +265,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self.assertEqual('value1', res_dict['key1'])
 
     def test_update_item_no_admin(self):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                     return_create_flavor_extra_specs)
         body = {"key1": "value1"}
 
         req = self._get_request('1/os-extra_specs/key1')
@@ -286,9 +272,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                           req, 1, 'key1', body=body)
 
     def _test_update_item_bad_request(self, body):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      return_create_flavor_extra_specs)
-
         req = self._get_request('1/os-extra_specs/key1',
                                 use_admin_context=True)
         self.assertRaises(self.bad_request, self.controller.update,
@@ -322,8 +305,6 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
         self._test_update_item_bad_request({"key1": value})
 
     def test_update_item_body_uri_mismatch(self):
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      return_create_flavor_extra_specs)
         body = {"key1": "value1"}
 
         req = self._get_request('1/os-extra_specs/bad', use_admin_context=True)
@@ -331,35 +312,29 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
                           req, 1, 'bad', body=body)
 
     def test_update_flavor_not_found(self):
-        def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise exception.FlavorNotFound(flavor_id='')
-
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      fake_instance_type_extra_specs_update_or_create)
         body = {"key1": "value1"}
 
         req = self._get_request('1/os-extra_specs/key1',
                                 use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
-                          req, 1, 'key1', body=body)
+        with mock.patch('nova.objects.Flavor.save',
+                        side_effect=exception.FlavorNotFound(flavor_id='')):
+            self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
+                              req, 1, 'key1', body=body)
 
     def test_update_flavor_db_duplicate(self):
-        def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise exception.FlavorExtraSpecUpdateCreateFailed(id=1, retries=5)
-
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      fake_instance_type_extra_specs_update_or_create)
         body = {"key1": "value1"}
 
         req = self._get_request('1/os-extra_specs/key1',
                                 use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPConflict, self.controller.update,
-                          req, 1, 'key1', body=body)
+        with mock.patch(
+                'nova.objects.Flavor.save',
+                side_effect=exception.FlavorExtraSpecUpdateCreateFailed(
+                    id=1, retries=5)):
+            self.assertRaises(webob.exc.HTTPConflict, self.controller.update,
+                              req, 1, 'key1', body=body)
 
     def test_update_really_long_integer_value(self):
         value = 10 ** 1000
-        self.stub_out('nova.db.flavor_extra_specs_update_or_create',
-                      return_create_flavor_extra_specs)
 
         req = self._get_request('1/os-extra_specs/key1',
                                 use_admin_context=True)
