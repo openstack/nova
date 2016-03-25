@@ -49,7 +49,7 @@ LOG = logging.getLogger(__name__)
 class Server(service.ServiceBase):
     """Server class to manage a WSGI server, serving a WSGI application."""
 
-    default_pool_size = CONF.wsgi_default_pool_size
+    default_pool_size = CONF.wsgi.wsgi_default_pool_size
 
     def __init__(self, name, app, host='0.0.0.0', port=0, pool_size=None,
                        protocol=eventlet.wsgi.HttpProtocol, backlog=128,
@@ -67,7 +67,7 @@ class Server(service.ServiceBase):
         :raises: nova.exception.InvalidInput
         """
         # Allow operators to customize http requests max header line size.
-        eventlet.wsgi.MAX_HEADER_LINE = CONF.max_header_line
+        eventlet.wsgi.MAX_HEADER_LINE = CONF.wsgi.max_header_line
         self.name = name
         self.app = app
         self._server = None
@@ -77,7 +77,7 @@ class Server(service.ServiceBase):
         self._logger = logging.getLogger("nova.%s.wsgi.server" % self.name)
         self._use_ssl = use_ssl
         self._max_url_len = max_url_len
-        self.client_socket_timeout = CONF.client_socket_timeout or None
+        self.client_socket_timeout = CONF.wsgi.client_socket_timeout or None
 
         if backlog < 1:
             raise exception.InvalidInput(
@@ -129,13 +129,13 @@ class Server(service.ServiceBase):
         if hasattr(socket, 'TCP_KEEPIDLE'):
             dup_socket.setsockopt(socket.IPPROTO_TCP,
                                   socket.TCP_KEEPIDLE,
-                                  CONF.tcp_keepidle)
+                                  CONF.wsgi.tcp_keepidle)
 
         if self._use_ssl:
             try:
-                ca_file = CONF.ssl_ca_file
-                cert_file = CONF.ssl_cert_file
-                key_file = CONF.ssl_key_file
+                ca_file = CONF.wsgi.ssl_ca_file
+                cert_file = CONF.wsgi.ssl_cert_file
+                key_file = CONF.wsgi.ssl_key_file
 
                 if cert_file and not os.path.exists(cert_file):
                     raise RuntimeError(
@@ -161,7 +161,7 @@ class Server(service.ServiceBase):
                     'cert_reqs': ssl.CERT_NONE,
                 }
 
-                if CONF.ssl_ca_file:
+                if CONF.wsgi.ssl_ca_file:
                     ssl_kwargs['ca_certs'] = ca_file
                     ssl_kwargs['cert_reqs'] = ssl.CERT_REQUIRED
 
@@ -181,9 +181,9 @@ class Server(service.ServiceBase):
             'protocol': self._protocol,
             'custom_pool': self._pool,
             'log': self._logger,
-            'log_format': CONF.wsgi_log_format,
+            'log_format': CONF.wsgi.wsgi_log_format,
             'debug': False,
-            'keepalive': CONF.wsgi_keep_alive,
+            'keepalive': CONF.wsgi.wsgi_keep_alive,
             'socket_timeout': self.client_socket_timeout
             }
 
@@ -234,8 +234,8 @@ class Server(service.ServiceBase):
 
 class Request(webob.Request):
     def __init__(self, environ, *args, **kwargs):
-        if CONF.secure_proxy_ssl_header:
-            scheme = environ.get(CONF.secure_proxy_ssl_header)
+        if CONF.wsgi.secure_proxy_ssl_header:
+            scheme = environ.get(CONF.wsgi.secure_proxy_ssl_header)
             if scheme:
                 environ['wsgi.url_scheme'] = scheme
         super(Request, self).__init__(environ, *args, **kwargs)
@@ -474,7 +474,7 @@ class Loader(object):
         """
         self.config_path = None
 
-        config_path = config_path or CONF.api_paste_config
+        config_path = config_path or CONF.wsgi.api_paste_config
         if not os.path.isabs(config_path):
             self.config_path = CONF.find_file(config_path)
         elif os.path.exists(config_path):

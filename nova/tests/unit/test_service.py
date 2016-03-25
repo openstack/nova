@@ -359,7 +359,7 @@ class TestWSGIService(test.NoDBTestCase):
         test_service.reset()
         test_service.start()
         self.assertEqual(test_service.server._pool.size,
-                         CONF.wsgi_default_pool_size)
+                         CONF.wsgi.wsgi_default_pool_size)
 
 
 class TestLauncher(test.NoDBTestCase):

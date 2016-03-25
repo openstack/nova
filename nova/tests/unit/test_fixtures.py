@@ -63,10 +63,10 @@ class TestConfFixture(testtools.TestCase):
 
     """
     def _test_override(self):
-        self.assertEqual('api-paste.ini', CONF.api_paste_config)
+        self.assertEqual('api-paste.ini', CONF.wsgi.api_paste_config)
         self.assertFalse(CONF.fake_network)
         self.useFixture(conf_fixture.ConfFixture())
-        CONF.set_default('api_paste_config', 'foo')
+        CONF.set_default('api_paste_config', 'foo', group='wsgi')
         self.assertTrue(CONF.fake_network)
 
     def test_override1(self):

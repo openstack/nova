@@ -512,7 +512,8 @@ class VersionsTestV21(test.NoDBTestCase):
 class VersionBehindSslTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VersionBehindSslTestCase, self).setUp()
-        self.flags(secure_proxy_ssl_header='HTTP_X_FORWARDED_PROTO')
+        self.flags(secure_proxy_ssl_header='HTTP_X_FORWARDED_PROTO',
+                   group='wsgi')
 
     @property
     def wsgi_app(self):

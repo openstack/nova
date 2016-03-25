@@ -1,0 +1,4 @@
+---
+upgrade:
+  - All WSGI configuration options have been added to the 'wsgi' group.
+    They should no longer be included in the 'DEFAULT' group.
