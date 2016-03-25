@@ -31,13 +31,13 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev213\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-15 22:46+0000\n"
+"POT-Creation-Date: 2016-03-17 05:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-12 07:38+0000\n"
+"PO-Revision-Date: 2016-03-16 05:53+0000\n"
 "Last-Translator: Martine Marin <mmarin@fr.ibm.com>\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -364,6 +364,9 @@ msgstr "Agrégat introuvable pour le nombre d'hôtes %(host)s"
 #, python-format
 msgid "Aggregates does not have %s action"
 msgstr "Les agrégats n'ont pas d'action %s"
+
+msgid "All hosts are already mapped to cell(s), exiting."
+msgstr "Tous les hôtes sont déjà mappés à une ou plusieurs cellules. Sortie..."
 
 #, python-format
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
@@ -1825,6 +1828,10 @@ msgid "Host %(host)s could not be found."
 msgstr "L'hôte %(host)s ne peut pas être trouvé."
 
 #, python-format
+msgid "Host %(host)s is already mapped to cell %(uuid)s"
+msgstr "L'hôte %(host)s est déjà mappé à la cellule %(uuid)s"
+
+#, python-format
 msgid ""
 "Host %(server)s is running an old version of Nova, live migrations involving "
 "that version may cause data loss. Upgrade Nova on %(server)s and try again."
@@ -3181,6 +3188,9 @@ msgstr "Aucun port disponible pour l'instance %(instance)s."
 msgid "No host available on cluster"
 msgstr "Aucun hôte disponible sur le cluster"
 
+msgid "No hosts found to map to cell, exiting."
+msgstr "Aucun hôte à mapper à la cellule n'a été trouvé. Sortie..."
+
 #, python-format
 msgid "No hypervisor matching '%s' could be found."
 msgstr "Aucun hyperviseur correspondant à '%s' n'a été trouvé."
@@ -3336,6 +3346,10 @@ msgid ""
 msgstr ""
 "Le nombre de ports série '%(num_ports)s' spécifié dans '%(property)s' n'est "
 "pas valide."
+
+#, python-format
+msgid "OVS configuration failed with: %(inner_exception)s."
+msgstr "Echec de la configuration OVS avec : %(inner_exception)s."
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"
