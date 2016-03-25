@@ -284,6 +284,50 @@ class _TestFlavor(object):
         self.assertEqual(['project-1', 'project-3'], flavor.projects)
         mock_add.assert_called_once_with(ctxt, 'foo', 'project-3')
 
+    @mock.patch('nova.objects.Flavor._flavor_add_project')
+    @mock.patch('nova.objects.Flavor._flavor_del_project')
+    @mock.patch('nova.objects.Flavor._flavor_extra_specs_del')
+    @mock.patch('nova.objects.Flavor._flavor_extra_specs_add')
+    @mock.patch('nova.objects.Flavor.in_api', new=True)
+    def test_save_api(self, mock_update, mock_delete, mock_remove, mock_add):
+        extra_specs = {'key1': 'value1', 'key2': 'value2'}
+        projects = ['project-1', 'project-2']
+        flavor = flavor_obj.Flavor(context=self.context, flavorid='foo',
+                                   id=123, extra_specs=extra_specs,
+                                   projects=projects)
+        flavor.obj_reset_changes()
+
+        # Test deleting an extra_specs key and project
+        del flavor.extra_specs['key1']
+        del flavor.projects[-1]
+        self.assertEqual(set(['extra_specs', 'projects']),
+                         flavor.obj_what_changed())
+        flavor.save()
+        self.assertEqual({'key2': 'value2'}, flavor.extra_specs)
+        mock_delete.assert_called_once_with(self.context, 123, 'key1')
+        self.assertEqual(['project-1'], flavor.projects)
+        mock_remove.assert_called_once_with(self.context, 123, 'project-2')
+
+        # Test updating an extra_specs key value
+        flavor.extra_specs['key2'] = 'foobar'
+        self.assertEqual(set(['extra_specs']), flavor.obj_what_changed())
+        flavor.save()
+        self.assertEqual({'key2': 'foobar'}, flavor.extra_specs)
+        mock_update.assert_called_with(self.context, 123, {'key2': 'foobar'})
+
+        # Test adding an extra_specs and project
+        flavor.extra_specs['key3'] = 'value3'
+        flavor.projects.append('project-3')
+        self.assertEqual(set(['extra_specs', 'projects']),
+                         flavor.obj_what_changed())
+        flavor.save()
+        self.assertEqual({'key2': 'foobar', 'key3': 'value3'},
+                         flavor.extra_specs)
+        mock_update.assert_called_with(self.context, 123, {'key2': 'foobar',
+                                                   'key3': 'value3'})
+        self.assertEqual(['project-1', 'project-3'], flavor.projects)
+        mock_add.assert_called_once_with(self.context, 123, 'project-3')
+
     @mock.patch('nova.db.flavor_create')
     @mock.patch('nova.db.flavor_extra_specs_delete')
     @mock.patch('nova.db.flavor_extra_specs_update_or_create')
@@ -291,14 +335,13 @@ class _TestFlavor(object):
                                       mock_create):
         mock_create.return_value = dict(fake_flavor,
                                         extra_specs={'key1': 'value1'})
-        ctxt = self.context.elevated()
-        flavor = flavor_obj.Flavor(context=ctxt)
+        flavor = flavor_obj.Flavor(context=self.context)
         flavor.flavorid = 'test'
         flavor.extra_specs = {'key1': 'value1'}
         flavor.create()
         flavor.extra_specs = {}
         flavor.save()
-        mock_delete.assert_called_once_with(ctxt, flavor.flavorid,
+        mock_delete.assert_called_once_with(self.context, flavor.flavorid,
                                             'key1')
         self.assertFalse(mock_update.called)
 
@@ -388,6 +431,15 @@ class TestFlavor(test_objects._LocalTest, _TestFlavor):
                           flavor.add_access, 'project1')
         self.assertRaises(exception.FlavorAccessNotFound,
                           flavor.remove_access, 'project2')
+
+    def test_extra_specs_in_db(self):
+        db_flavor = self._create_api_flavor(self.context)
+        flavor = objects.Flavor.get_by_id(self.context, db_flavor['id'])
+        flavor.extra_specs['marty'] = 'mcfly'
+        del flavor.extra_specs['foo']
+        flavor.save()
+        flavor = objects.Flavor.get_by_id(self.context, db_flavor['id'])
+        self.assertEqual({'marty': 'mcfly'}, flavor.extra_specs)
 
 
 class TestFlavorRemote(test_objects._RemoteTest, _TestFlavor):

@@ -77,6 +77,54 @@ def _flavor_del_project(context, flavor_id, project_id):
                                              project_id=project_id)
 
 
+@db_api.api_context_manager.writer
+def _flavor_extra_specs_add(context, flavor_id, specs, max_retries=10):
+    writer = db_api.api_context_manager.writer
+    for attempt in range(max_retries):
+        try:
+            spec_refs = context.session.query(
+                api_models.FlavorExtraSpecs).\
+                filter_by(flavor_id=flavor_id).\
+                filter(api_models.FlavorExtraSpecs.key.in_(
+                    specs.keys())).\
+                all()
+
+            existing_keys = set()
+            for spec_ref in spec_refs:
+                key = spec_ref["key"]
+                existing_keys.add(key)
+                with writer.savepoint.using(context):
+                    spec_ref.update({"value": specs[key]})
+
+            for key, value in specs.items():
+                if key in existing_keys:
+                    continue
+                spec_ref = api_models.FlavorExtraSpecs()
+                with writer.savepoint.using(context):
+                    spec_ref.update({"key": key, "value": value,
+                                     "flavor_id": flavor_id})
+                    context.session.add(spec_ref)
+
+            return specs
+        except db_exc.DBDuplicateEntry:
+            # a concurrent transaction has been committed,
+            # try again unless this was the last attempt
+            if attempt == max_retries - 1:
+                raise exception.FlavorExtraSpecUpdateCreateFailed(
+                    id=flavor_id, retries=max_retries)
+
+
+@db_api.api_context_manager.writer
+def _flavor_extra_specs_del(context, flavor_id, key):
+    result = context.session.query(api_models.FlavorExtraSpecs).\
+             filter_by(flavor_id=flavor_id).\
+             filter_by(key=key).\
+             delete()
+    if result == 0:
+        raise exception.FlavorExtraSpecsNotFound(
+            extra_specs_key=key, flavor_id=flavor_id)
+
+
 # TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
 class Flavor(base.NovaPersistentObject, base.NovaObject,
@@ -365,6 +413,14 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             self._remove_access(project_id)
         self.obj_reset_changes(['projects'])
 
+    @staticmethod
+    def _flavor_extra_specs_add(context, flavor_id, specs, max_retries=10):
+        return _flavor_extra_specs_add(context, flavor_id, specs, max_retries)
+
+    @staticmethod
+    def _flavor_extra_specs_del(context, flavor_id, key):
+        return _flavor_extra_specs_del(context, flavor_id, key)
+
     @base.remotable
     def save_extra_specs(self, to_add=None, to_delete=None):
         """Add or delete extra_specs.
@@ -373,16 +429,23 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         :param:to_delete: A list of keys to remove
         """
 
+        if self.in_api:
+            add_fn = self._flavor_extra_specs_add
+            del_fn = self._flavor_extra_specs_del
+            ident = self.id
+        else:
+            add_fn = db.flavor_extra_specs_update_or_create
+            del_fn = db.flavor_extra_specs_delete
+            ident = self.flavorid
+
         to_add = to_add if to_add is not None else {}
         to_delete = to_delete if to_delete is not None else []
 
         if to_add:
-            db.flavor_extra_specs_update_or_create(self._context,
-                                                   self.flavorid,
-                                                   to_add)
+            add_fn(self._context, ident, to_add)
 
         for key in to_delete:
-            db.flavor_extra_specs_delete(self._context, self.flavorid, key)
+            del_fn(self._context, ident, key)
         self.obj_reset_changes(['extra_specs'])
 
     def save(self):
