@@ -16,6 +16,14 @@ from nova.objects import base as obj_base
 from nova.objects import fields
 from nova import utils
 
+# These are special case enums for the auto-allocate scenario. 'none' means
+# do not allocate a network on server create. 'auto' means auto-allocate a
+# network (if possible) if none are already available to the project. Other
+# values for network_id can be a specific network id, or None, where None
+# is the case before auto-allocation was supported in the compute API.
+NETWORK_ID_NONE = 'none'
+NETWORK_ID_AUTO = 'auto'
+
 
 # TODO(berrange): Remove NovaObjectDictCompat
 @obj_base.NovaObjectRegistry.register
@@ -51,6 +59,14 @@ class NetworkRequest(obj_base.NovaObject,
             network_id, address = net_tuple
             return cls(network_id=network_id, address=address)
 
+    @property
+    def auto_allocate(self):
+        return self.network_id == NETWORK_ID_AUTO
+
+    @property
+    def no_allocate(self):
+        return self.network_id == NETWORK_ID_NONE
+
 
 @obj_base.NovaObjectRegistry.register
 class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
@@ -79,3 +95,11 @@ class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
     def is_single_unspecified(self):
         return ((len(self.objects) == 1) and
             (self.objects[0].to_tuple() == NetworkRequest().to_tuple()))
+
+    @property
+    def auto_allocate(self):
+        return len(self.objects) == 1 and self.objects[0].auto_allocate
+
+    @property
+    def no_allocate(self):
+        return len(self.objects) == 1 and self.objects[0].no_allocate
