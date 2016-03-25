@@ -71,6 +71,7 @@ import six
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
+import nova.conf
 from nova import config
 from nova import context
 from nova import db
@@ -85,15 +86,9 @@ from nova import servicegroup
 from nova import utils
 from nova import version
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('network_manager', 'nova.service')
 CONF.import_opt('service_down_time', 'nova.service')
-CONF.import_opt('flat_network_bridge', 'nova.network.manager')
-CONF.import_opt('num_networks', 'nova.network.manager')
-CONF.import_opt('multi_host', 'nova.network.manager')
-CONF.import_opt('network_size', 'nova.network.manager')
-CONF.import_opt('vlan_start', 'nova.network.manager')
-CONF.import_opt('vpn_start', 'nova.network.manager')
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('public_interface', 'nova.network.linux_net')
 CONF.import_opt('connection', 'oslo_db.options', group='database')

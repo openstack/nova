@@ -30,6 +30,7 @@ from oslo_utils import fileutils
 
 from nova import compute
 from nova.compute import flavors
+import nova.conf
 from nova import crypto
 from nova import db
 from nova import exception
@@ -59,7 +60,7 @@ cloudpipe_opts = [
                help='Suffix to add to project name for vpn key and secgroups'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(cloudpipe_opts)
 CONF.import_opt('keys_path', 'nova.crypto')
 
@@ -73,9 +74,6 @@ def is_vpn_image(image_id):
 def _load_boot_script():
     with open(CONF.boot_script_template, "r") as shellfile:
         s = string.Template(shellfile.read())
-
-    CONF.import_opt('cnt_vpn_clients', 'nova.network.manager')
-
     return s.substitute(dmz_net=CONF.dmz_net,
                         dmz_mask=CONF.dmz_mask,
                         num_vpn=CONF.cnt_vpn_clients)

@@ -30,6 +30,7 @@ import six
 
 from nova.api.openstack import extensions
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import base_api
@@ -58,7 +59,7 @@ neutron_opts = [
 
 NEUTRON_GROUP = 'neutron'
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(neutron_opts, NEUTRON_GROUP)
 
 deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
@@ -74,7 +75,6 @@ ks_loading.register_auth_conf_options(CONF, NEUTRON_GROUP)
 
 
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('flat_injected', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
 
 soft_external_network_attach_authorize = extensions.soft_core_authorizer(

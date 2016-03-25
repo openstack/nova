@@ -54,7 +54,7 @@ from nova.conf import ironic
 # from nova.conf import matchmaker_redis
 # from nova.conf import metadata
 # from nova.conf import metrics
-# from nova.conf import network
+from nova.conf import network
 # from nova.conf import neutron
 # from nova.conf import notification
 # from nova.conf import osapi_v21
@@ -114,7 +114,7 @@ ironic.register_opts(CONF)
 # matchmaker_redis.register_opts(CONF)
 # metadata.register_opts(CONF)
 # metrics.register_opts(CONF)
-# network.register_opts(CONF)
+network.register_opts(CONF)
 # neutron.register_opts(CONF)
 # notification.register_opts(CONF)
 # osapi_v21.register_opts(CONF)
