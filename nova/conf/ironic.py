@@ -51,6 +51,11 @@ admin_url = cfg.StrOpt(
     'admin_url',
     help='Keystone public API endpoint.')
 
+cafile = cfg.StrOpt(
+    'cafile',
+    help='PEM encoded Certificate Authority to use when verifying HTTPs '
+         'connections.')
+
 client_log_level = cfg.StrOpt(
     'client_log_level',
     deprecated_for_removal=True,
@@ -81,6 +86,7 @@ ALL_OPTS = [api_version,
             admin_password,
             admin_auth_token,
             admin_url,
+            cafile,
             client_log_level,
             admin_tenant_name,
             api_max_retries,
