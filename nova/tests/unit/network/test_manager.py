@@ -2022,10 +2022,8 @@ class CommonNetworkTestCase(test.TestCase):
         db = manager.db
         db.virtual_interface_delete_by_instance = mock.Mock()
         ctx = context.RequestContext('igonre', 'igonre')
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest.from_tuple(t)
-                     for t in [('123', '1.2.3.4'), ('123', '4.3.2.1'),
-                               ('123', None)]])
+        requested_networks = objects.NetworkRequestList.from_tuples(
+            [('123', '1.2.3.4'), ('123', '4.3.2.1'), ('123', None)])
         manager.deallocate_for_instance(
             ctx,
             instance=fake_instance.fake_instance_obj(ctx),
@@ -2041,9 +2039,8 @@ class CommonNetworkTestCase(test.TestCase):
         db = manager.db
         db.virtual_interface_delete_by_instance = mock.Mock()
         ctx = context.RequestContext('igonre', 'igonre')
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest.from_tuple(t)
-                     for t in [('123', '1.2.3.4'), ('123', '4.3.2.1')]])
+        requested_networks = objects.NetworkRequestList.from_tuples(
+            [('123', '1.2.3.4'), ('123', '4.3.2.1')])
         with mock.patch.object(manager.network_rpcapi,
                                'update_dns') as mock_update_dns:
             manager.deallocate_for_instance(

@@ -368,9 +368,8 @@ class ComputeTaskManager(base.Base):
         if (requested_networks and
                 not isinstance(requested_networks,
                                objects.NetworkRequestList)):
-            requested_networks = objects.NetworkRequestList(
-                objects=[objects.NetworkRequest.from_tuple(t)
-                         for t in requested_networks])
+            requested_networks = objects.NetworkRequestList.from_tuples(
+                requested_networks)
         # TODO(melwitt): Remove this in version 2.0 of the RPC API
         flavor = filter_properties.get('instance_type')
         if flavor and not isinstance(flavor, objects.Flavor):

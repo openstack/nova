@@ -398,9 +398,8 @@ class NetworkManager(manager.Manager):
         if (requested_networks and
                 not isinstance(requested_networks,
                                objects.NetworkRequestList)):
-            requested_networks = objects.NetworkRequestList(
-                objects=[objects.NetworkRequest.from_tuple(t)
-                         for t in requested_networks])
+            requested_networks = objects.NetworkRequestList.from_tuples(
+                requested_networks)
         vpn = kwargs['vpn']
         macs = kwargs['macs']
         admin_context = context.elevated()
