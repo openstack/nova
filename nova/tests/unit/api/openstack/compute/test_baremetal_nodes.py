@@ -224,5 +224,6 @@ class BareMetalNodesTestV2(BareMetalNodesTestV21):
     mod = b_nodes_v2
 
     def _setup(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
+        self.ext_mgr = extensions.ExtensionManager()
+        self.ext_mgr.extensions = {}
         self.controller = b_nodes_v2.BareMetalNodeController(self.ext_mgr)
