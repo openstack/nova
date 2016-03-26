@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from six.moves import range
 
 from nova.cells import state
@@ -101,8 +102,6 @@ class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                         {}, response, 200)
 
     def _mock_cell_capacity(self):
-        self.mox.StubOutWithMock(self.cells.manager.state_manager,
-                                 'get_our_capacities')
         response = {"ram_free":
                         {"units_by_mb": {"8192": 0, "512": 13,
                                          "4096": 1, "2048": 3, "16384": 0},
@@ -112,6 +111,6 @@ class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                                          "40960": 23, "163840": 5, "0": 0},
                          "total_mb": 1052672}
         }
-        self.cells.manager.state_manager.get_our_capacities(). \
-            AndReturn(response)
-        self.mox.ReplayAll()
+        goc_mock = mock.Mock()
+        goc_mock.return_value = response
+        self.cells.manager.state_manager.get_our_capacities = goc_mock
