@@ -92,5 +92,4 @@ def list_opts():
              [nova.console.rpcapi.rpcapi_cap_opt],
              [nova.consoleauth.rpcapi.rpcapi_cap_opt],
          )),
-        ('workarounds', nova.utils.workarounds_opts),
     ]
