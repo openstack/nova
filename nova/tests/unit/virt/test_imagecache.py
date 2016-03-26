@@ -99,20 +99,17 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         image_cache_manager = imagecache.ImageCacheManager()
 
         self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
-                   'get_by_instance_uuid')
+                   'bdms_by_instance_uuid')
 
         ctxt = context.get_admin_context()
         swap_bdm_256_list = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_256)
         swap_bdm_128_list = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_128)
-        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '123').AndReturn(swap_bdm_256_list)
-        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '456').AndReturn(swap_bdm_128_list)
-        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '789').AndReturn(swap_bdm_128_list)
-
+        objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
+            ctxt, ['123', '456', '789']).AndReturn({'123': swap_bdm_256_list,
+                                                    '456': swap_bdm_128_list,
+                                                    '789': swap_bdm_128_list})
         self.mox.ReplayAll()
 
         # The argument here should be a context, but it's mocked out
@@ -156,13 +153,13 @@ class ImageCacheManagerTests(test.NoDBTestCase):
 
         image_cache_manager = imagecache.ImageCacheManager()
         self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
-                   'get_by_instance_uuid')
+                   'bdms_by_instance_uuid')
 
         ctxt = context.get_admin_context()
         bdms = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_256)
-        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '123').AndReturn(bdms)
+        objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
+                ctxt, ['123']).AndReturn({'123': bdms})
 
         self.mox.ReplayAll()
         running = image_cache_manager._list_running_instances(ctxt,

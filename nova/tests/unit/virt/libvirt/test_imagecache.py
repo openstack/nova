@@ -700,13 +700,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.stub_out('os.remove', lambda x: remove(x))
 
         self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
-                   'get_by_instance_uuid')
+                   'bdms_by_instance_uuid')
 
         ctxt = context.get_admin_context()
-        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '123').AndReturn(None)
-        objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '456').AndReturn(None)
+        objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
+                ctxt, ['123', '456']).AndReturn({})
 
         self.mox.ReplayAll()
         # And finally we can make the call we're actually testing...
@@ -797,13 +795,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.mox.StubOutWithMock(
                 objects.block_device.BlockDeviceMappingList,
-                'get_by_instance_uuid')
+                'bdms_by_instance_uuid')
 
             ctxt = context.get_admin_context()
-            objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '123').AndReturn(None)
-            objects.block_device.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, '456').AndReturn(None)
+            objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
+                ctxt, ['123', '456']).AndReturn({})
 
             self.mox.ReplayAll()
 
