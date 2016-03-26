@@ -19,7 +19,6 @@ Unit Tests for nova.network.rpcapi
 import collections
 
 import mock
-from mox3 import mox
 from oslo_config import cfg
 
 from nova import context
@@ -89,26 +88,38 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
             if CONF.multi_host:
                 prepare_kwargs['server'] = host
 
-        self.mox.StubOutWithMock(rpcapi, 'client')
+        with test.nested(
+            mock.patch.object(rpcapi.client, rpc_method),
+            mock.patch.object(rpcapi.client, 'prepare'),
+            mock.patch.object(rpcapi.client, 'can_send_version'),
+        ) as (
+            rpc_mock, prepare_mock, csv_mock
+        ):
 
-        version_check = [
-            'deallocate_for_instance', 'deallocate_fixed_ip',
-            'allocate_for_instance', 'release_fixed_ip', 'set_network_host',
-            'setup_networks_on_host'
-        ]
-        if method in version_check:
-            rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
+            version_check = [
+                'deallocate_for_instance', 'deallocate_fixed_ip',
+                'allocate_for_instance', 'release_fixed_ip',
+                'set_network_host', 'setup_networks_on_host'
+            ]
+            if method in version_check:
+                csv_mock.return_value = True
 
-        if prepare_kwargs:
-            rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
+            if prepare_kwargs:
+                prepare_mock.return_value = rpcapi.client
 
-        rpc_method = getattr(rpcapi.client, rpc_method)
-        rpc_method(ctxt, method, **expected_kwargs).AndReturn('foo')
+            if rpc_method == 'call':
+                rpc_mock.return_value = 'foo'
+            else:
+                rpc_mock.return_value = None
 
-        self.mox.ReplayAll()
+            retval = getattr(rpcapi, method)(ctxt, **kwargs)
+            self.assertEqual(expected_retval, retval)
 
-        retval = getattr(rpcapi, method)(ctxt, **kwargs)
-        self.assertEqual(expected_retval, retval)
+            if method in version_check:
+                csv_mock.assert_called_once_with(mock.ANY)
+            if prepare_kwargs:
+                prepare_mock.assert_called_once_with(**prepare_kwargs)
+            rpc_mock.assert_called_once_with(ctxt, method, **expected_kwargs)
 
     def test_create_networks(self):
         self._test_network_api('create_networks', rpc_method='call',
