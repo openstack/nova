@@ -1625,32 +1625,33 @@ class IronicDriverTestCase(test.NoDBTestCase):
                 detach_block_devices=None, attach_block_devices=None)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get')
-    def _test_network_binding_host_id(self, is_neutron, mock_get):
+    def _test_network_binding_host_id(self, network_interface, mock_get):
         node_uuid = uuidutils.generate_uuid()
         hostname = 'ironic-compute'
         instance = fake_instance.fake_instance_obj(self.ctx,
                                                    node=node_uuid,
                                                    host=hostname)
-        if is_neutron:
-            provider = 'neutron'
+        if network_interface == 'neutron':
             expected = None
         else:
-            provider = 'none'
             expected = hostname
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
                                           instance_type_id=5,
-                                          network_provider=provider)
+                                          network_interface=network_interface)
         mock_get.return_value = node
 
         host_id = self.driver.network_binding_host_id(self.ctx, instance)
         self.assertEqual(expected, host_id)
 
     def test_network_binding_host_id_neutron(self):
-        self._test_network_binding_host_id(True)
+        self._test_network_binding_host_id('neutron')
 
-    def test_network_binding_host_id_none(self):
-        self._test_network_binding_host_id(False)
+    def test_network_binding_host_id_flat(self):
+        self._test_network_binding_host_id('flat')
+
+    def test_network_binding_host_id_noop(self):
+        self._test_network_binding_host_id('noop')
 
 
 @mock.patch.object(instance_metadata, 'InstanceMetadata')
