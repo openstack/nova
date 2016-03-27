@@ -118,6 +118,19 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def migrate_engine(self):
         return self.engine
 
+    def _skippable_migrations(self):
+        mitaka_placeholders = range(8, 13)
+        return mitaka_placeholders
+
+    def migrate_up(self, version, with_data=False):
+        if with_data:
+            check = getattr(self, '_check_%03d' % version, None)
+            if version not in self._skippable_migrations():
+                self.assertIsNotNone(check,
+                                     ('API DB Migration %i does not have a '
+                                      'test. Please add one!') % version)
+        super(NovaAPIMigrationsWalk, self).migrate_up(version, with_data)
+
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
 
