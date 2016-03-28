@@ -13,16 +13,17 @@
 # Mie Yamamoto <myamamot@redhat.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Yuko Katabami <yukokatabami@gmail.com>, 2015. #zanata
+# Tsutomu Kimura <ebb0de2@jp.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
+"Project-Id-Version: nova 13.0.0.0rc2.dev15\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-17 05:38+0000\n"
+"POT-Creation-Date: 2016-03-24 10:46+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-10-08 04:20+0000\n"
-"Last-Translator: Akihiro Motoki <amotoki@gmail.com>\n"
+"PO-Revision-Date: 2016-03-28 05:08+0000\n"
+"Last-Translator: Tsutomu Kimura <ebb0de2@jp.ibm.com>\n"
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -392,6 +393,7 @@ msgstr "ブロックデバイス %(id)s がブート可能ではありません�
 msgid "Block Device Mapping cannot be converted to legacy format. "
 msgstr "ブロックデバイスマッピングを以前の形式に変換することはできません。"
 
+#, fuzzy
 msgid "Block Device Mapping is Invalid."
 msgstr "ブロックデバイスマッピングが無効です。"
 
@@ -2637,9 +2639,9 @@ msgstr "%(host)s:%(port)d をバインドできません。%(error)s"
 msgid "Not an rbd snapshot"
 msgstr "rbd スナップショットではありません"
 
-#, python-format
+#, fuzzy, python-format
 msgid "Not authorized for image %(image_id)s."
-msgstr "イメージ %(image_id)s では許可されていません。"
+msgstr "イメージ %(image_id)s への権限がありません。"
 
 msgid "Not authorized."
 msgstr "権限がありません。"
