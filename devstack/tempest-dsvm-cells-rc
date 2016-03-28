@@ -25,15 +25,15 @@
 # should be escaped. There is no need to specify .* at the end of a
 # pattern, as it's handled by the final match.
 
+# Test idempotent ids are used for specific tests because
+# these are unchanged if the test name changes.
+
 # Construct a regex to use when limiting scope of tempest
 # to avoid features unsupported by Nova Cells.
 r="^(?!.*"
 
 # skip security group tests
 r="$r(?:tempest\.api\.compute\.security_groups)"
-
-# skip test that requires security groups
-r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test_compute_with_volumes)"
 
 # skip aggregates tests
 r="$r|(?:tempest\.api\.compute\.admin\.test_aggregates)"
@@ -48,11 +48,16 @@ r="$r|(?:tempest\.api\.compute\.admin\.test_fixed_ips)"
 # skip floating-ip tests
 r="$r|(?:tempest\.api\.compute\.floating_ips)"
 # https://bugs.launchpad.net/tempest/+bug/1513983 - The follow scenario tests rely on Neutron but use floating IPs
-r="$r|(?:tempest\.scenario\.test_network_advanced_server_ops\.TestNetworkAdvancedServerOps\.test_server_connectivity_pause_unpause)"
-r="$r|(?:tempest\.scenario\.test_network_basic_ops\.TestNetworkBasicOps\.test_network_basic_ops)"
-r="$r|(?:tempest\.scenario\.test_network_basic_ops\.TestNetworkBasicOps\.test_update_router_admin_state)"
-r="$r|(?:tempest\.scenario\.test_network_v6\.TestGettingAddress\.test_slaac_from_os)"
-r="$r|(?:tempest\.scenario\.test_security_groups_basic_ops\.TestSecurityGroupsBasicOps\.test_cross_tenant_traffic)"
+# tempest.scenario.test_network_advanced_server_ops.TestNetworkAdvancedServerOps.test_server_connectivity_pause_unpause
+r="$r|(?:.*id\-2b2642db\-6568\-4b35\-b812\-eceed3fa20ce.*)"
+# tempest.scenario.test_network_basic_ops.TestNetworkBasicOps.test_network_basic_ops
+r="$r|(?:.*id\-f323b3ba\-82f8\-4db7\-8ea6\-6a895869ec49.*)"
+# tempest.scenario.test_network_basic_ops.TestNetworkBasicOps.test_update_router_admin_state
+r="$r|(?:.*id\-04b9fe4e\-85e8\-4aea\-b937\-ea93885ac59f.*)"
+# tempest.scenario.test_network_v6.TestGettingAddress.test_slaac_from_os
+r="$r|(?:.*id\-2c92df61\-29f0\-4eaa\-bee3\-7c65bef62a43.*)"
+# tempest.scenario.test_security_groups_basic_ops.TestSecurityGroupsBasicOps.test_cross_tenant_traffic
+r="$r|(?:.*id\-e79f879e\-debb\-440c\-a7e4\-efeda05b6848.*)"
 
 # exclude the slow tag
 r="$r|(?:.*\[.*\bslow\b.*\])"
@@ -62,30 +67,40 @@ r="$r|(?:.*\[.*\bslow\b.*\])"
 
 # NOTE(mriedem): Resize tests are skipped in devstack until custom flavors
 # in devstack used in Tempest runs are synced to the cells database.
-r="$r|(?:tempest\.api\.compute\.admin\.test_networks\.NetworksTest\.test_get_network)"
-r="$r|(?:tempest\.api\.compute\.admin\.test_networks\.NetworksTest\.test_list_all_networks)"
+# tempest.api.compute.admin.test_networks.NetworksTest.test_get_network)"
+r="$r|(?:.*id\-d206d211\-8912\-486f\-86e2\-a9d090d1f416.*)"
+# tempest.api.compute.admin.test_networks.NetworksTest.test_list_all_networks)"
+r="$r|(?:.*id\-df3d1046\-6fa5\-4b2c\-ad0c\-cfa46a351cb9.*)"
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_rescue\.ServerRescueTestJSON)"
-r="$r|(?:tempest\.api\.compute\.servers\.test_create_server\.ServersTestJSON\.test_create_server_with_scheduler_hint_group)"
-r="$r|(?:tempest\.api\.compute\.servers\.test_create_server\.ServersTestManualDisk\.test_create_server_with_scheduler_hint_group)"
-r="$r|(?:tempest\.api\.compute\.servers\.test_virtual_interfaces\.VirtualInterfacesTestJSON\.test_list_virtual_interfaces)"
-r="$r|(?:tempest\.api\.compute\.test_networks\.ComputeNetworksTest\.test_list_networks)"
-r="$r|(?:tempest\.scenario\.test_minimum_basic\.TestMinimumBasicScenario\.test_minimum_basic_scenario)"
+# tempest.api.compute.servers.test_create_server.ServersTestJSON.test_create_server_with_scheduler_hint_group
+r="$r|(?:.*id\-ed20d3fb\-9d1f\-4329\-b160\-543fbd5d9811.*)"
+# tempest.api.compute.servers.test_virtual_interfaces.VirtualInterfacesTestJSON.test_list_virtual_interfaces
+r="$r|(?:.*id\-96c4e2ef\-5e4d\-4d7f\-87f5\-fed6dca18016.*)"
+# tempest.api.compute.test_networks.ComputeNetworksTest.test_list_networks
+r="$r|(?:.*id\-3fe07175\-312e\-49a5\-a623\-5f52eeada4c2.*)"
+# tempest.scenario.test_minimum_basic.TestMinimumBasicScenario.test_minimum_basic_scenario
+r="$r|(?:.*id\-bdbb5441\-9204\-419d\-a225\-b4fdbfb1a1a8.*)"
 r="$r|(?:tempest\.api\.compute\.servers\.test_server_rescue_negative\.ServerRescueNegativeTestJSON)"
-r="$r|(?:tempest\.scenario\.test_encrypted_cinder_volumes\.TestEncryptedCinderVolumes\.test_encrypted_cinder_volumes_cryptsetup)"
-r="$r|(?:tempest\.scenario\.test_encrypted_cinder_volumes\.TestEncryptedCinderVolumes\.test_encrypted_cinder_volumes_luks)"
-r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_network\.EC2NetworkTest\.test_disassociate_not_associated_floating_ip)"
-r="$r|(?:tempest\.scenario\.test_server_basic_ops\.TestServerBasicOps\.(test_server_basicops|test_server_basic_ops))"
-r="$r|(?:tempest\.scenario\.test_snapshot_pattern\.TestSnapshotPattern\.test_snapshot_pattern)"
-r="$r|(?:tempest\.api\.compute\.admin\.test_hosts\.HostsAdminTestJSON\.test_show_host_detail)"
-r="$r|(?:tempest\.api\.compute\.test_tenant_networks\.ComputeTenantNetworksTest\.test_list_show_tenant_networks)"
+# tempest.scenario.test_encrypted_cinder_volumes.TestEncryptedCinderVolumes.test_encrypted_cinder_volumes_cryptsetup
+r="$r|(?:.*id\-cbc752ed\-b716\-4717\-910f\-956cce965722.*)"
+# tempest.scenario.test_encrypted_cinder_volumes.TestEncryptedCinderVolumes.test_encrypted_cinder_volumes_luks
+r="$r|(?:.*id\-79165fb4\-5534\-4b9d\-8429\-97ccffb8f86e.*)"
+# tempest.scenario.test_server_basic_ops.TestServerBasicOps.test_server_basicops
+r="$r|(?:.*id\-7fff3fb3\-91d8\-4fd0\-bd7d\-0204f1f180ba.*)"
+# tempest.scenario.test_snapshot_pattern.TestSnapshotPattern.test_snapshot_pattern
+r="$r|(?:.*id\-608e604b\-1d63\-4a82\-8e3e\-91bc665c90b4.*)"
+# tempest.api.compute.admin.test_hosts.HostsAdminTestJSON.test_show_host_detail
+r="$r|(?:.*id\-38adbb12\-aee2\-4498\-8aec\-329c72423aa4.*)"
+# tempest.api.compute.test_tenant_networks.ComputeTenantNetworksTest.test_list_show_tenant_networks
+r="$r|(?:.*id\-edfea98e\-bbe3\-4c7a\-9739\-87b986baff26.*)"
 # https://bugs.launchpad.net/nova/+bug/1489581
 r="$r|(?:tempest\.scenario\.test_volume_boot_pattern\.)"
-# https://bugs.launchpad.net/nova/+bug/1445628
-r="$r|(?:tempest\.thirdparty\.boto\.test_ec2_instance_run\.InstanceRunTest\.test_run_idempotent_instances)"
 # https://bugs.launchpad.net/nova/+bug/1466696 - Cells: Race between instance 'unlock' and 'stop' can cause 'stop' to fail
-r="$r|(?:tempest\.api\.compute\.servers\.test_server_actions\.ServerActionsTestJSON\.test_lock_unlock_server)"
+# tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_lock_unlock_server
+r="$r|(?:.*id\-80a8094c\-211e\-440a\-ab88\-9e59d556c7ee.*)"
 # scheduler hints apparently don't work in devstack cells
-r="$r|(?:tempest\.scenario\.test_server_multinode\.TestServerMultinode\.test_schedule_to_all_nodes)"
+# tempest.scenario.test_server_multinode.TestServerMultinode.test_schedule_to_all_nodes
+r="$r|(?:.*id\-9cecbe35\-b9d4\-48da\-a37e\-7ce70aa43d30.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
