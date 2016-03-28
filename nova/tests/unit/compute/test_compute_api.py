@@ -3030,6 +3030,11 @@ class _ComputeAPIUnitTestMixIn(object):
                             'access_ip_v6': None,
                             'config_drive': None,
                             'key_name': None,
+                            'reservation_id': None,
+                            'kernel_id': None,
+                            'ramdisk_id': None,
+                            'root_device_name': None,
+                            'user_data': None,
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
@@ -3066,8 +3071,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_provision_instances_creates_destroys_build_request(self):
         @mock.patch.object(self.compute_api, '_check_num_instances_quota')
-        @mock.patch.object(objects.Instance, 'create')
-        @mock.patch.object(objects.Instance, 'save')
+        @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
         @mock.patch.object(self.compute_api, '_validate_bdm')
@@ -3077,20 +3081,22 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects.InstanceMapping, 'create')
         def do_test(_mock_inst_mapping_create, mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
-                _mock_validate_bdm, _mock_ensure_default, _mock_inst_create,
-                _mock_inst_save, mock_check_num_inst_quota):
+                _mock_validate_bdm, _mock_ensure_default, mock_inst,
+                mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
-            req_spec_mock = mock.MagicMock()
-            build_req_mock = mock.MagicMock()
 
+            min_count = 1
+            max_count = 2
             mock_check_num_inst_quota.return_value = (2, quota_mock)
+            req_spec_mock = mock.MagicMock()
             mock_req_spec_from_components.return_value = req_spec_mock
-            mock_build_req.return_value = build_req_mock
+            inst_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_inst.side_effect = inst_mocks
+            build_req_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_build_req.side_effect = build_req_mocks
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
             flavor = self._create_flavor()
-            min_count = 1
-            max_count = 2
             boot_meta = {
                 'id': 'fake-image-id',
                 'properties': {'mappings': []},
@@ -3105,6 +3111,11 @@ class _ComputeAPIUnitTestMixIn(object):
                             'access_ip_v6': None,
                             'config_drive': None,
                             'key_name': None,
+                            'reservation_id': None,
+                            'kernel_id': None,
+                            'ramdisk_id': None,
+                            'root_device_name': None,
+                            'user_data': None,
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
@@ -3129,15 +3140,20 @@ class _ComputeAPIUnitTestMixIn(object):
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
                     filter_properties)
-            self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
+            for instance in instances:
+                self.assertTrue(uuidutils.is_uuid_like(instance.uuid))
 
-            display_names = ['fake-name-1', 'fake-name-2']
+            for inst_mock in inst_mocks:
+                inst_mock.create.assert_called_once_with()
+
             build_req_calls = [
                     mock.call(ctxt,
+                              instance=instances[0],
+                              instance_uuid=instances[0].uuid,
                               request_spec=req_spec_mock,
                               project_id=ctxt.project_id,
                               user_id=ctxt.user_id,
-                              display_name=display_names[0],
+                              display_name=instances[0].display_name,
                               instance_metadata=base_options['metadata'],
                               progress=0,
                               vm_state=vm_states.BUILDING,
@@ -3150,13 +3166,13 @@ class _ComputeAPIUnitTestMixIn(object):
                               config_drive=False,
                               key_name=base_options['config_drive'],
                               locked_by=None),
-                    mock.call().create(),
-                    mock.call().destroy(),
                     mock.call(ctxt,
+                              instance=instances[1],
+                              instance_uuid=instances[1].uuid,
                               request_spec=req_spec_mock,
                               project_id=ctxt.project_id,
                               user_id=ctxt.user_id,
-                              display_name=display_names[1],
+                              display_name=instances[1].display_name,
                               instance_metadata=base_options['metadata'],
                               progress=0,
                               vm_state=vm_states.BUILDING,
@@ -3169,10 +3185,11 @@ class _ComputeAPIUnitTestMixIn(object):
                               config_drive=False,
                               key_name=base_options['config_drive'],
                               locked_by=None),
-                    mock.call().create(),
-                    mock.call().destroy()
                     ]
             mock_build_req.assert_has_calls(build_req_calls)
+            for build_req_mock in build_req_mocks:
+                build_req_mock.create.assert_called_once_with()
+                build_req_mock.destroy.assert_called_once_with()
 
         do_test()
 
@@ -3213,6 +3230,11 @@ class _ComputeAPIUnitTestMixIn(object):
                             'access_ip_v6': None,
                             'config_drive': None,
                             'key_name': None,
+                            'reservation_id': None,
+                            'kernel_id': None,
+                            'ramdisk_id': None,
+                            'root_device_name': None,
+                            'user_data': None,
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}

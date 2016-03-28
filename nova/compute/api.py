@@ -911,30 +911,25 @@ class API(base.Base):
         # by the network quotas
         return base_options, max_network_count
 
-    def _create_build_request(self, context, instance_uuid, base_options,
+    def _create_build_request(self, context, instance, base_options,
             request_spec, security_groups, num_instances, index):
         # Store the BuildRequest that will help populate an instance
         # object for a list/show request
         info_cache = objects.InstanceInfoCache()
-        info_cache.instance_uuid = instance_uuid
+        info_cache.instance_uuid = instance.uuid
         info_cache.network_info = network_model.NetworkInfo()
         # NOTE: base_options['config_drive'] is either True or '' due
         # to how it's represented in the instances table in the db.
         # BuildRequest needs a boolean.
         bool_config_drive = strutils.bool_from_string(
                 base_options['config_drive'], default=False)
-        # display_name follows a whole set of rules
-        display_name = base_options['display_name']
-        if display_name is None:
-            display_name = self._default_display_name(instance_uuid)
-        if num_instances > 1:
-            display_name = self._new_instance_name_from_template(instance_uuid,
-                    display_name, index)
         build_request = objects.BuildRequest(context,
+                instance=instance,
+                instance_uuid=instance.uuid,
                 request_spec=request_spec,
                 project_id=context.project_id,
                 user_id=context.user_id,
-                display_name=display_name,
+                display_name=instance.display_name,
                 instance_metadata=base_options['metadata'],
                 progress=0,
                 vm_state=vm_states.BUILDING,
@@ -974,9 +969,6 @@ class API(base.Base):
                         base_options['pci_requests'], filter_properties,
                         instance_group, base_options['availability_zone'])
                 req_spec.create()
-                build_request = self._create_build_request(context,
-                        instance_uuid, base_options, req_spec, security_groups,
-                        num_instances, i)
 
                 # Create an instance object, but do not store in db yet.
                 instance = objects.Instance(context=context)
@@ -987,6 +979,9 @@ class API(base.Base):
                         block_device_mapping, num_instances, i,
                         shutdown_terminate, create_instance=False)
 
+                build_request = self._create_build_request(context,
+                        instance, base_options, req_spec, security_groups,
+                        num_instances, i)
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
                 # for it need to instead look for the RequestSpec.

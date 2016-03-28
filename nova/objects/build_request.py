@@ -13,6 +13,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_versionedobjects import exception as ovoo_exc
 import six
 from sqlalchemy.orm import joinedload
 
@@ -27,7 +28,7 @@ from nova.objects import fields
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
-OBJECT_FIELDS = ['info_cache', 'security_groups']
+OBJECT_FIELDS = ['info_cache', 'security_groups', 'instance']
 JSON_FIELDS = ['instance_metadata']
 IP_FIELDS = ['access_ip_v4', 'access_ip_v6']
 
@@ -39,6 +40,7 @@ class BuildRequest(base.NovaObject):
 
     fields = {
         'id': fields.IntegerField(),
+        'instance_uuid': fields.UUIDField(),
         'project_id': fields.StringField(),
         'user_id': fields.StringField(),
         'display_name': fields.StringField(nullable=True),
@@ -55,6 +57,7 @@ class BuildRequest(base.NovaObject):
         'key_name': fields.StringField(nullable=True),
         'locked_by': fields.EnumField(['owner', 'admin'], nullable=True),
         'request_spec': fields.ObjectField('RequestSpec'),
+        'instance': fields.ObjectField('Instance'),
         # NOTE(alaski): Normally these would come from the NovaPersistentObject
         # mixin but they're being set explicitly because we only need
         # created_at/updated_at. There is no soft delete for this object.
@@ -76,8 +79,36 @@ class BuildRequest(base.NovaObject):
         self.security_groups = objects.SecurityGroupList.obj_from_primitive(
                 jsonutils.loads(db_sec_group))
 
+    def _load_instance(self, db_instance):
+        # NOTE(alaski): Be very careful with instance loading because it
+        # changes more than most objects.
+        try:
+            self.instance = objects.Instance.obj_from_primitive(
+                    jsonutils.loads(db_instance))
+        except TypeError:
+            LOG.debug('Failed to load instance from BuildRequest with uuid '
+                      '%s because it is None' % (self.instance_uuid))
+            raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
+        except ovoo_exc.IncompatibleObjectVersion as exc:
+            # This should only happen if proper service upgrade strategies are
+            # not followed. Log the exception and raise BuildRequestNotFound.
+            # If the instance can't be loaded this object is useless and may
+            # as well not exist.
+            LOG.debug('Could not deserialize instance store in BuildRequest '
+                      'with uuid %(instance_uuid)s. Found version %(version)s '
+                      'which is not supported here.',
+                      dict(instance_uuid=self.instance_uuid,
+                          version=exc.objver))
+            LOG.exception(_LE('Could not deserialize instance in '
+                              'BuildRequest'))
+            raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
+
     @staticmethod
     def _from_db_object(context, req, db_req):
+        # Set this up front so that it can be pulled for error messages or
+        # logging at any point.
+        req.instance_uuid = db_req['instance_uuid']
+
         for key in req.fields:
             if isinstance(req.fields[key], fields.ObjectField):
                 try:
@@ -97,9 +128,7 @@ class BuildRequest(base.NovaObject):
     def _get_by_instance_uuid_from_db(context, instance_uuid):
         db_req = (context.session.query(api_models.BuildRequest)
                 .options(joinedload('request_spec'))
-                .filter(
-                    api_models.RequestSpec.instance_uuid == instance_uuid)
-                ).first()
+                .filter_by(instance_uuid=instance_uuid)).first()
         if not db_req:
             raise exception.BuildRequestNotFound(uuid=instance_uuid)
         return db_req
@@ -142,6 +171,10 @@ class BuildRequest(base.NovaObject):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+        if not self.obj_attr_is_set('instance_uuid'):
+            # We can't guarantee this is not null in the db so check here
+            raise exception.ObjectActionError(action='create',
+                    reason='instance_uuid must be set')
 
         updates = self._get_update_primitives()
         db_req = self._create_in_db(self._context, updates)
