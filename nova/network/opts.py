@@ -15,7 +15,6 @@ import itertools
 import nova.network
 import nova.network.driver
 import nova.network.floating_ips
-import nova.network.ldapdns
 import nova.network.linux_net
 import nova.network.neutronv2.api
 import nova.network.rpcapi
@@ -28,7 +27,6 @@ def list_opts():
          itertools.chain(
              nova.network._network_opts,
              nova.network.driver.driver_opts,
-             nova.network.ldapdns.ldap_dns_opts,
              nova.network.linux_net.linux_net_opts,
              nova.network.rpcapi.rpcapi_opts,
              nova.network.security_group.openstack_driver.security_group_opts,

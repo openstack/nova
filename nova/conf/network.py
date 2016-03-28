@@ -1,4 +1,4 @@
-# Copyright 2016 IBM Corporation
+# Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -12,6 +12,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
+import itertools
 
 from oslo_config import cfg
 
@@ -91,9 +93,52 @@ network_opts = [
 ]
 
 
+ldap_dns_opts = [
+    cfg.StrOpt('ldap_dns_url',
+                default='ldap://ldap.example.com:389',
+                help='URL for LDAP server which will store DNS entries'),
+    cfg.StrOpt('ldap_dns_user',
+                default='uid=admin,ou=people,dc=example,dc=org',
+                help='User for LDAP DNS'),
+    cfg.StrOpt('ldap_dns_password',
+                default='password',
+                help='Password for LDAP DNS',
+                secret=True),
+    cfg.StrOpt('ldap_dns_soa_hostmaster',
+                default='hostmaster@example.org',
+                help='Hostmaster for LDAP DNS driver Statement of Authority'),
+    cfg.MultiStrOpt('ldap_dns_servers',
+                default=['dns.example.org'],
+                help='DNS Servers for LDAP DNS driver'),
+    cfg.StrOpt('ldap_dns_base_dn',
+                default='ou=hosts,dc=example,dc=org',
+                help='Base DN for DNS entries in LDAP'),
+    cfg.StrOpt('ldap_dns_soa_refresh',
+                default='1800',
+                help='Refresh interval (in seconds) for LDAP DNS driver '
+                     'Statement of Authority'),
+    cfg.StrOpt('ldap_dns_soa_retry',
+                default='3600',
+                help='Retry interval (in seconds) for LDAP DNS driver '
+                     'Statement of Authority'),
+    cfg.StrOpt('ldap_dns_soa_expiry',
+                default='86400',
+                help='Expiry interval (in seconds) for LDAP DNS driver '
+                     'Statement of Authority'),
+    cfg.StrOpt('ldap_dns_soa_minimum',
+                default='7200',
+                help='Minimum interval (in seconds) for LDAP DNS driver '
+                     'Statement of Authority'),
+]
+
+ALL_DEFAULT_OPTS = itertools.chain(
+                   network_opts,
+                   ldap_dns_opts)
+
+
 def register_opts(conf):
-    conf.register_opts(network_opts)
+    conf.register_opts(ALL_DEFAULT_OPTS)
 
 
 def list_opts():
-    return {"DEFAULT": network_opts}
+    return {"DEFAULT": ALL_DEFAULT_OPTS}
