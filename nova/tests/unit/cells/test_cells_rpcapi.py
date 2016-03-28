@@ -24,6 +24,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 
@@ -151,7 +152,8 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual(capacity_info, result)
 
     def test_instance_update_at_top(self):
-        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_info_cache = objects.InstanceInfoCache(
+            instance_uuid=uuids.instance)
         fake_sys_metadata = {'key1': 'value1',
                              'key2': 'value2'}
         fake_attrs = {'id': 2,
@@ -171,7 +173,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                 expected_args, version='1.35')
 
     def test_instance_destroy_at_top(self):
-        fake_instance = objects.Instance(uuid='fake-uuid')
+        fake_instance = objects.Instance(uuid=uuids.instance)
 
         call_info = self._stub_rpc_method('cast', None)
 
@@ -368,7 +370,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_actions_get(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': 'region!child'}
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.actions_get(self.fake_context,
                                                fake_instance)
@@ -379,13 +381,13 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_actions_get_no_cell(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': None}
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.actions_get, self.fake_context,
                           fake_instance)
 
     def test_action_get_by_request_id(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': 'region!child'}
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.action_get_by_request_id(self.fake_context,
                                                             fake_instance,
@@ -398,13 +400,13 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_action_get_by_request_id_no_cell(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': None}
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.action_get_by_request_id,
                           self.fake_context, fake_instance, 'req-fake')
 
     def test_action_events_get(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': 'region!child'}
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.action_events_get(self.fake_context,
                                                      fake_instance,
@@ -416,7 +418,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_action_events_get_no_cell(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': None}
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.action_events_get,
                           self.fake_context, fake_instance, 'fake-action')
@@ -425,9 +427,9 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.consoleauth_delete_tokens(self.fake_context,
-                                                    'fake-uuid')
+                                                    uuids.instance)
 
-        expected_args = {'instance_uuid': 'fake-uuid'}
+        expected_args = {'instance_uuid': uuids.instance}
         self._check_result(call_info, 'consoleauth_delete_tokens',
                 expected_args, version='1.6')
 
@@ -435,9 +437,9 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('call', 'fake_response')
 
         result = self.cells_rpcapi.validate_console_port(self.fake_context,
-                'fake-uuid', 'fake-port', 'fake-type')
+                uuids.instance, 'fake-port', 'fake-type')
 
-        expected_args = {'instance_uuid': 'fake-uuid',
+        expected_args = {'instance_uuid': uuids.instance,
                          'console_port': 'fake-port',
                          'console_type': 'fake-type'}
         self._check_result(call_info, 'validate_console_port',
@@ -460,11 +462,11 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.bdm_destroy_at_top(self.fake_context,
-                                             'fake-uuid',
+                                             uuids.instance,
                                              device_name='fake-device',
                                              volume_id='fake-vol')
 
-        expected_args = {'instance_uuid': 'fake-uuid',
+        expected_args = {'instance_uuid': uuids.instance,
                          'device_name': 'fake-device',
                          'volume_id': 'fake-vol'}
         self._check_result(call_info, 'bdm_destroy_at_top',
