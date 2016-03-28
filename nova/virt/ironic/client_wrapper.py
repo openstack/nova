@@ -30,7 +30,7 @@ ironic = None
 IRONIC_GROUP = nova.conf.ironic.ironic_group
 
 # The API version required by the Ironic driver
-IRONIC_API_VERSION = (1, 29)
+IRONIC_API_VERSION = (1, 32)
 
 
 class IronicClientWrapper(object):
