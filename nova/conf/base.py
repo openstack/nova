@@ -49,7 +49,22 @@ tempdir = cfg.StrOpt(
 monkey_patch = cfg.BoolOpt(
     'monkey_patch',
     default=False,
-    help='Whether to apply monkey patching')
+    help="""Determine if monkey patching should be applied.
+
+Possible values:
+
+* True: Functions specified in ``monkey_patch_modules`` will be patched.
+* False: No monkey patching will occur.
+
+Services which consume this:
+
+* All
+
+Interdependencies to other options:
+
+* ``monkey_patch_modules``: This must have values set for this option to have
+  any effect
+""")
 
 notify_decorator = 'nova.notifications.notify_decorator'
 
@@ -58,7 +73,22 @@ monkey_patch_modules = cfg.ListOpt(
     default=[
         'nova.compute.api:%s' % (notify_decorator)
     ],
-    help='List of modules/decorators to monkey patch')
+    help="""List of modules/decorators to monkey patch.
+
+This option allows you to patch a decorator for all functions in specified
+modules.
+
+Possible values:
+
+* nova.compute.api:nova.notifications.notify_decorator
+* nova.api.ec2.cloud:nova.notifications.notify_decorator
+* [...]
+
+Interdependencies to other options:
+
+* ``monkey_patch``: This must be set to ``True`` for this option to
+  have any effect
+""")
 
 
 ALL_OPTS = [
