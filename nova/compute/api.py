@@ -970,9 +970,21 @@ class API(base.Base):
                 build_request = self._create_build_request(context,
                         instance_uuid, base_options, req_spec, security_groups,
                         num_instances, i)
+                # Create an instance_mapping.  The null cell_mapping indicates
+                # that the instance doesn't yet exist in a cell, and lookups
+                # for it need to instead look for the RequestSpec.
+                # cell_mapping will be populated after scheduling, with a
+                # scheduling failure using the cell_mapping for the special
+                # cell0.
+                inst_mapping = objects.InstanceMapping(context=context)
+                inst_mapping.instance_uuid = instance_uuid
+                inst_mapping.project_id = context.project_id
+                inst_mapping.cell_mapping = None
+                inst_mapping.create()
                 # TODO(alaski): Cast to conductor here which will call the
                 # scheduler and defer instance creation until the scheduler
-                # has picked a cell/host.
+                # has picked a cell/host. Set the instance_mapping to the cell
+                # that the instance is scheduled to.
                 instance = objects.Instance(context=context)
                 instance.uuid = instance_uuid
                 instance.update(base_options)

@@ -2952,7 +2952,8 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects, 'BuildRequest')
-        def do_test(_mock_build_req,
+        @mock.patch.object(objects.InstanceMapping, 'create')
+        def do_test(_mock_inst_mapping_create, _mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
                 _mock_validate_bdm, _mock_ensure_default, _mock_create,
                 mock_check_num_inst_quota):
@@ -3023,9 +3024,11 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects, 'BuildRequest')
-        def do_test(mock_build_req, mock_req_spec_from_components,
-                _mock_create_bdm, _mock_validate_bdm, _mock_ensure_default,
-                _mock_inst_create, _mock_inst_save, mock_check_num_inst_quota):
+        @mock.patch.object(objects.InstanceMapping, 'create')
+        def do_test(_mock_inst_mapping_create, mock_build_req,
+                mock_req_spec_from_components, _mock_create_bdm,
+                _mock_validate_bdm, _mock_ensure_default, _mock_inst_create,
+                _mock_inst_save, mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
             req_spec_mock = mock.MagicMock()
             build_req_mock = mock.MagicMock()
@@ -3121,6 +3124,75 @@ class _ComputeAPIUnitTestMixIn(object):
                     ]
             mock_build_req.assert_has_calls(build_req_calls)
 
+        do_test()
+
+    def test_provision_instances_creates_instance_mapping(self):
+        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch.object(objects.Instance, 'create', new=mock.MagicMock())
+        @mock.patch.object(self.compute_api.security_group_api,
+                'ensure_default', new=mock.MagicMock())
+        @mock.patch.object(self.compute_api, '_validate_bdm',
+                new=mock.MagicMock())
+        @mock.patch.object(self.compute_api, '_create_block_device_mapping',
+                new=mock.MagicMock())
+        @mock.patch.object(objects.RequestSpec, 'from_components',
+                mock.MagicMock())
+        @mock.patch.object(objects, 'BuildRequest', new=mock.MagicMock())
+        @mock.patch('nova.objects.InstanceMapping')
+        def do_test(mock_inst_mapping, mock_check_num_inst_quota):
+            quota_mock = mock.MagicMock()
+            inst_mapping_mock = mock.MagicMock()
+
+            mock_check_num_inst_quota.return_value = (1, quota_mock)
+            mock_inst_mapping.return_value = inst_mapping_mock
+
+            ctxt = context.RequestContext('fake-user', 'fake-project')
+            flavor = self._create_flavor()
+            min_count = max_count = 1
+            boot_meta = {
+                'id': 'fake-image-id',
+                'properties': {'mappings': []},
+                'status': 'fake-status',
+                'location': 'far-away'}
+            base_options = {'image_ref': 'fake-ref',
+                            'display_name': 'fake-name',
+                            'project_id': 'fake-project',
+                            'availability_zone': None,
+                            'metadata': {},
+                            'access_ip_v4': None,
+                            'access_ip_v6': None,
+                            'config_drive': None,
+                            'key_name': None,
+                            'numa_topology': None,
+                            'pci_requests': None}
+            security_groups = {}
+            block_device_mapping = [objects.BlockDeviceMapping(
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                    {
+                     'id': 1,
+                     'volume_id': 1,
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'device_name': 'vda',
+                     'boot_index': 0,
+                     }))]
+            shutdown_terminate = True
+            instance_group = None
+            check_server_group_quota = False
+            filter_properties = {'scheduler_hints': None,
+                    'instance_type': flavor}
+
+            instances = self.compute_api._provision_instances(ctxt, flavor,
+                    min_count, max_count, base_options, boot_meta,
+                    security_groups, block_device_mapping, shutdown_terminate,
+                    instance_group, check_server_group_quota,
+                    filter_properties)
+            self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
+
+            self.assertEqual(instances[0].uuid,
+                    inst_mapping_mock.instance_uuid)
+            self.assertIsNone(inst_mapping_mock.cell_mapping)
+            self.assertEqual(ctxt.project_id, inst_mapping_mock.project_id)
         do_test()
 
     def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,
