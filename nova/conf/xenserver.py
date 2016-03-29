@@ -338,12 +338,25 @@ xenapi_opts = [
                     '(ex. /dev/xvdb -> /dev/sdb)'),
 ]
 
+xenapi_vmops_opts = [
+    cfg.IntOpt('running_timeout',
+               default=60,
+               help='Number of seconds to wait for instance '
+                    'to go to running state'),
+    cfg.StrOpt('vif_driver',
+               default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
+               help='The XenAPI VIF driver using XenServer Network APIs.'),
+    cfg.StrOpt('image_upload_handler',
+                default='nova.virt.xenapi.image.glance.GlanceStore',
+               help='Dom0 plugin driver used to handle image uploads.'),
+    ]
 
 ALL_XENSERVER_OPTS = (xenapi_agent_opts +
                       xenapi_session_opts +
                       xenapi_torrent_opts +
                       xenapi_vm_utils_opts +
-                      xenapi_opts)
+                      xenapi_opts +
+                      xenapi_vmops_opts)
 
 
 def register_opts(conf):

@@ -83,7 +83,6 @@ def list_opts():
          itertools.chain(
              [nova.virt.xenapi.vif.xenapi_ovs_integration_bridge_opt],
              nova.virt.xenapi.pool.xenapi_pool_opts,
-             nova.virt.xenapi.vmops.xenapi_vmops_opts,
              nova.virt.xenapi.volume_utils.xenapi_volume_utils_opts,
          )),
     ]
