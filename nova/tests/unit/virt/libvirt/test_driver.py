@@ -6993,7 +6993,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                            test_mock, [])
             test_mock.migrateToURI2.assert_called_once_with(
                 'qemu+tcp://127.0.0.2/system',
-                None, mupdate(), None, None, 0)
+                None, mupdate(), 0, None, 0)
 
     def test_update_volume_xml(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7323,7 +7323,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.context, instance, 'dest',
                           False, migrate_data, dom, disk_paths)
         mock_migrateToURI3.assert_called_once_with(
-                drvr._live_migration_uri('dest'), params, None)
+                drvr._live_migration_uri('dest'), params, 0)
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
