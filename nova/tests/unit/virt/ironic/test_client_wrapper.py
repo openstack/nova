@@ -92,6 +92,23 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
+    @mock.patch.object(ironic_client, 'get_client')
+    def test__get_client_cafile(self, mock_ir_cli):
+        self.flags(admin_auth_token='fake-token', group='ironic')
+        self.flags(cafile='fake-cafile', group='ironic')
+        ironicclient = client_wrapper.IronicClientWrapper()
+        # dummy call to have _get_client() called
+        ironicclient.call("node.list")
+        expected = {'os_auth_token': 'fake-token',
+                    'ironic_url': CONF.ironic.api_endpoint,
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval,
+                    'os_ironic_api_version': '1.8',
+                    'os_cacert': 'fake-cafile',
+                    'ca_file': 'fake-cafile'}
+        mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
+                                            **expected)
+
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
     def test_call_fail(self, mock_get_client, mock_multi_getattr):

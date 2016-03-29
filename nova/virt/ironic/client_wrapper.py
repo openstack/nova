@@ -82,6 +82,11 @@ class IronicClientWrapper(object):
             kwargs = {'os_auth_token': auth_token,
                       'ironic_url': CONF.ironic.api_endpoint}
 
+        if CONF.ironic.cafile:
+            kwargs['os_cacert'] = CONF.ironic.cafile
+            # Set the old option for compat with old clients
+            kwargs['ca_file'] = CONF.ironic.cafile
+
         # Retries for Conflict exception
         kwargs['max_retries'] = max_retries
         kwargs['retry_interval'] = retry_interval
