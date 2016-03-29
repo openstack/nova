@@ -2296,10 +2296,19 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             except (cinder_exception.EndpointNotFound,
                     keystone_exception.EndpointNotFound) as exc:
-                LOG.warning(_LW('Ignoring EndpointNotFound: %s'), exc,
+                LOG.warning(_LW('Ignoring EndpointNotFound for '
+                                'volume %(volume_id)s: %(exc)s'),
+                            {'exc': exc, 'volume_id': bdm.volume_id},
                             instance=instance)
             except cinder_exception.ClientException as exc:
-                LOG.warning(_LW('Ignoring Unknown cinder exception: %s'), exc,
+                LOG.warning(_LW('Ignoring unknown cinder exception for '
+                                'volume %(volume_id)s: %(exc)s'),
+                            {'exc': exc, 'volume_id': bdm.volume_id},
+                            instance=instance)
+            except Exception as exc:
+                LOG.warning(_LW('Ignoring unknown exception for '
+                                'volume %(volume_id)s: %(exc)s'),
+                            {'exc': exc, 'volume_id': bdm.volume_id},
                             instance=instance)
 
         if notify:
