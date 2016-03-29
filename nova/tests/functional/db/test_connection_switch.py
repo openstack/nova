@@ -21,13 +21,17 @@ from nova import test
 from nova.tests import fixtures
 
 
-class ConnectionSwitchTestCase(test.NoDBTestCase):
-    USES_DB_SELF = True
+class ConnectionSwitchTestCase(test.TestCase):
     test_filename = 'foo.db'
+    fake_conn = 'sqlite:///' + test_filename
 
     def setUp(self):
         super(ConnectionSwitchTestCase, self).setUp()
         self.addCleanup(self.cleanup)
+        # Use a file-based sqlite database so data will persist across new
+        # connections
+        # The 'main' database connection will stay open, so in-memory is fine
+        self.useFixture(fixtures.Database(connection=self.fake_conn))
 
     def cleanup(self):
         try:
@@ -36,23 +40,17 @@ class ConnectionSwitchTestCase(test.NoDBTestCase):
             pass
 
     def test_connection_switch(self):
-        # Use a file-based sqlite database so data will persist across new
-        # connections
-        fake_conn = 'sqlite:///' + self.test_filename
-
-        # The 'main' database connection will stay open, so in-memory is fine
-        self.useFixture(fixtures.Database(database='main'))
-        self.useFixture(fixtures.Database(connection=fake_conn))
-
         # Make a request context with a cell mapping
-        mapping = objects.CellMapping(database_connection=fake_conn)
-        # In the tests, the admin context is required in order to read
-        # an Instance back after write, for some reason
-        ctxt = context.get_admin_context()
+        mapping = objects.CellMapping(database_connection=self.fake_conn)
+        ctxt = context.RequestContext('fake-user', 'fake-project')
         # Create an instance in the cell database
         uuid = uuidutils.generate_uuid()
         with context.target_cell(ctxt, mapping):
-            instance = objects.Instance(context=ctxt, uuid=uuid)
+            # Must set project_id because instance get specifies
+            # project_only=True to model_query, which means non-admin
+            # users can only read instances for their project
+            instance = objects.Instance(context=ctxt, uuid=uuid,
+                                        project_id='fake-project')
             instance.create()
 
             # Verify the instance is found in the cell database
