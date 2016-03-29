@@ -38,7 +38,6 @@ import nova.paths
 import nova.quota
 import nova.servicegroup.api
 import nova.spice
-import nova.utils
 import nova.volume
 import nova.volume.cinder
 
@@ -63,7 +62,6 @@ def list_opts():
              nova.notifications.notify_opts,
              nova.paths.path_opts,
              nova.quota.quota_opts,
-             nova.utils.monkey_patch_opts,
              nova.volume._volume_opts,
          )),
         ('cinder', nova.volume.cinder.cinder_opts),

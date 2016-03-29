@@ -46,12 +46,29 @@ tempdir = cfg.StrOpt(
     'tempdir',
     help='Explicitly specify the temporary working directory')
 
+monkey_patch = cfg.BoolOpt(
+    'monkey_patch',
+    default=False,
+    help='Whether to apply monkey patching')
+
+notify_decorator = 'nova.notifications.notify_decorator'
+
+monkey_patch_modules = cfg.ListOpt(
+    'monkey_patch_modules',
+    default=[
+        'nova.compute.api:%s' % (notify_decorator)
+    ],
+    help='List of modules/decorators to monkey patch')
+
+
 ALL_OPTS = [
     password_length,
     instance_usage_audit_period,
     use_rootwrap_daemon,
     rootwrap_config,
-    tempdir]
+    tempdir,
+    monkey_patch,
+    monkey_patch_modules]
 
 
 def register_opts(conf):

@@ -42,7 +42,6 @@ import eventlet
 import netaddr
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -62,22 +61,8 @@ from nova.i18n import _, _LE, _LI, _LW
 import nova.network
 from nova import safe_utils
 
-notify_decorator = 'nova.notifications.notify_decorator'
-
-monkey_patch_opts = [
-    cfg.BoolOpt('monkey_patch',
-                default=False,
-                help='Whether to apply monkey patching'),
-    cfg.ListOpt('monkey_patch_modules',
-                default=[
-                  'nova.compute.api:%s' % (notify_decorator)
-                  ],
-                help='List of modules/decorators to monkey patch'),
-]
-
 
 CONF = nova.conf.CONF
-CONF.register_opts(monkey_patch_opts)
 
 LOG = logging.getLogger(__name__)
 
