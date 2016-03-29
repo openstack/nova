@@ -41,7 +41,6 @@ import nova.virt.vmwareapi.vmops
 import nova.virt.xenapi.agent
 import nova.virt.xenapi.client.session
 import nova.virt.xenapi.driver
-import nova.virt.xenapi.image.bittorrent
 import nova.virt.xenapi.pool
 import nova.virt.xenapi.vif
 import nova.virt.xenapi.vm_utils
@@ -89,7 +88,6 @@ def list_opts():
          itertools.chain(
              [nova.virt.xenapi.vif.xenapi_ovs_integration_bridge_opt],
              nova.virt.xenapi.driver.xenapi_opts,
-             nova.virt.xenapi.image.bittorrent.xenapi_torrent_opts,
              nova.virt.xenapi.pool.xenapi_pool_opts,
              nova.virt.xenapi.vm_utils.xenapi_vm_utils_opts,
              nova.virt.xenapi.vmops.xenapi_vmops_opts,
