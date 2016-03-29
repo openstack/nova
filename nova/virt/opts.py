@@ -38,8 +38,6 @@ import nova.virt.vmwareapi.vim_util
 import nova.virt.vmwareapi.vm_util
 import nova.virt.vmwareapi.vmops
 import nova.virt.xenapi.agent
-import nova.virt.xenapi.client.session
-import nova.virt.xenapi.driver
 import nova.virt.xenapi.pool
 import nova.virt.xenapi.vif
 import nova.virt.xenapi.vmops
@@ -84,7 +82,6 @@ def list_opts():
         ('xenserver',
          itertools.chain(
              [nova.virt.xenapi.vif.xenapi_ovs_integration_bridge_opt],
-             nova.virt.xenapi.driver.xenapi_opts,
              nova.virt.xenapi.pool.xenapi_pool_opts,
              nova.virt.xenapi.vmops.xenapi_vmops_opts,
              nova.virt.xenapi.volume_utils.xenapi_volume_utils_opts,

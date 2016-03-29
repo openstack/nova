@@ -25,7 +25,6 @@ A driver for XenServer or Xen Cloud Platform.
 
 import math
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -33,6 +32,7 @@ from oslo_utils import versionutils
 import six
 import six.moves.urllib.parse as urlparse
 
+import nova.conf
 from nova.i18n import _, _LE, _LW
 from nova.virt import driver
 from nova.virt.xenapi.client import session
@@ -44,57 +44,7 @@ from nova.virt.xenapi import volumeops
 
 LOG = logging.getLogger(__name__)
 
-xenapi_opts = [
-    cfg.StrOpt('connection_url',
-               help='URL for connection to XenServer/Xen Cloud Platform. '
-                    'A special value of unix://local can be used to connect '
-                    'to the local unix socket.  '
-                    'Required if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('connection_username',
-               default='root',
-               help='Username for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('connection_password',
-               help='Password for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver',
-               secret=True),
-    cfg.FloatOpt('vhd_coalesce_poll_interval',
-                 default=5.0,
-                 help='The interval used for polling of coalescing vhds. '
-                      'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.BoolOpt('check_host',
-                default=True,
-                help='Ensure compute service is running on host XenAPI '
-                     'connects to.'),
-    cfg.IntOpt('vhd_coalesce_max_attempts',
-               default=20,
-               help='Max number of times to poll for VHD to coalesce. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('sr_base_path',
-               default='/var/run/sr-mount',
-               help='Base path to the storage repository'),
-    cfg.StrOpt('target_host',
-               help='The iSCSI Target Host'),
-    cfg.StrOpt('target_port',
-               default='3260',
-               help='The iSCSI Target Port, default is port 3260'),
-    cfg.StrOpt('iqn_prefix',
-               default='iqn.2010-10.org.openstack',
-               help='IQN Prefix'),
-    # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
-    # when we pull support for it, we should remove this
-    cfg.BoolOpt('remap_vbd_dev',
-                default=False,
-                help='Used to enable the remapping of VBD dev '
-                     '(Works around an issue in Ubuntu Maverick)'),
-    cfg.StrOpt('remap_vbd_dev_prefix',
-               default='sd',
-               help='Specify prefix to remap VBD dev to '
-                    '(ex. /dev/xvdb -> /dev/sdb)'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(xenapi_opts, 'xenserver')
+CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
 
 OVERHEAD_BASE = 3
