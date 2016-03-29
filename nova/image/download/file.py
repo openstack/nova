@@ -16,21 +16,15 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI
 import nova.image.download.base as xfer_base
 import nova.virt.libvirt.utils as lv_utils
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
-
-opt_group = cfg.ListOpt(name='filesystems', default=[],
-                        help=_('List of file systems that are configured '
-                               'in this file in the '
-                               'image_file_url:<list entry name> '
-                               'sections'))
-CONF.register_opt(opt_group, group="image_file_url")
 
 
 #  This module extends the configuration options for nova.conf.  If the user

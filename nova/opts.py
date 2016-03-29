@@ -79,7 +79,6 @@ def list_opts():
         ('cinder', nova.volume.cinder.cinder_opts),
         ('api_database', nova.db.sqlalchemy.api.api_db_opts),
         ('database', nova.db.sqlalchemy.api.oslo_db_options.database_opts),
-        ('image_file_url', [nova.image.download.file.opt_group]),
         ('spice',
          itertools.chain(
              nova.cmd.spicehtml5proxy.opts,
