@@ -450,6 +450,18 @@ class RequestSpec(base.NovaObject):
         self._from_db_object(self._context, self, db_spec)
         self.obj_reset_changes()
 
+    def reset_forced_destinations(self):
+        """Clears the forced destination fields from the RequestSpec object.
+
+        This method is for making sure we don't ask the scheduler to give us
+        again the same destination(s) without persisting the modifications.
+        """
+        self.force_hosts = None
+        self.force_nodes = None
+        # NOTE(sbauza): Make sure we don't persist this, we need to keep the
+        # original request for the forced hosts
+        self.obj_reset_changes(['force_hosts', 'force_nodes'])
+
 
 @base.NovaObjectRegistry.register
 class SchedulerRetries(base.NovaObject):
