@@ -65,14 +65,15 @@ class LocalComputeTaskAPI(object):
 
     def resize_instance(self, context, instance, extra_instance_updates,
                         scheduler_hint, flavor, reservations,
-                        clean_shutdown=True):
+                        clean_shutdown=True, request_spec=None):
         # NOTE(comstud): 'extra_instance_updates' is not used here but is
         # needed for compatibility with the cells_rpcapi version of this
         # method.
         self._manager.migrate_server(
             context, instance, scheduler_hint, live=False, rebuild=False,
             flavor=flavor, block_migration=None, disk_over_commit=None,
-            reservations=reservations, clean_shutdown=clean_shutdown)
+            reservations=reservations, clean_shutdown=clean_shutdown,
+            request_spec=request_spec)
 
     def live_migrate_instance(self, context, instance, host_name,
                               block_migration, disk_over_commit,
@@ -176,14 +177,15 @@ class ComputeTaskAPI(object):
 
     def resize_instance(self, context, instance, extra_instance_updates,
                         scheduler_hint, flavor, reservations,
-                        clean_shutdown=True):
+                        clean_shutdown=True, request_spec=None):
         # NOTE(comstud): 'extra_instance_updates' is not used here but is
         # needed for compatibility with the cells_rpcapi version of this
         # method.
         self.conductor_compute_rpcapi.migrate_server(
             context, instance, scheduler_hint, live=False, rebuild=False,
             flavor=flavor, block_migration=None, disk_over_commit=None,
-            reservations=reservations, clean_shutdown=clean_shutdown)
+            reservations=reservations, clean_shutdown=clean_shutdown,
+            request_spec=request_spec)
 
     def live_migrate_instance(self, context, instance, host_name,
                               block_migration, disk_over_commit,

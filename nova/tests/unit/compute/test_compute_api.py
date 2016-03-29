@@ -1487,6 +1487,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
+        self.mox.StubOutWithMock(objects.RequestSpec, 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
 
@@ -1571,6 +1572,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.compute_api._record_action_start(self.context, fake_inst,
                                                       'migrate')
 
+            fake_spec = objects.RequestSpec()
+            objects.RequestSpec.get_by_instance_uuid(
+                self.context, fake_inst.uuid).AndReturn(fake_spec)
+
             scheduler_hint = {'filter_properties': filter_properties}
 
             self.compute_api.compute_task_api.resize_instance(
@@ -1578,7 +1583,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     scheduler_hint=scheduler_hint,
                     flavor=mox.IsA(objects.Flavor),
                     reservations=expected_reservations,
-                    clean_shutdown=clean_shutdown)
+                    clean_shutdown=clean_shutdown,
+                    request_spec=fake_spec)
 
         self.mox.ReplayAll()
 
@@ -1591,6 +1597,11 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.resize(self.context, fake_inst,
                                     clean_shutdown=clean_shutdown,
                                     **extra_kwargs)
+
+        if allow_same_host:
+            self.assertEqual([], fake_spec.ignore_hosts)
+        else:
+            self.assertEqual([fake_inst['host']], fake_spec.ignore_hosts)
 
     def _test_migrate(self, *args, **kwargs):
         self._test_resize(*args, flavor_id_passed=False, **kwargs)
@@ -1690,6 +1701,7 @@ class _ComputeAPIUnitTestMixIn(object):
                               self.compute_api.resize, self.context,
                               fake_inst, flavor_id='flavor-id')
 
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('nova.compute.api.API._resize_cells_support')
     @mock.patch('nova.conductor.conductor_api.ComputeTaskAPI.resize_instance')
@@ -1698,7 +1710,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       get_flavor_by_flavor_id,
                                                       resize_instance_mock,
                                                       cells_support_mock,
-                                                      record_mock):
+                                                      record_mock,
+                                                      get_by_inst):
         params = dict(image_ref='')
         fake_inst = self._create_instance_obj(params=params)
 

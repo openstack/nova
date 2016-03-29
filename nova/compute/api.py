@@ -2729,12 +2729,26 @@ class API(base.Base):
             self._record_action_start(context, instance,
                                       instance_actions.RESIZE)
 
+        # NOTE(sbauza): The migration script we provided in Newton should make
+        # sure that all our instances are currently migrated to have an
+        # attached RequestSpec object but let's consider that the operator only
+        # half migrated all their instances in the meantime.
+        try:
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                context, instance.uuid)
+            request_spec.ignore_hosts = filter_properties['ignore_hosts']
+        except exception.RequestSpecNotFound:
+            # Some old instances can still have no RequestSpec object attached
+            # to them, we need to support the old way
+            request_spec = None
+
         scheduler_hint = {'filter_properties': filter_properties}
         self.compute_task_api.resize_instance(context, instance,
                 extra_instance_updates, scheduler_hint=scheduler_hint,
                 flavor=new_instance_type,
                 reservations=quotas.reservations or [],
-                clean_shutdown=clean_shutdown)
+                clean_shutdown=clean_shutdown,
+                request_spec=request_spec)
 
     @wrap_check_policy
     @check_instance_lock

@@ -668,6 +668,24 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'resize_instance',
                            expected_args, version='1.33')
 
+    def test_resize_instance_not_passing_request_spec(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.resize_instance(self.fake_context,
+                                          'fake-instance',
+                                          dict(cow='moo'),
+                                          'fake-hint',
+                                          'fake-flavor',
+                                          'fake-reservations',
+                                          clean_shutdown=True,
+                                          request_spec='fake-spec')
+        expected_args = {'instance': 'fake-instance',
+                         'flavor': 'fake-flavor',
+                         'extra_instance_updates': dict(cow='moo'),
+                         'clean_shutdown': True}
+        self._check_result(call_info, 'resize_instance',
+                           expected_args, version='1.33')
+
     def test_live_migrate_instance(self):
         call_info = self._stub_rpc_method('cast', None)
 
