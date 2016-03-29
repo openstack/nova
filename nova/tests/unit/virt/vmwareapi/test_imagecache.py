@@ -232,8 +232,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertEqual(3, self._get_timestamp_called)
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
-    def test_update(self, mock_get_by_inst):
+                       'bdms_by_instance_uuid', return_value={})
+    def test_update(self, mock_bdms_by_inst):
         def fake_list_datastore_images(ds_path, datastore):
             return {'unexplained_images': [],
                     'originals': self.images}

@@ -74,6 +74,8 @@ class ImageCacheManager(object):
         image_popularity = {}
         instance_names = set()
         used_swap_images = set()
+        instance_bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
+            context, [instance.uuid for instance in all_instances])
 
         for instance in all_instances:
             # NOTE(mikal): "instance name" here means "the name of a directory
@@ -102,8 +104,7 @@ class ImageCacheManager(object):
                 image_popularity.setdefault(image_ref_str, 0)
                 image_popularity[image_ref_str] += 1
 
-            gb = objects.BlockDeviceMappingList.get_by_instance_uuid
-            bdms = gb(context, instance.uuid)
+            bdms = instance_bdms.get(instance.uuid)
             if bdms:
                 swap = driver_block_device.convert_swap(bdms)
                 if swap:
