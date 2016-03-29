@@ -387,6 +387,21 @@ class ServerGroupTestV2(ServerGroupTestBase):
         self.assertNotEqual(servers[0]['OS-EXT-SRV-ATTR:host'],
                             migrated_server['OS-EXT-SRV-ATTR:host'])
 
+    def test_resize_to_same_host_with_anti_affinity(self):
+        self.flags(allow_resize_to_same_host=True)
+        created_group = self.api.post_server_groups(self.anti_affinity)
+        servers = self._boot_servers_to_group(created_group,
+                                              flavor=self.api.get_flavors()[0])
+
+        post = {'resize': {'flavorRef': '2'}}
+        server1_old_host = servers[1]['OS-EXT-SRV-ATTR:host']
+        self.admin_api.post_server_action(servers[1]['id'], post)
+        migrated_server = self._wait_for_state_change(servers[1],
+                                                      'VERIFY_RESIZE')
+
+        self.assertEqual(server1_old_host,
+                         migrated_server['OS-EXT-SRV-ATTR:host'])
+
     def _get_compute_service_by_host_name(self, host_name):
         host = None
         if self.compute.host == host_name:

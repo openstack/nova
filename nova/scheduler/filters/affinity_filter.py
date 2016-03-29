@@ -87,6 +87,11 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
                     if spec_obj.instance_group else [])
         if self.policy_name not in policies:
             return True
+        # NOTE(hanrong): Move operations like resize can check the same source
+        # compute node where the instance is. That case, AntiAffinityFilter
+        # must not return the source as a non-possible destination.
+        if spec_obj.instance_uuid in host_state.instances.keys():
+            return True
 
         group_hosts = (spec_obj.instance_group.hosts
                        if spec_obj.instance_group else [])
