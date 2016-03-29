@@ -101,46 +101,74 @@ def get_test_instance(context=None, flavor=None, obj=False):
         instance = nova.db.instance_create(context, test_instance)
     return instance
 
+FAKE_NETWORK_VLAN = 100
+FAKE_NETWORK_BRIDGE = 'br0'
+FAKE_NETWORK_INTERFACE = 'eth0'
+
+FAKE_NETWORK_IP4_ADDR1 = '10.0.0.73'
+FAKE_NETWORK_IP4_ADDR2 = '10.0.0.74'
+FAKE_NETWORK_IP6_ADDR1 = '2001:b105:f00d::1'
+FAKE_NETWORK_IP6_ADDR2 = '2001:b105:f00d::2'
+FAKE_NETWORK_IP6_ADDR3 = '2001:b105:f00d::3'
+
+FAKE_NETWORK_IP4_GATEWAY = '10.0.0.254'
+FAKE_NETWORK_IP6_GATEWAY = '2001:b105:f00d::ff'
+
+FAKE_NETWORK_IP4_CIDR = '10.0.0.0/24'
+FAKE_NETWORK_IP6_CIDR = '2001:b105:f00d::0/64'
+
+FAKE_NETWORK_DNS_IP4_ADDR1 = '192.168.122.1'
+FAKE_NETWORK_DNS_IP4_ADDR2 = '192.168.122.2'
+FAKE_NETWORK_DNS_IP6_ADDR1 = '2001:dead:beef::1'
+FAKE_NETWORK_DNS_IP6_ADDR2 = '2001:dead:beef::2'
+
+FAKE_NETWORK_DHCP_IP4_ADDR = '192.168.122.253'
+
+FAKE_NETWORK_UUID = '4587c867-a2e6-4356-8c5b-bc077dcb8620'
+
+FAKE_VIF_UUID = '51a9642b-1414-4bd6-9a92-1320ddc55a63'
+FAKE_VIF_MAC = 'de:ad:be:ef:ca:fe'
+
 
 def get_test_network_info(count=1):
     ipv6 = CONF.use_ipv6
-    fake = 'fake'
-    fake_ip = '0.0.0.0'
-    fake_vlan = 100
-    fake_bridge_interface = 'eth0'
 
     def current():
-        subnet_4 = network_model.Subnet(cidr=fake_ip,
-                                        dns=[network_model.IP(fake_ip),
-                                             network_model.IP(fake_ip)],
-                                        gateway=network_model.IP(fake_ip),
-                                        ips=[network_model.IP(fake_ip),
-                                             network_model.IP(fake_ip)],
-                                        routes=None,
-                                        dhcp_server=fake_ip)
-        subnet_6 = network_model.Subnet(cidr=fake_ip,
-                                        gateway=network_model.IP(fake_ip),
-                                        ips=[network_model.IP(fake_ip),
-                                             network_model.IP(fake_ip),
-                                             network_model.IP(fake_ip)],
-                                        routes=None,
-                                        version=6)
+        subnet_4 = network_model.Subnet(
+            cidr=FAKE_NETWORK_IP4_CIDR,
+            dns=[network_model.IP(FAKE_NETWORK_DNS_IP4_ADDR1),
+                 network_model.IP(FAKE_NETWORK_DNS_IP4_ADDR2)],
+            gateway=network_model.IP(FAKE_NETWORK_IP4_GATEWAY),
+            ips=[network_model.IP(FAKE_NETWORK_IP4_ADDR1),
+                 network_model.IP(FAKE_NETWORK_IP4_ADDR2)],
+            routes=None,
+            dhcp_server=FAKE_NETWORK_DHCP_IP4_ADDR)
+        subnet_6 = network_model.Subnet(
+            cidr=FAKE_NETWORK_IP6_CIDR,
+            gateway=network_model.IP(FAKE_NETWORK_IP6_GATEWAY),
+            ips=[network_model.IP(FAKE_NETWORK_IP6_ADDR1),
+                 network_model.IP(FAKE_NETWORK_IP6_ADDR2),
+                 network_model.IP(FAKE_NETWORK_IP6_ADDR3)],
+            routes=None,
+            version=6)
         subnets = [subnet_4]
         if ipv6:
             subnets.append(subnet_6)
-        network = network_model.Network(id=None,
-                                        bridge=fake,
-                                        label=None,
-                                        subnets=subnets,
-                                        vlan=fake_vlan,
-                                        bridge_interface=fake_bridge_interface,
-                                        injected=False)
-        vif = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                address=fake,
-                                network=network,
-                                type=network_model.VIF_TYPE_BRIDGE,
-                                devname=None,
-                                ovs_interfaceid=None)
+        network = network_model.Network(
+            id=FAKE_NETWORK_UUID,
+            bridge=FAKE_NETWORK_BRIDGE,
+            label=None,
+            subnets=subnets,
+            vlan=FAKE_NETWORK_VLAN,
+            bridge_interface=FAKE_NETWORK_INTERFACE,
+            injected=False)
+        vif = network_model.VIF(
+            id=FAKE_VIF_UUID,
+            address=FAKE_VIF_MAC,
+            network=network,
+            type=network_model.VIF_TYPE_BRIDGE,
+            devname=None,
+            ovs_interfaceid=None)
 
         return vif
 
