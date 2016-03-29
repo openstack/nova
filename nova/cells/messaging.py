@@ -668,9 +668,15 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         # 1st arg is instance_uuid that we need to turn into the
         # instance object.
         instance_uuid = args[0]
+        # NOTE: compute/api.py loads these when retrieving an instance for an
+        # API request, so there's a good chance that this is what was loaded.
+        expected_attrs = ['metadata', 'system_metadata', 'security_groups',
+                          'info_cache']
+
         try:
-            instance = self.db.instance_get_by_uuid(message.ctxt,
-                                                    instance_uuid)
+            instance = objects.Instance.get_by_uuid(message.ctxt,
+                    instance_uuid, expected_attrs=expected_attrs)
+            args[0] = instance
         except exception.InstanceNotFound:
             with excutils.save_and_reraise_exception():
                 # Must be a race condition.  Let's try to resolve it by
@@ -679,22 +685,6 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                 instance = {'uuid': instance_uuid}
                 self.msg_runner.instance_destroy_at_top(message.ctxt,
                                                         instance)
-        # FIXME(comstud): This is temporary/transitional until I can
-        # work out a better way to pass full objects down.
-        EXPECTS_OBJECTS = ['start', 'stop', 'delete_instance_metadata',
-                           'update_instance_metadata', 'shelve', 'unshelve']
-        if method in EXPECTS_OBJECTS:
-            inst_obj = objects.Instance()
-            expected_attrs = None
-            # shelve and unshelve requires 'info_cache' and 'metadata',
-            # because of this fetching same from database.
-            if method in ['shelve', 'unshelve']:
-                expected_attrs = ['metadata', 'info_cache']
-
-            inst_obj._from_db_object(message.ctxt, inst_obj, instance,
-                                     expected_attrs=expected_attrs)
-            instance = inst_obj
-        args[0] = instance
         return fn(message.ctxt, *args, **method_info['method_kwargs'])
 
     def update_capabilities(self, message, cell_name, capabilities):
