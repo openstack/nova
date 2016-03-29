@@ -15,11 +15,6 @@ import itertools
 import nova.conf
 import nova.virt.configdrive
 import nova.virt.disk.vfs.guestfs
-import nova.virt.hyperv.eventhandler
-import nova.virt.hyperv.pathutils
-import nova.virt.hyperv.vif
-import nova.virt.hyperv.vmops
-import nova.virt.hyperv.volumeops
 import nova.virt.imagecache
 import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
@@ -63,14 +58,6 @@ def list_opts():
              nova.virt.imagecache.imagecache_opts,
          )),
         ('guestfs', nova.virt.disk.vfs.guestfs.guestfs_opts),
-        ('hyperv',
-         itertools.chain(
-             nova.virt.hyperv.pathutils.hyperv_opts,
-             nova.virt.hyperv.vif.hyperv_opts,
-             nova.virt.hyperv.vmops.hyperv_opts,
-             nova.virt.hyperv.volumeops.hyper_volumeops_opts,
-             nova.virt.hyperv.eventhandler.hyperv_opts
-         )),
         ('libvirt',
          itertools.chain(
              nova.virt.libvirt.driver.libvirt_opts,
