@@ -64,7 +64,6 @@ def list_opts():
              nova.paths.path_opts,
              nova.quota.quota_opts,
              nova.utils.monkey_patch_opts,
-             nova.utils.utils_opts,
              nova.volume._volume_opts,
          )),
         ('cinder', nova.volume.cinder.cinder_opts),

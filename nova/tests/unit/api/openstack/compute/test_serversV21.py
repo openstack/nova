@@ -24,7 +24,6 @@ import fixtures
 import iso8601
 import mock
 from mox3 import mox
-from oslo_config import cfg
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -50,6 +49,7 @@ from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import models
@@ -67,8 +67,7 @@ from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova import utils as nova_utils
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 
 FAKE_UUID = fakes.FAKE_UUID
 

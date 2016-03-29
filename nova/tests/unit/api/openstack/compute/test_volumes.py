@@ -17,7 +17,6 @@
 import datetime
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 from six.moves import urllib
 import webob
@@ -34,6 +33,7 @@ from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
@@ -43,8 +43,7 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.volume import cinder
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUID_A = '00000000-aaaa-aaaa-aaaa-000000000000'

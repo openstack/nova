@@ -74,31 +74,10 @@ monkey_patch_opts = [
                   ],
                 help='List of modules/decorators to monkey patch'),
 ]
-utils_opts = [
-    cfg.IntOpt('password_length',
-               default=12,
-               help='Length of generated instance admin passwords'),
-    cfg.StrOpt('instance_usage_audit_period',
-               default='month',
-               help='Time period to generate instance usages for.  '
-                    'Time period must be hour, day, month or year'),
-    cfg.BoolOpt('use_rootwrap_daemon', default=False,
-                help="Start and use a daemon that can run the commands that "
-                     "need to be run with root privileges. This option is "
-                     "usually enabled on nodes that run nova compute "
-                     "processes"),
-    cfg.StrOpt('rootwrap_config',
-               default="/etc/nova/rootwrap.conf",
-               help='Path to the rootwrap configuration file to use for '
-                    'running commands as root'),
-    cfg.StrOpt('tempdir',
-               help='Explicitly specify the temporary working directory'),
-]
 
 
 CONF = nova.conf.CONF
 CONF.register_opts(monkey_patch_opts)
-CONF.register_opts(utils_opts)
 
 LOG = logging.getLogger(__name__)
 

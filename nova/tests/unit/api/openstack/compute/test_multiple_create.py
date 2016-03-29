@@ -15,7 +15,6 @@
 
 import datetime
 
-from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute import block_device_mapping \
@@ -27,6 +26,7 @@ from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions as extensions_v20
 from nova.compute import api as compute_api
 from nova.compute import flavors
+import nova.conf
 from nova import exception
 from nova.network import manager
 from nova import test
@@ -34,7 +34,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 def return_security_group(context, instance_id, security_group_id):

@@ -13,19 +13,18 @@
 #   under the License.
 
 import mock
-from oslo_config import cfg
 import webob
 
 from nova.api.openstack.compute.legacy_v2.contrib import rescue as rescue_v2
 from nova.api.openstack.compute import rescue as rescue_v21
 from nova.api.openstack import extensions
 from nova import compute
+import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
 
 
