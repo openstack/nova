@@ -15,11 +15,11 @@
 
 """VIF drivers for VMware."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import versionutils
 from oslo_vmware import vim_util
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.network import model
@@ -28,21 +28,7 @@ from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-
-vmwareapi_vif_opts = [
-    cfg.StrOpt('vlan_interface',
-               default='vmnic0',
-               help='Physical ethernet adapter name for vlan networking'),
-    cfg.StrOpt('integration_bridge',
-               help='This option should be configured only when using the '
-                    'NSX-MH Neutron plugin. This is the name of the '
-                    'integration bridge on the ESXi. This should not be set '
-                    'for any other Neutron plugin. Hence the default value '
-                    'is not set.'),
-]
-
-CONF.register_opts(vmwareapi_vif_opts, 'vmware')
+CONF = nova.conf.CONF
 
 
 def _get_associated_vswitch_for_interface(session, interface, cluster=None):

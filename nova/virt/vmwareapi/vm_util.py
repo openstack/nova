@@ -22,7 +22,6 @@ import collections
 import copy
 import functools
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
@@ -32,6 +31,7 @@ from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
@@ -40,23 +40,7 @@ from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
 
-vmware_utils_opts = [
-    cfg.IntOpt('console_delay_seconds',
-               help='Set this value if affected by an increased network '
-                    'latency causing repeated characters when typing in '
-                    'a remote console.'),
-    cfg.StrOpt('serial_port_service_uri',
-               help='Identifies the remote system that serial port traffic '
-                    'will be sent to. If this is not set, no serial ports '
-                    'will be added to the created VMs.'),
-    cfg.StrOpt('serial_port_proxy_uri',
-               help='Identifies a proxy service that provides network access '
-                    'to the serial_port_service_uri. This option is ignored '
-                    'if serial_port_service_uri is not specified.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(vmware_utils_opts, 'vmware')
+CONF = nova.conf.CONF
 
 ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
                                  'VirtualPCNet32', 'VirtualSriovEthernetCard',

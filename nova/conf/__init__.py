@@ -69,7 +69,7 @@ from nova.conf import serial_console
 # from nova.conf import trusted_computing
 # from nova.conf import upgrade_levels
 from nova.conf import virt
-# from nova.conf import vmware
+from nova.conf import vmware
 from nova.conf import vnc
 # from nova.conf import volume
 # from nova.conf import workarounds
@@ -129,7 +129,7 @@ serial_console.register_opts(CONF)
 # trusted_computing.register_opts(CONF)
 # upgrade_levels.register_opts(CONF)
 virt.register_opts(CONF)
-# vmware.register_opts(CONF)
+vmware.register_opts(CONF)
 vnc.register_opts(CONF)
 # volume.register_opts(CONF)
 # workarounds.register_opts(CONF)
