@@ -25,6 +25,7 @@ from oslo_log import log as logging
 from nova.compute import arch
 import nova.conf
 from nova import exception
+from nova.tests import fixtures as nova_fixtures
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -258,4 +259,6 @@ def stub_out_image_service(test):
                   lambda x, y: (image_service, y))
     test.stub_out('nova.image.glance.get_default_image_service',
                   lambda: image_service)
+    test.useFixture(nova_fixtures.ConfPatcher(
+        group="glance", api_servers=['http://localhost:9292']))
     return image_service

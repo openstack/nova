@@ -4800,6 +4800,7 @@ class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):
         super(ComputeManagerInstanceUsageAuditTestCase, self).setUp()
         self.flags(use_local=True, group='conductor')
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
         self.flags(instance_usage_audit=True)
 
     @mock.patch('nova.objects.TaskLog')

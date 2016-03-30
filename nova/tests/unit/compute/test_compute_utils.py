@@ -409,6 +409,7 @@ class UsageInfoTestCase(test.TestCase):
         def fake_show(meh, context, id, **kwargs):
             return {'id': 1, 'properties': {'kernel_id': 1, 'ramdisk_id': 1}}
 
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
         self.stubs.Set(nova.tests.unit.image.fake._FakeImageService,
                        'show', fake_show)
         fake_network.set_stub_network_methods(self)
