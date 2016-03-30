@@ -149,6 +149,8 @@ class HypervisorsController(object):
         except NotImplementedError:
             msg = _("Virt driver does not implement uptime function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         service = self.host_api.service_get_by_compute_host(context, host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, False,
