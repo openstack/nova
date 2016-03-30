@@ -1082,6 +1082,13 @@ def quota_get_all_by_project(context, project_id):
     return IMPL.quota_get_all_by_project(context, project_id)
 
 
+def quota_get_per_project_resources():
+    """Retrieve the names of resources whose quotas are calculated on a
+       per-project rather than a per-user basis.
+    """
+    return IMPL.quota_get_per_project_resources()
+
+
 def quota_get_all(context, project_id):
     """Retrieve all user quotas associated with a given project."""
     return IMPL.quota_get_all(context, project_id)
@@ -1144,6 +1151,27 @@ def quota_usage_update(context, project_id, user_id, resource, **kwargs):
     """Update a quota usage or raise if it does not exist."""
     return IMPL.quota_usage_update(context, project_id, user_id, resource,
                                    **kwargs)
+
+
+def quota_usage_refresh(context, resources, keys, until_refresh, max_age,
+                        project_id=None, user_id=None):
+    """Refresh the quota usages.
+
+    :param context: The request context, for access checks.
+    :param resources: A dictionary of the registered resources.
+    :param keys: Names of the resources whose usage is to be refreshed.
+    :param until_refresh:  The until_refresh configuration value.
+    :param max_age:  The max_age configuration value.
+    :param project_id: (Optional) The project_id containing the usages
+                       to be refreshed.  Defaults to the project_id
+                       in the context.
+    :param user_id: (Optional) The user_id containing the usages
+                     to be refreshed.  Defaults to the user_id
+                     in the context.
+
+    """
+    return IMPL.quota_usage_refresh(context, resources, keys, until_refresh,
+                              max_age, project_id=project_id, user_id=user_id)
 
 
 ###################

@@ -1616,6 +1616,89 @@ class InstanceSystemMetadataTestCase(test.TestCase):
                           {'key': 'value'}, True)
 
 
+class RefreshUsageTestCase(test.TestCase):
+    """Tests for the db.api.quota_usage_refresh method. """
+
+    def setUp(self):
+        super(RefreshUsageTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+        self.project_id = 'project1'
+        self.user_id = 'user1'
+
+    def _quota_refresh(self, keys):
+        """Refresh the in_use count on the QuotaUsage objects.
+           The QuotaUsage objects are created if they don't exist.
+        """
+        def get_sync(resource, usage):
+            def sync(elevated, project_id, user_id):
+                return {resource: usage}
+            return sync
+
+        resources = {}
+        for i in range(4):
+            resource = 'resource%d' % i
+            if i == 2:
+                # test for project level resources
+                resource = 'fixed_ips'
+            if i == 3:
+                # test for project level resources
+                resource = 'floating_ips'
+
+            sync_name = '_sync_%s' % resource
+            resources[resource] = quota.ReservableResource(
+                resource, sync_name, 'quota_res_%d' % i)
+            setattr(sqlalchemy_api, sync_name, get_sync(resource, i + 1))
+            sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
+                sqlalchemy_api, sync_name)
+
+        db.quota_usage_refresh(self.ctxt, resources, keys,
+                               until_refresh=3,
+                               max_age=0,
+                               project_id=self.project_id,
+                               user_id=self.user_id)
+
+    def _compare_resource_usages(self, keys, expected, project_id,
+                                 user_id = None):
+        for key in keys:
+            actual = db.quota_usage_get(self.ctxt, project_id, key, user_id)
+            self.assertEqual(expected['project_id'], actual.project_id)
+            self.assertEqual(expected['user_id'], actual.user_id)
+            self.assertEqual(key, actual.resource)
+            self.assertEqual(expected[key]['in_use'], actual.in_use)
+            self.assertEqual(expected[key]['reserved'], actual.reserved)
+            self.assertEqual(expected[key]['until_refresh'],
+                             actual.until_refresh)
+
+    def test_refresh_created_project_usages(self):
+        # The refresh will create the usages and then sync
+        # in_use from 0 to 3 for fixed_ips and 0 to 4 for floating_ips.
+        keys = ['fixed_ips', 'floating_ips']
+        self._quota_refresh(keys)
+        expected = {'project_id': self.project_id,
+                    # User ID will be none for per-project resources
+                    'user_id': None,
+                    'fixed_ips': {'in_use': 3, 'reserved': 0,
+                                  'until_refresh': 3},
+                    'floating_ips': {'in_use': 4, 'reserved': 0,
+                                     'until_refresh': 3}}
+        self._compare_resource_usages(keys, expected, self.project_id,
+                                      self.user_id)
+
+    def test_refresh_created_user_usages(self):
+        # The refresh will create the usages and then sync
+        # in_use from 0 to 1 for resource0 and 0 to 2 for resource1.
+        keys = ['resource0', 'resource1']
+        self._quota_refresh(keys)
+        expected = {'project_id': self.project_id,
+                    'user_id': self.user_id,
+                    'resource0': {'in_use': 1, 'reserved': 0,
+                                  'until_refresh': 3},
+                    'resource1': {'in_use': 2, 'reserved': 0,
+                                  'until_refresh': 3}}
+        self._compare_resource_usages(keys, expected, self.project_id,
+                                      self.user_id)
+
+
 class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     """Tests for db.api.reservation_* methods."""
