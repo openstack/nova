@@ -16,12 +16,15 @@
 
 import six
 
+import testscenarios
+
 from nova import context
 from nova import db
 from nova import exception as ex
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import integrated_helpers as helper
 from nova.tests.unit import policy_fixture
 
@@ -38,7 +41,7 @@ def rand_flavor(**kwargs):
     return flav
 
 
-class FlavorManageFullstack(test.TestCase):
+class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
     """Tests for flavors manage administrative command.
 
     Extension: os-flavors-manage
@@ -74,10 +77,31 @@ class FlavorManageFullstack(test.TestCase):
     the database.
 
     """
+
+    _additional_fixtures = []
+
+    scenarios = [
+        # test v2.1 base microversion
+        ('v2_1', {
+            'api_major_version': 'v2.1'}),
+        # test v2 with the v2 legacy code
+        ('v2legacy', {
+            'api_major_version': 'v2',
+            '_additional_fixtures': [
+                api_paste_fixture.ApiPasteLegacyV2Fixture]})
+    ]
+
     def setUp(self):
         super(FlavorManageFullstack, self).setUp()
+
+        # load any additional fixtures specified by the scenario
+        for fix in self._additional_fixtures:
+            self.useFixture(fix())
+
         self.useFixture(policy_fixture.RealPolicyFixture())
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture())
+        api_fixture = self.useFixture(
+            nova_fixtures.OSAPIFixture(
+                api_version=self.api_major_version))
 
         # NOTE(sdague): because this test is primarily an admin API
         # test default self.api to the admin api.
