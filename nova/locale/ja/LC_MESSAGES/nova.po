@@ -17,13 +17,13 @@
 # 笹原 昌美 <ebb0de1@jp.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc3.dev1\n"
+"Project-Id-Version: nova 13.0.0.0rc3.dev7\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-28 17:06+0000\n"
+"POT-Creation-Date: 2016-03-29 14:46+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-29 06:35+0000\n"
+"PO-Revision-Date: 2016-03-30 06:39+0000\n"
 "Last-Translator: Tsutomu Kimura <ebb0de2@jp.ibm.com>\n"
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -79,6 +79,10 @@ msgid ""
 msgstr ""
 "%(event_type)s はバージョンが設定された通知でもなければ、ホワイトリストの対象"
 "にもなっていません。./doc/source/notification.rst を参照してください。"
+
+#, python-format
+msgid "%(field)s should not be part of the updates."
+msgstr "%(field)s を更新に含めることはできません。"
 
 #, python-format
 msgid "%(fieldname)s missing field type"
@@ -643,7 +647,7 @@ msgid ""
 "with the builtin SYSTEM account or other accounts unable to authenticate on "
 "a remote host."
 msgstr ""
-"「%(instances_path)s」にアクセスできません。パスが存在し、適切な許可を持って"
+"\"%(instances_path)s\" にアクセスできません。パスが存在し、適切な許可を持って"
 "いることを確認してください。特に、Nova-Compute は、リモートホスト上で認証でき"
 "ない組み込みのシステムアカウント等のアカウントで実行してはなりません。"
 
@@ -669,9 +673,33 @@ msgid "Cannot attach one or more volumes to multiple instances"
 msgstr "1 つのボリュームを複数のインスタンスに接続できません"
 
 #, python-format
+msgid ""
+"Cannot block migrate instance %(uuid)s with mapped volumes. Selective block "
+"device migration feature requires libvirt version %(libvirt_ver)s"
+msgstr ""
+"マッピングされたボリュームを使用してインスタンス %(uuid)s のブロックをマイグ"
+"レーションすることはできません。特定のブロックデバイスをマイグレーションする"
+"には、libvirt のバージョン %(libvirt_ver)s が必要です。"
+
+#, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr ""
 "親のない %(objtype)s オブジェクトで %(method)s を呼び出すことはできません"
+
+msgid ""
+"Cannot create default bittorrent URL without xenserver.torrent_base_url "
+"configuration option set."
+msgstr ""
+"xenserver.torrent_base_url の設定オプションを設定しないかぎり、デフォルトの "
+"bittorrent URL を作成できません。"
+
+#, python-format
+msgid ""
+"Cannot determine the parent storage pool for %s; cannot determine where to "
+"store images"
+msgstr ""
+"%s の親のストレージプールを検出できません。イメージを保存する場所を決定できま"
+"せん。"
 
 msgid "Cannot disassociate auto assigned floating IP"
 msgstr ""
@@ -730,6 +758,14 @@ msgstr ""
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "ボリュームを使ったインスタンスはレスキューできません"
+
+#, python-format
+msgid ""
+"Cannot resize the root disk to a smaller size. Current size: "
+"%(curr_root_gb)s GB. Requested size: %(new_root_gb)s GB."
+msgstr ""
+"ルートディスクのサイズを小さくすることはできません。現在のサイズ: "
+"%(curr_root_gb)s GB。要求されたサイズ: %(new_root_gb)s GB。"
 
 msgid "Cannot run any more instances of this type."
 msgstr "このタイプのインスタンスをこれ以上実行することはできません。"
@@ -919,7 +955,7 @@ msgid ""
 "Console log output could not be retrieved for instance %(instance_id)s. "
 "Reason: %(reason)s"
 msgstr ""
-"インスタンス %(instance_id)s についてコンソールログの出力を抽出できませんでし"
+"インスタンス %(instance_id)s についてコンソールログの出力を取得できませんでし"
 "た。理由: %(reason)s"
 
 #, python-format
@@ -1196,9 +1232,9 @@ msgstr ""
 msgid "Error during following call to agent: %(method)s"
 msgstr "エージェントに対する %(method)s の呼び出し中に、エラーが発生しました"
 
-#, fuzzy, python-format
+#, python-format
 msgid "Error during unshelve instance %(instance_id)s: %(reason)s"
-msgstr "インスタンス %(instance_id)s のアンシェルブ中のエラー: %(reason)s"
+msgstr "インスタンス %(instance_id)s の復元中のエラー: %(reason)s"
 
 #, python-format
 msgid ""
@@ -1231,6 +1267,14 @@ msgid ""
 msgstr ""
 "%(instance_name)s の静止中に libvirt でエラーが発生しました: [エラーコード "
 "%(error_code)s] %(ex)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while set password for username \"%(user)s\": [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"ユーザー名 \"%(user)s\" のパスワードの設定中に libvirt でエラーが発生しまし"
+"た: [エラーコード %(error_code)s] %(ex)s"
 
 #, python-format
 msgid ""
@@ -1297,7 +1341,7 @@ msgid "Extra column %(table)s.%(column)s in shadow table"
 msgstr "シャドーテーブルに余分なカラム %(table)s.%(column)s があります"
 
 msgid "Extracting vmdk from OVA failed."
-msgstr "OVA からの vmdk の抽出に失敗しました。"
+msgstr "OVA からの vmdk の取得に失敗しました。"
 
 msgid "Fail to validate provided extra specs keys. Expected string"
 msgstr ""
@@ -1343,20 +1387,24 @@ msgstr ""
 "ネットワークアダプターデバイスを %(instance_uuid)s に接続できませんでした"
 
 #, python-format
+msgid "Failed to create vif %s"
+msgstr "vif %s の作成に失敗しました"
+
+#, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "イメージファイル %(image_file)s の復号に失敗しました: %(err)s"
+msgstr "イメージファイル %(image_file)s の復号化に失敗しました: %(err)s"
 
 #, python-format
 msgid "Failed to decrypt initialization vector: %s"
-msgstr "初期化ベクタの復号に失敗しました: %s"
+msgstr "初期化ベクターの復号化に失敗しました: %s"
 
 #, python-format
 msgid "Failed to decrypt private key: %s"
-msgstr "秘密鍵の復号に失敗しました: %s"
+msgstr "秘密鍵の復号化に失敗しました: %s"
 
 #, python-format
 msgid "Failed to decrypt text: %(reason)s"
-msgstr "テキストの復号に失敗しました: %(reason)s"
+msgstr "テキストの復号化に失敗しました: %(reason)s"
 
 #, python-format
 msgid "Failed to deploy instance: %(reason)s"
@@ -1453,9 +1501,8 @@ msgstr "xvp の実行に失敗しました。"
 msgid "Failed to set admin password on %(instance)s because %(reason)s"
 msgstr "%(instance)s で管理者パスワードの設定に失敗しました。理由: %(reason)s"
 
-#, fuzzy
 msgid "Failed to spawn, rolling back"
-msgstr "作成に失敗しました。ロールバックしています"
+msgstr "起動に失敗しました。ロールバックしています"
 
 #, python-format
 msgid "Failed to suspend instance: %(reason)s"
@@ -1464,6 +1511,10 @@ msgstr "インスタンスを休止できませんでした: %(reason)s"
 #, python-format
 msgid "Failed to terminate instance: %(reason)s"
 msgstr "インスタンスを削除できませんでした: %(reason)s"
+
+#, python-format
+msgid "Failed to unplug vif %s"
+msgstr "vif %s の取り外しに失敗しました"
 
 msgid "Failure prepping block device."
 msgstr "ブロックデバイスを準備できませんでした"
@@ -1699,7 +1750,7 @@ msgstr "ブリッジ %s に対するネットワークが存在しません。"
 
 #, python-format
 msgid "Found non-unique network for bridge %s"
-msgstr "ブリッジ %sについて一意でないネットワークが見つかりました"
+msgstr "ブリッジ %s について一意でないネットワークが見つかりました"
 
 #, python-format
 msgid "Found non-unique network for name_label %s"
@@ -1707,7 +1758,9 @@ msgstr "name_label %s について一意でないネットワークが見つか�
 
 #, python-format
 msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
-msgstr "空き %(type)s %(free).02f %(unit)s < 要求された %(requested)d %(unit)s"
+msgstr ""
+"空き %(type)s %(free).02f %(unit)s が要求された %(requested)d %(unit)s より少"
+"ないです"
 
 #, python-format
 msgid "Glance image %(image_id)s is in unknown state - %(state)s"
@@ -1992,6 +2045,12 @@ msgid "Instance %(instance_uuid)s does not specify a NUMA topology"
 msgstr "インスタンス %(instance_uuid)s で NUMA トポロジーが指定されていません"
 
 #, python-format
+msgid "Instance %(instance_uuid)s does not specify a migration context."
+msgstr ""
+"インスタンス %(instance_uuid)s がマイグレーションのコンテキストを設定していま"
+"せん。"
+
+#, python-format
 msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
 msgstr "インスタンス %(instance_uuid)s に Fixed IP '%(ip)s' がありません。"
 
@@ -2038,6 +2097,10 @@ msgstr "インスタンス %s が接続されていません。"
 #, python-format
 msgid "Instance %s not found"
 msgstr "インスタンス %s が見つかりません"
+
+#, python-format
+msgid "Instance %s provisioning was aborted"
+msgstr "インスタンス %s のプロビジョニングが中止しました。"
 
 msgid "Instance could not be found"
 msgstr "インスタンスが見つかりませんでした"
@@ -2101,6 +2164,14 @@ msgstr "インスタンスのロールバックが実行されました。原因
 
 msgid "Instance snapshots are not permitted at this time."
 msgstr "現在、インスタンスのスナップショット作成は許可されていません。"
+
+#, python-format
+msgid ""
+"Insufficient Space on Volume Group %(vg)s. Only %(free_space)db available, "
+"but %(size)d bytes required by volume %(lv)s."
+msgstr ""
+"ボリュームグループ %(vg)s に十分なスペースがありません。使用可能なのは "
+"%(free_space)db のみですが、ボリューム %(lv)s には %(size)d バイト必要です。"
 
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
@@ -2305,6 +2376,10 @@ msgid "Invalid key_name provided."
 msgstr "無効な key_name が指定されました。"
 
 #, python-format
+msgid "Invalid libvirt version %(version)s"
+msgstr "libvirt のバージョン %(version)s が無効です"
+
+#, python-format
 msgid "Invalid memory page size '%(pagesize)s'"
 msgstr "メモリーページサイズ \"%(pagesize)s\" が無効です"
 
@@ -2438,6 +2513,15 @@ msgstr "force の値 '%s' は無効です。"
 msgid "Invalid value for Config Drive option: %(option)s"
 msgstr "コンフィグドライブのオプション %(option)s の値が無効です"
 
+#, python-format
+msgid ""
+"Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
+"online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
+msgstr ""
+"vcpu_pin_set の設定が無効です。指定された CPU セットのうち 1 つ以上がオンライ"
+"ン状態にありません。オンラインの CPU セット: %(online)s、リクエストされた "
+"CPU セット: %(req)s"
+
 msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
 msgstr "vcpu_pin_set 設定が無効です。ハイパーバイザーの CPU の範囲外です。"
 
@@ -2546,6 +2630,9 @@ msgstr ""
 msgid "Limit"
 msgstr "上限値"
 
+msgid "Limits only supported from vCenter 6.0 and above"
+msgstr "上限が適用されるのは、vCenter 6.0 以降の場合のみです。"
+
 #, python-format
 msgid "Line %(linenum)d : %(line)s"
 msgstr "行 %(linenum)d : %(line)s"
@@ -2567,6 +2654,13 @@ msgstr "このクラウドでは仮想インターフェースの一覧表示を
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "サーバー %(uuid)s のマイグレーション %(id)s は進行中ではありません。"
+
+msgid ""
+"Live migration can not be used without shared storage except a booted from "
+"volume VM which does not have a local disk."
+msgstr ""
+"ローカルディスクを持たないボリューム VM から起動する場合を除いて、共有スト"
+"レージなしにはライブマイグレーションを行うことはできません。"
 
 #, python-format
 msgid "Live migration of instance %(id)s to host %(host)s failed"
@@ -2787,8 +2881,8 @@ msgid ""
 "More than one possible network found. Specify network ID(s) to select which "
 "one(s) to connect to."
 msgstr ""
-"複数の使用可能なネットワークが見つかりました。接続先のネットワーク(複数可) を"
-"選択するには、ネットワーク ID を指定してください。"
+"複数の使用可能なネットワークが見つかりました。接続先のネットワークを選択する"
+"には、ネットワーク ID を指定してください。"
 
 msgid "More than one swap drive requested."
 msgstr "複数のスワップドライブが要求されました。"
@@ -2816,7 +2910,7 @@ msgid ""
 "not return uptime for just one host."
 msgstr ""
 "複数のホストが VMWare vCenter ドライバーによって管理されている可能性がありま"
-"す。このため、 ホスト単位の稼働時間は返しません。"
+"す。このため ホスト単位の稼働時間は返しません。"
 
 msgid "Multiple possible networks found, use a Network ID to be more specific."
 msgstr ""
@@ -3154,12 +3248,12 @@ msgstr "%(host)s 用の未使用ポートを取得できません"
 msgid "Not able to bind %(host)s:%(port)d, %(error)s"
 msgstr "%(host)s:%(port)d をバインドできません。%(error)s"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Not all Virtual Functions of PF %(compute_node_id)s:%(address)s are free."
 msgstr ""
-"Not all Virtual Functions of PF %(compute_node_id)s:%(address)s のすべての仮"
-"想機能are free."
+"PF %(compute_node_id)s の %(address)s のすべての Virtual Function に空きがあ"
+"るとは限りません。"
 
 msgid "Not an rbd snapshot"
 msgstr "rbd スナップショットではありません"
@@ -3189,7 +3283,7 @@ msgstr "アーカイブは行われませんでした"
 
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
-msgstr "Nova は libvirt バージョン %s 以上を必要とします。"
+msgstr "Nova には libvirt バージョン %s 以降が必要です。"
 
 msgid "Number of Rows Archived"
 msgstr "アーカイブ済みの行数"
@@ -3358,13 +3452,13 @@ msgstr "パーソナリティーファイル数の上限を超えました"
 msgid "Personality file path too long"
 msgstr "パーソナリティーファイルのパスが長すぎます"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Physical Function %(compute_node_id)s:%(address)s, related to VF "
 "%(compute_node_id)s:%(vf_address)s is %(status)s instead of %(hopestatus)s"
 msgstr ""
-"Physical Function %(compute_node_id)s:%(address)s, related to VF "
-"%(compute_node_id)s:%(vf_address)s is %(status)s instead of %(hopestatus)s"
+"VF %(compute_node_id)s に関連する %(address)s のPhysical Function "
+"%(compute_node_id)s。%(vf_address)s は %(status)s ではなく %(hopestatus)sです"
 
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
@@ -3435,6 +3529,10 @@ msgstr ""
 
 msgid "QEMU guest agent is not enabled"
 msgstr "QEMU ゲストエージェントが有効になっていません"
+
+#, python-format
+msgid "Quiescing is not supported in instance %(instance_id)s"
+msgstr "インスタンス %(instance_id)s を正常に終了することができません。"
 
 msgid "Quota"
 msgstr "クォータ"
@@ -3557,6 +3655,15 @@ msgstr ""
 
 msgid "Realtime policy not supported by hypervisor"
 msgstr "ハイパーバイザーはリアルタイムポリシーをサポートしません"
+
+#, python-format
+msgid ""
+"Relative blockcommit support was not detected. Libvirt '%s' or later is "
+"required for online deletion of file/network storage-backed volume snapshots."
+msgstr ""
+"相対ブロックコミットのサポートが検出されませんでした。ファイルまたはネット"
+"ワークストレージによるボリュームのスナップショットをオンラインで削除するには "
+"Libvirt '%s' 以降が必要です。"
 
 msgid "Request body and URI mismatch"
 msgstr "リクエスト本文と URI の不一致"
@@ -3685,6 +3792,15 @@ msgstr "ルールがグループにはすでに存在します: %(rule)s"
 msgid "Running Nova with parallels virt_type requires libvirt version %s"
 msgstr ""
 "parallels virt_type で Nova を実行するには libvirt バージョン %s が必要です。"
+
+#, python-format
+msgid ""
+"Running Nova with qemu/kvm virt_type on %(arch)s requires libvirt version "
+"%(libvirt_ver)s and qemu version %(qemu_ver)s, or greater"
+msgstr ""
+"%(arch)s 上で qemu/kvm virt_type を使用して Nova を稼働させるには、libvirt の"
+"バージョン %(libvirt_ver)s および qemu のバージョン %(qemu_ver)s (またはそれ"
+"以降のバージョン) が必要です。"
 
 #, python-format
 msgid "Running batches of %i until complete"
@@ -3865,6 +3981,14 @@ msgstr "設定された管理者パスワードがサポートされません"
 msgid "Shadow table with name %(name)s already exists."
 msgstr "名前が %(name)s のシャドーテーブルは既に存在します。"
 
+#, python-format
+msgid "Share '%s' is not supported"
+msgstr "シェア '%s' はサポートされません"
+
+#, python-format
+msgid "Share level '%s' cannot have share configured"
+msgstr "シェアレベル '%s' に設定されたシェアがありません"
+
 msgid "Should we use a CA for each project?"
 msgstr "プロジェクトごとに CA を使用するか否かのフラグ"
 
@@ -3888,6 +4012,15 @@ msgstr "いくつかのフィールドが無効です。"
 
 msgid "Some required fields are missing"
 msgstr "いくつかの必須フィールドがありません。"
+
+#, python-format
+msgid ""
+"Something went wrong when deleting a volume snapshot: rebasing a "
+"%(protocol)s network disk using qemu-img has not been fully tested"
+msgstr ""
+"ボリュームのスナップショットの削除中に問題が発生しました: qemu-img を使用し"
+"て %(protocol)s のネットワークディスクを再設定することは十分に検証されていま"
+"せん。"
 
 msgid "Sort direction size exceeds sort key size"
 msgstr "ソート方向の数がソートキーの数より多いです"
@@ -4050,13 +4183,13 @@ msgstr ""
 msgid "The key %s is required in all file system descriptions."
 msgstr "すべてのファイルシステム記述でキー %s が必要です。"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "The metadata for this location will not work with this module %(module)s.  "
 "%(reason)s."
 msgstr ""
 "このロケーションのメタデータは、このモジュール %(module)s では機能しませ"
-"ん。  %(reason)s。"
+"ん。%(reason)s。"
 
 #, python-format
 msgid "The method %(method_name)s is not implemented."
@@ -4128,6 +4261,10 @@ msgstr "要求された機能はサポートされていません。"
 msgid "The signature data was not properly encoded using base64"
 msgstr ""
 "このシグニチャーデータは base64 を使用して適切にエンコードされませんでした"
+
+#, python-format
+msgid "The specified cluster '%s' was not found in vCenter"
+msgstr "指定されたクラスター '%s' が vCenter で見つかりませんでした"
 
 msgid ""
 "The string containing the reason for disabling the service contains invalid "
@@ -4388,6 +4525,9 @@ msgstr "VBD %s を削除できません"
 msgid "Unable to destroy VDI %s"
 msgstr "VDI %s を破棄できません"
 
+msgid "Unable to detach from guest transient domain."
+msgstr "ゲストの一時ドメインから切り離すことができません。"
+
 #, python-format
 msgid "Unable to determine disk bus for '%s'"
 msgstr "ディスク '%s' のバスを判別できません"
@@ -4422,8 +4562,8 @@ msgid ""
 "host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
 msgstr ""
 "target_iqn %s のマウントされたディスクが見つかりません。ホストのSAN ポリシー"
-"が「OfflineAll」または「OfflineShared」に設定されていることを確認してくださ"
-"い。"
+"が \"OfflineAll\" または \"OfflineShared\" に設定されていることを確認してくだ"
+"さい。"
 
 #, python-format
 msgid "Unable to find ca_file : %s"
@@ -4467,6 +4607,12 @@ msgstr "DNS ドメインを取得できません"
 
 msgid "Unable to get dns entry"
 msgstr "DNS エントリーを取得できません"
+
+msgid "Unable to get host UUID: /etc/machine-id does not exist"
+msgstr " ホストの UUID を取得できません: /etc/machine-id が存在しません"
+
+msgid "Unable to get host UUID: /etc/machine-id is empty"
+msgstr "ホストの UUID が取得できません: /etc/machine-id が空です"
 
 msgid "Unable to get rdp console, functionality not implemented"
 msgstr "RDP コンソールを取得できません。機能が実装されていません"
@@ -4523,7 +4669,7 @@ msgid ""
 "on destination host:%(available)s < need:%(necessary)s)"
 msgstr ""
 "%(instance_uuid)s をマイグレーションできません: インスタンスのディスクが大き"
-"すぎます (宛先ホスト上の使用可能量:%(available)s < 必要量:%(necessary)s)"
+"すぎます (宛先ホスト上の使用可能量: %(available)s < 必要量: %(necessary)s)"
 
 #, python-format
 msgid ""
@@ -4687,9 +4833,9 @@ msgstr "CONF.running_deleted_instance_action で認識されない値 '%s'"
 msgid "Unsafe filenames in image"
 msgstr "安全ではないファイル名がイメージ内にあります"
 
-#, fuzzy, python-format
+#, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
-msgstr "アンシェルブが試行されましたが、イメージ %s が見つかりません。"
+msgstr "復元が試行されましたが、イメージ %s が見つかりません。"
 
 msgid "Unsupported Content-Type"
 msgstr "サポートされない Content-Type"
@@ -4727,7 +4873,7 @@ msgid "User is not authorized to use key manager."
 msgstr "ユーザーは鍵マネージャーの使用を許可されていません。"
 
 msgid "Userdata content cannot be decoded"
-msgstr "ユーザーデータの内容をデコードできません"
+msgstr "ユーザーデータの内容を復号化できません"
 
 msgid ""
 "Using different block_device_mapping syntaxes is not allowed in the same "
@@ -4880,7 +5026,7 @@ msgstr ""
 "%(image_min_disk)i バイトです。"
 
 msgid "Volume must be attached in order to detach."
-msgstr "ボリュームを切り離すにはボリュームを接続されていなければいけません。"
+msgstr "ボリュームを切り離すにはボリュームが接続されていなければいけません。"
 
 msgid "Volume resource quota exceeded"
 msgstr "ボリュームのリソースクォータを超過しました"
@@ -4979,12 +5125,23 @@ msgstr ""
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
 "your destination node does not support retrieving listen addresses.  In "
+"order for live migration to work properly you must either disable serial "
+"console or upgrade your libvirt version."
+msgstr ""
+"libvirt のバージョンが VIR_DOMAIN_XML_MIGRATABLE フラグをサポートしないか、宛"
+"先ノードが リッスンアドレスの取得をサポートしません。ライブマイグレーションが"
+"適切に機能するには、シリアルコンソールを無効化するか、libvirt のバージョンを"
+"アップグレードする必要があります。"
+
+msgid ""
+"Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag or "
+"your destination node does not support retrieving listen addresses.  In "
 "order for live migration to work properly, you must configure the graphics "
 "(VNC and/or SPICE) listen addresses to be either the catch-all address "
 "(0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
 msgstr ""
 "使用している libvirt バージョンが VIR_DOMAIN_XML_MIGRATABLE フラグをサポート"
-"していないか、または宛先ノードが listen アドレスの取得をサポートしていませ"
+"していないか、または宛先ノードがリッスンアドレスの取得をサポートしていませ"
 "ん。ライブマイグレーションが正しく機能するには、グラフィックス (VNC および "
 "SPICE またはそのいずれか) listen アドレスを、 catch-all アドレス (0.0.0.0 ま"
 "たは ::) またはローカルアドレス (127.0.0.1 または ::1) のいずれかに設定する必"
@@ -5018,7 +5175,7 @@ msgid "aggregate deleted"
 msgstr "アグリゲートが削除されました"
 
 msgid "aggregate in error"
-msgstr "アグリゲートにエラーがあります"
+msgstr "アグリゲートでエラーが発生しました"
 
 #, python-format
 msgid "assert_can_migrate failed because: %s"
@@ -5066,6 +5223,9 @@ msgstr "createImage エンティティーには name 属性が必要です"
 #, python-format
 msgid "destination is %(target_cell)s but routing_path is %(routing_path)s"
 msgstr "宛先は %(target_cell)s ですが、routing_path は %(routing_path)s です"
+
+msgid "direct_snapshot() is not implemented"
+msgstr "direct_snapshot() が実装されていません"
 
 msgid "disk"
 msgstr "ディスク"
@@ -5258,6 +5418,14 @@ msgstr "削除するホストがありません"
 msgid "no match found for %s"
 msgstr "%s に合致するものが見つかりません"
 
+#, python-format
+msgid "no usable parent snapshot for volume %s"
+msgstr "ボリューム %s に関して使用可能な親スナップショットがありません"
+
+#, python-format
+msgid "no write permission on storage pool %s"
+msgstr "ストレージプール %s に書き込み権限がありません"
+
 msgid "node"
 msgstr "ノード"
 
@@ -5423,7 +5591,7 @@ msgstr ""
 "%(actual)s です。"
 
 msgid "vcpu"
-msgstr "VCPU"
+msgstr "vCPU"
 
 msgid "version should be an integer"
 msgstr "バージョンは整数でなければなりません"
@@ -5435,6 +5603,10 @@ msgstr "vg %s は LVM ボリュームグループでなければなりません"
 #, python-format
 msgid "vhostuser_sock_path not present in vif_details for vif %(vif_id)s"
 msgstr "vhostuser_sock_path が vif %(vif_id)s の vif_details にありません"
+
+#, python-format
+msgid "vif type %s not supported"
+msgstr "vif タイプ %s はサポートされません"
 
 msgid "vif_type parameter must be present for this vif_driver implementation"
 msgstr "この vif_driver の実装では vif_type パラメーターが必要です"
@@ -5453,8 +5625,8 @@ msgstr "ボリューム %s は既に切り離されています"
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
 msgstr ""
-"ボリューム「%(vol)s」の状況は「使用可能」でなければなりませんが、現在は"
-"「%(status)s」です"
+"ボリューム '%(vol)s' の状況は「使用可能」でなければなりませんが、現在は "
+"'%(status)s' です"
 
 #, python-format
 msgid ""
