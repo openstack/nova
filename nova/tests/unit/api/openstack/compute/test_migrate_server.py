@@ -264,10 +264,6 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationPreCheckError(reason=''))
 
-    def test_migrate_live_migration_with_old_nova_not_safe(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.LiveMigrationWithOldNovaNotSafe(server=''))
-
     def test_migrate_live_migration_with_unexpected_error(self):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationError(reason=''),
