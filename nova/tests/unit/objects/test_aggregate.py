@@ -221,12 +221,10 @@ class _TestAggregateObject(object):
         self.assertEqual(fake_aggregate['id'], agg.id)
         self.assertFalse(get_by_uuid.called)
 
-    def test_create(self):
-        self.mox.StubOutWithMock(db, 'aggregate_create')
-        db.aggregate_create(self.context, {'name': 'foo',
-                                           'uuid': uuidsentinel.fake_agg},
-                            metadata={'one': 'two'}).AndReturn(fake_aggregate)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'aggregate_create')
+    def test_create(self, mock_aggregate_create):
+        mock_aggregate_create.return_value = fake_aggregate
+
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
@@ -234,12 +232,14 @@ class _TestAggregateObject(object):
         agg.create()
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
-    def test_recreate_fails(self):
-        self.mox.StubOutWithMock(db, 'aggregate_create')
-        db.aggregate_create(self.context, {'name': 'foo',
-                                           'uuid': uuidsentinel.fake_agg},
-                            metadata={'one': 'two'}).AndReturn(fake_aggregate)
-        self.mox.ReplayAll()
+        mock_aggregate_create.assert_called_once_with(self.context,
+            {'name': 'foo', 'uuid': uuidsentinel.fake_agg},
+            metadata={'one': 'two'})
+
+    @mock.patch.object(db, 'aggregate_create')
+    def test_recreate_fails(self, mock_aggregate_create):
+        mock_aggregate_create.return_value = fake_aggregate
+
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
@@ -247,16 +247,22 @@ class _TestAggregateObject(object):
         agg.create()
         self.assertRaises(exception.ObjectActionError, agg.create)
 
-    def test_save(self):
-        self.mox.StubOutWithMock(db, 'aggregate_update')
-        db.aggregate_update(self.context, 123, {'name': 'baz'}).AndReturn(
-            fake_aggregate)
-        self.mox.ReplayAll()
+        mock_aggregate_create.assert_called_once_with(self.context,
+            {'name': 'foo', 'uuid': uuidsentinel.fake_agg},
+            metadata={'one': 'two'})
+
+    @mock.patch.object(db, 'aggregate_update')
+    def test_save(self, mock_aggregate_update):
+        mock_aggregate_update.return_value = fake_aggregate
+
         agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
         agg.name = 'baz'
         agg.save()
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
+
+        mock_aggregate_update.aasert_called_once_with(self.context,
+            123, {'name': 'baz'})
 
     def test_save_and_create_no_hosts(self):
         agg = aggregate.Aggregate(context=self.context)
@@ -267,12 +273,9 @@ class _TestAggregateObject(object):
         self.assertRaises(exception.ObjectActionError,
                           agg.save)
 
-    def test_update_metadata(self):
-        self.mox.StubOutWithMock(db, 'aggregate_metadata_delete')
-        self.mox.StubOutWithMock(db, 'aggregate_metadata_add')
-        db.aggregate_metadata_delete(self.context, 123, 'todelete')
-        db.aggregate_metadata_add(self.context, 123, {'toadd': 'myval'})
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'aggregate_metadata_delete')
+    @mock.patch.object(db, 'aggregate_metadata_add')
+    def test_update_metadata(self, mock_add, mock_delete):
         fake_notifier.NOTIFICATIONS = []
         agg = aggregate.Aggregate()
         agg._context = self.context
@@ -291,19 +294,22 @@ class _TestAggregateObject(object):
                          msg.payload['meta_data'])
         self.assertEqual({'foo': 'bar', 'toadd': 'myval'}, agg.metadata)
 
-    def test_destroy(self):
-        self.mox.StubOutWithMock(db, 'aggregate_delete')
-        db.aggregate_delete(self.context, 123)
-        self.mox.ReplayAll()
+        mock_delete.assert_called_once_with(self.context, 123, 'todelete')
+        mock_add.assert_called_once_with(self.context, 123,
+                                         {'toadd': 'myval'})
+
+    @mock.patch.object(db, 'aggregate_delete')
+    def test_destroy(self, mock_aggregate_delete):
         agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
         agg.destroy()
 
-    def test_add_host(self):
-        self.mox.StubOutWithMock(db, 'aggregate_host_add')
-        db.aggregate_host_add(self.context, 123, 'bar'
-                              ).AndReturn({'host': 'bar'})
-        self.mox.ReplayAll()
+        mock_aggregate_delete.assert_called_once_with(self.context, 123)
+
+    @mock.patch.object(db, 'aggregate_host_add')
+    def test_add_host(self, mock_host_add):
+        mock_host_add.return_value = {'host': 'bar'}
+
         agg = aggregate.Aggregate()
         agg.id = 123
         agg.hosts = ['foo']
@@ -311,16 +317,22 @@ class _TestAggregateObject(object):
         agg.add_host('bar')
         self.assertEqual(agg.hosts, ['foo', 'bar'])
 
-    def test_delete_host(self):
-        self.mox.StubOutWithMock(db, 'aggregate_host_delete')
-        db.aggregate_host_delete(self.context, 123, 'foo')
-        self.mox.ReplayAll()
+        mock_host_add.assert_called_once_with(self.context,
+                                              123,
+                                             'bar')
+
+    @mock.patch.object(db, 'aggregate_host_delete')
+    def test_delete_host(self, mock_host_delete):
         agg = aggregate.Aggregate()
         agg.id = 123
         agg.hosts = ['foo', 'bar']
         agg._context = self.context
         agg.delete_host('foo')
         self.assertEqual(agg.hosts, ['bar'])
+
+        mock_host_delete.assert_called_once_with(self.context,
+                                                 123,
+                                                'foo')
 
     def test_availability_zone(self):
         agg = aggregate.Aggregate()
