@@ -105,6 +105,24 @@ Nova Shell
 
     Runs the named script from the specified path with flags set.
 
+Nova Project
+~~~~~~~~~~~~
+
+``nova-manage project quota <project_id> [--user <user_id>] [--key <key>] [--value <value>]``
+
+    Create, update or display quotas for project/user.  If a key is
+    not specified then the current usages are displayed.
+
+``nova-manage project quota_usage_refresh <project_id> [--user <user_id>] [--key <key>]``
+
+    Refresh the quota usages for the project/user so that the
+    usage record matches the actual used.  If a key is not specified
+    then all quota usages relevant to the project/user are refreshed.
+
+``nova-manage project scrub <project-id>``
+
+    Deletes data associated with project.
+
 Nova VPN
 ~~~~~~~~
 

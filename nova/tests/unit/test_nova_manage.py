@@ -391,6 +391,33 @@ class ProjectCommandsTestCase(test.TestCase):
     def test_quota_update_invalid_key(self):
         self.assertEqual(2, self.commands.quota('admin', 'volumes1', '10'))
 
+    def test_quota_usage_refresh_all_user_keys(self):
+        self.assertIsNone(self.commands.quota_usage_refresh(
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab'))
+
+    def test_quota_usage_refresh_all_project_keys(self):
+        self.assertIsNone(self.commands.quota_usage_refresh(
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'))
+
+    def test_quota_usage_refresh_with_keys(self):
+        self.assertIsNone(self.commands.quota_usage_refresh(
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab',
+            'ram'))
+
+    def test_quota_usage_refresh_invalid_user_key(self):
+        self.assertEqual(2, self.commands.quota_usage_refresh(
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaab',
+            'fixed_ip'))
+
+    def test_quota_usage_refresh_invalid_project_key(self):
+        self.assertEqual(2, self.commands.quota_usage_refresh(
+            'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+            None,
+            'ram'))
+
 
 class VmCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
