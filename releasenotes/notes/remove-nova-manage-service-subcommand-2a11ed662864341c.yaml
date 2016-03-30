@@ -1,0 +1,5 @@
+---
+features:
+  - The service subcommand of nova-manage was deprecated in 13.0. Now in 14.0
+    the service subcommand is removed. Use service-* commands from
+    python-novaclient or the os-services REST resource instead.

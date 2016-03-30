@@ -556,18 +556,6 @@ class ApiDbCommandsTestCase(test.NoDBTestCase):
         sqla_sync.assert_called_once_with(version=4, database='api')
 
 
-class ServiceCommandsTestCase(test.TestCase):
-    def setUp(self):
-        super(ServiceCommandsTestCase, self).setUp()
-        self.commands = manage.ServiceCommands()
-
-    def test_service_enable_invalid_params(self):
-        self.assertEqual(2, self.commands.enable('nohost', 'noservice'))
-
-    def test_service_disable_invalid_params(self):
-        self.assertEqual(2, self.commands.disable('nohost', 'noservice'))
-
-
 class CellCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CellCommandsTestCase, self).setUp()
