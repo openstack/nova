@@ -1413,7 +1413,12 @@ class API(base_api.NetworkAPI):
                                            neutron_client=neutron)
                     if port.get('device_id', None):
                         raise exception.PortInUse(port_id=request.port_id)
-                    if not port.get('fixed_ips'):
+                    deferred_ip = port.get('ip_allocation') == 'deferred'
+                    # NOTE(carl_baldwin) A deferred IP port doesn't have an
+                    # address here. If it fails to get one later when nova
+                    # updates it with host info, Neutron will error which
+                    # raises an exception.
+                    if not deferred_ip and not port.get('fixed_ips'):
                         raise exception.PortRequiresFixedIP(
                             port_id=request.port_id)
                     request.network_id = port['network_id']

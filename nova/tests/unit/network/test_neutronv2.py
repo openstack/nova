@@ -3055,6 +3055,37 @@ class TestNeutronv2WithMock(test.TestCase):
             'fake-user', 'fake-project',
             auth_token='bff4a5a6b9eb4ea2a6efec6eefb77936')
 
+    @mock.patch('nova.network.neutronv2.api.API._show_port')
+    def test_deferred_ip_port_immediate_allocation(self, mock_show):
+        port = {'network_id': 'my_netid1',
+                'device_id': None,
+                'id': uuids.port,
+                'fixed_ips': [],  # no fixed ip
+                'ip_allocation': 'immediate', }
+
+        mock_show.return_value = port
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=port['id'])])
+        self.assertRaises(exception.PortRequiresFixedIP,
+                          self.api.validate_networks,
+                          self.context, requested_networks, 1)
+
+    @mock.patch('nova.network.neutronv2.api.API._show_port')
+    def test_deferred_ip_port_deferred_allocation(self, mock_show):
+        port = {'network_id': 'my_netid1',
+                'device_id': None,
+                'id': uuids.port,
+                'fixed_ips': [],  # no fixed ip
+                'ip_allocation': 'deferred', }
+
+        mock_show.return_value = port
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=port['id'])])
+        count = self.api.validate_networks(self.context, requested_networks, 1)
+        self.assertEqual(1, count)
+
     @mock.patch('oslo_concurrency.lockutils.lock')
     def test_get_instance_nw_info_locks_per_instance(self, mock_lock):
         instance = objects.Instance(uuid=uuid.uuid4())
