@@ -2367,13 +2367,9 @@ class FakeUsage(sqa_models.QuotaUsage):
         pass
 
 
-class QuotaReserveSqlAlchemyTestCase(test.TestCase):
-    # nova.db.sqlalchemy.api.quota_reserve is so complex it needs its
-    # own test case, and since it's a quota manipulator, this is the
-    # best place to put it...
-
+class QuotaSqlAlchemyBase(test.TestCase):
     def setUp(self):
-        super(QuotaReserveSqlAlchemyTestCase, self).setUp()
+        super(QuotaSqlAlchemyBase, self).setUp()
         self.sync_called = set()
         self.quotas = dict(
             instances=5,
@@ -2408,7 +2404,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
 
         self.addCleanup(restore_sync_functions)
 
-        for res_name in ('instances', 'cores', 'ram', 'fixed_ips'):
+        for res_name in ('instances', 'cores', 'ram', 'fixed_ips',
+                         'security_groups', 'server_groups', 'floating_ips'):
             method_name = '_sync_%s' % res_name
             sqa_api.QUOTA_SYNC_FUNCTIONS[method_name] = make_sync(res_name)
             res = quota.ReservableResource(res_name, '_sync_%s' % res_name)
@@ -2502,7 +2499,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             created_at = timeutils.utcnow()
         if updated_at is None:
             updated_at = timeutils.utcnow()
-        if resource == 'fixed_ips':
+        if resource == 'fixed_ips' or resource == 'floating_ips':
             user_id = None
 
         quota_usage_ref = self._make_quota_usage(project_id, user_id, resource,
@@ -2518,8 +2515,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             for key, value in usage.items():
                 actual = getattr(usage_dict[resource], key)
                 self.assertEqual(actual, value,
-                                 "%s != %s on usage for resource %s" %
-                                 (actual, value, resource))
+                                 "%s != %s on usage for resource %s, key %s" %
+                                 (actual, value, resource, key))
 
     def _make_reservation(self, uuid, usage_id, project_id, user_id, resource,
                           delta, expire, created_at, updated_at):
@@ -2593,6 +2590,12 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             self.init_usage('test_project', 'fake_user',
                             option, in_use[i], **kwargs)
         return FakeContext('test_project', 'test_class')
+
+
+class QuotaReserveSqlAlchemyTestCase(QuotaSqlAlchemyBase):
+    # nova.db.sqlalchemy.api.quota_reserve is so complex it needs its
+    # own test case, and since it's a quota manipulator, this is the
+    # best place to put it...
 
     def test_quota_reserve_create_usages(self):
         context = FakeContext('test_project', 'test_class')
@@ -2784,6 +2787,273 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         self.assertEqual(self.usages_created, {})
         reservations_list = self._update_reservations_list(False, True)
         self.compare_reservation(result, reservations_list)
+
+
+class QuotaEngineUsageRefreshTestCase(QuotaSqlAlchemyBase):
+    def _init_usages(self, *in_use, **kwargs):
+        for i, option in enumerate(('instances', 'cores', 'ram', 'fixed_ips',
+                                    'server_groups', 'security_groups',
+                                    'floating_ips')):
+            self.init_usage('test_project', 'fake_user',
+                            option, in_use[i], **kwargs)
+        return FakeContext('test_project', 'test_class')
+
+    def setUp(self):
+        super(QuotaEngineUsageRefreshTestCase, self).setUp()
+
+        # The usages_list are the expected usages (in_use) values after
+        # the test has run.
+        # The pattern is that the test will initialize the actual in_use
+        # to 3 for all the resources, then the refresh will sync
+        # the actual in_use to 2 for the resources whose names are in the keys
+        # list and are scoped to project or user.
+
+        # The usages are indexed as follows:
+        # Index Resource name    Scope
+        # 0     instances        user
+        # 1     cores            user
+        # 2     ram              user
+        # 3     fixed_ips        project
+        # 4     server_groups    user
+        # 5     security_groups  user
+        # 6     floating_ips     project
+        self.usages_list.append(dict(resource='server_groups',
+                     project_id='test_project',
+                     user_id='fake_user',
+                     in_use=2,
+                     reserved=2,
+                     until_refresh=None))
+        self.usages_list.append(dict(resource='security_groups',
+                     project_id='test_project',
+                     user_id='fake_user',
+                     in_use=2,
+                     reserved=2,
+                     until_refresh=None))
+        self.usages_list.append(dict(resource='floating_ips',
+                     project_id='test_project',
+                     user_id=None,
+                     in_use=2,
+                     reserved=2,
+                     until_refresh=None))
+
+        # None of the usage refresh tests should add a reservation.
+        self.usages_list[0]['reserved'] = 0
+        self.usages_list[1]['reserved'] = 0
+        self.usages_list[2]['reserved'] = 0
+        self.usages_list[3]['reserved'] = 0
+        self.usages_list[4]['reserved'] = 0
+        self.usages_list[5]['reserved'] = 0
+        self.usages_list[6]['reserved'] = 0
+
+        def fake_quota_get_all_by_project_and_user(context, project_id,
+                                                   user_id):
+            return self.quotas
+
+        def fake_quota_get_all_by_project(context, project_id):
+            return self.quotas
+
+        self.stub_out('nova.db.sqlalchemy.api.quota_get_all_by_project',
+                       fake_quota_get_all_by_project)
+        self.stub_out(
+            'nova.db.sqlalchemy.api.quota_get_all_by_project_and_user',
+            fake_quota_get_all_by_project_and_user)
+
+        # The actual sync function for instances, ram, and cores, is
+        # _sync_instances, so override the function here.
+        def make_instances_sync():
+            def sync(context, project_id, user_id):
+                updates = {}
+                self.sync_called.add('instances')
+
+                for res_name in ('instances', 'cores', 'ram'):
+                    if res_name not in self.usages:
+                        # Usage doesn't exist yet, initialize
+                        # the in_use to 0.
+                        updates[res_name] = 0
+                    elif self.usages[res_name].in_use < 0:
+                        updates[res_name] = 2
+                    else:
+                        # Simulate as if the actual usage
+                        # is one less than the recorded usage.
+                        updates[res_name] = \
+                            self.usages[res_name].in_use - 1
+                return updates
+            return sync
+
+        sqa_api.QUOTA_SYNC_FUNCTIONS['_sync_instances'] = make_instances_sync()
+
+    def test_usage_refresh_user_all_keys(self):
+        self._init_usages(3, 3, 3, 3, 3, 3, 3, until_refresh = 5)
+        # Let the parameters determine the project_id and user_id,
+        # not the context.
+        ctxt = context.get_admin_context()
+        quota.QUOTAS.usage_refresh(ctxt, 'test_project', 'fake_user')
+
+        self.assertEqual(self.sync_called, set(['instances', 'server_groups',
+                                                'security_groups']))
+
+        # Compare the expected usages with the actual usages.
+        # Expect fixed_ips not to change since it is project scoped.
+        self.usages_list[3]['in_use'] = 3
+        self.usages_list[3]['until_refresh'] = 5
+        # Expect floating_ips not to change since it is project scoped.
+        self.usages_list[6]['in_use'] = 3
+        self.usages_list[6]['until_refresh'] = 5
+        self.compare_usage(self.usages, self.usages_list)
+
+        # No usages were created.
+        self.assertEqual(self.usages_created, {})
+
+    def test_usage_refresh_user_two_keys(self):
+        context = self._init_usages(3, 3, 3, 3, 3, 3, 3,
+                                    until_refresh = 5)
+        keys = ['server_groups', 'ram']
+        # Let the context determine the project_id and user_id
+        quota.QUOTAS.usage_refresh(context, None, None, keys)
+
+        self.assertEqual(self.sync_called, set(['instances', 'server_groups']))
+
+        # Compare the expected usages with the actual usages.
+        # Expect fixed_ips not to change since it is project scoped.
+        self.usages_list[3]['in_use'] = 3
+        self.usages_list[3]['until_refresh'] = 5
+        # Expect security_groups not to change since it is not in keys list.
+        self.usages_list[5]['in_use'] = 3
+        self.usages_list[5]['until_refresh'] = 5
+        # Expect fixed_ips not to change since it is project scoped.
+        self.usages_list[6]['in_use'] = 3
+        self.usages_list[6]['until_refresh'] = 5
+        self.compare_usage(self.usages, self.usages_list)
+
+        # No usages were created.
+        self.assertEqual(self.usages_created, {})
+
+    def test_usage_refresh_create_user_usage(self):
+        context = FakeContext('test_project', 'test_class')
+
+        # Create per-user ram usage
+        keys = ['ram']
+        quota.QUOTAS.usage_refresh(context, 'test_project', 'fake_user', keys)
+
+        self.assertEqual(self.sync_called, set(['instances']))
+
+        # Compare the expected usages with the created usages.
+        # Expect instances to be created and initialized to 0
+        self.usages_list[0]['in_use'] = 0
+        # Expect cores to be created and initialized to 0
+        self.usages_list[1]['in_use'] = 0
+        # Expect ram to be created and initialized to 0
+        self.usages_list[2]['in_use'] = 0
+        self.compare_usage(self.usages_created, self.usages_list[0:3])
+
+        self.assertEqual(len(self.usages_created), 3)
+
+    def test_usage_refresh_project_all_keys(self):
+        self._init_usages(3, 3, 3, 3, 3, 3, 3, until_refresh = 5)
+        # Let the parameter determine the project_id, not the context.
+        ctxt = context.get_admin_context()
+        quota.QUOTAS.usage_refresh(ctxt, 'test_project')
+
+        self.assertEqual(self.sync_called, set(['fixed_ips', 'floating_ips']))
+
+        # Compare the expected usages with the actual usages.
+        # Expect instances not to change since it is user scoped.
+        self.usages_list[0]['in_use'] = 3
+        self.usages_list[0]['until_refresh'] = 5
+        # Expect cores not to change since it is user scoped.
+        self.usages_list[1]['in_use'] = 3
+        self.usages_list[1]['until_refresh'] = 5
+        # Expect ram not to change since it is user scoped.
+        self.usages_list[2]['in_use'] = 3
+        self.usages_list[2]['until_refresh'] = 5
+        # Expect server_groups not to change since it is user scoped.
+        self.usages_list[4]['in_use'] = 3
+        self.usages_list[4]['until_refresh'] = 5
+        # Expect security_groups not to change since it is user scoped.
+        self.usages_list[5]['in_use'] = 3
+        self.usages_list[5]['until_refresh'] = 5
+        self.compare_usage(self.usages, self.usages_list)
+
+        self.assertEqual(self.usages_created, {})
+
+    def test_usage_refresh_project_one_key(self):
+        self._init_usages(3, 3, 3, 3, 3, 3, 3, until_refresh = 5)
+        # Let the parameter determine the project_id, not the context.
+        ctxt = context.get_admin_context()
+        keys = ['floating_ips']
+        quota.QUOTAS.usage_refresh(ctxt, 'test_project', resource_names=keys)
+
+        self.assertEqual(self.sync_called, set(['floating_ips']))
+
+        # Compare the expected usages with the actual usages.
+        # Expect instances not to change since it is user scoped.
+        self.usages_list[0]['in_use'] = 3
+        self.usages_list[0]['until_refresh'] = 5
+        # Expect cores not to change since it is user scoped.
+        self.usages_list[1]['in_use'] = 3
+        self.usages_list[1]['until_refresh'] = 5
+        # Expect ram not to change since it is user scoped.
+        self.usages_list[2]['in_use'] = 3
+        self.usages_list[2]['until_refresh'] = 5
+        # Expect fixed_ips not to change since it is not in the keys list.
+        self.usages_list[3]['in_use'] = 3
+        self.usages_list[3]['until_refresh'] = 5
+        # Expect server_groups not to change since it is user scoped.
+        self.usages_list[4]['in_use'] = 3
+        self.usages_list[4]['until_refresh'] = 5
+        # Expect security_groups not to change since it is user scoped.
+        self.usages_list[5]['in_use'] = 3
+        self.usages_list[5]['until_refresh'] = 5
+        self.compare_usage(self.usages, self.usages_list)
+
+        self.assertEqual(self.usages_created, {})
+
+    def test_usage_refresh_create_project_usage(self):
+        ctxt = context.get_admin_context()
+
+        # Create per-project floating_ips usage
+        keys = ['floating_ips']
+        quota.QUOTAS.usage_refresh(ctxt, 'test_project', resource_names=keys)
+
+        self.assertEqual(self.sync_called, set(['floating_ips']))
+
+        # Compare the expected usages with the created usages.
+        # Expect floating_ips to be created and initialized to 0
+        self.usages_list[6]['in_use'] = 0
+        self.compare_usage(self.usages_created, self.usages_list[6:])
+
+        self.assertEqual(len(self.usages_created), 1)
+
+    def _test_exception(self, context, project_id, user_id, keys):
+        try:
+            quota.QUOTAS.usage_refresh(context, project_id, user_id, keys)
+        except exception.QuotaUsageRefreshNotAllowed as e:
+            self.assertIn(keys[0], e.format_message())
+        else:
+            self.fail('Expected QuotaUsageRefreshNotAllowed failure')
+
+    def test_usage_refresh_invalid_user_key(self):
+        context = FakeContext('test_project', 'test_class')
+        # fixed_ips is a valid syncable project key,
+        # but not a valid user key
+        self._test_exception(context, 'test_project', 'fake_user',
+                             ['fixed_ips'])
+
+    def test_usage_refresh_non_syncable_user_key(self):
+        # security_group_rules is a valid user key, but not syncable
+        context = FakeContext('test_project', 'test_class')
+        self._test_exception(context, 'test_project', 'fake_user',
+                             ['security_group_rules'])
+
+    def test_usage_refresh_invalid_project_key(self):
+        ctxt = context.get_admin_context()
+        # ram is a valid syncable user key, but not a valid project key
+        self._test_exception(ctxt, "test_project", None, ['ram'])
+
+    def test_usage_refresh_non_syncable_project_key(self):
+        # injected_files is a valid project key, but not syncable
+        ctxt = context.get_admin_context()
+        self._test_exception(ctxt, 'test_project', None, ['injected_files'])
 
 
 class NoopQuotaDriverTestCase(test.TestCase):
