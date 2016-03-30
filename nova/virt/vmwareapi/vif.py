@@ -21,7 +21,7 @@ from oslo_utils import versionutils
 from oslo_vmware import vim_util
 
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LI, _LW
 from nova.network import model
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
@@ -124,7 +124,18 @@ def _get_neutron_network(session, cluster, vif):
             use_external_id = False
             network_type = 'opaque'
         else:
-            net_id = vif['network']['id']
+            # The NSX|V3 plugin will pass the nsx-logical-switch-id as part
+            # of the port details. This will enable the VC to connect to
+            # that specific opaque network
+            net_id = (vif.get('details') and
+                      vif['details'].get('nsx-logical-switch-id'))
+            if not net_id:
+                # Make use of the original one, in the event that the
+                # plugin does not pass the aforementioned id
+                LOG.info(_LI('NSX Logical switch ID is not present. '
+                             'Using network ID to attach to the '
+                             'opaque network.'))
+                net_id = vif['network']['id']
             use_external_id = True
             network_type = 'nsx.LogicalSwitch'
         network_ref = {'type': 'OpaqueNetwork',

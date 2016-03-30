@@ -250,6 +250,25 @@ class VMwareVifTestCase(test.NoDBTestCase):
         self.assertEqual(expected_ref, network_ref)
         mock_check.assert_called_once_with('fake-session')
 
+    @mock.patch.object(vif, '_check_ovs_supported_version')
+    def test_get_neutron_network_ovs_logical_switch_id(self, mock_check):
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_OVS,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network,
+                                  details={'nsx-logical-switch-id':
+                                           'fake-nsx-id'})]
+        )[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        expected_ref = {'type': 'OpaqueNetwork',
+                        'network-id': 'fake-nsx-id',
+                        'network-type': 'nsx.LogicalSwitch',
+                        'use-external-id': True}
+        self.assertEqual(expected_ref, network_ref)
+        mock_check.assert_called_once_with('fake-session')
+
     @mock.patch.object(network_util, 'get_network_with_the_name')
     def test_get_neutron_network_dvs(self, mock_network_name):
         fake_network_obj = {'type': 'DistributedVirtualPortgroup',
