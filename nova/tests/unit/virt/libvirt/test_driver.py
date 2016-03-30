@@ -7363,54 +7363,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(vm_states.ACTIVE, instance_ref.vm_state)
         self.assertEqual(power_state.RUNNING, instance_ref.power_state)
 
-    def test_live_migration_raises_unsupported_config_exception(self):
-        # Tests that when migrateToURI2 fails with VIR_ERR_CONFIG_UNSUPPORTED,
-        # migrateToURI is used instead.
-
-        # Preparing data
-        instance_ref = objects.Instance(**self.test_instance)
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, 'migrateToURI2')
-        self.mox.StubOutWithMock(vdmock, 'migrateToURI')
-        _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
-                FakeVirtDomain().XMLDesc(flags=0))
-        unsupported_config_error = fakelibvirt.libvirtError('ERR')
-        unsupported_config_error.err = (
-            fakelibvirt.VIR_ERR_CONFIG_UNSUPPORTED,)
-        # This is the first error we hit but since the error code is
-        # VIR_ERR_CONFIG_UNSUPPORTED we'll try migrateToURI.
-        vdmock.migrateToURI2(drvr._live_migration_uri('dest'), None,
-                             mox.IgnoreArg(), mox.IgnoreArg(), None,
-                             _bandwidth).AndRaise(unsupported_config_error)
-        # This is the second and final error that will actually kill the run,
-        # we use TestingException to make sure it's not the same libvirtError
-        # above.
-        vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                            mox.IgnoreArg(), None,
-                            _bandwidth).AndRaise(test.TestingException('oops'))
-
-        migrate_data = objects.LibvirtLiveMigrateData(
-            graphics_listen_addr_vnc='0.0.0.0',
-            graphics_listen_addr_spice='127.0.0.1',
-            serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
-            bdms=[],
-            block_migration=False)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        self.mox.ReplayAll()
-
-        # start test
-        self.assertRaises(test.TestingException,
-                          drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock, [])
-
     @mock.patch('shutil.rmtree')
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')

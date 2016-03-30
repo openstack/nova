@@ -6026,54 +6026,25 @@ class LibvirtDriver(driver.ComputeDriver):
                                                migrate_data.bdms,
                                                listen_addrs,
                                                serial_listen_addr)
-                try:
-                    if self._host.has_min_version(
-                            MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
-                        params = {
-                            'bandwidth': CONF.libvirt.live_migration_bandwidth,
-                            'destination_xml': new_xml_str,
-                            'migrate_disks': device_names,
-                        }
-                        dom.migrateToURI3(
-                            self._live_migration_uri(dest),
-                            params,
-                            migration_flags)
-                    else:
-                        dom.migrateToURI2(
-                            self._live_migration_uri(dest),
-                            None,
-                            new_xml_str,
-                            migration_flags,
-                            None,
-                            CONF.libvirt.live_migration_bandwidth)
-                except libvirt.libvirtError as ex:
-                    # NOTE(mriedem): There is a bug in older versions of
-                    # libvirt where the VIR_DOMAIN_XML_MIGRATABLE flag causes
-                    # virDomainDefCheckABIStability to not compare the source
-                    # and target domain xml's correctly for the CPU model.
-                    # We try to handle that error here and attempt the legacy
-                    # migrateToURI path, which could fail if the console
-                    # addresses are not correct, but in that case we have the
-                    # _check_graphics_addresses_can_live_migrate check in place
-                    # to catch it.
-                    # TODO(mriedem): Remove this workaround when
-                    # Red Hat BZ #1141838 is closed.
-                    error_code = ex.get_error_code()
-                    if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
-                        LOG.warning(_LW('An error occurred trying to live '
-                                     'migrate. Falling back to legacy live '
-                                     'migrate flow. Error: %s'), ex,
-                                 instance=instance)
-                        self._check_graphics_addresses_can_live_migrate(
-                            listen_addrs)
-                        self._verify_serial_console_is_disabled()
-                        dom.migrateToURI(
-                            self._live_migration_uri(dest),
-                            migration_flags,
-                            None,
-                            CONF.libvirt.live_migration_bandwidth)
-                    else:
-                        raise
+                if self._host.has_min_version(
+                        MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
+                    params = {
+                        'bandwidth': CONF.libvirt.live_migration_bandwidth,
+                        'destination_xml': new_xml_str,
+                        'migrate_disks': device_names,
+                    }
+                    dom.migrateToURI3(
+                        self._live_migration_uri(dest),
+                        params,
+                        migration_flags)
+                else:
+                    dom.migrateToURI2(
+                        self._live_migration_uri(dest),
+                        None,
+                        new_xml_str,
+                        migration_flags,
+                        None,
+                        CONF.libvirt.live_migration_bandwidth)
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Live Migration failure: %s"), e,
