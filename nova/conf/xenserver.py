@@ -22,8 +22,8 @@ xenserver_group = cfg.OptGroup('xenserver',
 XenServer options are used when the compute_driver is set to use
 XenServer (compute_driver=xenapi.XenAPIDriver).
 
-Must specify connection_url, and connection_password to use
-compute_driver=xenapi.XenAPIDriver.
+Must specify connection_url, connection_password and ovs_integration_bridge to
+use compute_driver=xenapi.XenAPIDriver.
 """)
 
 xenapi_agent_opts = [
@@ -552,7 +552,6 @@ before raising VDI not found exception.
 
 xenapi_ovs_integration_bridge_opts = [
     cfg.StrOpt('ovs_integration_bridge',
-        default='xapi1',
         help="""
 The name of the integration Bridge that is used with xenapi
 when connecting with Open vSwitch.
@@ -563,7 +562,7 @@ accordingly if you are using XenAPI.
 
 Possible values:
 
-* Any string that represents a bridge name(default is xapi1).
+* Any string that represents a bridge name.
 """),
 ]
 
