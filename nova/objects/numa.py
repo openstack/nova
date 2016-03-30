@@ -173,10 +173,8 @@ class NUMAPagesTopology(base.NovaObject):
         return self.free * self.size_kb
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class NUMATopology(base.NovaObject,
-                   base.NovaObjectDictCompat):
+class NUMATopology(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Update NUMACell to 1.1
     # Version 1.2: Update NUMACell to 1.2
