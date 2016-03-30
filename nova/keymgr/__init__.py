@@ -14,18 +14,11 @@
 #    under the License.
 
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
+import nova.conf
 
-keymgr_opts = [
-    cfg.StrOpt('api_class',
-               default='nova.keymgr.conf_key_mgr.ConfKeyManager',
-               help='The full class name of the key manager API class'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(keymgr_opts, group='keymgr')
+CONF = nova.conf.CONF
 
 
 def API():

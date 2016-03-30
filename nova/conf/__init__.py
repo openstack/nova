@@ -23,7 +23,7 @@ from oslo_config import cfg
 # from nova.conf import api_database
 from nova.conf import availability_zone
 # from nova.conf import aws
-# from nova.conf import barbican
+from nova.conf import barbican
 # from nova.conf import base
 from nova.conf import cells
 from nova.conf import cert
@@ -48,7 +48,7 @@ from nova.conf import hyperv
 # from nova.conf import imagecache
 # from nova.conf import image_file_url
 from nova.conf import ironic
-# from nova.conf import keymgr
+from nova.conf import keymgr
 # from nova.conf import keystone_authtoken
 # from nova.conf import libvirt
 # from nova.conf import matchmaker_redis
@@ -83,7 +83,7 @@ CONF = cfg.CONF
 # api_database.register_opts(CONF)
 availability_zone.register_opts(CONF)
 # aws.register_opts(CONF)
-# barbican.register_opts(CONF)
+barbican.register_opts(CONF)
 # base.register_opts(CONF)
 cells.register_opts(CONF)
 cert.register_opts(CONF)
@@ -108,7 +108,7 @@ hyperv.register_opts(CONF)
 # imagecache.register_opts(CONF)
 # image_file_url.register_opts(CONF)
 ironic.register_opts(CONF)
-# keymgr.register_opts(CONF)
+keymgr.register_opts(CONF)
 # keystone_authtoken.register_opts(CONF)
 # libvirt.register_opts(CONF)
 # matchmaker_redis.register_opts(CONF)
