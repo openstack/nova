@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -27,17 +20,57 @@ import sys
 
 from oslo_config import cfg
 
-path_opts = [
+ALL_OPTS = [
     cfg.StrOpt('pybasedir',
-               default=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                    '../../')),
-               help='Directory where the nova python module is installed'),
+        default=os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                             '../../')),
+        help="""
+The directory where the Nova python modules are installed.
+
+This directory is used to store template files for networking and remote
+console access. It is also the default path for other config options which
+need to persist Nova internal data. It is very unlikely that you need to
+change this option from its default value.
+
+Possible values:
+
+* The full path to a directory.
+
+Related options:
+
+* ``state_path``
+"""),
     cfg.StrOpt('bindir',
-               default=os.path.join(sys.prefix, 'local', 'bin'),
-               help='Directory where nova binaries are installed'),
+        default=os.path.join(sys.prefix, 'local', 'bin'),
+        help="""
+The directory where the Nova binaries are installed.
+
+This option is only relevant if the networking capabilities from Nova are
+used (see services below). Nova's networking capabilities are targeted to
+be fully replaced by Neutron in the future. It is very unlikely that you need
+to change this option from its default value.
+
+Possible values:
+
+* The full path to a directory.
+"""),
+
     cfg.StrOpt('state_path',
-               default='$pybasedir',
-               help="Top-level directory for maintaining nova's state"),
+        default='$pybasedir',
+        help="""
+The top-level directory for maintaining Nova's state.
+
+This directory is used to store Nova's internal state. It is used by a
+variety of other config options which derive from this. In some scenarios
+(for example migrations) it makes sense to use a storage location which is
+shared between multiple compute hosts (for example via NFS). Unless the
+option ``instances_path`` gets overwritten, this directory can grow very
+large.
+
+Possible values:
+
+* The full path to a directory. Defaults to value provided in ``pybasedir``.
+"""),
 ]
 
 
@@ -56,27 +89,9 @@ def state_path_def(*args):
     return os.path.join('$state_path', *args)
 
 
-# TODO(markus_z): This needs to be removed in a new patch. No one uses this.
-def basedir_rel(*args):
-    """Return a path relative to $pybasedir."""
-    return os.path.join(cfg.CONF.pybasedir, *args)
-
-
-# TODO(markus_z): This needs to be removed in a new patch. No one uses this.
-def bindir_rel(*args):
-    """Return a path relative to $bindir."""
-    return os.path.join(cfg.CONF.bindir, *args)
-
-
-# TODO(markus_z): This needs to be removed in a new patch. No one uses this.
-def state_path_rel(*args):
-    """Return a path relative to $state_path."""
-    return os.path.join(cfg.CONF.state_path, *args)
-
-
 def register_opts(conf):
-    conf.register_opts(path_opts)
+    conf.register_opts(ALL_OPTS)
 
 
 def list_opts():
-    return {"DEFAULT": path_opts}
+    return {"DEFAULT": ALL_OPTS}
