@@ -29,6 +29,7 @@ from nova import context
 from nova import exception
 from nova.image import glance
 from nova import test
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 NOW_GLANCE_FORMAT = "2010-10-11T10:30:22.000000"
@@ -724,7 +725,7 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
             'properties': {
                 'img_signature': 'signature',
                 'img_signature_hash_method': 'SHA-224',
-                'img_signature_certificate_uuid': 'uuid',
+                'img_signature_certificate_uuid': uuids.img_sig_cert_uuid,
                 'img_signature_key_type': 'RSA-PSS',
             }
         }
@@ -745,7 +746,9 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         res = self.service.download(context=None, image_id=None,
                                     data=None, dst_path=None)
         self.assertEqual(self.fake_img_data, res)
-        mock_get_verifier.assert_called_once_with(None, 'uuid', 'SHA-224',
+        mock_get_verifier.assert_called_once_with(None,
+                                                  uuids.img_sig_cert_uuid,
+                                                  'SHA-224',
                                                   'signature', 'RSA-PSS')
         mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
 
@@ -765,7 +768,9 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
         mock_open.return_value = mock_dest
         self.service.download(context=None, image_id=None,
                               data=None, dst_path=fake_path)
-        mock_get_verifier.assert_called_once_with(None, 'uuid', 'SHA-224',
+        mock_get_verifier.assert_called_once_with(None,
+                                                  uuids.img_sig_cert_uuid,
+                                                  'SHA-224',
                                                   'signature', 'RSA-PSS')
         mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
         self.assertEqual(len(self.fake_img_data), mock_dest.write.call_count)

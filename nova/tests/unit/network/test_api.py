@@ -35,9 +35,11 @@ from nova import objects
 from nova.objects import fields
 from nova import policy
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_virtual_interface
+from nova.tests import uuidsentinel as uuids
 
 FAKE_UUID = 'a47ae74e-ab08-547f-9eee-ffd23fc46c16'
 
@@ -46,7 +48,7 @@ fake_info_cache = {
     'updated_at': None,
     'deleted_at': None,
     'deleted': False,
-    'instance_uuid': 'fake-uuid',
+    'instance_uuid': uuids.instance,
     'network_info': '[]',
     }
 
@@ -90,7 +92,7 @@ class ApiTestCase(test.TestCase):
         super(ApiTestCase, self).setUp()
         self.network_api = network.API()
         self.context = context.RequestContext('fake-user',
-                                              'fake-project')
+                                              fakes.FAKE_PROJECT_ID)
 
     @mock.patch('nova.objects.NetworkList.get_all')
     def test_get_all(self, mock_get_all):
@@ -120,7 +122,7 @@ class ApiTestCase(test.TestCase):
     def test_get(self, mock_get):
         mock_get.return_value = mock.sentinel.get_by_uuid
         self.assertEqual(mock.sentinel.get_by_uuid,
-                         self.network_api.get(self.context, 'fake-uuid'))
+                         self.network_api.get(self.context, uuids.instance))
 
     @mock.patch('nova.objects.Network.get_by_id')
     @mock.patch('nova.db.virtual_interface_get_by_instance')
@@ -130,15 +132,15 @@ class ApiTestCase(test.TestCase):
             dict(test_virtual_interface.fake_vif,
                  network_id=123)]
         mock_get_by_id.return_value = objects.Network()
-        mock_get_by_id.return_value.uuid = mock.sentinel.network_uuid
-        instance = objects.Instance(uuid=mock.sentinel.inst_uuid)
+        mock_get_by_id.return_value.uuid = uuids.network_1
+        instance = objects.Instance(uuid=uuids.instance)
         vifs = self.network_api.get_vifs_by_instance(self.context,
                                                      instance)
         self.assertEqual(1, len(vifs))
         self.assertEqual(123, vifs[0].network_id)
-        self.assertEqual(str(mock.sentinel.network_uuid), vifs[0].net_uuid)
+        self.assertEqual(uuids.network_1, vifs[0].net_uuid)
         mock_get_by_instance.assert_called_once_with(
-            self.context, str(mock.sentinel.inst_uuid))
+            self.context, uuids.instance)
         mock_get_by_id.assert_called_once_with(self.context, 123,
                                                project_only='allow_none')
 
@@ -149,11 +151,11 @@ class ApiTestCase(test.TestCase):
         mock_get_by_address.return_value = dict(
             test_virtual_interface.fake_vif, network_id=123)
         mock_get_by_id.return_value = objects.Network(
-            uuid=mock.sentinel.network_uuid)
+            uuid=uuids.network_1)
         vif = self.network_api.get_vif_by_mac_address(self.context,
                                                       mock.sentinel.mac)
         self.assertEqual(123, vif.network_id)
-        self.assertEqual(str(mock.sentinel.network_uuid), vif.net_uuid)
+        self.assertEqual(uuids.network_1, vif.net_uuid)
         mock_get_by_address.assert_called_once_with(self.context,
                                                     mock.sentinel.mac)
         mock_get_by_id.assert_called_once_with(self.context, 123,
@@ -176,7 +178,8 @@ class ApiTestCase(test.TestCase):
         self.mox.ReplayAll()
         flavor = flavors.get_default_flavor()
         flavor['rxtx_factor'] = 0
-        instance = objects.Instance(id=1, uuid='uuid', project_id='project_id',
+        instance = objects.Instance(id=1, uuid=uuids.instance,
+                                    project_id='project_id',
                                     host='host', system_metadata={},
                                     flavor=flavor)
         self.network_api.allocate_for_instance(
@@ -240,7 +243,7 @@ class ApiTestCase(test.TestCase):
                                                '10.0.0.2')
 
     def test_associate_preassociated_floating_ip(self):
-        self._do_test_associate_floating_ip('orig-uuid')
+        self._do_test_associate_floating_ip(uuids.orig_uuid)
 
     def test_associate_unassociated_floating_ip(self):
         self._do_test_associate_floating_ip(None)
@@ -502,8 +505,8 @@ class ApiTestCase(test.TestCase):
     @mock.patch('nova.objects.FixedIP.get_by_floating_address')
     def test_get_instance_by_floating_address(self, mock_get_by_floating):
         mock_get_by_floating.return_value = objects.FixedIP(
-            instance_uuid = mock.sentinel.instance_uuid)
-        self.assertEqual(str(mock.sentinel.instance_uuid),
+            instance_uuid = uuids.instance)
+        self.assertEqual(uuids.instance,
                          self.network_api.get_instance_id_by_floating_address(
                              self.context, mock.sentinel.floating))
         mock_get_by_floating.assert_called_once_with(self.context,

@@ -46,6 +46,7 @@ from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fixtures
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import cast_as_call
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit import fake_instance
@@ -53,6 +54,7 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import fake_utils
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 
@@ -67,8 +69,8 @@ class FakeContext(context.RequestContext):
 class _BaseTestCase(object):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
-        self.user_id = 'fake'
-        self.project_id = 'fake'
+        self.user_id = fakes.FAKE_USER_ID
+        self.project_id = fakes.FAKE_PROJECT_ID
         self.context = FakeContext(self.user_id, self.project_id)
 
         fake_notifier.stub_notifier(self.stubs)
@@ -280,8 +282,8 @@ class ConductorImportTest(test.NoDBTestCase):
 class _BaseTaskTestCase(object):
     def setUp(self):
         super(_BaseTaskTestCase, self).setUp()
-        self.user_id = 'fake'
-        self.project_id = 'fake'
+        self.user_id = fakes.FAKE_USER_ID
+        self.project_id = fakes.FAKE_PROJECT_ID
         self.context = FakeContext(self.user_id, self.project_id)
         fake_server_actions.stub_out_action_events(self.stubs)
 
@@ -1245,7 +1247,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch.object(live_migrate.LiveMigrationTask, 'execute')
     def _test_migrate_server_deals_with_expected_exceptions(self, ex,
         mock_execute, mock_set):
-        instance = fake_instance.fake_db_instance(uuid='uuid',
+        instance = fake_instance.fake_db_instance(uuid=uuids.instance,
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance, [])
@@ -1266,7 +1268,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 ex, self._build_request_spec(inst_obj))
 
     def test_migrate_server_deals_with_invalidcpuinfo_exception(self):
-        instance = fake_instance.fake_db_instance(uuid='uuid',
+        instance = fake_instance.fake_db_instance(uuid=uuids.instance,
                                                   vm_state=vm_states.ACTIVE)
         inst_obj = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance, [])
@@ -1370,8 +1372,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             instance_type_id=flavor['id'],
             vm_state=vm_states.ACTIVE,
             system_metadata={},
-            uuid='fake',
-            user_id='fake')
+            uuid=uuids.instance,
+            user_id=fakes.FAKE_USER_ID)
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1421,8 +1423,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             vm_state=vm_states.STOPPED,
             instance_type_id=flavor['id'],
             system_metadata={},
-            uuid='fake',
-            user_id='fake')
+            uuid=uuids.instance,
+            user_id=fakes.FAKE_USER_ID)
         image = 'fake-image'
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict(),
@@ -1463,8 +1465,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             vm_state=vm_states.STOPPED,
             instance_type_id=flavor['id'],
             system_metadata={},
-            uuid='fake',
-            user_id='fake')
+            uuid=uuids.instance,
+            user_id=fakes.FAKE_USER_ID)
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1507,8 +1509,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             vm_state=vm_states.STOPPED,
             instance_type_id=flavor['id'],
             system_metadata={},
-            uuid='fake',
-            user_id='fake')
+            uuid=uuids.instance,
+            user_id=fakes.FAKE_USER_ID)
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())
         filter_props = dict(context=None)
@@ -1550,8 +1552,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             vm_state=vm_states.STOPPED,
             instance_type_id=flavor['id'],
             system_metadata={},
-            uuid='fake',
-            user_id='fake')
+            uuid=uuids.instance,
+            user_id=fakes.FAKE_USER_ID)
         image = 'fake-image'
         request_spec = dict(instance_type=dict(),
                             instance_properties=dict(),
@@ -1605,8 +1607,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             vm_state=vm_states.STOPPED,
             instance_type_id=flavor['id'],
             system_metadata={},
-            uuid='fake',
-            user_id='fake')
+            uuid=uuids.instance,
+            user_id=fakes.FAKE_USER_ID)
 
         request_spec = dict(instance_type=dict(extra_specs=dict()),
                             instance_properties=dict())

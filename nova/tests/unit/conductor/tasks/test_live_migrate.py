@@ -24,6 +24,7 @@ from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 
@@ -32,7 +33,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         super(LiveMigrationTaskTestCase, self).setUp()
         self.context = "context"
         self.instance_host = "host"
-        self.instance_uuid = "uuid"
+        self.instance_uuid = uuids.instance
         self.instance_image = "image_ref"
         db_instance = fake_instance.fake_db_instance(
                 host=self.instance_host,
