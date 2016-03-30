@@ -52,6 +52,7 @@ from nova.conf import ironic
 from nova.conf import keymgr
 # from nova.conf import keystone_authtoken
 # from nova.conf import libvirt
+from nova.conf import mks
 # from nova.conf import matchmaker_redis
 # from nova.conf import metadata
 # from nova.conf import metrics
@@ -107,6 +108,7 @@ glance.register_opts(CONF)
 # guestfs.register_opts(CONF)
 # host.register_opts(CONF)
 hyperv.register_opts(CONF)
+mks.register_opts(CONF)
 # image.register_opts(CONF)
 # imagecache.register_opts(CONF)
 image_file_url.register_opts(CONF)
