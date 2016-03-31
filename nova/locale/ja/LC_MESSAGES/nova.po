@@ -17,13 +17,13 @@
 # 笹原 昌美 <ebb0de1@jp.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc3.dev7\n"
+"Project-Id-Version: nova 13.0.0.0rc3.dev10\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-29 14:46+0000\n"
+"POT-Creation-Date: 2016-03-30 14:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-30 06:39+0000\n"
+"PO-Revision-Date: 2016-03-31 06:16+0000\n"
 "Last-Translator: Tsutomu Kimura <ebb0de2@jp.ibm.com>\n"
 "Language: ja\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -65,8 +65,8 @@ msgstr ""
 "%(desc)r\n"
 "コマンド: %(cmd)r\n"
 "終了コード: %(code)r\n"
-"標準出力: %(stdout)r\n"
-"標準エラー: %(stderr)r"
+"stdout: %(stdout)r\n"
+"stderr: %(stderr)r"
 
 #, python-format
 msgid "%(err)s"
@@ -1150,7 +1150,7 @@ msgstr ""
 
 #, python-format
 msgid "Disk contains a filesystem we are unable to resize: %s"
-msgstr "ディスクに、サイズ変更できないファイルシステムが含まれています: %s"
+msgstr "ディスクにサイズ変更できないファイルシステムが含まれています: %s"
 
 #, python-format
 msgid "Disk format %(disk_format)s is not acceptable"
@@ -1260,13 +1260,13 @@ msgstr ""
 "%(instance_name)s の検索中に libvirt でエラーが発生しました: [エラーコード "
 "%(error_code)s] %(ex)s"
 
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "Error from libvirt while quiescing %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr ""
-"%(instance_name)s の静止中に libvirt でエラーが発生しました: [エラーコード "
-"%(error_code)s] %(ex)s"
+"%(instance_name)s の正常終了中に libvirt でエラーが発生しました: [エラーコー"
+"ド %(error_code)s] %(ex)s"
 
 #, python-format
 msgid ""
@@ -4040,11 +4040,11 @@ msgid "Specified fixed address not assigned to instance"
 msgstr "指定された固定アドレスはインスタンスに割り当てられていません"
 
 msgid "Specify `table_name` or `table` param"
-msgstr "`table_name` または `table` パラメーターを指定してください"
+msgstr "'table_name' または 'table' のパラメーターを指定してください"
 
 msgid "Specify only one param `table_name` `table`"
 msgstr ""
-"パラメーター `table_name` または `table` のいずれか 1 つのみを指定してくださ"
+"'table_name' または 'table' のパラメーターのいずれか 1 つのみを指定してくださ"
 "い"
 
 msgid "Started"
@@ -4276,7 +4276,7 @@ msgstr ""
 msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
-msgstr "ネットワーク数とVLANの開始番号の和は 4094 より大きくできません。"
+msgstr "ネットワーク数と VLAN の開始番号の和は 4094 より大きくできません。"
 
 #, python-format
 msgid "The supplied device (%(device)s) is busy."
@@ -4660,7 +4660,7 @@ msgid ""
 "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of memory(host:"
 "%(avail)s <= instance:%(mem_inst)s)"
 msgstr ""
-"%(instance_uuid)s を %(dest)s にマイグレーションできません:メモリー不足です "
+"%(instance_uuid)s を %(dest)s にマイグレーションできません: メモリー不足です "
 "(host:%(avail)s <= instance:%(mem_inst)s)"
 
 #, python-format
@@ -5055,7 +5055,7 @@ msgstr "警告: Fixed IP %s が存在しないインスタンスに割り当て�
 msgid ""
 "We do not support scheme '%s' under Python < 2.7.4, please use http or https"
 msgstr ""
-"Python < 2.7.4 ではスキーム「%s」はサポートされません。http またはhttps を使"
+"Python < 2.7.4 ではスキーム '%s' はサポートされません。http またはhttps を使"
 "用してください"
 
 msgid "When resizing, instances must change flavor!"
@@ -5632,8 +5632,8 @@ msgstr ""
 msgid ""
 "volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
 msgstr ""
-"ボリューム「%(vol)s」の状況は「使用中」でなければなりませんが、現在の状況は"
-"「%(status)s」です"
+"ボリューム '%(vol)s' の状況は「使用中」でなければなりませんが、現在の状況は "
+"'%(status)s' です"
 
 msgid "volume not specified"
 msgstr "ボリュームが指定されていません"
