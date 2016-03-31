@@ -55,3 +55,4 @@ oslo.versionedobjects>=1.5.0 # Apache-2.0
 os-brick>=1.3.0 # Apache-2.0
 os-win>=0.2.3 # Apache-2.0
 castellan>=0.3.1 # Apache-2.0
+microversion-parse>=0.1.2  # Apache-2.0
