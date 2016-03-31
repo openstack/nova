@@ -1,0 +1,609 @@
+tenant_id:
+      type: UUID
+      in: URI
+      description: |
+        The UUID of the tenant in a multi-tenancy cloud.
+changes-since:
+      type: dateTime
+      in: query
+      optional: True
+      description: |
+        Only return servers that have changed in status since the specified time
+image:
+      type: UUID
+      in: query
+      optional: True
+      description: |
+        Filters the response by an image, as a UUID.
+flavor:
+      type: UUID
+      in: query
+      optional: True
+      description: |
+        Filters the response by a flavor, as a UUID. A flavor is a
+        combination of memory, disk size, and CPUs.
+
+name:
+      type: regexp
+      in: query
+      optional: True
+      description: |
+        Filters the response by a server name, as a string.
+
+        You can use regular expressions in the query. For example, the
+        ?name=bob regular expression returns both bob and bobb. If you
+        must match on only bob, you can use a regular expression that
+        matches the syntax of the underlying database server that is
+        implemented for Compute, such as MySQL or PostgreSQL.
+status:
+      type: ServerStatus
+      in: query
+      optional: True
+      description: |
+        Filters the response by a server status, as a string. For example, ACTIVE.
+
+host:
+      type: string
+      in: query
+      optional: True
+      description: |
+        Filters the response by a host name, as a string. This query
+        parameter is typically available to only administrative
+        users. If you are a non-administrative user, the API ignores
+        this parameter.
+
+limit:
+      type: int
+      in: query
+      optional: True
+      description: |
+
+        Requests a page size of items. Returns a number of items up to
+        a limit value. Use the limit parameter to make an initial
+        limited request and use the ID of the last-seen item from the
+        response as the marker parameter value in a subsequent limited
+        request.
+
+marker:
+      type: string
+      in: query
+      optional: True
+      description: |
+        The ID of the last-seen item. Use the limit parameter to make
+        an initial limited request and use the ID of the last-seen
+        item from the response as the marker parameter value in a
+        subsequent limited request.
+
+request_id:
+  type: UUID
+  in: header
+  description: |
+    A unique ID for tracking the request. The request ID
+    associated with the request appears in the log lines for that
+    request. By default, the middleware configuration ensures that
+    the request ID appears in the log files.
+
+servers:
+  type: list
+  in: body
+  description: |
+
+    A list of servers objects that match the critera above. If no
+    additional filters are added will be all non ``DELETED`` servers
+    for the project of the user making the request.
+
+server_id:
+  type: UUID
+  in: body
+  description: |
+    The UUID of a server. Useful for follow on calls.
+
+server_id_url:
+  type: UUID
+  in: URL
+  description: |
+    The UUID of a server.
+
+generic_links:
+  type: list
+  in: body
+  description: |
+    A list of uris that reference the resource in question.
+
+server_name:
+  type: string
+  in: body
+  description: |
+    The display name of the server
+
+server:
+  type: object
+  in: body
+  description: |
+    A structured description of the server.
+
+security_groups:
+  in: body
+  optional: True
+  type: string
+  description: |
+
+    One or more security groups. Specify the name of the security
+    group in the name attribute. If you omit this attribute, the API
+    creates the server in the default security group.
+
+user_data:
+  in: body
+  optional: True
+  type: string
+  description: |
+    Configuration information or scripts to use upon launch. Must be Base64 encoded.
+
+availability_zone:
+  in: body
+  optional: True
+  type: string
+  description: |
+
+    The availability zone from which to launch the server. When you
+    provision resources, you specify from which availability zone you
+    want your instance to be built.
+
+    Typically, you use availability zones to arrange OpenStack compute
+    hosts into logical groups. An availability zone provides a form of
+    physical isolation and redundancy from other availability
+    zones. For instance, if some racks in your data center are on a
+    separate power source, you can put servers in those racks in their
+    own availability zone. Availability zones can also help separate
+    different classes of hardware.
+
+    By segregating resources into availability zones, you can ensure
+    that your application resources are spread across disparate
+    machines to achieve high availability in the event of hardware or
+    other failure.
+
+image_ref:
+  in: body
+  type: string
+  description: |
+
+    The image reference, as a ``UUID`` or full URL, for the image to
+    use for your server instance.
+
+flavor_ref:
+  in: body
+  type: string
+  description: |
+
+    The flavor reference, as a ``UUID`` or full URL, for the flavor
+    for your server instance.
+
+network_obj:
+  in: body
+  type: object
+  optional: True
+  description: |
+
+    A networks object. Required parameter when there are mulitple
+    networks defined for the tenant. When you do not specify the
+    networks parameter, the server attaches to the only network
+    created for the current tenant.
+
+    Optionally, you can create one or more NICs on the server.
+
+    To provision the server instance with a NIC for a network, specify
+    the UUID of the network in the uuid attribute in a networks
+    object.
+
+    To provision the server instance with a NIC for an already
+    existing port, specify the port-id in the port attribute in a
+    networks object.
+
+fixed_ip:
+  in: body
+  type: string
+  optional: True
+  description: |
+
+    A fixed IPv4 address for the NIC. Valid with a neutron or
+    nova-networks network.
+
+metadata:
+  in: body
+  type: object
+  optional: True
+  description: |
+
+    Metadata key and value pairs. The maximum size of the metadata
+    key and value is 255 bytes each.
+
+personality:
+  in: body
+  type: string
+  optional: True
+  description: |
+
+    The file path and contents, text only, to inject into the server
+    at launch. The maximum size of the file path data is 255
+    bytes. The maximum limit is The number of allowed bytes in the
+    decoded, rather than encoded, data.
+
+block_device_mapping_v2:
+  in: body
+  type: object
+  optional: True
+  description: |
+
+    Enables you to boot a server from a volume when you specify
+    additional parameters. If you specify the volume status, you must
+    set it to available. In the OpenStack Block Storage database, the
+    volume ``attach_status`` must be ``detached``.
+
+bdm_device_name:
+  in: block_device_mapping_v2
+  type: string
+  description: |
+    A path to the device for the volume that you want to use to boot the server.
+
+bdm_source_type:
+  in: block_device_mapping_v2
+  type: string
+  description: |
+    The source type of the volume. A valid value is blank, snapshot, volume, or image.
+
+bdm_destination_type:
+  in: block_device_mapping_v2
+  type: string
+  optional: True
+  description: |
+    Defines where the volume comes from. A valid value is local or volume.
+
+bdm_delete_on_termination:
+  in: block_device_mapping_v2
+  type: boolean
+  description: |
+
+    To delete the boot volume when the server is destroyed, specify
+    ``true``. Otherwise, specify ``false``.
+
+bdm_guest_format:
+  in: block_device_mapping_v2
+  type: string
+  description: |
+    Specifies the guest server disk file system format, such as ephemeral or swap.
+
+bdm_boot_index:
+  in: block_device_mapping_v2
+  type: int
+  description: |
+
+    Defines the order in which a hypervisor tries devices when it
+    attempts to boot the guest from storage.
+
+    Give each device a unique boot index starting from 0. To
+    disable a device from booting, set the boot index to a
+    negative value or use the default boot index value, which is
+    None.
+
+    The simplest usage is, set the boot index of the boot device
+    to 0 and use the default boot index value, None, for any other
+    devices.
+
+    Some hypervisors might not support booting from multiple
+    devices; these hypervisors consider only the device with a
+    boot index of 0.
+
+    Some hypervisors support booting from multiple devices but
+    only if the devices are of different types. For example, a
+    disk and CD-ROM.
+
+config_drive:
+  in: body
+  type: boolean
+  optional: True
+  description: |
+
+    Indicates whether a configuration drive enables metadata
+    injection. The config_drive setting provides information about a
+    drive that the instance can mount at boot time. The instance reads
+    files from the drive to get information that is normally available
+    through the metadata service. This metadata is different from the
+    user data. Not all cloud providers enable the config_drive. Read
+    more in the OpenStack End User Guide.
+
+keypair_name:
+  in: body
+  type: string
+  optional: True
+  description: |
+    Key pair name.
+
+scheduler_hints:
+  in: body
+  type: object
+  optional: True
+  description: |
+
+    The dictionary of data to send to the
+    scheduler. Alternatively, you can specify
+    OS-SCH-HNT:scheduler_hints as the string.
+
+server_disk_config:
+  in: body
+  type: string
+  optional: True
+  description: |
+
+    Controls how the API partitions the disk when you create,
+    rebuild, or resize servers. A server inherits the
+    OS-DCF:diskConfig value from the image from which it was
+    created, and an image inherits the OS-DCF:diskConfig value
+    from the server from which it was created. To override the
+    inherited setting, you can include this attribute in the
+    request body of a server create, rebuild, or resize request.
+
+    If the OS-DCF:diskConfig value for an image is ``MANUAL``, you
+    cannot create a server from that image and set its
+    OS-DCF:diskConfig value to ``AUTO``.
+
+    A valid value is:
+
+      ``AUTO``. The API builds the server with a single partition the
+      size of the target flavor disk. The API automatically adjusts
+      the file system to fit the entire partition.
+
+      ``MANUAL``. The API builds the server by using whatever
+      partition scheme and file system is in the source image. If the
+      target flavor disk is larger, the API does not partition the
+      remaining disk space.
+
+
+admin_pass:
+  in: body
+  type: string
+  description: |
+    The administrative password of the server.
+
+server_addresses:
+  type: object
+  in: body
+  description: |
+    The addresses for the server.
+
+    Addresses information is hidden for any server in a state set
+    in the ``osapi_hide_server_address_states`` configuration
+    option. By default, servers in building state hide their
+    addresses information.
+
+    See nova.conf - configuration options.
+
+
+created:
+  type: string
+  in: body
+  description: |
+    The date and time when the resource was created.
+
+    The date and time stamp format is ISO 8601:
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+
+    The ±hh:mm value, if included, is the time zone as an offset from
+    UTC. In the previous example, the offset value is -05:00.
+
+flavor_obj:
+  type: object
+  in: body
+  description: |
+
+    The ID and links for the flavor for your server instance. A
+    flavor is a combination of memory, disk size, and CPUs.
+
+image_obj:
+  type: object
+  in: body
+  description: |
+    The UUID and links for the image for your server instance. The
+    image object might be an empty string when you boot the server
+    from a volume.
+
+hostId:
+  type: string
+  in: body
+  description: |
+
+    The ID of the host. This is a hashed value which will be the
+    same if 2 instances are on the same physical host.
+
+server_compute_hostname:
+  type: string
+  in: body
+  admin_only: True
+  description: |
+    The host name. Appears in the response for administrative users only.
+
+server_hypervisor_hostname:
+  type: string
+  in: body
+  admin_only: True
+  description: |
+    The hypervisor host name. Appears in the response for administrative users only.
+
+server_instance_name:
+  type: string
+  in: body
+  admin_only: True
+  description: |
+
+    The instance name. The Compute API generates the instance name
+    from the instance name template. Appears in the response for
+    administrative users only.
+
+server_power_state:
+  type: string
+  in: body
+  description: |
+    The power state of the instance.
+
+server_task_state:
+  type: string
+  in: body
+  description: |
+    The task state of the instance.
+
+server_vm_state:
+  type: string
+  in: body
+  description: |
+    The VM state.
+
+server_volumes_attached:
+  type: object
+  in: body
+  description: |
+    The attached volumes, if any.
+
+server_launched_at:
+  type: string
+  in: body
+  description: |
+    The date and time when the server was launched.
+
+    The date and time stamp format is ISO 8601:
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, 2015-08-27T09:49:58-05:00.
+
+    The ±hh:mm value, if included, is the time zone as an offset from UTC.
+
+    If the ``deleted_at`` date and time stamp is not set, its value is null.
+
+server_terminated_at:
+  type: string
+  in: body
+  description: |
+    The date and time when the server was deleted.
+
+    The date and time stamp format is ISO 8601:
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, 2015-08-27T09:49:58-05:00.
+
+    The ±hh:mm value, if included, is the time zone as an offset from UTC.
+
+    If the deleted_at date and time stamp is not set, its value is null.
+
+build_progress:
+  type: int
+  in: body
+  description: |
+    A percentage value of the build progress.
+
+security_groups_obj:
+  type: object
+  in: body
+  description: |
+    Security groups object.
+
+sg_description:
+  type: string
+  in: security_groups
+  description: |
+    The security group description.
+
+sg_id:
+  type: string
+  in: security_groups
+  description: |
+    The security group ID.
+
+sg_name:
+  type: string
+  in: security_groups
+  description: |
+    The security group name.
+
+sg_rules:
+  type: object
+  in: security_groups
+  description: |
+    A rules object.
+
+server_status:
+  type: string
+  in: body
+  description: |
+    The server status.
+
+tenant_id_body:
+  type: UUID
+  in: body
+  description: |
+    The ``UUID`` of the tenant in a multi-tenancy cloud.
+
+updated:
+  type: string
+  in: body
+  description: |
+    The date and time when the resource was updated.
+
+    The date and time stamp format is ISO 8601:
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ±hh:mm value, if included, is the time zone as an offset from UTC.
+
+    For example, 2015-08-27T09:49:58-05:00.
+
+    The UTC time zone is assumed.
+
+user_id:
+  type: UUID
+  in: body
+  description: |
+    The user ID of the user who owns the server.
+
+# parameters in microversions only
+
+server_locked:
+  type: boolean
+  in: body
+  min_version: 2.9
+  description: |
+
+    Whether or not a server has been ``locked``. Locked servers
+    prevent most actions from being performed on them.
+
+host_status:
+  type: string
+  in: body
+  min_version: 2.16
+  description: |
+
+    The host status. Values where next value in list can override
+    the previous:
+
+    ``UP`` if nova-compute up.
+
+    ``UNKNOWN`` if nova-compute not reported by servicegroup driver.
+
+    ``DOWN`` if nova-compute forced down.
+
+    ``MAINTENANCE`` if nova-compute is disabled.
+
+    Empty string indicates there is no host for server.
+
+    This attribute appears in the response only if the policy permits.
+
+server_description:
+  type: string
+  in: body
+  min_version: 2.19
+  description: |
+
+    A free form description field for the server. It is limitted to
+    ``255`` characters in length.
