@@ -70,6 +70,7 @@ class RealTimeServersTest(ServersTestBase):
            'nova.virt.libvirt.guest.libvirt',
            fakelibvirt))
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
+        self.flags(sysinfo_serial='none', group='libvirt')
 
     def _setup_compute_service(self):
         self.flags(compute_driver='nova.virt.libvirt.LibvirtDriver')
