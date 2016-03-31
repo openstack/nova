@@ -14,6 +14,7 @@ import inspect
 
 import mock
 import six
+import testscenarios
 import webob
 
 from nova.api.openstack import api_version_request as api_version
@@ -29,8 +30,25 @@ from nova.tests.unit import utils
 from oslo_serialization import jsonutils
 
 
-class RequestTest(test.NoDBTestCase):
-    header_name = 'X-OpenStack-Nova-API-Version'
+class MicroversionedTest(testscenarios.WithScenarios, test.NoDBTestCase):
+
+    scenarios = [
+        ('legacy-microverison', {
+            'header_name': 'X-OpenStack-Nova-API-Version',
+        }),
+        ('modern-microversion', {
+            'header_name': 'OpenStack-API-Version',
+        })
+    ]
+
+    def _make_microversion_header(self, value):
+        if 'nova' in self.header_name.lower():
+            return {self.header_name: value}
+        else:
+            return {self.header_name: 'compute %s' % value}
+
+
+class RequestTest(MicroversionedTest):
 
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
@@ -165,7 +183,7 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("2.14")
 
         request = wsgi.Request.blank('/')
-        request.headers = {self.header_name: '2.14'}
+        request.headers = self._make_microversion_header('2.14')
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("2.14"),
                          request.api_version_request)
@@ -175,14 +193,14 @@ class RequestTest(test.NoDBTestCase):
         mock_maxver.return_value = api_version.APIVersionRequest("3.5")
 
         request = wsgi.Request.blank('/')
-        request.headers = {self.header_name: 'latest'}
+        request.headers = self._make_microversion_header('latest')
         request.set_api_version_request()
         self.assertEqual(api_version.APIVersionRequest("3.5"),
                          request.api_version_request)
 
     def test_api_version_request_header_invalid(self):
         request = wsgi.Request.blank('/')
-        request.headers = {self.header_name: '2.1.3'}
+        request.headers = self._make_microversion_header('2.1.3')
 
         self.assertRaises(exception.InvalidAPIVersionString,
                           request.set_api_version_request)
@@ -269,8 +287,7 @@ class JSONDeserializerTest(test.NoDBTestCase):
                           deserializer.deserialize, data)
 
 
-class ResourceTest(test.NoDBTestCase):
-    header_name = 'X-OpenStack-Nova-API-Version'
+class ResourceTest(MicroversionedTest):
 
     def get_req_id_header_name(self, request):
         header_name = 'x-openstack-request-id'
@@ -308,7 +325,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {self.header_name: version}
+        req.headers = self._make_microversion_header(version)
         response = req.get_response(app)
         self.assertEqual(b'success', response.body)
         self.assertEqual(response.status_int, 200)
@@ -322,7 +339,7 @@ class ResourceTest(test.NoDBTestCase):
 
         app = fakes.TestRouterV21(Controller())
         req = webob.Request.blank('/tests')
-        req.headers = {self.header_name: invalid_version}
+        req.headers = self._make_microversion_header(invalid_version)
         response = req.get_response(app)
         self.assertEqual(400, response.status_int)
 

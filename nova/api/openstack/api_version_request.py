@@ -72,6 +72,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.25 - Make block_migration support 'auto' and remove
              disk_over_commit for os-migrateLive.
     * 2.26 - Adds support of server tags
+    * 2.27 - Adds support for new-style microversion headers while
+             keeping support for the original style.
 """
 
 # The minimum and maximum versions of the API supported
@@ -80,7 +82,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.26"
+_MAX_API_VERSION = "2.27"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

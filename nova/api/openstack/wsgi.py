@@ -71,9 +71,10 @@ DEFAULT_API_VERSION = "2.1"
 # name of attribute to keep version method information
 VER_METHOD_ATTR = 'versioned_methods'
 
-# Name of header used by clients to request a specific version
+# Names of headers used by clients to request a specific version
 # of the REST API
-API_VERSION_REQUEST_HEADER = 'X-OpenStack-Nova-API-Version'
+API_VERSION_REQUEST_HEADER = 'OpenStack-API-Version'
+LEGACY_API_VERSION_REQUEST_HEADER = 'X-OpenStack-Nova-API-Version'
 
 
 ENV_LEGACY_V2 = 'openstack.legacy_v2'
@@ -230,7 +231,7 @@ class Request(wsgi.Request):
         """Set API version request based on the request header information."""
         hdr_string = microversion_parse.get_version(
             self.headers, service_type='compute',
-            legacy_headers=[API_VERSION_REQUEST_HEADER])
+            legacy_headers=[LEGACY_API_VERSION_REQUEST_HEADER])
 
         if hdr_string is None:
             self.api_version_request = api_version.APIVersionRequest(
@@ -767,8 +768,11 @@ class Resource(wsgi.Application):
 
             if not request.api_version_request.is_null():
                 response.headers[API_VERSION_REQUEST_HEADER] = \
+                    'compute ' + request.api_version_request.get_string()
+                response.headers[LEGACY_API_VERSION_REQUEST_HEADER] = \
                     request.api_version_request.get_string()
-                response.headers['Vary'] = API_VERSION_REQUEST_HEADER
+                response.headers.add('Vary', API_VERSION_REQUEST_HEADER)
+                response.headers.add('Vary', LEGACY_API_VERSION_REQUEST_HEADER)
 
         return response
 
@@ -1121,9 +1125,12 @@ class Fault(webob.exc.HTTPException):
 
         if not req.api_version_request.is_null():
             self.wrapped_exc.headers[API_VERSION_REQUEST_HEADER] = \
+                'compute ' + req.api_version_request.get_string()
+            self.wrapped_exc.headers[LEGACY_API_VERSION_REQUEST_HEADER] = \
                 req.api_version_request.get_string()
-            self.wrapped_exc.headers['Vary'] = \
-              API_VERSION_REQUEST_HEADER
+            self.wrapped_exc.headers.add('Vary', API_VERSION_REQUEST_HEADER)
+            self.wrapped_exc.headers.add('Vary',
+                                         LEGACY_API_VERSION_REQUEST_HEADER)
 
         self.wrapped_exc.content_type = 'application/json'
         self.wrapped_exc.charset = 'UTF-8'

@@ -90,7 +90,7 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
-                       self.wsgi_api_version}
+                       'compute %s' % self.wsgi_api_version}
         res = req.get_response(
             fakes.wsgi_app_v21(init_only=('servers',
                                           'os-extended-server-attributes')))

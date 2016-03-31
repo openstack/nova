@@ -114,11 +114,14 @@ class LegacyV2CompatibleWrapper(base_wsgi.Middleware):
 
     def _filter_request_headers(self, req):
         """For keeping same behavior with v2 API, ignores microversions
-        HTTP header X-OpenStack-Nova-API-Version in the request.
+        HTTP headers X-OpenStack-Nova-API-Version and OpenStack-API-Version
+        in the request.
         """
 
         if wsgi.API_VERSION_REQUEST_HEADER in req.headers:
             del req.headers[wsgi.API_VERSION_REQUEST_HEADER]
+        if wsgi.LEGACY_API_VERSION_REQUEST_HEADER in req.headers:
+            del req.headers[wsgi.LEGACY_API_VERSION_REQUEST_HEADER]
         return req
 
     def _filter_response_headers(self, response):
@@ -128,13 +131,16 @@ class LegacyV2CompatibleWrapper(base_wsgi.Middleware):
 
         if wsgi.API_VERSION_REQUEST_HEADER in response.headers:
             del response.headers[wsgi.API_VERSION_REQUEST_HEADER]
+        if wsgi.LEGACY_API_VERSION_REQUEST_HEADER in response.headers:
+            del response.headers[wsgi.LEGACY_API_VERSION_REQUEST_HEADER]
 
         if 'Vary' in response.headers:
             vary_headers = response.headers['Vary'].split(',')
             filtered_vary = []
             for vary in vary_headers:
                 vary = vary.strip()
-                if vary == wsgi.API_VERSION_REQUEST_HEADER:
+                if (vary == wsgi.API_VERSION_REQUEST_HEADER or
+                    vary == wsgi.LEGACY_API_VERSION_REQUEST_HEADER):
                     continue
                 filtered_vary.append(vary)
             if filtered_vary:
