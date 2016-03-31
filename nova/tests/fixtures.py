@@ -28,9 +28,11 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_messaging import conffixture as messaging_conffixture
 import six
 
+from nova import context
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
 from nova import rpc
 from nova import service
@@ -295,6 +297,33 @@ class DatabaseAtVersion(fixtures.Fixture):
         super(DatabaseAtVersion, self).setUp()
         self.reset()
         self.addCleanup(self.cleanup)
+
+
+class DefaultFlavorsFixture(fixtures.Fixture):
+    def setUp(self):
+        super(DefaultFlavorsFixture, self).setUp()
+        ctxt = context.get_admin_context()
+        defaults = {'rxtx_factor': 1.0, 'disabled': False, 'is_public': True,
+                    'ephemeral_gb': 0, 'swap': 0}
+        default_flavors = [
+            objects.Flavor(context=ctxt, memory_mb=512, vcpus=1,
+                           root_gb=1, flavorid='1', name='m1.tiny',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=2048, vcpus=1,
+                           root_gb=20, flavorid='2', name='m1.small',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=4096, vcpus=2,
+                           root_gb=40, flavorid='3', name='m1.medium',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=8192, vcpus=4,
+                           root_gb=80, flavorid='4', name='m1.large',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=16384, vcpus=8,
+                           root_gb=160, flavorid='5', name='m1.xlarge',
+                           **defaults),
+            ]
+        for flavor in default_flavors:
+            flavor.create()
 
 
 class RPCFixture(fixtures.Fixture):

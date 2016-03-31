@@ -192,7 +192,7 @@ class TestDatabaseFixture(testtools.TestCase):
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
-        self.assertEqual(5, len(rows), "Rows %s" % rows)
+        self.assertEqual(0, len(rows), "Rows %s" % rows)
 
         # insert a 6th instance type, column 5 below is an int id
         # which has a constraint on it, so if new standard instance
@@ -202,7 +202,7 @@ class TestDatabaseFixture(testtools.TestCase):
                      ", 1.0, 40, 0, 0, 1, 0)")
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
-        self.assertEqual(6, len(rows), "Rows %s" % rows)
+        self.assertEqual(1, len(rows), "Rows %s" % rows)
 
         # reset by invoking the fixture again
         #
@@ -213,7 +213,7 @@ class TestDatabaseFixture(testtools.TestCase):
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
-        self.assertEqual(5, len(rows), "Rows %s" % rows)
+        self.assertEqual(0, len(rows), "Rows %s" % rows)
 
     def test_api_fixture_reset(self):
         # This sets up reasonable db connection strings
@@ -309,6 +309,25 @@ class TestDatabaseAtVersionFixture(testtools.TestCase):
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.Database())
         self.useFixture(fixtures.DatabaseAtVersion(318))
+
+
+class TestDefaultFlavorsFixture(testtools.TestCase):
+    def test_flavors(self):
+        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.Database(database='api'))
+
+        engine = session.get_api_engine()
+        conn = engine.connect()
+        result = conn.execute("select * from flavors")
+        rows = result.fetchall()
+        self.assertEqual(0, len(rows), "Rows %s" % rows)
+
+        self.useFixture(fixtures.DefaultFlavorsFixture())
+
+        result = conn.execute("select * from flavors")
+        rows = result.fetchall()
+        self.assertEqual(5, len(rows), "Rows %s" % rows)
 
 
 class TestIndirectionAPIFixture(testtools.TestCase):

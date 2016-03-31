@@ -85,33 +85,6 @@ def _create_shadow_tables(migrate_engine):
             raise
 
 
-def _populate_instance_types(instance_types_table):
-    default_inst_types = {
-        'm1.tiny': dict(mem=512, vcpus=1, root_gb=1, eph_gb=0, flavid=1),
-        'm1.small': dict(mem=2048, vcpus=1, root_gb=20, eph_gb=0, flavid=2),
-        'm1.medium': dict(mem=4096, vcpus=2, root_gb=40, eph_gb=0, flavid=3),
-        'm1.large': dict(mem=8192, vcpus=4, root_gb=80, eph_gb=0, flavid=4),
-        'm1.xlarge': dict(mem=16384, vcpus=8, root_gb=160, eph_gb=0, flavid=5)
-        }
-
-    try:
-        i = instance_types_table.insert()
-        for name, values in default_inst_types.items():
-            i.execute({'name': name, 'memory_mb': values["mem"],
-                        'vcpus': values["vcpus"], 'deleted': 0,
-                        'root_gb': values["root_gb"],
-                        'ephemeral_gb': values["eph_gb"],
-                        'rxtx_factor': 1,
-                        'swap': 0,
-                        'flavorid': values["flavid"],
-                        'disabled': False,
-                        'is_public': True})
-    except Exception:
-        LOG.info(repr(instance_types_table))
-        LOG.exception(_LE('Exception while seeding instance_types table'))
-        raise
-
-
 # NOTE(dprince): we add these here so our schema contains dump tables
 # which were added in migration 209 (in Havana). We can drop these in
 # Icehouse: https://bugs.launchpad.net/nova/+bug/1266538
@@ -1573,8 +1546,5 @@ def upgrade(migrate_engine):
             migrate_engine.url.database)
 
     _create_shadow_tables(migrate_engine)
-
-    # populate initial instance types
-    _populate_instance_types(instance_types)
 
     _create_dump_tables(migrate_engine)
