@@ -45,11 +45,18 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova.pci import utils
 
 PCI_NET_TAG = 'physical_network'
+PCI_DEVICE_TYPE_TAG = 'dev_type'
+
+DEVICE_TYPE_FOR_VNIC_TYPE = {
+    network_model.VNIC_TYPE_DIRECT_PHYSICAL: obj_fields.PciDeviceType.SRIOV_PF
+}
+
 
 CONF = nova.conf.CONF
 

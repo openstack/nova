@@ -96,7 +96,8 @@ VNIC_TYPE_MACVTAP = 'macvtap'
 VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
 VNIC_TYPE_BAREMETAL = 'baremetal'
 
-VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP)
+VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP,
+                    VNIC_TYPE_DIRECT_PHYSICAL)
 
 # Constants for the 'vif_model' values
 VIF_MODEL_VIRTIO = 'virtio'
