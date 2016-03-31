@@ -41,11 +41,6 @@ from nova import wsgi as base_wsgi
 
 
 api_opts = [
-        cfg.BoolOpt('enabled',
-                    default=True,
-                    help='DEPRECATED: Whether the V2.1 API is enabled or not. '
-                    'This option will be removed in the near future.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
         cfg.ListOpt('extensions_blacklist',
                     default=[],
                     help='DEPRECATED: A list of v2.1 API extensions to never '
@@ -366,11 +361,6 @@ class APIRouterV21(base_wsgi.Router):
                     if ext.obj.alias not in blacklist:
                         return self._register_extension(ext)
             return False
-
-        if not CONF.osapi_v21.enabled:
-            LOG.info(_LI("V2.1 API has been disabled by configuration"))
-            LOG.warning(_LW("In the M release you must run the v2.1 API."))
-            return
 
         if (CONF.osapi_v21.extensions_blacklist or
                 CONF.osapi_v21.extensions_whitelist):
