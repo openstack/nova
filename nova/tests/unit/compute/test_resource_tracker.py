@@ -27,7 +27,6 @@ import six
 
 from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker
-from nova.compute import resources
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -64,7 +63,6 @@ FAKE_VIRT_VCPUS = 1
 FAKE_VIRT_STATS = {'virt_stat': 10}
 FAKE_VIRT_STATS_COERCED = {'virt_stat': '10'}
 FAKE_VIRT_STATS_JSON = jsonutils.dumps(FAKE_VIRT_STATS)
-RESOURCE_NAMES = ['vcpu']
 CONF = cfg.CONF
 
 
@@ -451,8 +449,6 @@ class BaseTestCase(test.TestCase):
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
         tracker.compute_node = self._create_compute_node_obj(self.context)
-        tracker.ext_resources_handler = \
-            resources.ResourceHandler(RESOURCE_NAMES, True)
         return tracker
 
 
@@ -810,32 +806,6 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
 
     def _driver(self):
         return FakeVirtDriver(pci_support=True)
-
-
-class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
-
-    def test_set_empty_ext_resources(self):
-        resources = self._create_compute_node_obj(self.context)
-        del resources.stats
-        self.tracker._write_ext_resources(resources)
-        self.assertEqual({}, resources.stats)
-
-    def test_set_extra_resources(self):
-        def fake_write_resources(resources):
-            resources.stats['resA'] = '123'
-            resources.stats['resB'] = 12
-
-        self.stubs.Set(self.tracker.ext_resources_handler,
-                       'write_resources',
-                       fake_write_resources)
-
-        resources = self._create_compute_node_obj(self.context)
-        del resources.stats
-        self.tracker._write_ext_resources(resources)
-
-        expected = {"resA": "123", "resB": "12"}
-        self.assertEqual(sorted(expected),
-                         sorted(resources.stats))
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):

@@ -26,7 +26,6 @@ from oslo_utils import importutils
 
 from nova.compute import claims
 from nova.compute import monitors
-from nova.compute import resources as ext_resources
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -85,8 +84,6 @@ class ResourceTracker(object):
         self.tracked_migrations = {}
         monitor_handler = monitors.MonitorHandler(self)
         self.monitors = monitor_handler.monitors
-        self.ext_resources_handler = \
-            ext_resources.ResourceHandler(CONF.compute_resources)
         self.old_resources = objects.ComputeNode()
         self.scheduler_client = scheduler_client.SchedulerClient()
         self.ram_allocation_ratio = CONF.ram_allocation_ratio
@@ -390,6 +387,7 @@ class ResourceTracker(object):
         # purge old stats and init with anything passed in by the driver
         self.stats.clear()
         self.stats.digest_stats(resources.get('stats'))
+        self.compute_node.stats = copy.deepcopy(self.stats)
 
         # update the allocation ratios for the related ComputeNode object
         self.compute_node.ram_allocation_ratio = self.ram_allocation_ratio
@@ -546,10 +544,6 @@ class ResourceTracker(object):
             LOG.warning(_LW("No compute node record for %(host)s:%(node)s"),
                         {'host': self.host, 'node': self.nodename})
 
-    def _write_ext_resources(self, resources):
-        resources.stats = copy.deepcopy(self.stats)
-        self.ext_resources_handler.write_resources(resources)
-
     def _report_hypervisor_resource_view(self, resources):
         """Log the hypervisor's view of free resources.
 
@@ -637,7 +631,6 @@ class ResourceTracker(object):
 
     def _update(self, context):
         """Update partial stats locally and populate them to Scheduler."""
-        self._write_ext_resources(self.compute_node)
         if not self._resource_change():
             return
         # Persist the stats to the Scheduler
@@ -663,7 +656,6 @@ class ResourceTracker(object):
                                           self.compute_node.local_gb_used)
 
         self.compute_node.running_vms = self.stats.num_instances
-        self.ext_resources_handler.update_from_instance(usage, sign)
 
         # Calculate the numa usage
         free = sign == -1
@@ -820,6 +812,7 @@ class ResourceTracker(object):
             sign = -1
 
         self.stats.update_stats_for_instance(instance, is_removed_instance)
+        self.compute_node.stats = copy.deepcopy(self.stats)
 
         # if it's a new or deleted instance:
         if is_new_instance or is_removed_instance:
@@ -855,10 +848,6 @@ class ResourceTracker(object):
                                           self.compute_node.local_gb_used)
         self.compute_node.current_workload = 0
         self.compute_node.running_vms = 0
-
-        # Reset values for extended resources
-        self.ext_resources_handler.reset_resources(self.compute_node,
-                                                   self.driver)
 
         for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
