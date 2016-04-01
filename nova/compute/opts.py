@@ -15,7 +15,6 @@ import itertools
 import nova.compute.flavors
 import nova.compute.manager
 import nova.compute.monitors
-import nova.compute.resource_tracker
 import nova.compute.rpcapi
 import nova.conf
 
@@ -30,8 +29,6 @@ def list_opts():
              nova.compute.manager.interval_opts,
              nova.compute.manager.running_deleted_opts,
              nova.compute.manager.timeout_opts,
-             nova.compute.resource_tracker.resource_tracker_opts,
-             nova.compute.resource_tracker.allocation_ratio_opts,
              nova.compute.rpcapi.rpcapi_opts,
          )),
         ('upgrade_levels',
