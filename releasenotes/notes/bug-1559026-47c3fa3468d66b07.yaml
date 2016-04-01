@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The ``record`` configuration option for the console proxy
+    services (like VNC, serial, spice) is changed from
+    boolean to string. It specifies the filename that will
+    be used for recording websocket frames.
