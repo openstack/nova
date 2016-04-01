@@ -293,7 +293,7 @@ class FloatingIP(object):
         rpc'ing to correct host if i'm not it.
 
         Access to the floating_address is verified but access to the
-        fixed_address is not verified. This assumes that that the calling
+        fixed_address is not verified. This assumes that the calling
         side has already verified that the fixed_address is legal by
         checking access to the instance.
         """

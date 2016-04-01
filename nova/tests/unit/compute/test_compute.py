@@ -10625,7 +10625,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                          'aggregate.updatemetadata.end')
 
     def test_update_aggregate_az_do_not_replace_existing_metadata(self):
-        # Ensure that that update of the aggregate availability zone
+        # Ensure that the update of the aggregate availability zone
         # does not replace the aggregate existing metadata
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
