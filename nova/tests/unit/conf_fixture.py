@@ -60,7 +60,6 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('sqlite_synchronous', False,
                 group='api_database')
         self.conf.set_default('fatal_exception_format_errors', True)
-        self.conf.set_default('enabled', True, 'osapi_v21')
         # TODO(sdague): this makes our project_id match 'fake' as well.
         # We should fix the tests to use real
         # UUIDs then drop this work around.

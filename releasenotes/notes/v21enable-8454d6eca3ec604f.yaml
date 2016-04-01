@@ -1,0 +1,6 @@
+---
+upgrade:
+
+  - The deprecated osapi_v21.enabled config option has been removed. This
+    previously allowed you a way to disable the v2.1 API. That is no
+    longer something we support, v2.1 is mandatory.
