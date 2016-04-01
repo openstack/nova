@@ -122,14 +122,20 @@ class RestParametersDirective(Table):
         new_content = list()
         for paramlist in parsed:
             for name, ref in paramlist.items():
-                new_content.append((name, lookup[ref]))
+                if ref in lookup:
+                    new_content.append((name, lookup[ref]))
+                else:
+                    self.env.warn(
+                        self.env.docname,
+                        "No field definition for %s found in %s. Skipping." %
+                        (ref, fpath))
 
         # self.app.info("New content %s" % new_content)
         self.yaml = new_content
 
     def run(self):
-        env = self.state.document.settings.env
-        self.app = env.app
+        self.env = self.state.document.settings.env
+        self.app = self.env.app
 
         # Make sure we have some content, which should be yaml that
         # defines some parameters.
@@ -149,7 +155,7 @@ class RestParametersDirective(Table):
 
         # NOTE(sdague): it's important that we pop the arg otherwise
         # we end up putting the filename as the table caption.
-        rel_fpath, fpath = env.relfn2path(self.arguments.pop())
+        rel_fpath, fpath = self.env.relfn2path(self.arguments.pop())
         self.yaml_from_file(fpath)
 
         self.max_cols = len(self.headers)
