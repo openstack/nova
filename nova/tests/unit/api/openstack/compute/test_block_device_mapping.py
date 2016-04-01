@@ -329,7 +329,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertRaises(exc.HTTPBadRequest,
                               self._test_create, params)
             self.assertTrue(self.validation_fail_test_validate_called)
-            self.assertTrue(self.validation_fail_instance_destroy_called)
+            self.assertFalse(self.validation_fail_instance_destroy_called)
             self.validation_fail_test_validate_called = False
             self.validation_fail_instance_destroy_called = False
 

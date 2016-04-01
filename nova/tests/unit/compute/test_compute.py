@@ -7733,6 +7733,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_populate_instance_for_create(self):
         base_options = {'image_ref': self.fake_image['id'],
                         'system_metadata': {'fake': 'value'},
+                        'display_name': 'foo',
                         'uuid': uuids.instance}
         instance = objects.Instance()
         instance.update(base_options)
@@ -7743,7 +7744,9 @@ class ComputeAPITestCase(BaseTestCase):
                                 self.fake_image,
                                 1,
                                 security_groups=objects.SecurityGroupList(),
-                                instance_type=inst_type)
+                                instance_type=inst_type,
+                                num_instances=1,
+                                shutdown_terminate=False)
         self.assertEqual(str(base_options['image_ref']),
                          instance['system_metadata']['image_base_image_ref'])
         self.assertEqual(vm_states.BUILDING, instance['vm_state'])
