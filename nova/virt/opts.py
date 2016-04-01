@@ -15,7 +15,6 @@ import itertools
 import nova.conf
 import nova.virt.configdrive
 import nova.virt.disk.vfs.guestfs
-import nova.virt.imagecache
 import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
 import nova.virt.libvirt.imagecache
@@ -55,7 +54,6 @@ def list_opts():
         ('DEFAULT',
          itertools.chain(
              nova.virt.configdrive.configdrive_opts,
-             nova.virt.imagecache.imagecache_opts,
          )),
         ('guestfs', nova.virt.disk.vfs.guestfs.guestfs_opts),
         ('libvirt',

@@ -32,6 +32,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import fileutils
 
+import nova.conf
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
@@ -67,10 +68,9 @@ imagecache_opts = [
                help='How frequently to checksum base images'),
     ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(imagecache_opts, 'libvirt')
 CONF.import_opt('instances_path', 'nova.compute.manager')
-CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 
 
 def get_cache_fname(images, key):

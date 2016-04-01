@@ -22,7 +22,6 @@ import time
 import mock
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import formatters
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -30,6 +29,7 @@ from oslo_utils import importutils
 from six.moves import cStringIO
 
 from nova import conductor
+import nova.conf
 from nova import context
 from nova import objects
 from nova import test
@@ -38,7 +38,7 @@ from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 

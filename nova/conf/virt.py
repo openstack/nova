@@ -299,6 +299,31 @@ timeout_nbd = cfg.IntOpt(
     help='Amount of time, in seconds, to wait for NBD '
     'device start up.')
 
+image_cache_manager_interval = cfg.IntOpt(
+    'image_cache_manager_interval',
+    default=2400,
+    help='Number of seconds to wait between runs of the image '
+    'cache manager. Set to -1 to disable. '
+    'Setting this to 0 will run at the default rate.')
+
+image_cache_subdirectory_name = cfg.StrOpt(
+    'image_cache_subdirectory_name',
+    default='_base',
+    help='Where cached images are stored under $instances_path. '
+    'This is NOT the full path - just a folder name. '
+    'For per-compute-host cached images, set to _base_$my_ip')
+
+remove_unused_base_images = cfg.BoolOpt(
+    'remove_unused_base_images',
+    default=True,
+    help='Should unused base images be removed?')
+
+remove_unused_original_minimum_age_seconds = cfg.IntOpt(
+    'remove_unused_original_minimum_age_seconds',
+    default=(24 * 3600),
+    help='Unused unresized base images younger than this will not '
+    'be removed')
+
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
             default_ephemeral_format,
@@ -312,7 +337,11 @@ ALL_OPTS = [vcpu_pin_set,
             injected_network_template,
             virt_mkfs,
             resize_fs_using_block_device,
-            timeout_nbd]
+            timeout_nbd,
+            image_cache_manager_interval,
+            image_cache_subdirectory_name,
+            remove_unused_base_images,
+            remove_unused_original_minimum_age_seconds]
 
 
 def register_opts(conf):
