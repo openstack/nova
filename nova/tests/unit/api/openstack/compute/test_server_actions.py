@@ -83,8 +83,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
     def setUp(self):
         super(ServerActionsControllerTestV21, self).setUp()
-
-        CONF.set_override('host', 'localhost', group='glance')
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                                host='fake_host'))

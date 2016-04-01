@@ -80,6 +80,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         self.stubs.Set(glance.GlanceImageService, 'detail', fake_detail)
         self.flags(osapi_compute_extension=['nova.api.openstack.compute'
                                             '.contrib.image_size.Image_size'])
+        self.flags(api_servers=['http://localhost:9292'], group='glance')
 
     def _make_request(self, url):
         req = webob.Request.blank(url)

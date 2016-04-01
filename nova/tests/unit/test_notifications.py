@@ -59,6 +59,8 @@ class NotificationsTestCase(test.TestCase):
                    notify_on_state_change="vm_and_task_state",
                    host='testhost')
 
+        self.flags(api_servers=['http://localhost:9292'], group='glance')
+
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

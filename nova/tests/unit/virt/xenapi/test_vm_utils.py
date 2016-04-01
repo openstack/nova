@@ -273,6 +273,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.context.auth_token = 'auth_token'
         self.session = FakeSession()
         self.instance = {"uuid": "uuid"}
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
 
         self.mox.StubOutWithMock(vm_utils, '_make_uuid_stack')
         vm_utils._make_uuid_stack().AndReturn(["uuid_stack"])

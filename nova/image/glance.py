@@ -33,7 +33,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import sslutils
 from oslo_utils import excutils
-from oslo_utils import netutils
 from oslo_utils import timeutils
 import six
 from six.moves import range
@@ -47,28 +46,9 @@ from nova import signature_utils
 
 
 glance_opts = [
-    cfg.StrOpt('host',
-               default='$my_ip',
-               # TODO(sdague): remove in N
-               deprecated_for_removal=True,
-               help='DEPRECATED: Glance server hostname or IP address. '
-                    'Use the "api_servers" option instead.'),
-    cfg.IntOpt('port',
-               default=9292,
-               min=1,
-               max=65535,
-               # TODO(sdague): remove in N
-               deprecated_for_removal=True,
-               help='DEPRECATED: Glance server port. Use the "api_servers" '
-                    'option instead.'),
-    cfg.StrOpt('protocol',
-                default='http',
-                choices=('http', 'https'),
-                # TODO(sdague): remove in N
-                deprecated_for_removal=True,
-                help='DEPRECATED: Protocol to use when connecting to glance. '
-                     'Set to https for SSL. Use the "api_servers" option '
-                     'instead.'),
+    # NOTE(sdague): there is intentionally no default here. This
+    # requires configuration. Eventually this will come from the
+    # service catalog, however we don't have a good path there atm.
     cfg.ListOpt('api_servers',
                 help='''
 A list of the glance api servers endpoints available to nova. These
@@ -98,18 +78,13 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 CONF.register_opts(glance_opts, 'glance')
 CONF.import_opt('auth_strategy', 'nova.api.auth')
-CONF.import_opt('my_ip', 'nova.netconf')
 
 supported_glance_versions = (1, 2)
 
 
 def generate_glance_url():
-    """Generate the URL to glance."""
-    glance_host = CONF.glance.host
-    if netutils.is_valid_ipv6(glance_host):
-        glance_host = '[%s]' % glance_host
-    return "%s://%s:%d" % (CONF.glance.protocol, glance_host,
-                           CONF.glance.port)
+    """Return a random glance url from the api servers we know about."""
+    return next(get_api_servers())
 
 
 def generate_image_url(image_ref):
@@ -187,13 +162,10 @@ def get_api_servers():
     """
     api_servers = []
 
-    configured_servers = ([generate_glance_url()]
-                          if CONF.glance.api_servers is None
-                          else CONF.glance.api_servers)
-    for api_server in configured_servers:
+    for api_server in CONF.glance.api_servers:
         if '//' not in api_server:
             api_server = 'http://' + api_server
-            # NOTE(sdague): remove in N.
+            # NOTE(sdague): remove in O.
             LOG.warning(
                 _LW("No protocol specified in for api_server '%s', "
                     "please update [glance] api_servers with fully "

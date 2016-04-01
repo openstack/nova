@@ -185,6 +185,8 @@ class DiskConfigTestCaseV21(test.TestCase):
             self.assertDiskConfig(server_dict, expected)
 
     def test_show_image(self):
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
+
         req = fakes.HTTPRequest.blank(
             '/fake/images/a440c04b-79fa-479c-bed1-0b816eaec379')
         res = req.get_response(self.app)

@@ -51,6 +51,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     def setUp(self):
         """Run before each test."""
         super(ImagesControllerTestV21, self).setUp()
+        self.flags(api_servers=['http://localhost:9292'], group='glance')
         fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)

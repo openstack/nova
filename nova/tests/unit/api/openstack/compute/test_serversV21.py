@@ -207,6 +207,7 @@ class ControllerTest(test.TestCase):
                        lambda api, *a, **k: return_server(*a, **k))
         self.stub_out('nova.db.instance_update_and_get_original',
                       instance_update_and_get_original)
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
 
         ext_info = extension_info.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
@@ -218,10 +219,6 @@ class ControllerTest(test.TestCase):
 
 class ServersControllerTest(ControllerTest):
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
-
-    def setUp(self):
-        super(ServersControllerTest, self).setUp()
-        CONF.set_override('host', 'localhost', group='glance')
 
     def req(self, url, use_admin_context=False):
         return fakes.HTTPRequest.blank(url,
@@ -3442,8 +3439,8 @@ class ServersViewBuilderTest(test.TestCase):
 
     def setUp(self):
         super(ServersViewBuilderTest, self).setUp()
-        CONF.set_override('host', 'localhost', group='glance')
         self.flags(use_ipv6=True)
+        self.flags(group='glance', api_servers=['http://localhost:9292'])
         nw_cache_info = self._generate_nw_cache_info()
         db_inst = fakes.stub_instance(
             id=1,
