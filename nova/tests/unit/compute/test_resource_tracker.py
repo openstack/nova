@@ -1067,7 +1067,8 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                              inst.obj_what_changed())
 
         mock_save.side_effect = fake_save
-        inst = objects.Instance(host=None, node=None, memory_mb=1024)
+        inst = objects.Instance(host=None, node=None, memory_mb=1024,
+                                uuid=uuidsentinel.instance1)
         inst.obj_reset_changes()
         numa = objects.InstanceNUMATopology()
         claim = mock.MagicMock()

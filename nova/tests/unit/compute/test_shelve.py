@@ -215,8 +215,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         def fake_claim(context, instance, limits):
             instance.host = self.compute.host
+            requests = objects.InstancePCIRequests(requests=[])
             return claims.Claim(context, instance,
-                                self.rt, _fake_resources())
+                                self.rt, _fake_resources(),
+                                requests)
 
         tracking = {
             'last_state': instance.task_state,
@@ -322,7 +324,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, self.compute.host)
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
-                             _fake_resources()))
+                             _fake_resources(),
+                             objects.InstancePCIRequests(requests=[])))
         self.compute.driver.spawn(self.context, instance,
                 mox.IsA(objects.ImageMeta),
                 injected_files=[], admin_password=None,
