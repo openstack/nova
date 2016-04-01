@@ -25,7 +25,6 @@ import time
 
 from eventlet import queue
 from eventlet import timeout
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import versionutils
 from six.moves import range
@@ -35,6 +34,7 @@ try:
 except ImportError:
     import six.moves.xmlrpc_client as xmlrpclib
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.i18n import _, _LE, _LW
@@ -46,18 +46,8 @@ from nova.virt.xenapi import pool_states
 
 LOG = logging.getLogger(__name__)
 
-xenapi_session_opts = [
-    cfg.IntOpt('login_timeout',
-               default=10,
-               help='Timeout in seconds for XenAPI login.'),
-    cfg.IntOpt('connection_concurrent',
-               default=5,
-               help='Maximum number of concurrent XenAPI connections. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
-    ]
 
-CONF = cfg.CONF
-CONF.register_opts(xenapi_session_opts, 'xenserver')
+CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
 
 
