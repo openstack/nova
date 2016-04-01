@@ -16,18 +16,18 @@
 #    under the License.
 
 from oslo_cache import core as cache
-from oslo_config import cfg
 from oslo_db import options
 from oslo_log import log
 
 from nova.common import config
+import nova.conf
 from nova.db.sqlalchemy import api as sqlalchemy_api
-from nova import debugger
 from nova import paths
 from nova import rpc
 from nova import version
 
-CONF = cfg.CONF
+
+CONF = nova.conf.CONF
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
@@ -45,7 +45,6 @@ def parse_args(argv, default_config_files=None, configure_db=True,
                          sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
     cache.configure(CONF)
-    debugger.register_cli_opts()
     config.set_middleware_defaults()
 
     CONF(argv[1:],
