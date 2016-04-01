@@ -126,40 +126,160 @@ mounted_disk_query_retry_count_opt = cfg.IntOpt(
                 'mounted_disk_query_retry_count',
                 default=10,
                 help="""
+Mounted disk query retry count
+
 The number of times to retry checking for a disk mounted via iSCSI.
+During long stress runs the WMI query that is looking for the iSCSI
+device number can incorrectly return no data. If the query is
+retried the appropriate data can then be obtained. The query runs
+until the device can be found or the retry count is reached.
+
+Possible values:
+
+* Positive integer values. Values greater than 1 is recommended
+  (Default: 10).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* Time interval between disk mount retries is declared with
+  "mounted_disk_query_retry_interval" option.
 """)
 
 mounted_disk_query_retry_interval_opt = cfg.IntOpt(
                 'mounted_disk_query_retry_interval',
                 default=5,
                 help="""
+Mounted disk query retry interval
+
 Interval between checks for a mounted iSCSI disk, in seconds.
+
+Possible values:
+
+* Time in seconds (Default: 5).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* This option is meaningful when the mounted_disk_query_retry_count
+  is greater than 1.
+* The retry loop runs with mounted_disk_query_retry_count and
+  mounted_disk_query_retry_interval configuration options.
 """)
 
 power_state_check_timeframe_opt = cfg.IntOpt('power_state_check_timeframe',
                 default=60,
                 help="""
+Power state check timeframe
+
 The timeframe to be checked for instance power state changes.
+This option is used to fetch the state of the instance from Hyper-V
+through the WMI interface, within the specified timeframe.
+
+Possible values:
+
+* Timeframe in seconds (Default: 60).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 power_state_event_polling_interval_opt = cfg.IntOpt(
                 'power_state_event_polling_interval',
                 default=2,
                 help="""
-Instance power state change event polling frequency.
+Power state event polling interval
+
+Instance power state change event polling frequency. Sets the
+listener interval for power state events to the given value.
+This option enhances the internal lifecycle notifications of
+instances that reboot themselves. It is unlikely that an operator
+has to change this value.
+
+Possible values:
+
+* Time in seconds (Default: 2).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 qemu_img_cmd_opt = cfg.StrOpt('qemu_img_cmd',
                 default="qemu-img.exe",
                 help="""
-Path of qemu-img command which is used to convert
-between different image types
+qemu-img command
+
+qemu-img is required for some of the image related operations
+like converting between different image types. You can get it
+from here: (http://qemu.weilnetz.de/) or you can install the
+Cloudbase OpenStack Hyper-V Compute Driver
+(https://cloudbase.it/openstack-hyperv-driver/) which automatically
+sets the proper path for this config option. You can either give the
+full path of qemu-img.exe or set its path in the PATH environment
+variable and leave this option to the default value.
+
+Possible values:
+
+* Name of the qemu-img executable, in case it is in the same
+  directory as the nova-compute service or its path is in the
+  PATH environment variable (Default).
+* Path of qemu-img command (DRIVELETTER:\PATH\TO\QEMU-IMG\COMMAND).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* If the config_drive_cdrom option is False, qemu-img will be used to
+  convert the ISO to a VHD, otherwise the configuration drive will
+  remain an ISO. To use configuration drive with Hyper-V, you must
+  set the mkisofs_cmd value to the full path to an mkisofs.exe
+  installation.
 """)
 
 vswitch_name_opt = cfg.StrOpt('vswitch_name',
                 help="""
-External virtual switch Name, if not provided,
-the first external virtual switch is used
+External virtual switch name
+
+The Hyper-V Virtual Switch is a software-based layer-2 Ethernet
+network switch that is available with the installation of the
+Hyper-V server role. The switch includes programmatically managed
+and extensible capabilities to connect virtual machines to both
+virtual networks and the physical network. In addition, Hyper-V
+Virtual Switch provides policy enforcement for security, isolation,
+and service levels. The vSwitch represented by this config option
+must be an external one (not internal or private).
+
+Possible values:
+
+* If not provided, the first of a list of available vswitches
+  is used. This list is queried using WQL.
+* Virtual switch name.
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 wait_soft_reboot_seconds_opt = cfg.IntOpt('wait_soft_reboot_seconds',
