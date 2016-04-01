@@ -396,10 +396,17 @@ class XMLMatches(object):
 
     SKIP_TAGS = (etree.Comment, etree.ProcessingInstruction)
 
+    @staticmethod
+    def _parse(text_or_bytes):
+        if isinstance(text_or_bytes, six.text_type):
+            text_or_bytes = text_or_bytes.encode("utf-8")
+        parser = etree.XMLParser(encoding="UTF-8")
+        return etree.parse(six.BytesIO(text_or_bytes), parser)
+
     def __init__(self, expected, allow_mixed_nodes=False,
                  skip_empty_text_nodes=True, skip_values=('DONTCARE',)):
         self.expected_xml = expected
-        self.expected = etree.parse(six.StringIO(expected))
+        self.expected = self._parse(expected)
         self.allow_mixed_nodes = allow_mixed_nodes
         self.skip_empty_text_nodes = skip_empty_text_nodes
         self.skip_values = set(skip_values)
@@ -408,7 +415,7 @@ class XMLMatches(object):
         return 'XMLMatches(%r)' % self.expected_xml
 
     def match(self, actual_xml):
-        actual = etree.parse(six.StringIO(actual_xml))
+        actual = self._parse(actual_xml)
 
         state = XMLMatchState(self.expected_xml, actual_xml)
         expected_doc_info = self._get_xml_docinfo(self.expected)
