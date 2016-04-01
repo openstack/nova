@@ -1445,7 +1445,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                                             filter_properties,
                                             block_device_mapping=[])
-        self.assertEqual(999999999999, self.rt.compute_node['memory_mb_used'])
+        self.assertEqual(999999999999, self.rt.compute_node.memory_mb_used)
 
     def test_create_instance_unlimited_disk(self):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
@@ -1465,22 +1465,22 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(1024, self.rt.compute_node['memory_mb_used'])
-        self.assertEqual(256, self.rt.compute_node['local_gb_used'])
+        self.assertEqual(1024, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(256, self.rt.compute_node.local_gb_used)
 
         params = {"memory_mb": 2048, "root_gb": 256, "ephemeral_gb": 256}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(3072, self.rt.compute_node['memory_mb_used'])
-        self.assertEqual(768, self.rt.compute_node['local_gb_used'])
+        self.assertEqual(3072, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(768, self.rt.compute_node.local_gb_used)
 
         params = {"memory_mb": 8192, "root_gb": 8192, "ephemeral_gb": 8192}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance,
                 {}, {}, {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(3072, self.rt.compute_node['memory_mb_used'])
-        self.assertEqual(768, self.rt.compute_node['local_gb_used'])
+        self.assertEqual(3072, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(768, self.rt.compute_node.local_gb_used)
 
     def test_create_multiple_instance_with_neutron_port(self):
         instance_type = flavors.get_default_flavor()
@@ -1522,7 +1522,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(instance_mb, self.rt.compute_node['memory_mb_used'])
+        self.assertEqual(instance_mb, self.rt.compute_node.memory_mb_used)
 
     def test_create_instance_with_oversubscribed_ram_fail(self):
         """Test passing of oversubscribed ram policy from the scheduler, but
@@ -1569,7 +1569,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(2, self.rt.compute_node['vcpus_used'])
+        self.assertEqual(2, self.rt.compute_node.vcpus_used)
 
         # create one more instance:
         params = {"memory_mb": 10, "root_gb": 1,
@@ -1578,14 +1578,14 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(3, self.rt.compute_node['vcpus_used'])
+        self.assertEqual(3, self.rt.compute_node.vcpus_used)
 
         # delete the instance:
         instance['vm_state'] = vm_states.DELETED
         self.rt.update_usage(self.context,
                 instance=instance)
 
-        self.assertEqual(2, self.rt.compute_node['vcpus_used'])
+        self.assertEqual(2, self.rt.compute_node.vcpus_used)
 
         # now oversubscribe vcpus and fail:
         params = {"memory_mb": 10, "root_gb": 1,
@@ -1620,7 +1620,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
 
-        self.assertEqual(instance_gb, self.rt.compute_node['local_gb_used'])
+        self.assertEqual(instance_gb, self.rt.compute_node.local_gb_used)
 
     def test_create_instance_with_oversubscribed_disk_fail(self):
         """Test passing of oversubscribed disk policy from the scheduler, but

@@ -146,7 +146,7 @@ def fake_compute_node_statistics(context):
             if key == 'count':
                 result[key] += 1
             else:
-                result[key] += hyper[key]
+                result[key] += getattr(hyper, key)
 
     return result
 

@@ -463,7 +463,7 @@ class TestUpdateAvailableResources(BaseTestCase):
                                           'fake-node')
 
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -485,7 +485,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -508,7 +509,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -530,7 +531,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -560,7 +562,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -582,7 +584,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 1  # One active instance
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -630,7 +633,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -654,7 +657,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             # Yep, for some reason, orphaned instances are not counted
             # as running VMs...
             'running_vms': 0
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -702,7 +706,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -724,7 +728,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -769,7 +774,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -791,7 +796,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -833,7 +839,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -855,7 +861,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 0,
             'vcpus': 4,
             'running_vms': 0
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -906,7 +913,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
                                             'fake-node')
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_resources.update({
+        vals = {
             # host is added in update_available_resources()
             # before calling _update()
             'host': 'fake-host',
@@ -930,7 +937,8 @@ class TestUpdateAvailableResources(BaseTestCase):
             'current_workload': 1,  # One migrating instance...
             'vcpus': 4,
             'running_vms': 2
-        })
+        }
+        _update_compute_node(expected_resources, **vals)
         update_mock.assert_called_once_with(mock.sentinel.ctx)
         self.assertTrue(obj_base.obj_equal_prims(expected_resources,
                                                  self.rt.compute_node))
@@ -1211,15 +1219,16 @@ class TestInstanceClaim(BaseTestCase):
                                                  self.rt.compute_node))
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
-        expected.update({
+        vals = {
             'local_gb_used': disk_used,
             'memory_mb_used': self.instance.memory_mb,
-            'free_disk_gb': expected['local_gb'] - disk_used,
-            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'free_disk_gb': expected.local_gb - disk_used,
+            "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
-        })
+        }
+        _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
@@ -1236,15 +1245,16 @@ class TestInstanceClaim(BaseTestCase):
 
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
-        expected.update({
+        vals = {
             'local_gb_used': disk_used,
             'memory_mb_used': self.instance.memory_mb,
-            'free_disk_gb': expected['local_gb'] - disk_used,
-            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'free_disk_gb': expected.local_gb - disk_used,
+            "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
-        })
+        }
+        _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
@@ -1253,7 +1263,7 @@ class TestInstanceClaim(BaseTestCase):
                                                      self.rt.compute_node))
 
         expected_updated = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_updated['pci_device_pools'] = objects.PciDevicePoolList()
+        expected_updated.pci_device_pools = objects.PciDevicePoolList()
 
         self.instance.vm_state = vm_states.SHELVED_OFFLOADED
         with mock.patch.object(self.rt, '_update') as update_mock:
@@ -1270,15 +1280,16 @@ class TestInstanceClaim(BaseTestCase):
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected.update({
+        vals = {
             'local_gb_used': disk_used,
             'memory_mb_used': self.instance.memory_mb,
-            'free_disk_gb': expected['local_gb'] - disk_used,
-            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'free_disk_gb': expected.local_gb - disk_used,
+            "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
-        })
+        }
+        _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
@@ -1311,15 +1322,16 @@ class TestInstanceClaim(BaseTestCase):
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected.update({
+        vals = {
             'local_gb_used': disk_used,
             'memory_mb_used': self.instance.memory_mb,
-            'free_disk_gb': expected['local_gb'] - disk_used,
-            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'free_disk_gb': expected.local_gb - disk_used,
+            "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': pci_pools
-        })
+        }
+        _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
@@ -1411,9 +1423,9 @@ class TestInstanceClaim(BaseTestCase):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
 
         good_limits = {
-            'memory_mb': _COMPUTE_NODE_FIXTURES[0]['memory_mb'],
-            'disk_gb': _COMPUTE_NODE_FIXTURES[0]['local_gb'],
-            'vcpu': _COMPUTE_NODE_FIXTURES[0]['vcpus'],
+            'memory_mb': _COMPUTE_NODE_FIXTURES[0].memory_mb,
+            'disk_gb': _COMPUTE_NODE_FIXTURES[0].local_gb,
+            'vcpu': _COMPUTE_NODE_FIXTURES[0].vcpus,
         }
         for key in good_limits.keys():
             bad_limits = copy.deepcopy(good_limits)
@@ -1432,7 +1444,7 @@ class TestInstanceClaim(BaseTestCase):
 
         self.instance.numa_topology = _INSTANCE_NUMA_TOPOLOGIES['2mb']
         host_topology = _NUMA_HOST_TOPOLOGIES['2mb']
-        self.rt.compute_node['numa_topology'] = host_topology._to_json()
+        self.rt.compute_node.numa_topology = host_topology._to_json()
         limits = {'numa_topology': _NUMA_LIMIT_TOPOLOGIES['2mb']}
 
         expected_numa = copy.deepcopy(host_topology)
@@ -1444,7 +1456,7 @@ class TestInstanceClaim(BaseTestCase):
                 self.rt.instance_claim(self.ctx, self.instance, limits)
             update_mock.assert_called_once_with(self.ctx.elevated())
             updated_compute_node = self.rt.compute_node
-            new_numa = updated_compute_node['numa_topology']
+            new_numa = updated_compute_node.numa_topology
             new_numa = objects.NUMATopology.obj_from_db_obj(new_numa)
             self.assertEqualNUMAHostTopology(expected_numa, new_numa)
 
@@ -1747,3 +1759,8 @@ class TestInstanceInResizeState(test.NoDBTestCase):
         instance = objects.Instance(vm_state=vm_states.RESIZED,
                                     task_state=task_states.RESIZE_FINISH)
         self.assertTrue(resource_tracker._instance_in_resize_state(instance))
+
+
+def _update_compute_node(node, **kwargs):
+    for key, value in kwargs.items():
+        setattr(node, key, value)

@@ -686,7 +686,7 @@ class BaseTrackerTestCase(BaseTestCase):
         if field not in tracker.compute_node:
             raise test.TestingException(
                 "'%(field)s' not in compute node." % {'field': field})
-        x = tracker.compute_node[field]
+        x = getattr(tracker.compute_node, field)
 
         if field == 'numa_topology':
             self.assertEqualNUMAHostTopology(
@@ -822,8 +822,8 @@ class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
 
     def test_set_extra_resources(self):
         def fake_write_resources(resources):
-            resources['stats']['resA'] = '123'
-            resources['stats']['resB'] = 12
+            resources.stats['resA'] = '123'
+            resources.stats['resB'] = 12
 
         self.stubs.Set(self.tracker.ext_resources_handler,
                        'write_resources',
@@ -1041,9 +1041,9 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                  'migration_context'],
                 mock_instance_list.call_args_list[0][1]['expected_attrs'])
         self.assertEqual(FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD,
-                         self.tracker.compute_node['memory_mb_used'])
+                         self.tracker.compute_node.memory_mb_used)
         self.assertEqual(ROOT_GB + EPHEMERAL_GB,
-                         self.tracker.compute_node['local_gb_used'])
+                         self.tracker.compute_node.local_gb_used)
         mock_migration_list.assert_called_once_with(self.context,
                                                     "fakehost",
                                                     "fakenode")
@@ -1294,7 +1294,7 @@ class TrackerPeriodicTestCase(BaseTrackerTestCase):
         @mock.patch.object(self.tracker, '_verify_resources')
         @mock.patch.object(self.tracker, '_report_hypervisor_resource_view')
         def _test(mock_rhrv, mock_vr, mock_uar, mock_driver):
-            resources = {'there is someone in my head': 'but it\'s not me'}
+            resources = self._create_compute_node()
             mock_driver.get_available_resource.return_value = resources
             self.tracker.update_available_resource(self.context)
             mock_uar.assert_called_once_with(self.context, resources)

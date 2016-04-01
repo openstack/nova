@@ -104,7 +104,7 @@ class PciController(wsgi.Controller):
         results = []
         for node in compute_nodes:
             pci_devs = objects.PciDeviceList.get_by_compute_node(
-                context, node['id'])
+                context, node.id)
             results.extend([self._view_pcidevice(dev, detail)
                             for dev in pci_devs])
         return results

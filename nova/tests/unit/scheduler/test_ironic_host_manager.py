@@ -122,7 +122,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_host_manager.IronicNodeState, '__init__')
     def test_create_ironic_node_state(self, init_mock):
         init_mock.return_value = None
-        compute = {'hypervisor_type': 'ironic'}
+        compute = objects.ComputeNode(**{'hypervisor_type': 'ironic'})
         host_state = self.host_manager.host_state_cls('fake-host', 'fake-node',
                                                       compute=compute)
         self.assertIs(ironic_host_manager.IronicNodeState, type(host_state))
@@ -130,17 +130,25 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostState, '__init__')
     def test_create_non_ironic_host_state(self, init_mock):
         init_mock.return_value = None
-        compute = {'cpu_info': 'other cpu'}
+        compute = objects.ComputeNode(**{'cpu_info': 'other cpu'})
         host_state = self.host_manager.host_state_cls('fake-host', 'fake-node',
                                                       compute=compute)
+        self.assertIs(host_manager.HostState, type(host_state))
+
+    @mock.patch.object(host_manager.HostState, '__init__')
+    def test_create_host_state_null_compute(self, init_mock):
+        init_mock.return_value = None
+        host_state = self.host_manager.host_state_cls('fake-host', 'fake-node')
         self.assertIs(host_manager.HostState, type(host_state))
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
     def test_get_all_host_states_after_delete_one(self, mock_get_all,
                                                   mock_get_by_binary):
+        getter = (lambda n: n.hypervisor_hostname
+                  if 'hypervisor_hostname' in n else None)
         running_nodes = [n for n in ironic_fakes.COMPUTE_NODES
-                         if n.get('hypervisor_hostname') != 'node4uuid']
+                         if getter(n) != 'node4uuid']
 
         mock_get_all.side_effect = [
             ironic_fakes.COMPUTE_NODES, running_nodes]
@@ -187,7 +195,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.assertEqual(10240, host.free_disk_mb)
         self.assertEqual(1, host.vcpus_total)
         self.assertEqual(0, host.vcpus_used)
-        self.assertEqual(self.compute_node['stats'], host.stats)
+        self.assertEqual(self.compute_node.stats, host.stats)
         self.assertEqual('ironic', host.hypervisor_type)
         self.assertEqual(1, host.hypervisor_version)
         self.assertEqual('fake_host', host.hypervisor_hostname)

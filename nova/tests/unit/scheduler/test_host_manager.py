@@ -470,8 +470,8 @@ class HostManagerTestCase(test.NoDBTestCase):
         # Check that .service is set properly
         for i in range(4):
             compute_node = fakes.COMPUTE_NODES[i]
-            host = compute_node['host']
-            node = compute_node['hypervisor_hostname']
+            host = compute_node.host
+            node = compute_node.hypervisor_hostname
             state_key = (host, node)
             self.assertEqual(host_states_map[state_key].service,
                     obj_base.obj_to_primitive(fakes.get_service_by_host(host)))
@@ -792,8 +792,10 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def test_get_all_host_states_after_delete_one(self, mock_get_by_host,
                                                   mock_get_all,
                                                   mock_get_by_binary):
+        getter = (lambda n: n.hypervisor_hostname
+                  if 'hypervisor_hostname' in n else None)
         running_nodes = [n for n in fakes.COMPUTE_NODES
-                         if n.get('hypervisor_hostname') != 'node4']
+                         if getter(n) != 'node4']
 
         mock_get_by_host.return_value = objects.InstanceList()
         mock_get_all.side_effect = [fakes.COMPUTE_NODES, running_nodes]

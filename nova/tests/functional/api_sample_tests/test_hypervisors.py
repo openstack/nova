@@ -155,7 +155,7 @@ class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
             'nova.compute.cells_api.HostAPI.get_host_uptime',
             fake_get_host_uptime)
 
-        hypervisor_id = fake_hypervisor['id']
+        hypervisor_id = fake_hypervisor.id
         response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
         subs = {'hypervisor_id': str(hypervisor_id)}
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)

@@ -168,6 +168,6 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         # Verify B gets deleted since now only A is reported by driver
         self.assertEqual(len(fake_compute_nodes), 1)
-        self.assertEqual(fake_compute_nodes[0]['hypervisor_hostname'], 'A')
+        self.assertEqual(fake_compute_nodes[0].hypervisor_hostname, 'A')
         self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                         ['A'])

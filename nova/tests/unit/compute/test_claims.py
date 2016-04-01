@@ -143,7 +143,7 @@ class ClaimTestCase(test.NoDBTestCase):
         }
         if values:
             resources.update(values)
-        return resources
+        return objects.ComputeNode(**resources)
 
     def test_memory_unlimited(self):
         self._claim(memory_mb=99999999)

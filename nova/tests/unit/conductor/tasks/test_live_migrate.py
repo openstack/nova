@@ -219,12 +219,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.task._check_host_is_up(self.destination)
         self.task._check_destination_has_enough_memory()
-        self.task._get_compute_info(self.instance_host).AndReturn({
-            "hypervisor_type": "b"
-        })
-        self.task._get_compute_info(self.destination).AndReturn({
-            "hypervisor_type": "a"
-        })
+
+        self.task._get_compute_info(self.instance_host).AndReturn(
+            objects.ComputeNode(hypervisor_type='b')
+        )
+        self.task._get_compute_info(self.destination).AndReturn(
+            objects.ComputeNode(hypervisor_type='a')
+        )
 
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidHypervisorType,
@@ -238,14 +239,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.task._check_host_is_up(self.destination)
         self.task._check_destination_has_enough_memory()
-        self.task._get_compute_info(self.instance_host).AndReturn({
-            "hypervisor_type": "a",
-            "hypervisor_version": 7
-        })
-        self.task._get_compute_info(self.destination).AndReturn({
-            "hypervisor_type": "a",
-            "hypervisor_version": 6
-        })
+        host1 = {'hypervisor_type': 'a', 'hypervisor_version': 7}
+        self.task._get_compute_info(self.instance_host).AndReturn(
+            objects.ComputeNode(**host1)
+        )
+        host2 = {'hypervisor_type': 'a', 'hypervisor_version': 6}
+        self.task._get_compute_info(self.destination).AndReturn(
+            objects.ComputeNode(**host2)
+        )
 
         self.mox.ReplayAll()
         self.assertRaises(exception.DestinationHypervisorTooOld,

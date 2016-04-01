@@ -32,10 +32,8 @@ CONF.import_opt('disk_allocation_ratio', 'nova.compute.resource_tracker')
 LOG = logging.getLogger(__name__)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class ComputeNode(base.NovaPersistentObject, base.NovaObject,
-                  base.NovaObjectDictCompat):
+class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_service_id()
     # Version 1.2: String attributes updated to support unicode
@@ -148,19 +146,19 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                 service = objects.Service.get_by_id(
                     compute._context, db_compute['service_id'])
             except exception.ServiceNotFound:
-                compute['host'] = None
+                compute.host = None
                 return
             try:
-                compute['host'] = service.host
+                compute.host = service.host
             except (AttributeError, exception.OrphanedObjectError):
                 # Host can be nullable in Service
-                compute['host'] = None
+                compute.host = None
         elif 'host' in db_compute and db_compute['host'] is not None:
             # New-style DB having host as a field
-            compute['host'] = db_compute['host']
+            compute.host = db_compute['host']
         else:
             # We assume it should not happen but in case, let's set it to None
-            compute['host'] = None
+            compute.host = None
 
     @staticmethod
     def _from_db_object(context, compute, db_compute):
@@ -205,18 +203,18 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                     if value == 0.0 and key == 'disk_allocation_ratio':
                         # It's not specified either on the controller
                         value = 1.0
-            compute[key] = value
+            setattr(compute, key, value)
 
         stats = db_compute['stats']
         if stats:
-            compute['stats'] = jsonutils.loads(stats)
+            compute.stats = jsonutils.loads(stats)
 
         sup_insts = db_compute.get('supported_instances')
         if sup_insts:
             hv_specs = jsonutils.loads(sup_insts)
             hv_specs = [objects.HVSpec.from_list(hv_spec)
                         for hv_spec in hv_specs]
-            compute['supported_hv_specs'] = hv_specs
+            compute.supported_hv_specs = hv_specs
 
         pci_stats = db_compute.get('pci_stats')
         if pci_stats is not None:
@@ -354,7 +352,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject,
                 "disk_available_least", "host_ip"]
         for key in keys:
             if key in resources:
-                self[key] = resources[key]
+                setattr(self, key, resources[key])
 
         # supported_instances has a different name in compute_node
         if 'supported_instances' in resources:
