@@ -33,7 +33,6 @@ import nova.db.base
 import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
-import nova.image.glance
 import nova.ipv6.api
 import nova.netconf
 import nova.notifications
@@ -80,7 +79,6 @@ def list_opts():
         ('cinder', nova.volume.cinder.cinder_opts),
         ('api_database', nova.db.sqlalchemy.api.api_db_opts),
         ('database', nova.db.sqlalchemy.api.oslo_db_options.database_opts),
-        ('glance', nova.image.glance.glance_opts),
         ('image_file_url', [nova.image.download.file.opt_group]),
         ('spice',
          itertools.chain(

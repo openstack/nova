@@ -28,7 +28,6 @@ import cryptography
 import glanceclient
 from glanceclient.common import http
 import glanceclient.exc
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import sslutils
@@ -38,45 +37,15 @@ import six
 from six.moves import range
 import six.moves.urllib.parse as urlparse
 
+import nova.conf
 from nova import exception
 from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
 from nova import objects
 from nova import signature_utils
 
-
-glance_opts = [
-    # NOTE(sdague): there is intentionally no default here. This
-    # requires configuration. Eventually this will come from the
-    # service catalog, however we don't have a good path there atm.
-    cfg.ListOpt('api_servers',
-                help='''
-A list of the glance api servers endpoints available to nova. These
-should be fully qualified urls of the form
-"scheme://hostname:port[/path]" (i.e. "http://10.0.1.0:9292" or
-"https://my.glance.server/image")'''),
-    cfg.BoolOpt('api_insecure',
-                default=False,
-                help='Allow to perform insecure SSL (https) requests to '
-                     'glance'),
-    cfg.IntOpt('num_retries',
-               default=0,
-               help='Number of retries when uploading / downloading an image '
-                    'to / from glance.'),
-    cfg.ListOpt('allowed_direct_url_schemes',
-                default=[],
-                help='A list of url scheme that can be downloaded directly '
-                     'via the direct_url.  Currently supported schemes: '
-                     '[file].'),
-    cfg.BoolOpt('verify_glance_signatures',
-                default=False,
-                help='Require Nova to perform signature verification on '
-                     'each image downloaded from Glance.'),
-    ]
-
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.register_opts(glance_opts, 'glance')
+CONF = nova.conf.CONF
 CONF.import_opt('auth_strategy', 'nova.api.auth')
 
 supported_glance_versions = (1, 2)
