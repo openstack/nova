@@ -36,8 +36,6 @@ from nova import rpc
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('scheduler_default_filters', 'nova.scheduler.host_manager')
-CONF.import_opt('scheduler_weight_classes', 'nova.scheduler.host_manager')
 
 GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies',
                                                        'members'])
