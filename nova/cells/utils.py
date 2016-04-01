@@ -123,7 +123,9 @@ class ServiceProxy(_CellProxy):
             # ComputeNode object that consumers of this Proxy don't use, we can
             # safely remove it from what's returned
             raise AttributeError
-        return getattr(self._obj, key)
+        # NOTE(claudiub): needed for py34 compatiblity.
+        # get self._obj first, without ending into an infinite recursion.
+        return getattr(self.__getattribute__("_obj"), key)
 
 
 def get_instances_to_sync(context, updated_since=None, project_id=None,
