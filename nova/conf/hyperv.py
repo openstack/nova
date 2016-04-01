@@ -285,34 +285,129 @@ Related options:
 wait_soft_reboot_seconds_opt = cfg.IntOpt('wait_soft_reboot_seconds',
                 default=60,
                 help="""
-Number of seconds to wait for instance to shut down after
-soft reboot request is made. We fall back to hard reboot
-if instance does not shutdown within this window.
+Wait soft reboot seconds
+
+Number of seconds to wait for instance to shut down after soft
+reboot request is made. We fall back to hard reboot if instance
+does not shutdown within this window.
+
+Possible values:
+
+* Time in seconds (Default: 60).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None
 """)
 
 config_drive_cdrom_opt = cfg.BoolOpt('config_drive_cdrom',
                 default=False,
                 help="""
-Attaches the Config Drive image as a cdrom drive
-instead of a disk drive
+Configuration drive cdrom
+
+OpenStack can be configured to write instance metadata to
+a configuration drive, which is then attached to the
+instance before it boots. The configuration drive can be
+attached as a disk drive (default) or as a CD drive.
+
+Possible values:
+
+* True: Attach the configuration drive image as a CD drive.
+* False: Attach the configuration drive image as a disk drive (Default).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* This option is meaningful with force_config_drive option set to 'True'
+  or when the REST API call to create an instance will have
+  '--config-drive=True' flag.
+* config_drive_format option must be set to 'iso9660' in order to use
+  CD drive as the configuration drive image.
+* To use configuration drive with Hyper-V, you must set the
+  mkisofs_cmd value to the full path to an mkisofs.exe installation.
+  Additionally, you must set the qemu_img_cmd value to the full path
+  to an qemu-img command installation.
+* You can configure the Compute service to always create a configuration
+  drive by setting the force_config_drive option to 'True'.
 """)
 
 config_drive_inject_password_opt = cfg.BoolOpt('config_drive_inject_password',
                 default=False,
                 help="""
-Sets the admin password in the config drive image
+Configuration drive inject password
+
+Enables setting the admin password in the configuration drive image.
+
+Possible values:
+
+* True: Enables the feature.
+* False: Disables the feature (Default).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* This option is meaningful when used with other options that enable
+  configuration drive usage with Hyper-V, such as force_config_drive.
+* Currently, the only accepted config_drive_format is 'iso9660'.
 """)
 
 volume_attach_retry_count_opt = cfg.IntOpt('volume_attach_retry_count',
                 default=10,
                 help="""
-The number of times to retry to attach a volume
+Volume attach retry count
+
+The number of times to retry to attach a volume. This option is used
+to avoid incorrectly returned no data when the system is under load.
+Volume attachment is retried until success or the given retry count
+is reached. To prepare the Hyper-V node to be able to attach to
+volumes provided by cinder you must first make sure the Windows iSCSI
+initiator service is running and started automatically.
+
+Possible values:
+
+* Positive integer values (Default: 10).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* Time interval between attachment attempts is declared with
+  volume_attach_retry_interval option.
 """)
 
 volume_attach_retry_interval_opt = cfg.IntOpt('volume_attach_retry_interval',
                 default=5,
                 help="""
-Interval between volume attachment attempts, in seconds
+Volume attach retry interval
+
+Interval between volume attachment attempts, in seconds.
+
+Possible values:
+
+* Time in seconds (Default: 5).
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* This options is meaningful when volume_attach_retry_count
+  is greater than 1.
+* The retry loop runs with volume_attach_retry_count and
+  volume_attach_retry_interval configuration options.
 """)
 
 
