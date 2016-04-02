@@ -372,7 +372,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
           type=network_model.VIF_TYPE_MACVTAP)
 
     instance = objects.Instance(id=1,
-                                uuid='f0000000-0000-0000-0000-000000000001')
+                                uuid='f0000000-0000-0000-0000-000000000001',
+                                project_id=723)
 
     bandwidth = {
         'quota:vif_inbound_peak': '200',
@@ -701,7 +702,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(linux_net, 'delete_ivs_vif_port') as delete:
             delete.side_effect = processutils.ProcessExecutionError
-            d.unplug(None, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ovs)
 
     def _test_plug_ovs_hybrid(self, ipv6_exists):
         calls = {
@@ -777,7 +778,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(linux_net, 'delete_ovs_vif_port')
         ) as (device_exists, execute, delete_ovs_vif_port):
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug(None, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             execute.assert_has_calls(calls['execute'])
             delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
@@ -808,7 +809,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   run_as_root=True,
                                   check_exit_code=exit_code)]
         }
-        op(None, self.vif_hw_veb_macvtap)
+        op(self.instance, self.vif_hw_veb_macvtap)
         mock_get_ifname.assert_has_calls(calls['get_ifname'])
         mock_get_vf_num.assert_has_calls(calls['get_vf_num'])
         mock_execute.assert_has_calls(calls['execute'])
@@ -834,7 +835,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(linux_net, 'delete_ovs_vif_port')
         ) as (device_exists, delete_ovs_vif_port):
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug(None, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
 
@@ -897,7 +898,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(linux_net, 'delete_ivs_vif_port')
         ) as (execute, delete_ivs_vif_port):
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug(None, self.vif_ivs)
+            d.unplug(self.instance, self.vif_ivs)
             execute.assert_has_calls(calls['execute'])
             delete_ivs_vif_port.assert_has_calls(calls['delete_ivs_vif_port'])
 
@@ -905,13 +906,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            d.unplug(None, self.vif_ivs)
+            d.unplug(self.instance, self.vif_ivs)
 
     def test_unplug_iovisor(self):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            d.unplug(None, self.vif_ivs)
+            d.unplug(self.instance, self.vif_ivs)
 
     @mock.patch('nova.network.linux_net.device_exists')
     def test_plug_iovisor(self, device_exists):
@@ -919,15 +920,12 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            instance = objects.Instance(id=1,
-                           uuid='f0000000-0000-0000-0000-000000000001',
-                           project_id='myproject')
-            d.plug(instance, self.vif_ivs)
+            d.plug(self.instance, self.vif_ivs)
 
     def test_unplug_vrouter_with_details(self):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
-            d.unplug(None, self.vif_vrouter)
+            d.unplug(self.instance, self.vif_vrouter)
             execute.assert_called_once_with(
                 'vrouter-port-control',
                 '--oper=delete --uuid=vif-xxx-yyy-zzz',
@@ -1103,11 +1101,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_plug_tap(self, device_exists):
         device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver()
-        d.plug(None, self.vif_tap)
+        d.plug(self.instance, self.vif_tap)
 
     def test_unplug_tap(self):
         d = vif.LibvirtGenericVIFDriver()
-        d.unplug(None, self.vif_tap)
+        d.unplug(self.instance, self.vif_tap)
 
     def test_generic_8021qbh_driver(self):
         d = vif.LibvirtGenericVIFDriver()
@@ -1321,7 +1319,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch.object(linux_net, 'delete_fp_dev')
     def test_vhostuser_fp_unplug(self, mock_delete_fp_dev):
         d = vif.LibvirtGenericVIFDriver()
-        d.unplug(None, self.vif_vhostuser_fp)
+        d.unplug(self.instance, self.vif_vhostuser_fp)
         mock_delete_fp_dev.assert_has_calls([mock.call('tap-xxx-yyy-zzz')])
 
     def test_vhostuser_ovs_plug(self):
@@ -1348,7 +1346,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         with mock.patch.object(linux_net,
                                'delete_ovs_vif_port') as delete_port:
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug(None, self.vif_vhostuser_ovs)
+            d.unplug(self.instance, self.vif_vhostuser_ovs)
             delete_port.assert_has_calls(calls['delete_ovs_vif_port'])
 
     def test_vhostuser_ovs_fp_plug(self):
