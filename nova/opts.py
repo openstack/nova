@@ -14,7 +14,6 @@ import itertools
 
 import nova.baserpc
 import nova.cloudpipe.pipelib
-import nova.cmd.novnc
 import nova.cmd.serialproxy
 import nova.cmd.spicehtml5proxy
 import nova.conductor.rpcapi
@@ -49,7 +48,6 @@ def list_opts():
              [nova.db.base.db_driver_opt],
              [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
-             nova.cmd.novnc.opts,
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
              nova.console.xvp.xvp_opts,

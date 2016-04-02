@@ -1,4 +1,4 @@
-# Copyright (c) 2012 OpenStack Foundation
+# Copyright (c) 2016 OpenStack Foundation
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -15,7 +15,7 @@
 
 from oslo_config import cfg
 
-opts = [
+novnc_opts = [
     cfg.StrOpt('record',
                 help='This is the filename that will be used for storing '
                      'websocket frames received and sent by a proxy service '
@@ -40,4 +40,14 @@ opts = [
                help='Run webserver on same port. Serve files from DIR.'),
     ]
 
-cfg.CONF.register_cli_opts(opts)
+
+def register_opts(conf):
+    conf.register_opts(novnc_opts)
+
+
+def register_cli_opts(conf):
+    conf.register_cli_opts(novnc_opts)
+
+
+def list_opts():
+    return {'DEFAULT': novnc_opts}

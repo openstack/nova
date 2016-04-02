@@ -39,7 +39,6 @@ import nova.cells.weights.ram_by_instance_type
 import nova.cells.weights.weight_offset
 import nova.cert.rpcapi
 import nova.cloudpipe.pipelib
-import nova.cmd.novnc
 import nova.cmd.novncproxy
 import nova.cmd.serialproxy
 import nova.cmd.spicehtml5proxy
