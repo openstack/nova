@@ -23,10 +23,12 @@ import sys
 
 from nova.cmd import baseproxy
 import nova.conf
+from nova.conf import vnc
 from nova import config
 
 
 CONF = nova.conf.CONF
+vnc.register_cli_opts(CONF)
 
 
 def main():
