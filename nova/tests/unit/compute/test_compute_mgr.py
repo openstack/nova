@@ -1138,6 +1138,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         exc = exception.DiskNotFound(location="not\\here")
         self._test_shutdown_instance_exception(exc)
 
+    def test_shutdown_instance_other_exception(self):
+        exc = Exception('some other exception')
+        self._test_shutdown_instance_exception(exc)
+
     def _test_init_instance_retries_reboot(self, instance, reboot_type,
                                            return_power_state):
         instance.host = self.compute.host
