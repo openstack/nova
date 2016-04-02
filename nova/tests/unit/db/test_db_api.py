@@ -4135,10 +4135,30 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
             assert_sorted_by_key_both_dir(attr)
 
     def test_flavor_get_all_limit(self):
+        flavors = [
+            {'root_gb': 1, 'memory_mb': 100, 'disabled': True,
+             'is_public': False, 'name': 'flavor1', 'flavorid': 'flavor1'},
+            {'root_gb': 100, 'memory_mb': 200, 'disabled': True,
+             'is_public': False, 'name': 'flavor2', 'flavorid': 'flavor2'},
+            {'root_gb': 100, 'memory_mb': 300, 'disabled': True,
+             'is_public': False, 'name': 'flavor3', 'flavorid': 'flavor3'},
+        ]
+        flavors = [self._create_flavor(it) for it in flavors]
+
         limited_flavors = db.flavor_get_all(self.ctxt, limit=2)
         self.assertEqual(2, len(limited_flavors))
 
     def test_flavor_get_all_list_marker(self):
+        flavors = [
+            {'root_gb': 1, 'memory_mb': 100, 'disabled': True,
+             'is_public': False, 'name': 'flavor1', 'flavorid': 'flavor1'},
+            {'root_gb': 100, 'memory_mb': 200, 'disabled': True,
+             'is_public': False, 'name': 'flavor2', 'flavorid': 'flavor2'},
+            {'root_gb': 100, 'memory_mb': 300, 'disabled': True,
+             'is_public': False, 'name': 'flavor3', 'flavorid': 'flavor3'},
+        ]
+        flavors = [self._create_flavor(it) for it in flavors]
+
         all_flavors = db.flavor_get_all(self.ctxt)
 
         # Set the 3rd result as the marker

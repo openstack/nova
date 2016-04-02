@@ -82,20 +82,20 @@ class _TestFlavor(object):
     def test_get_by_id(self):
         with mock.patch.object(db, 'flavor_get') as get:
             get.return_value = fake_flavor
-            flavor = flavor_obj.Flavor.get_by_id(self.context, 1)
+            flavor = flavor_obj.Flavor.get_by_id(self.context, 100)
             self._compare(self, fake_flavor, flavor)
 
     def test_get_by_name(self):
         with mock.patch.object(db, 'flavor_get_by_name') as get_by_name:
             get_by_name.return_value = fake_flavor
-            flavor = flavor_obj.Flavor.get_by_name(self.context, 'm1.foo')
+            flavor = flavor_obj.Flavor.get_by_name(self.context, 'm1.legacy')
             self._compare(self, fake_flavor, flavor)
 
     def test_get_by_flavor_id(self):
         with mock.patch.object(db, 'flavor_get_by_flavor_id') as get_by_id:
             get_by_id.return_value = fake_flavor
             flavor = flavor_obj.Flavor.get_by_flavor_id(self.context,
-                                                        'm1.foo')
+                                                        'm1.legacy')
             self._compare(self, fake_flavor, flavor)
 
     @mock.patch('nova.objects.Flavor._flavor_get_from_db')
@@ -334,9 +334,9 @@ class _TestFlavor(object):
         mock_add.assert_called_once_with(self.context, 123, 'project-3')
 
     @mock.patch('nova.objects.Flavor._flavor_create')
-    @mock.patch('nova.db.flavor_extra_specs_delete')
-    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
-    def test_save_deleted_extra_specs(self, mock_update, mock_delete,
+    @mock.patch('nova.objects.Flavor._flavor_extra_specs_del')
+    @mock.patch('nova.objects.Flavor._flavor_extra_specs_add')
+    def test_save_deleted_extra_specs(self, mock_add, mock_delete,
                                       mock_create):
         mock_create.return_value = dict(fake_flavor,
                                         extra_specs={'key1': 'value1'})
@@ -346,9 +346,8 @@ class _TestFlavor(object):
         flavor.create()
         flavor.extra_specs = {}
         flavor.save()
-        mock_delete.assert_called_once_with(self.context, flavor.flavorid,
-                                            'key1')
-        self.assertFalse(mock_update.called)
+        mock_delete.assert_called_once_with(self.context, flavor.id, 'key1')
+        self.assertFalse(mock_add.called)
 
     def test_save_invalid_fields(self):
         flavor = flavor_obj.Flavor(id=123)
@@ -471,18 +470,23 @@ class TestFlavorRemote(test_objects._RemoteTest, _TestFlavor):
 
 
 class _TestFlavorList(object):
-    def test_get_all_from_db(self):
-        db_flavors = [
-            _TestFlavor._create_api_flavor(self.context),
-            _TestFlavor._create_api_flavor(self.context, 'm1.bar'),
-        ]
-        db_flavors.extend(db_api.flavor_get_all(self.context))
+    @mock.patch('nova.db.flavor_get_all')
+    def test_get_all_from_db(self, mock_get):
+        # Get a list of the actual flavors in the API DB
+        api_flavors = flavor_obj._flavor_get_all_from_db(self.context,
+                                                         False, None,
+                                                         'flavorid', 'asc',
+                                                         None, None)
+        # Return a fake flavor from the main DB query
+        db_flavors = [fake_flavor]
+        mock_get.return_value = db_flavors
+
         flavors = objects.FlavorList.get_all(self.context)
-        self.assertEqual(len(db_flavors), len(flavors))
+        # Make sure we're getting all flavors from the api and main
+        # db queries
+        self.assertEqual(len(db_flavors) + len(api_flavors), len(flavors))
 
     def test_get_all_from_db_with_limit(self):
-        _TestFlavor._create_api_flavor(self.context)
-        _TestFlavor._create_api_flavor(self.context, 'm1.bar')
         flavors = objects.FlavorList.get_all(self.context,
                                              limit=1)
         self.assertEqual(1, len(flavors))

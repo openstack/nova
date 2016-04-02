@@ -39,6 +39,16 @@ fake_api_flavor = {
     }
 
 
+class ForcedFlavor(objects.Flavor):
+    """A Flavor object that lets us create with things still in the main DB.
+
+    This is required for us to be able to test mixed scenarios.
+    """
+    @staticmethod
+    def _ensure_migrated(*args):
+        return True
+
+
 class FlavorObjectTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 
@@ -48,7 +58,13 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
+    def _delete_main_flavors(self):
+        flavors = db_api.flavor_get_all(self.context)
+        for flavor in flavors:
+            db_api.flavor_destroy(self.context, flavor['name'])
+
     def test_create(self):
+        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self.assertIn('id', flavor)
@@ -64,12 +80,8 @@ class FlavorObjectTestCase(test.NoDBTestCase):
                           db.flavor_get_by_flavor_id, self.context,
                           flavor.flavorid)
 
-        # Default flavors will overlap with our id, so just query and make sure
-        # they are different flavors
-        main_flavor = db.flavor_get(self.context, flavor.id)
-        self.assertNotEqual(flavor.name, main_flavor['name'])
-
     def test_get_with_no_projects(self):
+        self._delete_main_flavors()
         fields = dict(fake_api_flavor, projects=[])
         flavor = objects.Flavor(context=self.context, **fields)
         flavor.create()
@@ -77,6 +89,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual([], flavor.projects)
 
     def test_get_with_projects_and_specs(self):
+        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         flavor = objects.Flavor.get_by_id(self.context, flavor.id)
@@ -95,6 +108,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(flavor.id, flavor2.id)
 
     def test_query_api(self):
+        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_query(flavor)
@@ -126,6 +140,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(set(projects), set(flavor2.projects))
 
     def test_save_api(self):
+        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_save(flavor)
@@ -154,6 +169,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
                           flavor.name)
 
     def test_destroy_api(self):
+        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_destroy(flavor)
@@ -186,7 +202,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
 
     def test_get_all_with_some_api_flavors(self):
         expect_len = len(db_api.flavor_get_all(self.context))
-        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
+        flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_get_all(expect_len + 1)
 
@@ -194,17 +210,17 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         db_flavors = db_api.flavor_get_all(self.context)
         for flavor in db_flavors:
             db_api.flavor_destroy(self.context, flavor['name'])
-        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
+        flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_get_all(1)
 
     def test_get_all_with_marker_in_api(self):
         db_flavors = db_api.flavor_get_all(self.context)
         db_flavor_ids = [x['flavorid'] for x in db_flavors]
-        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
+        flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
         fake_flavor2 = dict(fake_api_flavor, name='m1.zoo', flavorid='m1.zoo')
-        flavor = objects.Flavor(context=self.context, **fake_flavor2)
+        flavor = ForcedFlavor(context=self.context, **fake_flavor2)
         flavor.create()
         result = self._test_get_all(3, marker='m1.foo', limit=3)
         result_flavorids = [x.flavorid for x in result]
@@ -213,23 +229,29 @@ class FlavorObjectTestCase(test.NoDBTestCase):
     def test_get_all_with_marker_in_main(self):
         db_flavors = db_api.flavor_get_all(self.context)
         db_flavor_ids = [x['flavorid'] for x in db_flavors]
-        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
+        flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
         fake_flavor2 = dict(fake_api_flavor, name='m1.zoo', flavorid='m1.zoo')
-        flavor = objects.Flavor(context=self.context, **fake_flavor2)
+        flavor = ForcedFlavor(context=self.context, **fake_flavor2)
         flavor.create()
         result = self._test_get_all(2, marker='3', limit=3)
         result_flavorids = [x.flavorid for x in result]
         self.assertEqual(db_flavor_ids[3:], result_flavorids)
 
     def test_get_all_with_marker_in_neither(self):
-        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
+        flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
         fake_flavor2 = dict(fake_api_flavor, name='m1.zoo', flavorid='m1.zoo')
-        flavor = objects.Flavor(context=self.context, **fake_flavor2)
+        flavor = ForcedFlavor(context=self.context, **fake_flavor2)
         flavor.create()
         self.assertRaises(exception.MarkerNotFound,
                           self._test_get_all, 2, marker='noflavoratall')
+
+    def test_create_checks_main_flavors(self):
+        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
+        self.assertRaises(exception.ObjectActionError, flavor.create)
+        self._delete_main_flavors()
+        flavor.create()
 
 
 class FlavorMigrationTestCase(test.NoDBTestCase):

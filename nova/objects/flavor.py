@@ -26,6 +26,7 @@ from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy.api import require_context
 from nova.db.sqlalchemy import api_models
+from nova.db.sqlalchemy import models as main_models
 from nova import exception
 from nova.i18n import _LW
 from nova import objects
@@ -187,6 +188,16 @@ def _flavor_destroy(context, flavor_id=None, name=None):
     context.session.query(api_models.FlavorExtraSpecs).\
         filter_by(flavor_id=result.id).delete()
     context.session.delete(result)
+
+
+@db_api.main_context_manager.reader
+def _ensure_migrated(context):
+    result = context.session.query(main_models.InstanceTypes).\
+             filter_by(deleted=0).count()
+    if result:
+        LOG.warning(_LW('Main database contains %(count)i unmigrated flavors'),
+                    {'count': result})
+    return result == 0
 
 
 # TODO(berrange): Remove NovaObjectDictCompat
@@ -453,11 +464,24 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
     def _flavor_create(context, updates):
         return _flavor_create(context, updates)
 
+    @staticmethod
+    def _ensure_migrated(context):
+        return _ensure_migrated(context)
+
     @base.remotable
     def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+
+        # NOTE(danms): Once we have made it past a point where we know
+        # all flavors have been migrated, we can remove this. Ideally
+        # in Ocata with a blocker migration to be sure.
+        if not self._ensure_migrated(self._context):
+            raise exception.ObjectActionError(
+                action='create',
+                reason='main database still contains flavors')
+
         updates = self.obj_get_changes()
         expected_attrs = []
         for attr in OPTIONAL_FIELDS:
@@ -671,7 +695,15 @@ def _get_main_db_flavor_ids(context, limit):
             limit(limit)]
 
 
-def migrate_flavors(ctxt, count):
+@db_api.main_context_manager.writer
+def _destroy_flavor_hard(context, name):
+    # NOTE(danms): We don't need this imported at runtime, so
+    # keep it separate here
+    from nova.db.sqlalchemy import models
+    context.session.query(models.InstanceTypes).filter_by(name=name).delete()
+
+
+def migrate_flavors(ctxt, count, hard_delete=False):
     main_db_ids = _get_main_db_flavor_ids(ctxt, count)
     if not main_db_ids:
         return 0, 0
@@ -686,7 +718,10 @@ def migrate_flavors(ctxt, count):
                              for field in flavor.fields}
             flavor._flavor_create(ctxt, flavor_values)
             count_hit += 1
-            db.flavor_destroy(ctxt, flavor.name)
+            if hard_delete:
+                _destroy_flavor_hard(ctxt, flavor.name)
+            else:
+                db.flavor_destroy(ctxt, flavor.name)
         except exception.FlavorNotFound:
             LOG.warning(_LW('Flavor id %(id)i disappeared during migration'),
                         {'id': flavor_id})
