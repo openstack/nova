@@ -96,8 +96,16 @@ VNIC_TYPE_MACVTAP = 'macvtap'
 VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
 VNIC_TYPE_BAREMETAL = 'baremetal'
 
+# Define list of ports which needs pci request.
+# Note: The macvtap port needs a PCI request as it is a tap interface
+# with VF as the lower physical interface.
 VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP,
                     VNIC_TYPE_DIRECT_PHYSICAL)
+
+# Define list of ports which are passthrough to the guest
+# and need a special treatment on snapshot and suspend/resume
+VNIC_TYPES_DIRECT_PASSTHROUGH = (VNIC_TYPE_DIRECT,
+                                 VNIC_TYPE_DIRECT_PHYSICAL)
 
 # Constants for the 'vif_model' values
 VIF_MODEL_VIRTIO = 'virtio'
