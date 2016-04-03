@@ -92,7 +92,7 @@ layer to guarantee it won't break the back-compatibility. That may ugly
 some hard-code permission check in API layer, but V2 API will be removed
 once V2.1 API ready, so our choice will reduce the risk.
 
-Port policy.d from oslo-incubator into nova
+Port policy.d into nova
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This feature make deployer can override default policy rule easily. And
