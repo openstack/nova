@@ -1796,6 +1796,54 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
+    @mock.patch('nova.db.block_device_mapping_get_by_instance_and_volume_id')
+    @mock.patch('nova.db.block_device_mapping_update')
+    @mock.patch('nova.volume.cinder.API.get')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.get_volume_connector')
+    @mock.patch('nova.compute.manager.ComputeManager._swap_volume')
+    def test_swap_volume_delete_on_termination_flag(self, swap_volume_mock,
+                                                    volume_connector_mock,
+                                                    get_volume_mock,
+                                                    update_bdm_mock,
+                                                    get_bdm_mock):
+        # This test ensures that delete_on_termination flag arguments
+        # are reserved
+        volumes = {}
+        old_volume_id = uuidutils.generate_uuid()
+        volumes[old_volume_id] = {'id': old_volume_id,
+                                  'display_name': 'old_volume',
+                                  'status': 'detaching',
+                                  'size': 2}
+        new_volume_id = uuidutils.generate_uuid()
+        volumes[new_volume_id] = {'id': new_volume_id,
+                                  'display_name': 'new_volume',
+                                  'status': 'available',
+                                  'size': 2}
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                   {'device_name': '/dev/vdb', 'source_type': 'volume',
+                    'destination_type': 'volume',
+                    'instance_uuid': uuids.instance,
+                    'delete_on_termination': True,
+                    'connection_info': '{"foo": "bar"}'})
+        comp_ret = {'save_volume_id': old_volume_id}
+        new_info = {"foo": "bar"}
+        swap_volume_mock.return_value = (comp_ret, new_info)
+        volume_connector_mock.return_value = {}
+        update_bdm_mock.return_value = fake_bdm
+        get_bdm_mock.return_value = fake_bdm
+        get_volume_mock.return_value = volumes[old_volume_id]
+        self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
+                fake_instance.fake_instance_obj(self.context,
+                                                **{'uuid': uuids.instance}))
+        update_values = {'no_device': False,
+                         'connection_info': u'{"foo": "bar"}',
+                         'volume_id': old_volume_id,
+                         'source_type': u'volume',
+                         'snapshot_id': None,
+                         'destination_type': u'volume'}
+        update_bdm_mock.assert_called_once_with(mock.ANY, mock.ANY,
+                                                update_values, legacy=False)
+
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_check_can_live_migrate_source(self, event_mock):
         is_volume_backed = 'volume_backed'
