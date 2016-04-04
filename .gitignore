@@ -26,7 +26,7 @@ CA/
 ChangeLog
 coverage.xml
 cover/*
-covhtml
+covhtml/*
 dist/*
 doc/source/api/*
 doc/build/*
