@@ -1011,8 +1011,16 @@ class Controller(object):
             # so later when we work through the list in order we find
             # the method which has the latest version which supports
             # the version requested.
-            # TODO(cyeoh): Add check to ensure that there are no overlapping
-            # ranges of valid versions as that is amibiguous
+            is_intersect = Controller.check_for_versions_intersection(
+                func_list)
+
+            if is_intersect:
+                raise exception.ApiVersionsIntersect(
+                    name=new_func.name,
+                    min_ver=new_func.start_version,
+                    max_ver=new_func.end_version,
+                )
+
             func_list.sort(key=lambda f: f.start_version, reverse=True)
 
             return f
@@ -1032,6 +1040,36 @@ class Controller(object):
                 return False
 
         return is_dict(body[entity_name])
+
+    @staticmethod
+    def check_for_versions_intersection(func_list):
+        """Determines whether function list contains version intervals
+        intersections or not. General algorithm:
+
+        https://en.wikipedia.org/wiki/Intersection_algorithm
+
+        :param func_list: list of VersionedMethod objects
+        :return: boolean
+        """
+        pairs = []
+        counter = 0
+
+        for f in func_list:
+            pairs.append((f.start_version, 1, f))
+            pairs.append((f.end_version, -1, f))
+
+        def compare(x):
+            return x[0]
+
+        pairs.sort(key=compare)
+
+        for p in pairs:
+            counter += p[1]
+
+            if counter > 1:
+                return True
+
+        return False
 
 
 class Fault(webob.exc.HTTPException):

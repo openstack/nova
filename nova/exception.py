@@ -376,6 +376,11 @@ class InvalidGlobalAPIVersion(Invalid):
                 "is %(min_ver)s and maximum is %(max_ver)s.")
 
 
+class ApiVersionsIntersect(Invalid):
+    msg_fmt = _("Version of %(name) %(min_ver) %(max_ver) intersects "
+                "with another versions.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):

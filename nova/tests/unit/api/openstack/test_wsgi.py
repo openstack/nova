@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack import extensions
+from nova.api.openstack import versioned_method
 from nova.api.openstack import wsgi
 from nova import exception
 from nova import i18n
@@ -1086,3 +1087,76 @@ class ValidBodyTest(test.NoDBTestCase):
         wsgi.Resource(controller=None)
         body = {'foo': 'bar'}
         self.assertFalse(self.controller.is_valid_body(body, 'foo'))
+
+
+class TestController(test.NoDBTestCase):
+    def test_check_for_versions_intersection_negative(self):
+        func_list = \
+            [versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.1'),
+                                              api_version.APIVersionRequest(
+                                                  '2.4'),
+                                              None),
+             versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.11'),
+                                              api_version.APIVersionRequest(
+                                                  '3.1'),
+                                              None),
+             versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.8'),
+                                              api_version.APIVersionRequest(
+                                                  '2.9'),
+                                              None),
+             ]
+
+        result = wsgi.Controller.check_for_versions_intersection(func_list=
+                                                                 func_list)
+        self.assertFalse(result)
+
+        func_list = \
+            [versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.12'),
+                                              api_version.APIVersionRequest(
+                                                  '2.14'),
+                                              None),
+             versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '3.0'),
+                                              api_version.APIVersionRequest(
+                                                  '3.4'),
+                                              None)
+             ]
+
+        result = wsgi.Controller.check_for_versions_intersection(func_list=
+                                                                 func_list)
+        self.assertFalse(result)
+
+    def test_check_for_versions_intersection_positive(self):
+        func_list = \
+            [versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.1'),
+                                              api_version.APIVersionRequest(
+                                                  '2.4'),
+                                              None),
+             versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.3'),
+                                              api_version.APIVersionRequest(
+                                                  '3.0'),
+                                              None),
+             versioned_method.VersionedMethod('foo',
+                                              api_version.APIVersionRequest(
+                                                  '2.8'),
+                                              api_version.APIVersionRequest(
+                                                  '2.9'),
+                                              None),
+             ]
+
+        result = wsgi.Controller.check_for_versions_intersection(func_list=
+                                                                 func_list)
+        self.assertTrue(result)
