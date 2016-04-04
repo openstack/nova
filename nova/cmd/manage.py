@@ -1181,6 +1181,21 @@ class CellCommands(object):
 class CellV2Commands(object):
     """Commands for managing cells v2."""
 
+    # TODO(melwitt): Remove this when the oslo.messaging function
+    # for assembling a transport url from ConfigOpts is available
+    @args('--transport-url', metavar='<transport url>', required=True,
+          dest='transport_url',
+          help='The transport url for the cell message queue')
+    def simple_cell_setup(self, transport_url):
+        cell_uuid = self._map_cell_and_hosts(transport_url)
+        if cell_uuid is None:
+            # There are no compute hosts which means no cell_mapping was
+            # created. This should also mean that there are no instances.
+            return 1
+        self.map_cell0()
+        self.map_instances(cell_uuid)
+        return 0
+
     @args('--database_connection',
           metavar='<database_connection>',
           help='The database connection url for cell0. '
