@@ -232,10 +232,10 @@ xenapi_torrent_opts = [
 ]
 
 
-ALL_XENSERVER_OPTS = itertools.chain(
+ALL_XENSERVER_OPTS = list(itertools.chain(
                      xenapi_agent_opts,
                      xenapi_session_opts,
-                     xenapi_torrent_opts)
+                     xenapi_torrent_opts))
 
 
 def register_opts(conf):

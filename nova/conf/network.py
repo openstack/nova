@@ -144,9 +144,9 @@ ldap_dns_opts = [
                      'Statement of Authority'),
 ]
 
-ALL_DEFAULT_OPTS = itertools.chain(
+ALL_DEFAULT_OPTS = list(itertools.chain(
                    network_opts,
-                   ldap_dns_opts)
+                   ldap_dns_opts))
 
 
 def register_opts(conf):
