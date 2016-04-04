@@ -52,7 +52,7 @@ class CloudpipeController(wsgi.Controller):
         # NOTE(vish): One of the drawbacks of doing this in the api is
         #             the keys will only be on the api node that launched
         #             the cloudpipe.
-        fileutils.ensure_tree(CONF.keys_path)
+        fileutils.ensure_tree(CONF.crypto.keys_path)
 
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes."""
