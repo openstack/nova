@@ -68,8 +68,6 @@ CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('network_topic', 'nova.network.rpcapi')
 CONF.import_opt('fake_network', 'nova.network.linux_net')
-CONF.import_opt('share_dhcp_address', 'nova.objects.network')
-CONF.import_opt('network_device_mtu', 'nova.objects.network')
 
 
 class RPCAllocateFixedIP(object):
