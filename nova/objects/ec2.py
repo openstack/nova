@@ -136,10 +136,8 @@ class EC2SnapshotMapping(base.NovaPersistentObject, base.NovaObject):
             return cls._from_db_object(context, cls(context), db_smap)
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class S3ImageMapping(base.NovaPersistentObject, base.NovaObject,
-                     base.NovaObjectDictCompat):
+class S3ImageMapping(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -151,7 +149,7 @@ class S3ImageMapping(base.NovaPersistentObject, base.NovaObject,
     @staticmethod
     def _from_db_object(context, s3imap, db_s3imap):
         for field in s3imap.fields:
-            s3imap[field] = db_s3imap[field]
+            setattr(s3imap, field, db_s3imap[field])
         s3imap._context = context
         s3imap.obj_reset_changes()
         return s3imap

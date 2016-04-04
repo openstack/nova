@@ -157,7 +157,7 @@ class _TestS3ImageMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         s3imap = ec2_obj.S3ImageMapping(context=self.context)
