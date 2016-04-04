@@ -255,6 +255,8 @@ class FlavorObjectTestCase(test.NoDBTestCase):
 
 
 class FlavorMigrationTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(FlavorMigrationTestCase, self).setUp()
         self.useFixture(fixtures.Database())
