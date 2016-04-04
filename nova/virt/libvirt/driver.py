@@ -318,7 +318,6 @@ CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
                 group='libvirt')
-CONF.import_group('workarounds', 'nova.utils')
 CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume.iscsi',
                 group='libvirt')
 
