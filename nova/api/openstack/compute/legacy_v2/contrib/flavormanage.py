@@ -88,6 +88,9 @@ class FlavorManageController(wsgi.Controller):
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
+        except exception.ObjectActionError:
+            raise webob.exc.HTTPConflict(explanation=_(
+                'Not all flavors have been migrated to the API database'))
         except exception.InvalidInput as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
         except exception.FlavorCreateFailed as exc:
