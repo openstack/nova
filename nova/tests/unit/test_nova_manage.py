@@ -818,3 +818,53 @@ class CellV2CommandsTestCase(test.TestCase):
         output = sys.stdout.getvalue().strip()
         expected = 'No hosts found to map to cell, exiting.'
         self.assertEqual(expected, output)
+
+    def test_map_instances(self):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        instance_uuids = []
+        for i in range(3):
+            uuid = uuidutils.generate_uuid()
+            instance_uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id,
+                             uuid=uuid).create()
+
+        self.commands.map_instances(cell_uuid)
+
+        for uuid in instance_uuids:
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
+                    uuid)
+            self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+            self.assertEqual(cell_mapping.uuid, inst_mapping.cell_mapping.uuid)
+
+    def test_map_instances_duplicates(self):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        instance_uuids = []
+        for i in range(3):
+            uuid = uuidutils.generate_uuid()
+            instance_uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id,
+                             uuid=uuid).create()
+
+        objects.InstanceMapping(ctxt, project_id=ctxt.project_id,
+                instance_uuid=instance_uuids[0],
+                cell_mapping=cell_mapping).create()
+
+        self.commands.map_instances(cell_uuid, verbose=True)
+        output = sys.stdout.getvalue().strip()
+
+        self.assertIn('%s already mapped to cell' % instance_uuids[0], output)
+
+        for uuid in instance_uuids:
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
+                    uuid)
+            self.assertEqual(ctxt.project_id, inst_mapping.project_id)
