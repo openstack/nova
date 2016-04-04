@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_versionedobjects import base as ovo
 from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
@@ -27,10 +26,8 @@ def _cell_id_in_updates(updates):
         updates["cell_id"] = cell_mapping_obj.id
 
 
-# NOTE(danms): Maintain Dict compatibility because of ovo bug 1474952
 @base.NovaObjectRegistry.register
-class HostMapping(base.NovaTimestampObject, base.NovaObject,
-                  ovo.VersionedObjectDictCompat):
+class HostMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 

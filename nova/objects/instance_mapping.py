@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_versionedobjects import base as ovo
 from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
@@ -22,10 +21,8 @@ from nova.objects import cell_mapping
 from nova.objects import fields
 
 
-# NOTE(danms): Maintain Dict compatibility because of ovo bug 1474952
 @base.NovaObjectRegistry.register
-class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
-                      ovo.VersionedObjectDictCompat):
+class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
