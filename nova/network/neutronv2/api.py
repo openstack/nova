@@ -1138,9 +1138,8 @@ class API(base_api.NetworkAPI):
 
             # TODO(danms): Remove me when all callers pass an object
             if isinstance(requested_networks[0], tuple):
-                requested_networks = objects.NetworkRequestList(
-                    objects=[objects.NetworkRequest.from_tuple(t)
-                             for t in requested_networks])
+                requested_networks = objects.NetworkRequestList.from_tuples(
+                    requested_networks)
 
             for request in requested_networks:
                 if request.port_id:
