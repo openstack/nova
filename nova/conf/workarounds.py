@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-""" The workarounds_opts group is for very specific reasons.
+"""The 'workarounds' group is for very specific reasons.
 
 If you're:
 
@@ -32,43 +32,112 @@ Then this is a good place for your workaround.
 
 from oslo_config import cfg
 
+workarounds_group = cfg.OptGroup(
+    'workarounds',
+    title='Workaround Options',
+    help="""
+A collection of workarounds used to mitigate bugs or issues found in system
+tools (e.g. Libvirt or QEMU) or Nova itself under certain conditions. These
+should only be enabled in exceptional circumstances. All options are linked
+against bug IDs, where more information on the issue can be found.
+""")
+
 disable_rootwrap = cfg.BoolOpt(
     'disable_rootwrap',
     default=False,
-    help='This option allows a fallback to sudo for performance '
-         'reasons. For example see '
-         'https://bugs.launchpad.net/nova/+bug/1415106')
+    help="""
+Use sudo instead of rootwrap.
+
+Allow fallback to sudo for performance reasons.
+
+For more information, refer to the bug report:
+
+  https://bugs.launchpad.net/nova/+bug/1415106
+
+Possible values:
+
+* True: Use sudo instead of rootwrap
+* False: Use rootwrap as usual
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+Any options that affect 'rootwrap' will be ignored.
+""")
 
 disable_libvirt_livesnapshot = cfg.BoolOpt(
     'disable_libvirt_livesnapshot',
     default=True,
-    help='When using libvirt 1.2.2 live snapshots fail '
-         'intermittently under load.  This config option provides '
-         'a mechanism to enable live snapshot while this is '
-                     'resolved.  See '
-                     'https://bugs.launchpad.net/nova/+bug/1334398')
+    help="""
+Disable live snapshots when using the libvirt driver.
+
+When using libvirt 1.2.2 live snapshots fail intermittently under load. This
+config option provides a mechanism to disable live snapshot, in favour of cold
+snapshot, while this is resolved.
+
+For more information, refer to the bug report:
+
+  https://bugs.launchpad.net/nova/+bug/1334398
+
+Possible values:
+
+* True: Live migrate is disabled when using libvirt
+* False: Live migrate functions as usual
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* None
+""")
 
 handle_virt_lifecycle_events = cfg.BoolOpt(
     'handle_virt_lifecycle_events',
     default=True,
-    help="Whether or not to handle events raised from the compute "
-         "driver's 'emit_event' method. These are lifecycle "
-         "events raised from compute drivers that implement the "
-         "method. An example of a lifecycle event is an instance "
-         "starting or stopping. If the instance is going through "
-         "task state changes due to an API operation, like "
-         "resize, the events are ignored. However, this is an "
-         "advanced feature which allows the hypervisor to signal "
-         "to the compute service that an unexpected state change "
-         "has occurred in an instance and the instance can be "
-         "shutdown automatically - which can inherently race in "
-         "reboot operations or when the compute service or host "
-         "is rebooted, either planned or due to an unexpected "
-         "outage. Care should be taken when using this and "
-         "sync_power_state_interval is negative since then if any "
-         "instances are out of sync between the hypervisor and "
-         "the Nova database they will have to be synchronized "
-         "manually. See https://bugs.launchpad.net/bugs/1444630")
+    help="""
+Enable handling of events emitted from compute drivers.
+
+Many compute drivers emit lifecycle events, which are events that occur when,
+for example, an instance is starting or stopping. If the instance is going
+through task state changes due to an API operation, like resize, the events
+are ignored.
+
+This is an advanced feature which allows the hypervisor to signal to the
+compute service that an unexpected state change has occurred in an instance
+and that the instance can be shutdown automatically. Unfortunately, this can
+race in some conditions, for exmaple in reboot operations or when the compute
+service or when host is rebooted (planned or due to an outage). If such races
+are common, then it is advisable to disable this feature.
+
+Care should be taken when this feature is disabled and
+'sync_power_state_interval' is set to a negative value. In this case, any
+instances that get out of sync between the hypervisor and the Nova database
+will have to be synchronized manually.
+
+For more information, refer to the bug report:
+
+  https://bugs.launchpad.net/bugs/1444630
+
+Possible values:
+
+* True: Enable the feature
+* False: Disable the feature
+
+Services which consume this:
+
+* ``nova-compute``
+
+Interdependencies to other options:
+
+* If ``sync_power_state_interval`` is negative and this feature is disabled,
+  then instances that get out of sync between the hypervisor and the Nova
+  database will have to be synchonized manually.
+""")
 
 ALL_OPTS = [disable_rootwrap,
             disable_libvirt_livesnapshot,
@@ -76,8 +145,8 @@ ALL_OPTS = [disable_rootwrap,
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS, group='workarounds')
+    conf.register_opts(ALL_OPTS, group=workarounds_group)
 
 
 def list_opts():
-    return {'workarounds': ALL_OPTS}
+    return {workarounds_group: ALL_OPTS}
