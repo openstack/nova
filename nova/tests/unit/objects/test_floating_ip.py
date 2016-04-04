@@ -20,6 +20,7 @@ from oslo_versionedobjects import base as ovo_base
 from nova import exception
 from nova import objects
 from nova.objects import floating_ip
+from nova import test
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_objects
@@ -263,3 +264,17 @@ class TestFloatingIPObject(test_objects._LocalTest,
 class TestRemoteFloatingIPObject(test_objects._RemoteTest,
                                  _TestFloatingIPObject):
     pass
+
+
+class TestNeutronFloatingIPObject(test.NoDBTestCase):
+    def test_create_with_uuid_id(self):
+        uuid = 'fc9b4956-fd97-11e5-86aa-5e5517507c66'
+        fip = objects.floating_ip.NeutronFloatingIP(id=uuid)
+
+        self.assertEqual(uuid, fip.id)
+
+    def test_create_with_uuid_fixed_id(self):
+        uuid = 'fc9b4c3a-fd97-11e5-86aa-5e5517507c66'
+        fip = objects.floating_ip.NeutronFloatingIP(fixed_ip_id=uuid)
+
+        self.assertEqual(uuid, fip.fixed_ip_id)
