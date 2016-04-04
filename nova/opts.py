@@ -56,7 +56,6 @@ def list_opts():
              [nova.db.base.db_driver_opt],
              [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
-             nova.cloudpipe.pipelib.cloudpipe_opts,
              nova.cmd.novnc.opts,
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
