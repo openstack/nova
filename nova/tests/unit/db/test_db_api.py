@@ -3383,8 +3383,9 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._create_service({'version': 3,
                               'host': 'host2',
                               'binary': 'compute'})
-        self.assertEqual(2, db.service_get_minimum_version(self.ctxt,
-                                                           'compute'))
+        self.assertEqual({'compute': 2},
+                         db.service_get_minimum_version(self.ctxt,
+                                                        ['compute']))
 
     def test_service_get_not_found_exception(self):
         self.assertRaises(exception.ServiceNotFound,

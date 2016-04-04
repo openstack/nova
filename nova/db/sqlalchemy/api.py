@@ -508,13 +508,14 @@ def service_get(context, service_id):
 
 
 @pick_context_manager_reader_allow_async
-def service_get_minimum_version(context, binary):
-    min_version = context.session.query(
+def service_get_minimum_version(context, binaries):
+    min_versions = context.session.query(
+        models.Service.binary,
         func.min(models.Service.version)).\
-                         filter(models.Service.binary == binary).\
+                         filter(models.Service.binary.in_(binaries)).\
                          filter(models.Service.forced_down == false()).\
-                         scalar()
-    return min_version
+                         group_by(models.Service.binary)
+    return dict(min_versions)
 
 
 @pick_context_manager_reader
