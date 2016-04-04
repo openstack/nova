@@ -15,10 +15,8 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
-                     base.NovaObjectDictCompat):
+class BandwidthUsage(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add use_slave to get_by_instance_uuid_and_mac
     # Version 1.2: Add update_cells to create
@@ -39,9 +37,9 @@ class BandwidthUsage(base.NovaPersistentObject, base.NovaObject,
     def _from_db_object(context, bw_usage, db_bw_usage):
         for field in bw_usage.fields:
             if field == 'instance_uuid':
-                bw_usage[field] = db_bw_usage['uuid']
+                setattr(bw_usage, field, db_bw_usage['uuid'])
             else:
-                bw_usage[field] = db_bw_usage[field]
+                setattr(bw_usage, field, db_bw_usage[field])
         bw_usage._context = context
         bw_usage.obj_reset_changes()
         return bw_usage
