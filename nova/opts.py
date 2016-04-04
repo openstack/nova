@@ -33,7 +33,6 @@ import nova.ipv6.api
 import nova.netconf
 import nova.notifications
 import nova.paths
-import nova.quota
 import nova.servicegroup.api
 import nova.spice
 import nova.volume
@@ -57,7 +56,6 @@ def list_opts():
              nova.netconf.netconf_opts,
              nova.notifications.notify_opts,
              nova.paths.path_opts,
-             nova.quota.quota_opts,
              nova.volume._volume_opts,
          )),
         ('cinder', nova.volume.cinder.cinder_opts),

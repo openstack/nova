@@ -61,6 +61,7 @@ from sqlalchemy.sql import true
 from nova import block_device
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -125,11 +126,10 @@ api_db_opts = [
                     'SQLAlchemy.'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(db_opts)
 CONF.register_opts(oslo_db_options.database_opts, 'database')
 CONF.register_opts(api_db_opts, group='api_database')
-CONF.import_opt('until_refresh', 'nova.quota')
 
 LOG = logging.getLogger(__name__)
 
