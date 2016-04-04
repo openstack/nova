@@ -195,9 +195,47 @@ xenapi_session_opts = [
 ]
 
 
+xenapi_torrent_opts = [
+    cfg.StrOpt('torrent_base_url',
+               help='Base URL for torrent files; must contain a slash'
+                    ' character (see RFC 1808, step 6)'),
+    cfg.FloatOpt('torrent_seed_chance',
+                 default=1.0,
+                 help='Probability that peer will become a seeder.'
+                      ' (1.0 = 100%)'),
+    cfg.IntOpt('torrent_seed_duration',
+               default=3600,
+               help='Number of seconds after downloading an image via'
+                    ' BitTorrent that it should be seeded for other peers.'),
+    cfg.IntOpt('torrent_max_last_accessed',
+               default=86400,
+               help='Cached torrent files not accessed within this number of'
+                    ' seconds can be reaped'),
+    cfg.IntOpt('torrent_listen_port_start',
+               default=6881,
+               min=1,
+               max=65535,
+               help='Beginning of port range to listen on'),
+    cfg.IntOpt('torrent_listen_port_end',
+               default=6891,
+               min=1,
+               max=65535,
+               help='End of port range to listen on'),
+    cfg.IntOpt('torrent_download_stall_cutoff',
+               default=600,
+               help='Number of seconds a download can remain at the same'
+                    ' progress percentage w/o being considered a stall'),
+    cfg.IntOpt('torrent_max_seeder_processes_per_host',
+               default=1,
+               help='Maximum number of seeder processes to run concurrently'
+                    ' within a given dom0. (-1 = no limit)')
+]
+
+
 ALL_XENSERVER_OPTS = itertools.chain(
                      xenapi_agent_opts,
-                     xenapi_session_opts)
+                     xenapi_session_opts,
+                     xenapi_torrent_opts)
 
 
 def register_opts(conf):
@@ -206,4 +244,4 @@ def register_opts(conf):
 
 
 def list_opts():
-    return {xenserver_group.name: ALL_XENSERVER_OPTS}
+    return {xenserver_group: ALL_XENSERVER_OPTS}

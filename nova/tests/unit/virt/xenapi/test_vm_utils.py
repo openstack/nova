@@ -22,7 +22,6 @@ import mock
 from mox3 import mox
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
@@ -33,6 +32,7 @@ import six
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import vm_mode
+import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
@@ -49,7 +49,7 @@ from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 XENSM_TYPE = 'xensm'
 ISCSI_TYPE = 'iscsi'
 
@@ -347,9 +347,6 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.VerifyAll()
 
     def test_fetch_vhd_image_works_with_bittorrent(self):
-        cfg.CONF.import_opt('torrent_base_url',
-                            'nova.virt.xenapi.image.bittorrent',
-                            group='xenserver')
         self.flags(torrent_base_url='http://foo', group='xenserver')
 
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
@@ -409,9 +406,6 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.VerifyAll()
 
     def test_fallback_to_default_handler(self):
-        cfg.CONF.import_opt('torrent_base_url',
-                            'nova.virt.xenapi.image.bittorrent',
-                            group='xenserver')
         self.flags(torrent_base_url='http://foo', group='xenserver')
 
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
@@ -443,9 +437,6 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.VerifyAll()
 
     def test_default_handler_does_not_fallback_to_itself(self):
-        cfg.CONF.import_opt('torrent_base_url',
-                            'nova.virt.xenapi.image.bittorrent',
-                            group='xenserver')
         self.flags(torrent_base_url='http://foo', group='xenserver')
 
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
