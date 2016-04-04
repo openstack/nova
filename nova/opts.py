@@ -24,8 +24,6 @@ import nova.console.manager
 import nova.console.rpcapi
 import nova.console.serial
 import nova.console.xvp
-import nova.consoleauth
-import nova.consoleauth.manager
 import nova.consoleauth.rpcapi
 import nova.crypto
 import nova.db.api
@@ -52,7 +50,6 @@ def list_opts():
         ('DEFAULT',
          itertools.chain(
              [nova.conductor.tasks.live_migrate.migrate_opt],
-             [nova.consoleauth.consoleauth_topic_opt],
              [nova.db.base.db_driver_opt],
              [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
@@ -60,7 +57,6 @@ def list_opts():
              nova.console.manager.console_manager_opts,
              nova.console.rpcapi.rpcapi_opts,
              nova.console.xvp.xvp_opts,
-             nova.consoleauth.manager.consoleauth_opts,
              nova.crypto.crypto_opts,
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
