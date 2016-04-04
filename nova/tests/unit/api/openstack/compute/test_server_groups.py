@@ -27,6 +27,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel
 
 FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
 FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
@@ -251,6 +252,10 @@ class ServerGroupTestV21(test.TestCase):
         self.assertEqual(2, len(result_members))
         for member in members:
             self.assertIn(member, result_members)
+
+    def test_display_members_with_nonexistent_group(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, self.req, uuidsentinel.group)
 
     def test_display_active_members_only(self):
         ctx = context.RequestContext('fake_user', 'fake')
