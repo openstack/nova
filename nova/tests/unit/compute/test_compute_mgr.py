@@ -21,7 +21,6 @@ from eventlet import event as eventlet_event
 import mock
 from mox3 import mox
 import netaddr
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -37,6 +36,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova.conductor import api as conductor_api
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -64,8 +64,7 @@ from nova.virt import fake as fake_driver
 from nova.virt import hardware
 
 
-CONF = cfg.CONF
-CONF.import_opt('compute_manager', 'nova.service')
+CONF = nova.conf.CONF
 
 
 class ComputeManagerUnitTestCase(test.NoDBTestCase):

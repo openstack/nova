@@ -25,7 +25,6 @@ from nova.virt import fake
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_manager', 'nova.service')
 
 
 class BaseTestCase(test.TestCase):

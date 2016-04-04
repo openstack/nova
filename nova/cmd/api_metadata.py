@@ -32,7 +32,6 @@ from nova import version
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('enabled_ssl_apis', 'nova.service')
 
 
 def main():

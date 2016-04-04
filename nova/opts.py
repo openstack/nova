@@ -36,7 +36,6 @@ import nova.netconf
 import nova.notifications
 import nova.paths
 import nova.quota
-import nova.service
 import nova.servicegroup.api
 import nova.spice
 import nova.utils
@@ -64,7 +63,6 @@ def list_opts():
              nova.notifications.notify_opts,
              nova.paths.path_opts,
              nova.quota.quota_opts,
-             nova.service.service_opts,
              nova.utils.monkey_patch_opts,
              nova.utils.utils_opts,
              nova.volume._volume_opts,

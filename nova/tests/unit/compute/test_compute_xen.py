@@ -25,7 +25,6 @@ from nova.tests.unit.virt.xenapi import stubs
 from nova.virt.xenapi import vm_utils
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_manager', 'nova.service')
 
 
 class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):

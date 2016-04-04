@@ -108,7 +108,6 @@ libvirt_guest.libvirt = fakelibvirt
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('instances_path', 'nova.compute.manager')

@@ -51,7 +51,6 @@ from nova.tests import uuidsentinel as uuids
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_manager', 'nova.service')
 
 
 def create_instance(context, user_id='fake', project_id='fake', params=None):

@@ -17,10 +17,10 @@
 """Tests For Console proxy."""
 
 import mock
-from oslo_config import cfg
 from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova.console import api as console_api
 from nova import context
 from nova import db
@@ -28,8 +28,7 @@ from nova import exception
 from nova import objects
 from nova import test
 
-CONF = cfg.CONF
-CONF.import_opt('console_manager', 'nova.service')
+CONF = nova.conf.CONF
 CONF.import_opt('console_driver', 'nova.console.manager')
 
 
