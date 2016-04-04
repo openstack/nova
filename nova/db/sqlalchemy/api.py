@@ -781,7 +781,11 @@ def _compute_node_select(context, filters=None):
     if "hypervisor_hostname" in filters:
         hyp_hostname = filters["hypervisor_hostname"]
         select = select.where(cn_tbl.c.hypervisor_hostname == hyp_hostname)
+    return select
 
+
+def _compute_node_fetchall(context, filters=None):
+    select = _compute_node_select(context, filters)
     engine = get_engine(context)
     conn = engine.connect()
 
@@ -795,7 +799,7 @@ def _compute_node_select(context, filters=None):
 
 @pick_context_manager_reader
 def compute_node_get(context, compute_id):
-    results = _compute_node_select(context, {"compute_id": compute_id})
+    results = _compute_node_fetchall(context, {"compute_id": compute_id})
     if not results:
         raise exception.ComputeHostNotFound(host=compute_id)
     return results[0]
@@ -815,7 +819,7 @@ def compute_node_get_model(context, compute_id):
 
 @pick_context_manager_reader
 def compute_nodes_get_by_service_id(context, service_id):
-    results = _compute_node_select(context, {"service_id": service_id})
+    results = _compute_node_fetchall(context, {"service_id": service_id})
     if not results:
         raise exception.ServiceNotFound(service_id=service_id)
     return results
@@ -823,7 +827,7 @@ def compute_nodes_get_by_service_id(context, service_id):
 
 @pick_context_manager_reader
 def compute_node_get_by_host_and_nodename(context, host, nodename):
-    results = _compute_node_select(context,
+    results = _compute_node_fetchall(context,
             {"host": host, "hypervisor_hostname": nodename})
     if not results:
         raise exception.ComputeHostNotFound(host=host)
@@ -832,7 +836,7 @@ def compute_node_get_by_host_and_nodename(context, host, nodename):
 
 @pick_context_manager_reader_allow_async
 def compute_node_get_all_by_host(context, host):
-    results = _compute_node_select(context, {"host": host})
+    results = _compute_node_fetchall(context, {"host": host})
     if not results:
         raise exception.ComputeHostNotFound(host=host)
     return results
@@ -840,7 +844,7 @@ def compute_node_get_all_by_host(context, host):
 
 @pick_context_manager_reader
 def compute_node_get_all(context):
-    return _compute_node_select(context)
+    return _compute_node_fetchall(context)
 
 
 @pick_context_manager_reader
@@ -895,38 +899,115 @@ def compute_node_delete(context, compute_id):
 @pick_context_manager_reader
 def compute_node_statistics(context):
     """Compute statistics over all compute nodes."""
+    engine = get_engine(context)
+    services_tbl = models.Service.__table__
+
+    inner_sel = sa.alias(_compute_node_select(context), name='inner_sel')
 
     # TODO(sbauza): Remove the service_id filter in a later release
     # once we are sure that all compute nodes report the host field
-    _filter = or_(models.Service.host == models.ComputeNode.host,
-                  models.Service.id == models.ComputeNode.service_id)
+    j = sa.join(
+        inner_sel, services_tbl,
+        sql.and_(
+            sql.or_(
+                inner_sel.c.host == services_tbl.c.host,
+                inner_sel.c.service_id == services_tbl.c.id
+            ),
+            services_tbl.c.disabled == false(),
+            services_tbl.c.binary == 'nova-compute'
+        )
+    )
 
-    result = model_query(context,
-                         models.ComputeNode, (
-                             func.count(models.ComputeNode.id),
-                             func.sum(models.ComputeNode.vcpus),
-                             func.sum(models.ComputeNode.memory_mb),
-                             func.sum(models.ComputeNode.local_gb),
-                             func.sum(models.ComputeNode.vcpus_used),
-                             func.sum(models.ComputeNode.memory_mb_used),
-                             func.sum(models.ComputeNode.local_gb_used),
-                             func.sum(models.ComputeNode.free_ram_mb),
-                             func.sum(models.ComputeNode.free_disk_gb),
-                             func.sum(models.ComputeNode.current_workload),
-                             func.sum(models.ComputeNode.running_vms),
-                             func.sum(models.ComputeNode.disk_available_least),
-                         ), read_deleted="no").\
-                         filter(models.Service.disabled == false()).\
-                         filter(models.Service.binary == "nova-compute").\
-                         filter(_filter).\
-                         first()
+    # NOTE(jaypipes): This COALESCE() stuff is temporary while the data
+    # migration to the new resource providers inventories and allocations
+    # tables is completed.
+    agg_cols = [
+        func.count().label('count'),
+        sql.func.sum(
+            sql.func.coalesce(
+                inner_sel.c.inv_vcpus,
+                inner_sel.c.vcpus
+            )
+        ).label('vcpus'),
+        sql.func.sum(
+            sql.func.coalesce(
+                inner_sel.c.inv_memory_mb,
+                inner_sel.c.memory_mb
+            )
+        ).label('memory_mb'),
+        sql.func.sum(
+            sql.func.coalesce(
+                inner_sel.c.inv_local_gb,
+                inner_sel.c.local_gb
+            )
+        ).label('local_gb'),
+        sql.func.sum(
+            sql.func.coalesce(
+                inner_sel.c.inv_vcpus_used,
+                inner_sel.c.vcpus_used
+            )
+        ).label('vcpus_used'),
+        sql.func.sum(
+            sql.func.coalesce(
+                inner_sel.c.inv_memory_mb_used,
+                inner_sel.c.memory_mb_used
+            )
+        ).label('memory_mb_used'),
+        sql.func.sum(
+            sql.func.coalesce(
+                inner_sel.c.inv_local_gb_used,
+                inner_sel.c.local_gb_used
+            )
+        ).label('local_gb_used'),
+        # NOTE(jaypipes): This mess cannot be removed until the
+        # resource-providers-allocations blueprint is completed and all of the
+        # data migrations for BOTH inventory and allocations fields have been
+        # completed.
+        sql.func.sum(
+            # NOTE(jaypipes): free_ram_mb and free_disk_gb do NOT take
+            # allocation ratios for those resources into account but they DO
+            # take reserved memory and disk configuration option amounts into
+            # account. Awesomesauce.
+            sql.func.coalesce(
+                (inner_sel.c.inv_memory_mb - (
+                    inner_sel.c.inv_memory_mb_used +
+                    inner_sel.c.inv_memory_mb_reserved)
+                ),
+                inner_sel.c.free_ram_mb
+            )
+        ).label('free_ram_mb'),
+        sql.func.sum(
+            sql.func.coalesce(
+                (inner_sel.c.inv_local_gb - (
+                    inner_sel.c.inv_local_gb_used +
+                    inner_sel.c.inv_local_gb_reserved)
+                ),
+                inner_sel.c.free_disk_gb
+            )
+        ).label('free_disk_gb'),
+        sql.func.sum(
+            inner_sel.c.current_workload
+        ).label('current_workload'),
+        sql.func.sum(
+            inner_sel.c.running_vms
+        ).label('running_vms'),
+        sql.func.sum(
+            inner_sel.c.disk_available_least
+        ).label('disk_available_least'),
+    ]
+    select = sql.select(agg_cols).select_from(j)
+    conn = engine.connect()
+
+    results = conn.execute(select).fetchone()
 
     # Build a dict of the info--making no assumptions about result
     fields = ('count', 'vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
               'memory_mb_used', 'local_gb_used', 'free_ram_mb', 'free_disk_gb',
               'current_workload', 'running_vms', 'disk_available_least')
-    return {field: int(result[idx] or 0)
-            for idx, field in enumerate(fields)}
+    results = {field: int(results[idx] or 0)
+               for idx, field in enumerate(fields)}
+    conn.close()
+    return results
 
 
 ###################
