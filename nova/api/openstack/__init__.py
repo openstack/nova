@@ -340,12 +340,10 @@ class APIRouterV21(base_wsgi.Router):
     def api_extension_namespace():
         return 'nova.api.v21.extensions'
 
-    def __init__(self, init_only=None, v3mode=False):
+    def __init__(self, init_only=None):
         # TODO(cyeoh): bp v3-api-extension-framework. Currently load
         # all extensions but eventually should be able to exclude
         # based on a config file
-        # TODO(oomichi): We can remove v3mode argument after moving all v3 APIs
-        # to v2.1.
         def _check_load_extension(ext):
             if (self.init_only is None or ext.obj.alias in
                 self.init_only) and isinstance(ext.obj,
@@ -388,10 +386,7 @@ class APIRouterV21(base_wsgi.Router):
             invoke_on_load=True,
             invoke_kwds={"extension_info": self.loaded_extension_info})
 
-        if v3mode:
-            mapper = PlainMapper()
-        else:
-            mapper = ProjectMapper()
+        mapper = ProjectMapper()
 
         self.resources = {}
 
