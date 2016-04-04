@@ -60,7 +60,7 @@ class PciServerControllerTestV21(test.NoDBTestCase):
                                        }]}
         self._create_fake_instance()
         self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
+        self.pci_device.claim(self.inst.uuid)
         self.pci_device.allocate(self.inst)
 
     def _create_fake_instance(self):

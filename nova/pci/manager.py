@@ -169,13 +169,7 @@ class PciDevTracker(object):
             self.pci_devs.objects.append(dev_obj)
             self.stats.add_device(dev_obj)
 
-    def _claim_instance(self, context, instance, prefix=''):
-        pci_requests = objects.InstancePCIRequests.get_by_instance(
-            context, instance)
-        if not pci_requests.requests:
-            return None
-        instance_numa_topology = hardware.instance_topology_from_instance(
-            instance)
+    def _claim_instance(self, context, pci_requests, instance_numa_topology):
         instance_cells = None
         if instance_numa_topology:
             instance_cells = instance_numa_topology.cells
@@ -185,13 +179,14 @@ class PciDevTracker(object):
         if not devs:
             return None
 
+        instance_uuid = pci_requests.instance_uuid
         for dev in devs:
-            dev.claim(instance)
+            dev.claim(instance_uuid)
         if instance_numa_topology and any(
                                         dev.numa_node is None for dev in devs):
             LOG.warning(_LW("Assigning a pci device without numa affinity to"
             "instance %(instance)s which has numa topology"),
-                        {'instance': instance['uuid']})
+                        {'instance': instance_uuid})
         return devs
 
     def _allocate_instance(self, instance, devs):
@@ -204,13 +199,15 @@ class PciDevTracker(object):
         if devs:
             self.allocations[instance['uuid']] += devs
 
-    def claim_instance(self, context, instance):
-        if not self.pci_devs:
+    def claim_instance(self, context, pci_requests, instance_numa_topology):
+        if not self.pci_devs or not pci_requests.requests:
             return
 
-        devs = self._claim_instance(context, instance)
+        instance_uuid = pci_requests.instance_uuid
+        devs = self._claim_instance(context, pci_requests,
+                                    instance_numa_topology)
         if devs:
-            self.claims[instance['uuid']] = devs
+            self.claims[instance_uuid] = devs
             return devs
         return None
 
@@ -260,8 +257,13 @@ class PciDevTracker(object):
                      the claims when sign is -1
         """
         uuid = instance['uuid']
+        pci_requests = objects.InstancePCIRequests.get_by_instance(
+                context, instance)
+        instance_numa_topology = hardware.instance_topology_from_instance(
+                instance)
         if sign == 1 and uuid not in self.claims:
-            devs = self._claim_instance(context, instance, 'new_')
+            devs = self._claim_instance(context, pci_requests,
+                                        instance_numa_topology)
             if devs:
                 self.claims[uuid] = devs
         if sign == -1 and uuid in self.claims:
