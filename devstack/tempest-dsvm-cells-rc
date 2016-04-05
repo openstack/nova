@@ -67,11 +67,14 @@ r="$r|(?:.*\[.*\bslow\b.*\])"
 
 # NOTE(mriedem): Resize tests are skipped in devstack until custom flavors
 # in devstack used in Tempest runs are synced to the cells database.
+# NOTE(mriedem): Rescue tests are skipped in devstack. They rely on floating
+# IPs and security groups, and rescue might not work with cells v1 anyway due
+# to synchronization issues.
+
 # tempest.api.compute.admin.test_networks.NetworksTest.test_get_network)"
 r="$r|(?:.*id\-d206d211\-8912\-486f\-86e2\-a9d090d1f416.*)"
 # tempest.api.compute.admin.test_networks.NetworksTest.test_list_all_networks)"
 r="$r|(?:.*id\-df3d1046\-6fa5\-4b2c\-ad0c\-cfa46a351cb9.*)"
-r="$r|(?:tempest\.api\.compute\.servers\.test_server_rescue\.ServerRescueTestJSON)"
 # tempest.api.compute.servers.test_create_server.ServersTestJSON.test_create_server_with_scheduler_hint_group
 r="$r|(?:.*id\-ed20d3fb\-9d1f\-4329\-b160\-543fbd5d9811.*)"
 # tempest.api.compute.servers.test_virtual_interfaces.VirtualInterfacesTestJSON.test_list_virtual_interfaces
@@ -80,7 +83,6 @@ r="$r|(?:.*id\-96c4e2ef\-5e4d\-4d7f\-87f5\-fed6dca18016.*)"
 r="$r|(?:.*id\-3fe07175\-312e\-49a5\-a623\-5f52eeada4c2.*)"
 # tempest.scenario.test_minimum_basic.TestMinimumBasicScenario.test_minimum_basic_scenario
 r="$r|(?:.*id\-bdbb5441\-9204\-419d\-a225\-b4fdbfb1a1a8.*)"
-r="$r|(?:tempest\.api\.compute\.servers\.test_server_rescue_negative\.ServerRescueNegativeTestJSON)"
 # tempest.scenario.test_encrypted_cinder_volumes.TestEncryptedCinderVolumes.test_encrypted_cinder_volumes_cryptsetup
 r="$r|(?:.*id\-cbc752ed\-b716\-4717\-910f\-956cce965722.*)"
 # tempest.scenario.test_encrypted_cinder_volumes.TestEncryptedCinderVolumes.test_encrypted_cinder_volumes_luks
