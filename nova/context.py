@@ -103,7 +103,8 @@ class RequestContext(context.RequestContext):
             show_deleted=kwargs.pop('show_deleted', False),
             request_id=request_id,
             resource_uuid=kwargs.pop('resource_uuid', None),
-            overwrite=overwrite)
+            overwrite=overwrite,
+            roles=roles)
         # oslo_context's RequestContext.to_dict() generates this field, we can
         # safely ignore this as we don't use it.
         kwargs.pop('user_identity', None)
@@ -116,7 +117,6 @@ class RequestContext(context.RequestContext):
         # get rid of them.
         self.user_id = user_id
         self.project_id = project_id
-        self.roles = roles or []
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
@@ -183,7 +183,6 @@ class RequestContext(context.RequestContext):
             'project_id': getattr(self, 'project_id', None),
             'is_admin': getattr(self, 'is_admin', None),
             'read_deleted': getattr(self, 'read_deleted', 'no'),
-            'roles': getattr(self, 'roles', None),
             'remote_address': getattr(self, 'remote_address', None),
             'timestamp': utils.strtime(self.timestamp) if hasattr(
                 self, 'timestamp') else None,
