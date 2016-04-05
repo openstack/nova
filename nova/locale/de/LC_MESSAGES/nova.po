@@ -10,21 +10,16 @@
 # Laera Loris <llaera@outlook.com>, 2013
 # matthew wagoner <zxkuqyb@gmail.com>, 2012
 # English translations for nova.
-# Andreas Jaeger <jaegerandi@gmail.com>, 2015. #zanata
-# Frank Kloeker <eumel@arcor.de>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
 # Frank Kloeker <eumel@arcor.de>, 2016. #zanata
-# Monika Wolf <vcomas3@de.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev15\n"
+"Project-Id-Version: nova 13.0.0.0rc3.dev11\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-24 10:46+0000\n"
+"POT-Creation-Date: 2016-03-31 06:58+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-24 03:12+0000\n"
+"PO-Revision-Date: 2016-04-05 06:32+0000\n"
 "Last-Translator: Monika Wolf <vcomas3@de.ibm.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -96,7 +91,7 @@ msgstr "%(host)s:%(port)s: Ziel geschlossen"
 #, python-format
 msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
 msgstr ""
-"%(key)s ist kein gültiger Quotenschlüssel. Gültige Optionen sind: "
+"%(key)s ist kein gültiger Kontingentschlüssel. Gültige Optionen sind: "
 "%(options)s."
 
 #, python-format
@@ -189,7 +184,7 @@ msgstr "%s ist kein gültiges IP-Netzwerk"
 
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
-msgstr "%s ist kein gültiger, von diesem Rechenhost verwalteter Knoten"
+msgstr "%s ist kein gültiger, von diesem Comput-Host verwalteter Knoten"
 
 #, python-format
 msgid "%s is not supported."
@@ -265,7 +260,7 @@ msgstr ""
 
 #, python-format
 msgid "API version %(version)s is not supported on this method."
-msgstr "API Version %(version)s ist nicht unterstützt für diese Methode."
+msgstr "API Version %(version)s wird für diese Methode nicht unterstützt."
 
 msgid "Access list not available for public flavors."
 msgstr "Zugriffsliste ist für öffentliche Versionen nicht verfügbar. "
@@ -398,7 +393,7 @@ msgid ""
 "nodes in image or flavor"
 msgstr ""
 "Asymmetrische NUMA-Topologien erfordern die explizite Zuordnung von CPUs und "
-"Speicher zu Knoten in Image oder Version"
+"Speicher zu Knoten in Abbild oder Version"
 
 #, python-format
 msgid ""
@@ -553,11 +548,11 @@ msgstr "Bootindex ist ungültig."
 
 #, python-format
 msgid "Build of instance %(instance_uuid)s aborted: %(reason)s"
-msgstr "Build der Instanz %(instance_uuid)s abgebrochen: %(reason)s"
+msgstr "Bau der Instanz %(instance_uuid)s abgebrochen: %(reason)s"
 
 #, python-format
 msgid "Build of instance %(instance_uuid)s was re-scheduled: %(reason)s"
-msgstr "Build der Instanz %(instance_uuid)s neu geplant: %(reason)s"
+msgstr "Bau der Instanz %(instance_uuid)s neu geplant: %(reason)s"
 
 #, python-format
 msgid "BuildRequest not found for instance %(uuid)s"
@@ -612,7 +607,7 @@ msgid "Can not add access to a public flavor."
 msgstr "Kann keinen Zugriff auf eine öffentliche Version herstellen. "
 
 msgid "Can not find requested image"
-msgstr "Angefordertes Image kann nicht gefunden werden"
+msgstr "Angefordertes Abbild kann nicht gefunden werden"
 
 #, python-format
 msgid "Can not handle authentication request for %d credentials"
@@ -729,7 +724,7 @@ msgid "Cannot find SR to read/write VDI."
 msgstr "SR zum Lesen/Schreiben von VDI kann nicht gefunden werden."
 
 msgid "Cannot find image for rebuild"
-msgstr "Image für Wiederherstellung kann nicht gefunden werden"
+msgstr "Abbild für Wiederherstellung kann nicht gefunden werden"
 
 #, python-format
 msgid ""
@@ -889,16 +884,17 @@ msgstr ""
 
 #, python-format
 msgid "Compute host %(host)s could not be found."
-msgstr "Rechenhost %(host)s konnte nicht gefunden werden."
+msgstr "Compute-Host %(host)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Compute host %(name)s needs to be created first before updating."
 msgstr ""
-"Rechenhost %(name)s muss erstellt werden, bevor er aktualisiert werden kann. "
+"Compute-Host %(name)s muss erstellt werden, bevor er aktualisiert werden "
+"kann. "
 
 #, python-format
 msgid "Compute host %s not found."
-msgstr "Rechenhost %s nicht gefunden."
+msgstr "Compute-Host %s nicht gefunden."
 
 #, python-format
 msgid "Compute service of %(host)s is still in use."
@@ -906,7 +902,7 @@ msgstr "Compute Dienst von %(host)s wird noch verwendet."
 
 #, python-format
 msgid "Compute service of %(host)s is unavailable at this time."
-msgstr "Rechenservice von %(host)s ist derzeit nicht verfügbar."
+msgstr "Compute Dienst von %(host)s ist derzeit nicht verfügbar."
 
 #, python-format
 msgid "Config drive format '%(format)s' is not supported."
@@ -994,7 +990,7 @@ msgid ""
 "Console pool of type %(console_type)s for compute host %(compute_host)s on "
 "proxy host %(host)s not found."
 msgstr ""
-"Konsolenpool vom Typ %(console_type)s für Rechenhost %(compute_host)s auf "
+"Konsolenpool vom Typ %(console_type)s für Compute-Host %(compute_host)s auf "
 "Proxy-Host %(host)s nicht gefunden."
 
 #, python-format
@@ -1018,7 +1014,7 @@ msgstr "Erweiterungen der API-Kerndefinitionen fehlen: %(missing_apis)s"
 
 #, python-format
 msgid "Could not attach image to loopback: %s"
-msgstr "Image konnte nicht an Loopback angehängt werden: %s"
+msgstr "Abbild konnte nicht an Loopback angehängt werden: %s"
 
 #, python-format
 msgid "Could not fetch image %(image_id)s"
@@ -1029,7 +1025,7 @@ msgid "Could not find a handler for %(driver_type)s volume."
 msgstr "Konnte keinen Handler finden für %(driver_type)s Datenträger."
 
 msgid "Could not find another compute"
-msgstr "Es konnte kein anderer Rechenknoten gefunden werden"
+msgstr "Es konnte kein anderer Compute-Knoten gefunden werden"
 
 #, python-format
 msgid "Could not find binary %(binary)s on host %(host)s."
@@ -1420,7 +1416,7 @@ msgstr "Vif %s konnte nicht erstellt werden."
 
 #, python-format
 msgid "Failed to decrypt image file %(image_file)s: %(err)s"
-msgstr "Fehler beim Entschlüsseln von Imagedatei %(image_file)s: %(err)s"
+msgstr "Fehler beim Entschlüsseln von Abbilddatei %(image_file)s: %(err)s"
 
 #, python-format
 msgid "Failed to decrypt initialization vector: %s"
@@ -1631,18 +1627,18 @@ msgstr "Keine feste IP für Adresse %(address)s gefunden."
 
 #, python-format
 msgid "Flavor %(flavor_id)s could not be found."
-msgstr "Version %(flavor_id)s konnte nicht gefunden werden."
+msgstr "Variante %(flavor_id)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Flavor %(flavor_id)s has no extra specs with key %(extra_specs_key)s."
 msgstr ""
-"Version %(flavor_id)s hat keine Sonderspezifikationen mit Schlüssel "
+"Variante %(flavor_id)s hat keine Sonderspezifikationen mit Schlüssel "
 "%(extra_specs_key)s."
 
 #, python-format
 msgid "Flavor %(flavor_id)s has no extra specs with key %(key)s."
 msgstr ""
-"Version %(flavor_id)s hat keine Sonderspezifikationen mit Schlüssel %(key)s."
+"Variante %(flavor_id)s hat keine Sonderspezifikationen mit Schlüssel %(key)s."
 
 #, python-format
 msgid ""
@@ -1663,7 +1659,7 @@ msgstr ""
 #, python-format
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
-"Versionszugriff nicht gefunden für Kombination aus %(flavor_id)s und "
+"Variantenzugriff nicht gefunden für Kombination aus %(flavor_id)s und "
 "%(project_id)s."
 
 msgid "Flavor for vpn instances"
@@ -1691,7 +1687,7 @@ msgstr "Version mit ID '%(flavor_id)s' ist bereits vorhanden."
 
 #, python-format
 msgid "Flavor with name %(flavor_name)s could not be found."
-msgstr "Version mit dem Namen %(flavor_name)s konnte nicht gefunden werden."
+msgstr "Variante mit dem Namen %(flavor_name)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Flavor with name %(name)s already exists."
@@ -1716,7 +1712,7 @@ msgstr ""
 "des Datenträgers ist %(flavor_size)i Bytes, Abbild ist %(image_size)i Bytes."
 
 msgid "Flavor's memory is too small for requested image."
-msgstr "Speicher der Version ist zu klein für angefordertes Image."
+msgstr "Speicher der Version ist zu klein für angefordertes Abbild."
 
 #, python-format
 msgid "Floating IP %(address)s already exists."
@@ -1739,7 +1735,7 @@ msgid "Floating IP %(address)s is not associated."
 msgstr "Floating IP %(address)s ist nicht zugeordnet."
 
 msgid "Floating IP allocate failed."
-msgstr "Allozierung von Floating IP fehlgeschlagen."
+msgstr "Zuweisen von Floating IP fehlgeschlagen."
 
 msgid "Floating IP is not associated"
 msgstr "Floating-IP-Adresse ist nicht zugeordnet."
@@ -1767,8 +1763,8 @@ msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
 msgstr ""
-"Es nicht zulässig, den Versionswert der Anzahl der seriellen Ports, die in "
-"den Imagemetadaten übergeben werden, zu überschreiten. "
+"Es ist nicht zulässig, den Versionswert der Anzahl der seriellen Ports, die "
+"in den Abbildmetadaten übergeben werden, zu überschreiten. "
 
 #, python-format
 msgid "Found no PIF for device %s"
@@ -1796,11 +1792,11 @@ msgstr ""
 
 #, python-format
 msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "Glance-Image '%(image_id)s' ist in unbekanntem Status - %(state)s"
+msgstr "Glance-Abbild '%(image_id)s' ist in unbekanntem Status - %(state)s"
 
 #, python-format
 msgid "Glance image %s is in killed state"
-msgstr "Glance-Image '%s' ist im Status 'killed'"
+msgstr "Glance-Abbild '%s' ist im Status 'killed'"
 
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
@@ -1884,10 +1880,10 @@ msgstr "IP-Adresse"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
-msgstr "IP-Zuordnung über Quote in Pool %s."
+msgstr "IP-Zuordnung über Kontingent in Pool %s."
 
 msgid "IP allocation over quota."
-msgstr "IP-Zuordnung über Quote."
+msgstr "IP-Zuordnung über Kontingent ."
 
 msgid "IPv4"
 msgstr "IPv4"
@@ -1910,9 +1906,9 @@ msgid ""
 "dynamically when they are listed for the first time. Have you listed image "
 "ids since adding this image?"
 msgstr ""
-"Image '%(image_id)s' konnte nicht gefunden werden. Die nova-EC2-API ordnet "
-"Image-IDs bei der ersten Auflistung dynamisch zu. Haben Sie Image-IDs "
-"aufgelistet, seitdem Sie dieses Image hinzugefügt haben?"
+"Abbild '%(image_id)s' konnte nicht gefunden werden. Die nova-EC2-API ordnet "
+"Abbild-IDs bei der ersten Auflistung dynamisch zu. Haben Sie Abbild-IDs "
+"aufgelistet, seitdem Sie dieses Abbild hinzugefügt haben?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1920,7 +1916,7 @@ msgstr "Abbild %(image_id)s ist nicht aktiv."
 
 #, python-format
 msgid "Image %(image_id)s is unacceptable: %(reason)s"
-msgstr "Image %(image_id)s ist nicht zulässig: %(reason)s"
+msgstr "Abbild %(image_id)s ist nicht zulässig: %(reason)s"
 
 msgid "Image disk size greater than requested disk size"
 msgstr ""
@@ -1930,13 +1926,13 @@ msgid "Image is not raw format"
 msgstr "Abbild ist kein Rohformat"
 
 msgid "Image metadata key cannot be blank"
-msgstr "Imagemetadatenschlüssel muss angegeben werden"
+msgstr "Abbildmetadatenschlüssel muss angegeben werden"
 
 msgid "Image metadata key too long"
-msgstr "Imagemetadatenschlüssel zu lang"
+msgstr "Abbildmetadatenschlüssel zu lang"
 
 msgid "Image metadata limit exceeded"
-msgstr "Grenzwert für Imagemetadaten überschritten"
+msgstr "Grenzwert für Abbildmetadaten überschritten"
 
 #, python-format
 msgid "Image model '%(image)s' is not supported"
@@ -1950,26 +1946,26 @@ msgid ""
 "Image property '%(name)s' is not permitted to override NUMA configuration "
 "set against the flavor"
 msgstr ""
-"Imageeigenschaft '%(name)s' darf die NUMA-Konfiguration für die Version "
+"Abbildeigenschaft '%(name)s' darf die NUMA-Konfiguration für die Version "
 "nicht überschreiben"
 
 msgid ""
 "Image property 'hw_cpu_policy' is not permitted to override CPU pinning "
 "policy set against the flavor"
 msgstr ""
-"Image-Eigenschaft 'hw_cpu_policy' darf die CPU-Pinn-Richtlinie, die für die "
+"Abbild-Eigenschaft 'hw_cpu_policy' darf die CPU-Pinn-Richtlinie, die für die "
 "Version festgelegt wurde, nicht überschreiben"
 
 msgid ""
 "Image property 'hw_cpu_thread_policy' is not permitted to override CPU "
 "thread pinning policy set against the flavor"
 msgstr ""
-"Die Abbildeigenschaft 'hw_cpu_thread_policy' darf die CPU-Thread-Pinning-"
+"Die Abbild-Eigenschaft 'hw_cpu_thread_policy' darf die CPU-Thread-Pinning-"
 "Richtlinie, die für die Variante festgelegt wurde, nicht überschreiben."
 
 msgid "Image that the instance was started with could not be found."
 msgstr ""
-"Image, mit dem die Instanz gestartet wurde, konnte nicht gefunden werden."
+"Abbild mit dem die Instanz gestartet wurde, konnte nicht gefunden werden."
 
 #, python-format
 msgid ""
@@ -1990,12 +1986,12 @@ msgstr ""
 #, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr ""
-"Die Konfigurationslaufwerkoption '%(config_drive)s' des Image ist ungültig"
+"Die Konfigurationslaufwerkoption '%(config_drive)s' des Abbildes ist ungültig"
 
 msgid ""
 "Images with destination_type 'volume' need to have a non-zero size specified"
 msgstr ""
-"Für Images mit destination_type 'volume' muss eine Größe ungleich null "
+"Für Abbilder mit destination_type 'volume' muss eine Größe ungleich null "
 "angegeben werden"
 
 msgid "In ERROR state"
@@ -2018,8 +2014,8 @@ msgid ""
 "Incompatible settings: ephemeral storage encryption is supported only for "
 "LVM images."
 msgstr ""
-"Inkompatible Einstellungen: Verschlüsselung für ephemeren Speicher wird nur "
-"unterstützt für LVM-Images. "
+"Inkompatible Einstellungen: Verschlüsselung für flüchtigen Speicher wird nur "
+"unterstützt für LVM-Abbilder."
 
 #, python-format
 msgid "Inconsistency in cell routing: %(reason)s"
@@ -2030,7 +2026,9 @@ msgstr "Falsches Anforderungshauptteilformat"
 
 #, python-format
 msgid "Info cache for instance %(instance_uuid)s could not be found."
-msgstr "Infocache für Instanz %(instance_uuid)s konnte nicht gefunden werden."
+msgstr ""
+"Infozwischenspeicher für Instanz %(instance_uuid)s konnte nicht gefunden "
+"werden."
 
 #, python-format
 msgid ""
@@ -2055,7 +2053,7 @@ msgstr "Instanz %(instance_id)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Instance %(instance_id)s has no tag '%(tag)s'"
-msgstr "Instanz %(instance_id)s weist kein Tag '%(tag)s' auf"
+msgstr "Instanz %(instance_id)s weist kein Schlagwort '%(tag)s' auf"
 
 #, python-format
 msgid "Instance %(instance_id)s is not in rescue mode"
@@ -2194,7 +2192,7 @@ msgid "Instance rollback performed due to: %s"
 msgstr "Instanz-Rollback ausgeführt. Ursache: %s"
 
 msgid "Instance snapshots are not permitted at this time."
-msgstr "Instanz-Momentaufnahmen sind derzeit nicht zulässig."
+msgstr "Instanz-Schattenkopien sind derzeit nicht zulässig."
 
 #, python-format
 msgid ""
@@ -2212,7 +2210,7 @@ msgstr "Nicht genug Compute Ressourcen: %(reason)s"
 #, python-format
 msgid "Insufficient free memory on compute node to start %(uuid)s."
 msgstr ""
-"Nicht genügend freier Speicherplatz auf Rechenknoten zum Starten von "
+"Nicht genügend freier Speicherplatz auf Compute-Knoten zum Starten von "
 "%(uuid)s."
 
 #, python-format
@@ -2221,7 +2219,7 @@ msgstr "Schnittstelle %(interface)s nicht gefunden."
 
 #, python-format
 msgid "Invalid Base 64 data for file %(path)s"
-msgstr "Ungültige Basis-64-Daten für Datei %(path)s"
+msgstr "Ungültige Base-64-Daten für Datei %(path)s"
 
 msgid "Invalid Connection Info"
 msgstr "Ungültige Verbindungsinformation"
@@ -2683,7 +2681,7 @@ msgid ""
 "<list entry name> sections"
 msgstr ""
 "Liste mit Dateisystemen, die in dieser Datei in den Abschnitten "
-"image_file_url:<Listeneintragsname> konfiguriert werden"
+"image_file_url:<list entry name> konfiguriert werden"
 
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr ""
@@ -2716,8 +2714,8 @@ msgid ""
 msgstr ""
 "Die Livemigration von Instanzen mit Konfigurationslaufwerken wird nicht "
 "unterstützt in libvirt, mit Ausnahme von Fällen, in denen der libvirt-"
-"Instanzpfad und die Laufwerkdaten von allen Rechenknoten gemeinsam verwendet "
-"werden."
+"Instanzpfad und die Laufwerkdaten von allen Compute-Knoten gemeinsam "
+"verwendet werden."
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2999,7 +2997,7 @@ msgstr "Netzwerk %(network_id)s dupliziert."
 
 #, python-format
 msgid "Network %(network_id)s is still in use."
-msgstr "Netz '%(network_id)s' ist noch im Gebrauch. "
+msgstr "Netz '%(network_id)s' ist noch im Benutzung. "
 
 #, python-format
 msgid ""
@@ -3114,7 +3112,7 @@ msgid "No cells available matching scheduling criteria."
 msgstr "Keine Zellen verfügbar, die den Planungskriterien entsprechen."
 
 msgid "No compute host specified"
-msgstr "Kein Rechenhost angegeben "
+msgstr "Kein Compute-Host angegeben "
 
 #, python-format
 msgid "No configuration information found for operating system %(os_name)s"
@@ -3176,7 +3174,7 @@ msgid "No hypervisor matching '%s' could be found."
 msgstr "Kein mit '%s' übereinstimmender Hypervisor konnte gefunden werden. "
 
 msgid "No image locations are accessible"
-msgstr "Es sind keine Imagepositionen verfügbar."
+msgstr "Es sind keine Abbildpositionen verfügbar."
 
 msgid "No instances found for any event"
 msgstr "Keine Instanzen für ein Ereignis gefunden"
@@ -3217,7 +3215,7 @@ msgid "No nova entries in syslog!"
 msgstr "Keine nova-Einträge im syslog!"
 
 msgid "No nw_info cache associated with instance"
-msgstr "Der Instanz ist kein 'nw_info'-Cache zugeordnet"
+msgstr "Der Instanz ist kein 'nw_info'-Zwischenspeicher zugeordnet"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -3282,7 +3280,7 @@ msgstr ""
 "frei."
 
 msgid "Not an rbd snapshot"
-msgstr "Keine RBD-Momentaufnahme"
+msgstr "Keine RBD-Schattenkopie"
 
 #, python-format
 msgid "Not authorized for image %(image_id)s."
@@ -3374,10 +3372,10 @@ msgid "OpenSSL error: %s"
 msgstr "OpenSSL-Fehler: %s"
 
 msgid "Origin header does not match this host."
-msgstr "Ursprungsheader stimmt nicht mit diesem Host überein."
+msgstr "Ursprunglicher Kopfteil stimmt nicht mit diesem Host überein."
 
 msgid "Origin header not valid."
-msgstr "Ursprungsheader nicht gültig."
+msgstr "Ursprunglicher Kopfteil nicht gültig."
 
 msgid "Origin header protocol does not match this host."
 msgstr "Ursprungsheaderprotokoll stimmt nicht mit diesem Host überein."
@@ -3419,9 +3417,9 @@ msgid ""
 "PCS doesn't support images in %s format. You should either set "
 "force_raw_images=True in config or upload an image in ploop or raw format."
 msgstr ""
-"PCS unterstützt keine Images im %s-Format. Sie sollten force_raw_images=True "
-"in der Konfiguration festlegen oder ein Image im ploop- oder unformatierten "
-"Format hochladen."
+"PCS unterstützt keine Abbilder im %s-Format. Sie sollten "
+"force_raw_images=True in der Konfiguration festlegen oder ein Abbild im "
+"ploop- oder unformatierten Format hochladen."
 
 #, python-format
 msgid ""
@@ -3464,11 +3462,11 @@ msgid "Paused"
 msgstr "Pausiert"
 
 msgid "Personality cannot be updated."
-msgstr "Persönlichkeit kann nicht aktualisiert werden. "
+msgstr "Persönliches kann nicht aktualisiert werden. "
 
 #, python-format
 msgid "Personality content for %s cannot be decoded"
-msgstr "Persönlichkeitsinhalt für %s kann nicht entschlüsselt werden"
+msgstr "Persönlicher Inhalt für %s kann nicht entschlüsselt werden"
 
 msgid "Personality file content too long"
 msgstr "Inhalt von Persönlichkeitsdatei zu lang"
@@ -3566,10 +3564,10 @@ msgstr "Kontingent"
 
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
-msgstr "Quotenklasse %(class_name)s konnte nicht gefunden werden."
+msgstr "Kontingentklasse %(class_name)s konnte nicht gefunden werden."
 
 msgid "Quota could not be found"
-msgstr "Quote konnte nicht gefunden werden"
+msgstr "Kontingent konnte nicht gefunden werden"
 
 #, python-format
 msgid ""
@@ -3581,57 +3579,58 @@ msgstr ""
 
 #, python-format
 msgid "Quota exceeded for resources: %(overs)s"
-msgstr "Quote für Ressourcen überschritten: %(overs)s"
+msgstr "Kontingent für Ressourcen überschritten: %(overs)s"
 
 msgid "Quota exceeded, too many key pairs."
-msgstr "Quote überschritten, zu viele Schlüsselpaare"
+msgstr "Kontingent überschritten, zu viele Schlüsselpaare"
 
 msgid "Quota exceeded, too many networks."
-msgstr "Quote überschritten, zu viele Netze."
+msgstr "Kontingent überschritten, zu viele Netze."
 
 msgid "Quota exceeded, too many security group rules."
-msgstr "Quote überschritten, zu viele Sicherheitsgruppenregeln. "
+msgstr "Kontingent überschritten, zu viele Sicherheitsgruppenregeln. "
 
 msgid "Quota exceeded, too many security groups."
-msgstr "Quote überschritten, zu viele Sicherheitsgruppen. "
+msgstr "Kontingent überschritten, zu viele Sicherheitsgruppen. "
 
 msgid "Quota exceeded, too many server groups."
-msgstr "Quote überschritten, zu viele Servergruppen. "
+msgstr "Kontingent überschritten, zu viele Servergruppen. "
 
 msgid "Quota exceeded, too many servers in group"
-msgstr "Quote überschritten, zu viele Server in Gruppe"
+msgstr "Kontingent überschritten, zu viele Server in Gruppe"
 
 #, python-format
 msgid "Quota exceeded: code=%(code)s"
-msgstr "Quote überschritten: code=%(code)s"
+msgstr "Kontingent überschritten: code=%(code)s"
 
 #, python-format
 msgid "Quota exists for project %(project_id)s, resource %(resource)s"
 msgstr ""
-"Für Projekt %(project_id)s, Ressource %(resource)s ist eine Quote vorhanden"
+"Für Projekt %(project_id)s, Ressource %(resource)s ist eine Kontingent "
+"vorhanden"
 
 #, python-format
 msgid "Quota for project %(project_id)s could not be found."
-msgstr "Quote für Projekt %(project_id)s konnte nicht gefunden werden."
+msgstr "Kontingent für Projekt %(project_id)s konnte nicht gefunden werden."
 
 #, python-format
 msgid ""
 "Quota for user %(user_id)s in project %(project_id)s could not be found."
 msgstr ""
-"Quote für Benutzer %(user_id)s im Projekt %(project_id)s konnte nicht "
+"Kontingent für Benutzer %(user_id)s im Projekt %(project_id)s konnte nicht "
 "gefunden werden."
 
 #, python-format
 msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "Quotengrenzwert %(limit)s für %(resource)s muss mindestens -1 sein"
+msgstr "Kontingentgrenzwert %(limit)s für %(resource)s muss mindestens -1 sein"
 
 #, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
 msgstr ""
-"Quotengrenzwert %(limit)s für %(resource)s muss größer-gleich dem bereits "
-"verwendeten und reservierten Wert %(minimum)s sein."
+"Kontingentgrenzwert %(limit)s für %(resource)s muss größer-gleich dem "
+"bereits verwendeten und reservierten Wert %(minimum)s sein."
 
 #, python-format
 msgid ""
@@ -3646,27 +3645,28 @@ msgid ""
 "Quota limit %(limit)s for %(resource)s must be less than or equal to "
 "%(maximum)s."
 msgstr ""
-"Quotengrenzwert %(limit)s für %(resource)s muss kleiner-gleich %(maximum)s "
-"sein."
+"Kontingentgrenzwert %(limit)s für %(resource)s muss kleiner-gleich "
+"%(maximum)s sein."
 
 msgid "Quota limit must be -1 or greater."
-msgstr "Quotengrenzwert muss mindestens -1 sein. "
+msgstr "Kontingentgrenzwert muss mindestens -1 sein. "
 
 #, python-format
 msgid "Quota limit must be greater than %s."
-msgstr "Quotengrenzwert muss größer als %s sein."
+msgstr "Kontingentgrenzwert muss größer als %s sein."
 
 #, python-format
 msgid "Quota limit must be less than %s."
-msgstr "Quotengrenzwert muss kleiner als %s sein."
+msgstr "Kontingentgrenzwert muss kleiner als %s sein."
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
-msgstr "Quotenreservierung %(uuid)s konnte nicht gefunden werden."
+msgstr "Kontingentreservierung %(uuid)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Quota usage for project %(project_id)s could not be found."
-msgstr "Quotennutzung für Projekt %(project_id)s konnte nicht gefunden werden."
+msgstr ""
+"Kontingentnutzung für Projekt %(project_id)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Reached maximum number of retries trying to unplug VBD %s"
@@ -3710,7 +3710,7 @@ msgstr ""
 #, python-format
 msgid "Request of image %(image_id)s got BadRequest response: %(response)s"
 msgstr ""
-"Bei der Anforderung des Image %(image_id)s wurde eine BadRequest-Antwort "
+"Bei der Anforderung des Abbild %(image_id)s wurde eine BadRequest-Antwort "
 "empfangen: %(response)s"
 
 #, python-format
@@ -3738,8 +3738,8 @@ msgstr ""
 #, python-format
 msgid "Requested image %(image)s has automatic disk resize disabled."
 msgstr ""
-"Für das angeforderte Image %(image)s wurde die automatische "
-"Plattengrößenänderung inaktiviert."
+"Für das angeforderte Abbild %(image)s wurde die automatische "
+"Plattengrößenänderung deaktiviert."
 
 msgid ""
 "Requested instance NUMA topology cannot fit the given host NUMA topology"
@@ -3975,15 +3975,15 @@ msgstr "ServerGroupSoftAntiAffinityWeigher nicht konfiguriert"
 
 #, python-format
 msgid "Service %(service)s on host %(host)s disabled."
-msgstr "Service %(service)s auf Host %(host)s ist inaktiviert."
+msgstr "Dienst %(service)s auf Host %(host)s ist deaktiviert."
 
 #, python-format
 msgid "Service %(service)s on host %(host)s enabled."
-msgstr "Service %(service)s auf Host %(host)s ist aktiviert."
+msgstr "DIenst %(service)s auf Host %(host)s ist aktiviert."
 
 #, python-format
 msgid "Service %(service_id)s could not be found."
-msgstr "Service %(service_id)s konnte nicht gefunden werden."
+msgstr "Dienst %(service_id)s konnte nicht gefunden werden."
 
 #, python-format
 msgid "Service %s not found."
@@ -3998,14 +3998,14 @@ msgstr "Service ist derzeit nicht verfügbar."
 
 #, python-format
 msgid "Service with host %(host)s binary %(binary)s exists."
-msgstr "Service mit Host %(host)s, Binärcode %(binary)s ist bereits vorhanden."
+msgstr "Dienst mit Host %(host)s, Binärcode %(binary)s ist bereits vorhanden."
 
 #, python-format
 msgid "Service with host %(host)s topic %(topic)s exists."
-msgstr "Service mit Host %(host)s, Topic %(topic)s ist bereits vorhanden."
+msgstr "Dienst mit Host %(host)s, Topic %(topic)s ist bereits vorhanden."
 
 msgid "Set admin password is not supported"
-msgstr "Das Setzen des Admin-Passwortes wird nicht unterstützt"
+msgstr "Das Setzen des Administratorkennworts wird nicht unterstützt"
 
 #, python-format
 msgid "Shadow table with name %(name)s already exists."
@@ -4035,7 +4035,7 @@ msgstr "Signaturverifizierung für das Abbild fehlgeschlagen: %(reason)s."
 
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
-msgstr "Momentaufnahme %(snapshot_id)s konnte nicht gefunden werden."
+msgstr "Schattenkopie %(snapshot_id)s konnte nicht gefunden werden."
 
 msgid "Some fields are invalid."
 msgstr "Einige Felder sind ungültig."
@@ -4178,7 +4178,7 @@ msgstr "Der erstellte Datenträger für die Instanz würde zu klein sein."
 
 msgid "The current driver does not support preserving ephemeral partitions."
 msgstr ""
-"Das Beibehalten ephemerer Partitionen wird vom aktuellen Treiber nicht "
+"Das Beibehalten flüchtiger Partitionen wird vom aktuellen Treiber nicht "
 "unterstützt."
 
 msgid "The default PBM policy doesn't exist on the backend."
@@ -4356,7 +4356,7 @@ msgstr "Die VLAN-Anzahl darf nicht kleiner als 1 sein"
 msgid ""
 "The volume cannot be assigned the same device name as the root device %s"
 msgstr ""
-"Der Datenträger kann nicht zum delben Gerätenamen wir das Root Gerät %s "
+"Der Datenträger kann nicht zum selben Gerätenamen wir das Root Gerät %s "
 "zugewiesen werden"
 
 msgid "The volume was either invalid or not attached to the instance."
@@ -4858,7 +4858,7 @@ msgstr ""
 
 #, python-format
 msgid "Unknown quota resources %(unknown)s."
-msgstr "Unbekannte Quotenressourcen %(unknown)s."
+msgstr "Unbekanntes Kontingent %(unknown)s."
 
 msgid "Unknown sort direction, must be 'desc' or 'asc'"
 msgstr ""
@@ -4885,7 +4885,8 @@ msgstr "Unsichere Dateinamen im Abbild"
 
 #, python-format
 msgid "Unshelve attempted but the image %s cannot be found."
-msgstr "Aufnahme wurde versucht, aber das Image %s kann nicht gefunden werden."
+msgstr ""
+"Aufnahme wurde versucht, aber das Abbild %s kann nicht gefunden werden."
 
 msgid "Unsupported Content-Type"
 msgstr "Nicht unterstützter Inhaltstyp"
@@ -5039,7 +5040,7 @@ msgstr ""
 #, python-format
 msgid "Virtualization type '%(virt)s' is not supported by this compute driver"
 msgstr ""
-"Virtualisierungstyp '%(virt)s' wird von diesem Rechentreiber nicht "
+"Virtualisierungstyp '%(virt)s' wird von diesem Compute-Treiber nicht "
 "unterstützt"
 
 msgid "VlanID"
@@ -5139,7 +5140,7 @@ msgstr "Wo sollen wir unsere root CA aufbewahren"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
-msgstr "Falsche Quotenmethode %(method)s für Ressource %(res)s verwendet"
+msgstr "Falsche Kontingentmethode %(method)s für Ressource %(res)s verwendet"
 
 msgid "Wrong type of hook method. Only 'pre' and 'post' type allowed"
 msgstr ""
@@ -5152,7 +5153,7 @@ msgid "X-Instance-ID header is missing from request."
 msgstr "X-Instance-ID-Header fehlt in Anforderung. "
 
 msgid "X-Instance-ID-Signature header is missing from request."
-msgstr "X-Instance-ID-Signature-Header fehlt in Anforderung."
+msgstr "X-Instance-ID-Signature-Kopfteil fehlt in Anforderung."
 
 msgid "X-Metadata-Provider is missing from request."
 msgstr "X-Metadata-Provider wird in der Anfrage vermisst."
@@ -5164,12 +5165,12 @@ msgid "XAPI supporting relax-xsm-sr-check=true required"
 msgstr "XAPI mit Unterstützung für 'relax-xsm-sr-check=true' erforderlich"
 
 msgid "You are not allowed to delete the image."
-msgstr "Sie sind nicht berechtigt, dieses Image zu löschen."
+msgstr "Sie sind nicht berechtigt, dieses Abbild zu löschen."
 
 msgid ""
 "You are not authorized to access the image the instance was started with."
 msgstr ""
-"Sie sind nicht berechtigt, auf das Image zuzugreifen, mit dem die Instanz "
+"Sie sind nicht berechtigt, auf das Abbild zuzugreifen, mit dem die Instanz "
 "gestartet wurde."
 
 msgid "You must implement __call__"
@@ -5177,11 +5178,12 @@ msgstr "Sie müssen '__call__' implementieren"
 
 msgid "You should specify images_rbd_pool flag to use rbd images."
 msgstr ""
-"Sie sollten das Flag 'images_rbd_pool' angeben, um RBD-Images zu verwenden"
+"Sie sollten die Markierung 'images_rbd_pool' angeben, um RBD-Abbilder zu "
+"verwenden"
 
 msgid "You should specify images_volume_group flag to use LVM images."
 msgstr ""
-"Sie sollten das Flag 'images_volume_group' angeben, um LVM-Images zu "
+"Sie sollten das Flag 'images_volume_group' angeben, um LVM-Abbilder zu "
 "verwenden"
 
 msgid ""
@@ -5206,7 +5208,8 @@ msgstr ""
 "oder Ihr Zielknoten unterstützt das Abrufen von Empfangsadressen nicht.  "
 "Damit die Livemigration ordnungsgemäß funktioniert, müssen Sie die Grafik-"
 "Empfangsadressen (VNC und/oder SPICE) entweder als umfassende Adresse "
-"(0.0.0.0 or ::) oder als die lokale Adresse (127.0.0.1 or ::1) konfigurieren."
+"(0.0.0.0 oder ::) oder als die lokale Adresse (127.0.0.1 oder ::1) "
+"konfigurieren."
 
 msgid "Zero fixed IPs could be found."
 msgstr "Es konnten keine festen IP-Adressen gefunden werden."
@@ -5231,8 +5234,8 @@ msgstr "accessIPv6 ist kein ordnungsgemäßes IPv6-Format"
 
 msgid "admin password can't be changed on existing disk"
 msgstr ""
-"Das Administrator Passwort kann nicht auf der bestehenden Festplatte "
-"geändert werden"
+"Das Administratorkennwort kann nicht auf der bestehenden Festplatte geändert "
+"werden"
 
 msgid "aggregate deleted"
 msgstr "Aggregat gelöscht"
@@ -5500,8 +5503,9 @@ msgid ""
 "lxc containers.  See the man page for details."
 msgstr ""
 "nova-idmapshift ist ein Werkzeug  welches die Rechte im Dateisystem richtig "
-"zur Benutzung im Linux User Namensraum setzt.  Dieses Werkzeug kann nur im "
-"Linux LXC Conainer benutzt werden. Schauen Sie in die Man Page für Details."
+"zur Benutzung im Linux Benutzer Namensraum setzt.  Dieses Werkzeug kann nur "
+"im Linux LXC Conainer benutzt werden. Schauen Sie in die Man Page für "
+"Details."
 
 msgid "old style configuration can use only dictionary or memcached backends"
 msgstr ""
@@ -5585,12 +5589,12 @@ msgstr "serve() kann nur einmal aufgerufen werden."
 
 msgid "service is a mandatory argument for DB based ServiceGroup driver"
 msgstr ""
-"Service ist ein obligatorisches Argument für den datenbankbasierten "
+"Dienst ist ein obligatorisches Argument für den datenbankbasierten "
 "ServiceGroup-Treiber"
 
 msgid "service is a mandatory argument for Memcached based ServiceGroup driver"
 msgstr ""
-"Service ist ein obligatorisches Argument für den Memcached-basierten "
+"Dienst ist ein obligatorisches Argument für den Memcached-basierten "
 "ServiceGroup-Treiber"
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
@@ -5603,10 +5607,10 @@ msgstr "Konfiguration in Bearbeitung"
 
 #, python-format
 msgid "snapshot for %s"
-msgstr "Momentaufnahme für %s"
+msgstr "Schattenkopie für %s"
 
 msgid "snapshot not specified"
-msgstr "Momentaufnahme nicht angegeben"
+msgstr "Schattenkopie nicht angegeben"
 
 msgid "snapshot_id required in create_info"
 msgstr "snapshot_id in create_info erforderlich"
