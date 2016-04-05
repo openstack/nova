@@ -32,6 +32,7 @@ from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
+from nova.tests import uuidsentinel as uuids
 
 
 class NotificationsTestCase(test.TestCase):
@@ -70,7 +71,7 @@ class NotificationsTestCase(test.TestCase):
 
     def _wrapped_create(self, params=None):
         instance_type = flavors.get_flavor_by_name('m1.tiny')
-        inst = objects.Instance(image_ref=1,
+        inst = objects.Instance(image_ref=uuids.image_ref,
                                 user_id=self.user_id,
                                 project_id=self.project_id,
                                 instance_type_id=instance_type['id'],
