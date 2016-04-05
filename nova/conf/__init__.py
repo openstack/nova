@@ -71,7 +71,7 @@ from nova.conf import service
 # from nova.conf import spice
 # from nova.conf import ssl
 # from nova.conf import trusted_computing
-# from nova.conf import upgrade_levels
+from nova.conf import upgrade_levels
 from nova.conf import virt
 # from nova.conf import vmware
 from nova.conf import vnc
@@ -135,7 +135,7 @@ service.register_opts(CONF)
 # spice.register_opts(CONF)
 # ssl.register_opts(CONF)
 # trusted_computing.register_opts(CONF)
-# upgrade_levels.register_opts(CONF)
+upgrade_levels.register_opts(CONF)
 virt.register_opts(CONF)
 # vmware.register_opts(CONF)
 vnc.register_opts(CONF)

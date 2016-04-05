@@ -19,7 +19,6 @@ DEFAULT_GROUP_NAME = "DEFAULT"
 # The scheduler has options in several groups
 METRICS_GROUP_NAME = "metrics"
 TRUSTED_GROUP_NAME = "trusted_computing"
-UPGRADE_GROUP_NAME = "upgrade_levels"
 
 
 host_subset_size_opt = cfg.IntOpt("scheduler_host_subset_size",
@@ -386,28 +385,6 @@ which will *always* be restricted to isolated hosts.
 
     scheduler/isolated_images
     scheduler/isolated_hosts
-""")
-
-# This option specifies an option group, so register separately
-rpcapi_cap_opt = cfg.StrOpt("scheduler",
-        help="""
-Sets a version cap (limit) for messages sent to scheduler services. In the
-situation where there were multiple scheduler services running, and they were
-not being upgraded together, you would set this to the lowest deployed version
-to guarantee that other services never send messages that any of your running
-schedulers cannot understand.
-
-This is rarely needed in practice as most deployments run a single scheduler.
-It exists mainly for design compatibility with the other services, such as
-compute, which are routinely upgraded in a rolling fashion.
-
-* Services that use this:
-
-    ``nova-compute, nova-conductor``
-
-* Related options:
-
-    None
 """)
 
 # These opts are registered as a separate OptGroup
@@ -943,7 +920,6 @@ default_opts = [host_subset_size_opt,
 
 def register_opts(conf):
     conf.register_opts(default_opts)
-    conf.register_opt(rpcapi_cap_opt, UPGRADE_GROUP_NAME)
     trust_group = cfg.OptGroup(name=TRUSTED_GROUP_NAME,
                                title="Trust parameters")
     conf.register_group(trust_group)
@@ -953,7 +929,6 @@ def register_opts(conf):
 
 def list_opts():
     return {DEFAULT_GROUP_NAME: default_opts,
-            UPGRADE_GROUP_NAME: [rpcapi_cap_opt],
             TRUSTED_GROUP_NAME: trusted_opts,
             METRICS_GROUP_NAME: metrics_weight_opts,
             }

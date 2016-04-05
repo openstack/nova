@@ -15,7 +15,6 @@
 
 """Client side of the conductor RPC API."""
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_versionedobjects import base as ovo_base
@@ -25,10 +24,6 @@ from nova.objects import base as objects_base
 from nova import rpc
 
 CONF = nova.conf.CONF
-
-rpcapi_cap_opt = cfg.StrOpt('conductor',
-        help='Set a version cap for messages sent to conductor services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
 class ConductorAPI(object):

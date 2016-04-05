@@ -729,57 +729,6 @@ Related options:
 """)
 ]
 
-
-rpcapi_cap_intercell_opt = cfg.StrOpt('intercell',
-        help="""
-Intercell version
-
-Intercell RPC API is the client side of the Cell<->Cell RPC API.
-Use this option to set a version cap for messages sent between
-cells services.
-
-Possible values:
-
-* None: This is the default value.
-* grizzly: message version 1.0.
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
-""")
-
-
-rpcapi_cap_cells_opt = cfg.StrOpt('cells',
-        help="""
-Cells version
-
-Cells client-side RPC API version. Use this option to set a version
-cap for messages sent to local cells services.
-
-Possible values:
-
-* None: This is the default value.
-* grizzly: message version 1.6.
-* havana: message version 1.24.
-* icehouse: message version 1.27.
-* juno: message version 1.29.
-* kilo: message version 1.34.
-* liberty: message version 1.37.
-
-Services which consume this:
-
-* nova-cells
-
-Related options:
-
-* None
-""")
-
-
 ALL_CELLS_OPTS = list(itertools.chain(
             cells_opts,
             mute_weigher_opts,
@@ -792,17 +741,10 @@ ALL_CELLS_OPTS = list(itertools.chain(
             cell_state_manager_opts
             ))
 
-ALL_RPCAPI_CAP_OPTS = [rpcapi_cap_intercell_opt,
-                       rpcapi_cap_cells_opt]
-
 
 def register_opts(conf):
     conf.register_opts(ALL_CELLS_OPTS, group="cells")
-    conf.register_opts(ALL_RPCAPI_CAP_OPTS, group="upgrade_levels")
 
 
 def list_opts():
-    return {
-        'cells': ALL_CELLS_OPTS,
-        'upgrade_levels': ALL_RPCAPI_CAP_OPTS,
-    }
+    return {'cells': ALL_CELLS_OPTS}

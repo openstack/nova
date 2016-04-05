@@ -18,18 +18,14 @@
 Base RPC client and server common to all services.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova import rpc
 
 
-CONF = cfg.CONF
-rpcapi_cap_opt = cfg.StrOpt('baseapi',
-        help='Set a version cap for messages sent to the base api in any '
-             'service')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 _NAMESPACE = 'baseapi'
 

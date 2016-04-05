@@ -31,8 +31,4 @@ def list_opts():
              nova.compute.manager.timeout_opts,
              nova.compute.rpcapi.rpcapi_opts,
          )),
-        ('upgrade_levels',
-         itertools.chain(
-             [nova.compute.rpcapi.rpcapi_cap_opt],
-         )),
     ]
