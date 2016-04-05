@@ -2810,6 +2810,23 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Make sure instance faults is deleted as well
         self.assertEqual(0, len(faults[uuid]))
 
+    def test_delete_instance_group_member_on_instance_destroy(self):
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+        db.instance_create(ctxt, {'uuid': uuid})
+        values = {'name': 'fake_name', 'user_id': 'fake',
+                  'project_id': 'fake'}
+        group = db.instance_group_create(ctxt, values,
+                                         policies=None, members=[uuid])
+        self.assertEqual([uuid],
+                         db.instance_group_members_get(ctxt,
+                                                       group['uuid']))
+
+        db.instance_destroy(ctxt, uuid)
+        self.assertEqual([],
+                         db.instance_group_members_get(ctxt,
+                                                       group['uuid']))
+
     def test_instance_update_and_get_original(self):
         instance = self.create_instance_with_args(vm_state='building')
         (old_ref, new_ref) = db.instance_update_and_get_original(self.ctxt,
