@@ -30,7 +30,6 @@ import nova.db.base
 import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
-import nova.ipv6.api
 import nova.netconf
 import nova.notifications
 import nova.paths
@@ -47,7 +46,6 @@ def list_opts():
          itertools.chain(
              [nova.conductor.tasks.live_migrate.migrate_opt],
              [nova.db.base.db_driver_opt],
-             [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
              nova.cmd.novnc.opts,
              nova.console.manager.console_manager_opts,
