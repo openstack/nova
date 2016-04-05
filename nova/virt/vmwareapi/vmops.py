@@ -518,9 +518,6 @@ class VMwareVMOps(object):
         self._move_to_cache(vi.dc_info.ref,
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
-        # The size of the image is different from the size of the virtual
-        # disk. We want to use the latter.
-        self._update_image_size(vi)
 
     def _cache_flat_image(self, vi, tmp_image_ds_loc):
         self._move_to_cache(vi.dc_info.ref,
@@ -614,6 +611,11 @@ class VMwareVMOps(object):
                 LOG.debug("Cleaning up location %s", str(tmp_dir_loc),
                           instance=vi.instance)
                 self._delete_datastore_file(str(tmp_dir_loc), vi.dc_info.ref)
+
+            # The size of the sparse image is different from the size of the
+            # virtual disk. We want to use the latter.
+            if vi.ii.disk_type == constants.DISK_TYPE_SPARSE:
+                self._update_image_size(vi)
 
     def _create_and_attach_thin_disk(self, instance, vm_ref, dc_info, size,
                                      adapter_type, path):

@@ -1997,7 +1997,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, '_cache_sparse_image')
     @mock.patch.object(vmops.VMwareVMOps, '_cache_flat_image')
     @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
+    @mock.patch.object(vmops.VMwareVMOps, '_update_image_size')
     def _test_fetch_image_if_missing(self,
+                                     mock_update_image_size,
                                      mock_delete_datastore_file,
                                      mock_cache_flat_image,
                                      mock_cache_sparse_image,
@@ -2034,6 +2036,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         mock_cache.assert_called_once_with(vi, tmp_image_path)
         mock_delete_datastore_file.assert_called_once_with(
                 str(tmp_dir_path), self._dc_info.ref)
+        if is_sparse_disk:
+            mock_update_image_size.assert_called_once_with(vi)
 
     def test_fetch_image_if_missing(self):
         self._test_fetch_image_if_missing()
@@ -2261,9 +2265,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(ds_util, 'file_move')
     @mock.patch.object(vm_util, 'copy_virtual_disk')
     @mock.patch.object(vmops.VMwareVMOps, '_delete_datastore_file')
-    @mock.patch.object(vmops.VMwareVMOps, '_update_image_size')
     def test_cache_sparse_image(self,
-                                mock_update_image_size,
                                 mock_delete_datastore_file,
                                 mock_copy_virtual_disk,
                                 mock_file_move):
@@ -2282,7 +2284,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self._session, self._dc_info.ref,
                 sparse_disk_path,
                 DsPathMatcher(target_disk_path))
-        mock_update_image_size.assert_called_once_with(vi)
 
     def test_get_storage_policy_none(self):
         flavor = objects.Flavor(name='m1.small',
