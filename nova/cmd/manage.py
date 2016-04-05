@@ -1157,34 +1157,13 @@ class CellV2Commands(object):
                 database_connection=dbc)
         cell_mapping.create()
 
-    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
-            help='Unmigrated instances will be mapped to the cell with the '
-                 'uuid provided.')
-    @args('--limit', metavar='<limit>',
-          help='Maximum number of instances to map')
-    @args('--marker', metavar='<marker',
-          help='The last updated instance UUID')
-    @args('--verbose', metavar='<verbose>',
-          help='Provide output for the registration')
-    def map_instances(self, cell_uuid, limit=None,
-                      marker=None, verbose=0):
-        if limit is not None:
-            limit = int(limit)
-            if limit < 0:
-                print('Must supply a positive value for limit')
-                return(1)
-        ctxt = context.get_admin_context(read_deleted='yes')
-        # Validate the cell exists
-        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+    def _get_and_map_instances(self, ctxt, cell_mapping, limit, marker):
         filters = {}
         instances = objects.InstanceList.get_by_filters(
-                ctxt, filters, sort_key='created_at', sort_dir='asc',
-                limit=limit, marker=marker)
-        if verbose:
-            fmt = "%s instances retrieved to be mapped to cell %s"
-            print(fmt % (len(instances), cell_uuid))
+                ctxt.elevated(read_deleted='yes'), filters,
+                sort_key='created_at', sort_dir='asc', limit=limit,
+                marker=marker)
 
-        mapped = 0
         for instance in instances:
             try:
                 mapping = objects.InstanceMapping(ctxt)
@@ -1193,16 +1172,77 @@ class CellV2Commands(object):
                 mapping.project_id = instance.project_id
                 mapping.create()
             except db_exc.DBDuplicateEntry:
-                if verbose:
-                    print("%s already mapped to cell" % instance.uuid)
                 continue
-            mapped += 1
 
-        fmt = "%s instances registered to cell %s"
-        print(fmt % (mapped, cell_mapping.uuid))
-        if instances:
-            instance = instances[-1]
-            print('Next marker: - %s' % instance.uuid)
+        if len(instances) == 0 or len(instances) < limit:
+            # We've hit the end of the instances table
+            marker = None
+        else:
+            marker = instances[-1].uuid
+        return marker
+
+    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
+            help='Unmigrated instances will be mapped to the cell with the '
+                 'uuid provided.')
+    @args('--max-count', metavar='<max_count>',
+          help='Maximum number of instances to map')
+    def map_instances(self, cell_uuid, max_count=None):
+        """Map instances into the provided cell.
+
+        This assumes that Nova on this host is still configured to use the nova
+        database not just the nova-api database. Instances in the nova database
+        will be queried from oldest to newest and mapped to the provided cell.
+        A max-count can be set on the number of instance to map in a single
+        run. Repeated runs of the command will start from where the last run
+        finished so it is not necessary to increase max-count to finish. An
+        exit code of 0 indicates that all instances have been mapped.
+        """
+
+        if max_count is not None:
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
+            map_all = False
+            if max_count < 1:
+                print(_('Must supply a positive value for max-count'))
+                return 127
+        else:
+            map_all = True
+            max_count = 50
+
+        ctxt = context.RequestContext()
+        marker_project_id = 'INSTANCE_MIGRATION_MARKER'
+
+        # Validate the cell exists, this will raise if not
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+
+        # Check for a marker from a previous run
+        marker_mapping = objects.InstanceMappingList.get_by_project_id(ctxt,
+                marker_project_id)
+        if len(marker_mapping) == 0:
+            marker = None
+        else:
+            # There should be only one here
+            marker = marker_mapping[0].instance_uuid.replace(' ', '-')
+            marker_mapping[0].destroy()
+
+        next_marker = True
+        while next_marker is not None:
+            next_marker = self._get_and_map_instances(ctxt, cell_mapping,
+                    max_count, marker)
+            marker = next_marker
+            if not map_all:
+                break
+
+        if next_marker:
+            # Don't judge me. There's already an InstanceMapping with this UUID
+            # so the marker needs to be non destructively modified.
+            next_marker = next_marker.replace('-', ' ')
+            objects.InstanceMapping(ctxt, instance_uuid=next_marker,
+                    project_id=marker_project_id).create()
+            return 1
+        return 0
 
     # TODO(melwitt): Remove this when the oslo.messaging function
     # for assembling a transport url from ConfigOpts is available
