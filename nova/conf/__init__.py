@@ -36,7 +36,7 @@ from nova.conf import conductor
 from nova.conf import consoleauth
 # from nova.conf import cors
 # from nova.conf import cors.subdomain
-# from nova.conf import crypto
+from nova.conf import crypto
 # from nova.conf import database
 # from nova.conf import disk
 from nova.conf import ephemeral_storage
@@ -101,7 +101,7 @@ conductor.register_opts(CONF)
 consoleauth.register_opts(CONF)
 # cors.register_opts(CONF)
 # cors.subdomain.register_opts(CONF)
-# crypto.register_opts(CONF)
+crypto.register_opts(CONF)
 # database.register_opts(CONF)
 # disk.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
