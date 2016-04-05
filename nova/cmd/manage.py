@@ -1019,11 +1019,14 @@ class DbCommands(object):
     def online_data_migrations(self, max_count=None):
         ctxt = context.get_admin_context()
         if max_count is not None:
-            max_count = int(max_count)
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
             unlimited = False
-            if max_count < 0:
+            if max_count < 1:
                 print(_('Must supply a positive value for max_number'))
-                return(1)
+                return 127
         else:
             unlimited = True
             max_count = 50
@@ -1034,6 +1037,8 @@ class DbCommands(object):
             ran = self._run_migration(ctxt, max_count)
             if not unlimited:
                 break
+
+        return ran and 1 or 0
 
 
 class ApiDbCommands(object):
