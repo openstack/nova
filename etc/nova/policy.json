@@ -312,6 +312,7 @@
     "os_compute_api:os-cloudpipe": "rule:admin_api",
     "os_compute_api:os-cloudpipe:discoverable": "@",
     "os_compute_api:os-config-drive": "rule:admin_or_owner",
+    "os_compute_api:os-config-drive:discoverable": "@",
     "os_compute_api:os-consoles:discoverable": "@",
     "os_compute_api:os-consoles:create": "rule:admin_or_owner",
     "os_compute_api:os-consoles:delete": "rule:admin_or_owner",
@@ -487,5 +488,7 @@
     "os_compute_api:os-assisted-volume-snapshots:delete": "rule:admin_api",
     "os_compute_api:os-assisted-volume-snapshots:discoverable": "@",
     "os_compute_api:os-console-auth-tokens": "rule:admin_api",
-    "os_compute_api:os-server-external-events:create": "rule:admin_api"
+    "os_compute_api:os-console-auth-tokens:discoverable": "@",
+    "os_compute_api:os-server-external-events:create": "rule:admin_api",
+    "os_compute_api:os-server-external-events:discoverable": "@"
 }

@@ -640,6 +640,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-cells:discoverable",
 "os_compute_api:os-certificates:discoverable",
 "os_compute_api:os-cloudpipe:discoverable",
+"os_compute_api:os-config-drive:discoverable",
 "os_compute_api:os-consoles:discoverable",
 "os_compute_api:os-console-output:discoverable",
 "os_compute_api:os-remote-consoles:discoverable",
@@ -707,6 +708,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-used-limits:discoverable",
 "os_compute_api:os-migrations:discoverable",
 "os_compute_api:os-assisted-volume-snapshots:discoverable",
+"os_compute_api:os-console-auth-tokens:discoverable",
+"os_compute_api:os-server-external-events:discoverable",
 )
 
     def test_all_rules_in_sample_file(self):
