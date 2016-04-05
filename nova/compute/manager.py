@@ -267,8 +267,6 @@ CONF.register_opts(instance_cleaning_opts)
 CONF.import_opt('console_topic', 'nova.console.rpcapi')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('enabled', 'nova.spice', group='spice')
-CONF.import_opt('enabled', 'nova.mks', group='mks')
-CONF.import_opt('mksproxy_base_url', 'nova.mks', group='mks')
 
 LOG = logging.getLogger(__name__)
 
