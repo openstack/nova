@@ -279,10 +279,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
             # Update PF status to CLAIMED if all of it dependants are free
             # and set their status to UNCLAIMABLE
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.address)
+            vfs_list = self.child_devices
             if not all([vf.is_available() for vf in vfs_list]):
                 raise exception.PciDeviceVFInvalidStatus(
                     compute_node_id=self.compute_node_id,
@@ -301,10 +298,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             parent_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
                                   fields.PciDeviceStatus.UNCLAIMABLE,
                                   fields.PciDeviceStatus.UNAVAILABLE)
-            try:
-                parent = self.get_by_dev_addr(self._context,
-                                              self.compute_node_id,
-                                              self.parent_addr)
+            parent = self.parent_device
+            if parent:
                 if parent.status not in parent_ok_statuses:
                     raise exception.PciDevicePFInvalidStatus(
                         compute_node_id=self.compute_node_id,
@@ -314,11 +309,11 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 # Set PF status
                 if parent.status == fields.PciDeviceStatus.AVAILABLE:
                     parent.status = fields.PciDeviceStatus.UNCLAIMABLE
-            except exception.PciDeviceNotFound:
+            else:
                 LOG.debug('Physical function addr: %(pf_addr)s parent of '
-                          'VF addr: %(vf_addr)s was not found',
-                           {'pf_addr': self.parent_addr,
-                            'vf_addr': self.address})
+                            'VF addr: %(vf_addr)s was not found',
+                            {'pf_addr': self.parent_addr,
+                                'vf_addr': self.address})
 
         self.status = fields.PciDeviceStatus.CLAIMED
         self.instance_uuid = instance_uuid
@@ -343,10 +338,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 address=self.address, owner=self.instance_uuid,
                 hopeowner=instance['uuid'])
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.address)
+            vfs_list = self.child_devices
             if not all([vf.status in dependatns_ok_statuses for
                         vf in vfs_list]):
                 raise exception.PciDeviceVFInvalidStatus(
@@ -356,10 +348,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                      fields.PciDeviceStatus.UNAVAILABLE)
 
         elif (self.dev_type == fields.PciDeviceType.SRIOV_VF):
-            try:
-                parent = self.get_by_dev_addr(self._context,
-                                              self.compute_node_id,
-                                              self.parent_addr)
+            parent = self.parent_device
+            if parent:
                 if parent.status not in parent_ok_statuses:
                     raise exception.PciDevicePFInvalidStatus(
                         compute_node_id=self.compute_node_id,
@@ -368,7 +358,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                         hopestatus=parent_ok_statuses)
                 # Set PF status
                 parent.status = fields.PciDeviceStatus.UNAVAILABLE
-            except exception.PciDeviceNotFound:
+            else:
                 LOG.debug('Physical function addr: %(pf_addr)s parent of '
                           'VF addr: %(vf_addr)s was not found',
                            {'pf_addr': self.parent_addr,
@@ -412,31 +402,23 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 hopeowner=instance['uuid'])
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
             # Set all PF dependants status to AVAILABLE
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.address)
+            vfs_list = self.child_devices
             self._bulk_update_status(vfs_list,
                                      fields.PciDeviceStatus.AVAILABLE)
             free_devs.extend(vfs_list)
         if self.dev_type == fields.PciDeviceType.SRIOV_VF:
             # Set PF status to AVAILABLE if all of it's VFs are free
-            vfs_list = objects.PciDeviceList.get_by_parent_address(
-                                             self._context,
-                                             self.compute_node_id,
-                                             self.parent_addr)
-            if all([vf.is_available() for vf in vfs_list if vf.id != self.id]):
-                try:
-                    parent = self.get_by_dev_addr(self._context,
-                                                  self.compute_node_id,
-                                                  self.parent_addr)
-                    parent.status = fields.PciDeviceStatus.AVAILABLE
+            parent = self.parent_device
+            if not parent:
+                LOG.debug('Physical function addr: %(pf_addr)s parent of '
+                          'VF addr: %(vf_addr)s was not found',
+                           {'pf_addr': self.parent_addr,
+                            'vf_addr': self.address})
+            else:
+                vfs_list = parent.child_devices
+                if all([vf.is_available() for vf in vfs_list
+                        if vf.id != self.id]):
                     free_devs.append(parent)
-                except exception.PciDeviceNotFound:
-                    LOG.debug('Physical function addr: %(pf_addr)s parent of '
-                              'VF addr: %(vf_addr)s was not found',
-                               {'pf_addr': self.parent_addr,
-                                'vf_addr': self.address})
         old_status = self.status
         self.status = fields.PciDeviceStatus.AVAILABLE
         free_devs.append(self)

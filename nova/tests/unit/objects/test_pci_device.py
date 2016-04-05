@@ -25,7 +25,6 @@ from nova import objects
 from nova.objects import fields
 from nova.objects import instance
 from nova.objects import pci_device
-from nova import test
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
 
@@ -523,6 +522,7 @@ class _TestSRIOVPciDeviceObject(object):
                        'numa_node': 0}
             pci_dev_obj = objects.PciDevice.create(None, pci_dev)
             pci_dev_obj.id = num_pfs + 81
+            pci_dev_obj.child_devices = []
             self.sriov_pf_devices.append(pci_dev_obj)
 
         self.sriov_vf_devices = []
@@ -538,6 +538,8 @@ class _TestSRIOVPciDeviceObject(object):
                        'numa_node': 0}
             pci_dev_obj = objects.PciDevice.create(None, pci_dev)
             pci_dev_obj.id = num_vfs + 1
+            pci_dev_obj.parent_device = self.sriov_pf_devices[int(dev / 4)]
+            pci_dev_obj.parent_device.child_devices.append(pci_dev_obj)
             self.sriov_vf_devices.append(pci_dev_obj)
 
     def _create_fake_instance(self):
@@ -553,188 +555,158 @@ class _TestSRIOVPciDeviceObject(object):
         self.mox.ReplayAll()
         self.pci_device = pci_device.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
 
-    def _fake_get_by_parent_address(self, ctxt, node_id, addr):
+    def _get_children_by_parent_address(self, addr):
         vf_devs = []
         for dev in self.sriov_vf_devices:
             if dev.parent_addr == addr:
                 vf_devs.append(dev)
         return vf_devs
 
-    def _fake_pci_device_get_by_addr(self, ctxt, id, addr):
+    def _get_parent_by_address(self, addr):
         for dev in self.sriov_pf_devices:
             if dev.address == addr:
                 return dev
 
     def test_claim_PF(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address):
-            self._create_pci_devices()
-            devobj = self.sriov_pf_devices[0]
-            devobj.claim(self.inst.uuid)
-            self.assertEqual(devobj.status,
-                             fields.PciDeviceStatus.CLAIMED)
-            self.assertEqual(devobj.instance_uuid,
-                             self.inst.uuid)
-            self.assertEqual(len(self.inst.pci_devices), 0)
-            # check if the all the dependants are UNCLAIMABLE
-            self.assertTrue(all(
-                 [dev.status == fields.PciDeviceStatus.UNCLAIMABLE for
-                  dev in self._fake_get_by_parent_address(None, None,
-                                        self.sriov_pf_devices[0].address)]))
+        self._create_pci_devices()
+        devobj = self.sriov_pf_devices[0]
+        devobj.claim(self.inst.uuid)
+        self.assertEqual(devobj.status,
+                            fields.PciDeviceStatus.CLAIMED)
+        self.assertEqual(devobj.instance_uuid,
+                            self.inst.uuid)
+        self.assertEqual(len(self.inst.pci_devices), 0)
+        # check if the all the dependants are UNCLAIMABLE
+        self.assertTrue(all(
+                [dev.status == fields.PciDeviceStatus.UNCLAIMABLE for
+                dev in self._get_children_by_parent_address(
+                                    self.sriov_pf_devices[0].address)]))
 
     def test_claim_VF(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr):
-            self._create_pci_devices()
-            devobj = self.sriov_vf_devices[0]
-            devobj.claim(self.inst.uuid)
-            self.assertEqual(devobj.status,
-                             fields.PciDeviceStatus.CLAIMED)
-            self.assertEqual(devobj.instance_uuid,
-                             self.inst.uuid)
-            self.assertEqual(len(self.inst.pci_devices), 0)
+        self._create_pci_devices()
+        devobj = self.sriov_vf_devices[0]
+        devobj.claim(self.inst.uuid)
+        self.assertEqual(devobj.status,
+                            fields.PciDeviceStatus.CLAIMED)
+        self.assertEqual(devobj.instance_uuid,
+                            self.inst.uuid)
+        self.assertEqual(len(self.inst.pci_devices), 0)
 
-            # check if parent device status has been changed to UNCLAIMABLE
-            parent = self._fake_pci_device_get_by_addr(None, None,
-                                                       devobj.parent_addr)
-            self.assertTrue(fields.PciDeviceStatus.UNCLAIMABLE, parent.status)
+        # check if parent device status has been changed to UNCLAIMABLE
+        parent = self._get_parent_by_address(devobj.parent_addr)
+        self.assertTrue(fields.PciDeviceStatus.UNCLAIMABLE, parent.status)
 
     def test_allocate_PF(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address):
-            self._create_pci_devices()
-            devobj = self.sriov_pf_devices[0]
-            devobj.claim(self.inst.uuid)
-            devobj.allocate(self.inst)
-            self.assertEqual(devobj.status,
-                             fields.PciDeviceStatus.ALLOCATED)
-            self.assertEqual(devobj.instance_uuid,
-                             self.inst.uuid)
-            self.assertEqual(len(self.inst.pci_devices), 1)
-            # check if the all the dependants are UNAVAILABLE
-            self.assertTrue(all(
-                 [dev.status == fields.PciDeviceStatus.UNAVAILABLE for
-                  dev in self._fake_get_by_parent_address(None, None,
-                                        self.sriov_pf_devices[0].address)]))
+        self._create_pci_devices()
+        devobj = self.sriov_pf_devices[0]
+        devobj.claim(self.inst.uuid)
+        devobj.allocate(self.inst)
+        self.assertEqual(devobj.status,
+                            fields.PciDeviceStatus.ALLOCATED)
+        self.assertEqual(devobj.instance_uuid,
+                            self.inst.uuid)
+        self.assertEqual(len(self.inst.pci_devices), 1)
+        # check if the all the dependants are UNAVAILABLE
+        self.assertTrue(all(
+                [dev.status == fields.PciDeviceStatus.UNAVAILABLE for
+                dev in self._get_children_by_parent_address(
+                                    self.sriov_pf_devices[0].address)]))
 
     def test_allocate_VF(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr):
-            self._create_pci_devices()
-            devobj = self.sriov_vf_devices[0]
-            devobj.claim(self.inst.uuid)
-            devobj.allocate(self.inst)
-            self.assertEqual(devobj.status,
-                             fields.PciDeviceStatus.ALLOCATED)
-            self.assertEqual(devobj.instance_uuid,
-                             self.inst.uuid)
-            self.assertEqual(len(self.inst.pci_devices), 1)
+        self._create_pci_devices()
+        devobj = self.sriov_vf_devices[0]
+        devobj.claim(self.inst.uuid)
+        devobj.allocate(self.inst)
+        self.assertEqual(devobj.status,
+                            fields.PciDeviceStatus.ALLOCATED)
+        self.assertEqual(devobj.instance_uuid,
+                            self.inst.uuid)
+        self.assertEqual(len(self.inst.pci_devices), 1)
 
-            # check if parent device status has been changed to UNAVAILABLE
-            parent = self._fake_pci_device_get_by_addr(None, None,
-                                                       devobj.parent_addr)
-            self.assertTrue(fields.PciDeviceStatus.UNAVAILABLE, parent.status)
+        # check if parent device status has been changed to UNAVAILABLE
+        parent = self._get_parent_by_address(devobj.parent_addr)
+        self.assertTrue(fields.PciDeviceStatus.UNAVAILABLE, parent.status)
 
     def test_claim_PF_fail(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address):
-            self._create_pci_devices()
-            devobj = self.sriov_pf_devices[0]
-            self.sriov_vf_devices[0].status = fields.PciDeviceStatus.CLAIMED
+        self._create_pci_devices()
+        devobj = self.sriov_pf_devices[0]
+        self.sriov_vf_devices[0].status = fields.PciDeviceStatus.CLAIMED
 
-            self.assertRaises(exception.PciDeviceVFInvalidStatus,
-                              devobj.claim, self.inst)
+        self.assertRaises(exception.PciDeviceVFInvalidStatus,
+                            devobj.claim, self.inst)
 
     def test_claim_VF_fail(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr):
-            self._create_pci_devices()
-            devobj = self.sriov_vf_devices[0]
-            parent = self._fake_pci_device_get_by_addr(None, None,
-                                                       devobj.parent_addr)
-            parent.status = fields.PciDeviceStatus.CLAIMED
+        self._create_pci_devices()
+        devobj = self.sriov_vf_devices[0]
+        parent = self._get_parent_by_address(devobj.parent_addr)
+        parent.status = fields.PciDeviceStatus.CLAIMED
 
-            self.assertRaises(exception.PciDevicePFInvalidStatus,
-                              devobj.claim, self.inst)
+        self.assertRaises(exception.PciDevicePFInvalidStatus,
+                            devobj.claim, self.inst)
 
     def test_allocate_PF_fail(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address):
-            self._create_pci_devices()
-            devobj = self.sriov_pf_devices[0]
-            self.sriov_vf_devices[0].status = fields.PciDeviceStatus.CLAIMED
+        self._create_pci_devices()
+        devobj = self.sriov_pf_devices[0]
+        self.sriov_vf_devices[0].status = fields.PciDeviceStatus.CLAIMED
 
-            self.assertRaises(exception.PciDeviceVFInvalidStatus,
-                              devobj.allocate, self.inst)
+        self.assertRaises(exception.PciDeviceVFInvalidStatus,
+                            devobj.allocate, self.inst)
 
     def test_allocate_VF_fail(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr):
-            self._create_pci_devices()
-            devobj = self.sriov_vf_devices[0]
-            parent = self._fake_pci_device_get_by_addr(None, None,
-                                                       devobj.parent_addr)
-            parent.status = fields.PciDeviceStatus.CLAIMED
+        self._create_pci_devices()
+        devobj = self.sriov_vf_devices[0]
+        parent = self._get_parent_by_address(devobj.parent_addr)
+        parent.status = fields.PciDeviceStatus.CLAIMED
 
-            self.assertRaises(exception.PciDevicePFInvalidStatus,
-                              devobj.allocate, self.inst)
+        self.assertRaises(exception.PciDevicePFInvalidStatus,
+                            devobj.allocate, self.inst)
 
     def test_free_allocated_PF(self):
         self._create_fake_instance()
-        with mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address):
-            self._create_pci_devices()
-            devobj = self.sriov_pf_devices[0]
-            devobj.claim(self.inst.uuid)
-            devobj.allocate(self.inst)
-            devobj.free(self.inst)
-            self.assertEqual(devobj.status,
-                             fields.PciDeviceStatus.AVAILABLE)
-            self.assertIsNone(devobj.instance_uuid)
-            # check if the all the dependants are AVAILABLE
-            self.assertTrue(all(
-                 [dev.status == fields.PciDeviceStatus.AVAILABLE for
-                  dev in self._fake_get_by_parent_address(None, None,
-                                        self.sriov_pf_devices[0].address)]))
+        self._create_pci_devices()
+        devobj = self.sriov_pf_devices[0]
+        devobj.claim(self.inst.uuid)
+        devobj.allocate(self.inst)
+        devobj.free(self.inst)
+        self.assertEqual(devobj.status,
+                            fields.PciDeviceStatus.AVAILABLE)
+        self.assertIsNone(devobj.instance_uuid)
+        # check if the all the dependants are AVAILABLE
+        self.assertTrue(all(
+                [dev.status == fields.PciDeviceStatus.AVAILABLE for
+                dev in self._get_children_by_parent_address(
+                                    self.sriov_pf_devices[0].address)]))
 
     def test_free_allocated_VF(self):
         self._create_fake_instance()
-        with test.nested(
-            mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr),
-            mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address)):
-            self._create_pci_devices()
-            vf = self.sriov_vf_devices[0]
-            dependents = self._fake_get_by_parent_address(None, None,
-                                                          vf.parent_addr)
-            for devobj in dependents:
-                devobj.claim(self.inst.uuid)
-                devobj.allocate(self.inst)
-                self.assertEqual(devobj.status,
-                                 fields.PciDeviceStatus.ALLOCATED)
-            for devobj in dependents[:3]:
-                devobj.free(self.inst)
-                # check if parent device status is still UNAVAILABLE
-                parent = self._fake_pci_device_get_by_addr(None, None,
-                                                           devobj.parent_addr)
-                self.assertTrue(fields.PciDeviceStatus.UNAVAILABLE,
-                                parent.status)
-            for devobj in dependents[3:]:
-                devobj.free(self.inst)
-                # check if parent device status is now AVAILABLE
-                parent = self._fake_pci_device_get_by_addr(None, None,
-                                                           devobj.parent_addr)
-                self.assertTrue(fields.PciDeviceStatus.AVAILABLE,
-                                parent.status)
+        self._create_pci_devices()
+        vf = self.sriov_vf_devices[0]
+        dependents = self._get_children_by_parent_address(vf.parent_addr)
+        for devobj in dependents:
+            devobj.claim(self.inst.uuid)
+            devobj.allocate(self.inst)
+            self.assertEqual(devobj.status,
+                                fields.PciDeviceStatus.ALLOCATED)
+        for devobj in dependents[:3]:
+            devobj.free(self.inst)
+            # check if parent device status is still UNAVAILABLE
+            parent = self._get_parent_by_address(devobj.parent_addr)
+            self.assertTrue(fields.PciDeviceStatus.UNAVAILABLE,
+                            parent.status)
+        for devobj in dependents[3:]:
+            devobj.free(self.inst)
+            # check if parent device status is now AVAILABLE
+            parent = self._get_parent_by_address(devobj.parent_addr)
+            self.assertTrue(fields.PciDeviceStatus.AVAILABLE,
+                            parent.status)
 
 
 class TestSRIOVPciDeviceListObject(test_objects._LocalTest,

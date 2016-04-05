@@ -367,8 +367,9 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                        'dev_type': fields.PciDeviceType.SRIOV_PF,
                        'parent_addr': None,
                        'numa_node': 0}
-            self.sriov_pf_devices.append(objects.PciDevice.create(None,
-                                                                  pci_dev))
+            dev_obj = objects.PciDevice.create(None, pci_dev)
+            dev_obj.child_devices = []
+            self.sriov_pf_devices.append(dev_obj)
 
         self.sriov_vf_devices = []
         for dev in range(8):
@@ -381,95 +382,66 @@ class PciDeviceVFPFStatsTestCase(test.NoDBTestCase):
                        'dev_type': fields.PciDeviceType.SRIOV_VF,
                        'parent_addr': '0000:81:00.%d' % int(dev / 4),
                        'numa_node': 0}
-            self.sriov_vf_devices.append(objects.PciDevice.create(None,
-                                                                  pci_dev))
+            dev_obj = objects.PciDevice.create(None, pci_dev)
+            dev_obj.parent_device = self.sriov_pf_devices[int(dev / 4)]
+            dev_obj.parent_device.child_devices.append(dev_obj)
+            self.sriov_vf_devices.append(dev_obj)
 
         list(map(self.pci_stats.add_device, self.sriov_pf_devices))
         list(map(self.pci_stats.add_device, self.sriov_vf_devices))
 
-    def _fake_get_by_parent_address(self, ctxt, node_id, addr):
-        vf_devs = []
-        for dev in self.sriov_vf_devices:
-            if dev.parent_addr == addr:
-                vf_devs.append(dev)
-        return vf_devs
-
-    def _fake_pci_device_get_by_addr(self, ctxt, id, addr):
-        for dev in self.sriov_pf_devices:
-            if dev.address == addr:
-                return dev
-
     def test_consume_VF_requests(self):
-        with mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr):
-            self._create_pci_devices()
-            pci_requests = [objects.InstancePCIRequest(count=2,
-                                spec=[{'product_id': '1515'}])]
-            devs = self.pci_stats.consume_requests(pci_requests)
-            self.assertEqual(2, len(devs))
-            self.assertEqual(set(['1515']),
-                             set([dev.product_id for dev in devs]))
-            free_devs = self.pci_stats.get_free_devs()
-            # Validate that the parents of these VFs has been removed
-            # from pools.
-            for dev in devs:
-                self.assertTrue(all(dev.parent_addr != free_dev.address
-                                    for free_dev in free_devs))
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=2,
+                            spec=[{'product_id': '1515'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['1515']),
+                            set([dev.product_id for dev in devs]))
+        free_devs = self.pci_stats.get_free_devs()
+        # Validate that the parents of these VFs has been removed
+        # from pools.
+        for dev in devs:
+            self.assertTrue(all(dev.parent_addr != free_dev.address
+                                for free_dev in free_devs))
 
     def test_consume_PF_requests(self):
-        with mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address):
-            self._create_pci_devices()
-            pci_requests = [objects.InstancePCIRequest(count=2,
-                                spec=[{'product_id': '1528',
-                                       'dev_type': 'type-PF'}])]
-            devs = self.pci_stats.consume_requests(pci_requests)
-            self.assertEqual(2, len(devs))
-            self.assertEqual(set(['1528']),
-                             set([dev.product_id for dev in devs]))
-            free_devs = self.pci_stats.get_free_devs()
-            # Validate that there are no free devices left, as when allocating
-            # both available PFs, its VFs should not be available.
-            self.assertEqual(0, len(free_devs))
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=2,
+                            spec=[{'product_id': '1528',
+                                    'dev_type': 'type-PF'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(2, len(devs))
+        self.assertEqual(set(['1528']),
+                            set([dev.product_id for dev in devs]))
+        free_devs = self.pci_stats.get_free_devs()
+        # Validate that there are no free devices left, as when allocating
+        # both available PFs, its VFs should not be available.
+        self.assertEqual(0, len(free_devs))
 
     def test_consume_VF_and_PF_requests(self):
-        with test.nested(
-            mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr),
-            mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address)):
-            self._create_pci_devices()
-            pci_requests = [objects.InstancePCIRequest(count=2,
-                                spec=[{'product_id': '1515'}]),
-                            objects.InstancePCIRequest(count=1,
-                                spec=[{'product_id': '1528',
-                                       'dev_type': 'type-PF'}])]
-            devs = self.pci_stats.consume_requests(pci_requests)
-            self.assertEqual(3, len(devs))
-            self.assertEqual(set(['1528', '1515']),
-                             set([dev.product_id for dev in devs]))
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=2,
+                            spec=[{'product_id': '1515'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'product_id': '1528',
+                                    'dev_type': 'type-PF'}])]
+        devs = self.pci_stats.consume_requests(pci_requests)
+        self.assertEqual(3, len(devs))
+        self.assertEqual(set(['1528', '1515']),
+                            set([dev.product_id for dev in devs]))
 
     def test_consume_VF_and_PF_requests_failed(self):
-        with test.nested(
-            mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr),
-            mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address)):
-            self._create_pci_devices()
-            pci_requests = [objects.InstancePCIRequest(count=5,
-                                spec=[{'product_id': '1515'}]),
-                            objects.InstancePCIRequest(count=1,
-                                spec=[{'product_id': '1528',
-                                       'dev_type': 'type-PF'}])]
-            self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
+        self._create_pci_devices()
+        pci_requests = [objects.InstancePCIRequest(count=5,
+                            spec=[{'product_id': '1515'}]),
+                        objects.InstancePCIRequest(count=1,
+                            spec=[{'product_id': '1528',
+                                    'dev_type': 'type-PF'}])]
+        self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
 
     def test_consume_VF_and_PF_same_prodict_id_failed(self):
-        with test.nested(
-            mock.patch.object(objects.PciDevice, 'get_by_dev_addr',
-                               side_effect=self._fake_pci_device_get_by_addr),
-            mock.patch.object(objects.PciDeviceList, 'get_by_parent_address',
-                               side_effect=self._fake_get_by_parent_address)):
-            self._create_pci_devices(pf_product_id=1515)
-            pci_requests = [objects.InstancePCIRequest(count=9,
-                                spec=[{'product_id': '1515'}])]
-            self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
+        self._create_pci_devices(pf_product_id=1515)
+        pci_requests = [objects.InstancePCIRequest(count=9,
+                            spec=[{'product_id': '1515'}])]
+        self.assertIsNone(self.pci_stats.consume_requests(pci_requests))
