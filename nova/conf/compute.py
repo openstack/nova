@@ -138,11 +138,11 @@ allocation_ratio_opts = [
              'and defaulted to 1.0'),
 ]
 
-ALL_OPTS = itertools.chain(
+ALL_OPTS = list(itertools.chain(
            compute_opts,
            resource_tracker_opts,
            allocation_ratio_opts
-           )
+           ))
 
 
 def register_opts(conf):
