@@ -48,16 +48,6 @@ disable_libvirt_livesnapshot = cfg.BoolOpt(
                      'resolved.  See '
                      'https://bugs.launchpad.net/nova/+bug/1334398')
 
-destroy_after_evacuate = cfg.BoolOpt(
-    'destroy_after_evacuate',
-    default=True,
-    deprecated_for_removal=True,
-    help='DEPRECATED: Whether to destroy '
-         'instances on startup when we suspect '
-         'they have previously been evacuated. This can result in '
-         'data loss if undesired. See '
-         'https://launchpad.net/bugs/1419785')
-
 handle_virt_lifecycle_events = cfg.BoolOpt(
     'handle_virt_lifecycle_events',
     default=True,
@@ -82,7 +72,6 @@ handle_virt_lifecycle_events = cfg.BoolOpt(
 
 ALL_OPTS = [disable_rootwrap,
             disable_libvirt_livesnapshot,
-            destroy_after_evacuate,
             handle_virt_lifecycle_events]
 
 
