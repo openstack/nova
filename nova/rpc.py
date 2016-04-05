@@ -29,25 +29,16 @@ __all__ = [
 import functools
 
 from nova.i18n import _
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+import nova.conf
 import nova.context
 import nova.exception
 
 
-CONF = cfg.CONF
-notification_opts = [
-    cfg.StrOpt('notification_format',
-               choices=['unversioned', 'versioned', 'both'],
-               default='both',
-               help='Specifies which notification format shall be used by '
-                    'nova.'),
-]
-
-CONF.register_opts(notification_opts)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
