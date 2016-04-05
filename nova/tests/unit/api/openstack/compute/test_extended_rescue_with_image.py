@@ -13,17 +13,16 @@
 #   under the License.
 
 import mock
-from oslo_config import cfg
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.legacy_v2.contrib import rescue
 from nova.api.openstack import extensions
 from nova import compute
+import nova.conf
 import nova.context as context
 from nova import test
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 
 
 class FakeRequest(object):

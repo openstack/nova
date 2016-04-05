@@ -15,7 +15,6 @@
 import uuid
 
 import mock
-from oslo_config import cfg
 import testtools
 import webob
 
@@ -25,14 +24,14 @@ from nova.api.openstack.compute.legacy_v2.contrib import evacuate \
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 
 
 def fake_compute_api(*args, **kwargs):
