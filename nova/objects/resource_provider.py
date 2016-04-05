@@ -20,6 +20,23 @@ from nova.objects import base
 from nova.objects import fields
 
 
+@db_api.main_context_manager.writer
+def _create_rp_in_db(context, updates):
+    db_rp = models.ResourceProvider()
+    db_rp.update(updates)
+    context.session.add(db_rp)
+    return db_rp
+
+
+@db_api.main_context_manager.reader
+def _get_rp_by_uuid_from_db(context, uuid):
+    result = context.session.query(models.ResourceProvider).filter_by(
+        uuid=uuid).first()
+    if not result:
+        raise exception.NotFound()
+    return result
+
+
 @base.NovaObjectRegistry.register
 class ResourceProvider(base.NovaObject):
     # Version 1.0: Initial version
@@ -48,12 +65,8 @@ class ResourceProvider(base.NovaObject):
         return cls._from_db_object(context, cls(), db_resource_provider)
 
     @staticmethod
-    @db_api.main_context_manager.writer
     def _create_in_db(context, updates):
-        db_rp = models.ResourceProvider()
-        db_rp.update(updates)
-        context.session.add(db_rp)
-        return db_rp
+        return _create_rp_in_db(context, updates)
 
     @staticmethod
     def _from_db_object(context, resource_provider, db_resource_provider):
@@ -64,13 +77,8 @@ class ResourceProvider(base.NovaObject):
         return resource_provider
 
     @staticmethod
-    @db_api.main_context_manager.reader
     def _get_by_uuid_from_db(context, uuid):
-        result = context.session.query(models.ResourceProvider).filter_by(
-            uuid=uuid).first()
-        if not result:
-            raise exception.NotFound()
-        return result
+        return _get_rp_by_uuid_from_db(context, uuid)
 
 
 class _HasAResourceProvider(base.NovaObject):
@@ -121,6 +129,22 @@ class _HasAResourceProvider(base.NovaObject):
         return target
 
 
+@db_api.main_context_manager.writer
+def _create_inventory_in_db(context, updates):
+    db_inventory = models.Inventory()
+    db_inventory.update(updates)
+    context.session.add(db_inventory)
+    return db_inventory
+
+
+@db_api.main_context_manager.writer
+def _update_inventory_in_db(context, id_, updates):
+    result = context.session.query(
+        models.Inventory).filter_by(id=id_).update(updates)
+    if not result:
+        raise exception.NotFound()
+
+
 @base.NovaObjectRegistry.register
 class Inventory(_HasAResourceProvider):
     # Version 1.0: Initial version
@@ -157,20 +181,12 @@ class Inventory(_HasAResourceProvider):
         self._update_in_db(self._context, self.id, updates)
 
     @staticmethod
-    @db_api.main_context_manager.writer
     def _create_in_db(context, updates):
-        db_inventory = models.Inventory()
-        db_inventory.update(updates)
-        context.session.add(db_inventory)
-        return db_inventory
+        return _create_inventory_in_db(context, updates)
 
     @staticmethod
-    @db_api.main_context_manager.writer
     def _update_in_db(context, id_, updates):
-        result = context.session.query(
-            models.Inventory).filter_by(id=id_).update(updates)
-        if not result:
-            raise exception.NotFound()
+        return _update_inventory_in_db(context, id_, updates)
 
 
 @base.NovaObjectRegistry.register
