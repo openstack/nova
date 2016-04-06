@@ -513,6 +513,32 @@ class DBCommandsTestCase(test.NoDBTestCase):
         command = command_cls()
         command.online_data_migrations(None)
 
+    def test_online_migrations_bad_max(self):
+        self.assertEqual(127,
+                         self.commands.online_data_migrations(max_count=-2))
+        self.assertEqual(127,
+                         self.commands.online_data_migrations(max_count='a'))
+        self.assertEqual(127,
+                         self.commands.online_data_migrations(max_count=0))
+
+    def test_online_migrations_no_max(self):
+        with mock.patch.object(self.commands, '_run_migration') as rm:
+            rm.return_value = 0
+            self.assertEqual(0,
+                             self.commands.online_data_migrations())
+
+    def test_online_migrations_finished(self):
+        with mock.patch.object(self.commands, '_run_migration') as rm:
+            rm.return_value = 0
+            self.assertEqual(0,
+                             self.commands.online_data_migrations(max_count=5))
+
+    def test_online_migrations_not_finished(self):
+        with mock.patch.object(self.commands, '_run_migration') as rm:
+            rm.return_value = 5
+            self.assertEqual(1,
+                             self.commands.online_data_migrations(max_count=5))
+
 
 class ApiDbCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
