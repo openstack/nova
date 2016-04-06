@@ -30,12 +30,6 @@ import nova.virt.libvirt.volume.remotefs
 import nova.virt.libvirt.volume.scality
 import nova.virt.libvirt.volume.smbfs
 import nova.virt.libvirt.volume.volume
-import nova.virt.vmwareapi.driver
-import nova.virt.vmwareapi.images
-import nova.virt.vmwareapi.vif
-import nova.virt.vmwareapi.vim_util
-import nova.virt.vmwareapi.vm_util
-import nova.virt.vmwareapi.vmops
 import nova.virt.xenapi.agent
 import nova.virt.xenapi.client.session
 import nova.virt.xenapi.driver
@@ -66,15 +60,6 @@ def list_opts():
              nova.virt.libvirt.volume.remotefs.libvirt_opts,
              nova.virt.libvirt.volume.scality.volume_opts,
              nova.virt.libvirt.volume.smbfs.volume_opts,
-         )),
-        ('vmware',
-         itertools.chain(
-             [nova.virt.vmwareapi.vim_util.vmware_opts],
-             nova.virt.vmwareapi.driver.spbm_opts,
-             nova.virt.vmwareapi.driver.vmwareapi_opts,
-             nova.virt.vmwareapi.vif.vmwareapi_vif_opts,
-             nova.virt.vmwareapi.vm_util.vmware_utils_opts,
-             nova.virt.vmwareapi.vmops.vmops_opts,
          )),
         ('xenserver',
          itertools.chain(

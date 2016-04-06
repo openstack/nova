@@ -25,7 +25,6 @@ import time
 
 import decorator
 from oslo_concurrency import lockutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -62,18 +61,8 @@ from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
-vmops_opts = [
-    cfg.StrOpt('cache_prefix',
-               help='The prefix for where cached images are stored. This is '
-                    'NOT the full path - just a folder prefix. '
-                    'This should only be used when a datastore cache should '
-                    'be shared between compute nodes. Note: this should only '
-                    'be used when the compute nodes have a shared file '
-                    'system.'),
-    ]
 
 CONF = nova.conf.CONF
-CONF.register_opts(vmops_opts, 'vmware')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)

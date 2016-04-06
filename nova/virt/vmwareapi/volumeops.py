@@ -17,17 +17,17 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vm_util
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
