@@ -29,10 +29,7 @@ import nova.virt.libvirt.volume.scality
 import nova.virt.libvirt.volume.smbfs
 import nova.virt.libvirt.volume.volume
 import nova.virt.xenapi.agent
-import nova.virt.xenapi.pool
-import nova.virt.xenapi.vif
 import nova.virt.xenapi.vmops
-import nova.virt.xenapi.volume_utils
 
 
 def list_opts():
@@ -55,11 +52,5 @@ def list_opts():
              nova.virt.libvirt.volume.remotefs.libvirt_opts,
              nova.virt.libvirt.volume.scality.volume_opts,
              nova.virt.libvirt.volume.smbfs.volume_opts,
-         )),
-        ('xenserver',
-         itertools.chain(
-             [nova.virt.xenapi.vif.xenapi_ovs_integration_bridge_opt],
-             nova.virt.xenapi.pool.xenapi_pool_opts,
-             nova.virt.xenapi.volume_utils.xenapi_volume_utils_opts,
          )),
     ]

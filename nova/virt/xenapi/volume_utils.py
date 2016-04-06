@@ -23,24 +23,17 @@ import string
 import uuid
 
 from eventlet import greenthread
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import versionutils
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
 
-xenapi_volume_utils_opts = [
-    cfg.IntOpt('introduce_vdi_retry_wait',
-               default=20,
-               help='Number of seconds to wait for an SR to settle '
-                    'if the VDI does not exist when first introduced'),
-    ]
 
-CONF = cfg.CONF
-CONF.register_opts(xenapi_volume_utils_opts, 'xenserver')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 

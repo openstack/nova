@@ -351,12 +351,35 @@ xenapi_vmops_opts = [
                help='Dom0 plugin driver used to handle image uploads.'),
     ]
 
+xenapi_volume_utils_opts = [
+    cfg.IntOpt('introduce_vdi_retry_wait',
+               default=20,
+               help='Number of seconds to wait for an SR to settle '
+                    'if the VDI does not exist when first introduced'),
+    ]
+
+xenapi_ovs_integration_bridge_opts = [
+    cfg.StrOpt('ovs_integration_bridge',
+               default='xapi1',
+               help='Name of Integration Bridge used by Open vSwitch'),
+    ]
+
+xenapi_pool_opts = [
+    cfg.BoolOpt('use_join_force',
+                default=True,
+                help='To use for hosts with different CPUs'),
+    ]
+
+
 ALL_XENSERVER_OPTS = (xenapi_agent_opts +
                       xenapi_session_opts +
                       xenapi_torrent_opts +
                       xenapi_vm_utils_opts +
                       xenapi_opts +
-                      xenapi_vmops_opts)
+                      xenapi_vmops_opts +
+                      xenapi_volume_utils_opts +
+                      xenapi_ovs_integration_bridge_opts +
+                      xenapi_pool_opts)
 
 
 def register_opts(conf):
