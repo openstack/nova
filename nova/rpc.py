@@ -28,7 +28,6 @@ __all__ = [
 
 import functools
 
-from nova.i18n import _
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -36,6 +35,7 @@ from oslo_serialization import jsonutils
 import nova.conf
 import nova.context
 import nova.exception
+from nova.i18n import _
 
 
 CONF = nova.conf.CONF
