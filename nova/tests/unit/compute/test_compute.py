@@ -3262,7 +3262,7 @@ class ComputeTestCase(BaseTestCase):
 
         output = self.compute.get_console_output(self.context,
                 instance=instance, tail_length=None)
-        self.assertEqual(output, b'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
+        self.assertEqual('FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE', output)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_console_output_bytes(self):
@@ -3286,7 +3286,7 @@ class ComputeTestCase(BaseTestCase):
 
         output = self.compute.get_console_output(self.context,
                 instance=instance, tail_length=2)
-        self.assertEqual(output, b'ANOTHER\nLAST LINE')
+        self.assertEqual('ANOTHER\nLAST LINE', output)
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_console_output_not_implemented(self):
