@@ -745,7 +745,8 @@ def _adjust_autoincrement(context, value):
 
 @db_api.api_context_manager.reader
 def _get_max_flavor_id(context):
-    return context.session.query(func.max(api_models.Flavors.id)).one()[0]
+    max_id = context.session.query(func.max(api_models.Flavors.id)).one()[0]
+    return max_id or 0
 
 
 def migrate_flavor_reset_autoincrement(ctxt, count):
