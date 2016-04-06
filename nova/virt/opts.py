@@ -13,7 +13,6 @@
 import itertools
 
 import nova.conf
-import nova.virt.configdrive
 import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
 import nova.virt.libvirt.imagecache
@@ -49,10 +48,6 @@ import nova.virt.xenapi.volume_utils
 
 def list_opts():
     return [
-        ('DEFAULT',
-         itertools.chain(
-             nova.virt.configdrive.configdrive_opts,
-         )),
         ('libvirt',
          itertools.chain(
              nova.virt.libvirt.driver.libvirt_opts,

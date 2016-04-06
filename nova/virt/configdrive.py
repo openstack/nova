@@ -18,31 +18,16 @@
 import os
 import shutil
 
-from oslo_config import cfg
 from oslo_utils import fileutils
 from oslo_utils import units
 
+import nova.conf
 from nova import exception
 from nova.objects import fields
 from nova import utils
 from nova import version
 
-configdrive_opts = [
-    cfg.StrOpt('config_drive_format',
-               default='iso9660',
-               choices=('iso9660', 'vfat'),
-               help='Config drive format.'),
-    cfg.BoolOpt('force_config_drive',
-                help='Force injection to take place on a config drive',
-                default=False),
-    cfg.StrOpt('mkisofs_cmd',
-               default='genisoimage',
-               help='Name and optionally path of the tool used for '
-                    'ISO image creation')
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(configdrive_opts)
+CONF = nova.conf.CONF
 
 # Config drives are 64mb, if we can't size to the exact size of the data
 CONFIGDRIVESIZE_BYTES = 64 * units.Mi
