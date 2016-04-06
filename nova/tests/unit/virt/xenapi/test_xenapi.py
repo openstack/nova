@@ -75,8 +75,6 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('login_timeout', 'nova.virt.xenapi.client.session',
-                group="xenserver")
 
 IMAGE_MACHINE = '1'
 IMAGE_KERNEL = '2'
