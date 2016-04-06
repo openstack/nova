@@ -59,6 +59,7 @@ from nova.conf import mks
 from nova.conf import network
 from nova.conf import neutron
 # from nova.conf import notification
+from nova.conf import novnc
 # from nova.conf import osapi_v21
 from nova.conf import pci
 from nova.conf import rdp
@@ -124,6 +125,7 @@ keymgr.register_opts(CONF)
 network.register_opts(CONF)
 neutron.register_opts(CONF)
 # notification.register_opts(CONF)
+novnc.register_opts(CONF)
 # osapi_v21.register_opts(CONF)
 pci.register_opts(CONF)
 rdp.register_opts(CONF)
