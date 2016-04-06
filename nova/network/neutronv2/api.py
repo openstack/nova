@@ -43,26 +43,10 @@ from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
 
-neutron_opts = [
-    cfg.StrOpt('url',
-               default='http://127.0.0.1:9696',
-               help='URL for connecting to neutron'),
-    cfg.StrOpt('region_name',
-               help='Region name for connecting to neutron in admin context'),
-    cfg.StrOpt('ovs_bridge',
-               default='br-int',
-               help='Default OVS bridge name to use if not specified '
-                    'by Neutron'),
-    cfg.IntOpt('extension_sync_interval',
-                default=600,
-                help='Number of seconds before querying neutron for'
-                     ' extensions'),
-   ]
 
 NEUTRON_GROUP = 'neutron'
 
 CONF = nova.conf.CONF
-CONF.register_opts(neutron_opts, NEUTRON_GROUP)
 
 deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
                                              group=NEUTRON_GROUP)],
