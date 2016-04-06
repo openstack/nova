@@ -140,18 +140,39 @@ class _TestAggregateObject(object):
             {'name': 'foo', 'uuid': uuidsentinel.fake_agg},
             metadata={'one': 'two'})
 
-    @mock.patch.object(db, 'aggregate_update')
-    def test_save(self, mock_aggregate_update):
-        mock_aggregate_update.return_value = fake_aggregate
-
+    @mock.patch('nova.objects.aggregate._aggregate_update_to_db')
+    @mock.patch('nova.db.aggregate_update')
+    def test_save(self, update_mock, api_update_mock):
+        api_update_mock.side_effect = exception.AggregateNotFound(
+            aggregate_id='foo')
+        update_mock.return_value = fake_aggregate
         agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
-        agg.name = 'baz'
+        agg.name = 'fake-aggregate'
         agg.save()
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
+        update_mock.assert_called_once_with(self.context,
+                                            123,
+                                            {'name': 'fake-aggregate'})
+        self.assertTrue(api_update_mock.called)
 
-        mock_aggregate_update.aasert_called_once_with(self.context,
-            123, {'name': 'baz'})
+    @mock.patch('nova.objects.Aggregate.in_api', return_value=True)
+    @mock.patch('nova.objects.aggregate._aggregate_update_to_db')
+    @mock.patch('nova.db.aggregate_update')
+    def test_save_to_api(self, update_mock, api_update_mock, in_api_mock):
+        api_update_mock.return_value = fake_aggregate
+        agg = aggregate.Aggregate(context=self.context)
+        agg.id = 123
+        agg.name = 'fake-api-aggregate'
+        agg.save()
+        self.compare_obj(agg, fake_aggregate, subs=SUBS)
+        api_update_mock.assert_called_once_with(self.context,
+                                                123,
+                                                {'name': 'fake-api-aggregate'})
+        self.assertFalse(update_mock.called)
+
+        api_update_mock.assert_called_once_with(self.context,
+            123, {'name': 'fake-api-aggregate'})
 
     def test_save_and_create_no_hosts(self):
         agg = aggregate.Aggregate(context=self.context)

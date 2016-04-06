@@ -159,6 +159,35 @@ def _metadata_delete_from_db(context, aggregate_id, key):
                             aggregate_id=aggregate_id, metadata_key=key)
 
 
+@db_api.api_context_manager.writer
+def _aggregate_update_to_db(context, aggregate_id, values):
+    aggregate = _aggregate_get_from_db(context, aggregate_id)
+
+    set_delete = True
+    if "availability_zone" in values:
+        az = values.pop('availability_zone')
+        if 'metadata' not in values:
+            values['metadata'] = {'availability_zone': az}
+            set_delete = False
+        else:
+            values['metadata']['availability_zone'] = az
+    metadata = values.get('metadata')
+    if metadata is not None:
+        _metadata_add_to_db(context, aggregate_id, values.pop('metadata'),
+                            set_delete=set_delete)
+
+    aggregate.update(values)
+    try:
+        aggregate.save(context.session)
+    except db_exc.DBDuplicateEntry:
+        if 'name' in values:
+            raise exception.AggregateNameExists(
+                aggregate_name=values['name'])
+        else:
+            raise
+    return _aggregate_get_from_db(context, aggregate_id)
+
+
 @base.NovaObjectRegistry.register
 class Aggregate(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
@@ -295,7 +324,13 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                                                     "updateprop.start",
                                                     payload)
         updates.pop('id', None)
-        db_aggregate = db.aggregate_update(self._context, self.id, updates)
+        db_aggregate = None
+        try:
+            db_aggregate = _aggregate_update_to_db(self._context,
+                                                   self.id, updates)
+        except exception.AggregateNotFound:
+            db_aggregate = db.aggregate_update(self._context, self.id, updates)
+
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updateprop.end",
                                                     payload)

@@ -205,6 +205,74 @@ class AggregateObjectDbTestCase(test.NoDBTestCase):
                                                      key='goodkey')
         self.assertEqual(2, len(rl1))
 
+    def test_aggregate_update(self):
+        created = _create_aggregate(self.context,
+                            metadata={'availability_zone': 'fake_avail_zone'})
+        result = aggregate_obj._aggregate_get_from_db(self.context,
+                                                      created['id'])
+        self.assertEqual(result['availability_zone'], 'fake_avail_zone')
+        new_values = deepcopy(_get_fake_aggregate(1, result=False))
+        new_values['availability_zone'] = 'different_avail_zone'
+        updated = aggregate_obj._aggregate_update_to_db(self.context,
+                                                    result['id'], new_values)
+        self.assertEqual('different_avail_zone', updated['availability_zone'])
+
+    def test_aggregate_update_with_metadata(self):
+        result = _create_aggregate(self.context, metadata=None)
+        values = deepcopy(_get_fake_aggregate(1, result=False))
+        values['metadata'] = deepcopy(_get_fake_metadata(1))
+        values['availability_zone'] = 'different_avail_zone'
+        expected_metadata = deepcopy(values['metadata'])
+        expected_metadata['availability_zone'] = values['availability_zone']
+        aggregate_obj._aggregate_update_to_db(self.context, result['id'],
+                                              values)
+        metadata = _aggregate_metadata_get_all(self.context, result['id'])
+        updated = aggregate_obj._aggregate_get_from_db(self.context,
+                                                       result['id'])
+        self.assertThat(metadata,
+                        matchers.DictMatches(expected_metadata))
+        self.assertEqual('different_avail_zone', updated['availability_zone'])
+
+    def test_aggregate_update_with_existing_metadata(self):
+        result = _create_aggregate(self.context)
+        values = deepcopy(_get_fake_aggregate(1, result=False))
+        values['metadata'] = deepcopy(_get_fake_metadata(1))
+        values['metadata']['fake_key1'] = 'foo'
+        expected_metadata = deepcopy(values['metadata'])
+        aggregate_obj._aggregate_update_to_db(self.context, result['id'],
+                                              values)
+        metadata = _aggregate_metadata_get_all(self.context, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected_metadata))
+
+    def test_aggregate_update_zone_with_existing_metadata(self):
+        result = _create_aggregate(self.context)
+        new_zone = {'availability_zone': 'fake_avail_zone_2'}
+        metadata = deepcopy(_get_fake_metadata(1))
+        metadata.update(new_zone)
+        aggregate_obj._aggregate_update_to_db(self.context, result['id'],
+                                              new_zone)
+        expected = _aggregate_metadata_get_all(self.context, result['id'])
+        self.assertThat(metadata, matchers.DictMatches(expected))
+
+    def test_aggregate_update_raise_not_found(self):
+        # this does not exist!
+        aggregate_id = 2
+        new_values = deepcopy(_get_fake_aggregate(1, result=False))
+        self.assertRaises(exception.AggregateNotFound,
+                          aggregate_obj._aggregate_update_to_db,
+                          self.context, aggregate_id, new_values)
+
+    def test_aggregate_update_raise_name_exist(self):
+        _create_aggregate(self.context, values={'name': 'test1'},
+                         metadata={'availability_zone': 'fake_avail_zone'})
+        _create_aggregate(self.context, values={'name': 'test2'},
+                          metadata={'availability_zone': 'fake_avail_zone'})
+        aggregate_id = 1
+        new_values = {'name': 'test2'}
+        self.assertRaises(exception.AggregateNameExists,
+                          aggregate_obj._aggregate_update_to_db,
+                          self.context, aggregate_id, new_values)
+
     def test_aggregate_host_add_to_db(self):
         result = _create_aggregate(self.context, metadata=None)
         host = _get_fake_hosts(1)[0]
