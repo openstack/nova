@@ -111,33 +111,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
 
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
-    def test_call_fail(self, mock_get_client, mock_multi_getattr):
-        cfg.CONF.set_override('api_max_retries', 2, 'ironic')
-        test_obj = mock.Mock()
-        test_obj.side_effect = ironic_exception.HTTPServiceUnavailable
-        mock_multi_getattr.return_value = test_obj
-        mock_get_client.return_value = FAKE_CLIENT
-        self.assertRaises(exception.NovaException, self.ironicclient.call,
-                          "node.list")
-        self.assertEqual(3, test_obj.call_count)
-
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
-    def test_call_with_api_max_retries_neg_conf_val(self, mock_get_client,
-                                                    mock_multi_getattr):
-        cfg.CONF.set_default('api_max_retries', -1, 'ironic')
-        test_obj = mock.Mock()
-        test_obj.side_effect = ironic_exception.HTTPServiceUnavailable
-        mock_multi_getattr.return_value = test_obj
-        mock_get_client.return_value = FAKE_CLIENT
-        self.assertRaises(exception.NovaException, self.ironicclient.call,
-                          "node.list")
-        self.assertEqual(1, test_obj.call_count)
-
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
-    def test_call_fail_unexpected_exception(self, mock_get_client,
-                                            mock_multi_getattr):
+    def test_call_fail_exception(self, mock_get_client, mock_multi_getattr):
         test_obj = mock.Mock()
         test_obj.side_effect = ironic_exception.HTTPNotFound
         mock_multi_getattr.return_value = test_obj
