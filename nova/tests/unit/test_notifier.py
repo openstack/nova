@@ -37,11 +37,11 @@ class TestNotifier(test.NoDBTestCase):
             'both': [
                 mock.call(mock.ANY, serializer=mock.ANY),
                 mock.call(mock.ANY, serializer=mock.ANY,
-                          topic='versioned_notifications')],
+                          topics=['versioned_notifications'])],
             'versioned': [
                 mock.call(mock.ANY, serializer=mock.ANY, driver='noop'),
                 mock.call(mock.ANY, serializer=mock.ANY,
-                          topic='versioned_notifications')]}
+                          topics=['versioned_notifications'])]}
 
         for config in cases:
             mock_notifier.reset_mock()

@@ -69,7 +69,7 @@ class TestRPC(testtools.TestCase):
     @mock.patch.object(messaging, 'Notifier')
     def test_init_both(self, mock_notif, mock_noti_trans, mock_trans,
                        mock_ser, mock_exmods):
-        expected = [{}, {'topic': 'versioned_notifications'}]
+        expected = [{}, {'topics': ['versioned_notifications']}]
         self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
                         mock_exmods, 'both', expected)
 
@@ -80,7 +80,8 @@ class TestRPC(testtools.TestCase):
     @mock.patch.object(messaging, 'Notifier')
     def test_init_versioned(self, mock_notif, mock_noti_trans, mock_trans,
                             mock_ser, mock_exmods):
-        expected = [{'driver': 'noop'}, {'topic': 'versioned_notifications'}]
+        expected = [{'driver': 'noop'},
+                    {'topics': ['versioned_notifications']}]
         self._test_init(mock_notif, mock_noti_trans, mock_trans, mock_ser,
                         mock_exmods, 'versioned', expected)
 
