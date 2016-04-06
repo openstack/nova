@@ -32,6 +32,7 @@ from nova import context
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
@@ -584,7 +585,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         instances = [{'image_ref': '1',
                       'host': CONF.host,
                       'name': 'instance-1',
-                      'uuid': '123',
+                      'uuid': uuids.instance_1,
                       'vm_state': '',
                       'task_state': ''},
                      {'image_ref': '1',
@@ -592,7 +593,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                       'ramdisk_id': '22',
                       'host': CONF.host,
                       'name': 'instance-2',
-                      'uuid': '456',
+                      'uuid': uuids.instance_2,
                       'vm_state': '',
                       'task_state': ''}]
         all_instances = [fake_instance.fake_instance_obj(None, **instance)
@@ -637,7 +638,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         ctxt = context.get_admin_context()
         objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
-                ctxt, ['123', '456']).AndReturn({})
+                ctxt, [uuids.instance_1, uuids.instance_2]).AndReturn({})
 
         self.mox.ReplayAll()
         # And finally we can make the call we're actually testing...
@@ -687,12 +688,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             was['called'] = True
             instances = []
             for x in range(2):
-                instances.append(fake_instance.fake_db_instance(
-                                                        image_ref='1',
-                                                        uuid=x,
-                                                        name=x,
-                                                        vm_state='',
-                                                        task_state=''))
+                instances.append(
+                    fake_instance.fake_db_instance(
+                        image_ref=uuids.fake_image_ref,
+                        uuid=getattr(uuids, 'instance_%s' % x),
+                        name='instance-%s' % x,
+                        vm_state='',
+                        task_state=''))
             return instances
 
         with utils.tempdir() as tmpdir:

@@ -25,6 +25,7 @@ from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel as uuids
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.volume import cinder
@@ -42,7 +43,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
     }
 
     swap_bdm_dict = block_device.BlockDeviceDict(
-        {'id': 1, 'instance_uuid': 'fake-instance',
+        {'id': 1, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sdb1',
          'source_type': 'blank',
          'destination_type': 'local',
@@ -62,7 +63,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'swap_size': 2}
 
     ephemeral_bdm_dict = block_device.BlockDeviceDict(
-        {'id': 2, 'instance_uuid': 'fake-instance',
+        {'id': 2, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sdc1',
          'source_type': 'blank',
          'destination_type': 'local',
@@ -87,7 +88,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'num': 0}
 
     volume_bdm_dict = block_device.BlockDeviceDict(
-        {'id': 3, 'instance_uuid': 'fake-instance',
+        {'id': 3, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda1',
          'source_type': 'volume',
          'disk_bus': 'scsi',
@@ -115,7 +116,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'delete_on_termination': False}
 
     snapshot_bdm_dict = block_device.BlockDeviceDict(
-        {'id': 4, 'instance_uuid': 'fake-instance',
+        {'id': 4, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda2',
          'delete_on_termination': True,
          'volume_size': 3,
@@ -143,7 +144,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'delete_on_termination': True}
 
     image_bdm_dict = block_device.BlockDeviceDict(
-        {'id': 5, 'instance_uuid': 'fake-instance',
+        {'id': 5, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda2',
          'delete_on_termination': True,
          'volume_size': 1,
@@ -171,7 +172,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'delete_on_termination': True}
 
     blank_bdm_dict = block_device.BlockDeviceDict(
-        {'id': 6, 'instance_uuid': 'fake-instance',
+        {'id': 6, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sda2',
          'delete_on_termination': True,
          'volume_size': 3,
@@ -394,7 +395,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                        lambda: elevated_context)
         self.mox.StubOutWithMock(driver_bdm._bdm_obj, 'save')
         self.mox.StubOutWithMock(encryptors, 'get_encryption_metadata')
-        instance_detail = {'id': '123', 'uuid': 'fake_uuid',
+        instance_detail = {'id': '123', 'uuid': uuids.uuid,
                            'availability_zone': availability_zone}
         instance = fake_instance.fake_instance_obj(self.context,
                                                    **instance_detail)
@@ -449,11 +450,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             driver_bdm._bdm_obj.save().AndReturn(None)
             if not fail_volume_attach:
                 self.volume_api.attach(elevated_context, fake_volume['id'],
-                                       'fake_uuid', bdm_dict['device_name'],
+                                       uuids.uuid, bdm_dict['device_name'],
                                         mode=access_mode).AndReturn(None)
             else:
                 self.volume_api.attach(elevated_context, fake_volume['id'],
-                                       'fake_uuid', bdm_dict['device_name'],
+                                       uuids.uuid, bdm_dict['device_name'],
                                         mode=access_mode).AndRaise(
                                             test.TestingException)
                 if driver_attach:
@@ -613,7 +614,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['snapshot'](
             self.snapshot_bdm)
 
-        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+        instance = {'id': 'fake_id', 'uuid': uuids.uuid}
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
         connection_info = {'data': {'multipath_id': 'fake_multipath_id'}}
         expected_conn_info = {'data': {'multipath_id': 'fake_multipath_id'},
@@ -705,7 +706,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                   'attach_status': 'detached'}
 
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
-                                                   **{'uuid': 'fake-uuid'})
+                                                   **{'uuid': uuids.uuid})
         with test.nested(
             mock.patch.object(self.volume_api, 'get_snapshot',
                               return_value=snapshot),
@@ -735,7 +736,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['snapshot'](
             self.snapshot_bdm)
 
-        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+        instance = {'id': 'fake_id', 'uuid': uuids.uuid}
 
         volume_class = self.driver_classes['volume']
         self.mox.StubOutWithMock(volume_class, 'attach')
@@ -817,7 +818,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                   'attach_status': 'detached'}
 
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
-                                                   **{'uuid': 'fake-uuid'})
+                                                   **{'uuid': uuids.uuid})
         with test.nested(
             mock.patch.object(self.volume_api, 'create', return_value=volume),
             mock.patch.object(self.volume_api, 'delete'),
@@ -844,7 +845,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['image'](
             self.image_bdm)
 
-        instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
+        instance = {'id': 'fake_id', 'uuid': uuids.uuid}
 
         volume_class = self.driver_classes['volume']
         self.mox.StubOutWithMock(volume_class, 'attach')
@@ -869,9 +870,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 fake_block_device.fake_bdm_object(
                         self.context, no_blank_volume))
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
-                                                   **{'uuid': 'fake-uuid'})
+                                                   **{'uuid': uuids.uuid})
         volume = {'id': 'fake-volume-id-2',
-                  'display_name': 'fake-uuid-blank-vol'}
+                  'display_name': '%s-blank-vol' % uuids.uuid}
 
         with test.nested(
             mock.patch.object(self.volume_api, 'create', return_value=volume),
@@ -891,7 +892,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                               wait_func=wait_func)
 
             vol_create.assert_called_once_with(
-                self.context, test_bdm.volume_size, 'fake-uuid-blank-vol',
+                self.context, test_bdm.volume_size,
+                '%s-blank-vol' % uuids.uuid,
                 '', availability_zone=None)
             vol_delete.assert_called_once_with(
                 self.context, volume['id'])
@@ -903,10 +905,10 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 fake_block_device.fake_bdm_object(
                         self.context, no_blank_volume))
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
-                                                   **{'uuid': 'fake-uuid'})
+                                                   **{'uuid': uuids.uuid})
         volume_class = self.driver_classes['volume']
         volume = {'id': 'fake-volume-id-2',
-                  'display_name': 'fake-uuid-blank-vol'}
+                  'display_name': '%s-blank-vol' % uuids.uuid}
 
         with test.nested(
             mock.patch.object(self.volume_api, 'create', return_value=volume),
@@ -916,7 +918,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                             self.virt_driver)
 
             vol_create.assert_called_once_with(
-                self.context, test_bdm.volume_size, 'fake-uuid-blank-vol',
+                self.context, test_bdm.volume_size,
+                '%s-blank-vol' % uuids.uuid,
                 '', availability_zone=None)
             vol_attach.assert_called_once_with(self.context, instance,
                                                self.volume_api,
@@ -933,12 +936,12 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['blank'](
                 fake_block_device.fake_bdm_object(
                         self.context, no_blank_volume))
-        updates = {'uuid': 'fake-uuid', 'availability_zone': 'test-az'}
+        updates = {'uuid': uuids.uuid, 'availability_zone': 'test-az'}
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
                                                    **updates)
         volume_class = self.driver_classes['volume']
         volume = {'id': 'fake-volume-id-2',
-                  'display_name': 'fake-uuid-blank-vol'}
+                  'display_name': '%s-blank-vol' % uuids.uuid}
 
         with mock.patch.object(self.volume_api, 'create',
                                return_value=volume) as vol_create:
@@ -947,7 +950,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                                 self.virt_driver)
 
                 vol_create.assert_called_once_with(
-                    self.context, test_bdm.volume_size, 'fake-uuid-blank-vol',
+                    self.context, test_bdm.volume_size,
+                    '%s-blank-vol' % uuids.uuid,
                     '', availability_zone='test-az')
                 vol_attach.assert_called_once_with(self.context, instance,
                                                    self.volume_api,

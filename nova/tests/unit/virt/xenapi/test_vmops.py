@@ -33,6 +33,7 @@ from nova import test
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.xenapi import stubs
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
@@ -334,7 +335,7 @@ class SpawnTestCase(VMOpsTestBase):
         name_label = name_label_param
         if name_label is None:
             name_label = "dummy"
-        image_meta = objects.ImageMeta.from_dict({"id": "image_id"})
+        image_meta = objects.ImageMeta.from_dict({"id": uuids.image_id})
         context = "context"
         session = self.vmops._session
         injected_files = "fake_files"
@@ -524,7 +525,7 @@ class SpawnTestCase(VMOpsTestBase):
                 "root_device_name": "/dev/xvda"}
         disk_info = "disk_info"
         network_info = "net_info"
-        image_meta = objects.ImageMeta.from_dict({"id": "image_id"})
+        image_meta = objects.ImageMeta.from_dict({"id": uuids.image_id})
         block_device_info = {}
         import_root = True
         if booted_from_volume:
@@ -1107,7 +1108,7 @@ class CreateVMRecordTestCase(VMOpsTestBase):
             mock_get_vm_device_id, mock_determine_vm_mode):
 
         context = "context"
-        instance = objects.Instance(vm_mode="vm_mode", uuid="uuid123")
+        instance = objects.Instance(vm_mode="vm_mode", uuid=uuids.instance)
         name_label = "dummy"
         disk_image_type = "vhd"
         kernel_file = "kernel"

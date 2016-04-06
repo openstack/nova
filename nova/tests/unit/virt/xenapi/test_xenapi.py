@@ -48,6 +48,7 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
@@ -58,6 +59,7 @@ from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_aggregate
 from nova.tests.unit import utils as test_utils
 from nova.tests.unit.virt.xenapi import stubs
+from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.client import session as xenapi_session
@@ -75,14 +77,14 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-IMAGE_MACHINE = '1'
-IMAGE_KERNEL = '2'
-IMAGE_RAMDISK = '3'
-IMAGE_RAW = '4'
-IMAGE_VHD = '5'
-IMAGE_ISO = '6'
-IMAGE_IPXE_ISO = '7'
-IMAGE_FROM_VOLUME = '8'
+IMAGE_MACHINE = uuids.image_ref
+IMAGE_KERNEL = uuids.image_kernel_id
+IMAGE_RAMDISK = uuids.image_ramdisk_id
+IMAGE_RAW = uuids.image_raw
+IMAGE_VHD = uuids.image_vhd
+IMAGE_ISO = uuids.image_iso
+IMAGE_IPXE_ISO = uuids.image_ipxe_iso
+IMAGE_FROM_VOLUME = uuids.image_from_volume
 
 IMAGE_FIXTURES = {
     IMAGE_MACHINE: {
@@ -297,7 +299,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stub_out_vm_methods(self.stubs)
         fake_processutils.stub_out_processutils_execute(self.stubs)
         self.user_id = 'fake'
-        self.project_id = 'fake'
+        self.project_id = fakes.FAKE_PROJECT_ID
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.conn._session.is_local_connection = False
@@ -353,7 +355,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.mox.ReplayAll()
 
         self.stubs.Set(objects.Instance, 'name', 'foo')
-        instance = objects.Instance(uuid='fake-uuid')
+        instance = objects.Instance(uuid=uuids.instance)
         self.assertTrue(self.conn.instance_exists(instance))
 
     def test_instance_not_exists(self):
@@ -362,7 +364,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.mox.ReplayAll()
 
         self.stubs.Set(objects.Instance, 'name', 'bar')
-        instance = objects.Instance(uuid='fake-uuid')
+        instance = objects.Instance(uuid=uuids.instance)
         self.assertFalse(self.conn.instance_exists(instance))
 
     def test_list_instances_0(self):
@@ -819,9 +821,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.check_vm_params_for_linux()
 
     def test_spawn_not_enough_memory(self):
-        self.assertRaises(exception.InsufficientFreeMemory,
-                          self._test_spawn,
-                          '1', 2, 3, "4")  # m1.xlarge
+        self.assertRaises(exception.InsufficientFreeMemory, self._test_spawn,
+                          IMAGE_MACHINE, IMAGE_KERNEL,
+                          IMAGE_RAMDISK, "4")  # m1.xlarge
 
     def test_spawn_fail_cleanup_1(self):
         """Simulates an error while downloading an image.
@@ -831,8 +833,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
         stubs.stubout_fetch_disk_image(self.stubs, raise_failure=True)
-        self.assertRaises(xenapi_fake.Failure,
-                          self._test_spawn, '1', 2, 3)
+        self.assertRaises(xenapi_fake.Failure, self._test_spawn,
+                          IMAGE_MACHINE, IMAGE_KERNEL, IMAGE_RAMDISK)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
         end_vms = self._list_vms()
@@ -848,8 +850,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
         stubs.stubout_create_vm(self.stubs)
-        self.assertRaises(xenapi_fake.Failure,
-                          self._test_spawn, '1', 2, 3)
+        self.assertRaises(xenapi_fake.Failure, self._test_spawn,
+                          IMAGE_MACHINE, IMAGE_KERNEL, IMAGE_RAMDISK)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
         end_vms = self._list_vms()
@@ -865,8 +867,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_attach_disks(self.stubs)
         vdi_recs_start = self._list_vdis()
         start_vms = self._list_vms()
-        self.assertRaises(xenapi_fake.Failure,
-                          self._test_spawn, '1', 2, 3)
+        self.assertRaises(xenapi_fake.Failure, self._test_spawn,
+                          IMAGE_MACHINE, IMAGE_KERNEL, IMAGE_RAMDISK)
         # No additional VDI should be found.
         vdi_recs_end = self._list_vdis()
         end_vms = self._list_vms()
@@ -1015,7 +1017,8 @@ iface eth0 inet6 static
             (r'mount', _mount_handler),
             (r'umount', _umount_handler),
             (r'tee.*interfaces', _tee_handler)])
-        self._test_spawn('1', 2, 3, check_injection=True)
+        self._test_spawn(IMAGE_MACHINE, IMAGE_KERNEL,
+                         IMAGE_RAMDISK, check_injection=True)
 
         # tee must not run in this case, where an injection-capable
         # guest agent is detected
@@ -1027,7 +1030,7 @@ iface eth0 inet6 static
         self.conn._vmops._inject_auto_disk_config(instance, mox.IgnoreArg())
         self.mox.ReplayAll()
         image_meta = objects.ImageMeta.from_dict(
-            IMAGE_FIXTURES['1']["image_meta"])
+            IMAGE_FIXTURES[IMAGE_MACHINE]["image_meta"])
         self.conn.spawn(self.context, instance, image_meta, [], 'herp', '')
 
     def test_spawn_vlanmanager(self):
@@ -1544,9 +1547,9 @@ iface eth0 inet6 static
             'display_name': 'host-',
             'project_id': self.project_id,
             'user_id': self.user_id,
-            'image_ref': 1,
-            'kernel_id': 2,
-            'ramdisk_id': 3,
+            'image_ref': IMAGE_MACHINE,
+            'kernel_id': IMAGE_KERNEL,
+            'ramdisk_id': IMAGE_RAMDISK,
             'root_gb': 80,
             'ephemeral_gb': 0,
             'instance_type_id': '3',  # m1.large
@@ -1559,7 +1562,7 @@ iface eth0 inet6 static
                                                         instance_values)
         network_info = fake_network.fake_get_instance_nw_info(self)
         image_meta = objects.ImageMeta.from_dict(
-            {'id': IMAGE_VHD,
+            {'id': uuids.image_id,
              'disk_format': 'vhd'})
         if spawn:
             self.conn.spawn(self.context, instance, image_meta, [], 'herp',
@@ -1655,7 +1658,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.instance_values = {
                   'project_id': self.project_id,
                   'user_id': self.user_id,
-                  'image_ref': 1,
+                  'image_ref': IMAGE_MACHINE,
                   'kernel_id': None,
                   'ramdisk_id': None,
                   'root_gb': 80,
@@ -1920,7 +1923,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.mox.StubOutWithMock(vmops, '_restore_orig_vm_and_cleanup_orphan')
 
         instance = objects.Instance(context=self.context,
-                                    auto_disk_config=True, uuid='uuid')
+                                    auto_disk_config=True,
+                                    uuid=uuids.instance)
         instance.obj_reset_changes()
         vm_ref = "vm_ref"
         dest = "dest"
@@ -2293,9 +2297,9 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.instance_values = {
                   'project_id': self.project_id,
                   'user_id': self.user_id,
-                  'image_ref': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
+                  'image_ref': IMAGE_MACHINE,
+                  'kernel_id': IMAGE_KERNEL,
+                  'ramdisk_id': IMAGE_RAMDISK,
                   'root_gb': 80,
                   'ephemeral_gb': 0,
                   'instance_type_id': '3',  # m1.large
@@ -2332,7 +2336,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
         vdis = {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}}
         image_meta = objects.ImageMeta.from_dict(
-            {'id': 'null',
+            {'id': uuids.image_id,
              'disk_format': 'vhd',
              'properties': {'vm_mode': 'xen'}})
         self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
@@ -2418,9 +2422,9 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.instance_values = {
                   'project_id': self.project_id,
                   'user_id': self.user_id,
-                  'image_ref': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
+                  'image_ref': IMAGE_MACHINE,
+                  'kernel_id': IMAGE_KERNEL,
+                  'ramdisk_id': IMAGE_RAMDISK,
                   'root_gb': 80,
                   'ephemeral_gb': 0,
                   'instance_type_id': '3',  # m1.large
@@ -2453,7 +2457,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         vdis = {vdi_key: {'uuid': vdi_uuid, 'ref': vdi_ref}}
         self.called = False
         image_meta = objects.ImageMeta.from_dict(
-            {'id': 'null',
+            {'id': uuids.image_id,
              'disk_format': 'vhd',
              'properties': {'vm_mode': 'xen'}})
         self.conn._vmops._attach_disks(instance, image_meta, vm_ref,

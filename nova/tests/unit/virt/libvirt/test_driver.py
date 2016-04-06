@@ -79,6 +79,7 @@ from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -3550,7 +3551,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
               </domain>
               """
         dom = FakeVirtDomain(fake_xml=xml)
-        instance.ephemeral_key_uuid = 'fake-id'  # encrypted
+        instance.ephemeral_key_uuid = uuids.ephemeral_key_uuid  # encrypted
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -12817,7 +12818,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_default_root_device_name(self):
         instance = {'uuid': 'fake_instance'}
-        image_meta = objects.ImageMeta.from_dict({'id': 'fake'})
+        image_meta = objects.ImageMeta.from_dict({'id': uuids.image_id})
         root_bdm = {'source_type': 'image',
                     'destination_type': 'volume',
                     'image_id': 'fake_id'}
@@ -13038,7 +13039,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(virt_type='lxc', group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(id=1, uuid='fake-uuid',
+        instance = objects.Instance(id=1, uuid=uuids.instance,
                                     image_ref='my_fake_image')
 
         with test.nested(
@@ -13456,7 +13457,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         bdm = objects.BlockDeviceMapping(self.context,
             **fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 2, 'instance_uuid': 'fake-instance',
+                {'id': 2, 'instance_uuid': uuids.instance,
                  'device_name': '/dev/vdb',
                  'source_type': 'volume',
                  'destination_type': 'volume',
@@ -13939,7 +13940,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         inst['id'] = 1
         inst['uuid'] = '52d3b512-1152-431f-a8f7-28f0288a622b'
         inst['os_type'] = 'linux'
-        inst['image_ref'] = '1'
+        inst['image_ref'] = uuids.fake_image_ref
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = 'fake'
         inst['project_id'] = 'fake'
@@ -14927,13 +14928,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists')
     @mock.patch.object(lvm, 'list_volumes')
     def test_lvm_disks(self, listlvs, exists):
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
         self.flags(images_volume_group='vols', group='libvirt')
         exists.return_value = True
-        listlvs.return_value = ['fake-uuid_foo',
+        listlvs.return_value = ['%s_foo' % uuids.instance,
                                 'other-uuid_foo']
         disks = self.drvr._lvm_disks(instance)
-        self.assertEqual(['/dev/vols/fake-uuid_foo'], disks)
+        self.assertEqual(['/dev/vols/%s_foo' % uuids.instance], disks)
 
     def test_is_booted_from_volume(self):
         func = libvirt_driver.LibvirtDriver._is_booted_from_volume
@@ -15218,7 +15219,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                         ).AndReturn(mock_backend.root)
 
         image_meta = objects.ImageMeta.from_dict(
-            {'id': 'fake', 'name': 'fake'})
+            {'id': uuids.image_id, 'name': 'fake'})
         self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
                                  network_info, mox.IgnoreArg(),
                                  image_meta,
@@ -15255,7 +15256,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                     "</devices></domain>")
 
         mock_get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake=uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
         fake_dom = FakeVirtDomain(fake_xml=dummyxml)
         mock_get_domain.return_value = fake_dom
         mock_load_file.return_value = "fake_unrescue_xml"
@@ -15336,7 +15337,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                             extra_md=mox.IgnoreArg(),
                                             network_info=mox.IgnoreArg())
         image_meta = objects.ImageMeta.from_dict(
-            {'id': 'fake', 'name': 'fake'})
+            {'id': uuids.image_id, 'name': 'fake'})
         self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
                                  network_info, mox.IgnoreArg(),
                                  image_meta,
@@ -15374,7 +15375,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files(self, get_instance_path, exists, exe,
                                    shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         exists.side_effect = [False, False, True, False]
 
@@ -15392,7 +15393,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_kill_running(
             self, get_instance_path, kill, exists, exe, shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
         self.drvr.job_tracker.jobs[instance.uuid] = [3, 4]
 
         exists.side_effect = [False, False, True, False]
@@ -15413,7 +15414,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_resize(self, get_instance_path, exists,
                                           exe, shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         nova.utils.execute.side_effect = [Exception(), None]
         exists.side_effect = [False, False, True, False]
@@ -15433,7 +15434,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_failed(self, get_instance_path, exists, exe,
                                           shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         exists.side_effect = [False, False, True, True]
 
@@ -15450,7 +15451,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_mv_failed(self, get_instance_path, exists,
                                              exe, shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         nova.utils.execute.side_effect = Exception()
         exists.side_effect = [True, True]
@@ -15469,7 +15470,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_resume(self, get_instance_path, exists,
                                              exe, shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         nova.utils.execute.side_effect = Exception()
         exists.side_effect = [False, False, True, False]
@@ -15488,7 +15489,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_none(self, get_instance_path, exists,
                                         exe, shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         nova.utils.execute.side_effect = Exception()
         exists.side_effect = [False, False, False, False]
@@ -15508,7 +15509,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_delete_instance_files_concurrent(self, get_instance_path, exists,
                                               exe, shutil):
         get_instance_path.return_value = '/path'
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         nova.utils.execute.side_effect = [Exception(), Exception(), None]
         exists.side_effect = [False, False, True, False]
@@ -15590,13 +15591,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     def test_instance_on_disk(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
         self.assertFalse(drvr.instance_on_disk(instance))
 
     def test_instance_on_disk_rbd(self):
         self.flags(images_type='rbd', group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
         self.assertTrue(drvr.instance_on_disk(instance))
 
     def test_get_disk_xml(self):
@@ -15681,8 +15682,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                    mock_unfilter, mock_delete_volume,
                                    mock_get_guest, mock_get_size):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance = objects.Instance(uuid='fake-uuid', id=1,
-                                    ephemeral_key_uuid='000-000-000')
+        instance = objects.Instance(
+            uuid=uuids.instance, id=1,
+            ephemeral_key_uuid=uuids.ephemeral_key_uuid)
         instance.system_metadata = {}
         block_device_info = {'root_device_name': '/dev/vda',
                              'ephemerals': [],
@@ -15715,8 +15717,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                           encrypted=False):
 
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance = objects.Instance(uuid='fake-uuid', id=1,
-                                    ephemeral_key_uuid='000-000-000')
+        instance = objects.Instance(
+            uuid=uuids.instance, id=1,
+            ephemeral_key_uuid=uuids.ephemeral_key_uuid)
         block_device_info = {'root_device_name': '/dev/vda',
                              'ephemerals': [],
                              'block_device_mapping': []}
@@ -15775,7 +15778,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
     def test_trigger_crash_dump(self):
         mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
@@ -15789,7 +15792,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
         mock_guest.inject_nmi = mock.Mock(side_effect=ex)
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
@@ -15804,7 +15807,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
         mock_guest.inject_nmi = mock.Mock(side_effect=ex)
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
@@ -15819,7 +15822,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
         mock_guest.inject_nmi = mock.Mock(side_effect=ex)
-        instance = objects.Instance(uuid='fake-uuid', id=1)
+        instance = objects.Instance(uuid=uuids.instance, id=1)
 
         with mock.patch.object(self.drvr._host, 'get_guest',
                                return_value=mock_guest):
@@ -16054,7 +16057,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         instance = objects.Instance(**self.inst)
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
             'id': 123,
-            'instance_uuid': 'fake-instance',
+            'instance_uuid': uuids.instance,
             'device_name': '/dev/sdb',
             'source_type': 'volume',
             'destination_type': 'volume',
