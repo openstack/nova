@@ -1,0 +1,5 @@
+---
+other:
+  - The default flavors that nova has previously had are no longer
+    created as part of the first database migration. New deployments
+    will need to create appropriate flavors before first use.
