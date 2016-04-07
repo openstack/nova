@@ -5410,7 +5410,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if (dest_check_data.is_shared_instance_path and
                 self.image_backend.backend().is_file_in_instance_path()):
-            # NOTE(angdraug): file based image backends (Raw, Qcow2)
+            # NOTE(angdraug): file based image backends (Flat, Qcow2)
             # place block device files under the instance path
             return True
 
