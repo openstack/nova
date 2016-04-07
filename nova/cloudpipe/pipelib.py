@@ -135,7 +135,7 @@ class CloudPipe(object):
             result, private_key = keypair_api.create_key_pair(context,
                                                               context.user_id,
                                                               key_name)
-            key_dir = os.path.join(CONF.keys_path, context.user_id)
+            key_dir = os.path.join(CONF.crypto.keys_path, context.user_id)
             fileutils.ensure_tree(key_dir)
             key_path = os.path.join(key_dir, '%s.pem' % key_name)
             with open(key_path, 'w') as f:

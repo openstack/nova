@@ -36,7 +36,7 @@ class X509Test(test.NoDBTestCase):
     @mock.patch('nova.db.certificate_create')
     def test_can_generate_x509(self, mock_create):
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir)
+            self.flags(ca_path=tmpdir, group='crypto')
             crypto.ensure_ca_filesystem()
             _key, cert_str = crypto.generate_x509_cert('fake', 'fake')
 
@@ -56,7 +56,7 @@ class X509Test(test.NoDBTestCase):
 
     def test_encrypt_decrypt_x509(self):
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir)
+            self.flags(ca_path=tmpdir, group='crypto')
             project_id = "fake"
             crypto.ensure_ca_filesystem()
 
@@ -85,7 +85,7 @@ class X509Test(test.NoDBTestCase):
                        side_effect=processutils.ProcessExecutionError)
     def test_ensure_ca_filesystem_chdir(self, *args, **kargs):
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir)
+            self.flags(ca_path=tmpdir, group='crypto')
             start = os.getcwd()
             self.assertRaises(processutils.ProcessExecutionError,
                               crypto.ensure_ca_filesystem)
@@ -156,7 +156,7 @@ class RevokeCertsTest(test.NoDBTestCase):
                           2, 'test_file')
 
     def test_revoke_cert_project_not_found_chdir_fails(self, *args, **kargs):
-        self.flags(use_project_ca=True)
+        self.flags(use_project_ca=True, group='crypto')
         self.assertRaises(exception.ProjectNotFound, crypto.revoke_cert,
                           str(uuid.uuid4()), 'test_file')
 
@@ -164,16 +164,16 @@ class RevokeCertsTest(test.NoDBTestCase):
 class CertExceptionTests(test.NoDBTestCase):
     def test_fetch_ca_file_not_found(self):
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir)
-            self.flags(use_project_ca=True)
+            self.flags(ca_path=tmpdir, group='crypto')
+            self.flags(use_project_ca=True, group='crypto')
 
             self.assertRaises(exception.CryptoCAFileNotFound, crypto.fetch_ca,
                               project_id='fake')
 
     def test_fetch_crl_file_not_found(self):
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir)
-            self.flags(use_project_ca=True)
+            self.flags(ca_path=tmpdir, group='crypto')
+            self.flags(use_project_ca=True, group='crypto')
 
             self.assertRaises(exception.CryptoCRLFileNotFound,
                               crypto.fetch_crl, project_id='fake')

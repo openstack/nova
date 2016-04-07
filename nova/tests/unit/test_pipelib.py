@@ -34,7 +34,7 @@ class PipelibTest(test.TestCase):
 
     def test_get_encoded_zip(self):
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir)
+            self.flags(ca_path=tmpdir, group='crypto')
             crypto.ensure_ca_filesystem()
 
             ret = self.cloudpipe.get_encoded_zip(self.project)
@@ -45,7 +45,7 @@ class PipelibTest(test.TestCase):
                        "create",
                        lambda *a, **kw: (None, "r-fakeres"))
         with utils.tempdir() as tmpdir:
-            self.flags(ca_path=tmpdir, keys_path=tmpdir)
+            self.flags(ca_path=tmpdir, keys_path=tmpdir, group='crypto')
             crypto.ensure_ca_filesystem()
             self.cloudpipe.launch_vpn_instance(self.context)
 
@@ -63,7 +63,7 @@ class PipelibTest(test.TestCase):
     def test_setup_key_pair(self):
         key_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
         with utils.tempdir() as tmpdir:
-            self.flags(keys_path=tmpdir)
+            self.flags(keys_path=tmpdir, group='crypto')
 
             # First attempt, key does not exist (thus it is generated)
             res1_key = self.cloudpipe.setup_key_pair(self.context)
