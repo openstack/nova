@@ -482,11 +482,32 @@ class CinderApiTestCase(test.NoDBTestCase):
             keystone_exception.Forbidden,
             exception.Forbidden)
 
+    def test_translate_mixed_exception_over_limit(self):
+        self._do_translate_mixed_exception_test(
+            cinder_exception.OverLimit(''),
+            exception.OverQuota)
+
+    def test_translate_mixed_exception_volume_not_found(self):
+        self._do_translate_mixed_exception_test(
+            cinder_exception.NotFound(''),
+            exception.VolumeNotFound)
+
+    def test_translate_mixed_exception_keystone_not_found(self):
+        self._do_translate_mixed_exception_test(
+            keystone_exception.NotFound,
+            exception.VolumeNotFound)
+
     def _do_translate_cinder_exception_test(self, raised_exc, expected_exc):
+        self._do_translate_exception_test(raised_exc, expected_exc,
+                                          cinder.translate_cinder_exception)
+
+    def _do_translate_mixed_exception_test(self, raised_exc, expected_exc):
+        self._do_translate_exception_test(raised_exc, expected_exc,
+                                          cinder.translate_mixed_exceptions)
+
+    def _do_translate_exception_test(self, raised_exc, expected_exc, wrapper):
         my_func = mock.Mock()
         my_func.__name__ = 'my_func'
         my_func.side_effect = raised_exc
 
-        self.assertRaises(expected_exc,
-                          cinder.translate_cinder_exception(my_func),
-                          'foo', 'bar', 'baz')
+        self.assertRaises(expected_exc, wrapper(my_func), 'foo', 'bar', 'baz')
