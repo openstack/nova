@@ -76,8 +76,7 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         tag = models.Tag()
         tag.resource_id = uuid
         tag.tag = 'OtherTag'
-        response = self._do_put('servers/%s/tags/%s' % (uuid, tag.tag),
-                                'server-tags-put-req', {})
+        response = self._do_put('servers/%s/tags/%s' % (uuid, tag.tag))
         self.assertEqual(201, response.status_code)
         expected_location = "%s/servers/%s/tags/%s" % (
             self._get_vers_compute_endpoint(), uuid, tag.tag)
