@@ -1,4 +1,6 @@
-# Copyright (c) 2011 OpenStack Foundation
+# Copyright (c) 2016 Intel, Inc.
+# Copyright (c) 2013 OpenStack Foundation
+# All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -12,26 +14,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from stevedore import driver
-
-import nova.conf
-
-CONF = nova.conf.CONF
-IMPL = None
+from oslo_config import cfg
 
 
-def reset_backend():
-    global IMPL
-    IMPL = driver.DriverManager("nova.ipv6_backend",
-                                CONF.ipv6_backend).driver
+ipv6_backend = cfg.StrOpt('ipv6_backend',
+    default='rfc2462',
+    help='Backend to use for IPv6 generation')
+
+IPV6_OPTS = [ipv6_backend]
 
 
-def to_global(prefix, mac, project_id):
-    return IMPL.to_global(prefix, mac, project_id)
+def register_opts(conf):
+    conf.register_opts(IPV6_OPTS)
 
 
-def to_mac(ipv6_address):
-    return IMPL.to_mac(ipv6_address)
-
-
-reset_backend()
+def list_opts():
+    return {'DEFAULT': IPV6_OPTS}
