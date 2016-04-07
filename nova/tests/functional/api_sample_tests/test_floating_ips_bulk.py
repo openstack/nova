@@ -13,14 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import context
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('public_interface', 'nova.network.linux_net')
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
