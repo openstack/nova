@@ -1,0 +1,4 @@
+---
+features:
+  - Microversion v2.26 allows to create/update/delete simple string tags.
+    They can be used for filtering servers by these tags.

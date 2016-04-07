@@ -313,4 +313,7 @@ class ViewBuilderV21(ViewBuilder):
             server["server"]["description"] = instance.get(
                                                 "display_description")
 
+        if api_version_request.is_supported(request, min_version="2.26"):
+            server["server"]["tags"] = [t.tag for t in instance.tags]
+
         return server

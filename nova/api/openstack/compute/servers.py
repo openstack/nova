@@ -45,6 +45,7 @@ from nova import objects
 from nova import utils
 
 ALIAS = 'servers'
+TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 
 CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
@@ -353,6 +354,12 @@ class ServersController(wsgi.Controller):
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPForbidden(explanation=msg)
 
+        if api_version_request.is_supported(req, min_version='2.26'):
+            for tag_filter in TAG_SEARCH_FILTERS:
+                if tag_filter in search_opts:
+                    search_opts[tag_filter] = search_opts[
+                        tag_filter].split(',')
+
         # If tenant_id is passed as a search parameter this should
         # imply that all_tenants is also enabled unless explicitly
         # disabled. Note that the tenant_id parameter is filtered out
@@ -397,6 +404,9 @@ class ServersController(wsgi.Controller):
 
         expected_attrs = ['pci_devices']
         if is_detail:
+            if api_version_request.is_supported(req, '2.26'):
+                expected_attrs.append("tags")
+
             # merge our expected attrs with what the view builder needs for
             # showing details
             expected_attrs = self._view_builder.get_show_expected_attrs(
@@ -1141,6 +1151,8 @@ class ServersController(wsgi.Controller):
                     'ip', 'changes-since', 'all_tenants')
         if api_version_request.is_supported(req, min_version='2.5'):
             opt_list += ('ip6',)
+        if api_version_request.is_supported(req, min_version='2.26'):
+            opt_list += TAG_SEARCH_FILTERS
         return opt_list
 
     def _get_instance(self, context, instance_uuid):
