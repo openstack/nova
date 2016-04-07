@@ -9848,3 +9848,146 @@ class TestInstanceInfoCache(test.TestCase):
         info_cache = db.instance_info_cache_get(self.context, instance_uuid)
         self.assertEqual(network_info, info_cache.network_info)
         self.assertEqual(instance_uuid, info_cache.instance_uuid)
+
+
+class TestInstanceTagsFiltering(test.TestCase):
+    sample_data = {
+        'project_id': 'project1'
+    }
+
+    def setUp(self):
+        super(TestInstanceTagsFiltering, self).setUp()
+        self.ctxt = context.RequestContext('user1', 'project1')
+
+    def _create_instances(self, count):
+        return [db.instance_create(self.ctxt, self.sample_data)['uuid']
+                for i in range(count)]
+
+    def _assertEqualInstanceUUIDs(self, expected_uuids, observed_instances):
+        observed_uuids = [inst['uuid'] for inst in observed_instances]
+        self.assertEqual(sorted(expected_uuids), sorted(observed_uuids))
+
+    def test_instance_get_all_by_filters_not_tags(self):
+        uuids = self._create_instances(8)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't2'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[4], [u't3'])
+        db.instance_tag_set(self.ctxt, uuids[5], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[6], [u't3', u't4'])
+        db.instance_tag_set(self.ctxt, uuids[7], [])
+
+        result = db.instance_get_all_by_filters(
+            self.ctxt, {'not-tags': [u't1', u't2']})
+
+        self._assertEqualInstanceUUIDs([uuids[0], uuids[1], uuids[3], uuids[4],
+                                        uuids[6], uuids[7]], result)
+
+    def test_instance_get_all_by_filters_not_tags_any(self):
+        uuids = self._create_instances(8)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't2'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[4], [u't3'])
+        db.instance_tag_set(self.ctxt, uuids[5], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[6], [u't3', u't4'])
+        db.instance_tag_set(self.ctxt, uuids[7], [])
+
+        result = db.instance_get_all_by_filters(
+            self.ctxt, {'not-tags-any': [u't1', u't2']})
+        self._assertEqualInstanceUUIDs([uuids[4], uuids[6], uuids[7]], result)
+
+    def test_instance_get_all_by_filters_not_tags_and_tags(self):
+        uuids = self._create_instances(5)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1', u't2', u't4', u't5'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2', u't4'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't1', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[4], [])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [u't1', u't2'],
+                                                 'not-tags': [u't4', u't5']})
+        self._assertEqualInstanceUUIDs([uuids[1], uuids[2]], result)
+
+    def test_instance_get_all_by_filters_tags_contradictory(self):
+        uuids = self._create_instances(4)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[3], [])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [u't1'],
+                                                 'not-tags': [u't1']})
+        self.assertEqual([], result)
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags': [u't1'],
+                                                 'not-tags-any': [u't1']})
+        self.assertEqual([], result)
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags-any': [u't1'],
+                                                 'not-tags-any': [u't1']})
+        self.assertEqual([], result)
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags-any': [u't1'],
+                                                 'not-tags': [u't1']})
+        self.assertEqual([], result)
+
+    def test_instance_get_all_by_filters_not_tags_and_tags_any(self):
+        uuids = self._create_instances(6)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't2'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't1', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[4], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[5], [])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'tags-any': [u't1', u't2'],
+                                                 'not-tags': [u't1', u't2']})
+        self._assertEqualInstanceUUIDs([uuids[0], uuids[1], uuids[3]], result)
+
+    def test_instance_get_all_by_filters_not_tags_and_not_tags_any(self):
+        uuids = self._create_instances(6)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't2', u't5'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't1', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[4], [u't1', u't2', u't4', u't5'])
+        db.instance_tag_set(self.ctxt, uuids[5], [])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                              {'not-tags': [u't1', u't2'],
+                                               'not-tags-any': [u't3', u't4']})
+        self._assertEqualInstanceUUIDs([uuids[0], uuids[1], uuids[5]], result)
+
+    def test_instance_get_all_by_filters_all_tag_filters(self):
+        uuids = self._create_instances(9)
+
+        db.instance_tag_set(self.ctxt, uuids[0], [u't1', u't3', u't7'])
+        db.instance_tag_set(self.ctxt, uuids[1], [u't1', u't2'])
+        db.instance_tag_set(self.ctxt, uuids[2], [u't1', u't2', u't7'])
+        db.instance_tag_set(self.ctxt, uuids[3], [u't1', u't2', u't3', u't5'])
+        db.instance_tag_set(self.ctxt, uuids[4], [u't1', u't2', u't3', u't7'])
+        db.instance_tag_set(self.ctxt, uuids[5], [u't1', u't2', u't3'])
+        db.instance_tag_set(self.ctxt, uuids[6], [u't1', u't2', u't3', u't4',
+                                                  u't5'])
+        db.instance_tag_set(self.ctxt, uuids[7], [u't1', u't2', u't3', u't4',
+                                                  u't5', u't6'])
+        db.instance_tag_set(self.ctxt, uuids[8], [])
+
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                              {'tags': [u't1', u't2'],
+                                               'tags-any': [u't3', u't4'],
+                                               'not-tags': [u't5', u't6'],
+                                               'not-tags-any': [u't7', u't8']})
+        self._assertEqualInstanceUUIDs([uuids[3], uuids[5], uuids[6]], result)
