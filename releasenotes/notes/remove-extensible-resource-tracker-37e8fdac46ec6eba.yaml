@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The extensible resource tracker was deprecated in the 13.0.0 release and
+    has now been removed. Custom resources in the nova.compute.resources
+    namespace selected by the compute_resources configuration parameter will
+    not be loaded.

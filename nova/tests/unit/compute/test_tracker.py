@@ -1035,6 +1035,7 @@ class TestInitComputeNode(BaseTestCase):
             ram_allocation_ratio=ram_alloc_ratio,
             cpu_allocation_ratio=cpu_alloc_ratio,
             disk_allocation_ratio=disk_alloc_ratio,
+            stats={},
         )
 
         # Forcing the flags to the values we know
@@ -1227,6 +1228,14 @@ class TestInstanceClaim(BaseTestCase):
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
+            'stats': {
+                'io_workload': 0,
+                'num_instances': 1,
+                'num_task_None': 1,
+                'num_os_type_' + self.instance.os_type: 1,
+                'num_proj_' + self.instance.project_id: 1,
+                'num_vm_' + self.instance.vm_state: 1,
+            },
         }
         _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
@@ -1253,6 +1262,14 @@ class TestInstanceClaim(BaseTestCase):
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
+            'stats': {
+                'io_workload': 0,
+                'num_instances': 1,
+                'num_task_None': 1,
+                'num_os_type_' + self.instance.os_type: 1,
+                'num_proj_' + self.instance.project_id: 1,
+                'num_vm_' + self.instance.vm_state: 1,
+            },
         }
         _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
@@ -1263,7 +1280,18 @@ class TestInstanceClaim(BaseTestCase):
                                                      self.rt.compute_node))
 
         expected_updated = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-        expected_updated.pci_device_pools = objects.PciDevicePoolList()
+        vals = {
+            'pci_device_pools': objects.PciDevicePoolList(),
+            'stats': {
+                'io_workload': 0,
+                'num_instances': 0,
+                'num_task_None': 0,
+                'num_os_type_' + self.instance.os_type: 0,
+                'num_proj_' + self.instance.project_id: 0,
+                'num_vm_' + self.instance.vm_state: 0,
+            },
+        }
+        _update_compute_node(expected_updated, **vals)
 
         self.instance.vm_state = vm_states.SHELVED_OFFLOADED
         with mock.patch.object(self.rt, '_update') as update_mock:
@@ -1288,6 +1316,14 @@ class TestInstanceClaim(BaseTestCase):
             'running_vms': 1,
             'vcpus_used': 1,
             'pci_device_pools': objects.PciDevicePoolList(),
+            'stats': {
+                'io_workload': 0,
+                'num_instances': 1,
+                'num_task_None': 1,
+                'num_os_type_' + self.instance.os_type: 1,
+                'num_proj_' + self.instance.project_id: 1,
+                'num_vm_' + self.instance.vm_state: 1,
+            },
         }
         _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:
@@ -1329,7 +1365,15 @@ class TestInstanceClaim(BaseTestCase):
             "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
-            'pci_device_pools': pci_pools
+            'pci_device_pools': pci_pools,
+            'stats': {
+                'io_workload': 0,
+                'num_instances': 1,
+                'num_task_None': 1,
+                'num_os_type_' + self.instance.os_type: 1,
+                'num_proj_' + self.instance.project_id: 1,
+                'num_vm_' + self.instance.vm_state: 1,
+            },
         }
         _update_compute_node(expected, **vals)
         with mock.patch.object(self.rt, '_update') as update_mock:

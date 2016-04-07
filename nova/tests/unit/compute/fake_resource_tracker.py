@@ -20,4 +20,4 @@ class FakeResourceTracker(resource_tracker.ResourceTracker):
     """Version without a DB requirement."""
 
     def _update(self, context):
-        self._write_ext_resources(self.compute_node)
+        pass

@@ -150,7 +150,6 @@ class Claim(NopClaim):
                    self._test_vcpus(resources, vcpus_limit),
                    self._test_numa_topology(resources, numa_topology_limit),
                    self._test_pci()]
-        reasons = reasons + self._test_ext_resources(limits)
         reasons = [r for r in reasons if r is not None]
         if len(reasons) > 0:
             raise exception.ComputeResourcesUnavailable(reason=
@@ -193,10 +192,6 @@ class Claim(NopClaim):
             stats = self.tracker.pci_tracker.stats
             if not stats.support_requests(pci_requests.requests):
                 return _('Claim pci failed.')
-
-    def _test_ext_resources(self, limits):
-        return self.tracker.ext_resources_handler.test_resources(
-            self.instance, limits)
 
     def _test_numa_topology(self, resources, limit):
         host_topology = (resources.numa_topology
@@ -303,10 +298,6 @@ class MoveClaim(Claim):
                 pci_requests.requests)
             if not claim:
                 return _('Claim pci failed.')
-
-    def _test_ext_resources(self, limits):
-        return self.tracker.ext_resources_handler.test_resources(
-            self.instance_type, limits)
 
     def abort(self):
         """Compute operation requiring claimed resources has failed or
