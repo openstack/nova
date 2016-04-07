@@ -317,6 +317,19 @@ class TestOpenStackClient(object):
     def delete_volume(self, volume_id):
         return self.api_delete('/os-volumes/%s' % volume_id)
 
+    def get_snapshot(self, snap_id):
+        return self.api_get('/os-snapshots/%s' % snap_id).body['snapshot']
+
+    def get_snapshots(self, detail=True):
+        rel_url = '/os-snapshots/detail' if detail else '/os-snapshots'
+        return self.api_get(rel_url).body['snapshots']
+
+    def post_snapshot(self, snapshot):
+        return self.api_post('/os-snapshots', snapshot).body['snapshot']
+
+    def delete_snapshot(self, snap_id):
+        return self.api_delete('/os-snapshots/%s' % snap_id)
+
     def get_server_volume(self, server_id, attachment_id):
         return self.api_get('/servers/%s/os-volume_attachments/%s' %
                             (server_id, attachment_id)

@@ -549,7 +549,7 @@ class SnapshotController(wsgi.Controller):
         res = [entity_maker(context, snapshot) for snapshot in limited_list]
         return {'snapshots': res}
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors((400, 403))
     @validation.schema(volumes_schema.snapshot_create)
     def create(self, req, body):
         """Creates a new snapshot."""
@@ -566,9 +566,12 @@ class SnapshotController(wsgi.Controller):
         else:
             create_func = self.volume_api.create_snapshot
 
-        new_snapshot = create_func(context, volume_id,
-                                   snapshot.get('display_name'),
-                                   snapshot.get('display_description'))
+        try:
+            new_snapshot = create_func(context, volume_id,
+                                       snapshot.get('display_name'),
+                                       snapshot.get('display_description'))
+        except exception.OverQuota as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         retval = _translate_snapshot_detail_view(context, new_snapshot)
         return {'snapshot': retval}
