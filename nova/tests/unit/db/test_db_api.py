@@ -9849,6 +9849,28 @@ class TestInstanceInfoCache(test.TestCase):
         self.assertEqual(network_info, info_cache.network_info)
         self.assertEqual(instance_uuid, info_cache.instance_uuid)
 
+    @mock.patch.object(models.InstanceInfoCache, 'update')
+    def test_instance_info_cache_retried_on_deadlock(self, update):
+        update.side_effect = [db_exc.DBDeadlock(), db_exc.DBDeadlock(), None]
+
+        instance = db.instance_create(self.context, {})
+        network_info = 'net'
+        updated = db.instance_info_cache_update(self.context, instance.uuid,
+                                                {'network_info': network_info})
+        self.assertEqual(instance.uuid, updated.instance_uuid)
+
+    @mock.patch.object(models.InstanceInfoCache, 'update')
+    def test_instance_info_cache_not_retried_on_deadlock_forever(self, update):
+        update.side_effect = db_exc.DBDeadlock
+
+        instance = db.instance_create(self.context, {})
+        network_info = 'net'
+
+        self.assertRaises(db_exc.DBDeadlock,
+                          db.instance_info_cache_update,
+                          self.context, instance.uuid,
+                          {'network_info': network_info})
+
 
 class TestInstanceTagsFiltering(test.TestCase):
     sample_data = {

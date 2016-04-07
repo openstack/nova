@@ -3005,6 +3005,7 @@ def instance_info_cache_get(context, instance_uuid):
 
 
 @require_context
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def instance_info_cache_update(context, instance_uuid, values):
     """Update an instance info cache record in the table.
