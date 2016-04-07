@@ -418,6 +418,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 vfs_list = parent.child_devices
                 if all([vf.is_available() for vf in vfs_list
                         if vf.id != self.id]):
+                    parent.status = fields.PciDeviceStatus.AVAILABLE
                     free_devs.append(parent)
         old_status = self.status
         self.status = fields.PciDeviceStatus.AVAILABLE
