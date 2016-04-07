@@ -20,13 +20,13 @@ the system.
 
 import datetime
 
-from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_log import log
 from oslo_utils import excutils
 from oslo_utils import timeutils
 import six
 
+import nova.conf
 import nova.context
 from nova import exception
 from nova.i18n import _LE
@@ -40,29 +40,7 @@ from nova import utils
 
 LOG = log.getLogger(__name__)
 
-notify_opts = [
-    cfg.StrOpt('notify_on_state_change',
-               default=None,
-               choices=(None, 'vm_state', 'vm_and_task_state'),
-               help='If set, send compute.instance.update notifications on '
-                    'instance state changes.  Valid values are None for no '
-                    'notifications, "vm_state" for notifications on VM state '
-                    'changes, or "vm_and_task_state" for notifications on VM '
-                    'and task state changes.'),
-    cfg.BoolOpt('notify_api_faults', default=False,
-        help='If set, send api.fault notifications on caught exceptions '
-             'in the API service.'),
-    cfg.StrOpt('default_notification_level',
-               default='INFO',
-               choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
-               help='Default notification level for outgoing notifications'),
-    cfg.StrOpt('default_publisher_id',
-               help='Default publisher_id for outgoing notifications'),
-]
-
-
-CONF = cfg.CONF
-CONF.register_opts(notify_opts)
+CONF = nova.conf.CONF
 
 
 def notify_decorator(name, fn):
