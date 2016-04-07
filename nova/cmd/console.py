@@ -27,7 +27,6 @@ from nova import service
 from nova import version
 
 CONF = cfg.CONF
-CONF.import_opt('console_topic', 'nova.console.rpcapi')
 
 
 def main():

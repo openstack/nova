@@ -19,7 +19,6 @@ import nova.cmd.spicehtml5proxy
 import nova.conductor.rpcapi
 import nova.conductor.tasks.live_migrate
 import nova.conf
-import nova.console.manager
 import nova.console.rpcapi
 import nova.console.serial
 import nova.console.xvp
@@ -47,8 +46,6 @@ def list_opts():
              [nova.db.base.db_driver_opt],
              [nova.ipv6.api.ipv6_backend_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
-             nova.console.manager.console_manager_opts,
-             nova.console.rpcapi.rpcapi_opts,
              nova.console.xvp.xvp_opts,
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
