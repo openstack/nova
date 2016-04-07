@@ -270,13 +270,22 @@ ldap_dns_opts = [
                      'Statement of Authority'),
 ]
 
-ALL_DEFAULT_OPTS = linux_net_opts + network_opts + ldap_dns_opts
+security_group_opts = [
+    cfg.StrOpt('security_group_api',
+                default='nova',
+                help='DEPRECATED: Full class name of the security API class',
+                deprecated_for_removal=True),
+]
+
+ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
+                   + security_group_opts)
 
 
 def register_opts(conf):
     conf.register_opts(linux_net_opts)
     conf.register_opts(network_opts)
     conf.register_opts(ldap_dns_opts)
+    conf.register_opts(security_group_opts)
 
 
 def list_opts():
