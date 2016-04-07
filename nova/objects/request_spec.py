@@ -22,6 +22,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
+from nova.scheduler import utils as scheduler_utils
 from nova.virt import hardware
 
 
@@ -461,6 +462,90 @@ class RequestSpec(base.NovaObject):
         # NOTE(sbauza): Make sure we don't persist this, we need to keep the
         # original request for the forced hosts
         self.obj_reset_changes(['force_hosts', 'force_nodes'])
+
+
+# NOTE(sbauza): Since verifying a huge list of instances can be a performance
+# impact, we need to use a marker for only checking a set of them.
+# As the current model doesn't expose a way to persist that marker, we propose
+# here to use the request_specs table with a fake (and impossible) instance
+# UUID where the related spec field (which is Text) would be the marker, ie.
+# the last instance UUID we checked.
+# TODO(sbauza): Remove the CRUD helpers and the migration script in Ocata.
+
+# NOTE(sbauza): RFC4122 (4.1.7) allows a Nil UUID to be semantically accepted.
+FAKE_UUID = '00000000-0000-0000-0000-000000000000'
+
+
+@db.api_context_manager.reader
+def _get_marker_for_migrate_instances(context):
+    req_spec = (context.session.query(api_models.RequestSpec).filter_by(
+                instance_uuid=FAKE_UUID)).first()
+    marker = req_spec['spec'] if req_spec else None
+    return marker
+
+
+@db.api_context_manager.writer
+def _set_or_delete_marker_for_migrate_instances(context, marker=None):
+    # We need to delete the old marker anyway, which no longer corresponds to
+    # the last instance we checked (if there was a marker)...
+    # NOTE(sbauza): delete() deletes rows that match the query and if none
+    # are found, returns 0 hits.
+    context.session.query(api_models.RequestSpec).filter_by(
+        instance_uuid=FAKE_UUID).delete()
+    if marker is not None:
+        # ... but there can be a new marker to set
+        db_mapping = api_models.RequestSpec()
+        db_mapping.update({'instance_uuid': FAKE_UUID, 'spec': marker})
+        db_mapping.save(context.session)
+
+
+def _create_minimal_request_spec(context, instance):
+    image = instance.image_meta
+    # TODO(sbauza): Modify that once setup_instance_group() accepts a
+    # RequestSpec object
+    request_spec = {'instance_properties': {'uuid': instance.uuid}}
+    filter_properties = {}
+    scheduler_utils.setup_instance_group(context, request_spec,
+                                         filter_properties)
+    # This is an old instance. Let's try to populate a RequestSpec
+    # object using the existing information we have previously saved.
+    request_spec = objects.RequestSpec.from_components(
+        context, instance.uuid, image,
+        instance.flavor, instance.numa_topology,
+        instance.pci_requests,
+        filter_properties, None, instance.availability_zone
+    )
+    request_spec.create()
+
+
+def migrate_instances_add_request_spec(context, max_count):
+    """Creates and persists a RequestSpec per instance not yet having it."""
+    marker = _get_marker_for_migrate_instances(context)
+    # Prevent lazy-load of those fields for every instance later.
+    attrs = ['system_metadata', 'flavor', 'pci_requests', 'numa_topology',
+             'availability_zone']
+    instances = objects.InstanceList.get_by_filters(context,
+                                                    filters={'deleted': False},
+                                                    sort_key='created_at',
+                                                    sort_dir='asc',
+                                                    limit=max_count,
+                                                    marker=marker,
+                                                    expected_attrs=attrs)
+    count_all = len(instances)
+    count_hit = 0
+    for instance in instances:
+        try:
+            RequestSpec.get_by_instance_uuid(context, instance.uuid)
+        except exception.RequestSpecNotFound:
+            _create_minimal_request_spec(context, instance)
+            count_hit += 1
+    if count_all > 0:
+        # We want to persist which last instance was checked in order to make
+        # sure we don't review it again in a next call.
+        marker = instances[-1].uuid
+
+    _set_or_delete_marker_for_migrate_instances(context, marker)
+    return count_all, count_hit
 
 
 @base.NovaObjectRegistry.register

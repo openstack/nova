@@ -82,6 +82,7 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
+from nova.objects import request_spec
 from nova import quota
 from nova import rpc
 from nova import utils
@@ -727,6 +728,7 @@ class DbCommands(object):
         flavor_obj.migrate_flavors,
         flavor_obj.migrate_flavor_reset_autoincrement,
         instance_obj.migrate_instance_keypairs,
+        request_spec.migrate_instances_add_request_spec,
     )
 
     def __init__(self):
