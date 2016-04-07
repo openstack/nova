@@ -577,7 +577,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             data = get_associated(self.context, 0, address=lease[2])[0]
             self.assertTrue(data['allocated'])
             self.assertTrue(data['leased'])
-            self.assertTrue(int(lease[0]) > seconds_since_epoch)
+            self.assertGreater(int(lease[0]), seconds_since_epoch)
             self.assertEqual(data['vif_address'], lease[1])
             self.assertEqual(data['address'], lease[2])
             self.assertEqual(data['instance_hostname'], lease[3])
@@ -594,7 +594,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             lease = lease.split(' ')
             data = get_associated(self.context, 1, address=lease[2])[0]
             self.assertTrue(data['leased'])
-            self.assertTrue(int(lease[0]) > seconds_since_epoch)
+            self.assertGreater(int(lease[0]), seconds_since_epoch)
             self.assertEqual(data['vif_address'], lease[1])
             self.assertEqual(data['address'], lease[2])
             self.assertEqual(data['instance_hostname'], lease[3])

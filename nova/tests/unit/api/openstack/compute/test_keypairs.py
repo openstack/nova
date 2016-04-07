@@ -101,8 +101,8 @@ class KeypairsTestV21(test.TestCase):
     def test_keypair_create(self):
         body = {'keypair': {'name': 'create_test'}}
         res_dict = self.controller.create(self.req, body=body)
-        self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
-        self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
+        self.assertGreater(len(res_dict['keypair']['fingerprint']), 0)
+        self.assertGreater(len(res_dict['keypair']['private_key']), 0)
         self._assert_keypair_type(res_dict)
 
     def _test_keypair_create_bad_request_case(self,
@@ -182,7 +182,7 @@ class KeypairsTestV21(test.TestCase):
         }
         res_dict = self.controller.create(self.req, body=body)
         # FIXME(ja): sholud we check that public_key was sent to create?
-        self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
+        self.assertGreater(len(res_dict['keypair']['fingerprint']), 0)
         self.assertNotIn('private_key', res_dict['keypair'])
         self._assert_keypair_type(res_dict)
 

@@ -281,30 +281,31 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp '
                            '-s 192.168.11.0/24')
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "ICMP acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                           "ICMP acceptance rule wasn't added")
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp '
                            '--icmp-type 8 -s 192.168.11.0/24')
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "ICMP Echo Request acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                           "ICMP Echo Request acceptance rule wasn't added")
 
         for ip in network_model.fixed_ips():
             if ip['version'] != 4:
                 continue
             regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp -m multiport '
                                '--dports 80:81 -s %s' % ip['address'])
-            self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                            "TCP port 80/81 acceptance rule wasn't added")
+            self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                               "TCP port 80/81 acceptance rule wasn't added")
             regex = re.compile('\[0\:0\] -A .* -j ACCEPT -s '
                                '%s' % ip['address'])
-            self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                            "Protocol/port-less acceptance rule wasn't added")
+            self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                               "Protocol/port-less acceptance rule"
+                               " wasn't added")
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp '
                            '-m multiport --dports 80:81 -s 192.168.10.0/24')
-        self.assertTrue(len(filter(regex.match, self.out_rules)) > 0,
-                        "TCP port 80/81 acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self.out_rules)), 0,
+                           "TCP port 80/81 acceptance rule wasn't added")
 
     def test_filters_for_instance_with_ip_v6(self):
         self.flags(use_ipv6=True)

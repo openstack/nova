@@ -5875,7 +5875,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                              '%s failed common check %d' % (xml, i))
 
         target = tree.find('./devices/filesystem/source').get('dir')
-        self.assertTrue(len(target) > 0)
+        self.assertGreater(len(target), 0)
 
     def _check_xml_and_disk_prefix(self, instance, prefix):
         instance_ref = objects.Instance(**instance)
@@ -7751,7 +7751,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         def fake_job_info(hostself):
             while True:
-                self.assertTrue(len(job_info_records) > 0)
+                self.assertGreater(len(job_info_records), 0)
                 rec = job_info_records.pop(0)
 
                 if type(rec) == str:

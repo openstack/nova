@@ -2076,9 +2076,9 @@ class _CPUPinningTestCaseBase(object):
             pins_per_sib = collections.defaultdict(int)
             for inst_p, host_p in instance_cell.cpu_pinning.items():
                 pins_per_sib[cpu_to_sib[host_p]] += 1
-            self.assertTrue(max(pins_per_sib.values()) > 1,
-                            "Seems threads were not preferred by the pinning "
-                            "logic.")
+            self.assertGreater(max(pins_per_sib.values()), 1,
+                               "Seems threads were not preferred by the "
+                               "pinning logic.")
 
 
 class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):

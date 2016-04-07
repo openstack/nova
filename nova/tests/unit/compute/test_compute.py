@@ -1981,7 +1981,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.refresh()
-        self.assertTrue(instance['launched_at'].replace(tzinfo=None) > launch)
+        self.assertGreater(instance['launched_at'].replace(tzinfo=None),
+                           launch)
         self.assertIsNone(instance['deleted_at'])
         terminate = timeutils.utcnow()
         self.compute.terminate_instance(self.context, instance, [], [])
@@ -1991,8 +1992,8 @@ class ComputeTestCase(BaseTestCase):
                     instance['uuid'])
         self.assertTrue(instance['launched_at'].replace(
             tzinfo=None) < terminate)
-        self.assertTrue(instance['deleted_at'].replace(
-            tzinfo=None) > terminate)
+        self.assertGreater(instance['deleted_at'].replace(
+            tzinfo=None), terminate)
 
     def test_run_terminate_deallocate_net_failure_sets_error_state(self):
         instance = self._create_fake_instance_obj()
@@ -3885,7 +3886,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
-        self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
+        self.assertGreaterEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type, 'compute.instance.create.start')
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -3911,7 +3912,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
 
-        self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
+        self.assertGreaterEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type, 'compute.instance.create.start')
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -3935,7 +3936,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.build_and_run_instance(
                 self.context, instance, {}, {}, {}, block_device_mapping=[])
 
-        self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
+        self.assertGreaterEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type, 'compute.instance.create.start')
         msg = fake_notifier.NOTIFICATIONS[-1]

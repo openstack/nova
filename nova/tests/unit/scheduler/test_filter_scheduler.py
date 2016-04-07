@@ -328,7 +328,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             except exception.NoValidHost as e:
                 # Make sure that we provided a reason why NoValidHost.
                 self.assertIn('reason', e.kwargs)
-                self.assertTrue(len(e.kwargs['reason']) > 0)
+                self.assertGreater(len(e.kwargs['reason']), 0)
                 # Make sure that the consumed hosts have chance to be reverted.
                 for host in consumed_hosts:
                     self.assertIsNone(host.obj.updated)

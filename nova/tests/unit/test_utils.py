@@ -799,7 +799,7 @@ class LastBytesTestCase(test.NoDBTestCase):
         self.f.seek(0, os.SEEK_SET)
         out, remaining = utils.last_bytes(self.f, 5)
         self.assertEqual(out, b'67890')
-        self.assertTrue(remaining > 0)
+        self.assertGreater(remaining, 0)
 
     def test_read_all(self):
         self.f.seek(0, os.SEEK_SET)
