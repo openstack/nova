@@ -21,7 +21,6 @@ import nova.conductor.tasks.live_migrate
 import nova.conf
 import nova.console.rpcapi
 import nova.console.serial
-import nova.console.xvp
 import nova.consoleauth.rpcapi
 import nova.db.api
 import nova.db.base
@@ -43,7 +42,6 @@ def list_opts():
              [nova.conductor.tasks.live_migrate.migrate_opt],
              [nova.db.base.db_driver_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
-             nova.console.xvp.xvp_opts,
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
              nova.exception.exc_log_opts,
