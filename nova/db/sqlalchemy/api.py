@@ -636,12 +636,12 @@ def _compute_node_select(context, filters=None):
     #  - inv_vcpus, inv_vcpus_used, inv_cpu_allocation_ratio
     #  - inv_local_gb, inv_local_gb_used, inv_disk_allocation_ratio
     # These resource capacity/usage fields store the total and used values
-    # for those three resource classes that are currently store in similar
+    # for those three resource classes that are currently stored in similar
     # fields in the compute_nodes table (e.g. memory_mb and memory_mb_used)
     # The code that runs the online data migrations will be able to tell if
     # the compute node has had its inventory information moved to the
     # inventories table by checking for a non-None field value for the
-    # inv_memory_mb, inv_vcpus, and inv_disk_gb fields.
+    # inv_memory_mb, inv_vcpus, and inv_local_gb fields.
     #
     # The below SQLAlchemy code below produces the following SQL statement
     # exactly:
