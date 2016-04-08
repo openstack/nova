@@ -67,6 +67,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
+from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova import test
@@ -1363,6 +1364,156 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertRaises(exception.PciDevicePrepareFailed,
                           drvr._prepare_pci_devices_for_use, pci_devices)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=False)
+    def test_device_metadata(self, mock_version):
+        xml = """
+        <domain>
+          <name>dummy</name>
+          <uuid>32dfcb37-5af1-552b-357c-be8c3aa38310</uuid>
+            <memory>1048576</memory>
+              <vcpu>1</vcpu>
+            <os>
+                <type arch='x86_64' machine='pc-i440fx-2.4'>hvm</type>
+            </os>
+          <devices>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source dev='/dev/mapper/generic'/>
+              <target dev='sda' bus='scsi'/>
+             <address type='drive' controller='0' bus='0' target='0' unit='0'/>
+            </disk>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source dev='/dev/mapper/generic-1'/>
+              <target dev='hda' bus='ide'/>
+             <address type='drive' controller='0' bus='1' target='0' unit='0'/>
+            </disk>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source dev='/dev/mapper/generic-2'/>
+              <target dev='hdb' bus='ide'/>
+             <address type='drive' controller='0' bus='1' target='1' unit='1'/>
+            </disk>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source dev='/dev/mapper/aa1'/>
+              <target dev='sdb' bus='usb'/>
+            </disk>
+            <disk type='block' device='disk'>
+              <driver name='qemu' type='qcow2'/>
+              <source dev='/var/lib/libvirt/images/centos'/>
+              <backingStore/>
+              <target dev='vda' bus='virtio'/>
+              <boot order='1'/>
+              <alias name='virtio-disk0'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x09'
+              function='0x0'/>
+            </disk>
+            <interface type='network'>
+              <mac address='52:54:00:f6:35:8f'/>
+              <source network='default'/>
+              <model type='virtio'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x03'
+              function='0x0'/>
+            </interface>
+            <interface type='network'>
+              <mac address='51:5a:2c:a4:5e:1b'/>
+              <source network='default'/>
+              <model type='virtio'/>
+              <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
+              function='0x1'/>
+            </interface>
+          </devices>
+        </domain>"""
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        dom = fakelibvirt.Domain(drvr._get_connection(), xml, False)
+        guest = libvirt_guest.Guest(dom)
+
+        instance_ref = objects.Instance(**self.test_instance)
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, [
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sda', 'tag': "db"}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/hda', 'tag': "nfvfunc1"}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 3,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdb', 'tag': "nfvfunc2"}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 4,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/hdb'}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 5,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vda', 'tag': "nfvfunc3"}),
+            ]
+        )
+        vif = obj_vif.VirtualInterface(context=self.context)
+        vif.address = '52:54:00:f6:35:8f'
+        vif.network_id = 123
+        vif.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
+        vif.uuid = '12ec4b21-ef22-6c21-534b-ba3e3ab3a311'
+        vif.tag = 'mytag1'
+        vif1 = obj_vif.VirtualInterface(context=self.context)
+        vif1.address = '51:5a:2c:a4:5e:1b'
+        vif1.network_id = 123
+        vif1.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
+        vif1.uuid = 'abec4b21-ef22-6c21-534b-ba3e3ab3a312'
+        vif1.tag = None
+        vifs = [vif, vif1]
+
+        with test.nested(
+            mock.patch('nova.objects.VirtualInterfaceList'
+                       '.get_by_instance_uuid', return_value=vifs),
+            mock.patch('nova.objects.BlockDeviceMappingList'
+                       '.get_by_instance_uuid', return_value=bdms),
+            mock.patch('nova.virt.libvirt.host.Host.get_guest',
+                       return_value=guest),
+            mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc',
+                              return_value=xml)):
+            metadata_obj = drvr._build_device_metadata(self.context,
+                                                       instance_ref)
+            metadata = metadata_obj.devices
+            self.assertEqual(5, len(metadata))
+            self.assertIsInstance(metadata[0],
+                                  objects.DiskMetadata)
+            self.assertIsInstance(metadata[0].bus,
+                                  objects.SCSIDeviceBus)
+            self.assertEqual(['db'], metadata[0].tags)
+            self.assertFalse(metadata[0].bus.obj_attr_is_set('address'))
+            self.assertEqual(['nfvfunc1'], metadata[1].tags)
+            self.assertIsInstance(metadata[1],
+                                  objects.DiskMetadata)
+            self.assertIsInstance(metadata[1].bus,
+                                  objects.IDEDeviceBus)
+            self.assertEqual(['nfvfunc1'], metadata[1].tags)
+            self.assertFalse(metadata[1].bus.obj_attr_is_set('address'))
+            self.assertIsInstance(metadata[2],
+                                  objects.DiskMetadata)
+            self.assertIsInstance(metadata[2].bus,
+                                  objects.USBDeviceBus)
+            self.assertEqual(['nfvfunc2'], metadata[2].tags)
+            self.assertFalse(metadata[2].bus.obj_attr_is_set('address'))
+            self.assertIsInstance(metadata[3],
+                                  objects.DiskMetadata)
+            self.assertIsInstance(metadata[3].bus,
+                                  objects.PCIDeviceBus)
+            self.assertEqual(['nfvfunc3'], metadata[3].tags)
+            self.assertEqual('0000:00:09.0', metadata[3].bus.address)
+            self.assertIsInstance(metadata[4],
+                                  objects.NetworkInterfaceMetadata)
+            self.assertIsInstance(metadata[4].bus,
+                                  objects.PCIDeviceBus)
+            self.assertEqual(['mytag1'], metadata[4].tags)
+            self.assertEqual('0000:00:03.0', metadata[4].bus.address)
 
     @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
@@ -9333,7 +9484,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(info[0]['backing_file'], "")
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
 
-    def test_spawn_with_network_info(self):
+    @mock.patch('nova.virt.configdrive.required_by',
+                return_value=False)
+    def test_spawn_with_network_info(self, config_mock):
         # Preparing mocks
         def fake_none(*args, **kwargs):
             return
@@ -9379,6 +9532,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = objects.Instance(**instance_ref)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 '_build_device_metadata')
+        libvirt_driver.LibvirtDriver._build_device_metadata(self.context,
+                                                           instance)
         # Mock out the get_info method of the LibvirtDriver so that the polling
         # in the spawn method of the LibvirtDriver returns immediately
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, 'get_info')
@@ -9899,7 +10056,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ]
         self.assertEqual(gotFiles, wantFiles)
 
-    def test_create_configdrive(self):
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._build_device_metadata',
+        return_value=None)
+    def test_create_configdrive(self, mock_save):
         def enable_configdrive(instance_ref):
             instance_ref['config_drive'] = 'true'
 
@@ -9929,6 +10089,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         with test.nested(
             mock.patch.object(drvr, '_create_images_and_backing'),
             mock.patch.object(drvr, 'plug_vifs'),
+            mock.patch.object(drvr, '_build_device_metadata',
+                              return_value=None),
             mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
@@ -15694,10 +15856,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_remove_volumes.assert_called_once_with(['lvm.rescue'])
 
     @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._build_device_metadata',
+        return_value=None)
+    @mock.patch(
         'nova.virt.configdrive.ConfigDriveBuilder.add_instance_metadata')
     @mock.patch('nova.virt.configdrive.ConfigDriveBuilder.make_drive')
     @mock.patch('nova.virt.libvirt.guest.Guest')
-    def test_rescue_config_drive(self, mock_guest, mock_make, mock_add):
+    def test_rescue_config_drive(self, mock_guest, mock_make, mock_add,
+                                 mock_save):
         instance = self._create_instance()
         uuid = instance.uuid
         configdrive_path = uuid + '/disk.config.rescue'
