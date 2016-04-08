@@ -25,9 +25,9 @@ paramiko>=1.16.0 # LGPL
 Babel>=1.3 # BSD
 iso8601>=0.1.9 # MIT
 jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
-python-cinderclient>=1.3.1 # Apache-2.0
+python-cinderclient>=1.6.0 # Apache-2.0
 keystoneauth1>=2.1.0 # Apache-2.0
-python-neutronclient!=4.1.0,>=2.6.0 # Apache-2.0
+python-neutronclient>=4.1.1 # Apache-2.0
 python-glanceclient>=2.0.0 # Apache-2.0
 requests!=2.9.0,>=2.8.1 # Apache-2.0
 six>=1.9.0 # MIT
@@ -36,7 +36,7 @@ setuptools>=16.0 # PSF/ZPL
 websockify>=0.6.1 # LGPLv3
 oslo.cache>=1.5.0 # Apache-2.0
 oslo.concurrency>=3.5.0 # Apache-2.0
-oslo.config>=3.7.0 # Apache-2.0
+oslo.config>=3.9.0 # Apache-2.0
 oslo.context>=2.2.0 # Apache-2.0
 oslo.log>=1.14.0 # Apache-2.0
 oslo.reports>=0.6.0 # Apache-2.0
@@ -52,7 +52,7 @@ rfc3986>=0.2.0 # Apache-2.0
 oslo.middleware>=3.0.0 # Apache-2.0
 psutil<2.0.0,>=1.1.1 # BSD
 oslo.versionedobjects>=1.5.0 # Apache-2.0
-alembic>=0.8.0 # MIT
+alembic>=0.8.4 # MIT
 os-brick>=1.0.0 # Apache-2.0
 os-win>=0.2.3 # Apache-2.0
 castellan>=0.3.1 # Apache-2.0
