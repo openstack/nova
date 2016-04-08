@@ -466,8 +466,15 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 self._write_sample(name, body)
         return self._get_response(url, method, body, headers=headers)
 
-    def _do_put(self, url, name, subs, headers=None):
-        return self._do_post(url, name, subs, method='PUT', headers=headers)
+    def _do_put(self, url, name=None, subs=None, headers=None):
+        # name indicates that we have a body document. While the HTTP
+        # spec implies that PUT is supposed to have one, we have some
+        # APIs which don't.
+        if name:
+            return self._do_post(
+                url, name, subs, method='PUT', headers=headers)
+        else:
+            return self._get_response(url, 'PUT', headers=headers)
 
     def _do_delete(self, url, headers=None):
         return self._get_response(url, 'DELETE', headers=headers)
