@@ -36,13 +36,13 @@
 # OpenStack Infra <zanata@openstack.org>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-17 05:38+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-16 12:54+0000\n"
+"PO-Revision-Date: 2016-03-22 10:23+0000\n"
 "Last-Translator: Linda <duleish@cn.ibm.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
@@ -1133,14 +1133,6 @@ msgstr "尝试运行 %(method)s 时出错"
 
 #, python-format
 msgid ""
-"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
-"%(total)d"
-msgstr ""
-" 针对'%(method)s'与Ironic服务器联系时出错。总尝试次数%(total)d，已尝"
-"试%(attempt)d"
-
-#, python-format
-msgid ""
 "Error destroying the instance on node %(node)s. Provision state still "
 "'%(state)s'."
 msgstr "在节点%(node)s销毁实例出错。准备状态仍然是'%(state)s'。"
@@ -1409,12 +1401,6 @@ msgid "Failure prepping block device."
 msgstr "准备块设备失败。"
 
 #, python-format
-msgid ""
-"Field labels list %(labels)s has different number of elements than fields "
-"list %(fields)s"
-msgstr "字段标签列表%(labels)s 与字段列表%(fields)s相比，元素数目不相同"
-
-#, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "找不到文件 %(file_path)s。"
 
@@ -1653,14 +1639,6 @@ msgstr "主机 %(host)s 没有找到。"
 #, python-format
 msgid "Host %(host)s is already mapped to cell %(uuid)s"
 msgstr "主机 %(host)s 已映射至单元 %(uuid)s"
-
-#, python-format
-msgid ""
-"Host %(server)s is running an old version of Nova, live migrations involving "
-"that version may cause data loss. Upgrade Nova on %(server)s and try again."
-msgstr ""
-"主机 %(server)s 正在旧版本的 nova 上运行，涉及该版本的实时迁移可能导致数据丢"
-"失。应在 %(server)s 上升级 nova 并重试。 "
 
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
@@ -3063,6 +3041,10 @@ msgid ""
 "Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
 "valid."
 msgstr "“%(property)s”中指定的串口数“%(num_ports)s”无效。"
+
+#, python-format
+msgid "OVS configuration failed with: %(inner_exception)s."
+msgstr "OVS 配置失败，产生以下异常：%(inner_exception)s。"
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"

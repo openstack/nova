@@ -10,9 +10,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -156,10 +156,6 @@ msgid ""
 msgstr ""
 "随着Juno的发布，Cinder V1 API已经被废弃，仍然配置Nova使用它。在Cinder中启用"
 "V2 API，并且在nova.conf中设置使用它。"
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "计算资源插件%s 没有加载"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -473,14 +469,6 @@ msgid ""
 msgstr "在从%(mp)s断开卷%(volume_id)s的过程中，忽略磁盘没有找到异常：%(err)s"
 
 #, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "忽略端点没有找到EndpointNotFound：%s"
-
-#, python-format
-msgid "Ignoring Unknown cinder exception: %s"
-msgstr "忽略未知的cinder异常：%s"
-
-#, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr "在删除%(exc)s期间，忽略卷%(vol_id)s上的卷错误"
 
@@ -539,9 +527,6 @@ msgid ""
 msgstr ""
 "在M版本，您必须运行所有的API。API扩展的概念将从代码基线移除，保证这是一个单一"
 "的计算API。"
-
-msgid "In the M release you must run the v2.1 API."
-msgstr "在M版本，您必须运行v2.1 API。"
 
 msgid ""
 "In vmwareapi:vmops:_destroy_instance, exception while deleting the VM "

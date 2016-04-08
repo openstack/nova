@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -151,10 +151,6 @@ msgstr ""
 "Cinder V1 API'si Juno sürümüyle beraber artık kullanılmayacak, ve Nova hala "
 "onu kullanacak şekilde yapılandırılmış. Kullanmak içi V2 API'sini Cinder'de "
 "etkinleştirin ve nova.conf'da cinder.catalog_info'yu ayarlayın."
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "Hesaplama kaynağı eklentisi %s yüklenmemişti"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -438,10 +434,6 @@ msgid ""
 msgstr ""
 "Mantıksal sürücü %(volume_id)s %(mp)s den ayrılırken alınan DiskNotFound "
 "istisnası göz ardı ediliyor: %(err)s"
-
-#, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "EndpointNotFound göz ardı ediliyor: %s"
 
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"

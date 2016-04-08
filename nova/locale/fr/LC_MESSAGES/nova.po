@@ -31,13 +31,13 @@
 # Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-17 05:38+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-16 05:53+0000\n"
+"PO-Revision-Date: 2016-04-04 06:25+0000\n"
 "Last-Translator: Martine Marin <mmarin@fr.ibm.com>\n"
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
@@ -746,13 +746,13 @@ msgid ""
 "Cannot load host manager from configuration scheduler_host_manager = "
 "%(conf)s."
 msgstr ""
-"Impossible de charger le gestionnaire hôte à partir de la configuration "
+"Impossible de charger le gestionnaire d'hôtes à partir de la configuration "
 "scheduler_host_manager = %(conf)s."
 
 #, python-format
 msgid "Cannot load scheduler driver from configuration %(conf)s."
 msgstr ""
-"Impossible de charger le module scheduler driver à partir de la "
+"Impossible de charger le pilote scheduler driver à partir de la "
 "configuration %(conf)s."
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
@@ -1256,14 +1256,6 @@ msgstr "Erreur lors de la tentative d'exécution de %(method)s"
 
 #, python-format
 msgid ""
-"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
-"%(total)d"
-msgstr ""
-"Erreur lors du contact du serveur Ironic pour '%(method)s'. Tentative "
-"%(attempt)d sur %(total)d"
-
-#, python-format
-msgid ""
 "Error destroying the instance on node %(node)s. Provision state still "
 "'%(state)s'."
 msgstr ""
@@ -1558,14 +1550,6 @@ msgid "Failure prepping block device."
 msgstr "Echec de préparation de l'unité par bloc."
 
 #, python-format
-msgid ""
-"Field labels list %(labels)s has different number of elements than fields "
-"list %(fields)s"
-msgstr ""
-"La liste des libellés de zone %(labels)s contient un nombre d'éléments qui "
-"diffère de celui de la liste des zones %(fields)s"
-
-#, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "Fichier %(file_path)s introuvable."
 
@@ -1832,15 +1816,6 @@ msgid "Host %(host)s is already mapped to cell %(uuid)s"
 msgstr "L'hôte %(host)s est déjà mappé à la cellule %(uuid)s"
 
 #, python-format
-msgid ""
-"Host %(server)s is running an old version of Nova, live migrations involving "
-"that version may cause data loss. Upgrade Nova on %(server)s and try again."
-msgstr ""
-"L'hôte %(server)s fonctionne avec une ancienne version de Nova, les "
-"migrations à chaud effectuées avec cette version peuvent causer des pertes "
-"de données. Mettez à jour Nova sur %(server)s et essayez à nouveau."
-
-#, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
 msgstr "L'hôte '%(name)s' n'est mappé à aucune cellule"
 
@@ -1940,7 +1915,7 @@ msgstr ""
 "La taille du disque d'image est supérieure à la taille de disque demandée"
 
 msgid "Image is not raw format"
-msgstr "Imgae n'est pas au format raw"
+msgstr "L'image n'est pas au format raw"
 
 msgid "Image metadata key cannot be blank"
 msgstr "La clé de métadonnées d'image ne peut pas être à blanc"
@@ -2725,9 +2700,9 @@ msgid ""
 "Live migration of instances with config drives is not supported in libvirt "
 "unless libvirt instance path and drive data is shared across compute nodes."
 msgstr ""
-"La migration à chaud d'instances avec des stockages de configuration n'est "
-"pas supportée par libvirt à moins que le chemin de l'instance libvir et les "
-"données stockées soient partagées à travers les nœuds de calcul."
+"La migration à chaud d'instances avec des unités de configuration n'est pas "
+"supportée par libvirt à moins que le chemin de l'instance libvir et les "
+"données de l'unité soient partagées entre les nœuds de calcul."
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2824,7 +2799,7 @@ msgstr "Echec d'envoi de la migration"
 #, python-format
 msgid "Migration %(id)s for server %(uuid)s is not live-migration."
 msgstr ""
-"La migration %(id)s pour le serveur %(uuid)s n'est pas une migration active."
+"La migration %(id)s pour le serveur %(uuid)s n'est pas une migration à chaud."
 
 #, python-format
 msgid "Migration %(migration_id)s could not be found."
@@ -2893,7 +2868,7 @@ msgid "Missing flavorRef attribute"
 msgstr "Attribut flavorRef manquant"
 
 msgid "Missing forced_down field"
-msgstr "Champ forced_down maquant"
+msgstr "Champ forced_down manquant"
 
 msgid "Missing imageRef attribute"
 msgstr "Attribut imageRef manquant"
@@ -4203,7 +4178,7 @@ msgid "The current driver does not support preserving ephemeral partitions."
 msgstr "Le pilote actuel ne permet pas de préserver les partitions éphémères."
 
 msgid "The default PBM policy doesn't exist on the backend."
-msgstr "La règle PBM par défaut n'existe pas sur le backend."
+msgstr "La règle PBM par défaut n'existe pas sur le back-end."
 
 #, python-format
 msgid "The firewall filter for %s does not exist"
@@ -4757,7 +4732,7 @@ msgid "Unable to set password on instance"
 msgstr "Impossible de définir le mot de passe sur l'instance"
 
 msgid "Unable to shrink disk."
-msgstr "Impossible de redimentionner le disque."
+msgstr "Impossible de redimensionner le disque."
 
 msgid "Unable to terminate instance."
 msgstr "Impossibilité de mettre fin à l'instance."
@@ -4835,7 +4810,7 @@ msgstr "Argument inconnu: port"
 
 #, python-format
 msgid "Unknown auth plugin: %s"
-msgstr "Plugin d'authentification inconnu : %s"
+msgstr "Plug-in d'authentification inconnu : %s"
 
 #, python-format
 msgid "Unknown chain: %r"
@@ -5511,7 +5486,7 @@ msgstr ""
 
 msgid "old style configuration can use only dictionary or memcached backends"
 msgstr ""
-"une ancienne configuration ne peut utiliser que des backends de type "
+"une ancienne configuration ne peut utiliser que des back-ends de type "
 "dictionary ou  memcached"
 
 msgid "onSharedStorage must be specified."
@@ -5691,11 +5666,11 @@ msgstr "vlan doit etre un entier"
 
 #, python-format
 msgid "volume %s already attached"
-msgstr "Le volume %s est dajà attahcé "
+msgstr "Le volume %s est déjà connecté "
 
 #, python-format
 msgid "volume %s already detached"
-msgstr "Le volume %s est déjà détaché"
+msgstr "Le volume %s est déjà déconnecté"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"

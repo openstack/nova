@@ -9,9 +9,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1007,9 +1007,6 @@ msgstr "Konfigurationslaufwerk wird verwendet"
 
 msgid "Using config drive for instance"
 msgstr "Konfigurationslaufwerk wird für Instanz verwendet"
-
-msgid "V2.1 API has been disabled by configuration"
-msgstr "V2.1 API wurde deaktiviert bei der Konfiguration"
 
 #, python-format
 msgid ""

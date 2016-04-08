@@ -6,13 +6,12 @@
 # Frédéric <frosmont@free.fr>, 2014
 # Lucas Mascaro <mascaro.lucas@yahoo.fr>, 2015
 # Maxime COQUEREL <max.coquerel@gmail.com>, 2014
-# Corinne Verheyde <cverheyd@gmail.com>, 2015. #zanata
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -132,10 +131,6 @@ msgid "Change will make usage less than 0 for the following resources: %s"
 msgstr ""
 "La modification définira une utilisation inférieure à 0 pour les ressources "
 "suivantes : %s"
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "Le greffon de la ressource Compute %s n'a pas été chargé"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -398,10 +393,6 @@ msgstr ""
 "%(volume_id)s depuis %(mp)s : %(err)s  "
 
 #, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "EndpointNotFound ignorée : %s"
-
-#, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr ""
 "Erreur Volume Ignorée sur le volume %(vol_id)s durant la suppression de "
@@ -441,9 +432,6 @@ msgid "Image %s not found on disk storage. Continue without injecting data"
 msgstr ""
 "L'image %s n'est pas trouvée sur l'espace disque. Continuer sans injonction "
 "de données."
-
-msgid "In the M release you must run the v2.1 API."
-msgstr "Dans la livraison M, vous devez utiliser l'API v2.1."
 
 #, python-format
 msgid ""

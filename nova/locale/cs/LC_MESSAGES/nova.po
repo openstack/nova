@@ -12,9 +12,9 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev213\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-15 22:46+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -1099,14 +1099,6 @@ msgstr "Požadované efemerní disky jsou větší, než typ instance umožňuje
 
 #, python-format
 msgid ""
-"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
-"%(total)d"
-msgstr ""
-"Chyba při kontaktování serveru ironic pro '%(method)s'. Pokus %(attempt)d z "
-"%(total)d"
-
-#, python-format
-msgid ""
 "Error destroying the instance on node %(node)s. Provision state still "
 "'%(state)s'."
 msgstr ""
@@ -1383,14 +1375,6 @@ msgid "Failure prepping block device."
 msgstr "Chyba při přípravě blokového zařízení."
 
 #, python-format
-msgid ""
-"Field labels list %(labels)s has different number of elements than fields "
-"list %(fields)s"
-msgstr ""
-"Seznam jmenovek pole %(labels)s se liší počtem prvků od seznamu polí "
-"%(fields)s"
-
-#, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "Soubor %(file_path)s nemohl být nalezen."
 
@@ -1632,15 +1616,6 @@ msgstr "Hostitel"
 #, python-format
 msgid "Host %(host)s could not be found."
 msgstr "Hostitel %(host)s nemohl být nalezen."
-
-#, python-format
-msgid ""
-"Host %(server)s is running an old version of Nova, live migrations involving "
-"that version may cause data loss. Upgrade Nova on %(server)s and try again."
-msgstr ""
-"Hostitel %(server)s běží na starší verzi Nova, přesunutí za provozu "
-"zapojující tuto verzi mohou způsobit ztrátu dat. Aktualizujte Nova na "
-"%(server)s a zkuste to znovu."
 
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
