@@ -190,7 +190,8 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
     def test_create_flavor_db_duplicate(self):
         def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise exception.FlavorExtraSpecUpdateCreateFailed(id=1, retries=5)
+            raise exception.FlavorExtraSpecUpdateCreateFailed(id='1',
+                                                              retries=5)
 
         self.stubs.Set(nova.db,
                        'flavor_extra_specs_update_or_create',
@@ -348,7 +349,8 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
     def test_update_flavor_db_duplicate(self):
         def fake_instance_type_extra_specs_update_or_create(*args, **kwargs):
-            raise exception.FlavorExtraSpecUpdateCreateFailed(id=1, retries=5)
+            raise exception.FlavorExtraSpecUpdateCreateFailed(id='1',
+                                                              retries=5)
 
         self.stubs.Set(nova.db,
                        'flavor_extra_specs_update_or_create',
