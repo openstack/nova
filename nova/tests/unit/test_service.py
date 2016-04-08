@@ -109,6 +109,17 @@ class ServiceTestCase(test.NoDBTestCase):
 
         self.assertTrue(app)
 
+    def test_repr(self):
+        # Test if a Service object is correctly represented, for example in
+        # log files.
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        exp = "<Service: host=foo, binary=nova-fake, " \
+              "manager_class_name=nova.tests.unit.test_service.FakeManager>"
+        self.assertEqual(exp, repr(serv))
+
     def _service_start_mocks(self):
         self.mox.StubOutWithMock(objects.Service, 'create')
         self.mox.StubOutWithMock(objects.Service, 'get_by_host_and_binary')
