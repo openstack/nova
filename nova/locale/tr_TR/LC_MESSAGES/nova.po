@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev213\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-15 22:46+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -952,14 +952,6 @@ msgstr "İstenen geçici diskler sunucu türünün izin verdiğinden daha büyü
 
 #, python-format
 msgid ""
-"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
-"%(total)d"
-msgstr ""
-"Ironic sunucuya '%(method)s' için bağlantı kurulamadı. Deneme %(attempt)d / "
-"%(total)d"
-
-#, python-format
-msgid ""
 "Error destroying the instance on node %(node)s. Provision state still "
 "'%(state)s'."
 msgstr ""
@@ -1211,14 +1203,6 @@ msgid "Failure prepping block device."
 msgstr "Blok aygıt hazırlama başarısız."
 
 #, python-format
-msgid ""
-"Field labels list %(labels)s has different number of elements than fields "
-"list %(fields)s"
-msgstr ""
-"Alan etiketleri listesi %(labels)s alan listesi %(fields)s'den farklı sayıda "
-"öğeye sahip"
-
-#, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "%(file_path)s dosyası bulunamadı."
 
@@ -1394,15 +1378,6 @@ msgstr "Host"
 #, python-format
 msgid "Host %(host)s could not be found."
 msgstr "%(host)s sunucusu bulunamadı."
-
-#, python-format
-msgid ""
-"Host %(server)s is running an old version of Nova, live migrations involving "
-"that version may cause data loss. Upgrade Nova on %(server)s and try again."
-msgstr ""
-"İstemci %(server)s Nova'nın eski bir sürümünü çalıştırıyor, bu sürümü içeren "
-"canlı göçler veri kaybına sebep olabilir. %(server)s üzerinde Nova "
-"güncellemesi yapın ve tekrar deneyin."
 
 msgid "Host PowerOn is not supported by the Hyper-V driver"
 msgstr "İstemci GüçAçma Hyper-V sürücüsü tarafından desteklenmiyor"

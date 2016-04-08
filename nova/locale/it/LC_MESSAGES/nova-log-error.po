@@ -7,9 +7,9 @@
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -276,9 +276,6 @@ msgstr "Eccezione durante l'esecuzione di %(name)s %(type)s-hook: %(obj)s"
 
 msgid "Exception while creating table."
 msgstr "Eccezione durante la creazione della tabella."
-
-msgid "Exception while seeding instance_types table"
-msgstr "Eccezione durante inserimento nella tabella instance_types"
 
 #, python-format
 msgid "Extending virtual disk failed with error: %s"

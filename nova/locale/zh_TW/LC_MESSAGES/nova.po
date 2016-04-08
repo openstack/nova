@@ -13,13 +13,13 @@
 # Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev7\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-17 05:38+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-16 08:10+0000\n"
+"PO-Revision-Date: 2016-03-18 12:23+0000\n"
 "Last-Translator: Jennifer <cristxu@tw.ibm.com>\n"
 "Language: zh-TW\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -1111,14 +1111,6 @@ msgstr "嘗試執行 %(method)s 時發生錯誤"
 
 #, python-format
 msgid ""
-"Error contacting Ironic server for '%(method)s'. Attempt %(attempt)d of "
-"%(total)d"
-msgstr ""
-"與用於 '%(method)s' 的 Ironic 伺服器聯絡時發生錯誤。嘗試 %(attempt)d 次"
-"（共%(total)d 次）"
-
-#, python-format
-msgid ""
 "Error destroying the instance on node %(node)s. Provision state still "
 "'%(state)s'."
 msgstr "毀損節點 %(node)s 上的實例時發生錯誤。供應狀態仍為'%(state)s'。"
@@ -1395,12 +1387,6 @@ msgid "Failure prepping block device."
 msgstr "準備區塊裝置時失敗。"
 
 #, python-format
-msgid ""
-"Field labels list %(labels)s has different number of elements than fields "
-"list %(fields)s"
-msgstr "欄位標籤清單 %(labels)s 中的元素數目與欄位清單 %(fields)s 中的不同"
-
-#, python-format
 msgid "File %(file_path)s could not be found."
 msgstr "找不到檔案 %(file_path)s。"
 
@@ -1639,14 +1625,6 @@ msgstr "找不到主機 %(host)s。"
 #, python-format
 msgid "Host %(host)s is already mapped to cell %(uuid)s"
 msgstr "主機 %(host)s 已經對映至 Cell %(uuid)s"
-
-#, python-format
-msgid ""
-"Host %(server)s is running an old version of Nova, live migrations involving "
-"that version may cause data loss. Upgrade Nova on %(server)s and try again."
-msgstr ""
-"主機 %(server)s 正在執行舊版本的 Nova，涉及到該版本的即時移轉可能會導致資料流"
-"失。請升級 %(server)s 上的 Nova，然後再試一次。"
 
 #, python-format
 msgid "Host '%(name)s' is not mapped to any cell"
@@ -3053,6 +3031,10 @@ msgid ""
 "Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
 "valid."
 msgstr "'%(property)s' 中指定的序列埠數目 '%(num_ports)s'無效。"
+
+#, python-format
+msgid "OVS configuration failed with: %(inner_exception)s."
+msgstr "OVS 配置失敗，發生 %(inner_exception)s。"
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"

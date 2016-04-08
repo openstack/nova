@@ -10,9 +10,9 @@
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -166,10 +166,6 @@ msgstr ""
 "Se desaprueba el uso de Cinder V1 API como una versión de Juno y Nova aún "
 "está configurada para usarlo. Habilite el V2 API en Cinder y configure "
 "cinder.catalog_info en nova.conf para usarlo."
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "No se cargo el complemento de recurso de cómputo %s"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -467,10 +463,6 @@ msgid ""
 msgstr ""
 "Ignorando excepción DiskNotFound mientras se separa volumen %(volume_id)s de "
 "%(mp)s: %(err)s"
-
-#, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "Ignorando DiskNotFound: %s"
 
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"

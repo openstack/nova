@@ -8,9 +8,9 @@
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev177\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-08 03:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -165,10 +165,6 @@ msgstr ""
 "API V1 Cinder je zastaralá od verze Juno a Nova je stále nastavena pro její "
 "použití. Povolte API V2 v Cinder a nastavte cinder.catalog_info v nova.conf, "
 "abyste ji mohli používat."
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "Zásuvný modul zdroje výpočtu %s nebyl načten"
 
 msgid ""
 "Conductor local mode is deprecated and will be removed in a subsequent "
@@ -554,14 +550,6 @@ msgstr ""
 "%(mp)s: %(err)s"
 
 #, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "Ignorování Nenalezení koncového bodu: %s"
-
-#, python-format
-msgid "Ignoring Unknown cinder exception: %s"
-msgstr "Ignorování neznámé výjimky Cinder: %s"
-
-#, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr "Ignorování chyby svazku %(vol_id)s během mazání %(exc)s"
 
@@ -623,9 +611,6 @@ msgid ""
 msgstr ""
 "Ve verzi M budete muset spouštět celou API. Koncept rozšíření API bude ze "
 "zdrojového kódu odstraněn, aby došlo k zajištění jediné API Compute."
-
-msgid "In the M release you must run the v2.1 API."
-msgstr "Ve verzi M musíte spouštět API V2.1"
 
 msgid ""
 "In vmwareapi:vmops:_destroy_instance, exception while deleting the VM "
@@ -1150,19 +1135,6 @@ msgstr ""
 "%(instance_id)s."
 
 msgid ""
-"The Extensible Resource Tracker is deprecated and will be removed in the "
-"14.0.0 release. If you use this functionality and have custom resources that "
-"are managed by the Extensible Resource Tracker, please contact the Nova "
-"development team by posting to the openstack-dev mailing list. There is no "
-"future planned support for the tracking of custom resources."
-msgstr ""
-"Sledovač rozšířitelných zdrojů je zastaralý a bude odstraněn ve verzi "
-"14.0.0. Pokud tuto funkci využíváte a máte vlastní zdroje které jsou tímto "
-"systémem spravované, prosím kontaktujte tým vývojářů Nova zasláním příspěvku "
-"na poštovní konferenci openstack-dev. Podpora sledování vlastních zdrojů "
-"není do budoucna plánována."
-
-msgid ""
 "The TrustedFilter is considered experimental by the OpenStack project "
 "because it receives much less testing than the rest of Nova. This may change "
 "in the future, but current deployers should be aware that the use of it in "
@@ -1552,12 +1524,6 @@ msgstr "regulární výraz datového úložiště je ignorován když je PBM zap
 #, python-format
 msgid "deallocate port %(port_id)s failed"
 msgstr "zrušení přidělení portu %(port_id)s selhalo"
-
-#, python-format
-msgid "get_minimum_version called with likely-incorrect binary `%s'"
-msgstr ""
-"Získání minimální verze zavoláno pomocí pravděpodobně nesprávného binárního "
-"souboru: `%s'"
 
 #, python-format
 msgid "hostname %s too long, truncating."
