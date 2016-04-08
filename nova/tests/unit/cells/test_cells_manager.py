@@ -34,8 +34,6 @@ from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_flavor
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-
 
 FAKE_COMPUTE_NODES = [dict(id=1, host='host1'), dict(id=2, host='host2')]
 FAKE_SERVICES = [dict(id=1, host='host1'),

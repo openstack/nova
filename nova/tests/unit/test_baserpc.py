@@ -18,13 +18,12 @@
 Test the base rpc API.
 """
 
-from oslo_config import cfg
-
 from nova import baserpc
+import nova.conf
 from nova import context
 from nova import test
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 class BaseAPITestCase(test.TestCase):

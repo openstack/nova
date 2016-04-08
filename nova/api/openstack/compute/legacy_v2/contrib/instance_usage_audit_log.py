@@ -16,18 +16,16 @@
 
 import datetime
 
-from oslo_config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
 from nova import compute
+import nova.conf
 from nova import context as nova_context
 from nova.i18n import _
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
-
+CONF = nova.conf.CONF
 
 authorize = extensions.extension_authorizer('compute',
                            'instance_usage_audit_log')

@@ -35,7 +35,6 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 LOG = logging.getLogger('nova.compute')
 
 
