@@ -16934,12 +16934,71 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         rbd.remove_snap.assert_called_with('c', 'd', ignore_errors=True,
                                            pool='b', force=True)
 
+    @mock.patch.object(imagebackend.Image, 'direct_snapshot')
+    @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(host.Host, 'get_guest')
+    def test_raw_with_rbd_clone_is_live_snapshot(self,
+                                                 mock_get_guest,
+                                                 mock_version,
+                                                 mock_resolve,
+                                                 mock_snapshot):
+        self.flags(disable_libvirt_livesnapshot=False, group='workarounds')
+        self.flags(images_type='rbd', group='libvirt')
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest._domain = mock.Mock()
+        mock_get_guest.return_value = mock_guest
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        recv_meta = self._create_image()
+        with mock.patch.object(driver, "suspend") as mock_suspend:
+            driver.snapshot(self.context, self.instance_ref, recv_meta['id'],
+                            self.mock_update_task_state)
+            self.assertFalse(mock_suspend.called)
+
+    @mock.patch.object(libvirt_driver.imagebackend.images, 'convert_image',
+                       side_effect=_fake_convert_image)
+    @mock.patch.object(fake_libvirt_utils, 'find_disk')
+    @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(host.Host, 'get_guest')
+    @mock.patch.object(rbd_utils, 'RBDDriver')
+    @mock.patch.object(rbd_utils, 'rbd')
+    def test_raw_with_rbd_clone_failure_does_cold_snapshot(self,
+                                                           mock_rbd,
+                                                           mock_driver,
+                                                           mock_get_guest,
+                                                           mock_version,
+                                                           mock_resolve,
+                                                           mock_find_disk,
+                                                           mock_convert):
+        self.flags(disable_libvirt_livesnapshot=False, group='workarounds')
+        self.flags(images_type='rbd', group='libvirt')
+        rbd = mock_driver.return_value
+        rbd.parent_info = mock.Mock(side_effect=exception.ImageUnacceptable(
+            image_id='fake_id', reason='rbd testing'))
+        mock_find_disk.return_value = ('rbd://some/fake/rbd/image', 'raw')
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = power_state.RUNNING
+        mock_guest._domain = mock.Mock()
+        mock_get_guest.return_value = mock_guest
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        recv_meta = self._create_image()
+
+        with mock.patch.object(fake_libvirt_utils, 'disk_type', new='rbd'):
+            with mock.patch.object(driver, "suspend") as mock_suspend:
+                driver.snapshot(self.context, self.instance_ref,
+                                recv_meta['id'], self.mock_update_task_state)
+                self.assertTrue(mock_suspend.called)
+
 
 class LXCSnapshotTests(LibvirtSnapshotTests):
     """Repeat all of the Libvirt snapshot tests, but with LXC enabled"""
     def setUp(self):
         super(LXCSnapshotTests, self).setUp()
         self.flags(virt_type='lxc', group='libvirt')
+
+    def test_raw_with_rbd_clone_failure_does_cold_snapshot(self):
+        self.skipTest("managedSave is not supported with LXC")
 
 
 class LVMSnapshotTests(_BaseSnapshotTests):
