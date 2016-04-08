@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_versionedobjects import fields
+import re
 import six
 
 # TODO(berrange) Temporary import for Arch class
@@ -64,6 +65,7 @@ IPV4NetworkField = fields.IPV4NetworkField
 IPV6NetworkField = fields.IPV6NetworkField
 AutoTypedField = fields.AutoTypedField
 BaseEnumField = fields.BaseEnumField
+MACAddressField = fields.MACAddressField
 
 
 # NOTE(danms): These are things we need to import for some of our
@@ -643,6 +645,63 @@ class NonNegativeInteger(FieldType):
         if v < 0:
             raise ValueError(_('Value must be >= 0 for field %s') % attr)
         return v
+
+
+class AddressBase(FieldType):
+    @staticmethod
+    def coerce(obj, attr, value):
+        if re.match(obj.PATTERN, str(value)):
+            return str(value)
+        else:
+            raise ValueError(_('Value must match %s') % obj.PATTERN)
+
+
+class PCIAddress(AddressBase):
+    PATTERN = '[a-f0-9]{4}:[a-f0-9]{2}:[a-f0-9]{2}.[a-f0-9]'
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        return AddressBase.coerce(PCIAddress, attr, value)
+
+
+class USBAddress(AddressBase):
+    PATTERN = '[a-f0-9]+:[a-f0-9]+'
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        return AddressBase.coerce(USBAddress, attr, value)
+
+
+class SCSIAddress(AddressBase):
+    PATTERN = '[a-f0-9]+:[a-f0-9]+:[a-f0-9]+:[a-f0-9]+'
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        return AddressBase.coerce(SCSIAddress, attr, value)
+
+
+class IDEAddress(AddressBase):
+    PATTERN = '[0-1]:[0-1]'
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        return AddressBase.coerce(IDEAddress, attr, value)
+
+
+class PCIAddressField(AutoTypedField):
+    AUTO_TYPE = PCIAddress()
+
+
+class USBAddressField(AutoTypedField):
+    AUTO_TYPE = USBAddress()
+
+
+class SCSIAddressField(AutoTypedField):
+    AUTO_TYPE = SCSIAddress()
+
+
+class IDEAddressField(AutoTypedField):
+    AUTO_TYPE = IDEAddress()
 
 
 class ArchitectureField(BaseEnumField):

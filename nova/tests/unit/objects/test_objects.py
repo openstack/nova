@@ -36,6 +36,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import notification
+from nova.objects import virt_device_metadata
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_notifier
@@ -1111,6 +1112,9 @@ object_data = {
     'ComputeNodeList': '1.14-3b6f4f5ade621c40e70cb116db237844',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
+    'DeviceMetadata': '1.0-04eb8fd218a49cbc3b1e54b774d179f7',
+    'DeviceMetadataList': '1.0-15ecf022a68ddbb8c2a6739cfc9f8f5e',
+    'DiskMetadata': '1.0-e7a0f1ccccf10d26a76b28e7492f3788',
     'EC2Ids': '1.0-474ee1094c7ec16f8ce657595d8c49d9',
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
@@ -1125,6 +1129,7 @@ object_data = {
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HyperVLiveMigrateData': '1.0-0b868dd6228a09c3f3e47016dddf6a1c',
     'HVSpec': '1.2-db672e73304da86139086d003f3977e7',
+    'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.12-6a132dee47931447bf86c03c7006d96c',
     'Instance': '2.1-416fdd0dfc33dfa12ff2cfdd8cc32e17',
@@ -1162,10 +1167,12 @@ object_data = {
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
     'NUMATopologyLimits': '1.0-9463e0edd40f64765ae518a539b9dfd2',
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
+    'NetworkInterfaceMetadata': '1.0-99a9574d086feb5ad45cd04a34855647',
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
     'NetworkRequest': '1.1-7a3e4ca2ce1e7b62d8400488f2f2b756',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PciDevice': '1.5-0d5abe5c91645b8469eb2a93fc53f932',
+    'PCIDeviceBus': '1.0-2b891cb77e42961044689f3dc2718995',
     'PciDeviceList': '1.3-52ff14355491c8c580bdc0ba34c26210',
     'PciDevicePool': '1.1-3f5ddc3ff7bfa14da7f6c7e9904cc000',
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
@@ -1176,6 +1183,7 @@ object_data = {
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
     'SchedulerRetries': '1.1-3c9c8b16143ebbb6ad7030e999d14cc0',
+    'SCSIDeviceBus': '1.0-61c1e89a00901069ab1cf2991681533b',
     'SecurityGroup': '1.1-0e1b9ba42fe85c13c1437f8b74bdb976',
     'SecurityGroupList': '1.0-dc8bbea01ba09a2edb6e5233eae85cbc',
     'SecurityGroupRule': '1.1-ae1da17b79970012e8536f88cb3c6b29',
@@ -1188,6 +1196,7 @@ object_data = {
     'TaskLogList': '1.0-cc8cce1af8a283b9d28b55fcd682e777',
     'Tag': '1.1-8b8d7d5b48887651a0e01241672e2963',
     'TagList': '1.1-55231bdb671ecf7641d6a2e9109b5d8e',
+    'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
     'VirtCPUFeature': '1.0-3310718d8c72309259a6e39bdefe83ee',
     'VirtCPUModel': '1.0-6a5cc9f322729fc70ddc6733bacd57d3',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
@@ -1243,6 +1252,13 @@ class TestObjectVersions(test.NoDBTestCase):
         self.assertNotEqual(old_hash, new_hash)
 
     def test_obj_make_compatible(self):
+        # NOTE(danms): This is normally not registered because it is just a
+        # base class. However, the test fixture below requires it to be
+        # in the registry so that it can verify backports based on its
+        # children. So, register it here, which will be reverted after the
+        # cleanUp for this (and all) tests is run.
+        base.NovaObjectRegistry.register(virt_device_metadata.DeviceBus)
+
         # Iterate all object classes and verify that we can run
         # obj_make_compatible with every older version than current.
         # This doesn't actually test the data conversions, but it at least
