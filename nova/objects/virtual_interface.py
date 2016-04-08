@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
+
 from nova import db
 from nova import exception
 from nova import objects
@@ -22,7 +24,8 @@ from nova.objects import fields
 @base.NovaObjectRegistry.register
 class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add tag field
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -30,7 +33,13 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         'network_id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
         'uuid': fields.UUIDField(),
+        'tag': fields.StringField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'tag' in primitive:
+            del primitive['tag']
 
     @staticmethod
     def _from_db_object(context, vif, db_vif):

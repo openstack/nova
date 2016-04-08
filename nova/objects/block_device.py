@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_log import log as logging
+from oslo_utils import versionutils
 
 from nova import block_device
 from nova.cells import opts as cells_opts
@@ -60,7 +61,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
     # Version 1.15: Instance version 1.23
     # Version 1.16: Deprecate get_by_volume_id(), add
     #               get_by_volume() and get_by_volume_and_instance()
-    VERSION = '1.16'
+    # Version 1.17: Added tag field
+    VERSION = '1.17'
 
     fields = {
         'id': fields.IntegerField(),
@@ -81,7 +83,13 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         'image_id': fields.StringField(nullable=True),
         'no_device': fields.BooleanField(default=False),
         'connection_info': fields.SensitiveStringField(nullable=True),
+        'tag': fields.StringField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 17) and 'tag' in primitive:
+            del primitive['tag']
 
     @staticmethod
     def _from_db_object(context, block_device_obj,

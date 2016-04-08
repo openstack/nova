@@ -6290,7 +6290,8 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'instance_uuid': self.instance_uuid,
             'address': 'fake_address',
             'network_id': self.network['id'],
-            'uuid': str(stdlib_uuid.uuid4())
+            'uuid': str(stdlib_uuid.uuid4()),
+            'tag': 'fake-tag',
         }
 
     def mock_db_query_first_to_raise_data_error_exception(self):
