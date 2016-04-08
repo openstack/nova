@@ -165,7 +165,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             'supported_hv_specs',
             'host',
             'pci_device_pools',
-            'uuid',
             ])
         fields = set(compute.fields) - special_cases
         for key in fields:
@@ -224,23 +223,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         # host column is present in the table or not
         compute._host_from_db_object(compute, db_compute)
 
-        # NOTE(danms): Remove this conditional load (and remove uuid from
-        # the list of special_cases above) once we're in Newton and have
-        # enforced that all UUIDs in the database are not NULL.
-        if db_compute.get('uuid'):
-            compute.uuid = db_compute['uuid']
-
         compute.obj_reset_changes()
-
-        # NOTE(danms): This needs to come after obj_reset_changes() to make
-        # sure we only save the uuid, if we generate one.
-        # FIXME(danms): Remove this in Newton once we have enforced that
-        # all compute nodes have uuids set in the database.
-        if 'uuid' not in compute:
-            compute.uuid = uuidutils.generate_uuid()
-            LOG.debug('Generated UUID %(uuid)s for compute node %(id)i',
-                      dict(uuid=compute.uuid, id=compute.id))
-            compute.save()
 
         return compute
 

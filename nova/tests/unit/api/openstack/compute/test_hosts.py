@@ -26,6 +26,7 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_hosts
+from nova.tests import uuidsentinel
 
 
 def stub_service_get_all(context, disabled=None):
@@ -323,6 +324,7 @@ class HostTestCaseV21(test.TestCase):
 
         dic = {'service_id': s_ref['id'],
                'host': s_ref['host'],
+               'uuid': uuidsentinel.compute_node,
                'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
                'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
                'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
