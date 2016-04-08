@@ -2534,6 +2534,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             image_meta,
                                             rescue=True)
+        gen_confdrive = functools.partial(self._create_configdrive,
+                                          context, instance,
+                                          admin_pass=rescue_password,
+                                          network_info=network_info,
+                                          suffix='.rescue')
         self._create_image(context, instance, disk_info['mapping'],
                            suffix='.rescue', disk_images=rescue_images,
                            network_info=network_info,
@@ -2542,7 +2547,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                   image_meta, rescue=rescue_images,
                                   write_to_disk=True)
         self._destroy(instance)
-        self._create_domain(xml)
+        self._create_domain(xml, post_xml_callback=gen_confdrive)
 
     def unrescue(self, instance, network_info):
         """Reboot the VM which is being rescued back into primary images.
@@ -2579,6 +2584,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             image_meta,
                                             block_device_info)
+        gen_confdrive = functools.partial(self._create_configdrive,
+                                          context, instance,
+                                          admin_pass=admin_password,
+                                          files=injected_files,
+                                          network_info=network_info)
         self._create_image(context, instance,
                            disk_info['mapping'],
                            network_info=network_info,
@@ -2589,9 +2599,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
                                   write_to_disk=True)
-        self._create_domain_and_network(context, xml, instance, network_info,
-                                        disk_info,
-                                        block_device_info=block_device_info)
+        self._create_domain_and_network(
+            context, xml, instance, network_info, disk_info,
+            block_device_info=block_device_info,
+            post_xml_callback=gen_confdrive)
         LOG.debug("Instance is running", instance=instance)
 
         def _wait_for_boot():
@@ -2952,54 +2963,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                      image_id=disk_images['ramdisk_id'])
 
         inst_type = instance.get_flavor()
+        if CONF.libvirt.virt_type == 'uml':
+            libvirt_utils.chown(image('disk').path, 'root')
 
-        # Config drive
-        config_drive_image = None
-        if configdrive.required_by(instance):
-            LOG.info(_LI('Using config drive'), instance=instance)
-
-            config_drive_image = self.image_backend.image(
-                instance, 'disk.config' + suffix,
-                self._get_disk_config_image_type())
-
-            # Don't overwrite an existing config drive
-            if not config_drive_image.exists():
-                extra_md = {}
-                if admin_pass:
-                    extra_md['admin_pass'] = admin_pass
-
-                inst_md = instance_metadata.InstanceMetadata(
-                    instance, content=files, extra_md=extra_md,
-                    network_info=network_info)
-
-                cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
-                with cdb:
-                    config_drive_local_path = self._get_disk_config_path(
-                        instance, suffix)
-                    LOG.info(_LI('Creating config drive at %(path)s'),
-                             {'path': config_drive_local_path},
-                             instance=instance)
-
-                    try:
-                        cdb.make_drive(config_drive_local_path)
-                    except processutils.ProcessExecutionError as e:
-                        with excutils.save_and_reraise_exception():
-                            LOG.error(_LE('Creating config drive failed '
-                                          'with error: %s'),
-                                      e, instance=instance)
-
-                try:
-                    config_drive_image.import_file(
-                        instance, config_drive_local_path,
-                        'disk.config' + suffix)
-                finally:
-                    # NOTE(mikal): if the config drive was imported into RBD,
-                    # then we no longer need the local copy
-                    if CONF.libvirt.images_type == 'rbd':
-                        os.unlink(config_drive_local_path)
-
-        need_inject = (config_drive_image is None and inject_files and
-                       CONF.libvirt.inject_partition != -2)
+        # File injection only if needed
+        need_inject = inject_files and CONF.libvirt.inject_partition != -2
 
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to
@@ -3099,8 +3067,51 @@ class LibvirtDriver(driver.ComputeDriver):
                                          size=size,
                                          swap_mb=swap_mb)
 
-        if CONF.libvirt.virt_type == 'uml':
-            libvirt_utils.chown(image('disk').path, 'root')
+    def _create_configdrive(self, context, instance, admin_pass=None,
+                            files=None, network_info=None, suffix=''):
+        config_drive_image = None
+        if configdrive.required_by(instance):
+            LOG.info(_LI('Using config drive'), instance=instance)
+
+            config_drive_image = self.image_backend.image(
+                instance, 'disk.config' + suffix,
+                self._get_disk_config_image_type())
+
+            # Don't overwrite an existing config drive
+            if not config_drive_image.exists():
+                extra_md = {}
+                if admin_pass:
+                    extra_md['admin_pass'] = admin_pass
+
+                inst_md = instance_metadata.InstanceMetadata(
+                    instance, content=files, extra_md=extra_md,
+                    network_info=network_info)
+
+                cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
+                with cdb:
+                    config_drive_local_path = self._get_disk_config_path(
+                        instance, suffix)
+                    LOG.info(_LI('Creating config drive at %(path)s'),
+                             {'path': config_drive_local_path},
+                             instance=instance)
+
+                    try:
+                        cdb.make_drive(config_drive_local_path)
+                    except processutils.ProcessExecutionError as e:
+                        with excutils.save_and_reraise_exception():
+                            LOG.error(_LE('Creating config drive failed '
+                                          'with error: %s'),
+                                      e, instance=instance)
+
+                try:
+                    config_drive_image.import_file(
+                        instance, config_drive_local_path,
+                        'disk.config' + suffix)
+                finally:
+                    # NOTE(mikal): if the config drive was imported into RBD,
+                    # then we no longer need the local copy
+                    if CONF.libvirt.images_type == 'rbd':
+                        os.unlink(config_drive_local_path)
 
     def _prepare_pci_devices_for_use(self, pci_devices):
         # kvm , qemu support managed mode
@@ -3346,9 +3357,13 @@ class LibvirtDriver(driver.ComputeDriver):
             # to rbd yet. Try to fall back on 'flat' image type.
             # TODO(melwitt): Add online migration of some sort so we can
             # remove this fall back once we know all config drives are in rbd.
-            image = self.image_backend.image(instance, name, 'flat')
-            LOG.debug('Config drive not found in RBD, falling back to the '
-                      'instance directory', instance=instance)
+            # NOTE(vladikr): make sure that the flat image exist, otherwise
+            # the image will be created after the domain definition.
+            flat_image = self.image_backend.image(instance, name, 'flat')
+            if flat_image.exists():
+                image = flat_image
+                LOG.debug('Config drive not found in RBD, falling back to the '
+                          'instance directory', instance=instance)
         disk_info = disk_mapping[name]
         return image.libvirt_info(disk_info['bus'],
                                   disk_info['dev'],
@@ -4689,7 +4704,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     # TODO(sahid): Consider renaming this to _create_guest.
     def _create_domain(self, xml=None, domain=None,
-                       power_on=True, pause=False):
+                       power_on=True, pause=False, post_xml_callback=None):
         """Create a domain.
 
         Either domain or xml must be passed in. If both are passed, then
@@ -4699,6 +4714,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         if xml:
             guest = libvirt_guest.Guest.create(xml, self._host)
+            if post_xml_callback is not None:
+                post_xml_callback()
         else:
             guest = libvirt_guest.Guest(domain)
 
@@ -4730,7 +4747,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_domain_and_network(self, context, xml, instance, network_info,
                                    disk_info, block_device_info=None,
                                    power_on=True, reboot=False,
-                                   vifs_already_plugged=False):
+                                   vifs_already_plugged=False,
+                                   post_xml_callback=None):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -4772,7 +4790,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 with self._lxc_disk_handler(instance, instance.image_meta,
                                             block_device_info, disk_info):
                     guest = self._create_domain(
-                        xml, pause=pause, power_on=power_on)
+                        xml, pause=pause, power_on=power_on,
+                        post_xml_callback=post_xml_callback)
 
                 self.firewall_driver.apply_instance_filter(instance,
                                                            network_info)
@@ -7139,6 +7158,10 @@ class LibvirtDriver(driver.ComputeDriver):
                            block_device_info=None, inject_files=False,
                            fallback_from_host=migration.source_compute)
 
+        gen_confdrive = functools.partial(self._create_configdrive,
+                                          context, instance,
+                                          network_info=network_info)
+
         # Resize root disk and a single ephemeral disk called disk.local
         # Also convert raw disks to qcow2 if migrating to host which uses
         # qcow2 from host which uses raw.
@@ -7206,7 +7229,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                         block_disk_info,
                                         block_device_info=block_device_info,
                                         power_on=power_on,
-                                        vifs_already_plugged=True)
+                                        vifs_already_plugged=True,
+                                        post_xml_callback=gen_confdrive)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
                                                     self._wait_for_running,
