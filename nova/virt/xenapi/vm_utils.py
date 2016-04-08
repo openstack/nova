@@ -78,6 +78,7 @@ MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
 MAX_VDI_CHAIN_SIZE = 16
 PROGRESS_INTERVAL_SECONDS = 300
+DD_BLOCKSIZE = 65536
 
 # Fudge factor to allow for the VHD chain to be slightly larger than
 # the partitioned space. Otherwise, legitimate images near their
@@ -1100,6 +1101,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                     utils.execute('dd',
                                   'if=%s' % tmp_file,
                                   'of=%s' % dev_path,
+                                  'bs=%d' % DD_BLOCKSIZE,
                                   'oflag=direct,sync',
                                   run_as_root=True)
 
@@ -2367,6 +2369,7 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
                 utils.execute('dd',
                               'if=%s' % src_path,
                               'of=%s' % dst_path,
+                              'bs=%d' % DD_BLOCKSIZE,
                               'count=%d' % num_blocks,
                               'iflag=direct,sync',
                               'oflag=direct,sync',
