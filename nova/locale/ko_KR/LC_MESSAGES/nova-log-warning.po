@@ -3,17 +3,16 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
+# Sungjin Kang <gang.sungjin@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev15\n"
+"Project-Id-Version: nova 13.0.1.dev3\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-24 10:46+0000\n"
+"POT-Creation-Date: 2016-04-08 07:42+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-24 09:49+0000\n"
+"PO-Revision-Date: 2016-04-08 05:42+0000\n"
 "Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -299,7 +298,7 @@ msgid ""
 msgstr ""
 "더 이상 사용되지 않음: Liberty 릴리스부터 이미 v2 API가 더 이상 사용되지 않으"
 "며 v2.1 API가 기본값으로 설정됩니다. V2.1 API로 원활하게 전환하기 위해 Nova에"
-"서도 v2.1 API 레거시 v2 호환 가능 모드를 지원합니다. v2.1 API 및 레거시 v2 호"
+"서도 v2.1 API 레거시 v2 호환 가능 모드를 지원합니다. v2.1 API와 레거시 v2 호"
 "환 가능 모드를 구성하는 방법에 대한 자세한 정보는 Nova api-paste.ini 샘플 파"
 "일을 참조하십시오."
 
@@ -328,7 +327,7 @@ msgid ""
 "Detaching interface %(mac)s failed  because the device is no longer found on "
 "the guest."
 msgstr ""
-"게스트에서 더 이상 장치를 찾을 수 없으므로 %(mac)s 인터페이스의 연결을 해제하"
+"게스트에서 더 이상 장치를 찾을 수 없으므로 %(mac)s 인터페이스 연결을 해제하"
 "지 못했습니다."
 
 msgid "Detaching volume from unknown instance"
@@ -444,7 +443,7 @@ msgstr "블랙리스트 및 화이트리스트 확장: %s"
 
 #, python-format
 msgid "Fail to unplug vif:%(vif)s, exception:%(exception)s"
-msgstr "vif:%(vif)s 플러그 해제 실패, 예외:%(exception)s"
+msgstr "Vif:%(vif)s 플러그 해제 실패, 예외:%(exception)s"
 
 #, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
@@ -456,7 +455,7 @@ msgstr "%s 마이그레이션을 중단하는 데 실패"
 
 #, python-format
 msgid "Failed to close augeas %s"
-msgstr "augeas %s을(를) 닫지 못했음"
+msgstr "Augeas %s을(를) 닫지 못했음"
 
 #, python-format
 msgid "Failed to close guest handle %s"
@@ -470,7 +469,7 @@ msgstr ""
 
 #, python-format
 msgid "Failed to create vif, exception:%(exception)s, vif:%(vif)s"
-msgstr "vif 생성 실패, 예외:%(exception)s, vif:%(vif)s"
+msgstr "Vif 생성 실패, 예외:%(exception)s, vif:%(vif)s"
 
 #, python-format
 msgid "Failed to deallocate port %(port_id)s for instance. Error: %(error)s"
@@ -774,11 +773,11 @@ msgstr "인스턴스의 정보 캐시를 찾을 수 없습니다. 무시합니�
 
 #, python-format
 msgid "Info cache is %r during associate"
-msgstr "연관 중에 정보 캐시는 %r임"
+msgstr "연관 중에 정보 캐시는 %r 임"
 
 #, python-format
 msgid "Info cache is %r during associate with no nw_info cache"
-msgstr "nw_info 캐시와 연관하지 않는 동안 정보 캐시는 %r임"
+msgstr "nw_info 캐시와 연관하지 않는 동안 정보 캐시는 %r 입니다"
 
 #, python-format
 msgid ""
@@ -838,7 +837,7 @@ msgstr ""
 "(%(power_state)s)임, 작업 상태를 지우고 인스턴스 일시중단을 취소함"
 
 msgid "Instance is not (soft-)deleted."
-msgstr "인스턴스가 (소프트)삭제되지 않습니다. "
+msgstr "인스턴스가 (soft-)삭제되지 않습니다. "
 
 #, python-format
 msgid ""
@@ -857,7 +856,7 @@ msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr "인스턴스가 예기치 않게 일시중단됩니다. 중지 API를 호출 중입니다. "
 
 msgid "Instance is unexpectedly not found. Ignore."
-msgstr "인스턴스가 예기치 않게 발견되지 않습니다. 무시하십시오. "
+msgstr "인스턴스가 예기치 않게 찾을 수 없습니다. 무시하십시오. "
 
 msgid ""
 "Instance lifecycle events from the compute driver have been disabled. Note "
@@ -926,7 +925,7 @@ msgstr "torrent_images의 올바르지 않은 값 '%s'"
 
 #, python-format
 msgid "Invalid value for id mapping %s"
-msgstr "id 맵핑 %s의 값이 올바르지 않음"
+msgstr "ID 맵핑 %s의 값이 올바르지 않음"
 
 #, python-format
 msgid "Key '%(key)s' not in instances '%(inst)s'"
@@ -993,7 +992,7 @@ msgid ""
 "Network %(id)s not matched with the tenants network! The ports tenant "
 "%(tenant_id)s will be used."
 msgstr ""
-"네트워크 %(id)s이(가) 테넌트 네트워크와 일치하지 않습니다! 포트 테넌트 "
+"네트워크 %(id)s이(가) tenant 네트워크와 일치하지 않습니다! 포트 tenant "
 "%(tenant_id)s을(를) 사용합니다."
 
 #, python-format
@@ -1029,7 +1028,7 @@ msgstr "Neutron 오류: 네트워크에 추가 Fixed IP가 없음: %s"
 
 #, python-format
 msgid "Neutron error: Port quota exceeded in tenant: %s"
-msgstr "Neutron 오류: 테넌트에서 포트 할당량이 초과됨: %s"
+msgstr "Neutron 오류: tenant에서 포트 할당량이 초과됨: %s"
 
 #, python-format
 msgid "No Network for FixedIP: %s"
@@ -1459,7 +1458,7 @@ msgid "Timed out while waiting for soft shutdown."
 msgstr "소프트 시스템 종료를 기다리는 중에 제한시간이 초과되었습니다."
 
 msgid "Timeout waiting for vif plugging callback"
-msgstr "vif 플러그 콜백을 기다리는 중에 제한시간이 초과됨"
+msgstr "Vif 플러그 콜백을 기다리는 중에 제한시간이 초과됨"
 
 #, python-format
 msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
@@ -1470,7 +1469,7 @@ msgid "Token: %(token)s failed to save into memcached."
 msgstr "토큰: %(token)s을(를) memcached에 저장하는 데 실패했습니다."
 
 msgid "Too many id maps, only included first five."
-msgstr "id 맵이 너무 많아, 처음 다섯 개만 포함합니다."
+msgstr "ID 맵이 너무 많아, 처음 다섯 개만 포함합니다."
 
 #, python-format
 msgid ""
@@ -1489,8 +1488,8 @@ msgid ""
 "Treating negative config value (%(retries)s) for 'network_allocate_retries' "
 "as 0."
 msgstr ""
-"'network_allocate_retries'의 음의 구성 값 (%(retries)s)은(는) 0으로 처리합니"
-"다."
+"'network_allocate_retries'에대한 음의 구성 값 (%(retries)s)은(는) 0으로 처리"
+"합니다."
 
 #, python-format
 msgid ""
@@ -1652,7 +1651,7 @@ msgid ""
 "volume size is %(size)d bytes, but free space on volume group is only "
 "%(free_space)db."
 msgstr ""
-"볼륨 그룹 %(vg)s이(가) 성긴 볼륨 %(lv)s을(를) 보유할 수 없습니다. 가상 볼륨 "
+"볼륨 그룹 %(vg)s이(가) 여유 볼륨 %(lv)s을(를) 보유할 수 없습니다. 가상 볼륨 "
 "크기는 %(size)d바이트지만, 볼륨 그룹의 여유 공간은 %(free_space)db뿐입니다."
 
 #, python-format
@@ -1724,11 +1723,11 @@ msgid ""
 "local address (127.0.0.1 or ::1), the live migration will succeed, but the "
 "VM will continue to listen on the current addresses."
 msgstr ""
-"libvirt 버전에서 VIR_DOMAIN_XML_MIGRATABLE 플래그를 지원하지 않으며, 대상 노"
+"Libvirt 버전에서 VIR_DOMAIN_XML_MIGRATABLE 플래그를 지원하지 않으며, 대상 노"
 "드에서 그래픽(VNC 및/또는 SPICE) 청취 주소가 소스 코드의 주소와 일치하지 않습"
-"니다. 소스 노드의 청취 주소가 catch-all 주소(0.0.0.0 or ::)또는 로컬 주소"
+"니다. 소스 노드의 listen 주소가 catch-all 주소(0.0.0.0 or ::)나 로컬 주소"
 "(127.0.0.1 or ::1)로 설정되었으므로, 라이브 마이그레이션에 성공하지만, VM이 "
-"현재 주소에서만 계속 청취합니다."
+"현재 주소에서만 계속 listen 합니다."
 
 #, python-format
 msgid "_migrate_disk_resizing_up failed to rollback: %s"
@@ -1868,8 +1867,7 @@ msgstr ""
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""
-"set_admin_password가 이 드라이버 또는 게스트 인스턴스에 의해 구현되지 않습니"
-"다. "
+"set_admin_password가 이 드라이버나 게스트 인스턴스에 의해 구현되지 않습니다. "
 
 #, python-format
 msgid "snapshot(%(name)s) on rbd image(%(img)s) is protected, skipping"
