@@ -16,6 +16,7 @@
 import copy
 import uuid
 
+import mock
 from oslo_policy import policy as oslo_policy
 import six
 from webob import exc
@@ -31,7 +32,6 @@ from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 
 FAKE_UUID = fake_server_actions.FAKE_UUID
@@ -80,41 +80,30 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         fake_url = '/123/servers/12/%s' % action
         return fakes.HTTPRequest.blank(fake_url)
 
+    def _get_instance_other_project(self, req):
+        context = req.environ['nova.context']
+        project_id = '%s_unequal' % context.project_id
+        return objects.Instance(project_id=project_id)
+
     def _set_policy_rules(self):
         rules = {'compute:get': '',
                  'os_compute_api:os-instance-actions':
                      'project_id:%(project_id)s'}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
-    def test_list_actions_restricted_by_project(self):
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_list_actions_restricted_by_project(self, mock_instance_get):
         self._set_policy_rules()
-
-        def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None,
-                                      use_slave=False):
-            return fake_instance.fake_db_instance(
-                **{'name': 'fake', 'project_id': '%s_unequal' %
-                       context.project_id})
-
-        self.stub_out('nova.db.instance_get_by_uuid',
-                      fake_instance_get_by_uuid)
         req = self._get_http_req('os-instance-actions')
+        mock_instance_get.return_value = self._get_instance_other_project(req)
         self.assertRaises(exception.Forbidden, self.controller.index, req,
                           str(uuid.uuid4()))
 
-    def test_get_action_restricted_by_project(self):
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_get_action_restricted_by_project(self, mock_instance_get):
         self._set_policy_rules()
-
-        def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None,
-                                      use_slave=False):
-            return fake_instance.fake_db_instance(
-                **{'name': 'fake', 'project_id': '%s_unequal' %
-                       context.project_id})
-
-        self.stub_out('nova.db.instance_get_by_uuid',
-                      fake_instance_get_by_uuid)
         req = self._get_http_req('os-instance-actions/1')
+        mock_instance_get.return_value = self._get_instance_other_project(req)
         self.assertRaises(exception.Forbidden, self.controller.show, req,
                           str(uuid.uuid4()), '1')
 
@@ -142,14 +131,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.controller = self.instance_actions.InstanceActionsController()
         self.fake_actions = copy.deepcopy(fake_server_actions.FAKE_ACTIONS)
         self.fake_events = copy.deepcopy(fake_server_actions.FAKE_EVENTS)
-
-        def fake_instance_get_by_uuid(context, instance_id, use_slave=False):
-            return fake_instance.fake_instance_obj(None,
-                **{'name': 'fake', 'project_id': context.project_id})
-
         self.stubs.Set(compute_api.API, 'get', self.fake_get)
-        self.stub_out('nova.db.instance_get_by_uuid',
-                      fake_instance_get_by_uuid)
 
     def _get_http_req(self, action, use_admin_context=False):
         fake_url = '/123/servers/12/%s' % action
