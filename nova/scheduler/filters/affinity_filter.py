@@ -82,7 +82,7 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
     hosts.
     """
     def host_passes(self, host_state, spec_obj):
-        # Only invoke the filter is 'anti-affinity' is configured
+        # Only invoke the filter if 'anti-affinity' is configured
         policies = (spec_obj.instance_group.policies
                     if spec_obj.instance_group else [])
         if self.policy_name not in policies:
@@ -110,7 +110,7 @@ class _GroupAffinityFilter(filters.BaseHostFilter):
     """Schedule the instance on to host from a set of group hosts.
     """
     def host_passes(self, host_state, spec_obj):
-        # Only invoke the filter is 'affinity' is configured
+        # Only invoke the filter if 'affinity' is configured
         policies = (spec_obj.instance_group.policies
                     if spec_obj.instance_group else [])
         if self.policy_name not in policies:
