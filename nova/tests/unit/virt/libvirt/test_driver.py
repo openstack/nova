@@ -931,9 +931,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDeviceDetachFailed,
                           drvr._detach_pci_devices, None, pci_devices)
 
-    def test_detach_pci_devices(self):
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
+    def test_detach_pci_devices(self, mocked_get_xml_desc, *args):
 
-        fake_domXML1 =\
+        fake_domXML1_with_pci = (
             """<domain> <devices>
             <disk type='file' device='disk'>
             <driver name='qemu' type='qcow2' cache='none'/>
@@ -945,84 +948,68 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             </disk>
             <hostdev mode="subsystem" type="pci" managed="yes">
             <source>
-            <address function="0x1" slot="0x10" domain="0x0000"
+            <address function="0x1" slot="0x10" domain="0x0001"
              bus="0x04"/>
             </source>
-            </hostdev></devices></domain>"""
+            </hostdev></devices></domain>""")
 
-        pci_devices = [dict(hypervisor_name='xxx',
-                            id='id1',
-                            instance_uuid='uuid',
-                            address="0001:04:10:1")]
+        fake_domXML1_without_pci = (
+            """<domain> <devices>
+            <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='none'/>
+            <source file='xxx'/>
+            <target dev='vda' bus='virtio'/>
+            <alias name='virtio-disk0'/>
+            <address type='pci' domain='0x0001' bus='0x00'
+            slot='0x04' function='0x0'/>
+            </disk></devices></domain>""")
+
+        pci_device_info = {'compute_node_id': 1,
+                           'instance_uuid': 'uuid',
+                           'address': '0001:04:10.1'}
+        pci_device = objects.PciDevice(**pci_device_info)
+        pci_devices = [pci_device]
+        mocked_get_xml_desc.return_value = fake_domXML1_without_pci
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(host.Host,
-                                 'has_min_version')
-        host.Host.has_min_version = lambda x, y: True
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 '_get_guest_pci_device')
-
-        class FakeDev(object):
-            def to_xml(self):
-                pass
-
-        libvirt_driver.LibvirtDriver._get_guest_pci_device =\
-            lambda x, y: FakeDev()
-
-        class FakeDomain(object):
-            def detachDeviceFlags(self, xml, flags):
-                pci_devices[0]['hypervisor_name'] = 'marked'
-                pass
-
-            def XMLDesc(self, flags):
-                return fake_domXML1
-
-        guest = libvirt_guest.Guest(FakeDomain())
+        dom = fakelibvirt.Domain(
+            drvr._get_connection(), fake_domXML1_with_pci, False)
+        guest = libvirt_guest.Guest(dom)
         drvr._detach_pci_devices(guest, pci_devices)
-        self.assertEqual(pci_devices[0]['hypervisor_name'], 'marked')
 
-    def test_detach_pci_devices_timeout(self):
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
+    def test_detach_pci_devices_timeout(self, mocked_get_xml_desc, *args):
 
-        fake_domXML1 =\
-            """<domain>
-                <devices>
-                  <hostdev mode="subsystem" type="pci" managed="yes">
-                    <source>
-            <address function="0x1" slot="0x10" domain="0x0000" bus="0x04"/>
-                    </source>
-                  </hostdev>
-                </devices>
-            </domain>"""
+        fake_domXML1_with_pci = (
+            """<domain> <devices>
+            <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='none'/>
+            <source file='xxx'/>
+            <target dev='vda' bus='virtio'/>
+            <alias name='virtio-disk0'/>
+            <address type='pci' domain='0x0000' bus='0x00'
+            slot='0x04' function='0x0'/>
+            </disk>
+            <hostdev mode="subsystem" type="pci" managed="yes">
+            <source>
+            <address function="0x1" slot="0x10" domain="0x0001"
+             bus="0x04"/>
+            </source>
+            </hostdev></devices></domain>""")
 
-        pci_devices = [dict(hypervisor_name='xxx',
-                            id='id1',
-                            instance_uuid='uuid',
-                            address="0000:04:10:1")]
+        pci_device_info = {'compute_node_id': 1,
+                           'instance_uuid': 'uuid',
+                           'address': '0001:04:10.1'}
+        pci_device = objects.PciDevice(**pci_device_info)
+        pci_devices = [pci_device]
+        mocked_get_xml_desc.return_value = fake_domXML1_with_pci
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(host.Host,
-                                 'has_min_version')
-        host.Host.has_min_version = lambda x, y: True
-
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 '_get_guest_pci_device')
-
-        class FakeDev(object):
-            def to_xml(self):
-                pass
-
-        libvirt_driver.LibvirtDriver._get_guest_pci_device =\
-            lambda x, y: FakeDev()
-
-        class FakeDomain(object):
-            def detachDeviceFlags(self, xml, flags):
-                pass
-
-            def XMLDesc(self, flags):
-                return fake_domXML1
-
-        guest = libvirt_guest.Guest(FakeDomain())
+        dom = fakelibvirt.Domain(
+            drvr._get_connection(), fake_domXML1_with_pci, False)
+        guest = libvirt_guest.Guest(dom)
         self.assertRaises(exception.PciDeviceDetachFailed,
                           drvr._detach_pci_devices, guest, pci_devices)
 
