@@ -849,7 +849,13 @@ class API(base.Base):
                 block_device.properties_root_device_name(
                     boot_meta.get('properties', {})))
 
-        image_meta = objects.ImageMeta.from_dict(boot_meta)
+        try:
+            image_meta = objects.ImageMeta.from_dict(boot_meta)
+        except ValueError as e:
+            # there must be invalid values in the image meta properties so
+            # consider this an invalid request
+            msg = _('Invalid image metadata. Error: %s') % six.text_type(e)
+            raise exception.InvalidRequest(msg)
         numa_topology = hardware.numa_get_constraints(
                 instance_type, image_meta)
 
