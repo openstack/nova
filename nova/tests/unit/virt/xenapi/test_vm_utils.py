@@ -190,7 +190,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
                       '-publisher', mox.IgnoreArg(), '-quiet',
                       '-J', '-r', '-V', 'config-2', mox.IgnoreArg(),
                       attempts=1, run_as_root=False).AndReturn(None)
-        utils.execute('dd', mox.IgnoreArg(), mox.IgnoreArg(),
+        utils.execute('dd', mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
                       mox.IgnoreArg(), run_as_root=True).AndReturn(None)
 
         self.mox.StubOutWithMock(vm_utils, 'create_vbd')
