@@ -2984,6 +2984,18 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
+    def test_create_instance_without_personality_should_get_empty_list(self):
+        old_create = compute_api.API.create
+        del self.body['server']['personality']
+
+        def create(*args, **kwargs):
+            self.assertEqual([], kwargs['injected_files'])
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+
+        self._test_create_instance()
+
     def test_create_instance_with_extra_personality_arg(self):
         self.body['server']['personality'] = [
             {
