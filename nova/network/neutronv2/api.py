@@ -15,14 +15,12 @@
 #    under the License.
 #
 
-import copy
 import time
 import uuid
 
 from keystoneauth1 import loading as ks_loading
 from neutronclient.common import exceptions as neutron_client_exc
 from neutronclient.v2_0 import client as clientv20
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import uuidutils
@@ -43,22 +41,7 @@ from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
 
-
-NEUTRON_GROUP = 'neutron'
-
 CONF = nova.conf.CONF
-
-deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
-                                             group=NEUTRON_GROUP)],
-                'insecure': [cfg.DeprecatedOpt('api_insecure',
-                                               group=NEUTRON_GROUP)],
-                'timeout': [cfg.DeprecatedOpt('url_timeout',
-                                              group=NEUTRON_GROUP)]}
-
-_neutron_options = ks_loading.register_session_conf_options(
-    CONF, NEUTRON_GROUP, deprecated_opts=deprecations)
-ks_loading.register_auth_conf_options(CONF, NEUTRON_GROUP)
-
 
 CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 LOG = logging.getLogger(__name__)
@@ -72,24 +55,6 @@ _ADMIN_AUTH = None
 DEFAULT_SECGROUP = 'default'
 
 
-def list_opts():
-    opts = copy.deepcopy(_neutron_options)
-    opts.insert(0, ks_loading.get_auth_common_conf_options()[0])
-    # NOTE(dims): There are a lot of auth plugins, we just generate
-    # the config options for a few common ones
-    plugins = ['password', 'v2password', 'v3password']
-    for name in plugins:
-        plugin = ks_loading.get_plugin_loader(name)
-        for plugin_option in ks_loading.get_auth_plugin_conf_options(plugin):
-            for option in opts:
-                if option.name == plugin_option.name:
-                    break
-            else:
-                opts.append(plugin_option)
-    opts.sort(key=lambda x: x.name)
-    return [(NEUTRON_GROUP, opts)]
-
-
 def reset_state():
     global _ADMIN_AUTH
     global _SESSION
@@ -99,7 +64,8 @@ def reset_state():
 
 
 def _load_auth_plugin(conf):
-    auth_plugin = ks_loading.load_auth_from_conf_options(conf, NEUTRON_GROUP)
+    auth_plugin = ks_loading.load_auth_from_conf_options(conf,
+                                    nova.conf.neutron.NEUTRON_GROUP)
 
     if auth_plugin:
         return auth_plugin
@@ -120,7 +86,7 @@ def get_client(context, admin=False):
 
     if not _SESSION:
         _SESSION = ks_loading.load_session_from_conf_options(
-            CONF, NEUTRON_GROUP)
+            CONF, nova.conf.neutron.NEUTRON_GROUP)
 
     if admin or (context.is_admin and not context.auth_token):
         if not _ADMIN_AUTH:
