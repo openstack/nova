@@ -18,9 +18,12 @@ Test cases for the key classes.
 """
 
 import array
+import codecs
 
 from nova.keymgr import key
 from nova import test
+
+decode_hex = codecs.getdecoder("hex_codec")
 
 
 class KeyTestCase(test.NoDBTestCase):
@@ -41,7 +44,7 @@ class SymmetricKeyTestCase(KeyTestCase):
 
     def setUp(self):
         self.algorithm = 'AES'
-        self.encoded = array.array('B', ('0' * 64).decode('hex')).tolist()
+        self.encoded = array.array('B', decode_hex('0' * 64)[0]).tolist()
 
         super(SymmetricKeyTestCase, self).setUp()
 

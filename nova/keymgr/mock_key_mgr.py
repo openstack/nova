@@ -27,6 +27,7 @@ this class.
 """
 
 import array
+import codecs
 
 from oslo_log import log as logging
 from oslo_utils import uuidutils
@@ -39,6 +40,7 @@ from nova import utils
 
 
 LOG = logging.getLogger(__name__)
+decode_hex = codecs.getdecoder("hex_codec")
 
 
 class MockKeyManager(key_mgr.KeyManager):
@@ -60,14 +62,14 @@ class MockKeyManager(key_mgr.KeyManager):
     def _generate_hex_key(self, **kwargs):
         key_length = kwargs.get('key_length', 256)
         # hex digit => 4 bits
-        hex_encoded = utils.generate_password(length=key_length / 4,
+        hex_encoded = utils.generate_password(length=key_length // 4,
                                               symbolgroups='0123456789ABCDEF')
         return hex_encoded
 
     def _generate_key(self, **kwargs):
         _hex = self._generate_hex_key(**kwargs)
         return key.SymmetricKey('AES',
-                                array.array('B', _hex.decode('hex')).tolist())
+                                array.array('B', decode_hex(_hex)[0]).tolist())
 
     def create_key(self, ctxt, **kwargs):
         """Creates a key.

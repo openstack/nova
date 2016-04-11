@@ -18,12 +18,15 @@ Test cases for the mock key manager.
 """
 
 import array
+import codecs
 
 from nova import context
 from nova import exception
 from nova.keymgr import key as keymgr_key
 from nova.keymgr import mock_key_mgr
 from nova.tests.unit.keymgr import test_key_mgr
+
+decode_hex = codecs.getdecoder("hex_codec")
 
 
 class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
@@ -46,14 +49,14 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         for length in [64, 128, 256]:
             key_id = self.key_mgr.create_key(self.ctxt, key_length=length)
             key = self.key_mgr.get_key(self.ctxt, key_id)
-            self.assertEqual(length / 8, len(key.get_encoded()))
+            self.assertEqual(length // 8, len(key.get_encoded()))
 
     def test_create_null_context(self):
         self.assertRaises(exception.Forbidden,
                           self.key_mgr.create_key, None)
 
     def test_store_key(self):
-        secret_key = array.array('B', ('0' * 64).decode('hex')).tolist()
+        secret_key = array.array('B', decode_hex('0' * 64)[0]).tolist()
         _key = keymgr_key.SymmetricKey('AES', secret_key)
         key_id = self.key_mgr.store_key(self.ctxt, _key)
 

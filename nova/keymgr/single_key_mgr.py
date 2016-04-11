@@ -49,7 +49,7 @@ class SingleKeyManager(mock_key_mgr.MockKeyManager):
 
     def _generate_hex_key(self, **kwargs):
         key_length = kwargs.get('key_length', 256)
-        return '0' * (key_length / 4)  # hex digit => 4 bits
+        return b'0' * (key_length // 4)  # hex digit => 4 bits
 
     def _generate_key_id(self):
         return self.key_id

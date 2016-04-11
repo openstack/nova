@@ -83,11 +83,6 @@ nova.tests.unit.db.test_migrations.TestNovaMigrationsMySQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsPostgreSQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsSQLite
 nova.tests.unit.image.test_fake.FakeImageServiceTestCase
-nova.tests.unit.keymgr.test_barbican.BarbicanKeyManagerTestCase
-nova.tests.unit.keymgr.test_conf_key_mgr.ConfKeyManagerTestCase
-nova.tests.unit.keymgr.test_key.SymmetricKeyTestCase
-nova.tests.unit.keymgr.test_mock_key_mgr.MockKeyManagerTestCase
-nova.tests.unit.keymgr.test_single_key_mgr.SingleKeyManagerTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
 nova.tests.unit.pci.test_manager.PciDevTrackerTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
@@ -189,8 +184,6 @@ nova.tests.unit.virt.xenapi.test_xenapi.HypervisorPoolTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIDiffieHellmanTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIDom0IptablesFirewallTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIVMTestCase
-nova.tests.unit.volume.encryptors.test_cryptsetup.CryptsetupEncryptorTestCase
-nova.tests.unit.volume.encryptors.test_luks.LuksEncryptorTestCase
 nova.tests.unit.volume.test_cinder.CinderApiTestCase
 
 ##########################################################################

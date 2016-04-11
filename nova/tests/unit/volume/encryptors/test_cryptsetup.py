@@ -15,6 +15,7 @@
 
 
 import array
+import codecs
 
 import mock
 import six
@@ -24,9 +25,11 @@ from nova.keymgr import key
 from nova.tests.unit.volume.encryptors import test_base
 from nova.volume.encryptors import cryptsetup
 
+decode_hex = codecs.getdecoder("hex_codec")
+
 
 def fake__get_key(context):
-    raw = array.array('B', ('0' * 64).decode('hex')).tolist()
+    raw = array.array('B', decode_hex('0' * 64)[0]).tolist()
 
     symmetric_key = key.SymmetricKey('AES', raw)
     return symmetric_key

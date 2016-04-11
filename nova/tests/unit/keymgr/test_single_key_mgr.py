@@ -18,11 +18,14 @@ Test cases for the single key manager.
 """
 
 import array
+import codecs
 
 from nova import exception
 from nova.keymgr import key
 from nova.keymgr import single_key_mgr
 from nova.tests.unit.keymgr import test_mock_key_mgr
+
+decode_hex = codecs.getdecoder("hex_codec")
 
 
 class SingleKeyManagerTestCase(test_mock_key_mgr.MockKeyManagerTestCase):
@@ -34,7 +37,7 @@ class SingleKeyManagerTestCase(test_mock_key_mgr.MockKeyManagerTestCase):
         super(SingleKeyManagerTestCase, self).setUp()
 
         self.key_id = '00000000-0000-0000-0000-000000000000'
-        encoded = array.array('B', ('0' * 64).decode('hex')).tolist()
+        encoded = array.array('B', decode_hex('0' * 64)[0]).tolist()
         self.key = key.SymmetricKey('AES', encoded)
 
     def test___init__(self):
