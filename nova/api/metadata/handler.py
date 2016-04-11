@@ -28,6 +28,7 @@ import webob.exc
 
 from nova.api.metadata import base
 from nova import cache_utils
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -36,20 +37,8 @@ from nova.i18n import _LW
 from nova.network.neutronv2 import api as neutronapi
 from nova import wsgi
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('use_forwarded_for', 'nova.api.auth')
-
-metadata_proxy_opts = [
-    cfg.BoolOpt(
-        'service_metadata_proxy',
-        default=False,
-        help='Set flag to indicate Neutron will proxy metadata requests and '
-             'resolve instance ids.'),
-     cfg.StrOpt(
-         'metadata_proxy_shared_secret',
-         default='', secret=True,
-         help='Shared secret to validate proxies Neutron metadata requests'),
-]
 
 metadata_opts = [
     cfg.IntOpt('metadata_cache_expiration',
@@ -62,7 +51,6 @@ metadata_opts = [
                     'changes to take effect.')
 ]
 
-CONF.register_opts(metadata_proxy_opts, 'neutron')
 CONF.register_opts(metadata_opts)
 
 LOG = logging.getLogger(__name__)
