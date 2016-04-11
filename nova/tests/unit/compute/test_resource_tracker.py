@@ -526,11 +526,18 @@ class MissingComputeNodeTestCase(BaseTestCase):
                 self._fake_compute_node_get_by_host_and_nodename)
         self.stub_out('nova.db.compute_node_create',
                 self._fake_create_compute_node)
+        self.stub_out('nova.db.compute_node_get',
+                self._fake_compute_node_get)
         self.tracker.scheduler_client.update_resource_stats = mock.Mock()
 
     def _fake_create_compute_node(self, context, values):
         self.created = True
+        self._values = values
         return self._create_compute_node(values)
+
+    def _fake_compute_node_get(self, context, id):
+        if self.created:
+            return self._create_compute_node(self._values)
 
     def _fake_service_get_by_compute_host(self, ctx, host):
         # return a service with no joined compute
@@ -560,11 +567,14 @@ class BaseTrackerTestCase(BaseTestCase):
 
         self.tracker = self._tracker()
         self._migrations = {}
+        self._fake_inventories = {}
 
         self.stub_out('nova.db.service_get_by_compute_host',
                 self._fake_service_get_by_compute_host)
         self.stub_out('nova.db.compute_node_get_by_host_and_nodename',
                 self._fake_compute_node_get_by_host_and_nodename)
+        self.stub_out('nova.db.compute_node_get',
+                self._fake_compute_node_get)
         self.stub_out('nova.db.compute_node_update',
                 self._fake_compute_node_update)
         self.stub_out('nova.db.compute_node_delete',
@@ -573,6 +583,10 @@ class BaseTrackerTestCase(BaseTestCase):
                 self._fake_migration_update)
         self.stub_out('nova.db.migration_get_in_progress_by_host_and_node',
                 self._fake_migration_get_in_progress_by_host_and_node)
+        self.stub_out('nova.objects.resource_provider._create_inventory_in_db',
+                self._fake_inventory_create)
+        self.stub_out('nova.objects.resource_provider._create_rp_in_db',
+                      self._fake_rp_create)
 
         # Note that this must be called before the call to _init_tracker()
         patcher = pci_fakes.fake_pci_whitelist()
@@ -589,12 +603,39 @@ class BaseTrackerTestCase(BaseTestCase):
         self.compute = self._create_compute_node()
         return self.compute
 
+    def _fake_compute_node_get(self, ctx, id):
+        return self.compute
+
     def _fake_compute_node_update(self, ctx, compute_node_id, values,
             prune_stats=False):
         self.update_call_count += 1
         self.updated = True
         self.compute.update(values)
         return self.compute
+
+    def _fake_inventory_create(self, context, updates):
+        if self._fake_inventories:
+            new_id = max([x for x in self._fake_inventories.keys()])
+        else:
+            new_id = 1
+        updates['id'] = new_id
+        self._fake_inventories[new_id] = updates
+
+        legacy = {
+            fields.ResourceClass.VCPU: 'vcpus',
+            fields.ResourceClass.MEMORY_MB: 'memory_mb',
+            fields.ResourceClass.DISK_GB: 'local_gb',
+        }
+        legacy_key = legacy.get(fields.ResourceClass.from_index(
+            updates['resource_class_id']))
+        if legacy_key:
+            inv_key = 'inv_%s' % legacy_key
+            self.compute[inv_key] = updates['total']
+
+        return updates
+
+    def _fake_rp_create(self, context, updates):
+        return dict(updates, id=1)
 
     def _fake_compute_node_delete(self, ctx, compute_node_id):
         self.deleted = True
@@ -1076,7 +1117,8 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    def test_additive_claims(self, mock_get, mock_save):
+    @mock.patch('nova.objects.ComputeNode._create_inventory')
+    def test_additive_claims(self, mock_ci, mock_get, mock_save):
 
         limits = self._limits(
               2 * FAKE_VIRT_MEMORY_WITH_OVERHEAD,
@@ -1098,7 +1140,8 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    def test_move_type_not_tracked(self, mock_get, mock_save):
+    @mock.patch('nova.objects.ComputeNode._create_inventory')
+    def test_move_type_not_tracked(self, mock_ci, mock_get, mock_save):
         self.claim_method(self.context, self.instance, self.instance_type,
                           limits=self.limits, move_type="live-migration")
         mock_save.assert_called_once_with()

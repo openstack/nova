@@ -227,7 +227,8 @@ class _TestComputeNodeObject(object):
             compute_node.ComputeNode.get_first_node_by_host_for_old_compat,
             self.context, 'fake')
 
-    def test_create(self):
+    @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
+    def test_create(self, mock_get):
         self.mox.StubOutWithMock(db, 'compute_node_create')
         db.compute_node_create(
             self.context,
@@ -255,7 +256,8 @@ class _TestComputeNodeObject(object):
 
     @mock.patch('nova.db.compute_node_create')
     @mock.patch('oslo_utils.uuidutils.generate_uuid')
-    def test_create_allocates_uuid(self, mock_gu, mock_create):
+    @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
+    def test_create_allocates_uuid(self, mock_get, mock_gu, mock_create):
         mock_create.return_value = fake_compute_node
         mock_gu.return_value = fake_compute_node['uuid']
         obj = objects.ComputeNode(context=self.context)
@@ -264,7 +266,8 @@ class _TestComputeNodeObject(object):
         mock_create.assert_called_once_with(
             self.context, {'uuid': fake_compute_node['uuid']})
 
-    def test_recreate_fails(self):
+    @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
+    def test_recreate_fails(self, mock_get):
         self.mox.StubOutWithMock(db, 'compute_node_create')
         db.compute_node_create(
             self.context, {'service_id': 456,
@@ -277,7 +280,8 @@ class _TestComputeNodeObject(object):
         compute.create()
         self.assertRaises(exception.ObjectActionError, compute.create)
 
-    def test_save(self):
+    @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
+    def test_save(self, mock_get):
         self.mox.StubOutWithMock(db, 'compute_node_update')
         db.compute_node_update(
             self.context, 123,
@@ -309,42 +313,42 @@ class _TestComputeNodeObject(object):
             objects.PciDevicePoolList(objects=[]).obj_to_primitive())
         compute_dict = fake_compute_node.copy()
         compute_dict['pci_stats'] = fake_pci
+        mock_get.return_value = compute_dict
 
-        with mock.patch.object(
-                db, 'compute_node_update',
-                return_value=compute_dict) as mock_compute_node_update:
-            compute = compute_node.ComputeNode(context=self.context)
-            compute.id = 123
-            compute.pci_device_pools = objects.PciDevicePoolList(objects=[])
-            compute.save()
-            self.compare_obj(compute, compute_dict,
-                             subs=self.subs(),
-                             comparators=self.comparators())
+        compute = compute_node.ComputeNode(context=self.context)
+        compute.id = 123
+        compute.pci_device_pools = objects.PciDevicePoolList(objects=[])
+        compute.save()
+        self.compare_obj(compute, compute_dict,
+                         subs=self.subs(),
+                         comparators=self.comparators())
 
-        mock_compute_node_update.assert_called_once_with(
+        mock_update.assert_called_once_with(
             self.context, 123, {'pci_stats': fake_pci})
 
-    def test_save_pci_device_pools_null(self):
+    @mock.patch('nova.db.compute_node_get')
+    @mock.patch('nova.db.compute_node_update')
+    def test_save_pci_device_pools_null(self, mock_update, mock_get):
         compute_dict = fake_compute_node.copy()
         compute_dict['pci_stats'] = None
+        mock_get.return_value = compute_dict
 
-        with mock.patch.object(
-                db, 'compute_node_update',
-                return_value=compute_dict) as mock_compute_node_update:
-            compute = compute_node.ComputeNode(context=self.context)
-            compute.id = 123
-            compute.pci_device_pools = None
-            compute.save()
-            self.compare_obj(compute, compute_dict,
-                             subs=self.subs(),
-                             comparators=self.comparators())
+        compute = compute_node.ComputeNode(context=self.context)
+        compute.id = 123
+        compute.pci_device_pools = None
+        compute.save()
+        self.compare_obj(compute, compute_dict,
+                         subs=self.subs(),
+                         comparators=self.comparators())
 
-        mock_compute_node_update.assert_called_once_with(
+        mock_update.assert_called_once_with(
             self.context, 123, {'pci_stats': None})
 
     @mock.patch.object(db, 'compute_node_create',
                        return_value=fake_compute_node)
-    def test_set_id_failure(self, db_mock):
+    @mock.patch.object(db, 'compute_node_get',
+                       return_value=fake_compute_node)
+    def test_set_id_failure(self, mock_get, db_mock):
         compute = compute_node.ComputeNode(context=self.context,
                                            uuid=fake_compute_node['uuid'])
         compute.create()

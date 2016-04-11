@@ -29,7 +29,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 9
+SERVICE_VERSION = 10
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -70,6 +70,8 @@ SERVICE_VERSION_HISTORY = (
     # Version 8: Add live_migration_abort in the compute_rpc
     {'compute_rpc': '4.10'},
     # Version 9: Allow block_migration and disk_over_commit be None
+    {'compute_rpc': '4.11'},
+    # Version 10: Compute node conversion to Inventories
     {'compute_rpc': '4.11'},
 )
 
