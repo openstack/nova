@@ -46,7 +46,7 @@
 
     "compute:attach_volume": "rule:admin_or_owner",
     "compute:detach_volume": "rule:admin_or_owner",
-    "compute:swap_volume": "rule:admin_or_owner",
+    "compute:swap_volume": "rule:admin_api",
 
     "compute:attach_interface": "rule:admin_or_owner",
     "compute:detach_interface": "rule:admin_or_owner",
@@ -190,7 +190,7 @@
     "compute_extension:volume_attachments:index": "rule:admin_or_owner",
     "compute_extension:volume_attachments:show": "rule:admin_or_owner",
     "compute_extension:volume_attachments:create": "rule:admin_or_owner",
-    "compute_extension:volume_attachments:update": "rule:admin_or_owner",
+    "compute_extension:volume_attachments:update": "rule:admin_api",
     "compute_extension:volume_attachments:delete": "rule:admin_or_owner",
     "compute_extension:volumetypes": "rule:admin_or_owner",
     "compute_extension:availability_zone:list": "rule:admin_or_owner",
@@ -479,7 +479,7 @@
     "os_compute_api:os-volumes-attachments:index": "rule:admin_or_owner",
     "os_compute_api:os-volumes-attachments:show": "rule:admin_or_owner",
     "os_compute_api:os-volumes-attachments:create": "rule:admin_or_owner",
-    "os_compute_api:os-volumes-attachments:update": "rule:admin_or_owner",
+    "os_compute_api:os-volumes-attachments:update": "rule:admin_api",
     "os_compute_api:os-volumes-attachments:delete": "rule:admin_or_owner",
     "os_compute_api:os-volumes-attachments:discoverable": "@",
     "os_compute_api:os-availability-zone:list": "rule:admin_or_owner",
