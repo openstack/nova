@@ -171,7 +171,10 @@ class TestOpenStackClient(object):
 
         headers = kwargs.setdefault('headers', {})
         headers['X-Auth-Token'] = auth_result['x-auth-token']
-        if self.microversion:
+        if 'X-OpenStack-Nova-API-Version' in headers:
+            raise Exception('X-OpenStack-Nova-API-Version should be set on '
+                            'microversion attribute in API client.')
+        elif self.microversion:
             headers['X-OpenStack-Nova-API-Version'] = self.microversion
 
         response = self.request(full_uri, **kwargs)
