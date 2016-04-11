@@ -1097,8 +1097,7 @@ class API(base.Base):
         return {}
 
     @staticmethod
-    def _get_requested_instance_group(context, filter_properties,
-                                      check_quota):
+    def _get_requested_instance_group(context, filter_properties):
         if (not filter_properties or
                 not filter_properties.get('scheduler_hints')):
             return
@@ -1180,7 +1179,7 @@ class API(base.Base):
                 block_device_mapping.root_bdm())
 
         instance_group = self._get_requested_instance_group(context,
-                                   filter_properties, check_server_group_quota)
+                                   filter_properties)
 
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
