@@ -108,12 +108,17 @@ class RestParametersDirective(Table):
         parameter definitions.
         """
         # self.app.info("Fpath: %s" % fpath)
-        with open(fpath, 'r') as stream:
-            try:
+        try:
+            with open(fpath, 'r') as stream:
                 lookup = yaml.load(stream)
-            except yaml.YAMLError as exc:
-                self.app.warn(exc)
-                raise
+        except IOError:
+            self.env.warn(
+                self.env.docname,
+                "Parameters file %s not found" % fpath)
+            return
+        except yaml.YAMLError as exc:
+            self.app.warn(exc)
+            raise
 
         content = "\n".join(self.content)
         parsed = yaml.load(content)
@@ -156,7 +161,8 @@ class RestParametersDirective(Table):
         # NOTE(sdague): it's important that we pop the arg otherwise
         # we end up putting the filename as the table caption.
         rel_fpath, fpath = self.env.relfn2path(self.arguments.pop())
-        self.yaml_from_file(fpath)
+        self.yaml_file = fpath
+        self.yaml_from_file(self.yaml_file)
 
         self.max_cols = len(self.headers)
         # TODO(sdague): it would be good to dynamically set column
@@ -184,18 +190,25 @@ class RestParametersDirective(Table):
         rows.append(trow)
         return rows, groups
 
-    def collect_rows(self):
-
         # Add a column for a field. In order to have the RST inside
-        # these fields get rendered, we need to use the
-        # ViewList. Note, ViewList expects a list of lines, so chunk
-        # up our content as a list to make it happy.
-        def add_col(value):
-            entry = nodes.entry()
-            result = ViewList(value.split('\n'))
-            self.state.nested_parse(result, 0, entry)
-            return entry
+    # these fields get rendered, we need to use the
+    # ViewList. Note, ViewList expects a list of lines, so chunk
+    # up our content as a list to make it happy.
+    def add_col(self, value):
+        entry = nodes.entry()
+        result = ViewList(value.split('\n'))
+        self.state.nested_parse(result, 0, entry)
+        return entry
 
+    def show_no_yaml_error(self):
+        trow = nodes.row(classes=["no_yaml"])
+        trow += self.add_col("No yaml found %s" % self.yaml_file)
+        trow += self.add_col("")
+        trow += self.add_col("")
+        trow += self.add_col("")
+        return trow
+
+    def collect_rows(self):
         rows = []
         groups = []
         try:
@@ -213,15 +226,17 @@ class RestParametersDirective(Table):
                 name = key
                 if values.get('optional') is True:
                     name += " (Optional)"
-                trow += add_col(name)
-                trow += add_col(values.get('in'))
-                trow += add_col(values.get('type'))
-                trow += add_col(desc)
+                trow += self.add_col(name)
+                trow += self.add_col(values.get('in'))
+                trow += self.add_col(values.get('type'))
+                trow += self.add_col(desc)
                 rows.append(trow)
         except AttributeError as exc:
-            self.app.warn("Failure on key: %s, values: %s. %s" %
-                          (key, values, exc))
-            raise
+            if 'key' in locals():
+                self.app.warn("Failure on key: %s, values: %s. %s" %
+                              (key, values, exc))
+            else:
+                rows.append(self.show_no_yaml_error())
         return rows, groups
 
     def build_table(self):
