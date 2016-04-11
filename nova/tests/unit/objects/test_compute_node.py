@@ -302,22 +302,9 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    def test_query_allocates_uuid(self):
-        fake = dict(fake_compute_node)
-        fake.pop('uuid')
-        db.compute_node_create(self.context, fake)
-        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_gu:
-            mock_gu.return_value = uuidsentinel.fake_compute_node
-            obj = objects.ComputeNode.get_by_id(self.context, fake['id'])
-            mock_gu.assert_called_once_with()
-            self.assertEqual(uuidsentinel.fake_compute_node, obj.uuid)
-            self.assertNotIn('uuid', obj.obj_get_changes())
-        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_gu:
-            obj = objects.ComputeNode.get_by_id(self.context, fake['id'])
-            self.assertEqual(uuidsentinel.fake_compute_node, obj.uuid)
-            self.assertFalse(mock_gu.called)
-
-    def test_save_pci_device_pools_empty(self):
+    @mock.patch('nova.db.compute_node_get')
+    @mock.patch('nova.db.compute_node_update')
+    def test_save_pci_device_pools_empty(self, mock_update, mock_get):
         fake_pci = jsonutils.dumps(
             objects.PciDevicePoolList(objects=[]).obj_to_primitive())
         compute_dict = fake_compute_node.copy()
@@ -358,7 +345,8 @@ class _TestComputeNodeObject(object):
     @mock.patch.object(db, 'compute_node_create',
                        return_value=fake_compute_node)
     def test_set_id_failure(self, db_mock):
-        compute = compute_node.ComputeNode(context=self.context)
+        compute = compute_node.ComputeNode(context=self.context,
+                                           uuid=fake_compute_node['uuid'])
         compute.create()
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           compute, 'id', 124)

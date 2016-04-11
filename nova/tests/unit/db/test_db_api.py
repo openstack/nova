@@ -9341,29 +9341,6 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(0, total)
         self.assertEqual(0, done)
 
-    def test_migrate_computenode(self):
-        db.compute_node_create(self.context,
-                               dict(vcpus=1, memory_mb=512, local_gb=10,
-                                    vcpus_used=0, memory_mb_used=256,
-                                    local_gb_used=5,
-                                    hypervisor_type='HyperDanVM',
-                                    hypervisor_version='34', cpu_info='foo'))
-        db.compute_node_create(self.context,
-                               dict(vcpus=1, memory_mb=512, local_gb=10,
-                                    uuid='foo',
-                                    vcpus_used=0, memory_mb_used=256,
-                                    local_gb_used=5,
-                                    hypervisor_type='HyperDanVM',
-                                    hypervisor_version='34', cpu_info='foo'))
-        total, done = db.computenode_uuids_online_data_migration(
-            self.context, 10)
-        self.assertEqual(1, total)
-        self.assertEqual(1, done)
-        total, done = db.computenode_uuids_online_data_migration(
-            self.context, 10)
-        self.assertEqual(0, total)
-        self.assertEqual(0, done)
-
 
 class RetryOnDeadlockTestCase(test.TestCase):
     def test_without_deadlock(self):
