@@ -49,7 +49,9 @@ def get_disk_type_from_path(path):
     return disk_type
 
 
-def copy_image(src, dest):
+def copy_image(src, dest, host=None, receive=False,
+               on_execute=None, on_completion=None,
+               compression=True):
     pass
 
 
