@@ -24,9 +24,11 @@ from oslo_log import log as logging
 from oslo_utils import uuidutils
 import testtools
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova.objects import base as obj_base
+from nova.objects import service as service_obj
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
 from nova import utils
@@ -432,3 +434,21 @@ class TestStableObjectJsonFixture(testtools.TestCase):
         with fixtures.StableObjectJsonFixture():
             self.assertEqual(['a', 'z'],
                              obj.obj_to_primitive()['nova_object.changes'])
+
+
+class TestAllServicesCurrentFixture(testtools.TestCase):
+    @mock.patch('nova.objects.Service._db_service_get_minimum_version')
+    def test_services_current(self, mock_db):
+        mock_db.return_value = {'nova-compute': 123}
+        self.assertEqual(123, service_obj.Service.get_minimum_version(
+            None, 'nova-compute'))
+        mock_db.assert_called_once_with(None, ['nova-compute'],
+                                        use_slave=False)
+        mock_db.reset_mock()
+        compute_rpcapi.LAST_VERSION = 123
+        self.useFixture(fixtures.AllServicesCurrent())
+        self.assertIsNone(compute_rpcapi.LAST_VERSION)
+        self.assertEqual(service_obj.SERVICE_VERSION,
+                         service_obj.Service.get_minimum_version(
+                             None, 'nova-compute'))
+        self.assertFalse(mock_db.called)

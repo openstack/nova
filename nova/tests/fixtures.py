@@ -28,12 +28,14 @@ from oslo_db.sqlalchemy import enginefacade
 from oslo_messaging import conffixture as messaging_conffixture
 import six
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import service as service_obj
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
@@ -651,3 +653,15 @@ class ForbidNewLegacyNotificationFixture(fixtures.Fixture):
         self.notifier.fatal = False
         self.notifier.allowed_legacy_notification_event_types.remove(
                 '_decorated_function')
+
+
+class AllServicesCurrent(fixtures.Fixture):
+    def setUp(self):
+        super(AllServicesCurrent, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.Service.get_minimum_version_multi',
+            self._fake_minimum))
+        compute_rpcapi.LAST_VERSION = None
+
+    def _fake_minimum(self, *args, **kwargs):
+        return service_obj.SERVICE_VERSION
