@@ -55,6 +55,7 @@ QUOTAS = quota.QUOTAS
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+FAKE_PROJECT_ID = '6a6a9c9eee154e9cb8cec487b98d36ab'
 FAKE_UUIDS = {}
 
 
@@ -252,10 +253,13 @@ class HTTPRequest(os_wsgi.Request):
     def blank(*args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
+        project_id = kwargs.pop('project_id', 'fake')
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         out = os_wsgi.Request.blank(*args, **kwargs)
-        out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
-                is_admin=use_admin_context)
+        out.environ['nova.context'] = FakeRequestContext(
+            user_id='fake_user',
+            project_id=project_id,
+            is_admin=use_admin_context)
         out.api_version_request = api_version.APIVersionRequest(version)
         return out
 
@@ -266,11 +270,14 @@ class HTTPRequestV21(os_wsgi.Request):
     def blank(*args, **kwargs):
         kwargs['base_url'] = 'http://localhost/v2'
         use_admin_context = kwargs.pop('use_admin_context', False)
+        project_id = kwargs.pop('project_id', 'fake')
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
         out = os_wsgi.Request.blank(*args, **kwargs)
         out.api_version_request = api_version.APIVersionRequest(version)
-        out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
-                is_admin=use_admin_context)
+        out.environ['nova.context'] = FakeRequestContext(
+            user_id='fake_user',
+            project_id=project_id,
+            is_admin=use_admin_context)
         return out
 
 

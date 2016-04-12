@@ -27,6 +27,7 @@ from nova import network
 from nova.objects import virtual_interface as vif_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -42,13 +43,13 @@ def _generate_fake_vifs(context):
     vif.address = '00-00-00-00-00-00'
     vif.network_id = 123
     vif.net_uuid = '22222222-2222-2222-2222-22222222222222222'
-    vif.uuid = '00000000-0000-0000-0000-00000000000000000'
+    vif.uuid = uuids.vif1_uuid
     fake_vifs = [vif]
     vif = vif_obj.VirtualInterface(context=context)
     vif.address = '11-11-11-11-11-11'
     vif.network_id = 456
     vif.net_uuid = '33333333-3333-3333-3333-33333333333333333'
-    vif.uuid = '11111111-1111-1111-1111-11111111111111111'
+    vif.uuid = uuids.vif2_uuid
     fake_vifs.append(vif)
     return fake_vifs
 
@@ -66,9 +67,9 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
     wsgi_api_version = None
     expected_response = {
         'virtual_interfaces': [
-            {'id': '00000000-0000-0000-0000-00000000000000000',
+            {'id': uuids.vif1_uuid,
                 'mac_address': '00-00-00-00-00-00'},
-            {'id': '11111111-1111-1111-1111-11111111111111111',
+            {'id': uuids.vif2_uuid,
                 'mac_address': '11-11-11-11-11-11'}]}
 
     def setUp(self):
@@ -128,10 +129,10 @@ class ServerVirtualInterfaceTestV212(ServerVirtualInterfaceTestV21):
 
     expected_response = {
         'virtual_interfaces': [
-            {'id': '00000000-0000-0000-0000-00000000000000000',
+            {'id': uuids.vif1_uuid,
                 'mac_address': '00-00-00-00-00-00',
                 'net_id': '22222222-2222-2222-2222-22222222222222222'},
-            {'id': '11111111-1111-1111-1111-11111111111111111',
+            {'id': uuids.vif2_uuid,
                 'mac_address': '11-11-11-11-11-11',
                 'net_id': '33333333-3333-3333-3333-33333333333333333'}]}
 

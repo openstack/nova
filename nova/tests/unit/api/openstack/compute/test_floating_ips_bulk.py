@@ -26,6 +26,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -92,7 +93,7 @@ class FloatingIPBulkV21(test.TestCase):
 
     @mock.patch('nova.objects.FloatingIPList.get_all')
     def _test_list_ips_associated(self, req, mock_get):
-        instance_uuid = "fake-uuid"
+        instance_uuid = uuids.instance
         fixed_address = "10.0.0.1"
         floating_address = "192.168.0.1"
         fixed_ip = objects.FixedIP(instance_uuid=instance_uuid,

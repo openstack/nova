@@ -57,6 +57,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit.image import fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_keypair
+from nova.tests import uuidsentinel as uuids
 from nova import utils as nova_utils
 
 CONF = nova.conf.CONF
@@ -1477,7 +1478,7 @@ class ServersControllerDeleteTest(ControllerTest):
         self.server_delete_called = False
 
         def fake_delete(api, context, instance):
-            if instance.uuid == 'non-existent-uuid':
+            if instance.uuid == uuids.non_existent_uuid:
                 raise exception.InstanceNotFound(instance_id=instance.uuid)
             self.server_delete_called = True
 
@@ -1504,7 +1505,7 @@ class ServersControllerDeleteTest(ControllerTest):
     def test_delete_server_instance_not_found(self):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self._delete_server_instance,
-                          uuid='non-existent-uuid')
+                          uuid=uuids.non_existent_uuid)
 
     def test_delete_locked_server(self):
         req = self._create_delete_request(FAKE_UUID)
