@@ -561,6 +561,57 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_migration_power_on_resize(self):
         self._test_finish_migration(power_on=True, resize_instance=True)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_create_swap')
+    @mock.patch.object(vmops.VMwareVMOps, '_create_ephemeral')
+    @mock.patch.object(ds_obj, 'get_datastore_by_ref',
+                       return_value='fake-ds-ref')
+    @mock.patch.object(vm_util, 'get_vmdk_info')
+    def _test_resize_create_ephemerals(self, vmdk, datastore,
+                                       mock_get_vmdk_info,
+                                       mock_get_datastore_by_ref,
+                                       mock_create_ephemeral,
+                                       mock_create_swap):
+        mock_get_vmdk_info.return_value = vmdk
+        dc_info = ds_util.DcInfo(ref='fake_ref', name='fake',
+                                 vmFolder='fake_folder')
+        with mock.patch.object(self._vmops, 'get_datacenter_ref_and_name',
+            return_value=dc_info) as mock_get_dc_ref_and_name:
+            self._vmops._resize_create_ephemerals_and_swap(
+                'vm-ref', self._instance, 'block-devices')
+            mock_get_vmdk_info.assert_called_once_with(
+                self._session, 'vm-ref', uuid=self._instance.uuid)
+            if vmdk.device:
+                mock_get_datastore_by_ref.assert_called_once_with(
+                    self._session, datastore.ref)
+                mock_get_dc_ref_and_name.assert_called_once_with(datastore.ref)
+                mock_create_ephemeral.assert_called_once_with(
+                    'block-devices', self._instance, 'vm-ref',
+                    dc_info, 'fake-ds-ref', 'uuid', 'fake-adapter')
+                mock_create_swap.assert_called_once_with(
+                    'block-devices', self._instance, 'vm-ref',
+                    dc_info, 'fake-ds-ref', 'uuid', 'fake-adapter')
+            else:
+                self.assertFalse(mock_create_ephemeral.called)
+                self.assertFalse(mock_get_dc_ref_and_name.called)
+                self.assertFalse(mock_get_datastore_by_ref.called)
+
+    def test_resize_create_ephemerals(self):
+        datastore = ds_obj.Datastore(ref='fake-ref', name='fake')
+        device = vmwareapi_fake.DataObject()
+        backing = vmwareapi_fake.DataObject()
+        backing.datastore = datastore.ref
+        device.backing = backing
+        vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
+                                'fake-adapter',
+                                'fake-disk',
+                                'fake-capacity',
+                                device)
+        self._test_resize_create_ephemerals(vmdk, datastore)
+
+    def test_resize_create_ephemerals_no_root(self):
+        vmdk = vm_util.VmdkInfo(None, None, None, 0, None)
+        self._test_resize_create_ephemerals(vmdk, None)
+
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vmops.VMwareVMOps, '_resize_create_ephemerals_and_swap')
     @mock.patch.object(vmops.VMwareVMOps, '_remove_ephemerals_and_swap')
