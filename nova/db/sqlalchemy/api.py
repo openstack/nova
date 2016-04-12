@@ -3528,6 +3528,10 @@ def quota_get_all(context, project_id):
     return result
 
 
+def quota_get_per_project_resources():
+    return PER_PROJECT_QUOTAS
+
+
 @main_context_manager.writer
 def quota_create(context, project_id, resource, limit, user_id=None):
     per_user = user_id and resource not in PER_PROJECT_QUOTAS
@@ -3847,6 +3851,53 @@ def _refresh_quota_usages(quota_usage, until_refresh, in_use):
     quota_usage.until_refresh = until_refresh or None
 
 
+def _refresh_quota_usages_if_needed(user_usages, context, resources, keys,
+                                    project_id, user_id, until_refresh,
+                                    max_age, force_refresh=False):
+    elevated = context.elevated()
+
+    # Handle usage refresh
+    work = set(keys)
+    while work:
+        resource = work.pop()
+
+        # Do we need to refresh the usage?
+        created = _create_quota_usage_if_missing(user_usages, resource,
+                                                 until_refresh, project_id,
+                                                 user_id, context.session)
+
+        refresh = force_refresh
+        if not refresh:
+            refresh = created or \
+                      _is_quota_refresh_needed(user_usages[resource], max_age)
+
+        # OK, refresh the usage
+        if refresh:
+            # Grab the sync routine
+            sync = QUOTA_SYNC_FUNCTIONS[resources[resource].sync]
+
+            updates = sync(elevated, project_id, user_id)
+            for res, in_use in updates.items():
+                # Make sure we have a destination for the usage!
+                _create_quota_usage_if_missing(user_usages, res,
+                                               until_refresh, project_id,
+                                               user_id, context.session)
+                _refresh_quota_usages(user_usages[res], until_refresh,
+                                      in_use)
+
+                # Because more than one resource may be refreshed
+                # by the call to the sync routine, and we don't
+                # want to double-sync, we make sure all refreshed
+                # resources are dropped from the work set.
+                work.discard(res)
+
+                # NOTE(Vek): We make the assumption that the sync
+                #            routine actually refreshes the
+                #            resources that it is the sync routine
+                #            for.  We don't check, because this is
+                #            a best-effort mechanism.
+
+
 def _calculate_overquota(project_quotas, user_quotas, deltas,
                          project_usages, user_usages):
     """Checks if any resources will go over quota based on the request.
@@ -3891,11 +3942,8 @@ def _calculate_overquota(project_quotas, user_quotas, deltas,
 @require_context
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @main_context_manager.writer
-def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
-                  expire, until_refresh, max_age, project_id=None,
-                  user_id=None):
-    elevated = context.elevated()
-
+def quota_usage_refresh(context, resources, keys, until_refresh, max_age,
+                        project_id=None, user_id=None):
     if project_id is None:
         project_id = context.project_id
     if user_id is None:
@@ -3905,43 +3953,30 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
     project_usages, user_usages = _get_project_user_quota_usages(
             context, project_id, user_id)
 
-    # Handle usage refresh
-    work = set(deltas.keys())
-    while work:
-        resource = work.pop()
+    # Force refresh of the usages
+    _refresh_quota_usages_if_needed(user_usages, context, resources, keys,
+                                    project_id, user_id, until_refresh,
+                                    max_age, force_refresh=True)
 
-        # Do we need to refresh the usage?
-        created = _create_quota_usage_if_missing(user_usages, resource,
-                                                 until_refresh, project_id,
-                                                 user_id, context.session)
-        refresh = created or _is_quota_refresh_needed(
-                                    user_usages[resource], max_age)
 
-        # OK, refresh the usage
-        if refresh:
-            # Grab the sync routine
-            sync = QUOTA_SYNC_FUNCTIONS[resources[resource].sync]
+@require_context
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
+@main_context_manager.writer
+def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
+                  expire, until_refresh, max_age, project_id=None,
+                  user_id=None):
+    if project_id is None:
+        project_id = context.project_id
+    if user_id is None:
+        user_id = context.user_id
 
-            updates = sync(elevated, project_id, user_id)
-            for res, in_use in updates.items():
-                # Make sure we have a destination for the usage!
-                _create_quota_usage_if_missing(user_usages, res,
-                                               until_refresh, project_id,
-                                               user_id, context.session)
-                _refresh_quota_usages(user_usages[res], until_refresh,
-                                      in_use)
+    # Get the current usages
+    project_usages, user_usages = _get_project_user_quota_usages(
+            context, project_id, user_id)
 
-                # Because more than one resource may be refreshed
-                # by the call to the sync routine, and we don't
-                # want to double-sync, we make sure all refreshed
-                # resources are dropped from the work set.
-                work.discard(res)
-
-                # NOTE(Vek): We make the assumption that the sync
-                #            routine actually refreshes the
-                #            resources that it is the sync routine
-                #            for.  We don't check, because this is
-                #            a best-effort mechanism.
+    _refresh_quota_usages_if_needed(user_usages, context, resources,
+                                    deltas.keys(), project_id, user_id,
+                                    until_refresh, max_age)
 
     # Check for deltas that would go negative
     unders = [res for res, delta in deltas.items()
