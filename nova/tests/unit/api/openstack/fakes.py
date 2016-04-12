@@ -56,6 +56,7 @@ QUOTAS = quota.QUOTAS
 
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_PROJECT_ID = '6a6a9c9eee154e9cb8cec487b98d36ab'
+FAKE_USER_ID = '5fae60f5cf4642609ddd31f71748beac'
 FAKE_UUIDS = {}
 
 

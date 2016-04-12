@@ -72,9 +72,9 @@ def server_group_db(sg):
     attrs['created_at'] = None
     attrs['updated_at'] = None
     if 'user_id' not in attrs:
-        attrs['user_id'] = 'user_id'
+        attrs['user_id'] = fakes.FAKE_USER_ID
     if 'project_id' not in attrs:
-        attrs['project_id'] = 'project_id'
+        attrs['project_id'] = fakes.FAKE_PROJECT_ID
     attrs['id'] = 7
 
     return AttrDict(attrs)
@@ -111,9 +111,12 @@ class ServerGroupTestV21(test.TestCase):
             self._create_server_group_normal([policy])
 
     def _create_instance(self, context):
-        instance = objects.Instance(context=context, image_ref=1, node='node1',
-                reservation_id='a', host='host1', project_id='fake',
-                vm_state='fake', system_metadata={'key': 'value'})
+        instance = objects.Instance(context=context,
+                                    image_ref=uuidsentinel.fake_image_ref,
+                                    node='node1', reservation_id='a',
+                                    host='host1', project_id='fake',
+                                    vm_state='fake',
+                                    system_metadata={'key': 'value'})
         instance.create()
         return instance
 
@@ -140,17 +143,17 @@ class ServerGroupTestV21(test.TestCase):
         members = []
         metadata = {}  # always empty
         names = ['default-x', 'test']
-        p_id = 'project_id'
-        u_id = 'user_id'
+        p_id = fakes.FAKE_PROJECT_ID
+        u_id = fakes.FAKE_USER_ID
         if api_version >= '2.13':
-            sg1 = server_group_resp_template(id=str(1345),
+            sg1 = server_group_resp_template(id=uuidsentinel.sg1_id,
                                             name=names[0],
                                             policies=policies,
                                             members=members,
                                             metadata=metadata,
                                             project_id=p_id,
                                             user_id=u_id)
-            sg2 = server_group_resp_template(id=str(891),
+            sg2 = server_group_resp_template(id=uuidsentinel.sg2_id,
                                             name=names[1],
                                             policies=policies,
                                             members=members,
@@ -158,12 +161,12 @@ class ServerGroupTestV21(test.TestCase):
                                             project_id=p_id,
                                             user_id=u_id)
         else:
-            sg1 = server_group_resp_template(id=str(1345),
+            sg1 = server_group_resp_template(id=uuidsentinel.sg1_id,
                                             name=names[0],
                                             policies=policies,
                                             members=members,
                                             metadata=metadata)
-            sg2 = server_group_resp_template(id=str(891),
+            sg2 = server_group_resp_template(id=uuidsentinel.sg2_id,
                                             name=names[1],
                                             policies=policies,
                                             members=members,
@@ -202,17 +205,17 @@ class ServerGroupTestV21(test.TestCase):
         members = []
         metadata = {}  # always empty
         names = ['default-x', 'test']
-        p_id = 'project_id'
-        u_id = 'user_id'
+        p_id = fakes.FAKE_PROJECT_ID
+        u_id = fakes.FAKE_USER_ID
         if api_version >= '2.13':
-            sg1 = server_group_resp_template(id=str(1345),
+            sg1 = server_group_resp_template(id=uuidsentinel.sg1_id,
                                             name=names[0],
                                             policies=policies,
                                             members=members,
                                             metadata=metadata,
                                             project_id=p_id,
                                             user_id=u_id)
-            sg2 = server_group_resp_template(id=str(891),
+            sg2 = server_group_resp_template(id=uuidsentinel.sg2_id,
                                             name=names[1],
                                             policies=policies,
                                             members=members,
@@ -220,12 +223,12 @@ class ServerGroupTestV21(test.TestCase):
                                             project_id=p_id,
                                             user_id=u_id)
         else:
-            sg1 = server_group_resp_template(id=str(1345),
+            sg1 = server_group_resp_template(id=uuidsentinel.sg1_id,
                                             name=names[0],
                                             policies=policies,
                                             members=members,
                                             metadata=metadata)
-            sg2 = server_group_resp_template(id=str(891),
+            sg2 = server_group_resp_template(id=uuidsentinel.sg2_id,
                                             name=names[1],
                                             policies=policies,
                                             members=members,
@@ -389,7 +392,7 @@ class ServerGroupTestV21(test.TestCase):
         self._test_list_server_group_all(api_version='2.1')
 
     def test_delete_server_group_by_id(self):
-        sg = server_group_template(id='123')
+        sg = server_group_template(id=uuidsentinel.sg1_id)
 
         self.called = False
 
@@ -405,7 +408,7 @@ class ServerGroupTestV21(test.TestCase):
         self.stub_out('nova.db.instance_group_get',
                       return_server_group)
 
-        resp = self.controller.delete(self.req, '123')
+        resp = self.controller.delete(self.req, uuidsentinel.sg1_id)
         self.assertTrue(self.called)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API

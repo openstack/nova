@@ -24,6 +24,7 @@ from nova import context
 from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -62,9 +63,9 @@ def server_group_db(sg):
     attrs['created_at'] = None
     attrs['updated_at'] = None
     if 'user_id' not in attrs:
-        attrs['user_id'] = 'user_id'
+        attrs['user_id'] = fakes.FAKE_USER_ID
     if 'project_id' not in attrs:
-        attrs['project_id'] = 'project_id'
+        attrs['project_id'] = fakes.FAKE_PROJECT_ID
     attrs['id'] = 7
 
     return AttrDict(attrs)
@@ -135,7 +136,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
 
     def test_delete_server_group_by_id(self):
         self._setup_quotas()
-        sg = server_group_template(id='123')
+        sg = server_group_template(id=uuids.sg1_id)
         self.called = False
 
         def server_group_delete(context, id):
@@ -150,7 +151,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
         self.stub_out('nova.db.instance_group_get',
                       return_server_group)
 
-        resp = self.controller.delete(self.req, '123')
+        resp = self.controller.delete(self.req, uuids.sg1_id)
         self.assertTrue(self.called)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
