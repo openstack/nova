@@ -1,0 +1,218 @@
+.. -*- rst -*-
+
+================================
+ Compute services (os-services)
+================================
+
+Lists all running Compute services for a tenant, enables or disables
+scheduling for a Compute service, logs disabled Compute service
+information, and deletes a Compute service.
+
+For an overview of Compute services, see `OpenStack
+Compute <http://docs.openstack.org/liberty/install-guide-obs/common/get_started_compute.html>`__.
+
+List Compute Services
+=====================
+
+.. rest_method:: GET /v2.1/{tenant_id}/os-services
+
+Lists all running Compute services for a tenant.
+
+Includes reasons, if available, for why any services were disabled.
+
+Normal response codes: 200
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+
+Response
+^^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - services: services
+  - id: id
+  - binary: binary
+  - disabled_reason: disabled_reason
+  - host: host
+  - state: state
+  - status: status
+  - updated_at: updated_at
+  - forced_down: forced_down
+  - zone: zone
+
+**Example List Compute Services: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/v2.11/services-list-resp.json
+   :language: javascript
+
+Enable Scheduling For A Compute Service
+=======================================
+
+.. rest_method:: PUT /v2.1/{tenant_id}/os-services/enable
+
+Enables scheduling for a Compute service.
+
+Specify the service by its host name and binary name.
+
+Normal response codes: 200
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - host: host
+  - binary: binary
+
+**Example Enable Scheduling For A Compute Service: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-req.json
+   :language: javascript
+
+Response
+^^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - service: service
+  - binary: binary
+  - host: host
+  - status: status
+
+**Example Enable Scheduling For A Compute Service: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-resp.json
+   :language: javascript
+
+Disable Scheduling For A Compute Service
+========================================
+
+.. rest_method:: PUT /v2.1/{tenant_id}/os-services/disable
+
+Disables scheduling for a Compute service.
+
+Specify the service by its host name and binary name.
+
+Normal response codes: 200
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - host: host
+  - binary: binary
+
+**Example Disable Scheduling For A Compute Service: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-req.json
+   :language: javascript
+
+Response
+^^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - service: service
+  - binary: binary
+  - host: host
+  - status: status
+
+**Example Disable Scheduling For A Compute Service: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-resp.json
+   :language: javascript
+
+Log Disabled Compute Service Information
+========================================
+
+.. rest_method:: PUT /v2.1/{tenant_id}/os-services/disable-log-reason
+
+Logs information to the Compute service table about why a Compute service was disabled.
+
+Specify the service by its host name and binary name.
+
+Normal response codes: 200
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - host: host
+  - binary: binary
+  - disabled_reason: disabled_reason
+
+**Example Log Disabled Compute Service Information: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-req.json
+   :language: javascript
+
+Response
+^^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - service: service
+  - binary: binary
+  - disabled_reason: disabled_reason
+  - host: host
+  - status: status
+
+**Example Log Disabled Compute Service Information: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-resp.json
+   :language: javascript
+
+Delete Compute Service
+======================
+
+.. rest_method:: DELETE /v2.1/{tenant_id}/os-services/{service_id}
+
+Deletes a Compute service.
+
+Specify the service by its host name and binary name.
+
+Normal response codes: 204,404
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+^^^^^^^
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - service_id: service_id
+  - host: host
+  - binary: binary
+
+**Example Delete Compute Service: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-services/service-enable-req.json
+   :language: javascript
+
+Response
+^^^^^^^^
+
