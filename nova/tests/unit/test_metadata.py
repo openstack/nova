@@ -17,6 +17,7 @@
 """Tests for metadata service."""
 
 import base64
+import copy
 import hashlib
 import hmac
 import re
@@ -45,6 +46,7 @@ from nova.network import model as network_model
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.security_group import openstack_driver
 from nova import objects
+from nova.objects import virt_device_metadata as metadata_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -81,6 +83,7 @@ def fake_inst_obj(context):
         hostname='test.novadomain',
         display_name='my_displayname',
         metadata={},
+        device_metadata=fake_metadata_objects(),
         default_ephemeral_device=None,
         default_swap_device=None,
         system_metadata={},
@@ -164,6 +167,79 @@ def fake_request(testcase, mdinst, relpath, address="127.0.0.1",
 
     response = request.get_response(app)
     return response
+
+
+class FakeDeviceMetadata(metadata_obj.DeviceMetadata):
+    pass
+
+
+class FakeDeviceBus(metadata_obj.DeviceBus):
+    pass
+
+
+def fake_metadata_objects():
+    nic_obj = metadata_obj.NetworkInterfaceMetadata(
+        bus=metadata_obj.PCIDeviceBus(address='0000:00:01.0'),
+        mac='00:00:00:00:00:00',
+        tags=['foo']
+    )
+    ide_disk_obj = metadata_obj.DiskMetadata(
+        bus=metadata_obj.IDEDeviceBus(address='0:0'),
+        serial='disk-vol-2352423',
+        path='/dev/sda',
+        tags=['baz'],
+    )
+    scsi_disk_obj = metadata_obj.DiskMetadata(
+        bus=metadata_obj.SCSIDeviceBus(address='05c8:021e:04a7:011b'),
+        serial='disk-vol-2352423',
+        path='/dev/sda',
+        tags=['baz'],
+    )
+    usb_disk_obj = metadata_obj.DiskMetadata(
+        bus=metadata_obj.USBDeviceBus(address='05c8:021e'),
+        serial='disk-vol-2352423',
+        path='/dev/sda',
+        tags=['baz'],
+    )
+    fake_device_obj = FakeDeviceMetadata()
+    device_with_fake_bus_obj = metadata_obj.NetworkInterfaceMetadata(
+        bus=FakeDeviceBus(),
+        mac='00:00:00:00:00:00',
+        tags=['foo']
+    )
+    mdlist = metadata_obj.InstanceDeviceMetadata(
+        instance_uuid='b65cee2f-8c69-4aeb-be2f-f79742548fc2',
+        devices=[nic_obj, ide_disk_obj, scsi_disk_obj, usb_disk_obj,
+                          fake_device_obj, device_with_fake_bus_obj])
+    return mdlist
+
+
+def fake_metadata_dicts():
+    nic_meta = {
+        'type': 'nic',
+        'bus': 'pci',
+        'address': '0000:00:01.0',
+        'mac': '00:00:00:00:00:00',
+        'tags': ['foo'],
+    }
+    ide_disk_meta = {
+        'type': 'disk',
+        'bus': 'ide',
+        'address': '0:0',
+        'serial': 'disk-vol-2352423',
+        'path': '/dev/sda',
+        'tags': ['baz'],
+    }
+
+    scsi_disk_meta = copy.copy(ide_disk_meta)
+    scsi_disk_meta['bus'] = 'scsi'
+    scsi_disk_meta['address'] = '05c8:021e:04a7:011b'
+
+    usb_disk_meta = copy.copy(ide_disk_meta)
+    usb_disk_meta['bus'] = 'usb'
+    usb_disk_meta['address'] = '05c8:021e'
+
+    return [nic_meta, ide_disk_meta, scsi_disk_meta, usb_disk_meta]
 
 
 class MetadataTestCase(test.TestCase):
@@ -361,6 +437,10 @@ class MetadataTestCase(test.TestCase):
             'openstack/2015-10-15/user_data',
             'openstack/2015-10-15/vendor_data.json',
             'openstack/2015-10-15/network_data.json',
+            'openstack/2016-06-30/meta_data.json',
+            'openstack/2016-06-30/user_data',
+            'openstack/2016-06-30/vendor_data.json',
+            'openstack/2016-06-30/network_data.json',
             'openstack/latest/meta_data.json',
             'openstack/latest/user_data',
             'openstack/latest/vendor_data.json',
@@ -445,6 +525,8 @@ class MetadataTestCase(test.TestCase):
             expected_metadata['random_seed'] = FAKE_SEED
         if md._check_os_version(base.LIBERTY, os_version):
             expected_metadata['project_id'] = instance.project_id
+        if md._check_os_version(base.NEWTON, os_version):
+            expected_metadata['devices'] = fake_metadata_dicts()
 
         mock_cells_keypair.return_value = keypair
         md._metadata_as_json(os_version, 'non useless path parameter')
@@ -490,6 +572,27 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.instance = fake_inst_obj(self.context)
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
+
+    def test_empty_device_metadata(self):
+        fakes.stub_out_key_pair_funcs(self)
+        inst = self.instance.obj_clone()
+        inst.device_metadata = None
+        mdinst = fake_InstanceMetadata(self, inst)
+        mdjson = mdinst.lookup("/openstack/latest/meta_data.json")
+        mddict = jsonutils.loads(mdjson)
+        self.assertEqual([], mddict['devices'])
+
+    def test_device_metadata(self):
+        # Because we handle a list of devices, we have only one test and in it
+        # include the various devices types that we have to test, as well as a
+        # couple of fake device types and bus types that should be silently
+        # ignored
+        fakes.stub_out_key_pair_funcs(self)
+        inst = self.instance.obj_clone()
+        mdinst = fake_InstanceMetadata(self, inst)
+        mdjson = mdinst.lookup("/openstack/latest/meta_data.json")
+        mddict = jsonutils.loads(mdjson)
+        self.assertEqual(fake_metadata_dicts(), mddict['devices'])
 
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json
@@ -1257,7 +1360,8 @@ class MetadataHandlerTestCase(test.TestCase):
                          "have been called, the context was given")
         mock_uuid.assert_called_once_with('CONTEXT', 'foo',
             expected_attrs=['ec2_ids', 'flavor', 'info_cache', 'metadata',
-                            'system_metadata', 'security_groups', 'keypairs'])
+                            'system_metadata', 'security_groups', 'keypairs',
+                            'device_metadata'])
         imd.assert_called_once_with(inst, 'bar')
 
     @mock.patch.object(context, 'get_admin_context')
@@ -1274,7 +1378,8 @@ class MetadataHandlerTestCase(test.TestCase):
         mock_context.assert_called_once_with()
         mock_uuid.assert_called_once_with('CONTEXT', 'foo',
             expected_attrs=['ec2_ids', 'flavor', 'info_cache', 'metadata',
-                            'system_metadata', 'security_groups', 'keypairs'])
+                            'system_metadata', 'security_groups', 'keypairs',
+                            'device_metadata'])
         imd.assert_called_once_with(inst, 'bar')
 
 

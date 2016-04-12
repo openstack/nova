@@ -37,6 +37,7 @@ from nova import context
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
+from nova.objects import virt_device_metadata as metadata_obj
 from nova import utils
 from nova.virt import netutils
 
@@ -59,12 +60,14 @@ FOLSOM = '2012-08-10'
 GRIZZLY = '2013-04-04'
 HAVANA = '2013-10-17'
 LIBERTY = '2015-10-15'
+NEWTON = '2016-06-30'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
     GRIZZLY,
     HAVANA,
     LIBERTY,
+    NEWTON,
 ]
 
 VERSION = "version"
@@ -339,8 +342,70 @@ class InstanceMetadata(object):
         if self._check_os_version(LIBERTY, version):
             metadata['project_id'] = self.instance.project_id
 
+        if self._check_os_version(NEWTON, version):
+            metadata['devices'] = self._get_device_metadata()
+
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
         return jsonutils.dump_as_bytes(metadata)
+
+    def _get_device_metadata(self):
+        """Build a device metadata dict based on the metadata objects. This is
+        done here in the metadata API as opposed to in the objects themselves
+        because the metadata dict is part of the guest API and thus must be
+        controlled.
+        """
+        device_metadata_list = []
+
+        if self.instance.device_metadata is not None:
+            for device in self.instance.device_metadata.devices:
+                device_metadata = {}
+                bus = 'none'
+                address = 'none'
+
+                if 'bus' in device:
+                    # TODO(artom/mriedem) It would be nice if we had something
+                    # more generic, like a type identifier or something, built
+                    # into these types of objects, like a get_meta_type()
+                    # abstract method on the base DeviceBus class.
+                    if isinstance(device.bus, metadata_obj.PCIDeviceBus):
+                        bus = 'pci'
+                    elif isinstance(device.bus, metadata_obj.USBDeviceBus):
+                        bus = 'usb'
+                    elif isinstance(device.bus, metadata_obj.SCSIDeviceBus):
+                        bus = 'scsi'
+                    elif isinstance(device.bus, metadata_obj.IDEDeviceBus):
+                        bus = 'ide'
+                    else:
+                        LOG.debug('Metadata for device with unknown bus %s '
+                                  'has not been included in the '
+                                  'output' % device.bus.__class__.__name__)
+                        continue
+                    if 'address' in device.bus:
+                        address = device.bus.address
+
+                if isinstance(device, metadata_obj.NetworkInterfaceMetadata):
+                    device_metadata['type'] = 'nic'
+                    device_metadata['mac'] = device.mac
+                elif isinstance(device, metadata_obj.DiskMetadata):
+                    device_metadata['type'] = 'disk'
+                    # serial and path are optional paramenters
+                    if 'serial' in device:
+                        device_metadata['serial'] = device.serial
+                    if 'path' in device:
+                        device_metadata['path'] = device.path
+                else:
+                    LOG.debug('Metadata for device of unknown type %s has not '
+                              'been included in the '
+                              'output' % device.__class__.__name__)
+                    continue
+
+                device_metadata['bus'] = bus
+                device_metadata['address'] = address
+                device_metadata['tags'] = device.tags
+
+                device_metadata_list.append(device_metadata)
+
+        return device_metadata_list
 
     def _handle_content(self, path_tokens):
         if len(path_tokens) == 1:
@@ -542,7 +607,8 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     instance = objects.Instance.get_by_uuid(
         ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache',
                                            'metadata', 'system_metadata',
-                                           'security_groups', 'keypairs'])
+                                           'security_groups', 'keypairs',
+                                           'device_metadata'])
     return InstanceMetadata(instance, address)
 
 
