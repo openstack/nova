@@ -5494,14 +5494,38 @@ class LibvirtDriver(driver.ComputeDriver):
         :param block_device_info: result of _get_instance_block_device_info
         :returns: a LibvirtLiveMigrateData object
         """
-        # Checking shared storage connectivity
-        # if block migration, instances_paths should not be on shared storage.
-        source = CONF.host
-
         if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
             md_obj = objects.LibvirtLiveMigrateData()
             md_obj.from_legacy_dict(dest_check_data)
             dest_check_data = md_obj
+
+        listen_addrs = None
+        # We are building listen_addrs of vnc/spice from
+        # LibvirtLiveMigrateData; in some certains (e.g. an old-code
+        # destination host) those fields may have not been set and we
+        # want to avoid any unfortunates exceptions raised.
+        # TODO(sahid): The method
+        # _check_graphics_addresses_can_live_migrate_should to take an
+        # object LibvirtLiveMigrate itself.
+        if (dest_check_data.obj_attr_is_set('graphics_listen_addr_vnc')
+            or dest_check_data.obj_attr_is_set('graphics_listen_addr_spice')):
+            listen_addrs = {'vnc': None, 'spice': None}
+        if dest_check_data.obj_attr_is_set('graphics_listen_addr_vnc'):
+            listen_addrs['vnc'] = dest_check_data.graphics_listen_addr_vnc
+        if dest_check_data.obj_attr_is_set('graphics_listen_addr_spice'):
+            listen_addrs['spice'] = dest_check_data.graphics_listen_addr_spice
+
+        migratable_flag = self._host.is_migratable_xml_flag()
+        if not migratable_flag or not listen_addrs:
+            # In this context want to ensure we do not have to migrate
+            # graphic or serial consoles since we can't update guest's
+            # domain XML to make it handle destination host.
+            self._check_graphics_addresses_can_live_migrate(listen_addrs)
+            self._verify_serial_console_is_disabled()
+
+        # Checking shared storage connectivity
+        # if block migration, instances_paths should not be on shared storage.
+        source = CONF.host
 
         dest_check_data.is_shared_instance_path = (
             self._check_shared_storage_test_file(
@@ -5990,15 +6014,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     migrate_data.target_connect_addr is not None):
                 dest = migrate_data.target_connect_addr
 
-            migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
-                                      None)
-
-            if (migratable_flag is None or (
+            if (not self._host.is_migratable_xml_flag() or (
                     not listen_addrs and not migrate_data.bdms)):
-                # TODO(alexs-h): These checks could be moved to the
-                # check_can_live_migrate_destination/source phase
-                self._check_graphics_addresses_can_live_migrate(listen_addrs)
-                self._verify_serial_console_is_disabled()
                 dom.migrateToURI(self._live_migration_uri(dest),
                                  migration_flags,
                                  None,
