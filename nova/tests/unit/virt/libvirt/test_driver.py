@@ -5720,8 +5720,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             write_bahavior = os.write(3, mox.IgnoreArg())
             if raise_write:
                 write_bahavior.AndRaise(exc)
-            else:
-                os.close(3)
+
+            # ensure unlink(filepath) will actually remove the file by deleting
+            # the remaining link to it in close(fd)
+            os.close(3)
+
         os.unlink(3)
 
     def test_supports_direct_io(self):
