@@ -224,7 +224,7 @@ class RestParametersDirective(Table):
                     classes.append(min_ver_css_name)
                 trow = nodes.row(classes=classes)
                 name = key
-                if values.get('optional') is True:
+                if values.get('required', False) is False:
                     name += " (Optional)"
                 trow += self.add_col(name)
                 trow += self.add_col(values.get('in'))

@@ -20,217 +20,217 @@ admin_tenant_id:
   description: |
     The UUID of the administrative tenant.
   in: path
-  required: false
+  required: true
   type: string
 agent_build_id:
   description: |
     The UUID of the agent build.
   in: path
-  required: false
+  required: true
   type: string
 aggregate_id:
   description: |
     The aggregate ID.
   in: path
-  required: false
+  required: true
   type: string
 alias_1:
   description: |
     An alias for the extension name. For example, ``os-server-external-events``.
   in: path
-  required: false
+  required: true
   type: string
 attachment_id:
   description: |
     The UUID of the attachment.
   in: path
-  required: false
+  required: true
   type: string
 cell_id:
   description: |
     The UUID of the cell.
   in: path
-  required: false
+  required: true
   type: string
 certificate_id:
   description: |
     The certificate ID, as a string. The only valid value is ``root``.
   in: path
-  required: false
+  required: true
   type: string
 class_id:
   description: |
     The UUID of the quota class.
   in: path
-  required: false
+  required: true
   type: string
 console_id:
   description: |
     The UUID of the console.
   in: path
-  required: false
+  required: true
   type: string
 domain:
   description: |
     The registered DNS domain that the DNS drivers publish.
   in: path
-  required: false
+  required: true
   type: string
 fixed_ip_1:
   description: |
     The fixed IP of interest to you.
   in: path
-  required: false
+  required: true
   type: string
 flavor_extra_spec_key:
   description: |
     The extra spec key for the flavor.
   in: path
-  required: false
+  required: true
   type: string
 flavor_id:
   description: |
     The ID of the flavor.
   in: path
-  required: false
+  required: true
   type: string
 floating_ip_id:
   description: |
     The ID of the floating IP address.
   in: path
-  required: false
+  required: true
   type: string
 host_name:
   description: |
     The name of the host.
   in: path
-  required: false
+  required: true
   type: string
 hypervisor_id:
   description: |
     The UUID of the hypervisor.
   in: path
-  required: false
+  required: true
   type: string
 image_id:
   description: |
     The UUID of the image.
   in: path
-  required: false
+  required: true
   type: string
 instance_id:
   description: |
     The UUID of the instance.
   in: path
-  required: false
+  required: true
   type: string
 ip:
   description: |
     The IP address.
   in: path
-  required: false
+  required: true
   type: string
 key:
   description: |
     The metadata item key, as a string. Maximum length is 255 characters.
   in: path
-  required: false
+  required: true
   type: string
 keypair_name:
   description: |
     The keypair name.
   in: path
-  required: false
+  required: true
   type: string
 name_1:
   description: |
     The name of the DNS entry.
   in: path
-  required: false
+  required: true
   type: string
 network_id:
   description: |
     The UUID of the network.
   in: path
-  required: false
+  required: true
   type: string
 network_label:
   description: |
     The network label, such as ``public`` or ``private``.
   in: path
-  required: false
+  required: true
   type: string
 node_id:
   description: |
     The node ID.
   in: path
-  required: false
+  required: true
   type: string
 port_id_1:
   description: |
     The UUID of the port.
   in: path
-  required: false
+  required: true
   type: string
 request_id:
   description: |
     The ID of the request.
   in: path
-  required: false
+  required: true
   type: string
 security_group_default_rule_id:
   description: |
     The UUID of the security group rule.
   in: path
-  required: false
+  required: true
   type: string
 security_group_id:
   description: |
     The ID of the security group.
   in: path
-  required: false
+  required: true
   type: string
 security_group_rule_id:
   description: |
     The ID of the security group rule.
   in: path
-  required: false
+  required: true
   type: string
 server_group_id:
   description: |
     The UUID of the server group.
   in: path
-  required: false
+  required: true
   type: string
 server_id:
   description: |
     The UUID of the server.
   in: path
-  required: false
+  required: true
   type: string
 snapshot_id_2:
   description: |
     The UUID of the snapshot.
   in: path
-  required: false
+  required: true
   type: string
 tenant_id:
   description: |
     The UUID of the tenant in a multi-tenancy cloud.
   in: path
-  required: false
+  required: true
   type: string
 volume_id_1:
   description: |
     The unique ID for a volume.
   in: path
-  required: false
+  required: true
   type: string
 volume_type_id:
   description: |
     The unique ID for a volume type.
   in: path
-  required: false
+  required: true
   type: string
 
 # variables in query
