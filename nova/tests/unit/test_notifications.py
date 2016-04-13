@@ -26,7 +26,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova import notifications
+from nova.notifications import base as notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova import test
@@ -417,7 +417,8 @@ class NotificationsTestCase(test.TestCase):
 
         def sending_no_state_change(context, instance, **kwargs):
             called[0] = True
-        self.stub_out('nova.notifications._send_instance_update_notification',
+        self.stub_out('nova.notifications.base.'
+                      '_send_instance_update_notification',
                        sending_no_state_change)
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertTrue(called[0])
@@ -425,7 +426,8 @@ class NotificationsTestCase(test.TestCase):
     def test_fail_sending_update(self):
         def fail_sending(context, instance, **kwargs):
             raise Exception('failed to notify')
-        self.stub_out('nova.notifications._send_instance_update_notification',
+        self.stub_out('nova.notifications.base.'
+                      '_send_instance_update_notification',
                        fail_sending)
 
         notifications.send_update(self.context, self.instance, self.instance)

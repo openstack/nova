@@ -15,10 +15,10 @@
 import mock
 from oslo_utils import timeutils
 
+from nova.notifications.objects import base as notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import notification
 from nova import test
 
 

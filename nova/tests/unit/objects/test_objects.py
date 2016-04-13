@@ -32,10 +32,10 @@ import six
 
 from nova import context
 from nova import exception
+from nova.notifications.objects import base as notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import notification
 from nova.objects import virt_device_metadata
 from nova import test
 from nova.tests import fixtures as nova_fixtures
