@@ -37,7 +37,7 @@ barbican_opts = [
 def register_opts(conf):
     conf.register_group(barbican_group)
     conf.register_opts(barbican_opts, group=barbican_group)
-    ks_loading.register_session_conf_options(conf, barbican_group)
+    ks_loading.register_session_conf_options(conf, barbican_group.name)
 
 
 def list_opts():

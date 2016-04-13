@@ -75,7 +75,7 @@ class BarbicanKeyManager(key_mgr.KeyManager):
         try:
             _SESSION = ks_loading.load_session_from_conf_options(
                 CONF,
-                nova.conf.barbican.barbican_group)
+                nova.conf.barbican.barbican_group.name)
 
             auth = ctxt.get_auth_plugin()
             service_type, service_name, interface = (CONF.
