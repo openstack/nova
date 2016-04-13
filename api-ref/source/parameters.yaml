@@ -235,11 +235,14 @@ volume_type_id:
 
 # variables in query
 all_projects:
-  description: "Administrator only. Lists server groups for all projects. For example:\n\
-    .. code-block:: json\n\n   GET /v2.1/\u200B{admin_tenant_id}\u200B/os-server-groups?all_projects=True\n\
-    \nIf you specify a tenant ID for a non-administrative user with this query parameter,\
-    \ the call lists all server groups for the tenant, or project, rather than for\
-    \ all projects.\n"
+  description: >
+    Administrator only. Lists server groups for all projects. For example:
+
+      ``GET /v2.1/{admin_tenant_id}/os-server-groups?all_projects=True``
+
+    If you specify a tenant ID for a non-administrative user with this query parameter,
+    the call lists all server groups for the tenant, or project, rather than for
+    all projects.
   in: query
   required: false
   type: boolean
@@ -602,9 +605,17 @@ block_device_mapping_v2:
   description: >
     Enables fine grained control of the block device mapping for an instance. This
     is typically used for booting servers from volumes.  An example format would look
-    as follows: ``"block_device_mapping_v2": { "boot_index": "0", "uuid": "ac408821
-    -c95a-448f-9292-73986c790911", "source_type": "image", "volume_size": "25", "destination_type":
-    "volume", "delete_on_termination": true }``
+    as follows:
+
+      .. code-block:: javascript
+
+        "block_device_mapping_v2": {
+            "boot_index": "0",
+            "uuid": "ac408821-c95a-448f-9292-73986c790911",
+            "source_type": "image",
+            "volume_size": "25",
+            "destination_type": "volume",
+            "delete_on_termination": true }
   in: body
   required: false
   type: object
@@ -696,11 +707,17 @@ create_info:
   required: true
   type: object
 created:
-  description: "The date and time when the resource was created.\nThe date and time\
-    \ stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:\n::\n\n\
-    \   CCYY-MM-DDThh:mm:ss\xB1hh:mm\n\nFor example, ``2015-08-27T09:49:58-05:00``.\n\
-    The ``\xB1hh:mm`` value, if included, is the time zone as an offset from UTC.\
-    \ In the previous example, the offset value is ``-05:00``.\n"
+  description: >
+    The date and time when the resource was created. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss\xB1hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``\xB1hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
   in: body
   required: true
   type: string
@@ -718,7 +735,8 @@ description:
   required: true
   type: string
 description_1:
-  description: "Text describing this extension\u2019s purpose.\n"
+  description: >
+    Text describing this extension's purpose.
   in: body
   required: true
   type: string
@@ -1892,11 +1910,17 @@ unshelve:
   required: true
   type: string
 updated:
-  description: "The date and time when the resource was updated.\nThe date and time\
-    \ stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:\n::\n\n\
-    \   CCYY-MM-DDThh:mm:ss\xB1hh:mm\n\nThe ``\xB1hh:mm`` value, if included, is the\
-    \ time zone as an offset from UTC.\nFor example, ``2015-08-27T09:49:58-05:00``.\n\
-    The UTC time zone is assumed.\n"
+  description: >
+    The date and time when the resource was updated. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss\xB1hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``\xB1hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
   in: body
   required: true
   type: string
@@ -1980,4 +2004,3 @@ vpn_port:
   in: body
   required: true
   type: string
-
