@@ -25,6 +25,7 @@ from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 class _TestBlockDeviceMappingObject(object):
@@ -32,7 +33,7 @@ class _TestBlockDeviceMappingObject(object):
         instance = instance or {}
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
             'id': 123,
-            'instance_uuid': instance.get('uuid') or 'fake-instance',
+            'instance_uuid': instance.get('uuid') or uuids.instance,
             'device_name': '/dev/sda2',
             'source_type': 'snapshot',
             'destination_type': 'volume',
@@ -215,7 +216,7 @@ class _TestBlockDeviceMappingObject(object):
             self.flags(enable=False, group='cells')
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': 'fake-instance'}
+                  'instance_uuid': uuids.instance}
         if device_name:
             values['device_name'] = device_name
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(values)
@@ -282,7 +283,7 @@ class _TestBlockDeviceMappingObject(object):
     def test_create(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': 'fake-instance'}
+                  'instance_uuid': uuids.instance}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
         with mock.patch.object(cells_rpcapi.CellsAPI,
                                'bdm_update_or_create_at_top'):
@@ -294,7 +295,7 @@ class _TestBlockDeviceMappingObject(object):
     def test_create_fails(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': 'fake-instance'}
+                  'instance_uuid': uuids.instance}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
         bdm.create()
 
@@ -304,7 +305,7 @@ class _TestBlockDeviceMappingObject(object):
     def test_create_fails_instance(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': 'fake-instance',
+                  'instance_uuid': uuids.instance,
                   'instance': objects.Instance()}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
         self.assertRaises(exception.ObjectActionError,
@@ -313,7 +314,7 @@ class _TestBlockDeviceMappingObject(object):
     def _test_destroy_mocked(self, cell_type=None):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume', 'id': 1,
-                  'instance_uuid': 'fake-instance', 'device_name': 'fake'}
+                  'instance_uuid': uuids.instance, 'device_name': 'fake'}
         if cell_type:
             self.flags(enable=True, cell_type=cell_type, group='cells')
         else:
@@ -365,7 +366,7 @@ class _TestBlockDeviceMappingObject(object):
     def test_obj_make_compatible_pre_1_17(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
-                  'instance_uuid': 'fake-instance'}
+                  'instance_uuid': uuids.instance}
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
         primitive = bdm.obj_to_primitive(target_version='1.16')
         self.assertNotIn('tag', primitive)
@@ -382,7 +383,7 @@ class TestRemoteBlockDeviceMappingObject(test_objects._RemoteTest,
 
 
 class _TestBlockDeviceMappingListObject(object):
-    def fake_bdm(self, bdm_id, boot_index=-1, instance_uuid='fake-instance'):
+    def fake_bdm(self, bdm_id, boot_index=-1, instance_uuid=uuids.instance):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
             'id': bdm_id,
             'boot_index': boot_index,
@@ -400,11 +401,11 @@ class _TestBlockDeviceMappingListObject(object):
         fakes = [self.fake_bdm(123), self.fake_bdm(456)]
         get_all_by_inst_uuids.return_value = fakes
         bdms_by_uuid = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
-            self.context, ['fake-instance'])
-        self.assertEqual(['fake-instance'], list(bdms_by_uuid.keys()))
+            self.context, [uuids.instance])
+        self.assertEqual([uuids.instance], list(bdms_by_uuid.keys()))
         self.assertIsInstance(
-            bdms_by_uuid['fake-instance'], objects.BlockDeviceMappingList)
-        for faked, got in zip(fakes, bdms_by_uuid['fake-instance']):
+            bdms_by_uuid[uuids.instance], objects.BlockDeviceMappingList)
+        for faked, got in zip(fakes, bdms_by_uuid[uuids.instance]):
             self.assertIsInstance(got, objects.BlockDeviceMapping)
             self.assertEqual(faked['id'], got.id)
 
@@ -412,7 +413,7 @@ class _TestBlockDeviceMappingListObject(object):
     def test_bdms_by_instance_uuid_no_result(self, get_all_by_inst_uuids):
         get_all_by_inst_uuids.return_value = None
         bdms_by_uuid = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
-            self.context, ['fake-instance'])
+            self.context, [uuids.instance])
         self.assertEqual({}, bdms_by_uuid)
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance_uuids')
@@ -420,7 +421,7 @@ class _TestBlockDeviceMappingListObject(object):
         fakes = [self.fake_bdm(123), self.fake_bdm(456)]
         get_all_by_inst_uuids.return_value = fakes
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuids(
-            self.context, ['fake-instance'])
+            self.context, [uuids.instance])
         for faked, got in zip(fakes, bdm_list):
             self.assertIsInstance(got, objects.BlockDeviceMapping)
             self.assertEqual(faked['id'], got.id)
@@ -429,7 +430,7 @@ class _TestBlockDeviceMappingListObject(object):
     def test_get_by_instance_uuids_no_result(self, get_all_by_inst_uuids):
         get_all_by_inst_uuids.return_value = None
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuids(
-            self.context, ['fake-instance'])
+            self.context, [uuids.instance])
         self.assertEqual(0, len(bdm_list))
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance')
@@ -437,7 +438,7 @@ class _TestBlockDeviceMappingListObject(object):
         fakes = [self.fake_bdm(123), self.fake_bdm(456)]
         get_all_by_inst.return_value = fakes
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, 'fake-instance')
+            self.context, uuids.instance)
         for faked, got in zip(fakes, bdm_list):
             self.assertIsInstance(got, objects.BlockDeviceMapping)
             self.assertEqual(faked['id'], got.id)
@@ -446,7 +447,7 @@ class _TestBlockDeviceMappingListObject(object):
     def test_get_by_instance_uuid_no_result(self, get_all_by_inst):
         get_all_by_inst.return_value = None
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, 'fake-instance')
+            self.context, uuids.instance)
         self.assertEqual(0, len(bdm_list))
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance')
@@ -454,25 +455,25 @@ class _TestBlockDeviceMappingListObject(object):
         fakes = [self.fake_bdm(123), self.fake_bdm(456, boot_index=0)]
         get_all_by_inst.return_value = fakes
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, 'fake-instance')
+            self.context, uuids.instance)
         self.assertEqual(456, bdm_list.root_bdm().id)
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance')
     def test_root_bdm_empty_bdm_list(self, get_all_by_inst):
         get_all_by_inst.return_value = None
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, 'fake-instance')
+            self.context, uuids.instance)
         self.assertIsNone(bdm_list.root_bdm())
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_instance')
     def test_root_bdm_undefined(self, get_all_by_inst):
         fakes = [
-            self.fake_bdm(123, instance_uuid='uuid_1'),
-            self.fake_bdm(456, instance_uuid='uuid_2')
+            self.fake_bdm(123, instance_uuid=uuids.instance_1),
+            self.fake_bdm(456, instance_uuid=uuids.instance_2)
         ]
         get_all_by_inst.return_value = fakes
         bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
-            self.context, 'fake-instance')
+            self.context, uuids.bdm_instance)
         self.assertRaises(exception.UndefinedRootBDM, bdm_list.root_bdm)
 
 

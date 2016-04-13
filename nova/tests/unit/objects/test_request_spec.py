@@ -21,10 +21,12 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import request_spec
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 class _TestRequestSpecObject(object):
@@ -74,7 +76,7 @@ class _TestRequestSpecObject(object):
         instance.uuid = uuidutils.generate_uuid()
         instance.numa_topology = None
         instance.pci_requests = None
-        instance.project_id = '1'
+        instance.project_id = fakes.FAKE_PROJECT_ID
         instance.availability_zone = 'nova'
 
         spec = objects.RequestSpec()
@@ -93,7 +95,7 @@ class _TestRequestSpecObject(object):
         instance = dict(uuid=uuidutils.generate_uuid(),
                         numa_topology=None,
                         pci_requests=None,
-                        project_id='1',
+                        project_id=fakes.FAKE_PROJECT_ID,
                         availability_zone='nova')
 
         spec = objects.RequestSpec()
@@ -120,7 +122,7 @@ class _TestRequestSpecObject(object):
             memory_mb=10,
             vcpus=1,
             numa_topology=None,
-            project_id='1',
+            project_id=fakes.FAKE_PROJECT_ID,
             availability_zone='nova',
             pci_requests={
                 'instance_uuid': 'fakeid',
@@ -138,7 +140,7 @@ class _TestRequestSpecObject(object):
             ephemeral_gb=0,
             memory_mb=10,
             vcpus=1,
-            project_id='1',
+            project_id=fakes.FAKE_PROJECT_ID,
             availability_zone='nova',
             pci_requests=None,
             numa_topology={'cells': [{'id': 1, 'cpuset': ['1'], 'memory': 8192,
@@ -176,7 +178,7 @@ class _TestRequestSpecObject(object):
                                      vcpus=1)
         spec.numa_topology = None
         spec.pci_requests = None
-        spec.project_id = '1'
+        spec.project_id = fakes.FAKE_PROJECT_ID
         spec.availability_zone = 'nova'
 
         instance = spec._to_legacy_instance()
@@ -186,7 +188,7 @@ class _TestRequestSpecObject(object):
                           'vcpus': 1,
                           'numa_topology': None,
                           'pci_requests': None,
-                          'project_id': '1',
+                          'project_id': fakes.FAKE_PROJECT_ID,
                           'availability_zone': 'nova'}, instance)
 
     def test_to_legacy_instance_with_unset_values(self):
@@ -298,13 +300,13 @@ class _TestRequestSpecObject(object):
     def test_from_components(self):
         ctxt = context.RequestContext('fake-user', 'fake-project')
         instance = fake_instance.fake_instance_obj(ctxt)
-        image = {'id': 'fake-image-id', 'properties': {'mappings': []},
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
                  'status': 'fake-status', 'location': 'far-away'}
         flavor = fake_flavor.fake_flavor_obj(ctxt)
         filter_properties = {}
         instance_group = None
 
-        spec = objects.RequestSpec.from_components(ctxt, instance, image,
+        spec = objects.RequestSpec.from_components(ctxt, instance.uuid, image,
                 flavor, instance.numa_topology, instance.pci_requests,
                 filter_properties, instance_group, instance.availability_zone)
         # Make sure that all fields are set using that helper method
@@ -320,13 +322,13 @@ class _TestRequestSpecObject(object):
         # to from_components
         ctxt = context.RequestContext('fake-user', 'fake-project')
         instance = fake_instance.fake_instance_obj(ctxt)
-        image = {'id': 'fake-image-id', 'properties': {'mappings': []},
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
                  'status': 'fake-status', 'location': 'far-away'}
         flavor = fake_flavor.fake_flavor_obj(ctxt)
         filter_properties = {'fake': 'property'}
         instance_group = objects.InstanceGroup()
 
-        objects.RequestSpec.from_components(ctxt, instance, image,
+        objects.RequestSpec.from_components(ctxt, instance.uuid, image,
                 flavor, instance.numa_topology, instance.pci_requests,
                 filter_properties, instance_group, instance.availability_zone)
 
@@ -336,14 +338,15 @@ class _TestRequestSpecObject(object):
     def test_from_components_without_instance_group(self, mock_pgi):
         # This test makes sure that we populate instance group if not
         # present
-        ctxt = context.RequestContext('fake-user', 'fake-project')
+        ctxt = context.RequestContext(fakes.FAKE_USER_ID,
+                                      fakes.FAKE_PROJECT_ID)
         instance = fake_instance.fake_instance_obj(ctxt)
-        image = {'id': 'fake-image-id', 'properties': {'mappings': []},
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
                  'status': 'fake-status', 'location': 'far-away'}
         flavor = fake_flavor.fake_flavor_obj(ctxt)
         filter_properties = {'fake': 'property'}
 
-        objects.RequestSpec.from_components(ctxt, instance, image,
+        objects.RequestSpec.from_components(ctxt, instance.uuid, image,
                 flavor, instance.numa_topology, instance.pci_requests,
                 filter_properties, None, instance.availability_zone)
 
@@ -375,7 +378,7 @@ class _TestRequestSpecObject(object):
                          'vcpus': 1,
                          'numa_topology': None,
                          'pci_requests': None,
-                         'project_id': '1',
+                         'project_id': fakes.FAKE_PROJECT_ID,
                          'availability_zone': 'nova',
                          'uuid': '1'}
         spec_to_legacy_instance.return_value = fake_instance
@@ -391,7 +394,7 @@ class _TestRequestSpecObject(object):
                                    pci_requests=None,
                                    project_id=1,
                                    availability_zone='nova',
-                                   instance_uuid='1',
+                                   instance_uuid=uuids.instance,
                                    flavor=fake_flavor)
         spec_dict = spec.to_legacy_request_spec_dict()
         expected = {'num_instances': 1,

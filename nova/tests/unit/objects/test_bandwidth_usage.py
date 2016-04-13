@@ -21,6 +21,7 @@ from nova import db
 from nova.objects import bandwidth_usage
 from nova import test
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 class _TestBandwidthUsage(test.TestCase):
@@ -55,7 +56,7 @@ class _TestBandwidthUsage(test.TestCase):
             'updated_at': None,
             'deleted_at': None,
             'deleted': 0,
-            'uuid': 'fake_uuid1',
+            'uuid': uuids.instance,
             'mac': 'fake_mac1',
             'start_period': start_period,
             'bw_in': bw_in,
@@ -77,7 +78,7 @@ class _TestBandwidthUsage(test.TestCase):
     def test_get_by_instance_uuid_and_mac(self, mock_get):
         mock_get.return_value = self.expected_bw_usage
         bw_usage = bandwidth_usage.BandwidthUsage.get_by_instance_uuid_and_mac(
-            self.context, 'fake_uuid', 'fake_mac',
+            self.context, uuids.instance, 'fake_mac',
             start_period=self.expected_bw_usage['start_period'])
         self._compare(self, self.expected_bw_usage, bw_usage)
 
@@ -86,7 +87,7 @@ class _TestBandwidthUsage(test.TestCase):
         mock_get_by_uuids.return_value = [self.expected_bw_usage]
 
         bw_usages = bandwidth_usage.BandwidthUsageList.get_by_uuids(
-            self.context, ['fake_uuid'],
+            self.context, [uuids.instance],
             start_period=self.expected_bw_usage['start_period'])
         self.assertEqual(1, len(bw_usages))
         self._compare(self, self.expected_bw_usage, bw_usages[0])
@@ -96,7 +97,7 @@ class _TestBandwidthUsage(test.TestCase):
         mock_create.return_value = self.expected_bw_usage
 
         bw_usage = bandwidth_usage.BandwidthUsage(context=self.context)
-        bw_usage.create('fake_uuid', 'fake_mac',
+        bw_usage.create(uuids.instance, 'fake_mac',
                         100, 200, 12345, 67890,
                         start_period=self.expected_bw_usage['start_period'])
 
@@ -109,12 +110,12 @@ class _TestBandwidthUsage(test.TestCase):
             last_ctr_in=42, last_ctr_out=42)
 
         bw_usage = bandwidth_usage.BandwidthUsage(context=self.context)
-        bw_usage.create('fake_uuid1', 'fake_mac1',
+        bw_usage.create(uuids.instance, 'fake_mac1',
                         100, 200, 42, 42,
                         start_period=self.expected_bw_usage['start_period'])
         self._compare(self, expected_bw_usage1, bw_usage,
                 ignored_fields=['last_refreshed', 'created_at'])
-        bw_usage.create('fake_uuid1', 'fake_mac1',
+        bw_usage.create(uuids.instance, 'fake_mac1',
                         100, 200, 12345, 67890,
                         start_period=self.expected_bw_usage['start_period'])
         self._compare(self, self.expected_bw_usage, bw_usage,

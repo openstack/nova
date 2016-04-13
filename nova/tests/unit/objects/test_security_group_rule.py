@@ -20,6 +20,7 @@ from nova import db
 from nova import objects
 from nova.tests.unit.objects import test_objects
 from nova.tests.unit.objects import test_security_group
+from nova.tests import uuidsentinel as uuids
 
 fake_rule = {
     'created_at': None,
@@ -107,7 +108,7 @@ class _TestSecurityGroupRuleListObject(object):
     @mock.patch('nova.db.security_group_rule_get_by_instance')
     def test_get_by_instance(self, mock_get):
         mock_get.return_value = fake_rules
-        instance = objects.Instance(uuid='fake-uuid')
+        instance = objects.Instance(uuid=uuids.instance)
         rules = objects.SecurityGroupRuleList.get_by_instance(self.context,
                                                               instance)
         mock_get.assert_called_once_with(self.context, instance.uuid)

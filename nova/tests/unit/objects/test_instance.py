@@ -1287,7 +1287,7 @@ class _TestInstanceObject(object):
             secgroups.append(secgroup)
         fake_secgroups = security_group.SecurityGroupList(objects=secgroups)
         mock_get.return_value = fake_secgroups
-        inst = objects.Instance(context=self.context, uuid='fake')
+        inst = objects.Instance(context=self.context, uuid=uuids.instance)
         secgroups = inst.security_groups
         mock_get.assert_called_once_with(self.context, inst)
         self.assertEqual(fake_secgroups, secgroups)

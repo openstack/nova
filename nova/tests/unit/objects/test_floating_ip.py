@@ -21,6 +21,7 @@ from nova import exception
 from nova import objects
 from nova.objects import floating_ip
 from nova import test
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_fixed_ip
 from nova.tests.unit.objects import test_network
 from nova.tests.unit.objects import test_objects
@@ -222,7 +223,7 @@ class _TestFloatingIPObject(object):
     def test_bulk_create(self, create_mock):
         def fake_create(ctxt, ip_info, want_result=False):
             return [{'id': 1, 'address': ip['address'], 'fixed_ip_id': 1,
-                     'project_id': 'foo', 'host': 'host',
+                     'project_id': fakes.FAKE_PROJECT_ID, 'host': 'host',
                      'auto_assigned': False, 'pool': ip['pool'],
                      'interface': ip['interface'], 'fixed_ip': None,
                      'created_at': None, 'updated_at': None,

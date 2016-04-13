@@ -23,6 +23,7 @@ from nova import db
 from nova.objects import instance_action
 from nova import test
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -33,7 +34,7 @@ fake_action = {
     'deleted': False,
     'id': 123,
     'action': 'fake-action',
-    'instance_uuid': 'fake-uuid',
+    'instance_uuid': uuids.instance,
     'request_id': 'fake-request',
     'user_id': 'fake-user',
     'project_id': 'fake-project',
@@ -144,19 +145,19 @@ class _TestInstanceActionObject(object):
             'request_id': self.context.request_id,
             'user_id': self.context.user_id,
             'project_id': self.context.project_id,
-            'instance_uuid': 'fake-uuid',
+            'instance_uuid': uuids.instance,
             'action': 'fake-action',
             'start_time': self.context.timestamp,
         }
         expected_packed_action_finish = {
             'request_id': self.context.request_id,
-            'instance_uuid': 'fake-uuid',
+            'instance_uuid': uuids.instance,
             'finish_time': NOW,
         }
         mock_start.return_value = fake_action
         mock_finish.return_value = fake_action
         action = instance_action.InstanceAction.action_start(
-            self.context, 'fake-uuid', 'fake-action')
+            self.context, uuids.instance, 'fake-action')
         action.finish()
         mock_start.assert_called_once_with(self.context,
                                            expected_packed_action_start)
