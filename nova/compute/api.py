@@ -571,7 +571,6 @@ class API(base.Base):
                 instance.hostname = self._default_host_name(instance.uuid)
             else:
                 instance.hostname = utils.sanitize_hostname(new_name)
-        instance.save()
         return instance
 
     def _check_config_drive(self, config_drive):
@@ -960,6 +959,7 @@ class API(base.Base):
                 context, instance_type, min_count, max_count)
         security_groups = self.security_group_api.populate_security_groups(
                 security_groups)
+        self.security_group_api.ensure_default(context)
         LOG.debug("Going to run %s instances...", num_instances)
         instances = []
         try:
@@ -977,6 +977,16 @@ class API(base.Base):
                 build_request = self._create_build_request(context,
                         instance_uuid, base_options, req_spec, security_groups,
                         num_instances, i)
+
+                # Create an instance object, but do not store in db yet.
+                instance = objects.Instance(context=context)
+                instance.uuid = instance_uuid
+                instance.update(base_options)
+                instance = self.create_db_entry_for_new_instance(context,
+                        instance_type, boot_meta, instance, security_groups,
+                        block_device_mapping, num_instances, i,
+                        shutdown_terminate, create_instance=False)
+
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
                 # for it need to instead look for the RequestSpec.
@@ -992,14 +1002,13 @@ class API(base.Base):
                 # scheduler and defer instance creation until the scheduler
                 # has picked a cell/host. Set the instance_mapping to the cell
                 # that the instance is scheduled to.
-                instance = objects.Instance(context=context)
-                instance.uuid = instance_uuid
-                instance.update(base_options)
-                instance = self.create_db_entry_for_new_instance(
-                        context, instance_type, boot_meta, instance,
-                        security_groups, block_device_mapping,
-                        num_instances, i, shutdown_terminate)
+                # NOTE(alaski): Instance and block device creation are going
+                # to move to the conductor.
+                instance.create()
                 instances.append(instance)
+
+                self._create_block_device_mapping(
+                        instance_type, instance.uuid, block_device_mapping)
                 # The BuildRequest needs to be stored until the instance is in
                 # an instance table. At that point it will never be used again
                 # and should be deleted. As instance creation is pushed back,
@@ -1395,7 +1404,8 @@ class API(base.Base):
         return "Server-%s" % instance_uuid
 
     def _populate_instance_for_create(self, context, instance, image,
-                                      index, security_groups, instance_type):
+                                      index, security_groups, instance_type,
+                                      num_instances, shutdown_terminate):
         """Build the beginning of a new instance."""
 
         instance.launch_index = index
@@ -1432,36 +1442,37 @@ class API(base.Base):
 
         instance.security_groups = security_groups
 
+        self._populate_instance_names(instance, num_instances)
+        instance.shutdown_terminate = shutdown_terminate
+        if num_instances > 1:
+            instance = self._apply_instance_name_template(context, instance,
+                                                          index)
+
         return instance
 
-    # NOTE(bcwaldon): No policy check since this is only used by scheduler and
-    # the compute api. That should probably be cleaned up, though.
+    # This method remains because cellsv1 uses it in the scheduler
     def create_db_entry_for_new_instance(self, context, instance_type, image,
             instance, security_group, block_device_mapping, num_instances,
-            index, shutdown_terminate=False):
+            index, shutdown_terminate=False, create_instance=True):
         """Create an entry in the DB for this new instance,
         including any related table updates (such as security group,
         etc).
 
         This is called by the scheduler after a location for the
         instance has been determined.
+
+        :param create_instance: Determines if the instance is created here or
+            just populated for later creation. This is done so that this code
+            can be shared with cellsv1 which needs the instance creation to
+            happen here. It should be removed and this method cleaned up when
+            cellsv1 is a distant memory.
         """
         self._populate_instance_for_create(context, instance, image, index,
-                                           security_group, instance_type)
+                                           security_group, instance_type,
+                                           num_instances, shutdown_terminate)
 
-        self._populate_instance_names(instance, num_instances)
-
-        instance.shutdown_terminate = shutdown_terminate
-
-        self.security_group_api.ensure_default(context)
-        instance.create()
-
-        if num_instances > 1:
-            # NOTE(russellb) We wait until this spot to handle
-            # multi_instance_display_name_template, because we need
-            # the UUID from the instance.
-            instance = self._apply_instance_name_template(context, instance,
-                                                          index)
+        if create_instance:
+            instance.create()
 
         # NOTE (ndipanov): This can now raise exceptions but the instance
         #                  has been created, so delete it and re-raise so
@@ -1472,10 +1483,14 @@ class API(base.Base):
         except (exception.CinderConnectionFailed, exception.InvalidBDM,
                 exception.InvalidVolume):
             with excutils.save_and_reraise_exception():
-                instance.destroy()
+                if create_instance:
+                    instance.destroy()
 
-        self._create_block_device_mapping(
-                instance_type, instance.uuid, block_device_mapping)
+        if create_instance:
+            # Because of the foreign key the bdm can't be created unless the
+            # instance is.
+            self._create_block_device_mapping(
+                    instance_type, instance.uuid, block_device_mapping)
 
         return instance
 
