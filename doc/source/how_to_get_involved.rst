@@ -56,7 +56,7 @@ you don't understand. It's also OK to see some potential problems but put a +0.
 
 Another way is to look for a subteam you'd like to get involved with and review
 their patches. See:
-https://etherpad.openstack.org/p/mitaka-nova-priorities-tracking
+https://etherpad.openstack.org/p/newton-nova-priorities-tracking
 
 Once you're ready to write code, take a look at some of the work already marked
 as low-hanging fruit:
@@ -70,10 +70,10 @@ How do I get my feature in?
 The best way of getting your feature in is... well it depends.
 
 First concentrate on solving your problem and/or use case, don't fixate
-on getting the code you have working merged. Its likely things will need
+on getting the code you have working merged. It's likely things will need
 significant re-work after you discuss how your needs match up with all
 the existing ways Nova is currently being used. The good news, is this
-process should leave you with a feature thats more flexible and doesn't
+process should leave you with a feature that's more flexible and doesn't
 lock you into your current way of thinking.
 
 A key part of getting code merged, is helping with reviewing other
@@ -134,7 +134,7 @@ Here are some top tips around engaging with the Nova community:
       "solving your problem"
    -  conversations are more productive that way
 
--  Its not the decision thats important, it's the reason behind it thats
+-  It's not the decision that's important, it's the reason behind it that's
    important
 
    -  Don't like the way the community is going?
@@ -185,7 +185,7 @@ any luck that gives all those people the time to fix different bugs, all
 that might have affected you, if you had not given them the time go fix
 it.
 
-Its similar with blueprints. You have worked out how to scratch your
+It's similar with blueprints. You have worked out how to scratch your
 itch, lets tell others about that great new feature you have added, so
 they can use that. Also, it stops someone with a similar idea going
 through all the pain of creating a feature only to find you already have
@@ -264,18 +264,24 @@ reviews:
 -  Where do I start? What should I review?
 
    -  There are various tools, but a good place to start is:
-      https://etherpad.openstack.org/p/ -nova-priorities-tracking
+      https://etherpad.openstack.org/p/newton-nova-priorities-tracking
    -  Depending on the time in the cycle, it's worth looking at
       NeedsCodeReview blueprints:
       https://blueprints.launchpad.net/nova/
+   -  Custom Gerrit review dashboards often provide a more manageable view of
+      the outstanding reviews, and help focus your efforts:
+
+      -  Nova Review Inbox:
+         https://goo.gl/1vTS0Z
+      -  Small Bug Fixes:
+         http://ow.ly/WAw1J
+
    -  Maybe take a look at things you want to see merged, bug fixes and
       features, or little code fixes
    -  Look for things that have been waiting a long time for a review:
       http://5885fef486164bb8596d-41634d3e64ee11f37e8658ed1b4d12ec.r44.cf3.rackcdn.com/nova-openreviews.html
    -  If you get through the above lists, try other tools, such as:
       http://status.openstack.org/reviews
-
--  TODO - I think there is more to add here
 
 How to do great code reviews?
 =============================
@@ -320,7 +326,7 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-http://specs.openstack.org/openstack/nova-specs/specs/mitaka/template.html
+http://specs.openstack.org/openstack/nova-specs/specs/newton/template.html
 
 http://docs.openstack.org/developer/nova/devref/kilo.blueprints.html#when-is-a-blueprint-needed
 
