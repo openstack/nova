@@ -1362,7 +1362,7 @@ class ServersControllerUpdateTest(ControllerTest):
             key="Label"></meta>"""
         req = self._get_request(body, content_type='xml')
         res = req.get_response(self.wsgi_app)
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(415, res.status_int)
 
     def test_update_server_invalid_xml_raises_expat(self):
         body = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1371,7 +1371,7 @@ class ServersControllerUpdateTest(ControllerTest):
             key="Label"></meta>"""
         req = self._get_request(body, content_type='xml')
         res = req.get_response(self.wsgi_app)
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(415, res.status_int)
 
     def test_update_server_name(self):
         body = {'server': {'name': 'server_test'}}

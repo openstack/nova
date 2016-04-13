@@ -661,7 +661,7 @@ class Resource(wsgi.Application):
             accept = request.best_match_content_type()
         except exception.InvalidContentType:
             msg = _("Unsupported Content-Type")
-            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
+            return Fault(webob.exc.HTTPUnsupportedMediaType(explanation=msg))
 
         # NOTE(Vek): Splitting the function up this way allows for
         #            auditing by external tools that wrap the existing
