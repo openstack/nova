@@ -1490,6 +1490,36 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
             mock_session.assert_called_once_with("SR.get_by_uuid",
                                                  "sr_uuid")
 
+    @mock.patch.object(volumeops.VolumeOps, "connect_volume")
+    @mock.patch.object(volume_utils, 'forget_sr')
+    def test_connect_block_device_volumes_calls_forget_sr(self, mock_forget,
+                                                          mock_connect):
+        bdms = [{'connection_info': 'info1'},
+                {'connection_info': 'info2'}]
+
+        def fake_connect(connection_info):
+            expected = bdms[mock_connect.call_count - 1]['connection_info']
+            self.assertEqual(expected, connection_info)
+
+            if mock_connect.call_count == 2:
+                raise exception.VolumeDriverNotFound(driver_type='123')
+
+            return ('sr_uuid_1', None)
+
+        def fake_call_xenapi(method, uuid):
+            self.assertEqual('sr_uuid_1', uuid)
+            return 'sr_ref_1'
+
+        mock_connect.side_effect = fake_connect
+
+        with mock.patch.object(self.vmops._session, "call_xenapi",
+                               side_effect=fake_call_xenapi):
+            self.assertRaises(exception.VolumeDriverNotFound,
+                              self.vmops.connect_block_device_volumes,
+                              {'block_device_mapping': bdms})
+            mock_forget.assert_called_once_with(self.vmops._session,
+                                                'sr_ref_1')
+
     def _call_live_migrate_command_with_migrate_send_data(self,
                                                           migrate_data):
         command_name = 'test_command'

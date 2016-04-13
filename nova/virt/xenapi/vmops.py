@@ -2485,7 +2485,7 @@ class VMOps(object):
         except Exception:
             with excutils.save_and_reraise_exception():
                 # Disconnect the volumes we just connected
-                for sr in sr_uuid_map:
-                    volume_utils.forget_sr(self._session, sr_uuid_map[sr_ref])
+                for sr_ref in six.itervalues(sr_uuid_map):
+                    volume_utils.forget_sr(self._session, sr_ref)
 
         return sr_uuid_map
