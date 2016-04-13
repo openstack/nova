@@ -364,9 +364,11 @@ class ClaimTestCase(test.NoDBTestCase):
 
 class MoveClaimTestCase(ClaimTestCase):
 
-    def _claim(self, limits=None, overhead=None, requests=None, **kwargs):
+    def _claim(self, limits=None, overhead=None, requests=None,
+               image_meta=None, **kwargs):
         instance_type = self._fake_instance_type(**kwargs)
         numa_topology = kwargs.pop('numa_topology', None)
+        image_meta = image_meta or {}
         self.instance = self._fake_instance(**kwargs)
         self.instance.numa_topology = None
         if numa_topology:
@@ -391,7 +393,7 @@ class MoveClaimTestCase(ClaimTestCase):
                     return_value=self.db_numa_topology)
         def get_claim(mock_extra_get, mock_numa_get, mock_pci_get):
             return claims.MoveClaim(self.context, self.instance, instance_type,
-                                     {}, self.tracker, self.resources,
+                                     image_meta, self.tracker, self.resources,
                                      overhead=overhead, limits=limits)
         return get_claim()
 
@@ -427,3 +429,12 @@ class MoveClaimTestCase(ClaimTestCase):
                                   objects.InstanceNUMATopology)
             self.assertEqual(migration, claim.migration)
         _test()
+
+    def test_image_meta(self):
+        claim = self._claim()
+        self.assertIsInstance(claim.image_meta, objects.ImageMeta)
+
+    def test_image_meta_object_passed(self):
+        image_meta = objects.ImageMeta()
+        claim = self._claim(image_meta=image_meta)
+        self.assertIsInstance(claim.image_meta, objects.ImageMeta)
