@@ -62,13 +62,6 @@ class _TestInstanceNUMATopology(object):
         topo_obj.create()
         self.assertEqual(1, len(mock_update.call_args_list))
 
-    @mock.patch('nova.db.instance_extra_update_by_uuid')
-    def test_save(self, mock_update):
-        topo_obj = get_fake_obj_numa_topology(self.context)
-        topo_obj.instance_uuid = fake_db_topology['instance_uuid']
-        topo_obj._save()
-        self.assertEqual(1, len(mock_update.call_args_list))
-
     def _test_get_by_instance_uuid(self):
         numa_topology = objects.InstanceNUMATopology.get_by_instance_uuid(
             self.context, fake_db_topology['instance_uuid'])

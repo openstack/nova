@@ -49,20 +49,6 @@ class MigrationContext(base.NovaPersistentObject, base.NovaObject):
         primitive = jsonutils.loads(db_obj)
         return cls.obj_from_primitive(primitive)
 
-    def _save(self):
-        primitive = self.obj_to_primitive()
-        payload = jsonutils.dumps(primitive)
-
-        values = {'migration_context': payload}
-        db.instance_extra_update_by_uuid(self._context, self.instance_uuid,
-                                         values)
-        self.obj_reset_changes()
-
-    @classmethod
-    def _destroy(cls, context, instance_uuid):
-        values = {'migration_context': None}
-        db.instance_extra_update_by_uuid(context, instance_uuid, values)
-
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_extra = db.instance_extra_get_by_instance_uuid(

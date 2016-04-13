@@ -536,15 +536,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # NOTE(danms): I don't think we need to worry about this, do we?
         pass
 
-    def _save_numa_topology(self, context):
-        if self.numa_topology:
-            self.numa_topology.instance_uuid = self.uuid
-            with self.numa_topology.obj_alternate_context(context):
-                self.numa_topology._save()
-        else:
-            objects.InstanceNUMATopology.delete_by_instance_uuid(
-                    context, self.uuid)
-
     def _save_pci_requests(self, context):
         # NOTE(danms): No need for this yet.
         pass
@@ -559,8 +550,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if not any([x in self.obj_what_changed() for x in
                     ('flavor', 'old_flavor', 'new_flavor')]):
             return
-        # FIXME(danms): We can do this smarterly by updating this
-        # with all the other extra things at the same time
         flavor_info = {
             'cur': self.flavor.obj_to_primitive(),
             'old': (self.old_flavor and
@@ -568,9 +557,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             'new': (self.new_flavor and
                     self.new_flavor.obj_to_primitive() or None),
         }
-        db.instance_extra_update_by_uuid(
-            context, self.uuid,
-            {'flavor': jsonutils.dumps(flavor_info)})
+        self._extra_values_to_save['flavor'] = jsonutils.dumps(flavor_info)
         self.obj_reset_changes(['flavor', 'old_flavor', 'new_flavor'])
 
     def _save_old_flavor(self, context):
@@ -581,33 +568,21 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if 'new_flavor' in self.obj_what_changed():
             self._save_flavor(context)
 
-    def _save_vcpu_model(self, context):
-        # TODO(yjiang5): should merge the db accesses for all the extra
-        # fields
-        if 'vcpu_model' in self.obj_what_changed():
-            if self.vcpu_model:
-                update = jsonutils.dumps(self.vcpu_model.obj_to_primitive())
-            else:
-                update = None
-            db.instance_extra_update_by_uuid(
-                context, self.uuid,
-                {'vcpu_model': update})
-
     def _save_ec2_ids(self, context):
         # NOTE(hanlind): Read-only so no need to save this.
         pass
 
-    def _save_migration_context(self, context):
-        if self.migration_context:
-            self.migration_context.instance_uuid = self.uuid
-            with self.migration_context.obj_alternate_context(context):
-                self.migration_context._save()
-        else:
-            objects.MigrationContext._destroy(context, self.uuid)
-
     def _save_keypairs(self, context):
         # NOTE(danms): Read-only so no need to save this.
         pass
+
+    def _save_extra_generic(self, field):
+        if field in self.obj_what_changed():
+            obj = getattr(self, field)
+            value = None
+            if obj is not None:
+                value = jsonutils.dumps(obj.obj_to_primitive())
+            self._extra_values_to_save[field] = value
 
     @base.remotable
     def save(self, expected_vm_state=None,
@@ -658,6 +633,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                             expected_task_state,
                             admin_state_reset)
 
+        self._extra_values_to_save = {}
         updates = {}
         changes = self.obj_what_changed()
 
@@ -669,6 +645,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 try:
                     getattr(self, '_save_%s' % field)(context)
                 except AttributeError:
+                    if field in _INSTANCE_EXTRA_FIELDS:
+                        self._save_extra_generic(field)
+                        continue
                     LOG.exception(_LE('No save handler for %s'), field,
                                   instance=self)
                 except db_exc.DBReferenceError as exp:
@@ -687,6 +666,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                             cells_utils.BLOCK_SYNC_FLAG, '', 1)
                 else:
                     updates[field] = self[field]
+
+        if self._extra_values_to_save:
+            db.instance_extra_update_by_uuid(context, self.uuid,
+                                             self._extra_values_to_save)
 
         if not updates:
             if cells_update_from_api:
@@ -925,7 +908,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     @base.remotable
     def drop_migration_context(self):
         if self.migration_context:
-            objects.MigrationContext._destroy(self._context, self.uuid)
+            db.instance_extra_update_by_uuid(self._context, self.uuid,
+                                             {'migration_context': None})
             self.migration_context = None
 
     def clear_numa_topology(self):
