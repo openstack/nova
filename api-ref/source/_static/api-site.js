@@ -19,6 +19,21 @@
         processButton(this, 'close');
       });
 
+    var expandAllActive = true;
+     // Expand the world
+    $('#expand-all').click(function () {
+        if (expandAllActive) {
+            expandAllActive = false;
+            $('.api-detail').collapse('show');
+            $('#expand-all').attr('data-toggle', '');
+            $(this).text('Hide All');
+        } else {
+            expandAllActive = true;
+            $('.api-detail').collapse('hide');
+            $('#expand-all').attr('data-toggle', 'collapse');
+            $(this).text('Show All');
+        }});
+
     // Wire up the search button
     $('#search-btn').on('click', function(e) {
       searchPage();

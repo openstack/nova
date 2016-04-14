@@ -65,6 +65,17 @@ class rest_method(nodes.Part, nodes.Element):
     pass
 
 
+class rest_expand_all(nodes.Part, nodes.Element):
+    pass
+
+
+class RestExpandAllDirective(Directive):
+    has_content = True
+
+    def run(self):
+        return [rest_expand_all()]
+
+
 class RestMethodDirective(Directive):
 
     # this enables content in the directive
@@ -295,6 +306,22 @@ def rest_method_html(self, node):
     raise nodes.SkipNode
 
 
+def rest_expand_all_html(self, node):
+    tmpl = """
+<div>
+<div class=col-md-11></div>
+<div class=col-md-1>
+    <button id="expand-all"
+       data-toggle="collapse"
+       class="btn btn-info btn-sm btn-expand-all"
+    >Show All</button>
+</div>
+</div>"""
+
+    self.body.append(tmpl % node)
+    raise nodes.SkipNode
+
+
 def resolve_rest_references(app, doctree):
     for node in doctree.traverse():
         if isinstance(node, rest_method):
@@ -330,8 +357,11 @@ def resolve_rest_references(app, doctree):
 def setup(app):
     app.add_node(rest_method,
                  html=(rest_method_html, None))
+    app.add_node(rest_expand_all,
+                 html=(rest_expand_all_html, None))
     app.add_directive('rest_parameters', RestParametersDirective)
     app.add_directive('rest_method', RestMethodDirective)
+    app.add_directive('rest_expand_all', RestExpandAllDirective)
     app.add_stylesheet('bootstrap.min.css')
     app.add_stylesheet('api-site.css')
     app.add_javascript('bootstrap.min.js')

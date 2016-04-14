@@ -3,6 +3,9 @@
 =============
  Compute API
 =============
+
+.. rest_expand_all::
+
 .. include:: versions.inc
 .. include:: servers.inc
 .. include:: servers-multiple-create.inc
