@@ -5,7 +5,7 @@ x-openstack-request-id:
     appears in the log lines for that request. By default, the middleware configuration
     ensures that the request ID appears in the log files.
   in: header
-  required: false
+  required: true
   type: string
 x-openstack-request-id_1:
   description: |
@@ -40,6 +40,12 @@ alias_1:
   in: path
   required: true
   type: string
+api_version:
+  in: path
+  required: true
+  type: string
+  description: >
+    The API version as returned in the links from the ``GET /`` call.
 attachment_id:
   description: |
     The UUID of the attachment.
@@ -1226,7 +1232,7 @@ limit_1:
   type: integer
 links:
   description: |
-    Server links.
+    Permalinks to resources.
   in: body
   required: true
   type: array
@@ -1999,6 +2005,45 @@ version:
   in: body
   required: true
   type: string
+versions:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of version objects that describe the API versions available.
+version_id:
+  type: string
+  in: body
+  required: true
+  description: >
+    A common name for the version in question. Informative only, it
+    has no real semantic meaning.
+version_max:
+  type: string
+  in: body
+  required: true
+  description: >
+    If this version of the API supports microversions, the maximum
+    microversion that is supported. This will be the empty string if
+    microversions are not supported.
+version_min:
+  type: string
+  in: body
+  required: true
+  description: >
+    If this version of the API supports microversions, the minimum
+    microversion that is supported. This will be the empty string if
+    microversions are not supported.
+version_status:
+  type: string
+  in: body
+  required: true
+  description: |
+    The status of this API version. This can be one of:
+
+    - ``CURRENT``: this is the preferred version of the API to use
+    - ``SUPPORTED``: this is an older, but still supported version of the API
+    - ``DEPRECATED``: a deprecated version of the API that is slated for removal
 virtual_interfaces:
   description: |
     A ``virtual_interfaces`` object.
