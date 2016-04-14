@@ -2669,12 +2669,15 @@ class ComputeManager(manager.Manager):
         # the instance's host and node properties to reflect it's
         # destination node for the recreate.
         if not scheduled_node:
-            try:
-                compute_node = self._get_compute_info(context, self.host)
-                scheduled_node = compute_node.hypervisor_hostname
-            except exception.ComputeHostNotFound:
-                LOG.exception(_LE('Failed to get compute_info for %s'),
-                                self.host)
+            if recreate:
+                try:
+                    compute_node = self._get_compute_info(context, self.host)
+                    scheduled_node = compute_node.hypervisor_hostname
+                except exception.ComputeHostNotFound:
+                    LOG.exception(_LE('Failed to get compute_info for %s'),
+                                  self.host)
+            else:
+                scheduled_node = instance.node
 
         with self._error_out_instance_on_exception(context, instance):
             try:
