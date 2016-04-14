@@ -93,9 +93,9 @@ class _TestNUMA(object):
                           numacell.pin_cpus, set([1, 55]))
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus, set([1, 4]))
-        self.assertRaises(exception.CPUPinningUnknown,
+        self.assertRaises(exception.CPUUnpinningUnknown,
                           numacell.unpin_cpus, set([1, 55]))
-        self.assertRaises(exception.CPUPinningInvalid,
+        self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus, set([1, 4]))
         numacell.unpin_cpus(set([1, 2, 3]))
         self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
@@ -111,13 +111,13 @@ class _TestNUMA(object):
         self.assertEqual(set(), numacell.free_cpus)
         numacell.unpin_cpus_with_siblings(set([1]))
         self.assertEqual(set([1, 3]), numacell.free_cpus)
-        self.assertRaises(exception.CPUPinningInvalid,
+        self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus_with_siblings,
                           set([3]))
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus_with_siblings,
                           set([4]))
-        self.assertRaises(exception.CPUPinningInvalid,
+        self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus_with_siblings,
                           set([3, 4]))
         self.assertEqual(set([1, 3]), numacell.free_cpus)
