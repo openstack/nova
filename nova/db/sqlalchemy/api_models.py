@@ -26,8 +26,6 @@ from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
 
-from nova.db.sqlalchemy import types
-
 
 class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
     pass
@@ -100,11 +98,6 @@ class RequestSpec(API_BASE):
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36), nullable=False)
     spec = Column(Text, nullable=False)
-    build_request = orm.relationship('BuildRequest',
-                    back_populates='request_spec',
-                    uselist=False,
-                    primaryjoin=(
-                        'RequestSpec.id == BuildRequest.request_spec_id'))
 
 
 class Flavors(API_BASE):
@@ -175,28 +168,16 @@ class BuildRequest(API_BASE):
         )
 
     id = Column(Integer, primary_key=True)
-    request_spec_id = Column(Integer, ForeignKey('request_specs.id'))
-    request_spec = orm.relationship(RequestSpec,
-            foreign_keys=request_spec_id,
-            back_populates='build_request',
-            primaryjoin=request_spec_id == RequestSpec.id)
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
-    user_id = Column(String(255))
-    display_name = Column(String(255))
-    instance_metadata = Column(Text)
-    progress = Column(Integer)
-    vm_state = Column(String(255))
-    task_state = Column(String(255))
-    image_ref = Column(String(255))
-    access_ip_v4 = Column(types.IPAddress())
-    access_ip_v6 = Column(types.IPAddress())
-    info_cache = Column(Text)
-    security_groups = Column(Text)
-    config_drive = Column(Boolean, default=False)
-    key_name = Column(String(255))
-    locked_by = Column(Enum('owner', 'admin'))
     instance = Column(Text)
+    # TODO(alaski): Drop these from the db in Ocata
+    # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',
+    #         'instance_metadata', 'progress', 'vm_state', 'task_state',
+    #         'image_ref', 'access_ip_v4', 'access_ip_v6', 'info_cache',
+    #         'security_groups', 'config_drive', 'key_name', 'locked_by',
+    #         'reservation_id', 'launch_index', 'hostname', 'kernel_id',
+    #         'ramdisk_id', 'root_device_name', 'user_data']
 
 
 class KeyPair(API_BASE):

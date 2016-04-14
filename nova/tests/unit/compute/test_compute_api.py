@@ -3106,19 +3106,19 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test()
 
     @mock.patch('nova.objects.RequestSpec.from_components')
+    @mock.patch('nova.objects.BuildRequest')
     @mock.patch('nova.objects.Instance')
     @mock.patch('nova.objects.InstanceMapping.create')
     def test_provision_instances_with_keypair(self, mock_im, mock_instance,
-                                              mock_rs):
+                                              mock_br, mock_rs):
         fake_keypair = objects.KeyPair(name='test')
 
         @mock.patch.object(self.compute_api, '_check_num_instances_quota')
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(self.compute_api,
                            'create_db_entry_for_new_instance')
-        @mock.patch.object(self.compute_api, '_create_build_request')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
-        def do_test(mock_cbdm, mock_cbr, mock_cdb, mock_sg, mock_cniq):
+        def do_test(mock_cbdm, mock_cdb, mock_sg, mock_cniq):
             mock_cniq.return_value = 1, mock.MagicMock()
             self.compute_api._provision_instances(self.context,
                                                   mock.sentinel.flavor,
@@ -3163,6 +3163,8 @@ class _ComputeAPIUnitTestMixIn(object):
             req_spec_mock = mock.MagicMock()
             mock_req_spec_from_components.return_value = req_spec_mock
             inst_mocks = [mock.MagicMock() for i in range(max_count)]
+            for inst_mock in inst_mocks:
+                inst_mock.project_id = 'fake-project'
             mock_inst.side_effect = inst_mocks
             build_req_mocks = [mock.MagicMock() for i in range(max_count)]
             mock_build_req.side_effect = build_req_mocks
@@ -3222,41 +3224,11 @@ class _ComputeAPIUnitTestMixIn(object):
                     mock.call(ctxt,
                               instance=instances[0],
                               instance_uuid=instances[0].uuid,
-                              request_spec=req_spec_mock,
-                              project_id=ctxt.project_id,
-                              user_id=ctxt.user_id,
-                              display_name=instances[0].display_name,
-                              instance_metadata=base_options['metadata'],
-                              progress=0,
-                              vm_state=vm_states.BUILDING,
-                              task_state=task_states.SCHEDULING,
-                              image_ref=base_options['image_ref'],
-                              access_ip_v4=base_options['access_ip_v4'],
-                              access_ip_v6=base_options['access_ip_v6'],
-                              info_cache=mock.ANY,
-                              security_groups=mock.ANY,
-                              config_drive=False,
-                              key_name=base_options['config_drive'],
-                              locked_by=None),
+                              project_id=instances[0].project_id),
                     mock.call(ctxt,
                               instance=instances[1],
                               instance_uuid=instances[1].uuid,
-                              request_spec=req_spec_mock,
-                              project_id=ctxt.project_id,
-                              user_id=ctxt.user_id,
-                              display_name=instances[1].display_name,
-                              instance_metadata=base_options['metadata'],
-                              progress=0,
-                              vm_state=vm_states.BUILDING,
-                              task_state=task_states.SCHEDULING,
-                              image_ref=base_options['image_ref'],
-                              access_ip_v4=base_options['access_ip_v4'],
-                              access_ip_v6=base_options['access_ip_v6'],
-                              info_cache=mock.ANY,
-                              security_groups=mock.ANY,
-                              config_drive=False,
-                              key_name=base_options['config_drive'],
-                              locked_by=None),
+                              project_id=instances[1].project_id),
                     ]
             mock_build_req.assert_has_calls(build_req_calls)
             for build_req_mock in build_req_mocks:
