@@ -22,12 +22,12 @@ sqlalchemy-migrate>=0.9.6 # Apache-2.0
 netaddr!=0.7.16,>=0.7.12 # BSD
 netifaces>=0.10.4 # MIT
 paramiko>=1.16.0 # LGPL
-Babel>=1.3 # BSD
+Babel!=2.3.0,!=2.3.1,!=2.3.2,!=2.3.3,>=1.3 # BSD
 iso8601>=0.1.9 # MIT
 jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
 python-cinderclient>=1.6.0 # Apache-2.0
 keystoneauth1>=2.1.0 # Apache-2.0
-python-neutronclient>=4.1.1 # Apache-2.0
+python-neutronclient>=4.2.0 # Apache-2.0
 python-glanceclient>=2.0.0 # Apache-2.0
 requests!=2.9.0,>=2.8.1 # Apache-2.0
 six>=1.9.0 # MIT
