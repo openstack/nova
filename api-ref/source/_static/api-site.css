@@ -7,6 +7,10 @@ tt.literal {
     border-radius: 4px;
 }
 
+/* bootstrap users blockquote for pull quotes, so they are much
+larger, we need them smaller */
+blockquote { font-size: 1em; }
+
 pre {
     display: block;
     padding: 9.5px;
