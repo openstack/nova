@@ -282,6 +282,14 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertEqual(['id'], fk['referred_columns'])
         self.assertEqual(['cell_id'], fk['constrained_columns'])
 
+    def _check_013(self, engine, data):
+        for column in ['instance_uuid', 'instance']:
+            self.assertColumnExists(engine, 'build_requests', column)
+        self.assertIndexExists(engine, 'build_requests',
+            'build_requests_instance_uuid_idx')
+        self.assertUniqueConstraintExists(engine, 'build_requests',
+                ['instance_uuid'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,

@@ -168,7 +168,10 @@ class BuildRequest(API_BASE):
 
     __tablename__ = 'build_requests'
     __table_args__ = (
+        Index('build_requests_instance_uuid_idx', 'instance_uuid'),
         Index('build_requests_project_id_idx', 'project_id'),
+        schema.UniqueConstraint('instance_uuid',
+            name='uniq_build_requests0instance_uuid'),
         schema.UniqueConstraint('request_spec_id',
             name='uniq_build_requests0request_spec_id')
         )
@@ -180,6 +183,7 @@ class BuildRequest(API_BASE):
             foreign_keys=request_spec_id,
             back_populates='build_request',
             primaryjoin=request_spec_id == RequestSpec.id)
+    instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
     user_id = Column(String(255), nullable=False)
     display_name = Column(String(255))
@@ -195,3 +199,4 @@ class BuildRequest(API_BASE):
     config_drive = Column(Boolean, default=False, nullable=False)
     key_name = Column(String(255))
     locked_by = Column(Enum('owner', 'admin'))
+    instance = Column(Text)
