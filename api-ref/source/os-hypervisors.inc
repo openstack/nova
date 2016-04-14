@@ -21,14 +21,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Hypervisors: JSON request**
 
@@ -48,14 +48,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Hypervisor Statistics: JSON request**
 
@@ -75,7 +75,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -83,7 +83,7 @@ Request
   - hypervisor_id: hypervisor_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Hypervisor Details: JSON request**
 
@@ -103,7 +103,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -111,7 +111,7 @@ Request
   - hypervisor_id: hypervisor_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Hypervisor Uptime: JSON request**
 

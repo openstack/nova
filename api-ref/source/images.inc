@@ -27,7 +27,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -35,7 +35,7 @@ Request
   - image_id: image_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Image Details: JSON request**
 
@@ -55,7 +55,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -63,7 +63,7 @@ Request
   - image_id: image_id
 
 Response
-^^^^^^^^
+--------
 
 Show Image Metadata Item Details
 ================================
@@ -78,7 +78,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -87,7 +87,7 @@ Request
   - key: key
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Image Metadata Item Details: JSON request**
 
@@ -107,7 +107,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -121,7 +121,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Or Update Image Metadata Item: JSON request**
 
@@ -141,7 +141,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -150,5 +150,5 @@ Request
   - key: key
 
 Response
-^^^^^^^^
+--------
 

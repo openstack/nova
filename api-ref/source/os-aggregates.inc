@@ -21,7 +21,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -33,7 +33,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Aggregate: JSON request**
 
@@ -53,7 +53,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -65,7 +65,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example List Aggregates: JSON request**
 
@@ -85,7 +85,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -98,7 +98,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Aggregate Details: JSON request**
 
@@ -118,7 +118,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -126,7 +126,7 @@ Request
   - aggregate_id: aggregate_id
 
 Response
-^^^^^^^^
+--------
 
 Update Aggregate
 ================
@@ -141,7 +141,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -154,7 +154,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Update Aggregate: JSON request**
 
@@ -176,7 +176,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -189,7 +189,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Add Host: JSON request**
 
@@ -211,7 +211,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -224,7 +224,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Or Update Aggregate Metadata: JSON request**
 
@@ -246,7 +246,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -259,7 +259,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Remove Host: JSON request**
 

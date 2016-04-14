@@ -19,10 +19,10 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 Response
-^^^^^^^^
+--------
 
 **Example List Api Versions: JSON request**
 
@@ -42,10 +42,10 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Api V2.1: JSON request**
 
@@ -65,10 +65,10 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Api V2: JSON request**
 

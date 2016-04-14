@@ -19,7 +19,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -38,7 +38,7 @@ Query Parameters
   - marker: marker
 
 Response
-^^^^^^^^
+--------
 
 **Example List Flavors: JSON request**
 
@@ -58,7 +58,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -70,7 +70,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Flavor: JSON request**
 
@@ -90,7 +90,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -98,7 +98,7 @@ Request
   - flavor_id: flavor_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Flavor Details: JSON request**
 
@@ -118,7 +118,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -126,7 +126,7 @@ Request
   - flavor_id: flavor_id
 
 Response
-^^^^^^^^
+--------
 
 List Flavors With Details
 =========================
@@ -141,7 +141,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -160,7 +160,7 @@ Query Parameters
   - marker: marker
 
 Response
-^^^^^^^^
+--------
 
 **Example List Flavors With Details: JSON request**
 

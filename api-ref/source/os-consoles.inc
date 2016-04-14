@@ -19,7 +19,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -27,7 +27,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 Lists Consoles
 ==============
@@ -42,7 +42,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -50,7 +50,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List consoles: JSON response**
 
@@ -70,7 +70,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -79,7 +79,7 @@ Request
   - console_id: console_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List consoles: JSON response**
 
@@ -99,7 +99,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -108,7 +108,7 @@ Request
   - console_id: console_id
 
 Response
-^^^^^^^^
+--------
 
 Show Console Authentication Token
 =================================
@@ -125,7 +125,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -133,7 +133,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List consoles: JSON response**
 

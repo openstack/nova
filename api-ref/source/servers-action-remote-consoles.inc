@@ -15,7 +15,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -29,7 +29,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Get Rdp Console (Os-Getrdpconsole Action): JSON request**
 
@@ -51,7 +51,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -65,7 +65,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Get Serial Console (Os-Getserialconsole Action): JSON request**
 
@@ -87,7 +87,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -101,7 +101,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Get Spice Console (Os-Getspiceconsole Action): JSON request**
 
@@ -123,7 +123,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -137,7 +137,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Get Vnc Console (Os-Getvncconsole Action): JSON request**
 

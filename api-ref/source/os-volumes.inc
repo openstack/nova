@@ -19,14 +19,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Volumes: JSON request**
 
@@ -46,7 +46,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -66,7 +66,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Volume: JSON request**
 
@@ -86,14 +86,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Volumes With Details: JSON request**
 
@@ -113,7 +113,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -121,7 +121,7 @@ Request
   - volume_id: volume_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Volume Details: JSON request**
 
@@ -141,7 +141,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -149,7 +149,7 @@ Request
   - volume_id: volume_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Delete Volume: JSON request**
 
@@ -169,14 +169,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 .. rest_parameters:: parameters.yaml
 
@@ -203,7 +203,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -211,7 +211,7 @@ Request
   - volume_type_id: volume_type_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Volume Type Details: JSON request**
 
@@ -231,7 +231,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -244,7 +244,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Snapshot: JSON request**
 
@@ -264,14 +264,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Snapshots: JSON request**
 
@@ -291,14 +291,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Snapshots With Details: JSON request**
 
@@ -318,7 +318,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -326,7 +326,7 @@ Request
   - snapshot_id: snapshot_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Snapshot Details: JSON request**
 
@@ -348,7 +348,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -356,7 +356,7 @@ Request
   - snapshot_id: snapshot_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Delete Snapshot: JSON request**
 

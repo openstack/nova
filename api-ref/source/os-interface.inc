@@ -21,7 +21,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -38,7 +38,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 .. rest_parameters:: parameters.yaml
 
@@ -67,7 +67,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -75,7 +75,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 .. rest_parameters:: parameters.yaml
 
@@ -104,7 +104,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -113,7 +113,7 @@ Request
   - port_id: port_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Port Interface Details: JSON request**
 
@@ -133,7 +133,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -142,5 +142,5 @@ Request
   - port_id: port_id
 
 Response
-^^^^^^^^
+--------
 

@@ -26,7 +26,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -38,7 +38,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Network: JSON request**
 
@@ -60,14 +60,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Networks: JSON request**
 
@@ -89,7 +89,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -101,7 +101,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Show Network Details
 ====================
@@ -118,7 +118,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -126,7 +126,7 @@ Request
   - network_id: network_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Network Details: JSON request**
 
@@ -148,7 +148,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -156,7 +156,7 @@ Request
   - network_id: network_id
 
 Response
-^^^^^^^^
+--------
 
 Associate Host
 ==============
@@ -173,7 +173,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -186,7 +186,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Disassociate Host
 =================
@@ -203,7 +203,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -216,7 +216,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Disassociate Network
 ====================
@@ -233,7 +233,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -246,7 +246,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Disassociate Project
 ====================
@@ -263,7 +263,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -276,5 +276,5 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 

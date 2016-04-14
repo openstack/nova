@@ -30,7 +30,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -44,7 +44,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Inject Network Information (Injectnetworkinfo Action)
 =====================================================
@@ -63,7 +63,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -77,7 +77,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Migrate Server (Migrate Action)
 ===============================
@@ -96,7 +96,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -110,7 +110,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Live-Migrate Server (Os-Migratelive Action)
 ===========================================
@@ -131,7 +131,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -147,7 +147,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Reset Networking On A Server (Resetnetwork Action)
 ==================================================
@@ -166,7 +166,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -180,7 +180,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Reset Server State (Os-Resetstate Action)
 =========================================
@@ -199,7 +199,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -213,5 +213,5 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 

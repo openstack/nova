@@ -45,7 +45,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -61,7 +61,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Add Security Group To A Server (Addsecuritygroup Action)
 ========================================================
@@ -78,7 +78,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -93,7 +93,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Change Administrative Password (Changepassword Action)
 ======================================================
@@ -112,7 +112,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -126,7 +126,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Confirm Resized Server (Confirmresize Action)
 =============================================
@@ -155,7 +155,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -169,7 +169,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Create Image (Createimage Action)
 =================================
@@ -206,7 +206,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -220,7 +220,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Lock Server (Lock Action)
 =========================
@@ -239,7 +239,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -253,7 +253,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Pause Server (Pause Action)
 ===========================
@@ -272,7 +272,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -286,7 +286,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Reboot Server (Reboot Action)
 =============================
@@ -303,7 +303,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -317,7 +317,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Rebuild Server (Rebuild Action)
 ===============================
@@ -336,7 +336,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -356,7 +356,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Rebuild Server (Rebuild Action): JSON request**
 
@@ -380,7 +380,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -395,7 +395,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Remove Security Group From A Server (Removesecuritygroup Action)
 ================================================================
@@ -412,7 +412,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -427,7 +427,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Rescue Server (Rescue Action)
 =============================
@@ -450,7 +450,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -466,7 +466,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 .. rest_parameters:: parameters.yaml
 
@@ -500,7 +500,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -514,7 +514,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Resume Suspended Server (Resume Action)
 =======================================
@@ -533,7 +533,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -547,7 +547,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Revert Resized Server (Revertresize Action)
 ===========================================
@@ -578,7 +578,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -592,7 +592,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Start Server (Os-Start Action)
 ==============================
@@ -623,7 +623,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -637,7 +637,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Stop Server (Os-Stop Action)
 ============================
@@ -664,7 +664,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -678,7 +678,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Suspend Server (Suspend Action)
 ===============================
@@ -697,7 +697,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -711,7 +711,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Unlock Server (Unlock Action)
 =============================
@@ -730,7 +730,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -744,7 +744,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Unpause Server (Unpause Action)
 ===============================
@@ -763,7 +763,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -777,7 +777,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Unrescue Server (Unrescue Action)
 =================================
@@ -804,7 +804,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -818,5 +818,5 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
