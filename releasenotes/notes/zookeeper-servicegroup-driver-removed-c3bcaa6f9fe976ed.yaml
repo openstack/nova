@@ -3,7 +3,7 @@ deprecations:
   - |
     The Zookeeper Service Group driver has been removed.
 
-    The driver has no known users and is not actively mantained. A warning log
+    The driver has no known users and is not actively maintained. A warning log
     message about the driver's state was added for the Kilo release. Also,
     evzookeeper library that the driver depends on is unmaintained and
     `incompatible with recent eventlet releases`_.
