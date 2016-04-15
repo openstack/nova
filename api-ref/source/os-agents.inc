@@ -29,6 +29,12 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
+  - hypervisor: OS-EXT-SRV-ATTR:hypervisor_hostname
+  - architecture: architecture
+  - os: os
+  - url: url
+  - md5hash: md5hash
+  - version: version
 
 **Example Create Agent Build: JSON request**
 

@@ -46,6 +46,12 @@ api_version:
   type: string
   description: >
     The API version as returned in the links from the ``GET /`` call.
+architecture:
+  description: |
+    The name of the cpu architecture.
+  in: body
+  required: true
+  type: string
 attachment_id:
   description: |
     The UUID of the attachment.
@@ -1426,6 +1432,12 @@ next:
   format: uri
   in: body
   required: false
+  type: string
+os:
+  description: |
+    The name of the operating system.
+  in: body
+  required: true
   type: string
 os-availability-zone:availability_zone:
   description: |
