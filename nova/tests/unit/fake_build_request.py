@@ -44,6 +44,7 @@ def fake_db_req(**updates):
     db_build_request = {
             'id': 1,
             'project_id': 'fake-project',
+            'instance_uuid': None,
             'user_id': 'fake-user',
             'display_name': '',
             'instance_metadata': jsonutils.dumps({'foo': 'bar'}),
@@ -60,6 +61,7 @@ def fake_db_req(**updates):
             'key_name': None,
             'locked_by': None,
             'request_spec': _req_spec_to_db_format(req_spec),
+            'instance': None,
             'created_at': datetime.datetime(2016, 1, 16),
             'updated_at': datetime.datetime(2016, 1, 16),
     }
