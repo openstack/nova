@@ -55,19 +55,7 @@ class TestServerValidation(test.TestCase):
         server = dict(name='server1 ',
                       imageRef=self.image_id,
                       flavorRef=self.flavor_id)
-        try:
-            self.api.post_server({'server': server})
-        except client.OpenStackApiException as osae:
-            # We expect this to be a 400 error with validation problems.
-            self.assertEqual(400, osae.response.status_code)
-            # NOTE(sdague): using expectFailure means we can land this
-            # test while the bug still exists, then fix it after.
-            self.expectFailure(
-                "This is expected to fail until bug 1541691 is fixed",
-                self.assertLess,
-                len(osae.response.content),
-                1000,
-                "The length of the error response is > 1k. Something is "
-                "wrong.")
-            return
-        self.fail("We should have thrown a 400 error")
+
+        server_args = {'server': server}
+        self.assertRaises(client.OpenStackApiException, self.api.post_server,
+                          server_args)
