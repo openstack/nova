@@ -26,6 +26,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
+  - name: aggregate_name
+  - availability_zone: availability_zone
 
 **Example Create Aggregate: JSON request**
 
