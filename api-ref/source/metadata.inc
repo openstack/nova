@@ -25,7 +25,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -33,7 +33,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List All Metadata: JSON request**
 
@@ -57,7 +57,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -70,7 +70,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Or Replace Metadata Items: JSON request**
 
@@ -94,7 +94,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -107,7 +107,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Update Metadata Items: JSON request**
 
@@ -129,7 +129,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -138,7 +138,7 @@ Request
   - key: key
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Metadata Item Details: JSON request**
 
@@ -162,7 +162,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -176,7 +176,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Or Update Metadata Item: JSON request**
 
@@ -198,7 +198,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -207,5 +207,5 @@ Request
   - key: key
 
 Response
-^^^^^^^^
+--------
 

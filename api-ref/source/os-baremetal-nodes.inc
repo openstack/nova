@@ -25,7 +25,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -43,7 +43,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Add Bare Metal Node: JSON request**
 
@@ -68,7 +68,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -76,7 +76,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Bare Metal Nodes: JSON request**
 
@@ -96,7 +96,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -109,7 +109,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Add Interface To Bare Metal Node: JSON request**
 
@@ -129,7 +129,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -142,7 +142,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 Show Bare Metal Node Details
 ============================
@@ -161,7 +161,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -170,7 +170,7 @@ Request
   - node_id: node_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Bare Metal Node Details: JSON request**
 
@@ -190,7 +190,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -199,5 +199,5 @@ Request
   - node_id: node_id
 
 Response
-^^^^^^^^
+--------
 

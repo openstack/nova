@@ -42,14 +42,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Floating Ip Addresses: JSON request**
 
@@ -73,7 +73,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -86,7 +86,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create (Allocate) Floating Ip Address: JSON request**
 
@@ -108,7 +108,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -116,7 +116,7 @@ Request
   - floating_ip_id: floating_ip_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Floating Ip Address Details: JSON request**
 
@@ -140,7 +140,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -148,5 +148,5 @@ Request
   - floating_ip_id: floating_ip_id
 
 Response
-^^^^^^^^
+--------
 

@@ -20,7 +20,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -33,7 +33,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Extra Specs For A Flavor: JSON request**
 
@@ -53,7 +53,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -66,7 +66,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example List Extra Specs For A Flavor: JSON request**
 
@@ -86,7 +86,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -95,7 +95,7 @@ Request
   - flavor_extra_spec_key: flavor_extra_spec_key
 
 Response
-^^^^^^^^
+--------
 
 **Example Show An Extra Spec For A Flavor: JSON request**
 
@@ -115,7 +115,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -129,7 +129,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Update An Extra Spec For A Flavor: JSON request**
 
@@ -149,7 +149,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -158,5 +158,5 @@ Request
   - flavor_extra_spec_key: flavor_extra_spec_key
 
 Response
-^^^^^^^^
+--------
 

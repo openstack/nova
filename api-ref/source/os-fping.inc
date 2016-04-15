@@ -25,7 +25,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -41,7 +41,7 @@ Query Parameters
   - exclude: exclude
 
 Response
-^^^^^^^^
+--------
 
 **Example Ping Instances: JSON request**
 
@@ -63,7 +63,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -71,7 +71,7 @@ Request
   - instance_id: instance_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Ping An Instance: JSON request**
 

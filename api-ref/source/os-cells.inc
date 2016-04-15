@@ -22,14 +22,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Cells: JSON request**
 
@@ -51,14 +51,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Cells With Details: JSON request**
 
@@ -80,7 +80,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -88,7 +88,7 @@ Request
   - cell_id: cell_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Cell Data: JSON request**
 
@@ -110,7 +110,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -118,7 +118,7 @@ Request
   - cell_id: cell_id
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Cell Capacities: JSON request**
 

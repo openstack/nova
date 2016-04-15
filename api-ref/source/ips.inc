@@ -22,7 +22,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -30,7 +30,7 @@ Request
   - server_id: server_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Ips: JSON request**
 
@@ -52,7 +52,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -61,7 +61,7 @@ Request
   - network_label: network_label
 
 Response
-^^^^^^^^
+--------
 
 **Example Show Ip Details: JSON request**
 

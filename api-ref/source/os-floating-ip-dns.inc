@@ -20,14 +20,14 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
 
 Response
-^^^^^^^^
+--------
 
 **Example List Dns Domains: JSON request**
 
@@ -47,7 +47,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -60,7 +60,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Or Update Dns Domain: JSON request**
 
@@ -80,7 +80,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -88,7 +88,7 @@ Request
   - domain: domain
 
 Response
-^^^^^^^^
+--------
 
 Create Or Update Dns Entry
 ==========================
@@ -103,7 +103,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -117,7 +117,7 @@ Request
    :language: javascript
 
 Response
-^^^^^^^^
+--------
 
 **Example Create Or Update Dns Entry: JSON request**
 
@@ -137,7 +137,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -146,7 +146,7 @@ Request
   - name: name
 
 Response
-^^^^^^^^
+--------
 
 **Example Find Unique Dns Entry: JSON request**
 
@@ -166,7 +166,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -175,7 +175,7 @@ Request
   - name: name
 
 Response
-^^^^^^^^
+--------
 
 List Dns Entries
 ================
@@ -190,7 +190,7 @@ Error response codes: computeFault(400, 500), serviceUnavailable(503), badReques
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
-^^^^^^^
+-------
 
 .. rest_parameters:: parameters.yaml
 
@@ -199,7 +199,7 @@ Request
   - ip: ip
 
 Response
-^^^^^^^^
+--------
 
 **Example List Dns Entries: JSON request**
 
