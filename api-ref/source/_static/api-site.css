@@ -55,3 +55,27 @@ div.document {
     padding-top: 0.5em;
     padding-bottom: 1em;
 }
+
+/* Ensure the method buttons and their links don't split lines when
+the page is narrower */
+.operation {
+    /* this moves the link icon into the gutter */
+    margin-left: -1.25em;
+    margin-right: 1.25em;
+    white-space: nowrap;
+}
+
+/* These make the links only show up on hover */
+a.operation-anchor {
+  visibility: hidden;
+}
+
+.operation-grp:hover a.operation-anchor {
+  visibility: visible;
+}
+
+/* All tables for requests should be full width */
+
+.api-detail table.docutils {
+    width: 100%;
+}
