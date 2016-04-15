@@ -69,6 +69,8 @@ soft_external_network_attach_authorize = extensions.soft_core_authorizer(
 _SESSION = None
 _ADMIN_AUTH = None
 
+DEFAULT_SECGROUP = 'default'
+
 
 def list_opts():
     opts = copy.deepcopy(_neutron_options)
@@ -442,6 +444,17 @@ class API(base_api.NetworkAPI):
 
         return ports, net_ids, ordered_networks, available_macs
 
+    def _clean_security_groups(self, security_groups):
+        """Cleans security groups requested from Nova API
+
+        Neutron already passes a 'default' security group when
+        creating ports so it's not necessary to specify it to the
+        request.
+        """
+        if DEFAULT_SECGROUP in security_groups:
+            security_groups.remove(DEFAULT_SECGROUP)
+        return security_groups
+
     def _process_security_groups(self, instance, neutron, security_groups):
         """Processes and validates requested security groups for allocation.
 
@@ -589,7 +602,8 @@ class API(base_api.NetworkAPI):
         #                available net which is permitted bug/1364344
         self._check_external_network_attach(context, nets)
 
-        security_groups = kwargs.get('security_groups', [])
+        security_groups = self._clean_security_groups(
+            kwargs.get('security_groups', []))
         security_group_ids = self._process_security_groups(
                                     instance, neutron, security_groups)
 
@@ -610,17 +624,20 @@ class API(base_api.NetworkAPI):
                 continue
 
             nets_in_requested_order.append(network)
-            # If security groups are requested on an instance then the
-            # network must has a subnet associated with it. Some plugins
-            # implement the port-security extension which requires
-            # 'port_security_enabled' to be True for security groups.
-            # That is why True is returned if 'port_security_enabled'
-            # is not found.
-            if (security_groups and not (
-                    network['subnets']
-                    and network.get('port_security_enabled', True))):
 
-                raise exception.SecurityGroupCannotBeApplied()
+            port_security_enabled = network.get('port_security_enabled', True)
+            if port_security_enabled:
+                if not network.get('subnets'):
+                    # Neutron can't apply security groups to a port
+                    # for a network without L3 assignements.
+                    raise exception.SecurityGroupCannotBeApplied()
+            else:
+                if security_group_ids:
+                    # We don't want to apply security groups on port
+                    # for a network defined with
+                    # 'port_security_enabled=False'.
+                    raise exception.SecurityGroupCannotBeApplied()
+
             zone = 'compute:%s' % instance.availability_zone
             port_req_body = {'port': {'device_id': instance.uuid,
                                       'device_owner': zone}}
