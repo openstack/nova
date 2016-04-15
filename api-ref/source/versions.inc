@@ -1,77 +1,109 @@
 .. -*- rst -*-
 
-============
-API Versions
-============
+==============
+ API Versions
+==============
 
-Lists information for all API versions.
+Concepts
+========
 
-List Api Versions
-=================
+In order to bring new features to users over time, the Nova API
+supports versioning. There are two kinds of versions in Nova.
+
+- ''major versions'', which have dedicated urls
+- ''microversions'', which can be requested through the use of the
+  ``X-OpenStack-Nova-API-Version`` header
+
+.. TODO(sdague): build a more detailed link to using Microversions on
+   requests.
+
+List All Major Versions
+=======================
 
 .. rest_method:: GET /
 
-Lists information about all Compute API versions.
+This fetches all the information about all known major API versions in
+the deployment. Links to more specific information will be provided
+for each API version, as well as information about supported min and
+max microversions.
 
-Normal response codes: 200,300
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
+Normal Response Codes: 200, 300
 
 Response
 --------
 
-**Example List Api Versions: JSON request**
+.. rest_parameters:: parameters.yaml
 
-.. literalinclude:: ../../doc/api_samples/versions/versions-list-resp.json
+  - x-openstack-request-id: x-openstack-request-id
+  - versions: versions
+  - id: version_id
+  - status: version_status
+  - links: links
+  - version: version_max
+  - min_version: version_min
+
+.. note::
+
+   The ``updated`` parameter in the response is vestigial and provides
+   no useful information.
+
+Response Example
+----------------
+
+This demonstrates the expected response from a bleeding edge server
+that supports up to the current microversion. When querying OpenStack
+environments you will typically find the current microversion on the
+v2.1 API is lower than listed below.
+
+.. literalinclude:: /../../doc/api_samples/versions/versions-get-resp.json
    :language: javascript
 
-Show Api V2.1
-=============
 
-.. rest_method:: GET /v2.1
+Show Details of Specific API Version
+====================================
 
-Show information about Compute API v2.1.
+.. rest_method:: GET /{api_version}
 
-Normal response codes: 200
+This gets the details of a specific API at it's root. Nearly all this
+information exists at the API root, so this is mostly a redundant
+operation.
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+.. TODO(sdague) we should probably deprecate this call as everything
+   that's needed is really in the root now
+
+Normal Response Codes: 200
 
 Request
 -------
 
-Response
---------
+.. rest_parameters:: parameters.yaml
 
-**Example Show Api V2.1: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/versions/versions-v21-show-resp.json
-   :language: javascript
-
-Show Api V2
-===========
-
-.. rest_method:: GET /v2
-
-Show information about Compute API v2.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
+   - api_version: api_version
 
 Response
 --------
 
-**Example Show Api V2: JSON request**
+.. rest_parameters:: parameters.yaml
 
-.. literalinclude:: ../../doc/api_samples/versions/versions-v2-show-resp.json
+  - x-openstack-request-id: x-openstack-request-id
+  - version: version
+  - id: version_id
+  - status: version_status
+  - links: links
+  - version: version_max
+  - min_version: version_min
+
+.. note::
+
+   The ``updated`` and ``media-types`` parameters in the response are
+   vestigial and provide no useful information. They will probably be
+   deprecated and removed in the future.
+
+
+Response Example
+----------------
+
+This is an example of a ``GET /v2.1`` on a relatively current server.
+
+.. literalinclude:: /../../doc/api_samples/versions/v21-version-get-resp.json
    :language: javascript
-
