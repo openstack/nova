@@ -91,48 +91,58 @@ interface on the server and might not necessarily appear when you query
 the server addresses. However, clients should use an access address to
 access the server directly.
 
-Create Server
-=============
+List Servers
+============
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers
+.. rest_method:: GET /v2.1/{tenant_id}/servers
 
-Creates a server.
+Lists IDs, names, and links for all servers.
 
-The progress of this operation depends on the location of the requested image, network I/O, host load, selected flavor, and other factors.
 
-To check the progress of the request, make a ``GET /servers/{id}`` request. This call returns a progress attribute, which is a percentage value from 0 to 100.
+Servers contain a status attribute that indicates the current server
+state. You can filter on the server status when you complete a list
+servers request. The server status is returned in the response
+body. The possible server status values are:
 
-The ``Location`` header returns the full URL to the newly created server and is available as a ``self`` and ``bookmark`` link in the server representation.
+- ``ACTIVE``. The server is active.
+- ``BUILDING``. The server has not finished the original build process.
+- ``DELETED``. The server is permanently deleted.
+- ``ERROR``. The server is in error.
+- ``HARD_REBOOT``. The server is hard rebooting. This is equivalent to
+  pulling the power plug on a physical server, plugging it back in,
+  and rebooting it.
+- ``MIGRATING``. The server is being migrated to a new host.
+- ``PASSWORD``. The password is being reset on the server.
+- ``PAUSED``. In a paused state, the state of the server is stored in
+  RAM. A paused server continues to run in frozen state.
+- ``REBOOT``. The server is in a soft reboot state. A reboot command
+  was passed to the operating system.
+- ``REBUILD``. The server is currently being rebuilt from an image.
+- ``RESCUED``. The server is in rescue mode. A rescue image is running
+  with the original server image attached.
+- ``RESIZED``. Server is performing the differential copy of data that
+  changed during its initial copy. Server is down for this stage.
+- ``REVERT_RESIZE``. The resize or migration of a server failed for
+  some reason. The destination server is being cleaned up and the
+  original source server is restarting.
+- ``SOFT_DELETED``. The server is marked as deleted but the disk
+  images are still available to restore.
+- ``STOPPED``. The server is powered off and the disk image still
+  persists.
+- ``SUSPENDED``. The server is suspended, either by request or
+  necessity. This status appears for only the XenServer/XCP, KVM, and
+  ESXi hypervisors. Administrative users can suspend an instance if it
+  is infrequently used or to perform system maintenance. When you
+  suspend an instance, its VM state is stored on disk, all memory is
+  written to disk, and the virtual machine is stopped. Suspending an
+  instance is similar to placing a device in hibernation; memory and
+  vCPUs become available to create other instances.
+- ``UNKNOWN``. The state of the server is unknown. Contact your cloud
+  provider.
+- ``VERIFY_RESIZE``. System is awaiting confirmation that the server
+  is operational after a move or resize.
 
-When you create a server, the response shows only the server ID, its links, and the admin password. You can get additional attributes through subsequent ``GET`` requests on the server.
-
-Include the ``block-device-mapping-v2`` parameter in the create request body to boot a server from a volume.
-
-Include the ``key_name`` parameter in the create request body to add a keypair to the server when you create it. To create a keypair, make a `create keypair <http://developer.openstack.org/api-ref-compute-v2.1.html#createKeypair>`__ request.
-
-Preconditions
-
-The user must have sufficient server quota to create the number of servers requested.
-
-The connection to the Image service is valid.
-
-Asynchronous postconditions
-
-With correct permissions, you can see the server status as ``ACTIVE`` through API calls.
-
-With correct access, you can see the created server in the compute node that OpenStack Compute manages.
-
-Troubleshooting
-
-If the server status remains ``BUILDING`` or shows another error status, the request failed. Ensure you meet the preconditions then investigate the compute node.
-
-The server is not created in the compute node that OpenStack Compute manages.
-
-The compute node needs enough free resource to match the resource of the server creation request.
-
-Ensure that the scheduler selection filter can fulfill the request with the available compute nodes that match the selection criteria of the filter.
-
-Normal response codes: 202,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -143,26 +153,123 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
+  - changes-since: changes-since
+  - image: image_query
+  - flavor: flavor_query
+  - name: server_name_query
+  - status: server_status_query
+  - host: host_query
+  - limit: limit
+  - marker: marker
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - servers: servers
+  - id: server_id
+  - links: links
+  - name: server_name
+
+**Example List Servers: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/servers/servers-list-resp.json
+   :language: javascript
+
+
+Create Server
+=============
+
+.. rest_method:: POST /v2.1/{tenant_id}/servers
+
+Creates a server.
+
+The progress of this operation depends on the location of the
+requested image, network I/O, host load, selected flavor, and other
+factors.
+
+To check the progress of the request, make a ``GET /servers/{id}``
+request. This call returns a progress attribute, which is a percentage
+value from 0 to 100.
+
+The ``Location`` header returns the full URL to the newly created
+server and is available as a ``self`` and ``bookmark`` link in the
+server representation.
+
+When you create a server, the response shows only the server ID, its
+links, and the admin password. You can get additional attributes
+through subsequent ``GET`` requests on the server.
+
+Include the ``block-device-mapping-v2`` parameter in the create
+request body to boot a server from a volume.
+
+Include the ``key_name`` parameter in the create request body to add a
+keypair to the server when you create it. To create a keypair, make a
+`create keypair
+<http://developer.openstack.org/api-ref-compute-v2.1.html#createKeypair>`__
+request.
+
+Preconditions
+
+- The user must have sufficient server quota to create the number of
+  servers requested.
+- The connection to the Image service is valid.
+
+Asynchronous postconditions
+
+- With correct permissions, you can see the server status as
+  ``ACTIVE`` through API calls.
+- With correct access, you can see the created server in the compute
+  node that OpenStack Compute manages.
+
+Troubleshooting
+
+- If the server status remains ``BUILDING`` or shows another error
+  status, the request failed. Ensure you meet the preconditions then
+  investigate the compute node.
+
+- The server is not created in the compute node that OpenStack Compute
+  manages.
+
+- The compute node needs enough free resource to match the resource of
+  the server creation request.
+
+- Ensure that the scheduler selection filter can fulfill the request
+  with the available compute nodes that match the selection criteria
+  of the filter.
+
+Normal response codes: 202
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server: server
+  - name: server_name
+  - flavorRef: flavorRef
+  - imageRef: imageRef
   - security_groups: security_groups
+  - metadata: metadata
   - user_data: user_data
   - os-availability-zone:availability_zone: os-availability-zone:availability_zone
-  - server: server
-  - imageRef: imageRef
-  - flavorRef: flavorRef
   - networks: networks
-  - uuid: uuid
-  - port: port
-  - fixed_ip: fixed_ip
-  - name: name
-  - metadata: metadata
+  - networks.uuid: network_uuid
+  - networks.port: port
+  - networks.fixed_ip: fixed_ip
   - personality: personality
   - block_device_mapping_v2: block_device_mapping_v2
-  - device_name: device_name
-  - source_type: source_type
-  - destination_type: destination_type
-  - delete_on_termination: delete_on_termination
-  - guest_format: guest_format
-  - boot_index: boot_index
+  - block_device_mapping_v2.device_name: device_name
+  - block_device_mapping_v2.source_type: source_type
+  - block_device_mapping_v2.destination_type: destination_type
+  - block_device_mapping_v2.delete_on_termination: delete_on_termination
+  - block_device_mapping_v2.guest_format: guest_format
+  - block_device_mapping_v2.boot_index: boot_index
   - config_drive: config_drive
   - key_name: key_name
   - os:scheduler_hints: os:scheduler_hints
@@ -180,7 +287,7 @@ Response
 
   - server: server
   - adminPass: adminPass
-  - id: id
+  - id: server_id
   - links: links
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - security_groups: security_groups
@@ -190,55 +297,33 @@ Response
 .. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
    :language: javascript
 
-List Servers
-============
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers
+List Servers Detailed
+=====================
 
-Lists IDs, names, and links for all servers.
+.. rest_method:: GET /v2.1/​{tenant_id}​/servers/detail
 
-Servers contain a status attribute that indicates the current server state. You can filter on the server status when you complete a list servers request. The server status is returned in the response body. The possible server status values are:
+For each server, shows server details including configuration drive,
+extended status, and server usage information.
 
-Server status values``ACTIVE``. The server is active.
+The extended status information appears in the OS-EXT-STS:vm_state,
+OS-EXT-STS:power_state, and OS-EXT-STS:task_state attributes.
 
-``BUILDING``. The server has not finished the original build process.
+The server usage information appears in the OS-SRV-USG:launched_at and
+OS-SRV-USG:terminated_at attributes.
 
-``DELETED``. The server is permanently deleted.
+To hide addresses information for instances in a certain state, set
+the osapi_hide_server_address_states configuration option. Set this
+option to a valid VM state in the nova.conf configuration file.
 
-``ERROR``. The server is in error.
+HostId is unique per account and is not globally unique.
 
-``HARD_REBOOT``. The server is hard rebooting. This is equivalent to pulling the power plug on a physical server, plugging it back in, and rebooting it.
+Normal response codes: 200
 
-``MIGRATING``. The server is being migrated to a new host.
+Error response codes: computeFault (400, 500, …), serviceUnavailable
+(503), badRequest (400), unauthorized (401), forbidden (403),
+badMethod (405)
 
-``PASSWORD``. The password is being reset on the server.
-
-``PAUSED``. In a paused state, the state of the server is stored in RAM. A paused server continues to run in frozen state.
-
-``REBOOT``. The server is in a soft reboot state. A reboot command was passed to the operating system.
-
-``REBUILD``. The server is currently being rebuilt from an image.
-
-``RESCUED``. The server is in rescue mode. A rescue image is running with the original server image attached.
-
-``RESIZED``. Server is performing the differential copy of data that changed during its initial copy. Server is down for this stage.
-
-``REVERT_RESIZE``. The resize or migration of a server failed for some reason. The destination server is being cleaned up and the original source server is restarting.
-
-``SOFT_DELETED``. The server is marked as deleted but the disk images are still available to restore.
-
-``STOPPED``. The server is powered off and the disk image still persists.
-
-``SUSPENDED``. The server is suspended, either by request or necessity. This status appears for only the XenServer/XCP, KVM, and ESXi hypervisors. Administrative users can suspend an instance if it is infrequently used or to perform system maintenance. When you suspend an instance, its VM state is stored on disk, all memory is written to disk, and the virtual machine is stopped. Suspending an instance is similar to placing a device in hibernation; memory and vCPUs become available to create other instances.
-
-``UNKNOWN``. The state of the server is unknown. Contact your cloud provider.
-
-``VERIFY_RESIZE``. System is awaiting confirmation that the server is operational after a move or resize.
-
-Normal response codes: 200,,503,400,401,403,405
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
 
 Request
 -------
@@ -246,18 +331,12 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-
-Query Parameters
-~~~~~~~~~~~~~~~~
-
-.. rest_parameters:: parameters.yaml
-
   - changes-since: changes-since
-  - image: image
-  - flavor: flavor
-  - name: name
-  - status: status
-  - host: host
+  - image: image_query
+  - flavor: flavor_query
+  - name: server_name_query
+  - status: server_status_query
+  - host: host_query
   - limit: limit
   - marker: marker
 
@@ -266,15 +345,46 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - servers: servers
-  - id: id
+  - server: server
+  - addresses: addresses
+  - created: created
+  - flavor: flavor
+  - hostId: hostId
+  - id: server_id
+  - image: image
+  - key_name: key_name
   - links: links
+  - metadata: metadata
   - name: name
+  - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
+  - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
+  - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
+  - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
+  - OS-EXT-STS:power_state: OS-EXT-STS:power_state
+  - OS-EXT-STS:task_state: OS-EXT-STS:task_state
+  - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
+  - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
+  - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
+  - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
+  - progress: progress
+  - security_groups: security_groups_obj
+  - security_group.description: description
+  - security_group.id: id
+  - security_group.name: name
+  - security_group.rules: rules
+  - status: server_status
+  - host_status: host_status
+  - tenant_id: tenant_id
+  - updated: updated
+  - user_id: user_id
 
-**Example List Servers: JSON request**
+Example Response
+----------------
 
-.. literalinclude:: ../../doc/api_samples/servers/servers-list-resp.json
+.. literalinclude:: /../../doc/api_samples/servers/servers-details-resp.json
    :language: javascript
+
 
 Show Server Details
 ===================
@@ -297,7 +407,7 @@ Preconditions
 
 The server must exist.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -308,7 +418,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
@@ -320,12 +430,12 @@ Response
   - created: created
   - flavor: flavor
   - hostId: hostId
-  - id: id
+  - id: server_id
   - image: image
   - key_name: key_name
   - links: links
   - metadata: metadata
-  - name: name
+  - name: server_name
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
@@ -338,12 +448,12 @@ Response
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
-  - security_groups: security_groups
-  - description: description
-  - id: id
-  - name: name
-  - rules: rules
-  - status: status
+  - security_groups: security_groups_obj
+  - security_group.description: description
+  - security_group.id: id
+  - security_group.name: name
+  - security_group.rules: rules
+  - status: server_status
   - host_status: host_status
   - tenant_id: tenant_id
   - updated: updated
@@ -351,7 +461,7 @@ Response
 
 **Example Show Server Details: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers/server-show-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/server-get-resp.json
    :language: javascript
 
 Update Server
@@ -367,7 +477,7 @@ The server must exist.
 
 You can edit the ``accessIPv4``, ``accessIPv6``, ``diskConfig`` and ``name`` attributes.
 
-Normal response codes: 200,,503,400,401,403,405,404,409
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -378,30 +488,10 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
-  - security_groups: security_groups
-  - user_data: user_data
-  - os-availability-zone:availability_zone: os-availability-zone:availability_zone
-  - server: server
-  - imageRef: imageRef
-  - flavorRef: flavorRef
-  - networks: networks
-  - uuid: uuid
-  - port: port
-  - fixed_ip: fixed_ip
-  - name: name
-  - metadata: metadata
-  - personality: personality
-  - block_device_mapping_v2: block_device_mapping_v2
-  - device_name: device_name
-  - source_type: source_type
-  - destination_type: destination_type
-  - delete_on_termination: delete_on_termination
-  - guest_format: guest_format
-  - boot_index: boot_index
-  - config_drive: config_drive
-  - key_name: key_name
-  - os:scheduler_hints: os:scheduler_hints
+  - server_id: server_id_path
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - name: server_name
   - OS-DCF:diskConfig: OS-DCF:diskConfig
 
 **Example Update server name: JSON request**
@@ -409,15 +499,19 @@ Request
 .. literalinclude:: ../../doc/api_samples/servers/server-update-req.json
    :language: javascript
 
-**Example Update server IP addresses: JSON request**
+..
+   TODO(sdague): split up the update examples to show them being used
+   separately.
 
-.. literalinclude:: ../../doc/api_samples/servers/server-update-address-req.json
-   :language: javascript
+   **Example Update server IP addresses: JSON request**
 
-**Example Update server OS-DCF:diskConfig parameter: JSON request**
+   .. literalinclude:: ../../doc/api_samples/servers/server-update-address-req.json
+      :language: javascript
 
-.. literalinclude:: ../../doc/api_samples/servers/server-update-diskconfig-req.json
-   :language: javascript
+   **Example Update server OS-DCF:diskConfig parameter: JSON request**
+
+   .. literalinclude:: ../../doc/api_samples/servers/server-update-diskconfig-req.json
+      :language: javascript
 
 Response
 --------
@@ -429,7 +523,7 @@ Response
   - created: created
   - flavor: flavor
   - hostId: hostId
-  - id: id
+  - id: server_id
   - image: image
   - key_name: key_name
   - links: links
@@ -447,12 +541,12 @@ Response
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
-  - security_groups: security_groups
-  - description: description
-  - id: id
-  - name: name
-  - rules: rules
-  - status: status
+  - security_groups: security_groups_obj
+  - security_group.description: description
+  - security_group.id: id
+  - security_group.name: name
+  - security_group.rules: rules
+  - status: server_status
   - host_status: host_status
   - tenant_id: tenant_id
   - updated: updated
@@ -472,31 +566,33 @@ Deletes a server.
 
 Preconditions
 
-The server must exist.
-
-Anyone can delete a server when the status of the server is not locked and when the policy allows.
-
-If the server is locked, you must have administrator privileges to delete the server.
+- The server must exist.
+- Anyone can delete a server when the status of the server is not
+  locked and when the policy allows.
+- If the server is locked, you must have administrator privileges to
+  delete the server.
 
 Asynchronous postconditions
 
-With correct permissions, you can see the server status as ``DELETED`` through API calls.
-
-The port attached to the server is deleted.
-
-The server does not appear in the list servers response.
-
-The server managed by OpenStack Compute is deleted on the compute node.
+- With correct permissions, you can see the server status as
+  ``DELETED`` through API calls.
+- The port attached to the server is deleted.
+- The server does not appear in the list servers response.
+- The server managed by OpenStack Compute is deleted on the compute
+  node.
 
 Troubleshooting
 
-If server status remains in ``deleting`` status or another error status, the request failed. Ensure that you meet the preconditions. Then, investigate the compute back end.
+- If server status remains in ``deleting`` status or another error
+  status, the request failed. Ensure that you meet the
+  preconditions. Then, investigate the compute back end.
+- The request returns the HTTP 409 response code when the server is
+  locked even if you have correct permissions. Ensure that you meet the
+  preconditions then investigate the server status.
+- The server managed by OpenStack Compute is not deleted from the
+  compute node.
 
-The request returns the HTTP 409 response code when the server is locked even if you have correct permissions. Ensure that you meet the preconditions then investigate the server status.
-
-The server managed by OpenStack Compute is not deleted from the compute node.
-
-Normal response codes: 204,,503,400,401,403,405,404
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -507,8 +603,9 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
 
+There is no body content for the response of a successful DELETE query
