@@ -35,13 +35,15 @@ class ConsoleTestCase(test.TestCase):
     """Test case for console proxy manager."""
     def setUp(self):
         super(ConsoleTestCase, self).setUp()
-        self.flags(console_driver='nova.console.fake.FakeConsoleProxy',
-                   stub_compute=True)
+        self.flags(console_driver='nova.console.fake.FakeConsoleProxy')
         self.console = importutils.import_object(CONF.console_manager)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
         self.host = 'test_compute_host'
+        self.pool_info = {'address': '127.0.0.1',
+                          'username': 'test',
+                          'password': '1234pass'}
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
@@ -62,12 +64,16 @@ class ConsoleTestCase(test.TestCase):
         inst['ami_launch_index'] = 0
         return db.instance_create(self.context, inst)
 
-    def test_get_pool_for_instance_host(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_pool_info')
+    def test_get_pool_for_instance_host(self, mock_get):
+        mock_get.return_value = self.pool_info
         pool = self.console._get_pool_for_instance_host(self.context,
                 self.host)
         self.assertEqual(pool['compute_host'], self.host)
 
-    def test_get_pool_creates_new_pool_if_needed(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_pool_info')
+    def test_get_pool_creates_new_pool_if_needed(self, mock_get):
+        mock_get.return_value = self.pool_info
         self.assertRaises(exception.NotFound,
                           db.console_pool_get_by_host_type,
                           self.context,
@@ -94,7 +100,9 @@ class ConsoleTestCase(test.TestCase):
                                                        'sometesthostname')
         self.assertEqual(pool['id'], new_pool['id'])
 
-    def test_add_console(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_pool_info')
+    def test_add_console(self, mock_get):
+        mock_get.return_value = self.pool_info
         instance = self._create_instance()
         self.console.add_console(self.context, instance['id'])
         instance = db.instance_get(self.context, instance['id'])
@@ -106,14 +114,18 @@ class ConsoleTestCase(test.TestCase):
         self.assertIn(instance['uuid'], console_instances)
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_add_console_does_not_duplicate(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_pool_info')
+    def test_add_console_does_not_duplicate(self, mock_get):
+        mock_get.return_value = self.pool_info
         instance = self._create_instance()
         cons1 = self.console.add_console(self.context, instance['id'])
         cons2 = self.console.add_console(self.context, instance['id'])
         self.assertEqual(cons1, cons2)
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_remove_console(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_pool_info')
+    def test_remove_console(self, mock_get):
+        mock_get.return_value = self.pool_info
         instance = self._create_instance()
         console_id = self.console.add_console(self.context, instance['id'])
         self.console.remove_console(self.context, console_id)
