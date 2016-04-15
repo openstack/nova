@@ -2119,3 +2119,8 @@ class OsInfoNotFound(NotFound):
 
 class BuildRequestNotFound(NotFound):
     msg_fmt = _("BuildRequest not found for instance %(uuid)s")
+
+
+class AttachInterfaceNotSupported(Invalid):
+    msg_fmt = _("Attaching interfaces is not supported for "
+                "instance %(instance)s.")

@@ -9528,11 +9528,13 @@ class ComputeAPITestCase(BaseTestCase):
             bind_host_id='fake-host'
             ).AndReturn(nwinfo)
         self.mox.ReplayAll()
-        vif = self.compute.attach_interface(self.context,
-                                            instance,
-                                            network_id,
-                                            port_id,
-                                            req_ip)
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_attach_interface=True):
+            vif = self.compute.attach_interface(self.context,
+                                                instance,
+                                                network_id,
+                                                port_id,
+                                                req_ip)
         self.assertEqual(vif['id'], network_id)
         return nwinfo, port_id
 
@@ -9555,8 +9557,10 @@ class ComputeAPITestCase(BaseTestCase):
             mock.patch.object(self.compute.network_api,
                               'allocate_port_for_instance'),
             mock.patch.object(self.compute.network_api,
-                              'deallocate_port_for_instance')) as (
-            mock_attach, mock_allocate, mock_deallocate):
+                              'deallocate_port_for_instance'),
+            mock.patch.dict(self.compute.driver.capabilities,
+                            supports_attach_interface=True)) as (
+                mock_attach, mock_allocate, mock_deallocate, mock_dict):
 
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")

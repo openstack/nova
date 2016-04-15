@@ -663,6 +663,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(drvr.capabilities['supports_migrate_to_same_host'],
                          'Driver capabilities for '
                          '\'supports_migrate_to_same_host\' is invalid')
+        self.assertTrue(drvr.capabilities['supports_attach_interface'],
+                        'Driver capabilities for '
+                        '\'supports_attach_interface\' '
+                        'is invalid')
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""

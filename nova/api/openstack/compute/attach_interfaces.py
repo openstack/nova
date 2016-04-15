@@ -119,7 +119,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.NetworkDuplicated,
                 exception.NetworkAmbiguous,
                 exception.NoMoreFixedIps,
-                exception.PortNotUsable) as e:
+                exception.PortNotUsable,
+                exception.AttachInterfaceNotSupported) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,
@@ -128,8 +129,6 @@ class InterfaceAttachmentController(wsgi.Controller):
         except (exception.PortNotFound,
                 exception.NetworkNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except NotImplementedError:
-            common.raise_feature_not_supported()
         except exception.InterfaceAttachFailed as e:
             raise webob.exc.HTTPInternalServerError(
                 explanation=e.format_message())
