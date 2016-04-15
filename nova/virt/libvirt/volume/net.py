@@ -21,7 +21,7 @@ volume_opts = [
     cfg.StrOpt('rbd_user',
                help='The RADOS client name for accessing rbd volumes'),
     cfg.StrOpt('rbd_secret_uuid',
-               help='The libvirt UUID of the secret for the rbd_user'
+               help='The libvirt UUID of the secret for the rbd_user '
                     'volumes'),
     ]
 
