@@ -37,6 +37,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -103,8 +104,9 @@ def fake_compute_volume_snapshot_create(self, context, volume_id,
     pass
 
 
-def fake_bdms_get_all_by_instance(context, instance_uuid, use_slave=False):
-    return [fake_block_device.FakeDbBlockDeviceDict(
+@classmethod
+def fake_bdm_list_get_by_instance_uuid(cls, context, instance_uuid):
+    db_list = [fake_block_device.FakeDbBlockDeviceDict(
             {'id': 1,
              'instance_uuid': instance_uuid,
              'device_name': '/dev/fake0',
@@ -124,6 +126,8 @@ def fake_bdms_get_all_by_instance(context, instance_uuid, use_slave=False):
              'snapshot_id': None,
              'volume_id': FAKE_UUID_B,
              'volume_size': 1})]
+    item_cls = objects.BlockDeviceMapping
+    return base.obj_make_list(context, cls(), item_cls, db_list)
 
 
 class BootFromVolumeTest(test.TestCase):
@@ -357,8 +361,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
     def setUp(self):
         super(VolumeAttachTestsV21, self).setUp()
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
-                      fake_bdms_get_all_by_instance)
+        self.stub_out('nova.objects.BlockDeviceMappingList'
+                      '.get_by_instance_uuid',
+                      fake_bdm_list_get_by_instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
         self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.context = context.get_admin_context()
