@@ -29,6 +29,12 @@ fake_migration_context_obj.migration_id = 42
 fake_migration_context_obj.new_numa_topology = (
     test_instance_numa_topology.fake_obj_numa_topology.obj_clone())
 fake_migration_context_obj.old_numa_topology = None
+fake_migration_context_obj.new_pci_devices = objects.PciDeviceList()
+fake_migration_context_obj.old_pci_devices = None
+fake_migration_context_obj.new_pci_requests = (
+    objects.InstancePCIRequests(requests=[
+        objects.InstancePCIRequest(count=123, spec=[])]))
+fake_migration_context_obj.old_pci_requests = None
 
 fake_db_context = {
     'created_at': None,
@@ -48,6 +54,7 @@ def get_fake_migration_context_obj(ctxt):
 
 
 class _TestMigrationContext(object):
+
     def _test_get_by_instance_uuid(self, db_data):
         mig_context = objects.MigrationContext.get_by_instance_uuid(
             self.context, fake_db_context['instance_uuid'])
@@ -65,6 +72,14 @@ class _TestMigrationContext(object):
                                   mig_context.new_numa_topology.__class__)
             self.assertIsInstance(expected_mig_context.old_numa_topology,
                                   mig_context.old_numa_topology.__class__)
+            self.assertIsInstance(expected_mig_context.new_pci_devices,
+                                  mig_context.new_pci_devices.__class__)
+            self.assertIsInstance(expected_mig_context.old_pci_devices,
+                                  mig_context.old_pci_devices.__class__)
+            self.assertIsInstance(expected_mig_context.new_pci_requests,
+                                  mig_context.new_pci_requests.__class__)
+            self.assertIsInstance(expected_mig_context.old_pci_requests,
+                                  mig_context.old_pci_requests.__class__)
         else:
             self.assertIsNone(mig_context)
 

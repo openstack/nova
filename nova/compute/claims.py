@@ -22,7 +22,6 @@ from oslo_log import log as logging
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LI
-from nova.i18n import _LW
 from nova import objects
 from nova.virt import hardware
 
@@ -201,9 +200,7 @@ class Claim(NopClaim):
         if host_topology:
             host_topology = objects.NUMATopology.obj_from_db_obj(
                     host_topology)
-            pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-                                        self.context, self.instance.uuid)
-
+            pci_requests = self._pci_requests
             pci_stats = None
             if pci_requests.requests:
                 pci_stats = self.tracker.pci_tracker.stats
@@ -300,18 +297,3 @@ class MoveClaim(Claim):
         self.tracker.drop_move_claim(
             self.context,
             self.instance, instance_type=self.instance_type)
-
-    def create_migration_context(self):
-        if not self.migration:
-            LOG.warning(
-                _LW("Can't create a migration_context record without a "
-                    "migration object specified."),
-                instance=self.instance)
-            return
-
-        mig_context = objects.MigrationContext(
-            context=self.context, instance_uuid=self.instance.uuid,
-            migration_id=self.migration.id,
-            old_numa_topology=self.instance.numa_topology,
-            new_numa_topology=self.claimed_numa_topology)
-        return mig_context

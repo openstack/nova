@@ -46,6 +46,7 @@ Possible Values:
 
 Services which consume this:
 
+* nova-api
 * nova-compute
 
 Related options:

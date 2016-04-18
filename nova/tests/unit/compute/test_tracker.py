@@ -26,8 +26,10 @@ from nova.compute import vm_states
 from nova import exception as exc
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova import test
+from nova.tests.unit.objects import test_pci_device as fake_pci_device
 
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
@@ -168,6 +170,8 @@ _INSTANCE_FIXTURES = [
         root_gb=_INSTANCE_TYPE_FIXTURES[1]['root_gb'],
         ephemeral_gb=_INSTANCE_TYPE_FIXTURES[1]['ephemeral_gb'],
         numa_topology=_INSTANCE_NUMA_TOPOLOGIES['2mb'],
+        pci_requests=None,
+        pci_devices=None,
         instance_type_id=1,
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
@@ -188,6 +192,8 @@ _INSTANCE_FIXTURES = [
         root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
         ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
+        pci_requests=None,
+        pci_devices=None,
         instance_type_id=2,
         vm_state=vm_states.DELETED,
         power_state=power_state.SHUTDOWN,
@@ -267,6 +273,8 @@ _MIGRATION_INSTANCE_FIXTURES = {
         root_gb=_INSTANCE_TYPE_FIXTURES[1]['root_gb'],
         ephemeral_gb=_INSTANCE_TYPE_FIXTURES[1]['ephemeral_gb'],
         numa_topology=_INSTANCE_NUMA_TOPOLOGIES['2mb'],
+        pci_requests=None,
+        pci_devices=None,
         instance_type_id=1,
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
@@ -289,6 +297,8 @@ _MIGRATION_INSTANCE_FIXTURES = {
         root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
         ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
+        pci_requests=None,
+        pci_devices=None,
         instance_type_id=2,
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
@@ -311,6 +321,8 @@ _MIGRATION_INSTANCE_FIXTURES = {
         root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
         ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
+        pci_requests=None,
+        pci_devices=None,
         instance_type_id=2,
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
@@ -333,6 +345,8 @@ _MIGRATION_INSTANCE_FIXTURES = {
         root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
         ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
         numa_topology=None,
+        pci_requests=None,
+        pci_devices=None,
         instance_type_id=2,
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
@@ -1384,11 +1398,9 @@ class TestInstanceClaim(BaseTestCase):
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
-    @mock.patch('nova.pci.manager.PciDevTracker.claim_instance')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_claim_with_pci(self, migr_mock, pci_mock,
-                            pci_manager_mock, pci_stats_mock):
+    def test_claim_with_pci(self, migr_mock, pci_mock, pci_stats_mock):
         # Test that a claim involving PCI requests correctly claims
         # PCI devices on the host and sends an updated pci_device_pools
         # attribute of the ComputeNode object.
@@ -1398,12 +1410,17 @@ class TestInstanceClaim(BaseTestCase):
         # upon the resource tracker being initialized...
         self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
 
-        pci_pools = objects.PciDevicePoolList()
-        pci_manager_mock.return_value = pci_pools
+        pci_dev = pci_device.PciDevice.create(
+            None, fake_pci_device.dev_dict)
+        pci_devs = [pci_dev]
+        self.rt.pci_tracker.pci_devs = objects.PciDeviceList(objects=pci_devs)
 
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
-        pci_mock.return_value = objects.InstancePCIRequests(requests=[request])
+        pci_requests = objects.InstancePCIRequests(
+                requests=[request],
+                instance_uuid=self.instance.uuid)
+        pci_mock.return_value = pci_requests
 
         disk_used = self.instance.root_gb + self.instance.ephemeral_gb
         expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
@@ -1414,7 +1431,7 @@ class TestInstanceClaim(BaseTestCase):
             "free_ram_mb": expected.memory_mb - self.instance.memory_mb,
             'running_vms': 1,
             'vcpus_used': 1,
-            'pci_device_pools': pci_pools,
+            'pci_device_pools': objects.PciDevicePoolList(),
             'stats': {
                 'io_workload': 0,
                 'num_instances': 1,
@@ -1429,9 +1446,7 @@ class TestInstanceClaim(BaseTestCase):
             with mock.patch.object(self.instance, 'save'):
                 self.rt.instance_claim(self.ctx, self.instance, None)
             update_mock.assert_called_once_with(self.elevated)
-            pci_manager_mock.assert_called_once_with(mock.ANY,  # context...
-                                                     pci_mock.return_value,
-                                                     None)
+            pci_stats_mock.assert_called_once_with([request])
             self.assertTrue(obj_base.obj_equal_prims(expected,
                                                      self.rt.compute_node))
 

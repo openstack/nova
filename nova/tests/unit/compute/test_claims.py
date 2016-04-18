@@ -62,6 +62,7 @@ class ClaimTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ClaimTestCase, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
+        self.instance = None
         self.resources = self._fake_resources()
         self.tracker = DummyTracker()
         self.empty_requests = objects.InstancePCIRequests(
@@ -224,34 +225,29 @@ class ClaimTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
-    def test_pci_pass(self, mock_supports):
+    def test_pci_pass(self, mock_pci_supports_requests):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
-
-        # Claim.__init__() would raise ComputeResourcesUnavailable
-        # if Claim._test_pci() did not return None.
         self._claim(requests=requests)
-        mock_supports.assert_called_once_with(requests.requests)
+        mock_pci_supports_requests.assert_called_once_with([request])
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=False)
-    def test_pci_fail(self, mock_supports):
+    def test_pci_fail(self, mock_pci_supports_requests):
         request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': 'v', 'product_id': 'p'}])
         requests = objects.InstancePCIRequests(requests=[request])
+        self.assertRaisesRegex(
+            exception.ComputeResourcesUnavailable,
+            'Claim pci failed.',
+            self._claim, requests=requests)
+        mock_pci_supports_requests.assert_called_once_with([request])
 
-        self.assertRaises(exception.ComputeResourcesUnavailable,
-                          self._claim, requests=requests)
-        mock_supports.assert_called_once_with(requests.requests)
-
-    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
-                return_value=True)
-    def test_pci_pass_no_requests(self, mock_supports):
-        # Claim.__init__() would raise ComputeResourcesUnavailable
-        # if Claim._test_pci() did not return None.
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests')
+    def test_pci_pass_no_requests(self, mock_pci_supports_requests):
         self._claim()
-        self.assertFalse(mock_supports.called)
+        self.assertFalse(mock_pci_supports_requests.called)
 
     def test_numa_topology_no_limit(self):
         huge_instance = objects.InstanceNUMATopology(
@@ -421,30 +417,6 @@ class MoveClaimTestCase(ClaimTestCase):
     def test_abort(self):
         claim = self._abort()
         self.assertTrue(claim.tracker.rcalled)
-
-    def test_create_migration_context(self):
-        numa_topology = objects.InstanceNUMATopology(
-                cells=[objects.InstanceNUMACell(
-                    id=1, cpuset=set([1, 2]), memory=512)])
-        claim = self._claim(numa_topology=numa_topology)
-        migration = objects.Migration(context=self.context, id=42)
-        claim.migration = migration
-        fake_mig_context = mock.Mock(spec=objects.MigrationContext)
-
-        @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
-                    return_value=None)
-        @mock.patch('nova.objects.MigrationContext',
-                    return_value=fake_mig_context)
-        def _test(ctxt_mock, mock_get_extra):
-            claim.create_migration_context()
-            ctxt_mock.assert_called_once_with(
-                context=self.context, instance_uuid=self.instance.uuid,
-                migration_id=42, old_numa_topology=None,
-                new_numa_topology=mock.ANY)
-            self.assertIsInstance(ctxt_mock.call_args[1]['new_numa_topology'],
-                                  objects.InstanceNUMATopology)
-            self.assertEqual(migration, claim.migration)
-        _test()
 
     def test_image_meta(self):
         claim = self._claim()

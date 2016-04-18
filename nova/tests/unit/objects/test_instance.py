@@ -1266,13 +1266,22 @@ class _TestInstanceObject(object):
 
     def test_apply_revert_migration_context(self):
         inst = instance.Instance(context=self.context, uuid=uuids.instance,
-                                 numa_topology=None)
+                                 numa_topology=None, pci_requests=None,
+                                 pci_devices=None)
         inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
             self.context)
         inst.apply_migration_context()
-        self.assertIsInstance(inst.numa_topology, objects.InstanceNUMATopology)
+        attrs_type = {'numa_topology': objects.InstanceNUMATopology,
+                      'pci_requests': objects.InstancePCIRequests,
+                      'pci_devices': objects.PciDeviceList}
+
+        for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
+            value = getattr(inst, attr_name)
+            self.assertIsInstance(value, attrs_type[attr_name])
         inst.revert_migration_context()
-        self.assertIsNone(inst.numa_topology)
+        for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
+            value = getattr(inst, attr_name)
+            self.assertIsNone(value)
 
     def test_drop_migration_context(self):
         inst = instance.Instance(context=self.context, uuid=uuids.instance)
@@ -1292,15 +1301,29 @@ class _TestInstanceObject(object):
                             fake_obj_numa_topology.obj_clone())
         numa_topology.cells[0].memory = 1024
         numa_topology.cells[1].memory = 1024
+        pci_requests = objects.InstancePCIRequests(requests=[
+            objects.InstancePCIRequest(count=1, spec=[])])
+        pci_devices = pci_device.PciDeviceList()
 
         inst = instance.Instance(context=self.context, uuid=uuids.instance,
-                                 numa_topology=numa_topology)
+                                 numa_topology=numa_topology,
+                                 pci_requests=pci_requests,
+                                 pci_devices=pci_devices)
+        expected_objs = {'numa_topology': numa_topology,
+                         'pci_requests': pci_requests,
+                         'pci_devices': pci_devices}
         inst.migration_context = test_mig_ctxt.get_fake_migration_context_obj(
             self.context)
         with inst.mutated_migration_context():
-            self.assertIs(inst.numa_topology,
-                          inst.migration_context.new_numa_topology)
-        self.assertIs(numa_topology, inst.numa_topology)
+            for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
+                inst_value = getattr(inst, attr_name)
+                migration_context_value = (
+                    getattr(inst.migration_context, 'new_' + attr_name))
+                self.assertIs(inst_value, migration_context_value)
+
+        for attr_name in instance._MIGRATION_CONTEXT_ATTRS:
+            inst_value = getattr(inst, attr_name)
+            self.assertIs(expected_objs[attr_name], inst_value)
 
     def test_clear_numa_topology(self):
         numa_topology = (test_instance_numa_topology.
