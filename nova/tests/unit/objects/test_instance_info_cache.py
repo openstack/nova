@@ -38,27 +38,24 @@ fake_info_cache = {
 
 
 class _TestInstanceInfoCacheObject(object):
-    def test_get_by_instance_uuid(self):
+    @mock.patch.object(db, 'instance_info_cache_get')
+    def test_get_by_instance_uuid(self, mock_get):
         nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
-        self.mox.StubOutWithMock(db, 'instance_info_cache_get')
-        db.instance_info_cache_get(
-            self.context, uuids.info_instance).AndReturn(
-            dict(fake_info_cache, network_info=nwinfo.json()))
-        self.mox.ReplayAll()
+        mock_get.return_value = dict(fake_info_cache,
+                                     network_info=nwinfo.json())
         obj = instance_info_cache.InstanceInfoCache.get_by_instance_uuid(
             self.context, uuids.info_instance)
         self.assertEqual(uuids.info_instance, obj.instance_uuid)
         self.assertEqual(nwinfo, obj.network_info)
+        mock_get.assert_called_once_with(self.context, uuids.info_instance)
 
-    def test_get_by_instance_uuid_no_entries(self):
-        self.mox.StubOutWithMock(db, 'instance_info_cache_get')
-        db.instance_info_cache_get(self.context,
-                                   uuids.info_instance).AndReturn(None)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'instance_info_cache_get', return_value=None)
+    def test_get_by_instance_uuid_no_entries(self, mock_get):
         self.assertRaises(
                 exception.InstanceInfoCacheNotFound,
                 instance_info_cache.InstanceInfoCache.get_by_instance_uuid,
                 self.context, uuids.info_instance)
+        mock_get.assert_called_once_with(self.context, uuids.info_instance)
 
     def test_new(self):
         obj = instance_info_cache.InstanceInfoCache.new(self.context,
@@ -68,33 +65,35 @@ class _TestInstanceInfoCacheObject(object):
         self.assertEqual(uuids.info_instance, obj.instance_uuid)
         self.assertIsNone(obj.network_info)
 
-    def _save_helper(self, cell_type, update_cells):
+    @mock.patch.object(cells_opts, 'get_cell_type')
+    @mock.patch.object(cells_rpcapi, 'CellsAPI')
+    @mock.patch.object(db, 'instance_info_cache_update')
+    def _save_helper(self, cell_type, update_cells, mock_update,
+                     mock_rpc, mock_get_type):
         obj = instance_info_cache.InstanceInfoCache()
         cells_api = cells_rpcapi.CellsAPI()
 
-        self.mox.StubOutWithMock(db, 'instance_info_cache_update')
-        self.mox.StubOutWithMock(cells_opts, 'get_cell_type')
-        self.mox.StubOutWithMock(cells_rpcapi, 'CellsAPI',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(cells_api,
-                                 'instance_info_cache_update_at_top')
         nwinfo = network_model.NetworkInfo.hydrate([{'address': 'foo'}])
         new_info_cache = fake_info_cache.copy()
         new_info_cache['network_info'] = nwinfo.json()
-        db.instance_info_cache_update(
-                self.context, uuids.info_instance,
-                {'network_info': nwinfo.json()}).AndReturn(new_info_cache)
-        if update_cells:
-            cells_opts.get_cell_type().AndReturn(cell_type)
-            if cell_type == 'compute':
-                cells_rpcapi.CellsAPI().AndReturn(cells_api)
-                cells_api.instance_info_cache_update_at_top(
-                    self.context, 'foo')
-        self.mox.ReplayAll()
+        mock_update.return_value = new_info_cache
+        with mock.patch.object(cells_api,
+                               'instance_info_cache_update_at_top'):
+            if update_cells:
+                mock_get_type.return_vaule = cell_type
+                if cell_type == 'compute':
+                    mock_rpc.return_value = cells_api
+                    cells_api.instance_info_cache_update_at_top(
+                        self.context, 'foo')
+                mock_rpc.assert_called_once_with()
         obj._context = self.context
         obj.instance_uuid = uuids.info_instance
         obj.network_info = nwinfo
         obj.save(update_cells=update_cells)
+        mock_update.asssert_called_once_with(self.context, obj.instance_uuid,
+                                             {'network_info': nwinfo.json()})
+        if update_cells:
+            mock_get_type.assert_called_once()
 
     def test_save_with_update_cells_and_compute_cell(self):
         self._save_helper('compute', True)
@@ -124,15 +123,14 @@ class _TestInstanceInfoCacheObject(object):
         self.assertEqual(timeutils.normalize_time(fake_updated_at),
                          timeutils.normalize_time(obj.updated_at))
 
-    def test_refresh(self):
+    @mock.patch.object(db, 'instance_info_cache_get',
+                       return_value=fake_info_cache)
+    def test_refresh(self, mock_get):
         obj = instance_info_cache.InstanceInfoCache.new(self.context,
                                                         uuids.info_instance_1)
-        self.mox.StubOutWithMock(db, 'instance_info_cache_get')
-        db.instance_info_cache_get(
-            self.context, uuids.info_instance_1).AndReturn(fake_info_cache)
-        self.mox.ReplayAll()
         obj.refresh()
         self.assertEqual(fake_info_cache['instance_uuid'], obj.instance_uuid)
+        mock_get.assert_called_once_with(self.context, uuids.info_instance_1)
 
 
 class TestInstanceInfoCacheObject(test_objects._LocalTest,
