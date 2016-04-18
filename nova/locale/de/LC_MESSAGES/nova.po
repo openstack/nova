@@ -11,15 +11,16 @@
 # matthew wagoner <zxkuqyb@gmail.com>, 2012
 # English translations for nova.
 # Frank Kloeker <eumel@arcor.de>, 2016. #zanata
+# Monika Wolf <vcomas3@de.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc3.dev11\n"
+"Project-Id-Version: nova 13.0.1.dev11\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-31 06:58+0000\n"
+"POT-Creation-Date: 2016-04-11 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-05 06:32+0000\n"
+"PO-Revision-Date: 2016-04-12 10:40+0000\n"
 "Last-Translator: Monika Wolf <vcomas3@de.ibm.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -2375,6 +2376,10 @@ msgstr "Ungültiger Abbild-Hyperlink %(image_href)s."
 
 msgid "Invalid image metadata"
 msgstr "Ungültige Abbildmetadaten"
+
+#, python-format
+msgid "Invalid image metadata. Error: %s"
+msgstr "Ungültige Abbildmetadaten. Fehler: %s"
 
 msgid "Invalid imageRef provided."
 msgstr "Angabe für imageRef ungültig."

@@ -10,9 +10,9 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0b4.dev129\n"
+"Project-Id-Version: nova 13.0.1.dev11\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-10 03:26+0000\n"
+"POT-Creation-Date: 2016-04-11 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -471,14 +471,6 @@ msgid ""
 "Ignoring DiskNotFound exception while detaching volume %(volume_id)s from "
 "%(mp)s: %(err)s"
 msgstr "在从%(mp)s断开卷%(volume_id)s的过程中，忽略磁盘没有找到异常：%(err)s"
-
-#, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "忽略端点没有找到EndpointNotFound：%s"
-
-#, python-format
-msgid "Ignoring Unknown cinder exception: %s"
-msgstr "忽略未知的cinder异常：%s"
 
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
