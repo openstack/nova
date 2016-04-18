@@ -103,3 +103,33 @@ class TestAggImagePropsIsolationFilter(test.NoDBTestCase):
                 hw_vm_mode='hvm', img_owner_id='wrong')))
         host = fakes.FakeHostState('host1', 'compute', {})
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_aggregate_image_properties_iso_props_with_custom_meta(self,
+            agg_mock):
+        agg_mock.return_value = {'os': 'linux'}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            image=objects.ImageMeta(properties=objects.ImageMetaProps(
+                os_type='linux')))
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_aggregate_image_properties_iso_props_with_matching_meta_pass(self,
+            agg_mock):
+        agg_mock.return_value = {'os_type': 'linux'}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            image=objects.ImageMeta(properties=objects.ImageMetaProps(
+                os_type='linux')))
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
+
+    def test_aggregate_image_properties_iso_props_with_matching_meta_fail(
+            self, agg_mock):
+        agg_mock.return_value = {'os_type': 'windows'}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            image=objects.ImageMeta(properties=objects.ImageMetaProps(
+                os_type='linux')))
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))

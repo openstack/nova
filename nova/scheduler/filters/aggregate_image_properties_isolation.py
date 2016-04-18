@@ -17,6 +17,7 @@ from oslo_log import log as logging
 import six
 
 import nova.conf
+from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
@@ -45,7 +46,15 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
             if (cfg_namespace and
                     not key.startswith(cfg_namespace + cfg_separator)):
                 continue
-            prop = image_props.get(key)
+            prop = None
+            try:
+                prop = image_props.get(key)
+            except AttributeError:
+                LOG.warning(_LW("Host '%(host)s' has a metadata key '%(key)s' "
+                                "that is not present in the image metadata.") %
+                                {"host": host_state.host, "key": key})
+                continue
+
             # NOTE(sbauza): Aggregate metadata is only strings, we need to
             # stringify the property to match with the option
             # TODO(sbauza): Fix that very ugly pattern matching
