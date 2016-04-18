@@ -123,7 +123,7 @@ Delete Interface From Bare Metal Node
 
 Deletes an interface from a bare metal node that is associated with a server.
 
-Normal response codes: ,503,400,401,403,405,404,415,400,409
+Normal response codes: 200,503,400,401,403,405,404,415,400,409
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
