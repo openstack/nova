@@ -25,6 +25,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
+from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _, _LE
@@ -43,6 +44,16 @@ image_opts = [
 CONF = cfg.CONF
 CONF.register_opts(image_opts)
 IMAGE_API = image.API()
+QEMU_IMG_LIMITS = None
+
+try:
+    QEMU_IMG_LIMITS = processutils.ProcessLimits(
+        cpu_time=2,
+        address_space=1 * units.Gi)
+except Exception:
+    LOG.error(_LE('Please upgrade to oslo.concurrency version '
+                  '2.6.1 -- this version has fixes for the '
+                  'vulnerability CVE-2015-5162.'))
 
 
 def qemu_img_info(path, format=None):
@@ -61,7 +72,10 @@ def qemu_img_info(path, format=None):
     if format is not None:
         cmd = cmd + ('-f', format)
     try:
-        out, err = utils.execute(*cmd)
+        if QEMU_IMG_LIMITS is not None:
+            out, err = utils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
+        else:
+            out, err = utils.execute(*cmd)
     except processutils.ProcessExecutionError as exp:
         msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
                 {'path': path, 'exp': exp})
