@@ -90,6 +90,7 @@ from nova.virt import fake
 from nova.virt import firewall as base_firewall
 from nova.virt import hardware
 from nova.virt.image import model as imgmodel
+from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import driver as libvirt_driver
@@ -8848,7 +8849,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(utils, "execute")
         utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
-                      '/test/disk.local').AndReturn((ret, ''))
+                      '/test/disk.local', prlimit = images.QEMU_IMG_LIMITS,
+                      ).AndReturn((ret, ''))
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -8956,7 +8958,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(utils, "execute")
         utils.execute('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info',
-                      '/test/disk.local').AndReturn((ret, ''))
+                      '/test/disk.local', prlimit = images.QEMU_IMG_LIMITS,
+                      ).AndReturn((ret, ''))
 
         self.mox.ReplayAll()
         conn_info = {'driver_volume_type': 'fake'}
