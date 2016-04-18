@@ -57,7 +57,7 @@ Request
 
 **Example Create multiple servers without reservation ID**
 
-.. literalinclude:: ../../doc/api_samples/servers-multiple-create/multiple-create-no-resv-req.json
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-no-resv-post-resp.json
    :language: javascript
 
 Response
@@ -125,7 +125,7 @@ Request
 
 **Example Create multiple servers with reservation ID**
 
-.. literalinclude:: ../../doc/api_samples/servers-multiple-create/multiple-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-req.json
    :language: javascript
 
 Response
@@ -137,6 +137,5 @@ Response
 
 **Example Create multiple servers with reservation ID**
 
-.. literalinclude:: ../../doc/api_samples/servers-multiple-create/multiple-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-resp.json
    :language: javascript
-

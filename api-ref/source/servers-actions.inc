@@ -57,7 +57,7 @@ Request
 
 **Example Add (Associate) Floating Ip (Addfloatingip Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/addFloatingIp-req.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-resp.json
    :language: javascript
 
 Response
@@ -89,7 +89,7 @@ Request
 
 **Example Add Security Group To A Server (Addsecuritygroup Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/addSecurityGroup-req.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-add-post-req.json
    :language: javascript
 
 Response
@@ -122,7 +122,7 @@ Request
 
 **Example Change Administrative Password (Changepassword Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/changePassword-req.json
+.. literalinclude:: ../../doc/api_samples/os-admin-password/admin-password-change-password.json
    :language: javascript
 
 Response
@@ -165,7 +165,7 @@ Request
 
 **Example Confirm Resized Server (Confirmresize Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/confirmResize-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-confirm-resize.json
    :language: javascript
 
 Response
@@ -216,7 +216,7 @@ Request
 
 **Example Create Image (Createimage Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/createImage-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-create-image.json
    :language: javascript
 
 Response
@@ -249,7 +249,7 @@ Request
 
 **Example Lock Server (Lock Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/lock-req.json
+.. literalinclude:: ../../doc/api_samples/os-lock-server/lock-server.json
    :language: javascript
 
 Response
@@ -282,7 +282,7 @@ Request
 
 **Example Pause Server (Pause Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/pause-req.json
+.. literalinclude:: ../../doc/api_samples/os-pause-server/pause-server.json
    :language: javascript
 
 Response
@@ -313,7 +313,7 @@ Request
 
 **Example Reboot Server (Reboot Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/reboot-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-reboot.json
    :language: javascript
 
 Response
@@ -352,7 +352,9 @@ Request
 
 **Example Rebuild Server (Rebuild Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/rebuild-preserve-ephemeral-req.json
+Preserving the ephemeral disk
+
+.. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-preserve-ephemeral.json
    :language: javascript
 
 Response
@@ -360,7 +362,7 @@ Response
 
 **Example Rebuild Server (Rebuild Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/rebuild-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (Removefloatingip Action)
@@ -389,10 +391,11 @@ Request
   - removeFloatingIp: removeFloatingIp
   - address: address
 
-**Example Remove (Disassociate) Floating Ip (Removefloatingip Action): JSON request**
+.. TODO(sdague) build example for this
+   **Example Remove (Disassociate) Floating Ip (Removefloatingip Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/removeFloatingIp-req.json
-   :language: javascript
+   .. literalinclude:: ../../doc/api_samples/servers-action/removeFloatingIp-req.json
+                       :language: javascript
 
 Response
 --------
@@ -423,7 +426,7 @@ Request
 
 **Example Remove Security Group From A Server (Removesecuritygroup Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/removeSecurityGroup-req.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-remove-post-req.json
    :language: javascript
 
 Response
@@ -462,7 +465,7 @@ Request
 
 **Example Rescue server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/rescue-req.json
+.. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue-req.json
    :language: javascript
 
 Response
@@ -474,7 +477,7 @@ Response
 
 **Example Extended rescue server: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/rescue-resp.json
+.. literalinclude:: ../../doc/api_samples/os-rescue/server-get-resp-rescue.json
    :language: javascript
 
 Resize Server (Resize Action)
@@ -510,7 +513,7 @@ Request
 
 **Example Resize Server (Resize Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/resize-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-resize.json
    :language: javascript
 
 Response
@@ -543,7 +546,7 @@ Request
 
 **Example Resume Suspended Server (Resume Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/resume-req.json
+.. literalinclude:: ../../doc/api_samples/os-suspend-server/server-resume.json
    :language: javascript
 
 Response
@@ -588,7 +591,7 @@ Request
 
 **Example Revert Resized Server (Revertresize Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/revertResize-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-revert-resize.json
    :language: javascript
 
 Response
@@ -633,7 +636,7 @@ Request
 
 **Example Start server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/start-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-start.json
    :language: javascript
 
 Response
@@ -674,7 +677,7 @@ Request
 
 **Example Stop server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/stop-req.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-stop.json
    :language: javascript
 
 Response
@@ -707,7 +710,7 @@ Request
 
 **Example Suspend Server (Suspend Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/suspend-req.json
+.. literalinclude:: ../../doc/api_samples/os-suspend-server/server-suspend.json
    :language: javascript
 
 Response
@@ -740,7 +743,7 @@ Request
 
 **Example Unlock Server (Unlock Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/unlock-req.json
+.. literalinclude:: ../../doc/api_samples/os-lock-server/unlock-server.json
    :language: javascript
 
 Response
@@ -773,7 +776,7 @@ Request
 
 **Example Unpause Server (Unpause Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/unpause-req.json
+.. literalinclude:: ../../doc/api_samples/os-pause-server/unpause-server.json
    :language: javascript
 
 Response
@@ -814,9 +817,8 @@ Request
 
 **Example Unrescue server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/unrescue-req.json
+.. literalinclude:: ../../doc/api_samples/os-rescue/server-unrescue-req.json
    :language: javascript
 
 Response
 --------
-
