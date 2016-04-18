@@ -2490,7 +2490,7 @@ class API(base.Base):
             elevated, instance.uuid, 'finished')
 
         # reverse quota reservation for increased resource usage
-        deltas = self._reverse_upsize_quota_delta(context, migration)
+        deltas = self._reverse_upsize_quota_delta(context, instance)
         quotas = self._reserve_quota_delta(context, deltas, instance)
 
         instance.task_state = task_states.RESIZE_REVERTING
@@ -2580,16 +2580,12 @@ class API(base.Base):
         return API._resize_quota_delta(context, new_flavor, old_flavor, 1, 1)
 
     @staticmethod
-    def _reverse_upsize_quota_delta(context, migration_ref):
+    def _reverse_upsize_quota_delta(context, instance):
         """Calculate deltas required to reverse a prior upsizing
         quota adjustment.
         """
-        old_flavor = objects.Flavor.get_by_id(
-            context, migration_ref['old_instance_type_id'])
-        new_flavor = objects.Flavor.get_by_id(
-            context, migration_ref['new_instance_type_id'])
-
-        return API._resize_quota_delta(context, new_flavor, old_flavor, -1, -1)
+        return API._resize_quota_delta(context, instance.new_flavor,
+                                       instance.old_flavor, -1, -1)
 
     @staticmethod
     def _downsize_quota_delta(context, instance):

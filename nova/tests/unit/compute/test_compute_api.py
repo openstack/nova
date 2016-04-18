@@ -1168,7 +1168,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished').AndReturn(
                         fake_mig)
         self.compute_api._reverse_upsize_quota_delta(
-                self.context, fake_mig).AndReturn('deltas')
+                self.context, fake_inst).AndReturn('deltas')
 
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
@@ -1226,7 +1226,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         delta = ['delta']
         self.compute_api._reverse_upsize_quota_delta(
-            self.context, fake_mig).AndReturn(delta)
+            self.context, fake_inst).AndReturn(delta)
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
         self.compute_api._reserve_quota_delta(
@@ -1243,6 +1243,22 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.revert_resize,
                           self.context,
                           fake_inst)
+
+    def test_reverse_quota_delta(self):
+        inst = self._create_instance_obj(params=None)
+        inst.old_flavor = self._create_flavor(vcpus=1, memory_mb=512)
+        inst.new_flavor = self._create_flavor(vcpus=2, memory_mb=4096)
+
+        expected_deltas = {
+            'cores': -1 * (inst.new_flavor['vcpus'] -
+                           inst.old_flavor['vcpus']),
+            'ram': -1 * (inst.new_flavor['memory_mb'] -
+                         inst.old_flavor['memory_mb'])
+        }
+
+        deltas = self.compute_api._reverse_upsize_quota_delta(
+            self.context, inst)
+        self.assertEqual(expected_deltas, deltas)
 
     def _test_resize(self, flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
