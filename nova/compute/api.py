@@ -2512,7 +2512,7 @@ class API(base.Base):
             elevated, instance.uuid, 'finished')
 
         # reverse quota reservation for increased resource usage
-        deltas = compute_utils.reverse_upsize_quota_delta(context, migration)
+        deltas = compute_utils.reverse_upsize_quota_delta(context, instance)
         quotas = compute_utils.reserve_quota_delta(context, deltas, instance)
 
         instance.task_state = task_states.RESIZE_REVERTING
