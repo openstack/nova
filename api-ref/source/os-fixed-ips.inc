@@ -14,7 +14,7 @@ Show Fixed Ip Details
 
 Shows details for a fixed IP address.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -44,7 +44,7 @@ Reserves or releases a fixed IP.
 
 To reserve a fixed IP address, specify ``reserve`` in the request body. To release a fixed IP address, specify ``unreserve`` in the request body.
 
-Normal response codes: 202,,503,400,401,403,405,415,400
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

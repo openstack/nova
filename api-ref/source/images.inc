@@ -21,7 +21,7 @@ Show Image Details
 
 Shows details for an image.
 
-Normal response codes: 200,203,,503,400,401,403,405,404
+Normal response codes: 200,203
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -49,7 +49,7 @@ Delete Image
 
 Deletes an image.
 
-Normal response codes: 204,,503,400,401,403,405,404
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -72,7 +72,7 @@ Show Image Metadata Item Details
 
 Shows details for a metadata item, by key, for an image.
 
-Normal response codes: 200,203,,503,400,401,403,405,404
+Normal response codes: 200,203
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -101,7 +101,7 @@ Create Or Update Image Metadata Item
 
 Creates or updates a metadata item, by key, for an image.
 
-Normal response codes: 200,,503,400,401,403,405,404,415,400,409
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -135,7 +135,7 @@ Delete Image Metadata Item
 
 Deletes a metadata item, by key, for an image.
 
-Normal response codes: 204,,503,400,401,403,405,404,409
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

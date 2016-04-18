@@ -193,7 +193,7 @@ Deletes a Compute service.
 
 Specify the service by its host name and binary name.
 
-Normal response codes: 204,404
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

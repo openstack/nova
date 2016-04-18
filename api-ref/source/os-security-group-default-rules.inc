@@ -13,7 +13,7 @@ List Default Security Group Rules
 
 Lists default security group rules.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -51,7 +51,7 @@ Creates a default security group rule.
 
 If you specify a source port ( ``from_port`` ) or destination port ( ``to_port`` ) value, you must specify an IP protocol ( ``ip_protocol`` ) value. Otherwise, the operation returns the ``Bad Request (400)`` response code.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -97,7 +97,7 @@ Show Default Security Group Rule Details
 
 Shows details for a security group rule.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -134,7 +134,7 @@ Delete Default Security Group Rule
 
 Deletes a security group rule.
 
-Normal response codes: 204,,503,400,401,403,405,404
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

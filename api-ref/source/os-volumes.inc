@@ -13,7 +13,7 @@ List Volumes
 
 Lists the volumes associated with the account.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -40,7 +40,7 @@ Create Volume
 
 Creates a volume.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -80,7 +80,7 @@ List Volumes With Details
 
 Lists all volumes with details.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -107,7 +107,7 @@ Show Volume Details
 
 Shows details for a volume.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -135,7 +135,7 @@ Delete Volume
 
 Deletes a volume.
 
-Normal response codes: 202,,503,400,401,403,405,404
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -163,7 +163,7 @@ List Volume Types
 
 Lists volume types.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -197,7 +197,7 @@ Show Volume Type Details
 
 Shows details for a volume type.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -225,7 +225,7 @@ Create Snapshot
 
 Creates a snapshot.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -258,7 +258,7 @@ List Snapshots
 
 Lists snapshots.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -285,7 +285,7 @@ List Snapshots With Details
 
 Lists all snapshots with details.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -312,7 +312,7 @@ Show Snapshot Details
 
 Shows details for a snapshot.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -342,7 +342,7 @@ Deletes a snapshot from the account.
 
 This operation is asynchronous. You must list snapshots repeatedly to determine whether the snapshot was deleted.
 
-Normal response codes: 202,,503,400,401,403,405,404
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

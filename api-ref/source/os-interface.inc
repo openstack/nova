@@ -15,7 +15,7 @@ Create Interface
 
 Creates a port interface and uses it to attach a port to a server instance.
 
-Normal response codes: 200,,503,400,401,403,405,415,400
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -61,7 +61,7 @@ List Port Interfaces
 
 Lists port interfaces that are attached to a server.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -98,7 +98,7 @@ Show Port Interface Details
 
 Shows details for a port interface that is attached to a server.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -127,7 +127,7 @@ Detach Interface
 
 Detaches a port interface.
 
-Normal response codes: 202,,503,400,401,403,405,415,400
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

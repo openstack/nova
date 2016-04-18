@@ -39,7 +39,7 @@ The server must exist.
 
 You can only add a floating IP address to the server when its status is ``available``.
 
-Normal response codes: 202,409,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -72,7 +72,7 @@ Adds a security group to a server.
 
 Specify the ``addSecurityGroup`` action in the request body.
 
-Normal response codes: 202,,503,400,401,403,405,415,400
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -149,7 +149,7 @@ Troubleshooting
 
 If the server status remains ``RESIZED``, the request failed. Ensure you meet the preconditions and run the request again. If the request fails again, investigate the compute back end or ask your cloud provider.
 
-Normal response codes: 204,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -200,7 +200,7 @@ If the server status does not go back to an original server's status, the reques
 
 If the request fails due to an error on OpenStack Compute service, the image is purged from the image store that OpenStack Image service manages. Ensure you meet the preconditions and run the request again. If the request fails again, investigate OpenStack Compute service or ask your cloud provider.
 
-Normal response codes: 202,409,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -297,7 +297,7 @@ Reboots a server.
 
 Specify the ``reboot`` action in the request body.
 
-Normal response codes: 202,,503,400,401,403,405,404,415,400,422,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -330,7 +330,7 @@ Specify the ``rebuild`` action in the request body.
 
 To rebuild the server with preservation of the ephemeral partition, set the ``preserve_ephemeral`` parameter to ``true``.
 
-Normal response codes: 202,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -374,7 +374,7 @@ The IP address is returned to the pool of IP addresses that is available for all
 
 Specify the ``removeFloatingIp`` action in the request body.
 
-Normal response codes: 202,409,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -406,7 +406,7 @@ Removes a security group from a server.
 
 Specify the ``removeSecurityGroup`` action in the request body.
 
-Normal response codes: 202,,503,400,401,403,405,415,400
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -494,7 +494,7 @@ You can only resize a server when its status is ``ACTIVE`` or ``SHUTOFF``.
 
 If the server is locked, you must have administrator privileges to resize the server.
 
-Normal response codes: 202,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -572,7 +572,7 @@ If the server status remains ``RESIZED``, the request failed. Ensure you meet th
 
 The server is not reverted in the compute node that OpenStack Compute manages.
 
-Normal response codes: 202,,503,400,401,403,405,404,415,400,503,409
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

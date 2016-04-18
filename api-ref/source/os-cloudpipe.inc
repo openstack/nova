@@ -13,7 +13,7 @@ List Cloudpipes
 
 Lists cloudpipes.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -40,7 +40,7 @@ Create Cloudpipe
 
 Creates a cloudpipe.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -73,7 +73,7 @@ Update Cloudpipe
 
 Updates the virtual private network (VPN) IP address and port for a cloudpipe instance.
 
-Normal response codes: 202,,503,400,401,403,405,415,400
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
