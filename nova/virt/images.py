@@ -25,6 +25,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
 from oslo_utils import imageutils
+from oslo_utils import units
 
 import nova.conf
 from nova import exception
@@ -36,6 +37,10 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 IMAGE_API = image.API()
+
+QEMU_IMG_LIMITS = processutils.ProcessLimits(
+    cpu_time=2,
+    address_space=1 * units.Gi)
 
 
 def qemu_img_info(path, format=None):
@@ -53,7 +58,7 @@ def qemu_img_info(path, format=None):
         cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
         if format is not None:
             cmd = cmd + ('-f', format)
-        out, err = utils.execute(*cmd)
+        out, err = utils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
     except processutils.ProcessExecutionError as exp:
         msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
                 {'path': path, 'exp': exp})
