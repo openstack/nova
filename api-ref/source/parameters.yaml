@@ -220,7 +220,7 @@ server_group_id:
   in: path
   required: true
   type: string
-server_id:
+server_id_path:
   description: |
     The UUID of the server.
   in: path
@@ -331,14 +331,14 @@ exclude:
   in: query
   required: false
   type: string
-flavor:
+flavor_query:
   description: |
     Filters the response by a flavor, as a UUID. A flavor is a combination of memory,
     disk size, and CPUs.
   in: query
   required: false
   type: string
-host_1:
+host_query:
   description: |
     Filters the response by a host name, as a string. This query parameter is typically
     available to only administrative users. If you are a non-administrative user,
@@ -346,7 +346,7 @@ host_1:
   in: query
   required: false
   type: string
-image:
+image_query:
   description: |
     Filters the response by an image, as a UUID.
   in: query
@@ -399,7 +399,7 @@ minRam_1:
   in: query
   required: false
   type: integer
-name_11:
+server_name_query:
   description: |
     Filters the response by a server name, as a string.  You can use regular expressions
     in the query. For example, the ``?name=bob`` regular expression returns both bob
@@ -447,7 +447,7 @@ status_1:
   in: query
   required: false
   type: string
-status_2:
+server_status_query:
   description: |
     Filters the response by a server status, as a string. For example, ``ACTIVE``.
   in: query
@@ -580,6 +580,18 @@ OS-SRV-USG:terminated_at:
   in: body
   required: true
   type: string
+accessIPv4:
+  in: body
+  required: true
+  type: string
+  description: |
+    IPv4 address that should be used to access this server.
+accessIPv6:
+  in: body
+  required: true
+  type: string
+  description: |
+    IPv6 address that should be used to access this server.
 addFixedIp:
   description: |
     The action.
@@ -912,7 +924,7 @@ flavorRef:
   in: body
   required: true
   type: string
-flavor_1:
+flavor:
   description: |
     The ID and links for the flavor for your server instance. A flavor is a combination
     of memory, disk size, and CPUs.
@@ -1035,7 +1047,7 @@ id_2:
   in: body
   required: true
   type: integer
-id_3:
+server_id:
   description: |
     The UUID of the server.
   in: body
@@ -1091,7 +1103,7 @@ imageRef_1:
   in: body
   required: false
   type: string
-image_1:
+image:
   description: |
     The UUID and links for the image for your server instance. The ``image`` object
     might be an empty string when you boot the server from a volume.
@@ -1374,7 +1386,7 @@ name_5:
   in: body
   required: true
   type: string
-name_6:
+server_name:
   description: |
     The server name.
   in: body
@@ -1424,7 +1436,7 @@ networks:
     specify the port-id in the ``port`` attribute in a ``networks`` object.
   in: body
   required: false
-  type: string
+  type: object
 new_file:
   description: |
     The name of the qcow2 file that Block Storage creates, which becomes the active
@@ -1792,7 +1804,7 @@ security_groups_1:
   in: body
   required: true
   type: integer
-security_groups_2:
+security_groups_obj:
   description: |
     Security groups object.
   in: body
@@ -1910,7 +1922,7 @@ status:
   in: body
   required: false
   type: string
-status_3:
+server_status:
   description: |
     The server status.
   in: body
@@ -2003,7 +2015,7 @@ user_id:
   in: body
   required: true
   type: string
-uuid:
+network_uuid:
   description: |
     To provision the server instance with a NIC for a network, specify the UUID of
     the network in the ``uuid`` attribute in a ``networks`` object. Required if you
