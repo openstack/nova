@@ -483,6 +483,12 @@ MIN_QEMU_PPC64_VERSION = (2, 1, 0)
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
 
+
+# number of serial console limit
+QEMU_MAX_SERIAL_PORTS = 4
+# Qemu supports 4 serial consoles, we remove 1 because of the PTY one defined
+ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
+
 # realtime suppport
 MIN_LIBVIRT_REALTIME_VERSION = (1, 2, 13)
 
@@ -4191,6 +4197,13 @@ class LibvirtDriver(driver.ComputeDriver):
                 hv.vapic = True
             guest.features.append(hv)
 
+    def _check_number_of_serial_console(self, num_ports):
+        virt_type = CONF.libvirt.virt_type
+        if (virt_type in ("kvm", "qemu") and
+            num_ports > ALLOWED_QEMU_SERIAL_PORTS):
+            raise exception.SerialPortNumberLimitExceeded(
+                allowed=ALLOWED_QEMU_SERIAL_PORTS, virt_type=virt_type)
+
     def _create_serial_console_devices(self, guest, instance, flavor,
                                        image_meta):
         guest_arch = libvirt_utils.get_arch(image_meta)
@@ -4198,11 +4211,15 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.serial_console.enabled:
             num_ports = hardware.get_number_of_serial_ports(
                 flavor, image_meta)
+
+            if guest_arch in (arch.S390, arch.S390X):
+                console_cls = vconfig.LibvirtConfigGuestConsole
+            else:
+                console_cls = vconfig.LibvirtConfigGuestSerial
+                self._check_number_of_serial_console(num_ports)
+
             for port in six.moves.range(num_ports):
-                if guest_arch in (arch.S390, arch.S390X):
-                    console = vconfig.LibvirtConfigGuestConsole()
-                else:
-                    console = vconfig.LibvirtConfigGuestSerial()
+                console = console_cls()
                 console.port = port
                 console.type = "tcp"
                 console.listen_host = (
