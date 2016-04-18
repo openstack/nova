@@ -44,6 +44,10 @@ def fake_compute_get(*args, **kwargs):
 
 
 class RescueTestV21(test.NoDBTestCase):
+
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+    image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+
     def setUp(self):
         super(RescueTestV21, self).setUp()
 
@@ -139,16 +143,26 @@ class RescueTestV21(test.NoDBTestCase):
                           self.fake_req, UUID, body=body)
 
     @mock.patch('nova.compute.api.API.rescue')
+    def test_rescue_with_bad_image_specified(self, mock_compute_api_rescue):
+        body = {"rescue": {"adminPass": "ABC123",
+                           "rescue_image_ref": "img-id"}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.rescue')
     def test_rescue_with_image_specified(self, mock_compute_api_rescue):
         instance = fake_compute_get()
         body = {"rescue": {"adminPass": "ABC123",
-                           "rescue_image_ref": "img-id"}}
+            "rescue_image_ref": self.image_href}}
         resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertEqual("ABC123", resp_json['adminPass'])
 
-        mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
-                                                   rescue_password=u'ABC123',
-                                                   rescue_image_ref=u'img-id')
+        mock_compute_api_rescue.assert_called_with(
+            mock.ANY,
+            instance,
+            rescue_password=u'ABC123',
+            rescue_image_ref=self.image_uuid)
 
     @mock.patch('nova.compute.api.API.rescue')
     def test_rescue_without_image_specified(self, mock_compute_api_rescue):
