@@ -57,7 +57,7 @@ Request
 
 **Example Enable Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-update-maintenance-req.json
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-put-maintenance-req.json
    :language: javascript
 
 Response
@@ -65,7 +65,7 @@ Response
 
 **Example Enable Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-update-maintenance-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-put-maintenance-resp.json
    :language: javascript
 
 Show Host Details
@@ -93,7 +93,7 @@ Response
 
 **Example Show Host Details: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-get-resp.json
    :language: javascript
 
 Reboot Host
@@ -121,7 +121,7 @@ Response
 
 **Example Reboot Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-reboot-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-get-reboot.json
    :language: javascript
 
 Shut Down Host
@@ -149,7 +149,7 @@ Response
 
 **Example Shut Down Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-shutdown-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-get-shutdown.json
    :language: javascript
 
 Start Host
@@ -177,6 +177,6 @@ Response
 
 **Example Start Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-start-resp.json
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-get-startup.json
    :language: javascript
 
