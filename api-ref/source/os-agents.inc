@@ -29,7 +29,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - hypervisor: OS-EXT-SRV-ATTR:hypervisor_hostname
+  - hypervisor: hypervisor
   - architecture: architecture
   - os: os
   - url: url
@@ -43,6 +43,16 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - hypervisor: hypervisor
+  - architecture: architecture
+  - os: os
+  - url: url
+  - md5hash: md5hash
+  - version: version
+  - agent_id: agent_id
 
 **Example Create Agent Build: JSON response**
 
@@ -137,7 +147,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - agent_id: agent_id
+  - agent_id: agent_id_str
   - url: url
   - md5hash: md5hash
   - version: version
