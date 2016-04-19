@@ -46,6 +46,6 @@ Response
 
 **Example Show Extension Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/extensions/extension-show-resp.json
+.. literalinclude:: ../../doc/api_samples/extensions-info/extensions-get-resp.json
    :language: javascript
 
