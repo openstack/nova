@@ -14,17 +14,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Super simple fake memcache client."""
+"""Simple wrapper for oslo_cache."""
 
 from oslo_cache import core as cache
+from oslo_log import log as logging
 
 import nova.conf
-from nova.i18n import _
-
+from nova.i18n import _, _LW
 
 CONF = nova.conf.CONF
 
+LOG = logging.getLogger(__name__)
+
 WEEK = 604800
+
+
+def _warn_if_null_backend():
+    if CONF.cache.backend == 'dogpile.cache.null':
+        LOG.warning(_LW("Cache enabled with backend dogpile.cache.null."))
 
 
 def get_memcached_client(expiration_time=0):
@@ -32,6 +39,7 @@ def get_memcached_client(expiration_time=0):
     # If the operator has [cache]/enabled flag on then we let oslo_cache
     # configure the region from the configuration settings
     if CONF.cache.enabled and CONF.cache.memcache_servers:
+        _warn_if_null_backend()
         return CacheClient(
                 _get_default_cache_region(expiration_time=expiration_time))
 
@@ -41,6 +49,7 @@ def get_client(expiration_time=0):
     # If the operator has [cache]/enabled flag on then we let oslo_cache
     # configure the region from configuration settings.
     if CONF.cache.enabled:
+        _warn_if_null_backend()
         return CacheClient(
                 _get_default_cache_region(expiration_time=expiration_time))
     # If [cache]/enabled flag is off, we use the dictionary backend
