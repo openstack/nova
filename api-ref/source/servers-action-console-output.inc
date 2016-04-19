@@ -26,7 +26,7 @@ Request
 
 **Example Get console output: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/os-getConsoleOutput-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-console-output/console-output-post-req.json
    :language: javascript
 
 Response
@@ -34,6 +34,6 @@ Response
 
 **Example Get console output: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/os-getConsoleOutput-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-console-output/console-output-post-resp.json
    :language: javascript
 

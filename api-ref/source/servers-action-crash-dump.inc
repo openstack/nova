@@ -29,7 +29,7 @@ Request
 
 **Example Trigger crash dump: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/server-action-trigger-crash-.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.17/server-action-trigger-crash-dump.json
    :language: javascript
 
 Response
