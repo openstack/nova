@@ -153,15 +153,15 @@ class _TestComputeNodeObject(object):
         return {'supported_hv_specs': 'supported_instances',
                 'pci_device_pools': 'pci_stats'}
 
-    def test_get_by_id(self):
-        self.mox.StubOutWithMock(db, 'compute_node_get')
-        db.compute_node_get(self.context, 123).AndReturn(fake_compute_node)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'compute_node_get')
+    def test_get_by_id(self, get_mock):
+        get_mock.return_value = fake_compute_node
         compute = compute_node.ComputeNode.get_by_id(self.context, 123)
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
         self.assertNotIn('uuid', compute.obj_what_changed())
+        get_mock.assert_called_once_with(self.context, 123)
 
     @mock.patch.object(objects.Service, 'get_by_id')
     @mock.patch.object(db, 'compute_node_get')
@@ -182,15 +182,14 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
-    def test_get_by_service_id(self):
-        self.mox.StubOutWithMock(db, 'compute_nodes_get_by_service_id')
-        db.compute_nodes_get_by_service_id(self.context, 456).AndReturn(
-            [fake_compute_node])
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'compute_nodes_get_by_service_id')
+    def test_get_by_service_id(self, get_mock):
+        get_mock.return_value = [fake_compute_node]
         compute = compute_node.ComputeNode.get_by_service_id(self.context, 456)
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+        get_mock.assert_called_once_with(self.context, 456)
 
     @mock.patch.object(db, 'compute_node_get_by_host_and_nodename')
     def test_get_by_host_and_nodename(self, cn_get_by_h_and_n):
@@ -228,19 +227,10 @@ class _TestComputeNodeObject(object):
             compute_node.ComputeNode.get_first_node_by_host_for_old_compat,
             self.context, 'fake')
 
+    @mock.patch.object(db, 'compute_node_create')
     @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
-    def test_create(self, mock_get):
-        self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(
-            self.context,
-            {
-                'service_id': 456,
-                'stats': fake_stats_db_format,
-                'host_ip': fake_host_ip,
-                'supported_instances': fake_supported_hv_specs_db_format,
-                'uuid': uuidsentinel.fake_compute_node,
-            }).AndReturn(fake_compute_node)
-        self.mox.ReplayAll()
+    def test_create(self, mock_get, mock_create):
+        mock_create.return_value = fake_compute_node
         compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
         compute.uuid = uuidsentinel.fake_compute_node
@@ -254,6 +244,14 @@ class _TestComputeNodeObject(object):
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+        param_dict = {
+            'service_id': 456,
+            'stats': fake_stats_db_format,
+            'host_ip': fake_host_ip,
+            'supported_instances': fake_supported_hv_specs_db_format,
+            'uuid': uuidsentinel.fake_compute_node
+        }
+        mock_create.assert_called_once_with(self.context, param_dict)
 
     @mock.patch('nova.db.compute_node_create')
     @mock.patch('oslo_utils.uuidutils.generate_uuid')
@@ -267,32 +265,23 @@ class _TestComputeNodeObject(object):
         mock_create.assert_called_once_with(
             self.context, {'uuid': fake_compute_node['uuid']})
 
+    @mock.patch('nova.db.compute_node_create')
     @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
-    def test_recreate_fails(self, mock_get):
-        self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(
-            self.context, {'service_id': 456,
-                           'uuid': uuidsentinel.fake_compute_node}).AndReturn(
-            fake_compute_node)
-        self.mox.ReplayAll()
+    def test_recreate_fails(self, mock_get, mock_create):
+        mock_create.return_value = fake_compute_node
         compute = compute_node.ComputeNode(context=self.context)
         compute.service_id = 456
         compute.uuid = uuidsentinel.fake_compute_node
         compute.create()
         self.assertRaises(exception.ObjectActionError, compute.create)
+        param_dict = {'service_id': 456,
+                      'uuid': uuidsentinel.fake_compute_node}
+        mock_create.assert_called_once_with(self.context, param_dict)
 
-    def test_save(self):
-        self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(
-            self.context, 123,
-            {
-                'vcpus_used': 3,
-                'stats': fake_stats_db_format,
-                'host_ip': fake_host_ip,
-                'supported_instances': fake_supported_hv_specs_db_format,
-                'uuid': uuidsentinel.fake_compute_node,
-            }).AndReturn(fake_compute_node)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'compute_node_update')
+    @mock.patch('nova.db.compute_node_get', return_value=fake_compute_node)
+    def test_save(self, mock_get, mock_update):
+        mock_update.return_value = fake_compute_node
         compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
         compute.vcpus_used = 3
@@ -305,6 +294,14 @@ class _TestComputeNodeObject(object):
         self.compare_obj(compute, fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+        param_dict = {
+            'vcpus_used': 3,
+            'stats': fake_stats_db_format,
+            'host_ip': fake_host_ip,
+            'supported_instances': fake_supported_hv_specs_db_format,
+            'uuid': uuidsentinel.fake_compute_node,
+        }
+        mock_update.assert_called_once_with(self.context, 123, param_dict)
 
     @mock.patch('nova.db.compute_node_update')
     def test_save_pci_device_pools_empty(self, mock_update):
@@ -353,35 +350,33 @@ class _TestComputeNodeObject(object):
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           compute, 'id', 124)
 
-    def test_destroy(self):
-        self.mox.StubOutWithMock(db, 'compute_node_delete')
-        db.compute_node_delete(self.context, 123)
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'compute_node_delete')
+    def test_destroy(self, mock_delete):
         compute = compute_node.ComputeNode(context=self.context)
         compute.id = 123
         compute.destroy()
+        mock_delete.assert_called_once_with(self.context, 123)
 
-    def test_get_all(self):
-        self.mox.StubOutWithMock(db, 'compute_node_get_all')
-        db.compute_node_get_all(self.context).AndReturn([fake_compute_node])
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'compute_node_get_all')
+    def test_get_all(self, mock_get_all):
+        mock_get_all.return_value = [fake_compute_node]
         computes = compute_node.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(computes))
         self.compare_obj(computes[0], fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+        mock_get_all.assert_called_once_with(self.context)
 
-    def test_get_by_hypervisor(self):
-        self.mox.StubOutWithMock(db, 'compute_node_search_by_hypervisor')
-        db.compute_node_search_by_hypervisor(self.context, 'hyper').AndReturn(
-            [fake_compute_node])
-        self.mox.ReplayAll()
+    @mock.patch.object(db, 'compute_node_search_by_hypervisor')
+    def test_get_by_hypervisor(self, mock_search):
+        mock_search.return_value = [fake_compute_node]
         computes = compute_node.ComputeNodeList.get_by_hypervisor(self.context,
                                                                   'hyper')
         self.assertEqual(1, len(computes))
         self.compare_obj(computes[0], fake_compute_node,
                          subs=self.subs(),
                          comparators=self.comparators())
+        mock_search.assert_called_once_with(self.context, 'hyper')
 
     @mock.patch('nova.db.compute_node_get_all_by_pagination',
                 return_value=[fake_compute_node])
