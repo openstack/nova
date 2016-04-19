@@ -1112,7 +1112,7 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
         return numa_topology
 
     if flavor_thread_policy in [None, fields.CPUThreadAllocationPolicy.PREFER]:
-        cpu_thread_policy = image_thread_policy
+        cpu_thread_policy = flavor_thread_policy or image_thread_policy
     elif image_thread_policy and image_thread_policy != flavor_thread_policy:
         raise exception.ImageCPUThreadPolicyForbidden()
     else:
