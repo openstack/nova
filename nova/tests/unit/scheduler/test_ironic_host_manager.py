@@ -346,23 +346,6 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
                 fake_properties)
         self._verify_result(info, result)
 
-    @mock.patch.object(FakeFilterClass2, '_filter_one', return_value=True)
-    def test_get_filtered_hosts_with_specified_filters(self, mock_filter_one):
-        fake_properties = objects.RequestSpec(
-            instance_uuid='fake-uuid',
-            ignore_hosts=[],
-            force_hosts=[],
-            force_nodes=[])
-
-        specified_filters = ['FakeFilterClass1', 'FakeFilterClass2']
-        info = {'expected_objs': self.fake_hosts,
-                'expected_fprops': fake_properties}
-        self._mock_get_filtered_hosts(info)
-
-        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
-                fake_properties, filter_class_names=specified_filters)
-        self._verify_result(info, result)
-
     def test_get_filtered_hosts_with_ignore(self):
         fake_properties = objects.RequestSpec(
             instance_uuid='fake-uuid',
