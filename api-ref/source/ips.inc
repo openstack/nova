@@ -34,7 +34,7 @@ Response
 
 **Example List Ips: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/ips/ips-resp.json
+.. literalinclude:: ../../doc/api_samples/server-ips/server-ips-resp.json
    :language: javascript
 
 Show Ip Details
@@ -65,6 +65,6 @@ Response
 
 **Example Show Ip Details: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/ips/ips-network-resp.json
+.. literalinclude:: ../../doc/api_samples/server-ips/server-ips-network-resp.json
    :language: javascript
 
