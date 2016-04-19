@@ -30,7 +30,7 @@ Response
 
 **Example List Cloudpipes: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-cloudpipe/cloud-pipe-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-cloudpipe/cloud-pipe-get-resp.json
    :language: javascript
 
 Create Cloudpipe
