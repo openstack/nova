@@ -15,13 +15,13 @@
 # SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.0rc2.dev10\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-03-22 12:07+0000\n"
+"Project-Id-Version: nova 13.0.1.dev12\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-19 04:49+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-22 06:36+0000\n"
+"PO-Revision-Date: 2016-04-18 08:32+0000\n"
 "Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
@@ -177,7 +177,7 @@ msgstr "%s이(가) 문자열 또는 Unicode가 아님"
 
 #, python-format
 msgid "%s is not a valid IP network"
-msgstr "%s이(가) 올바른 ip 네트워크가 아님"
+msgstr "%s이(가) 올바른 IP 네트워크가 아님"
 
 #, python-format
 msgid "%s is not a valid node managed by this compute host."
@@ -4142,7 +4142,7 @@ msgstr "제공된 디바이스 경로(%(path)s)가 올바르지 않습니다. "
 msgid ""
 "The supplied disk path (%(path)s) already exists, it is expected not to "
 "exist."
-msgstr "제공된 디스크 경로(%(path)s)가 이미 존재합니다. 없어야합니다."
+msgstr "제공된 디스크 경로(%(path)s)가 이미 존재합니다.  없어야 합니다. "
 
 msgid "The supplied hypervisor type of is invalid."
 msgstr "제공된 하이퍼바이저 유형이 올바르지 않습니다. "
@@ -4257,7 +4257,7 @@ msgid ""
 "of the rest of the deployment. Unable to continue."
 msgstr ""
 "이 서비스는 나머지 배치의 최소 (v%(minver)i) 버전보다 이전(v%(thisver)i)입니"
-"다."
+"다. 계속할 수 없습니다."
 
 #, python-format
 msgid "Timeout waiting for device %s to be created"
