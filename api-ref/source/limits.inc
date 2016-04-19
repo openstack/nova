@@ -30,6 +30,6 @@ Response
 
 **Example Show Rate And Absolute Limits: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/limits/limits-get-resp.json
+.. literalinclude:: ../../doc/api_samples/limits/limit-get-resp.json
    :language: javascript
 

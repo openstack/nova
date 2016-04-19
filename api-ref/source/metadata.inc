@@ -37,7 +37,7 @@ Response
 
 **Example List All Metadata: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-list-resp.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
 Create Or Replace Metadata Items
@@ -66,7 +66,7 @@ Request
 
 **Example Create Or Replace Metadata Items: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-create-req.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
 
 Response
@@ -74,7 +74,7 @@ Response
 
 **Example Create Or Replace Metadata Items: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-list-resp.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
 Update Metadata Items
@@ -103,7 +103,7 @@ Request
 
 **Example Update Metadata Items: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-create-req.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
 
 Response
@@ -111,7 +111,7 @@ Response
 
 **Example Update Metadata Items: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-list-resp.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
 Show Metadata Item Details
@@ -142,7 +142,7 @@ Response
 
 **Example Show Metadata Item Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-show-resp.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
 
 Create Or Update Metadata Item
@@ -172,7 +172,7 @@ Request
 
 **Example Create Or Update Metadata Item: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-item-update-req.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-req.json
    :language: javascript
 
 Response
@@ -180,7 +180,7 @@ Response
 
 **Example Create Or Update Metadata Item: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/metadata/server-metadata-item-show-resp.json
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
 
 Delete Metadata Item

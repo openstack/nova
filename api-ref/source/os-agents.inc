@@ -18,7 +18,7 @@ Create Agent Build
 
 Creates an agent build.
 
-Normal response codes: 201
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -38,7 +38,7 @@ Request
 
 **Example Create Agent Build: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-agents/agent-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-agents/agent-post-req.json
    :language: javascript
 
 Response
@@ -46,7 +46,7 @@ Response
 
 **Example Create Agent Build: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-agents/agent-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-agents/agent-post-resp.json
    :language: javascript
 
 List Agent Builds
@@ -79,7 +79,7 @@ Response
 
 **Example List Agent Builds: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-agents/agents-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-agents/agents-get-resp.json
    :language: javascript
 
 Delete Agent Build
@@ -89,7 +89,7 @@ Delete Agent Build
 
 Deletes an existing agent build.
 
-Normal response codes: 202
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -129,7 +129,7 @@ Request
 
 **Example Update Agent Build: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-agents/agent-update-req.json
+.. literalinclude:: ../../doc/api_samples/os-agents/agent-update-put-req.json
    :language: javascript
 
 Response
@@ -144,6 +144,6 @@ Response
 
 **Example Update Agent Build: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-agents/agent-update-resp.json
+.. literalinclude:: ../../doc/api_samples/os-agents/agent-update-put-resp.json
    :language: javascript
 
