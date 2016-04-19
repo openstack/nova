@@ -34,7 +34,7 @@ Response
 
 **Example List Flavor Access Information For Given Flavor: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-list-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-list-resp.json
    :language: javascript
 
 Add Flavor Access To Tenant
@@ -61,7 +61,7 @@ Request
 
 **Example Add Flavor Access To Tenant: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-add-req.json
+.. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-add-tenant-req.json
    :language: javascript
 
 Response
@@ -69,7 +69,7 @@ Response
 
 **Example Add Flavor Access To Tenant: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-add-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-add-tenant-resp.json
    :language: javascript
 
 Remove Flavor Access From Tenant
@@ -96,7 +96,7 @@ Request
 
 **Example Remove Flavor Access From Tenant: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-remove-req.json
+.. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-remove-tenant-req.json
    :language: javascript
 
 Response
@@ -104,6 +104,6 @@ Response
 
 **Example Remove Flavor Access From Tenant: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-remove-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-remove-tenant-resp.json
    :language: javascript
 

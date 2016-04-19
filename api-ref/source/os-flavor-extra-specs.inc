@@ -29,7 +29,7 @@ Request
 
 **Example Create Extra Specs For A Flavor: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-create-req.json
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-create-req.json
    :language: javascript
 
 Response
@@ -37,7 +37,7 @@ Response
 
 **Example Create Extra Specs For A Flavor: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-create-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-create-resp.json
    :language: javascript
 
 List Extra Specs For A Flavor
@@ -60,17 +60,12 @@ Request
   - tenant_id: tenant_id
   - flavor_id: flavor_id
 
-**Example List Extra Specs For A Flavor: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-create-req.json
-   :language: javascript
-
 Response
 --------
 
 **Example List Extra Specs For A Flavor: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-specs-list-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-list-resp.json
    :language: javascript
 
 Show An Extra Spec For A Flavor
@@ -99,7 +94,7 @@ Response
 
 **Example Show An Extra Spec For A Flavor: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-show-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-get-resp.json
    :language: javascript
 
 Update An Extra Spec For A Flavor
@@ -125,7 +120,7 @@ Request
 
 **Example Update An Extra Spec For A Flavor: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-update-req.json
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-update-req.json
    :language: javascript
 
 Response
@@ -133,7 +128,7 @@ Response
 
 **Example Update An Extra Spec For A Flavor: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-update-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-update-resp.json
    :language: javascript
 
 Delete An Extra Spec For A Flavor
