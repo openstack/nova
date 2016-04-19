@@ -14,12 +14,10 @@ List Cells
 
 Lists cells.
 
-When cells are not enabled, the call returns the ``Not Implemented (501)`` response code.
-
-Normal response codes: 200,501
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -43,12 +41,10 @@ List Cells With Details
 
 Lists cells with details.
 
-When cells are not enabled, the call returns the ``Not Implemented (501)`` response code.
-
-Normal response codes: 200,501
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -72,12 +68,10 @@ Show Cell Data
 
 Shows data for a cell.
 
-When cells are not enabled, the call returns the ``Not Implemented (501)`` response code.
-
-Normal response codes: 200,501
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -92,7 +86,7 @@ Response
 
 **Example Show Cell Data: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-cells/cell-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-cells/cells-get-resp.json
    :language: javascript
 
 Show Cell Capacities
@@ -102,12 +96,10 @@ Show Cell Capacities
 
 Shows capacities for a cell.
 
-When cells are not enabled, the call returns the ``Not Implemented (501)`` response code.
-
 Normal response codes: 200,501
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -122,6 +114,6 @@ Response
 
 **Example Show Cell Capacities: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-cells/cells-capacities-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-cells/cells-capacities-resp.json
    :language: javascript
 

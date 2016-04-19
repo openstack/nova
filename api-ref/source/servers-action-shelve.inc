@@ -45,7 +45,7 @@ Request
 
 **Example Shelve server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/shelve-req.json
+.. literalinclude:: ../../doc/api_samples//os-shelve/os-shelve.json
    :language: javascript
 
 Response
@@ -94,7 +94,7 @@ Request
 
 **Example Shelve server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/shelveOffload-req.json
+.. literalinclude:: ../../doc/api_samples/os-shelve/os-shelve-offload.json
    :language: javascript
 
 Response
@@ -143,7 +143,7 @@ Request
 
 **Example Unshelve server: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/unshelve-req.json
+.. literalinclude:: ../../doc/api_samples//os-shelve/os-unshelve.json
    :language: javascript
 
 Response
