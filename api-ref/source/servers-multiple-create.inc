@@ -18,7 +18,7 @@ Create Multiple Servers
 
 Creates one or more servers.
 
-Normal response codes: 202,,503,400,401,403,405,404
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -86,7 +86,7 @@ Creates one or more servers with a reservation ID.
 
 Set ``"return_reservation_id": "True"`` in the request body to request that a reservation ID be returned instead of the newly created instance information. With this parameter, the response shows only the reservation ID.
 
-Normal response codes: 202,,503,400,401,403,405,404
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

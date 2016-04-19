@@ -144,7 +144,7 @@ Delete Server Group
 
 Deletes a server group.
 
-Normal response codes: 204,,503,400,401,403,405,404
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)

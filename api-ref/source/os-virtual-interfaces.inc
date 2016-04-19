@@ -21,7 +21,7 @@ The API v2.1 base version does not return the network ID.
 
 The API v2.12 microversion returns the network ID in the ``net_id`` response attribute.
 
-Normal response codes: 200,,503,400,401,403,405,404
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
