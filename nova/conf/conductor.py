@@ -46,6 +46,13 @@ workers = cfg.IntOpt(
     help='Number of workers for OpenStack Conductor service. '
          'The default will be the number of CPUs available.')
 
+migrate_opt = cfg.IntOpt(
+    'migrate_max_retries',
+    default=-1,
+    help='Number of times to retry live-migration before failing. '
+         'If == -1, try until out of hosts. '
+         'If == 0, only try once, no retries.')
+
 ALL_OPTS = [
     use_local,
     topic,
@@ -56,7 +63,9 @@ ALL_OPTS = [
 def register_opts(conf):
     conf.register_group(conductor_group)
     conf.register_opts(ALL_OPTS, group=conductor_group)
+    conf.register_opts([migrate_opt])
 
 
 def list_opts():
-    return {conductor_group: ALL_OPTS}
+    return {"DEFAULT": [migrate_opt],
+            conductor_group: ALL_OPTS}
