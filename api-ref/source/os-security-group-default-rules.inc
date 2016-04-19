@@ -70,7 +70,7 @@ Request
 
 **Example Create default security group rule: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-security-group-default-rules/security-group-default-rule-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-security-group-default-rules/security-group-default-rules-create-req.json
    :language: javascript
 
 Response
@@ -87,7 +87,7 @@ Response
 
 **Example Create default security group rule: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-group-default-rules/security-group-default-rule-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-group-default-rules/security-group-default-rules-create-resp.json
    :language: javascript
 
 Show Default Security Group Rule Details
@@ -124,7 +124,7 @@ Response
 
 **Example Show default security group rule: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-group-default-rules/security-group-default-rule-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-group-default-rules/security-group-default-rules-show-resp.json
    :language: javascript
 
 Delete Default Security Group Rule
@@ -149,4 +149,3 @@ Request
 
 Response
 --------
-

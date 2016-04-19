@@ -32,10 +32,11 @@ Request
   - cidr: cidr
   - group_id: group_id
 
-**Example Create security group rule: JSON request**
+.. TODO(sdague): we currently have no samples here
+   **Example Create security group rule: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-security-group-rules/security-group-rule-create-req.json
-   :language: javascript
+   .. literalinclude:: ../../doc/api_samples/os-security-group-rules/security-group-rule-create-req.json
+      :language: javascript
 
 Response
 --------
@@ -53,10 +54,11 @@ Response
   - parent_group_id: parent_group_id
   - name: name
 
-**Example Create security group rule: JSON response**
+.. TODO(sdague): we currently have no samples here
+   **Example Create security group rule: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-group-rules/security-group-rule-create-resp.json
-   :language: javascript
+   .. literalinclude:: ../../doc/api_samples/os-security-group-rules/security-group-rule-create-resp.json
+      :language: javascript
 
 Delete Security Group Rule
 ==========================
@@ -80,4 +82,3 @@ Request
 
 Response
 --------
-
