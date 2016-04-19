@@ -78,7 +78,7 @@ Request
 
 **Example Enable Scheduling For A Compute Service: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-req.json
+.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-put-req.json
    :language: javascript
 
 Response
@@ -93,7 +93,7 @@ Response
 
 **Example Enable Scheduling For A Compute Service: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-resp.json
+.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-put-resp.json
    :language: javascript
 
 Disable Scheduling For A Compute Service
@@ -121,7 +121,7 @@ Request
 
 **Example Disable Scheduling For A Compute Service: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-services/service-disable-req.json
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-put-req.json
    :language: javascript
 
 Response
@@ -136,7 +136,7 @@ Response
 
 **Example Disable Scheduling For A Compute Service: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-services/service-disable-resp.json
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-put-resp.json
    :language: javascript
 
 Log Disabled Compute Service Information
@@ -165,7 +165,7 @@ Request
 
 **Example Log Disabled Compute Service Information: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-req.json
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-req.json
    :language: javascript
 
 Response
@@ -181,7 +181,7 @@ Response
 
 **Example Log Disabled Compute Service Information: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-resp.json
+.. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-resp.json
    :language: javascript
 
 Delete Compute Service
@@ -193,7 +193,7 @@ Deletes a Compute service.
 
 Specify the service by its host name and binary name.
 
-Normal response codes: 204,404
+Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
