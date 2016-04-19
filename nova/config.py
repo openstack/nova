@@ -21,8 +21,8 @@ from oslo_log import log
 
 from nova.common import config
 import nova.conf
+from nova.conf import paths
 from nova.db.sqlalchemy import api as sqlalchemy_api
-from nova import paths
 from nova import rpc
 from nova import version
 

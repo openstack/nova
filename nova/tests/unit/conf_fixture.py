@@ -18,9 +18,9 @@ from oslo_config import fixture as config_fixture
 from oslo_policy import opts as policy_opts
 
 import nova.conf
+from nova.conf import paths
 from nova import config
 from nova import ipv6
-from nova import paths
 from nova.tests.unit import utils
 
 CONF = nova.conf.CONF

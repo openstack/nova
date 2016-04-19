@@ -67,6 +67,7 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
+from nova.conf import paths
 from nova import consoleauth
 import nova.context
 from nova import exception
@@ -86,7 +87,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
-from nova import paths
 from nova import rpc
 from nova import safe_utils
 from nova.scheduler import client as scheduler_client

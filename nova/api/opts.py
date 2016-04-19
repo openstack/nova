@@ -81,7 +81,6 @@ import nova.network.rpcapi
 import nova.network.security_group.openstack_driver
 import nova.notifications
 import nova.objects.network
-import nova.paths
 import nova.pci.request
 import nova.pci.whitelist
 import nova.quota

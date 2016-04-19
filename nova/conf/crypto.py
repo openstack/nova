@@ -16,8 +16,8 @@ import os
 
 from oslo_config import cfg
 
+from nova.conf import paths
 from nova.i18n import _
-from nova import paths
 
 crypto_opts_group = cfg.OptGroup(
     'crypto',

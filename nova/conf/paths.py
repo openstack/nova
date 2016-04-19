@@ -23,7 +23,7 @@ from oslo_config import cfg
 path_opts = [
     cfg.StrOpt('pybasedir',
                default=os.path.abspath(os.path.join(os.path.dirname(__file__),
-                                                    '../')),
+                                                    '../../')),
                help='Directory where the nova python module is installed'),
     cfg.StrOpt('bindir',
                default=os.path.join(sys.prefix, 'local', 'bin'),
@@ -32,9 +32,6 @@ path_opts = [
                default='$pybasedir',
                help="Top-level directory for maintaining nova's state"),
 ]
-
-CONF = cfg.CONF
-CONF.register_opts(path_opts)
 
 
 def basedir_def(*args):
@@ -52,16 +49,27 @@ def state_path_def(*args):
     return os.path.join('$state_path', *args)
 
 
+# TODO(markus_z): This needs to be removed in a new patch. No one uses this.
 def basedir_rel(*args):
     """Return a path relative to $pybasedir."""
-    return os.path.join(CONF.pybasedir, *args)
+    return os.path.join(cfg.CONF.pybasedir, *args)
 
 
+# TODO(markus_z): This needs to be removed in a new patch. No one uses this.
 def bindir_rel(*args):
     """Return a path relative to $bindir."""
-    return os.path.join(CONF.bindir, *args)
+    return os.path.join(cfg.CONF.bindir, *args)
 
 
+# TODO(markus_z): This needs to be removed in a new patch. No one uses this.
 def state_path_rel(*args):
     """Return a path relative to $state_path."""
-    return os.path.join(CONF.state_path, *args)
+    return os.path.join(cfg.CONF.state_path, *args)
+
+
+def register_opts(conf):
+    conf.register_opts(path_opts)
+
+
+def list_opts():
+    return {"DEFAULT": path_opts}

@@ -15,12 +15,12 @@
 import os
 
 import fixtures
-from oslo_config import cfg
 
-from nova import paths
+import nova.conf
+from nova.conf import paths
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 class ApiPasteV21Fixture(fixtures.Fixture):

@@ -14,7 +14,7 @@
 
 from oslo_config import cfg
 
-from nova import paths
+from nova.conf import paths
 
 vcpu_pin_set = cfg.StrOpt(
     'vcpu_pin_set',
