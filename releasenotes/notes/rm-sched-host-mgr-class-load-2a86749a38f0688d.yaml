@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The ability to load a custom scheduler host manager via the
+    ``scheduler_host_manager`` configuration option was deprecated
+    in the 13.0.0 Mitaka release and is now removed in the 14.0.0 Newton
+    release.
