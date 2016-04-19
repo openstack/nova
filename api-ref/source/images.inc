@@ -37,7 +37,7 @@ Request
 Response
 --------
 
-**Example Show Image Details: JSON request**
+**Example Show Image Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/images/image-show-resp.json
    :language: javascript
@@ -89,7 +89,7 @@ Request
 Response
 --------
 
-**Example Show Image Metadata Item Details: JSON request**
+**Example Show Image Metadata Item Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/images/image-metadata-item-show-resp.json
    :language: javascript
@@ -123,7 +123,7 @@ Request
 Response
 --------
 
-**Example Create Or Update Image Metadata Item: JSON request**
+**Example Create Or Update Image Metadata Item: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/images/image-metadata-item-update-resp.json
    :language: javascript

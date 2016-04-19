@@ -37,7 +37,7 @@ Request
 Response
 --------
 
-**Example Create Aggregate: JSON request**
+**Example Create Aggregate: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-create-resp.json
    :language: javascript
@@ -69,7 +69,7 @@ Request
 Response
 --------
 
-**Example List Aggregates: JSON request**
+**Example List Aggregates: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-resp.json
    :language: javascript
@@ -102,7 +102,7 @@ Request
 Response
 --------
 
-**Example Show Aggregate Details: JSON request**
+**Example Show Aggregate Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-show-resp.json
    :language: javascript
@@ -158,7 +158,7 @@ Request
 Response
 --------
 
-**Example Update Aggregate: JSON request**
+**Example Update Aggregate: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-resp.json
    :language: javascript
@@ -193,7 +193,7 @@ Request
 Response
 --------
 
-**Example Add Host: JSON request**
+**Example Add Host: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-add-host-resp.json
    :language: javascript
@@ -228,7 +228,7 @@ Request
 Response
 --------
 
-**Example Create Or Update Aggregate Metadata: JSON request**
+**Example Create Or Update Aggregate Metadata: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-metadata-create-resp.json
    :language: javascript
@@ -263,7 +263,7 @@ Request
 Response
 --------
 
-**Example Remove Host: JSON request**
+**Example Remove Host: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-remove-host-resp.json
    :language: javascript

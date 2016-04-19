@@ -48,7 +48,7 @@ Response
   - forced_down: forced_down
   - zone: zone
 
-**Example List Compute Services: JSON request**
+**Example List Compute Services: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/v2.11/services-list-resp.json
    :language: javascript
@@ -91,7 +91,7 @@ Response
   - host: host
   - status: status
 
-**Example Enable Scheduling For A Compute Service: JSON request**
+**Example Enable Scheduling For A Compute Service: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/v2.11/service-enable-put-resp.json
    :language: javascript
@@ -134,7 +134,7 @@ Response
   - host: host
   - status: status
 
-**Example Disable Scheduling For A Compute Service: JSON request**
+**Example Disable Scheduling For A Compute Service: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-put-resp.json
    :language: javascript
@@ -179,7 +179,7 @@ Response
   - host: host
   - status: status
 
-**Example Log Disabled Compute Service Information: JSON request**
+**Example Log Disabled Compute Service Information: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-services/service-disable-log-put-resp.json
    :language: javascript

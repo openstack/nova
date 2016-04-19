@@ -172,7 +172,7 @@ Response
   - links: links
   - name: server_name
 
-**Example List Servers: JSON request**
+**Example List Servers: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/servers-list-resp.json
    :language: javascript
@@ -292,7 +292,7 @@ Response
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - security_groups: security_groups
 
-**Example Create Server: JSON request**
+**Example Create Server: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
    :language: javascript
@@ -379,8 +379,7 @@ Response
   - updated: updated
   - user_id: user_id
 
-Example Response
-----------------
+**Example List Servers Detailed: JSON response**
 
 .. literalinclude:: /../../doc/api_samples/servers/servers-details-resp.json
    :language: javascript
@@ -459,7 +458,7 @@ Response
   - updated: updated
   - user_id: user_id
 
-**Example Show Server Details: JSON request**
+**Example Show Server Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-get-resp.json
    :language: javascript

@@ -30,7 +30,7 @@ Request
 Response
 --------
 
-**Example Show Fixed Ip Details: JSON request**
+**Example Show Fixed Ip Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-fixed-ips/fixedip-show-resp.json
    :language: javascript

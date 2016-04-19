@@ -28,7 +28,7 @@ Request
 Response
 --------
 
-**Example List Tenant Usage For All Tenants: JSON request**
+**Example List Tenant Usage For All Tenants: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-show-general-resp.json
    :language: javascript
@@ -55,7 +55,7 @@ Request
 Response
 --------
 
-**Example Show Usage Details For Tenant: JSON request**
+**Example Show Usage Details For Tenant: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-show-resp.json
    :language: javascript

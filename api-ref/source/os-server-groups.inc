@@ -48,7 +48,7 @@ Response
   - project_id: project_id
   - user_id: user_id
 
-**Example List Server Groups: JSON request**
+**Example List Server Groups: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/server-groups-list-resp.json
    :language: javascript
@@ -93,7 +93,7 @@ Response
   - project_id: project_id
   - user_id: user_id
 
-**Example Create Server Group: JSON request**
+**Example Create Server Group: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/server-group-create-resp.json
    :language: javascript
@@ -132,7 +132,7 @@ Response
   - project_id: project_id
   - user_id: user_id
 
-**Example Show Server Group Details: JSON request**
+**Example Show Server Group Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-groups/server-group-show-resp.json
    :language: javascript

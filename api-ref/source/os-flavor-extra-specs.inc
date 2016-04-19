@@ -35,7 +35,7 @@ Request
 Response
 --------
 
-**Example Create Extra Specs For A Flavor: JSON request**
+**Example Create Extra Specs For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-create-resp.json
    :language: javascript
@@ -68,7 +68,7 @@ Request
 Response
 --------
 
-**Example List Extra Specs For A Flavor: JSON request**
+**Example List Extra Specs For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-specs-list-resp.json
    :language: javascript
@@ -97,7 +97,7 @@ Request
 Response
 --------
 
-**Example Show An Extra Spec For A Flavor: JSON request**
+**Example Show An Extra Spec For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-show-resp.json
    :language: javascript
@@ -131,7 +131,7 @@ Request
 Response
 --------
 
-**Example Update An Extra Spec For A Flavor: JSON request**
+**Example Update An Extra Spec For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-extra-specs/flavor-extra-spec-update-resp.json
    :language: javascript

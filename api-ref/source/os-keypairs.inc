@@ -28,7 +28,7 @@ Request
 Response
 --------
 
-**Example List Keypairs: JSON request**
+**Example List Keypairs: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-keypairs/keypairs-list-resp.json
    :language: javascript
@@ -62,7 +62,7 @@ Request
 Response
 --------
 
-**Example Create Or Import Keypair: JSON request**
+**Example Create Or Import Keypair: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-keypairs/keypair-import-resp.json
    :language: javascript
@@ -113,7 +113,7 @@ Request
 Response
 --------
 
-**Example Show Keypair Details: JSON request**
+**Example Show Keypair Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-keypairs/keypair-show-resp.json
    :language: javascript

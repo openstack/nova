@@ -30,7 +30,7 @@ Request
 Response
 --------
 
-**Example List Migrations: JSON request**
+**Example List Migrations: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-migrations/migrations-list-resp.json
    :language: javascript

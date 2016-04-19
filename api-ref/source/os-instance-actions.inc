@@ -32,7 +32,7 @@ Request
 Response
 --------
 
-**Example List Actions For Server: JSON request**
+**Example List Actions For Server: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-actions/instance-actions-list-resp.json
    :language: javascript
@@ -61,7 +61,7 @@ Request
 Response
 --------
 
-**Example Show Server Action Details: JSON request**
+**Example Show Server Action Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-actions/instance-action-show-resp.json
    :language: javascript

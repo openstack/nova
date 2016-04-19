@@ -32,7 +32,7 @@ Request
 Response
 --------
 
-**Example List Ips: JSON request**
+**Example List Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/ips/ips-resp.json
    :language: javascript
@@ -63,7 +63,7 @@ Request
 Response
 --------
 
-**Example Show Ip Details: JSON request**
+**Example Show Ip Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/ips/ips-network-resp.json
    :language: javascript

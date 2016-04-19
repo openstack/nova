@@ -85,7 +85,7 @@ Response
   - server_groups: server_groups
   - server_group_members: server_group_members
 
-**Example Update Quotas: JSON request**
+**Example Update Quotas: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-quota-sets/quota-update-resp.json
    :language: javascript
@@ -168,7 +168,7 @@ Response
   - server_groups: server_groups
   - server_group_members: server_group_members
 
-**Example Show A Quota: JSON request**
+**Example Show A Quota: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-quota-sets/user-quotas-show-get-.json
    :language: javascript
@@ -217,7 +217,7 @@ Response
   - server_groups: server_groups
   - server_group_members: server_group_members
 
-**Example List Default Quotas For Tenant: JSON request**
+**Example List Default Quotas For Tenant: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-default-list-resp.json
    :language: javascript

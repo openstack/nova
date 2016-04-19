@@ -32,7 +32,7 @@ Request
 Response
 --------
 
-**Example List Flavor Access Information For Given Flavor: JSON request**
+**Example List Flavor Access Information For Given Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-list-resp.json
    :language: javascript
@@ -67,7 +67,7 @@ Request
 Response
 --------
 
-**Example Add Flavor Access To Tenant: JSON request**
+**Example Add Flavor Access To Tenant: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-add-resp.json
    :language: javascript
@@ -102,7 +102,7 @@ Request
 Response
 --------
 
-**Example Remove Flavor Access From Tenant: JSON request**
+**Example Remove Flavor Access From Tenant: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-flavor-access/flavor-access-remove-resp.json
    :language: javascript

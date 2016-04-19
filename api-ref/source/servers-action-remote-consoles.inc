@@ -31,7 +31,7 @@ Request
 Response
 --------
 
-**Example Get Rdp Console (Os-Getrdpconsole Action): JSON request**
+**Example Get Rdp Console (Os-Getrdpconsole Action): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers-action/getRDPConsole-create-resp.json
    :language: javascript
@@ -67,7 +67,7 @@ Request
 Response
 --------
 
-**Example Get Serial Console (Os-Getserialconsole Action): JSON request**
+**Example Get Serial Console (Os-Getserialconsole Action): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers-action/getSerialConsole-create-resp.json
    :language: javascript
@@ -103,7 +103,7 @@ Request
 Response
 --------
 
-**Example Get Spice Console (Os-Getspiceconsole Action): JSON request**
+**Example Get Spice Console (Os-Getspiceconsole Action): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers-action/getSPICEConsole-create-resp.json
    :language: javascript
@@ -139,7 +139,7 @@ Request
 Response
 --------
 
-**Example Get Vnc Console (Os-Getvncconsole Action): JSON request**
+**Example Get Vnc Console (Os-Getvncconsole Action): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers-action/getVNCConsole-create-resp.json
    :language: javascript

@@ -28,7 +28,7 @@ Request
 Response
 --------
 
-**Example List Usage Audits For An Instance: JSON request**
+**Example List Usage Audits For An Instance: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/usage-audits-list-resp.json
    :language: javascript
@@ -62,7 +62,7 @@ Query Parameters
 Response
 --------
 
-**Example List Usage Audits Before Specified Time: JSON request**
+**Example List Usage Audits Before Specified Time: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/usage-audits-log-list-resp.json
    :language: javascript

@@ -35,7 +35,7 @@ Request
 Response
 --------
 
-**Example Create Project Network: JSON request**
+**Example Create Project Network: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-tenant-networks/network-create-resp.json
    :language: javascript
@@ -64,7 +64,7 @@ Request
 Response
 --------
 
-**Example List Project Networks: JSON request**
+**Example List Project Networks: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-networks/networks-list-resp.json
    :language: javascript
@@ -94,7 +94,7 @@ Request
 Response
 --------
 
-**Example Show Project Network Details: JSON request**
+**Example Show Project Network Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-tenant-networks/network-show-resp.json
    :language: javascript

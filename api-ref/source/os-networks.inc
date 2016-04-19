@@ -40,7 +40,7 @@ Request
 Response
 --------
 
-**Example Create Network: JSON request**
+**Example Create Network: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-networks/network-create-resp.json
    :language: javascript
@@ -69,7 +69,7 @@ Request
 Response
 --------
 
-**Example List Networks: JSON request**
+**Example List Networks: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-networks/networks-list-resp.json
    :language: javascript
@@ -128,7 +128,7 @@ Request
 Response
 --------
 
-**Example Show Network Details: JSON request**
+**Example Show Network Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-networks/network-show-resp.json
    :language: javascript

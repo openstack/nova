@@ -28,7 +28,7 @@ Request
 Response
 --------
 
-**Example List Cloudpipes: JSON request**
+**Example List Cloudpipes: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cloudpipe/cloud-pipe-show-resp.json
    :language: javascript
@@ -61,7 +61,7 @@ Request
 Response
 --------
 
-**Example Create Cloudpipe: JSON request**
+**Example Create Cloudpipe: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cloudpipe/cloud-pipe-create-resp.json
    :language: javascript

@@ -360,7 +360,7 @@ Preserving the ephemeral disk
 Response
 --------
 
-**Example Rebuild Server (Rebuild Action): JSON request**
+**Example Rebuild Server (Rebuild Action): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild.json
    :language: javascript

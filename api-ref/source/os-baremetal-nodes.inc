@@ -45,7 +45,7 @@ Request
 Response
 --------
 
-**Example Add Bare Metal Node: JSON request**
+**Example Add Bare Metal Node: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-baremetal-nodes/baremetal-node-create-resp.json
    :language: javascript
@@ -78,7 +78,7 @@ Request
 Response
 --------
 
-**Example List Bare Metal Nodes: JSON request**
+**Example List Bare Metal Nodes: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-baremetal-nodes/baremetal-nodes-list-resp.json
    :language: javascript
@@ -111,7 +111,7 @@ Request
 Response
 --------
 
-**Example Add Interface To Bare Metal Node: JSON request**
+**Example Add Interface To Bare Metal Node: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-baremetal-nodes/baremetal-node-add-interface-resp.json
    :language: javascript
@@ -172,7 +172,7 @@ Request
 Response
 --------
 
-**Example Show Bare Metal Node Details: JSON request**
+**Example Show Bare Metal Node Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-baremetal-nodes/baremetal-node-show-resp.json
    :language: javascript

@@ -31,7 +31,7 @@ Request
 Response
 --------
 
-**Example List Cells: JSON request**
+**Example List Cells: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-list-resp.json
    :language: javascript
@@ -60,7 +60,7 @@ Request
 Response
 --------
 
-**Example List Cells With Details: JSON request**
+**Example List Cells With Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-list-empty-resp.json
    :language: javascript
@@ -90,7 +90,7 @@ Request
 Response
 --------
 
-**Example Show Cell Data: JSON request**
+**Example Show Cell Data: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cells/cell-show-resp.json
    :language: javascript
@@ -120,7 +120,7 @@ Request
 Response
 --------
 
-**Example Show Cell Capacities: JSON request**
+**Example Show Cell Capacities: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-capacities-show-resp.json
    :language: javascript
