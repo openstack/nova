@@ -45,7 +45,7 @@ Response
 
 **Example Ping Instances: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-fping/fping-instances-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-fping/fping-get-resp.json
    :language: javascript
 
 Ping An Instance
@@ -75,6 +75,6 @@ Response
 
 **Example Ping An Instance: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-fping/fping-instance-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-fping/fping-get-details-resp.json
    :language: javascript
 
