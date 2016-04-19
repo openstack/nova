@@ -13,7 +13,6 @@
 
 """Unit tests for compute API."""
 
-import copy
 import datetime
 
 import iso8601
@@ -1133,8 +1132,8 @@ class _ComputeAPIUnitTestMixIn(object):
         updates = {'progress': 0, 'task_state': task_states.DELETING}
 
         self.mox.StubOutWithMock(inst, 'save')
-        self.mox.StubOutWithMock(db,
-                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
 
         self.mox.StubOutWithMock(db, 'constraint')
         self.mox.StubOutWithMock(db, 'instance_destroy')
@@ -1147,8 +1146,9 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
 
-        db.block_device_mapping_get_all_by_instance(self.context,
-                                                 inst.uuid).AndReturn([])
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
+            self.context, inst.uuid).AndReturn(
+                objects.BlockDeviceMappingList())
         inst.save()
         self.compute_api._create_reservations(self.context,
                                               inst, inst.task_state,
@@ -1275,15 +1275,16 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_delete_soft_rollback(self):
         inst = self._create_instance_obj()
-        self.mox.StubOutWithMock(db,
-                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(inst, 'save')
 
         delete_time = datetime.datetime(1955, 11, 5)
         self.useFixture(utils_fixture.TimeFixture(delete_time))
 
-        db.block_device_mapping_get_all_by_instance(
-            self.context, inst.uuid).AndReturn([])
+        objects.BlockDeviceMappingList.get_by_instance_uuid(
+            self.context, inst.uuid).AndReturn(
+                objects.BlockDeviceMappingList())
         inst.save().AndRaise(test.TestingException)
 
         self.mox.ReplayAll()
@@ -1304,6 +1305,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils, 'downsize_quota_delta')
         self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_mig, 'save')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'confirm_resize')
@@ -1328,7 +1330,8 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_mig.save().WithSideEffects(_check_mig)
 
         if self.cell_type:
-            fake_quotas.commit()
+            quota.QUOTAS.commit(self.context, resvs, project_id=None,
+                                user_id=None)
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'confirmResize')
@@ -1366,6 +1369,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(fake_mig, 'save')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'revert_resize')
@@ -1396,7 +1400,8 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_mig.save().WithSideEffects(_check_mig)
 
         if self.cell_type:
-            fake_quotas.commit()
+            quota.QUOTAS.commit(self.context, resvs, project_id=None,
+                                user_id=None)
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'revertResize')
@@ -1426,6 +1431,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'reverse_upsize_quota_delta')
         self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         self.context.elevated().AndReturn(self.context)
         objects.Migration.get_by_instance_and_status(
@@ -1445,7 +1451,8 @@ class _ComputeAPIUnitTestMixIn(object):
             expected={'task_state': [None]})
         fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
-        fake_quotas.rollback()
+        quota.QUOTAS.rollback(self.context, resvs, project_id=None,
+                              user_id=None)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnexpectedTaskStateError,
@@ -1474,6 +1481,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils, 'upsize_quota_delta')
         self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
@@ -1524,7 +1532,9 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 expected_reservations = []
             if self.cell_type == 'api':
-                fake_quotas.commit()
+                if flavor_id_passed:
+                    quota.QUOTAS.commit(self.context, resvs, project_id=None,
+                                        user_id=None)
                 expected_reservations = []
                 mig = objects.Migration()
 
@@ -2272,8 +2282,10 @@ class _ComputeAPIUnitTestMixIn(object):
         quiesced = [False, False]
         quiesce_expected = not quiesce_fails and vm_state == vm_states.ACTIVE
 
-        def fake_get_all_by_instance(context, instance, use_slave=False):
-            return copy.deepcopy(instance_bdms)
+        @classmethod
+        def fake_bdm_list_get_by_instance_uuid(cls, context, instance_uuid):
+            return obj_base.obj_make_list(context, cls(),
+                    objects.BlockDeviceMapping, instance_bdms)
 
         def fake_image_create(context, image_meta, data=None):
             self.assertThat(image_meta, matchers.DictMatches(expect_meta))
@@ -2293,8 +2305,9 @@ class _ComputeAPIUnitTestMixIn(object):
         def fake_unquiesce_instance(context, instance, mapping=None):
             quiesced[1] = True
 
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
-                      fake_get_all_by_instance)
+        self.stub_out('nova.objects.BlockDeviceMappingList'
+                      '.get_by_instance_uuid',
+                      fake_bdm_list_get_by_instance_uuid)
         self.stubs.Set(self.compute_api.image_api, 'create',
                        fake_image_create)
         self.stubs.Set(self.compute_api.volume_api, 'get',
