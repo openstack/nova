@@ -34,6 +34,12 @@ aggregate_id:
   in: path
   required: true
   type: string
+aggregate_name:
+  description: |
+    The name of the aggregate.
+  in: body
+  required: true
+  type: string
 alias_1:
   description: |
     An alias for the extension name. For example, ``os-server-external-events``.
