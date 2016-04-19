@@ -15,7 +15,6 @@
 """The rescue mode extension."""
 
 from oslo_config import cfg
-from oslo_utils import uuidutils
 from webob import exc
 
 from nova.api.openstack import common
@@ -25,7 +24,6 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova import utils
 
 
@@ -41,15 +39,6 @@ class RescueController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(RescueController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API(skip_policy_check=True)
-
-    def _rescue_image_validation(self, image_ref):
-        image_uuid = image_ref.split('/').pop()
-
-        if not uuidutils.is_uuid_like(image_uuid):
-            msg = _("Invalid rescue_image_ref provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        return image_uuid
 
     # TODO(cyeoh): Should be responding here with 202 Accept
     # because rescue is an async call, but keep to 200
@@ -70,8 +59,8 @@ class RescueController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, id)
         rescue_image_ref = None
         if body['rescue'] and 'rescue_image_ref' in body['rescue']:
-            rescue_image_ref = self._rescue_image_validation(
-                body['rescue']['rescue_image_ref'])
+            rescue_image_ref = common.image_uuid_from_href(
+                body['rescue']['rescue_image_ref'], 'rescue_image_ref')
 
         try:
             self.compute_api.rescue(context, instance,
