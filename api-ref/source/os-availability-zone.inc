@@ -30,7 +30,7 @@ Response
 
 **Example Get availability zone information: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-availability-zone/availability-zone-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-availability-zone/availability-zone-list-resp.json
    :language: javascript
 
 Get Detailed Availability Zone Information
@@ -57,6 +57,6 @@ Response
 
 **Example Get detailed availability zone information: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-availability-zone/availability-zone-show-details-resp.json
+.. literalinclude:: ../../doc/api_samples/os-availability-zone/availability-zone-detail-resp.json
    :language: javascript
 
