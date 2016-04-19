@@ -51,7 +51,7 @@ Request
 Response
 --------
 
-**Example List Floating Ip Addresses: JSON request**
+**Example List Floating Ip Addresses: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-list-resp.json
    :language: javascript
@@ -88,7 +88,7 @@ Request
 Response
 --------
 
-**Example Create (Allocate) Floating Ip Address: JSON request**
+**Example Create (Allocate) Floating Ip Address: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ip-create-resp.json
    :language: javascript
@@ -118,7 +118,7 @@ Request
 Response
 --------
 
-**Example Show Floating Ip Address Details: JSON request**
+**Example Show Floating Ip Address Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ip-show-resp.json
    :language: javascript

@@ -44,7 +44,7 @@ Response
   - description: description
   - updated: updated
 
-**Example Show Extension Details: JSON request**
+**Example Show Extension Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/extensions/extension-show-resp.json
    :language: javascript

@@ -48,7 +48,7 @@ Response
   - id: id
   - volume_id: volume_id
 
-**Example Create Assisted Volume Snapshots: JSON request**
+**Example Create Assisted Volume Snapshots: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-assisted-volume-snapshots/snapshot-create-assisted-resp.json
    :language: javascript

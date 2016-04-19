@@ -43,7 +43,7 @@ Query Parameters
 Response
 --------
 
-**Example Ping Instances: JSON request**
+**Example Ping Instances: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-fping/fping-instances-list-resp.json
    :language: javascript
@@ -73,7 +73,7 @@ Request
 Response
 --------
 
-**Example Ping An Instance: JSON request**
+**Example Ping An Instance: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-fping/fping-instance-show-resp.json
    :language: javascript

@@ -35,7 +35,7 @@ Request
 Response
 --------
 
-**Example Show Server Password: JSON request**
+**Example Show Server Password: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-password/password-show-resp.json
    :language: javascript

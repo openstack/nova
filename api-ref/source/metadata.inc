@@ -35,7 +35,7 @@ Request
 Response
 --------
 
-**Example List All Metadata: JSON request**
+**Example List All Metadata: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/metadata/server-metadata-list-resp.json
    :language: javascript
@@ -72,7 +72,7 @@ Request
 Response
 --------
 
-**Example Create Or Replace Metadata Items: JSON request**
+**Example Create Or Replace Metadata Items: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/metadata/server-metadata-list-resp.json
    :language: javascript
@@ -109,7 +109,7 @@ Request
 Response
 --------
 
-**Example Update Metadata Items: JSON request**
+**Example Update Metadata Items: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/metadata/server-metadata-list-resp.json
    :language: javascript
@@ -140,7 +140,7 @@ Request
 Response
 --------
 
-**Example Show Metadata Item Details: JSON request**
+**Example Show Metadata Item Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/metadata/server-metadata-show-resp.json
    :language: javascript
@@ -178,7 +178,7 @@ Request
 Response
 --------
 
-**Example Create Or Update Metadata Item: JSON request**
+**Example Create Or Update Metadata Item: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/metadata/server-metadata-item-show-resp.json
    :language: javascript

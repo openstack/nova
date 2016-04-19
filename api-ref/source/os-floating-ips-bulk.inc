@@ -31,7 +31,7 @@ Request
 Response
 --------
 
-**Example List Floating Ips: JSON request**
+**Example List Floating Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-list-resp.json
    :language: javascript
@@ -64,7 +64,7 @@ Request
 Response
 --------
 
-**Example Create Floating Ips: JSON request**
+**Example Create Floating Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-create-resp.json
    :language: javascript
@@ -97,7 +97,7 @@ Request
 Response
 --------
 
-**Example Bulk-Delete Floating Ips: JSON request**
+**Example Bulk-Delete Floating Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-delete-resp.json
    :language: javascript
@@ -125,7 +125,7 @@ Request
 Response
 --------
 
-**Example List Floating Ips By Host: JSON request**
+**Example List Floating Ips By Host: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips-bulk/floating-ips-bulk-list-by-host-resp.json
    :language: javascript

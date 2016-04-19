@@ -30,7 +30,7 @@ Request
 Response
 --------
 
-**Example List Hypervisors: JSON request**
+**Example List Hypervisors: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-list-resp.json
    :language: javascript
@@ -57,7 +57,7 @@ Request
 Response
 --------
 
-**Example Show Hypervisor Statistics: JSON request**
+**Example Show Hypervisor Statistics: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisor-statistics-show-resp.json
    :language: javascript
@@ -85,7 +85,7 @@ Request
 Response
 --------
 
-**Example Show Hypervisor Details: JSON request**
+**Example Show Hypervisor Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisor-show-resp.json
    :language: javascript
@@ -113,7 +113,7 @@ Request
 Response
 --------
 
-**Example Show Hypervisor Uptime: JSON request**
+**Example Show Hypervisor Uptime: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisor-uptime-show-resp.json
    :language: javascript

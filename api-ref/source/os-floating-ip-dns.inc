@@ -29,7 +29,7 @@ Request
 Response
 --------
 
-**Example List Dns Domains: JSON request**
+**Example List Dns Domains: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-domains-list-resp.json
    :language: javascript
@@ -62,7 +62,7 @@ Request
 Response
 --------
 
-**Example Create Or Update Dns Domain: JSON request**
+**Example Create Or Update Dns Domain: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-create-or-update-resp.json
    :language: javascript
@@ -119,7 +119,7 @@ Request
 Response
 --------
 
-**Example Create Or Update Dns Entry: JSON request**
+**Example Create Or Update Dns Entry: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-create-or-update-entry-resp.json
    :language: javascript
@@ -148,7 +148,7 @@ Request
 Response
 --------
 
-**Example Find Unique Dns Entry: JSON request**
+**Example Find Unique Dns Entry: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-entry-show-resp.json
    :language: javascript
@@ -201,7 +201,7 @@ Request
 Response
 --------
 
-**Example List Dns Entries: JSON request**
+**Example List Dns Entries: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-entry-by-ip-show-resp.json
    :language: javascript

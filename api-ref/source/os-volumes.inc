@@ -28,7 +28,7 @@ Request
 Response
 --------
 
-**Example List Volumes: JSON request**
+**Example List Volumes: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volumes-list-resp.json
    :language: javascript
@@ -68,7 +68,7 @@ Request
 Response
 --------
 
-**Example Create Volume: JSON request**
+**Example Create Volume: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-show-resp.json
    :language: javascript
@@ -95,7 +95,7 @@ Request
 Response
 --------
 
-**Example List Volumes With Details: JSON request**
+**Example List Volumes With Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volumes-list-detail-resp.json
    :language: javascript
@@ -123,7 +123,7 @@ Request
 Response
 --------
 
-**Example Show Volume Details: JSON request**
+**Example Show Volume Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-show-resp.json
    :language: javascript
@@ -151,7 +151,7 @@ Request
 Response
 --------
 
-**Example Delete Volume: JSON request**
+**Example Delete Volume: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-delete-json-http.txt
    :language: javascript
@@ -185,7 +185,7 @@ Response
   - name: name
   - extra_specs: extra_specs
 
-**Example List Volume Types: JSON request**
+**Example List Volume Types: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-types-list-resp.json
    :language: javascript
@@ -213,7 +213,7 @@ Request
 Response
 --------
 
-**Example Show Volume Type Details: JSON request**
+**Example Show Volume Type Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/volume-type-show-resp.json
    :language: javascript
@@ -246,7 +246,7 @@ Request
 Response
 --------
 
-**Example Create Snapshot: JSON request**
+**Example Create Snapshot: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-show-resp.json
    :language: javascript
@@ -273,7 +273,7 @@ Request
 Response
 --------
 
-**Example List Snapshots: JSON request**
+**Example List Snapshots: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
    :language: javascript
@@ -300,7 +300,7 @@ Request
 Response
 --------
 
-**Example List Snapshots With Details: JSON request**
+**Example List Snapshots With Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
    :language: javascript
@@ -328,7 +328,7 @@ Request
 Response
 --------
 
-**Example Show Snapshot Details: JSON request**
+**Example Show Snapshot Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-show-resp.json
    :language: javascript
@@ -358,7 +358,7 @@ Request
 Response
 --------
 
-**Example Delete Snapshot: JSON request**
+**Example Delete Snapshot: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-delete-json-http.txt
    :language: javascript

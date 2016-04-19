@@ -28,7 +28,7 @@ Request
 Response
 --------
 
-**Example Create Certificate: JSON request**
+**Example Create Certificate: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-certificates/certificate-create-resp.json
    :language: javascript
@@ -56,7 +56,7 @@ Request
 Response
 --------
 
-**Example Show Certificate Details: JSON request**
+**Example Show Certificate Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-certificates/certificate-show-root-resp.json
    :language: javascript

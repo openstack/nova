@@ -50,7 +50,7 @@ Response
   - status: status
   - tag: tag
 
-**Example Run Events: JSON request**
+**Example Run Events: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-server-external-events/event-create-resp.json
    :language: javascript

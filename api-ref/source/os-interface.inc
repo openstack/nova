@@ -49,7 +49,7 @@ Response
   - port_id: port_id
   - port_state: port_state
 
-**Example Create Interface: JSON request**
+**Example Create Interface: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-interface/port-interface-create-resp.json
    :language: javascript
@@ -86,7 +86,7 @@ Response
   - net_id: net_id
   - port_id: port_id
 
-**Example List Port Interfaces: JSON request**
+**Example List Port Interfaces: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-interface/port-interfaces-list-resp.json
    :language: javascript
@@ -115,7 +115,7 @@ Request
 Response
 --------
 
-**Example Show Port Interface Details: JSON request**
+**Example Show Port Interface Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-interface/port-interface-show-resp.json
    :language: javascript

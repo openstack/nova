@@ -55,7 +55,7 @@ Request
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - return_reservation_id: return_reservation_id
 
-**Example Create multiple servers without reservation ID**
+**Example Create multiple servers without reservation ID: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-no-resv-post-resp.json
    :language: javascript
@@ -72,7 +72,7 @@ Response
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - security_groups: security_groups
 
-**Example Create multiple servers without reservation ID**
+**Example Create multiple servers without reservation ID: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
    :language: javascript
@@ -123,7 +123,7 @@ Request
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - return_reservation_id: return_reservation_id
 
-**Example Create multiple servers with reservation ID**
+**Example Create multiple servers with reservation ID: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-req.json
    :language: javascript
@@ -135,7 +135,7 @@ Response
 
   - reservation_id: reservation_id
 
-**Example Create multiple servers with reservation ID**
+**Example Create multiple servers with reservation ID: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-resp.json
    :language: javascript

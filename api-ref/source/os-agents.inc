@@ -44,7 +44,7 @@ Request
 Response
 --------
 
-**Example Create Agent Build: JSON request**
+**Example Create Agent Build: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-agents/agent-create-resp.json
    :language: javascript
@@ -77,7 +77,7 @@ Request
 Response
 --------
 
-**Example List Agent Builds: JSON request**
+**Example List Agent Builds: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-agents/agents-list-resp.json
    :language: javascript
@@ -142,7 +142,7 @@ Response
   - md5hash: md5hash
   - version: version
 
-**Example Update Agent Build: JSON request**
+**Example Update Agent Build: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-agents/agent-update-resp.json
    :language: javascript

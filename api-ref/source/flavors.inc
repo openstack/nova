@@ -40,7 +40,7 @@ Query Parameters
 Response
 --------
 
-**Example List Flavors: JSON request**
+**Example List Flavors: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavors/flavors-list-resp.json
    :language: javascript
@@ -72,7 +72,7 @@ Request
 Response
 --------
 
-**Example Create Flavor: JSON request**
+**Example Create Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavors/flavor-create-resp.json
    :language: javascript
@@ -100,7 +100,7 @@ Request
 Response
 --------
 
-**Example Show Flavor Details: JSON request**
+**Example Show Flavor Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavors/flavor-show-resp.json
    :language: javascript
@@ -162,7 +162,7 @@ Query Parameters
 Response
 --------
 
-**Example List Flavors With Details: JSON request**
+**Example List Flavors With Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavors/flavors-list-detail-resp.json
    :language: javascript

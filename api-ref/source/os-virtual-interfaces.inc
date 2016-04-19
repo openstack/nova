@@ -43,7 +43,7 @@ Response
   - id: id
   - mac_address: mac_address
 
-**Example List Virtual Interfaces: JSON request**
+**Example List Virtual Interfaces: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-virtual-interfaces/vifs-list-resp.json
    :language: javascript

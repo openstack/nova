@@ -35,7 +35,7 @@ Response
   - floating_ip_pools: floating_ip_pools
   - name: name
 
-**Example List Floating Ip Pools: JSON request**
+**Example List Floating Ip Pools: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ip-pools/floatingippools-list-resp.json
    :language: javascript
