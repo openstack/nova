@@ -75,10 +75,10 @@ class XenAPISession(object):
 
     def __init__(self, url, user, pw):
         version_string = version.version_string_with_package()
-        self.nova_version = _('%(vendor)s %(product)s %(version)s') % \
-                              {'vendor': version.vendor_string(),
-                               'product': version.product_string(),
-                               'version': version_string}
+        self.nova_version = ('%(vendor)s %(product)s %(version)s' %
+                             {'vendor': version.vendor_string(),
+                              'product': version.product_string(),
+                              'version': version_string})
         import XenAPI
         self.XenAPI = XenAPI
         self._sessions = queue.Queue()
