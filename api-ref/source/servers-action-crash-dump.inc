@@ -25,7 +25,6 @@ Request
 
   - tenant_id: tenant_id
   - server_id: server_id
-  - trigger_crash_dump: trigger_crash_dump
 
 **Example Trigger crash dump: JSON request**
 
@@ -34,4 +33,3 @@ Request
 
 Response
 --------
-

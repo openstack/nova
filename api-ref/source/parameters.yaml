@@ -64,12 +64,6 @@ attachment_id:
   in: path
   required: true
   type: string
-binary:
-  description: |
-    The binary name of the service.
-  in: path
-  required: true
-  type: string
 cell_id:
   description: |
     The UUID of the cell.
@@ -238,6 +232,12 @@ server_id_path:
   in: path
   required: true
   type: string
+service_id_path:
+  in: path
+  required: true
+  type: int
+  description: |
+    The id of the service
 snapshot_id_2:
   description: |
     The UUID of the snapshot.
@@ -686,6 +686,12 @@ availability_zone:
   in: body
   required: false
   type: string
+binary:
+  description: |
+    The binary name of the service.
+  in: body
+  required: true
+  type: string
 block_device_mapping_v2:
   description: |
     Enables fine grained control of the block device mapping for an instance. This
@@ -976,6 +982,14 @@ force:
   in: body
   required: false
   type: boolean
+forced_down:
+  in: body
+  required: true
+  type: boolean
+  description: |
+    Whether or not this service was forced down manually by an
+    adminstrator. This value is useful to know that some 3rd party has
+    verified the service should be marked down.
 forceDelete:
   description: |
     The action.
@@ -1048,6 +1062,12 @@ host_status:
   in: body
   required: true
   type: string
+hypervisor_type:
+  in: body
+  required: true
+  type: string
+  description: |
+    The hypervisor type for the agent. Currently only ``xen`` is supported.
 id:
   description: |
     The security group name or UUID.
@@ -1891,6 +1911,24 @@ servers:
   in: body
   required: true
   type: array
+service:
+  in: body
+  required: true
+  type: object
+  description: |
+    Object representing a compute service
+services:
+  in: body
+  required: true
+  type: array
+  description: |
+    An array of service objects
+service_state:
+  in: body
+  required: true
+  type: string
+  description: |
+    The state of the service. One of ``up`` or ``down``.
 shelve:
   description: |
     The action.

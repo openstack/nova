@@ -141,10 +141,17 @@ class RestParametersDirective(Table):
                 if ref in lookup:
                     new_content.append((name, lookup[ref]))
                 else:
+                    # TODO(sdague): this provides a kind of confusing
+                    # error message because env.warn isn't meant to be
+                    # used this way, however it does provide a way to
+                    # track down where the parameters list is that is
+                    # wrong. So it's good enough for now.
                     self.env.warn(
-                        self.env.docname,
-                        "No field definition for %s found in %s. Skipping." %
-                        (ref, fpath))
+                        "%s:%s " % (
+                            self.state_machine.node.source,
+                            self.state_machine.node.line),
+                        ("No field definition for ``%s`` found in ``%s``. "
+                         " Skipping." % (ref, fpath)))
 
         # self.app.info("New content %s" % new_content)
         self.yaml = new_content
