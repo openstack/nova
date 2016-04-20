@@ -32,6 +32,6 @@ Response
 
 **Example List Migrations: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-migrations/migrations-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-migrations/migrations-get.json
    :language: javascript
 

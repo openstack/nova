@@ -30,7 +30,7 @@ Response
 
 **Example List Keypairs: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-keypairs/keypairs-list-resp.json
+.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-list-resp.json
    :language: javascript
 
 Create Or Import Keypair
@@ -56,7 +56,7 @@ Request
 
 **Example Create Or Import Keypair: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-keypairs/keypair-import-req.json
+.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-import-post-req.json
    :language: javascript
 
 Response
@@ -64,7 +64,7 @@ Response
 
 **Example Create Or Import Keypair: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-keypairs/keypair-import-resp.json
+.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-import-post-resp.json
    :language: javascript
 
 Delete Keypair
@@ -74,7 +74,7 @@ Delete Keypair
 
 Deletes a keypair.
 
-Normal response codes: 204
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -115,6 +115,6 @@ Response
 
 **Example Show Keypair Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-keypairs/keypair-show-resp.json
+.. literalinclude:: ../../doc/api_samples/keypairs/keypairs-get-resp.json
    :language: javascript
 

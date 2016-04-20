@@ -184,7 +184,7 @@ Request
 
 **Example Associate Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-associate-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-associate-host-req.json
    :language: javascript
 
 Response
@@ -216,7 +216,7 @@ Request
 
 **Example Disassociate Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-host-req.json
    :language: javascript
 
 Response
@@ -228,6 +228,8 @@ Disassociate Network
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a network from a project. You can then reuse the network.
+
+Specify the ``disassociate`` action in the request body.
 
 Specify the ``disassociate`` action in the request body.
 
@@ -248,7 +250,7 @@ Request
 
 **Example Disassociate Network: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks/networks-disassociate-req.json
    :language: javascript
 
 Response
@@ -260,6 +262,8 @@ Disassociate Project
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a project from a network.
+
+Specify the ``disassociate_project`` action in the request body.
 
 Specify the ``disassociate_project`` action in the request body.
 
@@ -280,7 +284,7 @@ Request
 
 **Example Disassociate Project: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-project-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-project-req.json
    :language: javascript
 
 Response
