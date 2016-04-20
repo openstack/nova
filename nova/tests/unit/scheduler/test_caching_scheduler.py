@@ -201,7 +201,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # This has proved to be around 1 ms on a random dev box
         # But this is here so you can do simply performance testing easily.
-        self.assertTrue(per_request_ms < 1000)
+        self.assertLess(per_request_ms, 1000)
 
 
 if __name__ == '__main__':
