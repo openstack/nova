@@ -1024,7 +1024,7 @@ hostId:
   in: body
   required: true
   type: string
-host_2:
+host_migration:
   description: |
     The host to which to migrate the server. If you omit this parameter, the scheduler
     chooses a host.

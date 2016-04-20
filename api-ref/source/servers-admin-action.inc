@@ -137,7 +137,7 @@ Request
 
   - tenant_id: tenant_id
   - server_id: server_id
-  - host: host
+  - host: host_migration 
   - block_migration: block_migration
   - disk_over_commit: disk_over_commit
 
