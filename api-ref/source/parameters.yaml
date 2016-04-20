@@ -24,7 +24,7 @@ admin_tenant_id:
   type: string
 agent_build_id:
   description: |
-    The UUID of the agent build.
+    The id of the agent build.
   in: path
   required: true
   type: string
@@ -667,6 +667,13 @@ agent_id:
   in: body
   required: true
   type: integer
+agent_id_str:
+  description: |
+    The agent ID. (This is a bug of API, this should be integer type which is consistent with
+    the responses of agent create and list. This will be fixed in later microversion.)
+  in: body
+  required: true
+  type: string
 alias:
   description: |
     A short name by which this extension is also known.
