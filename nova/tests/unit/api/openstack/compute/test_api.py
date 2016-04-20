@@ -59,7 +59,7 @@ class APITest(test.NoDBTestCase):
         req.headers["content-type"] = "application/xml"
 
         res = req.get_response(self.wsgi_app)
-        self.assertEqual(res.status_int, 400)
+        self.assertEqual(res.status_int, 415)
 
     def test_vendor_content_type_json(self):
         ctype = 'application/vnd.openstack.compute+json'
