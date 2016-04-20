@@ -18,7 +18,6 @@ import webob
 
 from nova.api.openstack.compute import admin_password as admin_password_v21
 from nova.api.openstack.compute.legacy_v2 import servers
-from nova.compute import api as compute_api
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -37,9 +36,9 @@ class AdminPasswordTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(AdminPasswordTestV21, self).setUp()
-        self.stubs.Set(compute_api.API, 'set_admin_password',
-                       fake_set_admin_password)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.stub_out('nova.compute.api.API.set_admin_password',
+                      fake_set_admin_password)
+        self.stub_out('nova.compute.api.API.get', fake_get)
         self.fake_req = fakes.HTTPRequest.blank('')
 
     def _get_action(self):
