@@ -2232,10 +2232,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(ds_util._DS_DC_MAPPING))
 
     def test_pre_live_migration(self):
+        migrate_data = objects.migrate_data.LiveMigrateData()
         self.assertRaises(NotImplementedError,
                           self.conn.pre_live_migration, self.context,
                           'fake_instance', 'fake_block_device_info',
-                          'fake_network_info', 'fake_disk_info')
+                          'fake_network_info', 'fake_disk_info', migrate_data)
 
     def test_live_migration(self):
         self.assertRaises(NotImplementedError,

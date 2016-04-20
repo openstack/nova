@@ -6367,25 +6367,16 @@ class LibvirtDriver(driver.ComputeDriver):
                         shutil.rmtree(instance_dir)
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         """Preparation live migration."""
         if disk_info is not None:
             disk_info = jsonutils.loads(disk_info)
 
-        # Steps for volume backed instance live migration w/o shared storage.
-        is_shared_block_storage = True
-        is_shared_instance_path = True
-        is_block_migration = True
-        if migrate_data:
-            if not isinstance(migrate_data, migrate_data_obj.LiveMigrateData):
-                obj = objects.LibvirtLiveMigrateData()
-                obj.from_legacy_dict(migrate_data)
-                migrate_data = obj
-            LOG.debug('migrate_data in pre_live_migration: %s', migrate_data,
-                      instance=instance)
-            is_shared_block_storage = migrate_data.is_shared_block_storage
-            is_shared_instance_path = migrate_data.is_shared_instance_path
-            is_block_migration = migrate_data.block_migration
+        LOG.debug('migrate_data in pre_live_migration: %s', migrate_data,
+                  instance=instance)
+        is_shared_block_storage = migrate_data.is_shared_block_storage
+        is_shared_instance_path = migrate_data.is_shared_instance_path
+        is_block_migration = migrate_data.block_migration
 
         if not is_shared_instance_path:
             instance_dir = libvirt_utils.get_instance_path_at_destination(

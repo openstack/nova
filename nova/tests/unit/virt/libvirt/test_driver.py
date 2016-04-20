@@ -68,6 +68,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova.objects import fields
+from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
@@ -9324,12 +9325,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.plug_vifs(mox.IsA(instance), nw_info)
 
         self.mox.ReplayAll()
-        migrate_data = {
-            "block_migration": False,
-            "instance_relative_path": "foo",
-            "is_shared_block_storage": False,
-            "is_shared_instance_path": False,
-        }
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            block_migration=False,
+            instance_relative_path='foo',
+            is_shared_block_storage=False,
+            is_shared_instance_path=False,
+        )
         result = drvr.pre_live_migration(
             c, instance, vol, nw_info, None,
             migrate_data=migrate_data)
@@ -9397,12 +9398,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = objects.Instance(**self.test_instance)
         instance.config_drive = 'True'
 
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_instance_path=False,
+            is_shared_block_storage=False,
+            block_migration=False,
+            instance_relative_path='foo',
+        )
         res_data = drvr.pre_live_migration(
-            self.context, instance, vol, [], None,
-            {'is_shared_instance_path': False,
-             'is_shared_block_storage': False,
-             'block_migration': False,
-             'instance_relative_path': 'foo'})
+            self.context, instance, vol, [], None, migrate_data)
         res_data = res_data.to_legacy_dict(pre_migration_result=True)
         block_device_info_get_mapping.assert_called_once_with(
             {'block_device_mapping': [
@@ -9456,16 +9459,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.mox.StubOutWithMock(drvr, 'plug_vifs')
             drvr.plug_vifs(mox.IsA(inst_ref), nw_info)
             self.mox.ReplayAll()
-            migrate_data = {'is_shared_instance_path': False,
-                            'is_shared_block_storage': False,
-                            'is_volume_backed': True,
-                            'block_migration': False,
-                            'instance_relative_path': inst_ref['name'],
-                            'disk_over_commit': False,
-                            'disk_available_mb': 123,
-                            'image_type': 'qcow2',
-                            'filename': 'foo',
-                        }
+            migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+                is_shared_instance_path=False,
+                is_shared_block_storage=False,
+                is_volume_backed=True,
+                block_migration=False,
+                instance_relative_path=inst_ref['name'],
+                disk_over_commit=False,
+                disk_available_mb=123,
+                image_type='qcow2',
+                filename='foo',
+            )
             ret = drvr.pre_live_migration(c, inst_ref, vol, nw_info, None,
                                           migrate_data)
             target_ret = {
@@ -9504,10 +9508,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(eventlet.greenthread, 'sleep',
                        lambda x: eventlet.sleep(0))
         disk_info_json = jsonutils.dumps({})
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_block_storage=True,
+            is_shared_instance_path=True,
+            block_migration=False,
+        )
         self.assertRaises(processutils.ProcessExecutionError,
                           drvr.pre_live_migration,
                           self.context, instance, block_device_info=None,
-                          network_info=[], disk_info=disk_info_json)
+                          network_info=[], disk_info=disk_info_json,
+                          migrate_data=migrate_data)
 
     def test_pre_live_migration_plug_vifs_retry_works(self):
         self.flags(live_migration_retry_count=3)
@@ -9526,8 +9536,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(eventlet.greenthread, 'sleep',
                        lambda x: eventlet.sleep(0))
         disk_info_json = jsonutils.dumps({})
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_block_storage=True,
+            is_shared_instance_path=True,
+            block_migration=False,
+        )
         drvr.pre_live_migration(self.context, instance, block_device_info=None,
-                                network_info=[], disk_info=disk_info_json)
+                                network_info=[], disk_info=disk_info_json,
+                                migrate_data=migrate_data)
 
     def test_pre_live_migration_image_not_created_with_shared_storage(self):
         migrate_data_set = [{'is_shared_block_storage': False,
@@ -9558,6 +9574,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                              'image_type': 'qcow2',
                              'block_migration': True}]
 
+        def _to_obj(d):
+            return migrate_data_obj.LibvirtLiveMigrateData(**d)
+        migrate_data_set = map(_to_obj, migrate_data_set)
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         # creating mocks
@@ -9584,10 +9604,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       objects.LibvirtLiveMigrateData)
 
     def test_pre_live_migration_with_not_shared_instance_path(self):
-        migrate_data = {'is_shared_block_storage': False,
-                        'is_shared_instance_path': False,
-                        'block_migration': False,
-                        'instance_relative_path': 'foo'}
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_block_storage=False,
+            is_shared_instance_path=False,
+            block_migration=False,
+            instance_relative_path='foo',
+        )
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
@@ -9622,10 +9644,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_pre_live_migration_recreate_disk_info(self):
 
-        migrate_data = {'is_shared_block_storage': False,
-                        'is_shared_instance_path': False,
-                        'block_migration': True,
-                        'instance_relative_path': '/some/path/'}
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_block_storage=False,
+            is_shared_instance_path=False,
+            block_migration=True,
+            instance_relative_path='/some/path/',
+        )
         disk_info = [{'disk_size': 5368709120, 'type': 'raw',
                       'virt_disk_size': 5368709120,
                       'path': '/some/path/disk',
@@ -9662,7 +9686,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._supported_perf_events = ['cmt']
 
-        migrate_data = {}
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_block_storage=False,
+            is_shared_instance_path=False,
+            block_migration=False,
+            instance_relative_path='foo',
+        )
 
         instance = objects.Instance(**self.test_instance)
 

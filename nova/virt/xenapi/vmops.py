@@ -2375,10 +2375,6 @@ class VMOps(object):
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
-        if migrate_data is None:
-            raise exception.InvalidParameterValue(
-                    'XenAPI requires migrate data')
-
         migrate_data.sr_uuid_map = self.connect_block_device_volumes(
                 block_device_info)
         return migrate_data
