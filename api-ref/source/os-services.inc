@@ -50,7 +50,7 @@ Response
 
 **Example List Compute Services: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/v2.11/services-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-services/services-list-get-resp.json
    :language: javascript
 
 Enable Scheduling For A Compute Service
@@ -78,7 +78,7 @@ Request
 
 **Example Enable Scheduling For A Compute Service: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-put-req.json
+.. literalinclude:: ../../doc/api_samples/os-services/service-enable-put-req.json
    :language: javascript
 
 Response
@@ -93,7 +93,7 @@ Response
 
 **Example Enable Scheduling For A Compute Service: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/v2.11/service-enable-put-resp.json
+.. literalinclude:: ../../doc/api_samples/os-services/service-enable-put-resp.json
    :language: javascript
 
 Disable Scheduling For A Compute Service
@@ -191,8 +191,6 @@ Delete Compute Service
 
 Deletes a Compute service.
 
-Specify the service by its host name and binary name.
-
 Normal response codes: 204
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
@@ -205,14 +203,6 @@ Request
 
   - tenant_id: tenant_id
   - service_id: service_id
-  - host: host
-  - binary: binary
-
-**Example Delete Compute Service: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-services/service-enable-req.json
-   :language: javascript
 
 Response
 --------
-
