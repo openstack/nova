@@ -21,6 +21,7 @@ from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import requests_mock
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova import policy
@@ -28,6 +29,8 @@ from nova import test
 from nova.tests.unit import fake_policy
 from nova.tests.unit import policy_fixture
 from nova import utils
+
+CONF = nova.conf.CONF
 
 
 class PolicyFileTestCase(test.NoDBTestCase):
@@ -742,11 +745,17 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
                            {'project_id': 'fake', 'user_id': 'fake'})
 
     def test_no_empty_rules(self):
-        rules = policy.get_rules()
-        for rule in rules:
+        # Parsed rules substitute '@' for '', so we need to look at the raw
+        # policy definitions
+        # CONF.oslo_policy.policy_file has been set to the sample file by
+        # the RealPolicyFixture used in setUp
+        with open(CONF.oslo_policy.policy_file, 'r') as policy_file:
+            policy_dict = jsonutils.loads(policy_file.read())
+
+        for rule_name, rule in policy_dict.items():
             self.assertNotEqual('', str(rule),
                     '%s should not be empty, use "@" instead if the policy '
-                    'should allow everything' % rule)
+                    'should allow everything' % rule_name)
 
     def test_allow_all_rules(self):
         for rule in self.allow_all_rules:
