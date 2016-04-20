@@ -43,6 +43,7 @@ from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 
@@ -980,12 +981,12 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'actions_get')
         self.tgt_db_inst.actions_get(self.ctxt,
-                                     'fake-uuid').AndReturn([fake_act])
+                                     fake_uuid).AndReturn([fake_act])
         self.mox.ReplayAll()
 
         response = self.src_msg_runner.actions_get(self.ctxt,
                                                    self.tgt_cell_name,
-                                                   'fake-uuid')
+                                                   fake_uuid)
         result = response.value_or_raise()
         self.assertEqual([jsonutils.to_primitive(fake_act)], result)
 
@@ -996,11 +997,11 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'action_get_by_request_id')
         self.tgt_db_inst.action_get_by_request_id(self.ctxt,
-                'fake-uuid', 'req-fake').AndReturn(fake_act)
+                fake_uuid, 'req-fake').AndReturn(fake_act)
         self.mox.ReplayAll()
 
         response = self.src_msg_runner.action_get_by_request_id(self.ctxt,
-                self.tgt_cell_name, 'fake-uuid', 'req-fake')
+                self.tgt_cell_name, fake_uuid, 'req-fake')
         result = response.value_or_raise()
         self.assertEqual(jsonutils.to_primitive(fake_act), result)
 
@@ -1020,7 +1021,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         self.assertEqual(jsonutils.to_primitive(fake_events), result)
 
     def test_validate_console_port(self):
-        instance_uuid = 'fake_instance_uuid'
+        instance_uuid = uuids.instance
         instance = objects.Instance(uuid=instance_uuid)
         console_port = 'fake-port'
         console_type = 'fake-type'
@@ -1495,7 +1496,8 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
 
     def _test_instance_update_at_top(self, exists=True):
         fake_uuid = fake_server_actions.FAKE_UUID
-        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_info_cache = objects.InstanceInfoCache(
+            instance_uuid=fake_uuid)
         fake_sys_metadata = {'key1': 'value1',
                              'key2': 'value2'}
         fake_attrs = {'uuid': fake_uuid,
@@ -1517,7 +1519,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
             if exists:
                 mock_save.side_effect = fake_save
             else:
-                error = exception.InstanceNotFound(instance_id='fake_uuid')
+                error = exception.InstanceNotFound(instance_id=fake_uuid)
                 mock_save.side_effect = error
 
             self.src_msg_runner.instance_update_at_top(self.ctxt,
@@ -1540,7 +1542,8 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
 
     def test_instance_update_at_top_with_building_state(self):
         fake_uuid = fake_server_actions.FAKE_UUID
-        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_info_cache = objects.InstanceInfoCache(
+            instance_uuid=fake_uuid)
         fake_sys_metadata = {'key1': 'value1',
                              'key2': 'value2'}
         fake_attrs = {'uuid': fake_uuid,
@@ -1567,7 +1570,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                 expected_vm_state=expected_vm_state, expected_task_state=None)
 
     def test_instance_destroy_at_top(self):
-        fake_instance = objects.Instance(uuid='fake_uuid')
+        fake_instance = objects.Instance(uuid=uuids.instance)
 
         with mock.patch.object(objects.Instance, 'destroy') as mock_destroy:
             self.src_msg_runner.instance_destroy_at_top(self.ctxt,
@@ -1575,7 +1578,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
             mock_destroy.assert_called_once_with()
 
     def test_instance_destroy_at_top_incomplete_instance_obj(self):
-        fake_instance = objects.Instance(uuid='fake_uuid')
+        fake_instance = objects.Instance(uuid=uuids.instance)
         with mock.patch.object(objects.Instance, 'get_by_uuid') as mock_get:
             self.src_msg_runner.instance_destroy_at_top(self.ctxt,
                     fake_instance)
@@ -1672,8 +1675,8 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
         updated_since_parsed = 'fake_updated_since_parsed'
         deleted = 'fake_deleted'
 
-        instance1 = objects.Instance(uuid='fake_uuid1', deleted=False)
-        instance2 = objects.Instance(uuid='fake_uuid2', deleted=True)
+        instance1 = objects.Instance(uuid=uuids.instance_1, deleted=False)
+        instance2 = objects.Instance(uuid=uuids.instance_2, deleted=True)
         fake_instances = [instance1, instance2]
 
         self.mox.StubOutWithMock(self.tgt_msg_runner,
@@ -1939,7 +1942,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
 
     def test_bdm_update_or_create_with_false_create_vol_id(self):
         fake_bdm = {'id': 'fake_id',
-                    'instance_uuid': 'fake_instance_uuid',
+                    'instance_uuid': uuids.instance,
                     'device_name': 'fake_device_name',
                     'volume_id': 'fake_volume_id'}
         expected_bdm = fake_bdm.copy()
@@ -1967,7 +1970,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                 'block_device_mapping_update')
 
         self.tgt_db_inst.block_device_mapping_get_all_by_instance(
-                self.ctxt, 'fake_instance_uuid').AndReturn(
+                self.ctxt, uuids.instance).AndReturn(
                         fake_inst_bdms)
         # Should try to update ID 2.
         self.tgt_db_inst.block_device_mapping_update(
@@ -1981,7 +1984,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
 
     def test_bdm_update_or_create_with_false_create_dev_name(self):
         fake_bdm = {'id': 'fake_id',
-                    'instance_uuid': 'fake_instance_uuid',
+                    'instance_uuid': uuids.instance,
                     'device_name': 'fake_device_name',
                     'volume_id': 'fake_volume_id'}
         expected_bdm = fake_bdm.copy()
@@ -2009,7 +2012,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                 'block_device_mapping_update')
 
         self.tgt_db_inst.block_device_mapping_get_all_by_instance(
-                self.ctxt, 'fake_instance_uuid').AndReturn(
+                self.ctxt, uuids.instance).AndReturn(
                         fake_inst_bdms)
         # Should try to update ID 2.
         self.tgt_db_inst.block_device_mapping_update(
@@ -2022,7 +2025,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                                                         create=False)
 
     def test_bdm_destroy_by_volume(self):
-        fake_instance_uuid = 'fake-instance-uuid'
+        fake_instance_uuid = uuids.instance
         fake_volume_id = 'fake-volume-name'
 
         # Shouldn't be called for these 2 cells
@@ -2042,7 +2045,7 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                                                volume_id=fake_volume_id)
 
     def test_bdm_destroy_by_device(self):
-        fake_instance_uuid = 'fake-instance-uuid'
+        fake_instance_uuid = uuids.instance
         fake_device_name = 'fake-device-name'
 
         # Shouldn't be called for these 2 cells

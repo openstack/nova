@@ -103,7 +103,7 @@ class CellsSchedulerTestCase(test.TestCase):
                           'name': 'instance-00000001',
                           'hostname': 'meow',
                           'display_name': 'moo',
-                          'image_ref': 'fake_image_ref',
+                          'image_ref': uuidsentinel.fake_image_ref,
                           'user_id': self.ctxt.user_id,
                           # Test these as lists
                           'metadata': {'moo': 'cow'},
@@ -115,8 +115,9 @@ class CellsSchedulerTestCase(test.TestCase):
         block_device_mapping = [
                 objects.BlockDeviceMapping(context=self.ctxt,
                     **fake_block_device.FakeDbBlockDeviceDict(
-                            block_device.create_image_bdm('fake_image_ref'),
-                            anon=True))
+                            block_device.create_image_bdm(
+                                uuidsentinel.fake_image_ref),
+                        anon=True))
                ]
 
         def _fake_instance_update_at_top(_ctxt, instance):
@@ -139,7 +140,8 @@ class CellsSchedulerTestCase(test.TestCase):
             self.assertEqual('meow', instance['hostname'])
             self.assertEqual('moo-%d' % (count + 1),
                              instance['display_name'])
-            self.assertEqual('fake_image_ref', instance['image_ref'])
+            self.assertEqual(uuidsentinel.fake_image_ref,
+                             instance['image_ref'])
 
     @mock.patch('nova.objects.Instance.update')
     def test_create_instances_here_pops_problematic_properties(self,
