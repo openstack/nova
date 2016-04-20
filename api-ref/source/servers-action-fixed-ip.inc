@@ -27,7 +27,7 @@ Request
 
 **Example Add (Associate) Fixed Ip (Addfixedip Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/multinic-add-fixed-ip-req.json
+.. literalinclude:: ../../doc/api_samples/os-multinic/multinic-add-fixed-ip-req.json
    :language: javascript
 
 Response
@@ -60,7 +60,7 @@ Request
 
 **Example Remove (Disassociate) Fixed Ip (Removefixedip Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/multinic-remove-fixed-ip-req.json
+.. literalinclude:: ../../doc/api_samples/os-multinic/multinic-remove-fixed-ip-req.json
    :language: javascript
 
 Response

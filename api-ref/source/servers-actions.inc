@@ -55,6 +55,7 @@ Request
   - address: address
   - fixed_address: fixed_address
 
+.. TODO(gmann) Need to create the sample file for this action.
 **Example Add (Associate) Floating Ip (Addfloatingip Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-resp.json
@@ -362,7 +363,7 @@ Response
 
 **Example Rebuild Server (Rebuild Action): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild.json
+.. literalinclude:: ../../doc/api_samples/servers/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (Removefloatingip Action)
@@ -477,7 +478,7 @@ Response
 
 **Example Extended rescue server: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-rescue/server-get-resp-rescue.json
+.. literalinclude:: ../../doc/api_samples/os-rescue/server-rescue.json
    :language: javascript
 
 Resize Server (Resize Action)
