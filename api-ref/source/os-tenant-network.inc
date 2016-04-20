@@ -29,7 +29,7 @@ Request
 
 **Example Create Project Network: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-tenant-networks/network-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-post-req.json
    :language: javascript
 
 Response
@@ -37,7 +37,7 @@ Response
 
 **Example Create Project Network: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-tenant-networks/network-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-post-res.json
    :language: javascript
 
 List Project Networks
@@ -66,7 +66,7 @@ Response
 
 **Example List Project Networks: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/networks-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-list-res.json
    :language: javascript
 
 Show Project Network Details
@@ -96,7 +96,7 @@ Response
 
 **Example Show Project Network Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-tenant-networks/network-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-post-res.json
    :language: javascript
 
 Delete Project Network
@@ -148,7 +148,7 @@ Request
 
 **Example Associate Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-associate-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-associate-host-req.json
    :language: javascript
 
 Response
@@ -178,7 +178,7 @@ Request
 
 **Example Disassociate Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-host-req.json
    :language: javascript
 
 Response
@@ -208,7 +208,7 @@ Request
 
 **Example Disassociate Network: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks/networks-disassociate-req.json
    :language: javascript
 
 Response
@@ -238,9 +238,8 @@ Request
 
 **Example Disassociate Project: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-project-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-project-req.json
    :language: javascript
 
 Response
 --------
-

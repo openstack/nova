@@ -30,7 +30,7 @@ Response
 
 **Example List Volumes: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/volumes-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-index-resp.json
    :language: javascript
 
 Create Volume
@@ -62,7 +62,7 @@ Request
 
 **Example Create Volume: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-post-req.json
    :language: javascript
 
 Response
@@ -70,7 +70,7 @@ Response
 
 **Example Create Volume: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-post-resp.json
    :language: javascript
 
 List Volumes With Details
@@ -97,7 +97,7 @@ Response
 
 **Example List Volumes With Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/volumes-list-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-detail-resp.json
    :language: javascript
 
 Show Volume Details
@@ -125,7 +125,7 @@ Response
 
 **Example Show Volume Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/os-volumes-get-resp.json
    :language: javascript
 
 Delete Volume
@@ -150,73 +150,6 @@ Request
 
 Response
 --------
-
-**Example Delete Volume: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-delete-json-http.txt
-   :language: javascript
-
-List Volume Types
-=================
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-volume-types
-
-Lists volume types.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
-.. rest_parameters:: parameters.yaml
-
-  - volume_types: volume_types
-  - id: id
-  - name: name
-  - extra_specs: extra_specs
-
-**Example List Volume Types: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-types-list-resp.json
-   :language: javascript
-
-Show Volume Type Details
-========================
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-volume-types/{volume_type_id}
-
-Shows details for a volume type.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - volume_type_id: volume_type_id
-
-Response
---------
-
-**Example Show Volume Type Details: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/volume-type-show-resp.json
-   :language: javascript
 
 Create Snapshot
 ===============
@@ -248,7 +181,7 @@ Response
 
 **Example Create Snapshot: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-resp.json
    :language: javascript
 
 List Snapshots
@@ -302,7 +235,7 @@ Response
 
 **Example List Snapshots With Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-detail-resp.json
    :language: javascript
 
 Show Snapshot Details
@@ -330,7 +263,7 @@ Response
 
 **Example Show Snapshot Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-show-resp.json
    :language: javascript
 
 Delete Snapshot
@@ -357,9 +290,3 @@ Request
 
 Response
 --------
-
-**Example Delete Snapshot: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-delete-json-http.txt
-   :language: javascript
-

@@ -30,7 +30,7 @@ Response
 
 **Example List Tenant Usage For All Tenants: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-show-general-resp.json
+.. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-get.json
    :language: javascript
 
 Show Usage Details For Tenant
@@ -57,6 +57,5 @@ Response
 
 **Example Show Usage Details For Tenant: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-get-specific.json
    :language: javascript
-
