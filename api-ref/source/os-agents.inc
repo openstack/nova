@@ -29,7 +29,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - hypervisor: hypervisor
+  - hypervisor: hypervisor_type
   - architecture: architecture
   - os: os
   - url: url
@@ -46,7 +46,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - hypervisor: hypervisor
+  - hypervisor: hypervisor_type
   - architecture: architecture
   - os: os
   - url: url
@@ -79,7 +79,7 @@ Request
   - tenant_id: tenant_id
   - agent_id: agent_id
   - architecture: architecture
-  - hypervisor: hypervisor
+  - hypervisor: hypervisor_type
   - url: url
   - md5hash: md5hash
   - version: version
@@ -156,4 +156,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-agents/agent-update-put-resp.json
    :language: javascript
-

@@ -70,7 +70,7 @@ Response
    :language: javascript
 
 List Images With Details
-==================
+========================
 
 .. rest_method:: GET /v2.1/{tenant_id}/images/detail
 

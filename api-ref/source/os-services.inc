@@ -42,11 +42,11 @@ Response
   - binary: binary
   - disabled_reason: disabled_reason
   - host: host
-  - state: state
+  - state: service_state
   - status: status
-  - updated_at: updated_at
+  - updated_at: updated
   - forced_down: forced_down
-  - zone: zone
+  - zone: OS-EXT-AZ:availability_zone
 
 **Example List Compute Services: JSON response**
 
@@ -202,7 +202,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - service_id: service_id
+  - service_id: service_id_path
 
 Response
 --------

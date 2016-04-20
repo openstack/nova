@@ -36,7 +36,7 @@ Request
   - imageRef: imageRef
   - flavorRef: flavorRef
   - networks: networks
-  - uuid: uuid
+  - uuid: network_uuid
   - port: port
   - fixed_ip: fixed_ip
   - name: name
@@ -104,7 +104,7 @@ Request
   - imageRef: imageRef
   - flavorRef: flavorRef
   - networks: networks
-  - uuid: uuid
+  - uuid: network_uuid
   - port: port
   - fixed_ip: fixed_ip
   - name: name
