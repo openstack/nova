@@ -1089,7 +1089,7 @@ id_7:
   in: body
   required: true
   type: string
-id_8:
+virtual_interface_id:
   description: |
     The UUID of the virtual interface.
   in: body

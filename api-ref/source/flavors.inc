@@ -66,7 +66,7 @@ Request
 
 **Example Create Flavor: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/flavors/flavor-create-req.json
+.. literalinclude:: ../../doc/api_samples/flavor-manage/flavor-create-post-req.json
    :language: javascript
 
 Response
@@ -74,7 +74,7 @@ Response
 
 **Example Create Flavor: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/flavors/flavor-create-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-manage/flavor-create-post-resp.json
    :language: javascript
 
 Show Flavor Details
@@ -102,7 +102,7 @@ Response
 
 **Example Show Flavor Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/flavors/flavor-show-resp.json
+.. literalinclude:: ../../doc/api_samples/flavors/flavor-get-resp.json
    :language: javascript
 
 Delete Flavor
@@ -164,6 +164,6 @@ Response
 
 **Example List Flavors With Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/flavors/flavors-list-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/flavors/flavors-detail-resp.json
    :language: javascript
 
