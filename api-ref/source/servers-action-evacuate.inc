@@ -9,7 +9,7 @@ Evacuates a server from a failed host to a new one.
 
 Specify the ``evacuate`` action in the request body.
 
-Normal response codes: 202
+Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -27,7 +27,7 @@ Request
 
 **Example Evacuate Server (Evacuate Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/evacuate-req.json
+.. literalinclude:: ../../doc/api_samples/os-evacuate/server-evacuate-req.json
    :language: javascript
 
 Response
@@ -35,6 +35,6 @@ Response
 
 **Example Evacuate Server (Evacuate Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/evacuate-resp.json
+.. literalinclude:: ../../doc/api_samples/os-evacuate/server-evacuate-resp.json
    :language: javascript
 
