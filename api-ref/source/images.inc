@@ -66,7 +66,7 @@ Response
 
 **Example Show Image Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/images/image-show-resp.json
+.. literalinclude:: ../../doc/api_samples/images/images-details-get-resp.json
    :language: javascript
 
 List Images With Details
@@ -300,4 +300,3 @@ Request
 
 Response
 --------
-
