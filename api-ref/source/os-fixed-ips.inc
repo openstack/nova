@@ -32,7 +32,7 @@ Response
 
 **Example Show Fixed Ip Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-fixed-ips/fixedip-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-fixed-ips/fixedips-get-resp.json
    :language: javascript
 
 Reserve Or Release A Fixed Ip
@@ -59,7 +59,7 @@ Request
 
 **Example Reserve Or Release A Fixed Ip: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-fixed-ips/fixedip-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-fixed-ips/fixedip-post-req.json
    :language: javascript
 
 Response
