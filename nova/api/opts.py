@@ -15,7 +15,6 @@ import itertools
 import nova.api.openstack.compute
 import nova.api.openstack.compute.hide_server_addresses
 import nova.api.openstack.compute.legacy_v2.contrib
-import nova.api.openstack.compute.legacy_v2.contrib.fping
 import nova.api.openstack.compute.legacy_v2.contrib.os_tenant_networks
 import nova.api.openstack.compute.legacy_v2.extensions
 import nova.api.openstack.compute.legacy_v2.servers
@@ -25,13 +24,10 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             [nova.api.openstack.compute.allow_instance_snapshots_opt],
              nova.api.openstack.compute.legacy_v2.contrib.ext_opts,
-             nova.api.openstack.compute.legacy_v2.contrib.fping.fping_opts,
              nova.api.openstack.compute.legacy_v2.contrib.os_tenant_networks.
                  os_network_opts,
              nova.api.openstack.compute.legacy_v2.extensions.ext_opts,
-             nova.api.openstack.compute.hide_server_addresses.opts,
              nova.api.openstack.compute.legacy_v2.servers.server_opts,
          )),
     ]

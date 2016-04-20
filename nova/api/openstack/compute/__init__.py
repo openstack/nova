@@ -18,7 +18,6 @@
 WSGI middleware for OpenStack Compute API.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 import nova.api.openstack
@@ -36,15 +35,11 @@ from nova.api.openstack.compute.legacy_v2 import server_metadata \
 from nova.api.openstack.compute.legacy_v2 import servers as v2_servers
 from nova.api.openstack.compute.legacy_v2 import versions \
         as legacy_v2_versions
+import nova.conf
 from nova.i18n import _LW
 
-allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
-        default=True,
-        help='Permit instance snapshot operations.')
 
-CONF = cfg.CONF
-CONF.register_opt(allow_instance_snapshots_opt)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
