@@ -31,7 +31,7 @@ Request
 
 **Example Create Aggregate: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-post-req.json
    :language: javascript
 
 Response
@@ -39,7 +39,7 @@ Response
 
 **Example Create Aggregate: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-post-resp.json
    :language: javascript
 
 List Aggregates
@@ -61,17 +61,12 @@ Request
 
   - tenant_id: tenant_id
 
-**Example List Aggregates: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-create-req.json
-   :language: javascript
-
 Response
 --------
 
 **Example List Aggregates: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-get-resp.json
    :language: javascript
 
 Show Aggregate Details
@@ -94,17 +89,12 @@ Request
   - tenant_id: tenant_id
   - aggregate_id: aggregate_id
 
-**Example Show Aggregate Details: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-create-req.json
-   :language: javascript
-
 Response
 --------
 
 **Example Show Aggregate Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-get-resp.json
    :language: javascript
 
 Delete Aggregate
@@ -152,7 +142,7 @@ Request
 
 **Example Update Aggregate: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-req.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-post-req.json
    :language: javascript
 
 Response
@@ -160,7 +150,7 @@ Response
 
 **Example Update Aggregate: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-post-resp.json
    :language: javascript
 
 Add Host
@@ -187,7 +177,7 @@ Request
 
 **Example Add Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-add-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-add-host-post-req.json
    :language: javascript
 
 Response
@@ -195,42 +185,7 @@ Response
 
 **Example Add Host: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-add-host-resp.json
-   :language: javascript
-
-Create Or Update Aggregate Metadata
-===================================
-
-.. rest_method:: POST /v2.1/{tenant_id}/os-aggregates/{aggregate_id}/action
-
-Creates or replaces metadata for an aggregate.
-
-Specify the ``set_metadata`` action in the request body.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - aggregate_id: aggregate_id
-
-**Example Create Or Update Aggregate Metadata: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-metadata-create-req.json
-   :language: javascript
-
-Response
---------
-
-**Example Create Or Update Aggregate Metadata: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-metadata-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-add-host-post-resp.json
    :language: javascript
 
 Remove Host
@@ -257,7 +212,7 @@ Request
 
 **Example Remove Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-remove-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-remove-host-post-req.json
    :language: javascript
 
 Response
@@ -265,6 +220,41 @@ Response
 
 **Example Remove Host: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-remove-host-resp.json
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-remove-host-post-resp.json
+   :language: javascript
+
+Create Or Update Aggregate Metadata
+===================================
+
+.. rest_method:: POST /v2.1/{tenant_id}/os-aggregates/{aggregate_id}/action
+
+Creates or replaces metadata for an aggregate.
+
+Specify the ``set_metadata`` action in the request body.
+
+Normal response codes: 200
+
+Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
+unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - aggregate_id: aggregate_id
+
+**Example Create Or Update Aggregate Metadata: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-metadata-post-req.json
+   :language: javascript
+
+Response
+--------
+
+**Example Create Or Update Aggregate Metadata: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-metadata-post-resp.json
    :language: javascript
 
