@@ -30,7 +30,7 @@ Response
 
 **Example List Usage Audits For An Instance: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/usage-audits-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/inst-usage-audit-log-index-get-resp.json
    :language: javascript
 
 List Usage Audits Before Specified Time
@@ -64,6 +64,6 @@ Response
 
 **Example List Usage Audits Before Specified Time: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/usage-audits-log-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/inst-usage-audit-log-show-get-resp.json
    :language: javascript
 
