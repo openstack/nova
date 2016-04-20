@@ -1114,14 +1114,16 @@ class CellCommands(object):
 class CellV2Commands(object):
     """Commands for managing cells v2."""
 
-    @args('--cell_uuid', metavar='<cell_uuid>', help='The cell uuid')
+    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
+            help='Unmigrated instances will be mapped to the cell with the '
+                 'uuid provided.')
     @args('--limit', metavar='<limit>',
           help='Maximum number of instances to map')
     @args('--marker', metavar='<marker',
           help='The last updated instance UUID')
     @args('--verbose', metavar='<verbose>',
           help='Provide output for the registration')
-    def map_instances(self, cell_uuid=None, limit=None,
+    def map_instances(self, cell_uuid, limit=None,
                       marker=None, verbose=0):
         if limit is not None:
             limit = int(limit)
@@ -1129,11 +1131,8 @@ class CellV2Commands(object):
                 print('Must supply a positive value for limit')
                 return(1)
         ctxt = context.get_admin_context(read_deleted='yes')
-        if cell_uuid is None:
-            raise Exception(_("cell_uuid must be set"))
-        else:
-            # Validate the cell exists
-            cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+        # Validate the cell exists
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
         filters = {}
         instances = objects.InstanceList.get_by_filters(
                 ctxt, filters, sort_key='created_at', sort_dir='asc',
@@ -1147,7 +1146,7 @@ class CellV2Commands(object):
             try:
                 mapping = objects.InstanceMapping(ctxt)
                 mapping.instance_uuid = instance.uuid
-                mapping.cell_id = cell_mapping.id
+                mapping.cell_mapping = cell_mapping
                 mapping.project_id = instance.project_id
                 mapping.create()
             except db_exc.DBDuplicateEntry:
