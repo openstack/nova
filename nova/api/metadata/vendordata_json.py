@@ -17,18 +17,14 @@
 
 import errno
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova.api.metadata import base
+import nova.conf
 from nova.i18n import _LW
 
-file_opt = cfg.StrOpt('vendordata_jsonfile_path',
-                      help='File to load JSON formatted vendor data from')
-
-CONF = cfg.CONF
-CONF.register_opt(file_opt)
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -37,7 +33,7 @@ class JsonFileVendorData(base.VendorDataDriver):
         super(JsonFileVendorData, self).__init__(*args, **kwargs)
         data = {}
         fpath = CONF.vendordata_jsonfile_path
-        logprefix = "%s[%s]:" % (file_opt.name, fpath)
+        logprefix = "vendordata_jsonfile_path[%s]:" % fpath
         if fpath:
             try:
                 with open(fpath, "r") as fp:

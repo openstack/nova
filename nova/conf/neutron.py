@@ -14,7 +14,6 @@
 #    under the License.
 
 import copy
-import itertools
 
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
@@ -52,10 +51,7 @@ metadata_proxy_opts = [
          help='Shared secret to validate proxies Neutron metadata requests'),
 ]
 
-ALL_OPTS = list(itertools.chain(
-    neutron_opts,
-    metadata_proxy_opts
-))
+ALL_OPTS = (neutron_opts + metadata_proxy_opts)
 
 deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
                                              group=NEUTRON_GROUP)],

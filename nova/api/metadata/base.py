@@ -20,7 +20,6 @@ import base64
 import os
 import posixpath
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -43,20 +42,7 @@ from nova import utils
 from nova.virt import netutils
 
 
-metadata_opts = [
-    cfg.StrOpt('config_drive_skip_versions',
-               default=('1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 '
-                        '2007-12-15 2008-02-01 2008-09-01'),
-               help='List of metadata versions to skip placing into the '
-                    'config drive'),
-    cfg.StrOpt('vendordata_driver',
-               default='nova.api.metadata.vendordata_json.JsonFileVendorData',
-               help='DEPRECATED: Driver to use for vendor data',
-               deprecated_for_removal=True),
-]
-
 CONF = nova.conf.CONF
-CONF.register_opts(metadata_opts)
 
 VERSIONS = [
     '1.0',

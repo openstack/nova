@@ -14,16 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+import nova.conf
 from nova import context
 from nova import wsgi as base_wsgi
 
-CONF = cfg.CONF
-CONF.import_opt('use_forwarded_for', 'nova.api.auth')
+CONF = nova.conf.CONF
 
 
 class NoAuthMiddlewareBase(base_wsgi.Middleware):

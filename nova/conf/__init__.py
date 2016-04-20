@@ -19,7 +19,7 @@
 
 from oslo_config import cfg
 
-# from nova.conf import api
+from nova.conf import api
 # from nova.conf import api_database
 from nova.conf import availability_zone
 # from nova.conf import aws
@@ -89,7 +89,7 @@ from nova.conf import xvp
 
 CONF = cfg.CONF
 
-# api.register_opts(CONF)
+api.register_opts(CONF)
 # api_database.register_opts(CONF)
 availability_zone.register_opts(CONF)
 # aws.register_opts(CONF)
