@@ -644,9 +644,9 @@ adminPass:
   in: body
   required: true
   type: string
-adminPass_1:
+adminPass_evacuate_rebuild:
   description: |
-    An administrative password to access the evacuated instance.  To set the administrative
+    An administrative password to access the evacuated or rebuild instance. To set the administrative
     password, set the ``enable_instance_password`` configuration option to ``True``.
     If you set this option to ``False`` and you try to set the administrative password,
     the API does not set the password and the response shows a ``null`` value for
@@ -654,7 +654,7 @@ adminPass_1:
   in: body
   required: false
   type: string
-adminPass_2:
+adminPass_rescue:
   description: |
     The password for the rescued instance. If you omit this parameter, the operation
     generates a new password.
