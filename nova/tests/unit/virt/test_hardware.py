@@ -1125,6 +1125,24 @@ class NUMATopologyTest(test.NoDBTestCase):
                 "expect": exception.ImageCPUThreadPolicyForbidden,
             },
             {
+                # CPU thread pinning override set to default value
+                "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
+                                         extra_specs={
+                         "hw:numa_nodes": 1,
+                         "hw:cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
+                         "hw:cpu_thread_policy":
+                             fields.CPUThreadAllocationPolicy.PREFER,
+                }),
+                "image": {},
+                "expect": objects.InstanceNUMATopology(cells=
+                    [
+                        objects.InstanceNUMACell(
+                            id=0, cpuset=set([0, 1, 2, 3]), memory=2048,
+                            cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                            cpu_thread_policy=
+                                fields.CPUThreadAllocationPolicy.PREFER)])
+            },
+            {
                 # Invalid CPU pinning policy with CPU thread pinning
                 "flavor": objects.Flavor(vcpus=4, memory_mb=2048,
                                          extra_specs={
