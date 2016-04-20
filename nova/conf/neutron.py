@@ -41,14 +41,46 @@ neutron_opts = [
 
 metadata_proxy_opts = [
     cfg.BoolOpt(
-        'service_metadata_proxy',
+        "service_metadata_proxy",
         default=False,
-        help='Set flag to indicate Neutron will proxy metadata requests and '
-             'resolve instance ids.'),
-    cfg.StrOpt(
-         'metadata_proxy_shared_secret',
-         default='', secret=True,
-         help='Shared secret to validate proxies Neutron metadata requests'),
+        help="""
+When set to True, this option indicates that Neutron will be used to proxy
+metadata requests and resolve instance ids. Otherwise, the instance ID must be
+passed to the metadata request in the 'X-Instance-ID' header.
+
+Possible values:
+
+    True, False (default)
+
+* Services which consume this:
+
+    ``nova-api``
+
+* Related options:
+
+    metadata_proxy_shared_secret
+"""),
+     cfg.StrOpt(
+        "metadata_proxy_shared_secret",
+        default="",
+        secret=True,
+        help="""
+This option holds the shared secret string used to validate proxy requests to
+Neutron metadata requests. In order to be used, the
+'X-Metadata-Provider-Signature' header must be supplied in the request.
+
+Possible values:
+
+    Any string
+
+* Services which consume this:
+
+    ``nova-api``
+
+* Related options:
+
+    service_metadata_proxy
+"""),
 ]
 
 ALL_OPTS = (neutron_opts + metadata_proxy_opts)
