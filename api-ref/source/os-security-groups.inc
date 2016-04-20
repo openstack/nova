@@ -39,7 +39,7 @@ Response
 
 **Example List security groups: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-list-get-resp.json
    :language: javascript
 
 Create Security Group
@@ -66,7 +66,7 @@ Request
 
 **Example Create security group: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-post-req.json
    :language: javascript
 
 Response
@@ -83,7 +83,7 @@ Response
 
 **Example Create security group: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-create-resp.json
    :language: javascript
 
 Show Security Group Details
@@ -120,7 +120,7 @@ Response
 
 **Example Show security group: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-get-resp.json
    :language: javascript
 
 Update Security Group
@@ -147,7 +147,7 @@ Request
 
 **Example Update security group: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-update-req.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-post-req.json
    :language: javascript
 
 Response
@@ -164,7 +164,7 @@ Response
 
 **Example Update security group: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-group-update-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-create-resp.json
    :language: javascript
 
 Delete Security Group
@@ -224,6 +224,5 @@ Response
 
 **Example List security groups by server: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-list-get-resp.json
    :language: javascript
-
