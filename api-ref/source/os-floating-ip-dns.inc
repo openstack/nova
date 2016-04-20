@@ -31,7 +31,7 @@ Response
 
 **Example List Dns Domains: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-domains-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-list-resp.json
    :language: javascript
 
 Create Or Update Dns Domain
@@ -74,7 +74,7 @@ Delete Dns Domain
 
 Deletes a DNS domain and all associated host entries.
 
-Normal response codes: 200
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -150,7 +150,7 @@ Response
 
 **Example Find Unique Dns Entry: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-entry-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-entry-get-resp.json
    :language: javascript
 
 Delete Dns Entry
@@ -160,7 +160,7 @@ Delete Dns Entry
 
 Deletes a DNS entry.
 
-Normal response codes: 200
+Normal response codes: 202
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
@@ -203,6 +203,6 @@ Response
 
 **Example List Dns Entries: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-entry-by-ip-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ip-dns/floating-ip-dns-entry-list-resp.json
    :language: javascript
 

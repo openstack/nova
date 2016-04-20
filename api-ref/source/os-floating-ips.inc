@@ -82,7 +82,7 @@ Request
 
 **Example Create (Allocate) Floating Ip Address: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ip-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-req.json
    :language: javascript
 
 Response
@@ -90,7 +90,7 @@ Response
 
 **Example Create (Allocate) Floating Ip Address: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ip-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-resp.json
    :language: javascript
 
 Show Floating Ip Address Details
@@ -120,7 +120,7 @@ Response
 
 **Example Show Floating Ip Address Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ip-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-get-resp.json
    :language: javascript
 
 Delete (Deallocate) Floating Ip Address
