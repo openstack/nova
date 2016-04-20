@@ -1,4 +1,8 @@
 .. -*- rst -*-
+.. needs:method_verification
+.. needs:parameter_verification
+.. needs:example_verification
+.. needs:body_verification
 
 Trigger Crash Dump In Server (Trigger_Crash_Dump Action)
 ========================================================
