@@ -63,6 +63,6 @@ Response
 
 **Example Show Server Action Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-instance-actions/instance-action-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-instance-actions/instance-action-get-resp.json
    :language: javascript
 

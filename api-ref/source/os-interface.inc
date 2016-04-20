@@ -34,7 +34,7 @@ Request
 
 **Example Create Interface: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-interface/port-interface-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-req.json
    :language: javascript
 
 Response
@@ -51,7 +51,7 @@ Response
 
 **Example Create Interface: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-interface/port-interface-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-resp.json
    :language: javascript
 
 List Port Interfaces
@@ -88,7 +88,7 @@ Response
 
 **Example List Port Interfaces: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-interface/port-interfaces-list-resp.json
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-list-resp.json
    :language: javascript
 
 Show Port Interface Details
@@ -117,7 +117,7 @@ Response
 
 **Example Show Port Interface Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-interface/port-interface-show-resp.json
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-show-resp.json
    :language: javascript
 
 Detach Interface
