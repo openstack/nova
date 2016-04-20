@@ -18,7 +18,6 @@ import functools
 import itertools
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import uuidutils
@@ -39,20 +38,7 @@ from nova import objects
 from nova import quota
 from nova import utils
 
-osapi_opts = [
-    cfg.IntOpt('osapi_max_limit',
-               default=1000,
-               help='The maximum number of items returned in a single '
-                    'response from a collection resource'),
-    cfg.StrOpt('osapi_compute_link_prefix',
-               help='Base URL that will be presented to users in links '
-                    'to the OpenStack Compute API'),
-    cfg.StrOpt('osapi_glance_link_prefix',
-               help='Base URL that will be presented to users in links '
-                    'to glance resources'),
-]
 CONF = nova.conf.CONF
-CONF.register_opts(osapi_opts)
 
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS

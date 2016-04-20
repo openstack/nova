@@ -50,10 +50,6 @@ TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 CONF = nova.conf.CONF
 CONF.import_opt('enable_instance_password',
                 'nova.api.openstack.compute.legacy_v2.servers')
-CONF.import_opt('extensions_blacklist', 'nova.api.openstack',
-                group='osapi_v21')
-CONF.import_opt('extensions_whitelist', 'nova.api.openstack',
-                group='osapi_v21')
 
 LOG = logging.getLogger(__name__)
 authorize = extensions.os_compute_authorizer(ALIAS)

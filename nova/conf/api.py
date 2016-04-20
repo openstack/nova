@@ -59,9 +59,23 @@ metadata_opts = [
 file_opt = cfg.StrOpt('vendordata_jsonfile_path',
                       help='File to load JSON formatted vendor data from')
 
+osapi_opts = [
+    cfg.IntOpt('osapi_max_limit',
+               default=1000,
+               help='The maximum number of items returned in a single '
+                    'response from a collection resource'),
+    cfg.StrOpt('osapi_compute_link_prefix',
+               help='Base URL that will be presented to users in links '
+                    'to the OpenStack Compute API'),
+    cfg.StrOpt('osapi_glance_link_prefix',
+               help='Base URL that will be presented to users in links '
+                    'to glance resources'),
+]
+
 ALL_OPTS = (auth_opts +
             metadata_opts +
             [file_opt] +
+            osapi_opts +
             [])
 # Please note that final empty list in the line above is just to allow adding
 # additional options in later patches without changing the last line. Once they
@@ -72,6 +86,7 @@ def register_opts(conf):
     conf.register_opts(auth_opts)
     conf.register_opts(metadata_opts)
     conf.register_opt(file_opt)
+    conf.register_opts(osapi_opts)
 
 
 def list_opts():
