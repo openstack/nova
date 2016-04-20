@@ -60,7 +60,7 @@ Query Parameters
 
 **Example Update Quotas: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-quota-sets/quota-update-post-req.json
+.. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-update-post-req.json
    :language: javascript
 
 Response
@@ -87,7 +87,7 @@ Response
 
 **Example Update Quotas: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-quota-sets/quota-update-post-resp.json
+.. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-update-post-resp.json
    :language: javascript
 
 Revert Quotas To Defaults

@@ -27,7 +27,7 @@ Request
 
 **Example Force-Delete Server (Forcedelete Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/force-delete-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-deferred-delete/force-delete-post-req.json
    :language: javascript
 
 Response
@@ -60,7 +60,7 @@ Request
 
 **Example Restore Soft-Deleted Instance (Restore Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/restore-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-deferred-delete/restore-post-req.json
    :language: javascript
 
 Response
