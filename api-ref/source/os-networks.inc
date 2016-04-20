@@ -165,6 +165,8 @@ Associate Host
 
 Associates a network with a host.
 
+Specify the ``associate_host`` action in the request body.
+
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
@@ -194,6 +196,8 @@ Disassociate Host
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a host from a network.
+
+Specify the ``disassociate_host`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
@@ -225,6 +229,8 @@ Disassociate Network
 
 Disassociates a network from a project. You can then reuse the network.
 
+Specify the ``disassociate`` action in the request body.
+
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
@@ -254,6 +260,8 @@ Disassociate Project
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a project from a network.
+
+Specify the ``disassociate_project`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
