@@ -54,7 +54,7 @@ Response
 
 **Example List consoles: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-consoles/consoles-list-get-resp.json
+.. literalinclude:: ../../doc/api_samples/consoles/consoles-list-get-resp.json
    :language: javascript
 
 Show Console Details
@@ -83,7 +83,7 @@ Response
 
 **Example List consoles: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-consoles/consoles-get-resp.json
+.. literalinclude:: ../../doc/api_samples/consoles/consoles-get-resp.json
    :language: javascript
 
 Delete Console
@@ -139,4 +139,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-console-auth-tokens/get-console-connect-info-get-resp.json
    :language: javascript
-
