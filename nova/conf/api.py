@@ -181,16 +181,59 @@ is no path set by this option, the class returns an empty dictionary.
 """)
 
 osapi_opts = [
-    cfg.IntOpt('osapi_max_limit',
-               default=1000,
-               help='The maximum number of items returned in a single '
-                    'response from a collection resource'),
-    cfg.StrOpt('osapi_compute_link_prefix',
-               help='Base URL that will be presented to users in links '
-                    'to the OpenStack Compute API'),
-    cfg.StrOpt('osapi_glance_link_prefix',
-               help='Base URL that will be presented to users in links '
-                    'to glance resources'),
+    cfg.IntOpt("osapi_max_limit",
+            default=1000,
+            help="""
+As a query can potentially return many thousands of items, you can limit the
+maximum number of items in a single response by setting this option.
+
+* Possible values:
+
+    Any positive integer. Default is 1000.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
+    cfg.StrOpt("osapi_compute_link_prefix",
+            help="""
+This string is prepended to the normal URL that is returned in links to the
+OpenStack Compute API. If it is empty (the default), the URLs are returned
+unchanged.
+
+* Possible values:
+
+    Any string, including an empty string (the default).
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
+    cfg.StrOpt("osapi_glance_link_prefix",
+            help="""
+This string is prepended to the normal URL that is returned in links to Glance
+resources. If it is empty (the default), the URLs are returned unchanged.
+
+* Possible values:
+
+    Any string, including an empty string (the default).
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
 ]
 
 allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',

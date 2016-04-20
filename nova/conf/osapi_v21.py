@@ -17,27 +17,77 @@ from oslo_config import cfg
 
 
 api_opts = [
-        cfg.ListOpt('extensions_blacklist',
-                    default=[],
-                    help='DEPRECATED: A list of v2.1 API extensions to never '
-                    'load. Specify the extension aliases here. '
-                    'This option will be removed in the near future. '
-                    'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
-        cfg.ListOpt('extensions_whitelist',
-                    default=[],
-                    help='DEPRECATED: If the list is not empty then a v2.1 '
-                    'API extension will only be loaded if it exists in this '
-                    'list. Specify the extension aliases here. '
-                    'This option will be removed in the near future. '
-                    'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
-        cfg.StrOpt('project_id_regex',
-                   default=None,
-                   help='DEPRECATED: The validation regex for project_ids '
-                   'used in urls. This defaults to [0-9a-f\-]+ if not set, '
-                   'which matches normal uuids created by keystone.',
-                   deprecated_for_removal=True, deprecated_group='osapi_v21')
+    cfg.ListOpt("extensions_blacklist",
+            default=[],
+            deprecated_for_removal=True,
+            deprecated_group="osapi_v21",
+            help="""
+*DEPRECATED*
+
+This option is a list of all of the v2.1 API extensions to never load. However,
+it will be removed in the near future, after which point all the API will run.
+
+* Possible values:
+
+    A list of strings, each being the alias of an extension that you do not
+    wish to load.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    enabled, extensions_whitelist
+"""),
+        cfg.ListOpt("extensions_whitelist",
+            default=[],
+            deprecated_for_removal=True,
+            deprecated_group="osapi_v21",
+            help="""
+*DEPRECATED*
+
+This is a list of extensions. If it is empty, then *all* extensions except
+those specified in the extensions_blacklist option will be loaded. If it is not
+empty, then only those extensions in this list will be loaded, provided that
+they are also not in the extensions_blacklist option.
+
+* Possible values:
+
+    A list of strings, each being the alias of an extension that you wish to
+    load, or an empty list, which indicates that all extensions are to be run.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    enabled, extensions_blacklist
+"""),
+        cfg.StrOpt("project_id_regex",
+            default=None,
+            deprecated_for_removal=True,
+            deprecated_group="osapi_v21",
+            help="""
+*DEPRECATED*
+
+This option is a string representing a regular expression (regex) that matches
+the project_id as contained in URLs. If not set, it will match normal UUIDs
+created by keystone.
+
+* Possible values:
+
+    A string representing any legal regular expression
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
 ]
 
 api_opts_group = cfg.OptGroup(name="osapi_v21", title="API v2.1 Options")
