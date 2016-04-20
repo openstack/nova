@@ -165,6 +165,8 @@ Associate Host
 
 Associates a network with a host.
 
+Specify the ``associate_host`` action in the request body.
+
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
@@ -182,7 +184,7 @@ Request
 
 **Example Associate Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-associate-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-associate-host-req.json
    :language: javascript
 
 Response
@@ -194,6 +196,8 @@ Disassociate Host
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a host from a network.
+
+Specify the ``disassociate_host`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
@@ -212,7 +216,7 @@ Request
 
 **Example Disassociate Host: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-host-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-host-req.json
    :language: javascript
 
 Response
@@ -224,6 +228,8 @@ Disassociate Network
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a network from a project. You can then reuse the network.
+
+Specify the ``disassociate`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
@@ -242,7 +248,7 @@ Request
 
 **Example Disassociate Network: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks/networks-disassociate-req.json
    :language: javascript
 
 Response
@@ -254,6 +260,8 @@ Disassociate Project
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
 Disassociates a project from a network.
+
+Specify the ``disassociate_project`` action in the request body.
 
 Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
@@ -272,7 +280,7 @@ Request
 
 **Example Disassociate Project: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/network-disassociate-project-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-project-req.json
    :language: javascript
 
 Response
