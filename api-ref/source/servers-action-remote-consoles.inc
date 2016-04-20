@@ -25,7 +25,7 @@ Request
 
 **Example Get Rdp Console (Os-Getrdpconsole Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getRDPConsole-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-rdp-console-post-req.json
    :language: javascript
 
 Response
@@ -33,7 +33,7 @@ Response
 
 **Example Get Rdp Console (Os-Getrdpconsole Action): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getRDPConsole-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-rdp-console-post-resp.json
    :language: javascript
 
 Get Serial Console (Os-Getserialconsole Action)
@@ -61,7 +61,7 @@ Request
 
 **Example Get Serial Console (Os-Getserialconsole Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getSerialConsole-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-serial-console-post-req.json
    :language: javascript
 
 Response
@@ -69,7 +69,7 @@ Response
 
 **Example Get Serial Console (Os-Getserialconsole Action): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getSerialConsole-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-serial-console-post-resp.json
    :language: javascript
 
 Get Spice Console (Os-Getspiceconsole Action)
@@ -97,7 +97,7 @@ Request
 
 **Example Get Spice Console (Os-Getspiceconsole Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getSPICEConsole-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-spice-console-post-req.json
    :language: javascript
 
 Response
@@ -105,7 +105,7 @@ Response
 
 **Example Get Spice Console (Os-Getspiceconsole Action): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getSPICEConsole-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-spice-console-post-resp.json
    :language: javascript
 
 Get Vnc Console (Os-Getvncconsole Action)
@@ -133,7 +133,7 @@ Request
 
 **Example Get Vnc Console (Os-Getvncconsole Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getVNCConsole-create-req.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-vnc-console-post-req.json
    :language: javascript
 
 Response
@@ -141,6 +141,6 @@ Response
 
 **Example Get Vnc Console (Os-Getvncconsole Action): JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers-action/getVNCConsole-create-resp.json
+.. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-vnc-console-post-resp.json
    :language: javascript
 

@@ -40,7 +40,7 @@ Request
 
 **Example Create Server Back Up (Createbackup Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/createBackup-req.json
+.. literalinclude:: ../../doc/api_samples/os-create-backup/create-backup-req.json
    :language: javascript
 
 Response
@@ -73,7 +73,7 @@ Request
 
 **Example Inject Network Information (Injectnetworkinfo Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/injectNetworkInfo-req.json
+.. literalinclude:: ../../doc/api_samples/os-admin-actions/admin-actions-inject-network-info.json
    :language: javascript
 
 Response
@@ -106,7 +106,7 @@ Request
 
 **Example Migrate Server (Migrate Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/migrate-req.json
+.. literalinclude:: ../../doc/api_samples/os-migrate-server/migrate-server.json
    :language: javascript
 
 Response
@@ -143,7 +143,7 @@ Request
 
 **Example Live-Migrate Server (Os-Migratelive Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/os-migrateLive-req.json
+.. literalinclude:: ../../doc/api_samples/os-migrate-server/live-migrate-server.json
    :language: javascript
 
 Response
@@ -176,7 +176,7 @@ Request
 
 **Example Reset Networking On A Server (Resetnetwork Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/resetNetwork-req.json
+.. literalinclude:: ../../doc/api_samples/os-admin-actions/admin-actions-reset-network.json
    :language: javascript
 
 Response
@@ -209,7 +209,7 @@ Request
 
 **Example Reset Server State (Os-Resetstate Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/servers-action-admin/os-resetState-req.json
+.. literalinclude:: ../../doc/api_samples/os-admin-actions/admin-actions-reset-server-state.json
    :language: javascript
 
 Response
