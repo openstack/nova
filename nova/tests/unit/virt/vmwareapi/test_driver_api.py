@@ -409,7 +409,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         for c in extras.OptionValue:
             if (c.key == "nvp.vm-uuid" and c.value == self.instance['uuid']):
                 found_vm_uuid = True
-            if (c.key == "nvp.iface-id.0" and c.value == "vif-xxx-yyy-zzz"):
+            if (c.key == "nvp.iface-id.0" and
+                c.value == utils.FAKE_VIF_UUID):
                 found_iface_id = True
 
         self.assertTrue(found_vm_uuid)

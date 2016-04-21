@@ -1331,7 +1331,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(uuid=node_uuid)
         # make the address be consistent with network_info's
-        port = ironic_utils.get_test_port(address='fake')
+        port = ironic_utils.get_test_port(address=utils.FAKE_VIF_MAC)
 
         mock_lp.return_value = [port]
 

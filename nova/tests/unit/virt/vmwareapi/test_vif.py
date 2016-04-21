@@ -207,9 +207,9 @@ class VMwareVifTestCase(test.NoDBTestCase):
         network_info = utils.get_test_network_info()
         vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
                                     'is_neutron', 'fake_model', network_info)
-        expected = [{'iface_id': 'vif-xxx-yyy-zzz',
-                     'mac_address': 'fake',
-                     'network_name': 'fake',
+        expected = [{'iface_id': utils.FAKE_VIF_UUID,
+                     'mac_address': utils.FAKE_VIF_MAC,
+                     'network_name': utils.FAKE_NETWORK_BRIDGE,
                      'network_ref': 'fake_ref',
                      'vif_model': 'fake_model'}]
         self.assertEqual(expected, vif_info)
