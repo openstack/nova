@@ -20,9 +20,7 @@ from nova.api.openstack.compute.legacy_v2 import servers as servers_v20
 from nova.api.openstack.compute import servers as servers_v21
 from nova.api.openstack import extensions as extensions_v20
 from nova.api.openstack import wsgi
-from nova.compute import api as compute_api
 from nova import exception
-from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -172,8 +170,8 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
         fake.stub_out_image_service(self)
         self.stub_out('nova.db.instance_get_by_uuid',
                       fakes.fake_instance_get())
-        self.stubs.Set(instance_obj.Instance, 'save', fake_save)
-        self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
+        self.stub_out('nova.objects.instance.Instance.save', fake_save)
+        self.stub_out('nova.compute.api.API.rebuild', fake_rebuild)
 
         self.req = fakes.HTTPRequest.blank('')
 
