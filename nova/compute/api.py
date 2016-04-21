@@ -665,7 +665,7 @@ class API(base.Base):
                     raise exception.FlavorDiskSmallerThanMinDisk(
                         flavor_size=dest_size, image_min_disk=image_min_disk)
 
-    def _get_image_defined_bdms(self, base_options, instance_type, image_meta,
+    def _get_image_defined_bdms(self, instance_type, image_meta,
                                 root_device_name):
         image_properties = image_meta.get('properties', {})
 
@@ -740,7 +740,7 @@ class API(base.Base):
                     raise exception.InvalidRequest(msg)
 
         image_defined_bdms = self._get_image_defined_bdms(
-            base_options, instance_type, image_meta, root_device_name)
+            instance_type, image_meta, root_device_name)
         root_in_image_bdms = (
             block_device.get_root_bdm(image_defined_bdms) is not None)
 
