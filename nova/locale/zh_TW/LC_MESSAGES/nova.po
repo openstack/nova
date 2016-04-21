@@ -7,15 +7,12 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2011
 # Pellaeon Lin <nfsmwlin@gmail.com>, 2013
 # Pellaeon Lin <nfsmwlin@gmail.com>, 2013
-# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Jennifer <cristxu@tw.ibm.com>, 2016. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -335,9 +332,6 @@ msgstr "所有主機均已對映至 Cell，正在結束。"
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
 msgstr "所提供的「名稱」值無效。名稱必須是：%(reason)s"
 
-msgid "An unexpected error has occurred."
-msgstr "發生非預期的錯誤。"
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "發生不明錯誤。請重試要求。"
 
@@ -429,9 +423,6 @@ msgstr "to_global_ipv6 的 project_id 錯誤：%s"
 #, python-format
 msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr "錯誤的 volumeId 格式：volumeId 不是適當的格式 (%s)"
-
-msgid "Binary"
-msgstr "二進位"
 
 #, python-format
 msgid ""
@@ -654,12 +645,6 @@ msgstr "找不到「儲存體儲存庫 (SR)」來讀寫 VDI。"
 
 msgid "Cannot find image for rebuild"
 msgstr "找不到要重建的映像檔"
-
-#, python-format
-msgid ""
-"Cannot load host manager from configuration scheduler_host_manager = "
-"%(conf)s."
-msgstr "無法從配置 scheduler_host_manager = %(conf)s 載入主機管理程式。"
 
 #, python-format
 msgid "Cannot load scheduler driver from configuration %(conf)s."
@@ -1611,12 +1596,6 @@ msgstr "群組無效。原因：%(reason)s"
 
 msgid "Guest does not have a console available."
 msgstr "訪客沒有主控台可用。"
-
-msgid "HOST"
-msgstr "主機"
-
-msgid "Host"
-msgstr "主機"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -3138,9 +3117,6 @@ msgstr ""
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s 不包含 IP 位址"
 
-msgid "PROJECT"
-msgstr "專案"
-
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
 msgstr "針對 '%(against)s'，已禁止頁面大小 %(pagesize)s"
@@ -3625,14 +3601,6 @@ msgid "ServerGroupSoftAntiAffinityWeigher not configured"
 msgstr "未配置 ServerGroupSoftAntiAffinityWeigher"
 
 #, python-format
-msgid "Service %(service)s on host %(host)s disabled."
-msgstr "已在主機 %(host)s 上停用服務 %(service)s。"
-
-#, python-format
-msgid "Service %(service)s on host %(host)s enabled."
-msgstr "已在主機 %(host)s 上啟用服務 %(service)s。"
-
-#, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr "找不到服務 %(service_id)s。"
 
@@ -3725,12 +3693,6 @@ msgstr "請僅指定 `table_name` 或 `table` 中的一個參數"
 
 msgid "Started"
 msgstr "已開始"
-
-msgid "State"
-msgstr "狀態"
-
-msgid "Status"
-msgstr "狀態"
 
 msgid "Stopped"
 msgstr "已停止"
@@ -4466,9 +4428,6 @@ msgstr "已嘗試解除擱置，但卻找不到映像檔 %s。"
 msgid "Unsupported Content-Type"
 msgstr "不支援的內容類型"
 
-msgid "Updated_At"
-msgstr "Updated_At"
-
 msgid "Upgrade DB using Essex release first."
 msgstr "請先使用 Essex 版本來升級 DB。"
 
@@ -4755,12 +4714,6 @@ msgstr "有 0 個浮動 IP 可供使用。"
 msgid "Zero floating IPs exist."
 msgstr "存在 0 個浮動 IP。"
 
-msgid "Zone"
-msgstr "區域"
-
-msgid "[Result]"
-msgstr "[結果]"
-
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4 不是適當的 IPv4 格式"
 
@@ -4795,9 +4748,6 @@ msgstr "無法儲存任意索引鍵"
 msgid "cannot understand JSON"
 msgstr "無法理解 JSON"
 
-msgid "cell_uuid must be set"
-msgstr "必須設定 cell_uuid"
-
 msgid "clone() is not implemented"
 msgstr "未實作 clone()"
 
@@ -4808,9 +4758,6 @@ msgstr "連接資訊：%s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "正在連接至：%(host)s:%(port)s"
-
-msgid "cpu"
-msgstr "CPU"
 
 #, python-format
 msgid "createBackup entity requires %s attribute"
@@ -4874,9 +4821,6 @@ msgstr "fmt = %(fmt)s 受 %(backing_file)s 支援"
 
 msgid "fping utility is not found."
 msgstr "找不到 fping 公用程式。"
-
-msgid "hdd"
-msgstr "hdd"
 
 msgid "host"
 msgstr "主機"
@@ -4980,9 +4924,6 @@ msgstr "列數上限必須小於或等於 %(max_value)d"
 
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "如果指定了 fixed_ip，則 max_count 不得大於 1。"
-
-msgid "mem(mb)"
-msgstr "mem (mb)"
 
 msgid "memcached_servers not defined"
 msgstr "未定義 memcached_servers"

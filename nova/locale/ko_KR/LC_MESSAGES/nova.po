@@ -7,17 +7,12 @@
 # Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
-# Ian Y. Choi <ianyrchoi@gmail.com>, 2015. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
-# SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -347,9 +342,6 @@ msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
 msgstr ""
 "올바르지 않은 'name' 값이 제공되었습니다. 이름은 %(reason)s이어야 합니다."
 
-msgid "An unexpected error has occurred."
-msgstr "예상치 않은 오류가 발생함．"
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "알 수 없는 오류가 발생했습니다. 요청을 다시 시도하십시오. "
 
@@ -445,9 +437,6 @@ msgstr "to_global_ipv6에 대한 잘못된 project_id: %s"
 #, python-format
 msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr "잘못된 volumeId 형식: volumeId가 적절한 형식(%s)이 아님"
-
-msgid "Binary"
-msgstr "2진"
 
 #, python-format
 msgid ""
@@ -687,14 +676,6 @@ msgstr "VDI를 읽기/쓰기할 SR을 찾을 수 없습니다. "
 
 msgid "Cannot find image for rebuild"
 msgstr "다시 빌드할 이미지를 찾을 수 없음"
-
-#, python-format
-msgid ""
-"Cannot load host manager from configuration scheduler_host_manager = "
-"%(conf)s."
-msgstr ""
-"구성 scheduler_host_manager = %(conf)s에서 호스트 관리자를 로드할 수 없습니"
-"다."
 
 #, python-format
 msgid "Cannot load scheduler driver from configuration %(conf)s."
@@ -1691,12 +1672,6 @@ msgstr "그룹이 올바르지 않습니다. 이유: %(reason)s"
 
 msgid "Guest does not have a console available."
 msgstr "게스트에 사용할 수 있는 콘솔이 없습니다."
-
-msgid "HOST"
-msgstr "호스트"
-
-msgid "Host"
-msgstr "호스트"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -3268,9 +3243,6 @@ msgstr ""
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s에 IP 주소가 없음"
 
-msgid "PROJECT"
-msgstr "PROJECT"
-
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
 msgstr "페이지 크기 %(pagesize)s이(가) '%(against)s'에 대해 금지됨"
@@ -3783,14 +3755,6 @@ msgid "ServerGroupSoftAntiAffinityWeigher not configured"
 msgstr "ServerGroupSoftAntiAffinityWeigher이 구성되지 않음"
 
 #, python-format
-msgid "Service %(service)s on host %(host)s disabled."
-msgstr "호스트 %(host)s에서 서비스 %(service)s을(를) 사용 안함으로 설정함."
-
-#, python-format
-msgid "Service %(service)s on host %(host)s enabled."
-msgstr "호스트 %(host)s에서 서비스 %(service)s을(를) 사용으로 설정함."
-
-#, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr "%(service_id)s 서비스를 찾을 수 없습니다. "
 
@@ -3885,12 +3849,6 @@ msgstr "하나의 매개변수 `table_name` 또는 `table`만 지정하십시오
 
 msgid "Started"
 msgstr "작동함"
-
-msgid "State"
-msgstr "상태"
-
-msgid "Status"
-msgstr "상태"
 
 msgid "Stopped"
 msgstr "중지됨"
@@ -4652,9 +4610,6 @@ msgstr "언쉘브를 시도했으나 %s 이미지를 찾을 수 없습니다."
 msgid "Unsupported Content-Type"
 msgstr "지원되지 않는 Content-Type"
 
-msgid "Updated_At"
-msgstr "업데이트 시간"
-
 msgid "Upgrade DB using Essex release first."
 msgstr "먼저 Essex 릴리스를 사용하여 DB를 업그레이드하십시오. "
 
@@ -4954,12 +4909,6 @@ msgstr "사용할 수 있는 Floating IP가 0개입니다."
 msgid "Zero floating IPs exist."
 msgstr "Floating IP가 0개 있습니다."
 
-msgid "Zone"
-msgstr "존"
-
-msgid "[Result]"
-msgstr "[결과]"
-
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4가 적절한 IPv4 형식이 아님"
 
@@ -4994,9 +4943,6 @@ msgstr "임의의 키를 저장할 수 없음"
 msgid "cannot understand JSON"
 msgstr "JSON을 이해할 수 없음"
 
-msgid "cell_uuid must be set"
-msgstr "cell_uuid를 설정해야 함"
-
 msgid "clone() is not implemented"
 msgstr "clone()이 구현되지 않음"
 
@@ -5007,9 +4953,6 @@ msgstr "연결 정보: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "%(host)s:%(port)s에 연결 중"
-
-msgid "cpu"
-msgstr "CPU"
 
 #, python-format
 msgid "createBackup entity requires %s attribute"
@@ -5073,9 +5016,6 @@ msgstr "fmt=%(fmt)s 백업: %(backing_file)s"
 
 msgid "fping utility is not found."
 msgstr "fping 유틸리티를 찾을 수 없습니다. "
-
-msgid "hdd"
-msgstr "hdd"
 
 msgid "host"
 msgstr "호스트"
@@ -5181,9 +5121,6 @@ msgstr "최대 행은 <= %(max_value)d이어야 함"
 
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "fixed_ip가 지정된 경우 max_count는 1 이하여야 합니다."
-
-msgid "mem(mb)"
-msgstr "mem(mb)"
 
 msgid "memcached_servers not defined"
 msgstr "memcached_servers가 정의되지 않음"

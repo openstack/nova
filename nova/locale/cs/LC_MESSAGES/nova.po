@@ -7,14 +7,12 @@
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2011
 # Jaroslav Lichtblau <dragonlord@seznam.cz>, 2014
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2013,2015
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -322,9 +320,6 @@ msgstr "Agregát pro počet hostitelů %(host)s nelze nalézt."
 msgid "Aggregates does not have %s action"
 msgstr "Agregáty nemají činnost %s"
 
-msgid "An unexpected error has occurred."
-msgstr "Objevila se neočekávaná chyba."
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "Vyskytla se neznámá chyba. Prosím zopakujte Váš požadavek."
 
@@ -420,9 +415,6 @@ msgstr "Špatné id projektu pro to_global_ipv6: %s"
 #, python-format
 msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr "Špatný formát id svazku: id není v platném formátu (%s)"
-
-msgid "Binary"
-msgstr "Binární soubor"
 
 #, python-format
 msgid ""
@@ -1607,12 +1599,6 @@ msgstr "Obraz Glance %s je ve stavu ukončení"
 msgid "Group not valid. Reason: %(reason)s"
 msgstr "Skupina není platná. Důvod: %(reason)s"
 
-msgid "HOST"
-msgstr "HOSTITEL"
-
-msgid "Host"
-msgstr "Hostitel"
-
 #, python-format
 msgid "Host %(host)s could not be found."
 msgstr "Hostitel %(host)s nemohl být nalezen."
@@ -1704,9 +1690,6 @@ msgstr "Obraz %(image_id)s není aktivní."
 #, python-format
 msgid "Image %(image_id)s is unacceptable: %(reason)s"
 msgstr "Obraz %(image_id)s je nepřijatelný: %(reason)s"
-
-msgid "Image disk size greater than requested disk size"
-msgstr "Velikost disku obrazu %s je větší než požadovaná velikost disku"
 
 msgid "Image is not raw format"
 msgstr "Obraz není v prostém formátu"
@@ -3092,9 +3075,6 @@ msgstr ""
 msgid "PIF %s does not contain IP address"
 msgstr "Fyz. rozhraní %s neobsahuje IP adresu"
 
-msgid "PROJECT"
-msgstr "PROJEKT"
-
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
 msgstr "Velikost stránky %(pagesize)s je zakázána v '%(against)s'"
@@ -3568,14 +3548,6 @@ msgid "ServerGroupAntiAffinityFilter not configured"
 msgstr "Filtr proti slučivosti skupiny serveru není nastaven"
 
 #, python-format
-msgid "Service %(service)s on host %(host)s disabled."
-msgstr "Služba %(service)s zakázána na hostiteli %(host)s."
-
-#, python-format
-msgid "Service %(service)s on host %(host)s enabled."
-msgstr "Služba %(service)s povolena na hostiteli %(host)s."
-
-#, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr "Služba %(service_id)s nemohla být nalezena."
 
@@ -3670,12 +3642,6 @@ msgstr "Zadejte pouze jeden parametr `table_name` `table`"
 
 msgid "Started"
 msgstr "Spuštěno"
-
-msgid "State"
-msgstr "Stav"
-
-msgid "Status"
-msgstr "Stav"
 
 msgid "Stopped"
 msgstr "Zastaveno"
@@ -4426,9 +4392,6 @@ msgstr "Pokus o vyskladnění, ale obraz %s nemůže být nalezen."
 msgid "Unsupported Content-Type"
 msgstr "Nepodporovaný Content-Type"
 
-msgid "Updated_At"
-msgstr "Aktualizováno"
-
 msgid "Upgrade DB using Essex release first."
 msgstr "Nejdříve aktualizujte DB pomocí verze z Essex."
 
@@ -4732,12 +4695,6 @@ msgstr "Je dostupných nula plovoucích IP adres."
 msgid "Zero floating IPs exist."
 msgstr "Existuje nula plovoucích IP."
 
-msgid "Zone"
-msgstr "Zóna"
-
-msgid "[Result]"
-msgstr "[Výsledek]"
-
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4 není ve správném formátu IPv4"
 
@@ -4772,9 +4729,6 @@ msgstr "nelze uložit libovolné klíče"
 msgid "cannot understand JSON"
 msgstr "JSON nelze porozumět"
 
-msgid "cell_uuid must be set"
-msgstr "uuid buňky musí být nastaveno"
-
 msgid "clone() is not implemented"
 msgstr "clone() není zavedeno."
 
@@ -4785,9 +4739,6 @@ msgstr "informace o připojení: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "připojování k: %(host)s:%(port)s"
-
-msgid "cpu"
-msgstr "procesor"
 
 #, python-format
 msgid "createBackup entity requires %s attribute"
@@ -4848,9 +4799,6 @@ msgstr "fmt=%(fmt)s zálohováno: %(backing_file)s"
 
 msgid "fping utility is not found."
 msgstr "nástroj fping nenalezen."
-
-msgid "hdd"
-msgstr "pevný disk"
 
 msgid "host"
 msgstr "Hostitel"
@@ -4950,9 +4898,6 @@ msgstr "značka [%s] nenalezena"
 
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr "Pokud je zadána pevná IP, maximální počet nemůže být větší než 1."
-
-msgid "mem(mb)"
-msgstr "paměť(mb)"
 
 msgid "memcached_servers not defined"
 msgstr "memcached_servers není zadáno"
