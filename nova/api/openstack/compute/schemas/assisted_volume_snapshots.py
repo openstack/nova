@@ -43,8 +43,8 @@ snapshots_create = {
             },
             'required': ['volume_id', 'create_info'],
             'additionalProperties': False,
-        },
-        'required': ['snapshot'],
-        'additionalProperties': False,
+        }
     },
+    'required': ['snapshot'],
+    'additionalProperties': False,
 }

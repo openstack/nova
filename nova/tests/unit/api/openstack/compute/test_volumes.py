@@ -889,10 +889,32 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
         self.assertRaises(self.bad_request, self.controller.create,
                 req, body=body)
 
+    def test_assisted_create_with_unexpected_attr(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        body = {
+            'snapshot': {
+                'volume_id': '1',
+                'create_info': {
+                    'type': 'qcow2',
+                    'new_file': 'new_file',
+                    'snapshot_id': 'snapshot_id'
+                }
+            },
+            'unexpected': 0,
+        }
+        req.method = 'POST'
+        self.assertRaises(self.bad_request, self.controller.create,
+                req, body=body)
+
 
 class AssistedSnapshotCreateTestCaseV2(AssistedSnapshotCreateTestCaseV21):
     assisted_snaps = assisted_snaps_v2
     bad_request = webob.exc.HTTPBadRequest
+
+    def test_assisted_create_with_unexpected_attr(self):
+        # NOTE: legacy v2.0 API cannot handle this kind of invalid requests.
+        # So we need to skip the test on legacy v2.0 API.
+        pass
 
 
 class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
