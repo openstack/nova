@@ -21,12 +21,12 @@ CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 
 
-class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
+class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = 'flavor-access'
 
     def _get_flags(self):
-        f = super(FlavorAccessSampleJsonTests, self)._get_flags()
+        f = super(FlavorAccessTestsBase, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
         f['osapi_compute_extension'].append(
                     'nova.api.openstack.compute.contrib.'
@@ -66,6 +66,9 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                  "flavor-access-create-req",
                                  subs)
         self._verify_response("flavor-access-create-resp", subs, response, 200)
+
+
+class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
 
     def test_flavor_access_detail(self):
         response = self._do_get('flavors/detail')
@@ -109,3 +112,35 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         }
         self._verify_response('flavor-access-remove-tenant-resp',
                               exp_subs, response, 200)
+
+
+class FlavorAccessV27SampleJsonTests(FlavorAccessTestsBase):
+    microversion = '2.7'
+
+    scenarios = [('v2_7', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(FlavorAccessV27SampleJsonTests, self).setUp()
+        self.api.microversion = self.microversion
+
+    def test_add_tenant_access_to_public_flavor(self):
+        subs = {
+            'flavor_id': '10',
+            'flavor_name': 'test_flavor'
+        }
+        # Create public flavor
+        response = self._do_post("flavors",
+                                 "flavor-access-create-req",
+                                 subs)
+        self.assertEqual(200, response.status_code)
+
+        subs = {
+            'flavor_id': '10',
+            'tenant_id': 'fake_tenant'
+        }
+        # Version 2.7+ will return HTTPConflict (409)
+        # if the flavor is public
+        response = self._do_post('flavors/10/action',
+                                 'flavor-access-add-tenant-req',
+                                 subs)
+        self.assertEqual(409, response.status_code)
