@@ -10,17 +10,12 @@
 # Laera Loris <llaera@outlook.com>, 2013
 # matthew wagoner <zxkuqyb@gmail.com>, 2012
 # English translations for nova.
-# Andreas Jaeger <jaegerandi@gmail.com>, 2015. #zanata
-# Frank Kloeker <eumel@arcor.de>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
-# Frank Kloeker <eumel@arcor.de>, 2016. #zanata
-# Monika Wolf <vcomas3@de.ibm.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -362,9 +357,6 @@ msgstr ""
 "Es wurde ein ungültiger 'name'-Wert angegeben. Der Name muss lauten: "
 "%(reason)s"
 
-msgid "An unexpected error has occurred."
-msgstr "Ein unerwarteter Fehler ist aufgetreten."
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr ""
 "Ein unbekannter Fehler ist aufgetreten. Stellen Sie Ihre Anforderung erneut."
@@ -464,9 +456,6 @@ msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr ""
 "Fehlerhaftes 'volumeId'-Format: 'volumeId' weist nicht das richtige Format "
 "auf (%s)"
-
-msgid "Binary"
-msgstr "Binärdatei"
 
 #, python-format
 msgid ""
@@ -730,14 +719,6 @@ msgstr "SR zum Lesen/Schreiben von VDI kann nicht gefunden werden."
 
 msgid "Cannot find image for rebuild"
 msgstr "Image für Wiederherstellung kann nicht gefunden werden"
-
-#, python-format
-msgid ""
-"Cannot load host manager from configuration scheduler_host_manager = "
-"%(conf)s."
-msgstr ""
-"Der Host-Manager kann nicht aus der Konfiguration scheduler_host_manager = "
-"%(conf)s geladen werden."
 
 #, python-format
 msgid "Cannot load scheduler driver from configuration %(conf)s."
@@ -1792,12 +1773,6 @@ msgstr "Gruppe nicht gültig. Grund: %(reason)s"
 
 msgid "Guest does not have a console available."
 msgstr "Für Gast ist keine Konsole verfügbar."
-
-msgid "HOST"
-msgstr "HOST"
-
-msgid "Host"
-msgstr "Host"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -3409,9 +3384,6 @@ msgstr ""
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s enthält keine IP-Adresse"
 
-msgid "PROJECT"
-msgstr "PROJEKT"
-
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
 msgstr "Seitengröße %(pagesize)s nicht zulässig für '%(against)s'"
@@ -3948,14 +3920,6 @@ msgid "ServerGroupSoftAntiAffinityWeigher not configured"
 msgstr "ServerGroupSoftAntiAffinityWeigher nicht konfiguriert"
 
 #, python-format
-msgid "Service %(service)s on host %(host)s disabled."
-msgstr "Service %(service)s auf Host %(host)s ist inaktiviert."
-
-#, python-format
-msgid "Service %(service)s on host %(host)s enabled."
-msgstr "Service %(service)s auf Host %(host)s ist aktiviert."
-
-#, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr "Service %(service_id)s konnte nicht gefunden werden."
 
@@ -4052,12 +4016,6 @@ msgstr "Geben Sie nur einen Parameter an, `table_name` oder `table`"
 
 msgid "Started"
 msgstr "Gestartet"
-
-msgid "State"
-msgstr "Zustand"
-
-msgid "Status"
-msgstr "Status"
 
 msgid "Stopped"
 msgstr "Gestoppt"
@@ -4864,9 +4822,6 @@ msgstr "Aufnahme wurde versucht, aber das Image %s kann nicht gefunden werden."
 msgid "Unsupported Content-Type"
 msgstr "Nicht unterstützter Inhaltstyp"
 
-msgid "Updated_At"
-msgstr "Updated_At"
-
 msgid "Upgrade DB using Essex release first."
 msgstr ""
 "Führen Sie zuerst ein Upgrade für die Datenbank unter Verwendung des Essex-"
@@ -5191,12 +5146,6 @@ msgstr "Keine Floating IPs verfügbar."
 msgid "Zero floating IPs exist."
 msgstr "Es existieren keine  Floating IPs."
 
-msgid "Zone"
-msgstr "Zone"
-
-msgid "[Result]"
-msgstr "[Ergebnis]"
-
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4 ist kein ordnungsgemäßes IPv4-Format. "
 
@@ -5233,9 +5182,6 @@ msgstr "beliebige Schlüssel können nicht gespeichert werden"
 msgid "cannot understand JSON"
 msgstr "kann JSON nicht verstehen"
 
-msgid "cell_uuid must be set"
-msgstr "cell_uuid muss gesetzt sein"
-
 msgid "clone() is not implemented"
 msgstr "clone() ist nicht implementiert"
 
@@ -5246,9 +5192,6 @@ msgstr "Verbindungsinfo: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "verbinden mit: %(host)s:%(port)s"
-
-msgid "cpu"
-msgstr "CPU"
 
 #, python-format
 msgid "createBackup entity requires %s attribute"
@@ -5312,9 +5255,6 @@ msgstr "fmt=%(fmt)s gesichert durch: %(backing_file)s"
 
 msgid "fping utility is not found."
 msgstr "fping-Dienstprogramm wurde nicht gefunden."
-
-msgid "hdd"
-msgstr "HDD"
 
 msgid "host"
 msgstr "Host"
@@ -5423,9 +5363,6 @@ msgstr "max. Zeilen müssen <= %(max_value)d sein"
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr ""
 "max_count darf nicht größer als 1 sein, wenn eine fixed_ip angegeben ist."
-
-msgid "mem(mb)"
-msgstr "Speicher(MB)"
 
 msgid "memcached_servers not defined"
 msgstr "'memcached_servers' nicht definiert"

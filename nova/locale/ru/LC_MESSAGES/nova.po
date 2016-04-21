@@ -11,15 +11,12 @@
 # Alexei Rudenko <alexei.rudenko@gmail.com>, 2013
 # Stanislav Hanzhin <hanzhin.stas@gmail.com>, 2013
 # dvy <vasily.dubinin@gmail.com>, 2014
-# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Grigory Mokhin <mokhin@gmail.com>, 2016. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -358,9 +355,6 @@ msgstr "Все хосты уже связаны с ячейками, выход.
 msgid "An invalid 'name' value was provided. The name must be: %(reason)s"
 msgstr "Недопустимое значение 'name'. Должно быть указано: %(reason)s"
 
-msgid "An unexpected error has occurred."
-msgstr "Произошла непредвиденная ошибка."
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr ""
 "Произошла неизвестная ошибка. Пожалуйста, попытайтесь повторить ваш запрос."
@@ -458,9 +452,6 @@ msgstr "Недопустимый project_id для to_global_ipv6: %s"
 #, python-format
 msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr "Неверный формат volumeId: volumeId имеет неверный формат (%s)"
-
-msgid "Binary"
-msgstr "Двоичный"
 
 #, python-format
 msgid ""
@@ -716,14 +707,6 @@ msgstr "Невозможно найти SR для чтения/записи VDI.
 
 msgid "Cannot find image for rebuild"
 msgstr "Невозможно найти образ для перекомпоновки"
-
-#, python-format
-msgid ""
-"Cannot load host manager from configuration scheduler_host_manager = "
-"%(conf)s."
-msgstr ""
-"Не удается загрузить администратор хостов из конфигурации "
-"scheduler_host_manager = %(conf)s."
 
 #, python-format
 msgid "Cannot load scheduler driver from configuration %(conf)s."
@@ -1766,12 +1749,6 @@ msgstr "Неверная группа. Причина: %(reason)s"
 
 msgid "Guest does not have a console available."
 msgstr "Гость не имеет доступной консоли."
-
-msgid "HOST"
-msgstr "HOST"
-
-msgid "Host"
-msgstr "Хост"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -3369,9 +3346,6 @@ msgstr ""
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s не содержит IP-адрес"
 
-msgid "PROJECT"
-msgstr "PROJECT"
-
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
 msgstr "Размер страницы %(pagesize)s запрещен для '%(against)s'"
@@ -3892,14 +3866,6 @@ msgid "ServerGroupSoftAntiAffinityWeigher not configured"
 msgstr "ServerGroupSoftAntiAffinityWeigher не настроен"
 
 #, python-format
-msgid "Service %(service)s on host %(host)s disabled."
-msgstr "Служба %(service)s на хосте %(host)s выключена."
-
-#, python-format
-msgid "Service %(service)s on host %(host)s enabled."
-msgstr "Служба %(service)s на хосте %(host)s включена."
-
-#, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr "Служба %(service_id)s не найдена."
 
@@ -3994,12 +3960,6 @@ msgstr "Укажите только один параметр `table_name` ил�
 
 msgid "Started"
 msgstr "Начато"
-
-msgid "State"
-msgstr "Состояние"
-
-msgid "Status"
-msgstr "Статус"
 
 msgid "Stopped"
 msgstr "Остановлен"
@@ -4780,9 +4740,6 @@ msgstr ""
 msgid "Unsupported Content-Type"
 msgstr "Не поддерживаемый  тип содержимого"
 
-msgid "Updated_At"
-msgstr "Updated_At"
-
 msgid "Upgrade DB using Essex release first."
 msgstr "Обновите сначала базу данных с помощью выпуска Essex."
 
@@ -5086,12 +5043,6 @@ msgstr "Нет доступных нефиксированных IP."
 msgid "Zero floating IPs exist."
 msgstr "Нет нефиксированных IP."
 
-msgid "Zone"
-msgstr "Зона"
-
-msgid "[Result]"
-msgstr "[Результат]"
-
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4 не является верным форматом IPv4"
 
@@ -5126,9 +5077,6 @@ msgstr "Не удается сохранить произвольные ключ
 msgid "cannot understand JSON"
 msgstr "невозможно понять JSON"
 
-msgid "cell_uuid must be set"
-msgstr "Необходимо указать cell_uuid"
-
 msgid "clone() is not implemented"
 msgstr "Функция clone() не реализована"
 
@@ -5139,9 +5087,6 @@ msgstr "информация о соединении: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "подключение к: %(host)s:%(port)s"
-
-msgid "cpu"
-msgstr "cpu"
 
 #, python-format
 msgid "createBackup entity requires %s attribute"
@@ -5206,9 +5151,6 @@ msgstr "fmt=%(fmt)s backed by: %(backing_file)s"
 
 msgid "fping utility is not found."
 msgstr "Утилита fping не найдена."
-
-msgid "hdd"
-msgstr "hdd"
 
 msgid "host"
 msgstr "Узел"
@@ -5316,9 +5258,6 @@ msgstr "максимальное число строк должно быть  <=
 msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr ""
 "Значение max_count не может быть больше 1, если указано значение fixed_ip."
-
-msgid "mem(mb)"
-msgstr "mem(mb)"
 
 msgid "memcached_servers not defined"
 msgstr "memcached_servers не определен"

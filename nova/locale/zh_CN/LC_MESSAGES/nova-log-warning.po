@@ -6,13 +6,12 @@
 # Shuwen SUN <chris-void@outlook.com>, 2014
 # Shuwen SUN <chris-void@outlook.com>, 2014
 # 颜海峰 <yanheven@gmail.com>, 2014
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:29+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -76,12 +75,6 @@ msgstr "地址 |%(address)s| 没有分配"
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "地址 |%(address)s| 没有分配给你的项目 |%(project)s|"
-
-#, python-format
-msgid ""
-"An error occurred trying to live migrate. Falling back to legacy live "
-"migrate flow. Error: %s"
-msgstr "尝试在线迁移时，发生错误。回归到遗留的在线迁移工作流。错误： %s"
 
 #, python-format
 msgid "Arguments dropped when creating context: %s"

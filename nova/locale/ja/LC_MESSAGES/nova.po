@@ -8,18 +8,12 @@
 # *pokotan-in-the-sky*  <>, 2012
 # Tom Fifield <tom@openstack.org>, 2013
 # Tomoyuki KATO <tomo@dream.daynight.jp>, 2013
-# Akihiro Motoki <amotoki@gmail.com>, 2015. #zanata
-# KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>, 2015. #zanata
-# Mie Yamamoto <myamamot@redhat.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Yuko Katabami <yukokatabami@gmail.com>, 2015. #zanata
-# Tsutomu Kimura <ebb0de2@jp.ibm.com>, 2016. #zanata
-# 笹原 昌美 <ebb0de1@jp.ibm.com>, 2016. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev177\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2016-04-08 03:28+0000\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:28+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -361,9 +355,6 @@ msgstr ""
 "無効な 'name' の値が提供されました。名前は以下である必要があります: "
 "%(reason)s"
 
-msgid "An unexpected error has occurred."
-msgstr "想定しないエラーが発生しました。"
-
 msgid "An unknown error has occurred. Please try your request again."
 msgstr "未知のエラーが発生しました。再度リクエストを実行してください。"
 
@@ -462,9 +453,6 @@ msgstr "to_global_ipv6 の project_id が正しくありません: %s"
 #, python-format
 msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr "無効な volumeId の形式: volumeId が適切な形式になっていません (%s)"
-
-msgid "Binary"
-msgstr "バイナリー"
 
 #, python-format
 msgid ""
@@ -716,14 +704,6 @@ msgstr "VDI の読み取り/書き込み用の SR が見つかりません。"
 
 msgid "Cannot find image for rebuild"
 msgstr "再作成用のイメージが見つかりません"
-
-#, python-format
-msgid ""
-"Cannot load host manager from configuration scheduler_host_manager = "
-"%(conf)s."
-msgstr ""
-"scheduler_host_manager = %(conf)s の設定からホストマネージャーをロードできま"
-"せん。"
 
 #, python-format
 msgid "Cannot load scheduler driver from configuration %(conf)s."
@@ -1760,12 +1740,6 @@ msgstr "グループが無効です。理由: %(reason)s"
 
 msgid "Guest does not have a console available."
 msgstr "ゲストはコンソールを使用することはできません。"
-
-msgid "HOST"
-msgstr "ホスト"
-
-msgid "Host"
-msgstr "ホスト"
 
 #, python-format
 msgid "Host %(host)s could not be found."
@@ -3383,9 +3357,6 @@ msgstr ""
 msgid "PIF %s does not contain IP address"
 msgstr "PIF %s に IP アドレスが含まれていません"
 
-msgid "PROJECT"
-msgstr "プロジェクト"
-
 #, python-format
 msgid "Page size %(pagesize)s forbidden against '%(against)s'"
 msgstr "ページサイズ %(pagesize)s は \"%(against)s\" に対して禁止されています"
@@ -3918,14 +3889,6 @@ msgid "ServerGroupSoftAntiAffinityWeigher not configured"
 msgstr "ServerGroupSoftAntiAffinityWeigher が設定されていません"
 
 #, python-format
-msgid "Service %(service)s on host %(host)s disabled."
-msgstr "ホスト %(host)s のサービス %(service)s は無効です。"
-
-#, python-format
-msgid "Service %(service)s on host %(host)s enabled."
-msgstr "ホスト %(host)s のサービス %(service)s は有効です。"
-
-#, python-format
 msgid "Service %(service_id)s could not be found."
 msgstr "サービス %(service_id)s が見つかりませんでした。"
 
@@ -4024,12 +3987,6 @@ msgstr ""
 
 msgid "Started"
 msgstr "開始済み"
-
-msgid "State"
-msgstr "状態"
-
-msgid "Status"
-msgstr "ステータス"
 
 msgid "Stopped"
 msgstr "停止済み"
@@ -4815,9 +4772,6 @@ msgstr "復元が試行されましたが、イメージ %s が見つかりま�
 msgid "Unsupported Content-Type"
 msgstr "サポートされない Content-Type"
 
-msgid "Updated_At"
-msgstr "最終更新"
-
 msgid "Upgrade DB using Essex release first."
 msgstr "最初に Essex リリースを使用して DB をアップグレードします。"
 
@@ -5131,12 +5085,6 @@ msgstr "使用可能な Floating IP はありません。"
 msgid "Zero floating IPs exist."
 msgstr "Floating IP が存在しません。"
 
-msgid "Zone"
-msgstr "ゾーン"
-
-msgid "[Result]"
-msgstr "[結果]"
-
 msgid "accessIPv4 is not proper IPv4 format"
 msgstr "accessIPv4 は正しい IPv4 形式ではありません"
 
@@ -5171,9 +5119,6 @@ msgstr "任意のキーを保存できるわけではありません"
 msgid "cannot understand JSON"
 msgstr "JSON を解釈できません"
 
-msgid "cell_uuid must be set"
-msgstr "cell_uuid を設定する必要があります"
-
 msgid "clone() is not implemented"
 msgstr "clone() は実装されていません"
 
@@ -5184,9 +5129,6 @@ msgstr "接続情報: %s"
 #, python-format
 msgid "connecting to: %(host)s:%(port)s"
 msgstr "%(host)s:%(port)s に接続中です"
-
-msgid "cpu"
-msgstr "CPU"
 
 #, python-format
 msgid "createBackup entity requires %s attribute"
@@ -5250,9 +5192,6 @@ msgstr "fmt=%(fmt)s は %(backing_file)s でサポートされています"
 
 msgid "fping utility is not found."
 msgstr "fping ユーティリティーが見つかりません。"
-
-msgid "hdd"
-msgstr "HDD"
 
 msgid "host"
 msgstr "ホスト"
@@ -5362,9 +5301,6 @@ msgid "max_count cannot be greater than 1 if an fixed_ip is specified."
 msgstr ""
 "fixed_ip が指定されている場合、max_count を 1 より大きくすることはできませ"
 "ん。"
-
-msgid "mem(mb)"
-msgstr "メモリー(mb)"
 
 msgid "memcached_servers not defined"
 msgstr "memcached_servers が定義されていません"
