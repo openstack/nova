@@ -19,6 +19,7 @@ import inspect
 import math
 import time
 
+import microversion_parse
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
@@ -227,29 +228,30 @@ class Request(wsgi.Request):
 
     def set_api_version_request(self):
         """Set API version request based on the request header information."""
-        if API_VERSION_REQUEST_HEADER in self.headers:
-            hdr_string = self.headers[API_VERSION_REQUEST_HEADER]
-            # 'latest' is a special keyword which is equivalent to requesting
-            # the maximum version of the API supported
-            if hdr_string == 'latest':
-                self.api_version_request = api_version.max_api_version()
-            else:
-                self.api_version_request = api_version.APIVersionRequest(
-                    hdr_string)
+        hdr_string = microversion_parse.get_version(
+            self.headers, service_type='compute',
+            legacy_headers=[API_VERSION_REQUEST_HEADER])
 
-                # Check that the version requested is within the global
-                # minimum/maximum of supported API versions
-                if not self.api_version_request.matches(
-                        api_version.min_api_version(),
-                        api_version.max_api_version()):
-                    raise exception.InvalidGlobalAPIVersion(
-                        req_ver=self.api_version_request.get_string(),
-                        min_ver=api_version.min_api_version().get_string(),
-                        max_ver=api_version.max_api_version().get_string())
-
-        else:
+        if hdr_string is None:
             self.api_version_request = api_version.APIVersionRequest(
                 api_version.DEFAULT_API_VERSION)
+        elif hdr_string == 'latest':
+            # 'latest' is a special keyword which is equivalent to
+            # requesting the maximum version of the API supported
+            self.api_version_request = api_version.max_api_version()
+        else:
+            self.api_version_request = api_version.APIVersionRequest(
+                hdr_string)
+
+            # Check that the version requested is within the global
+            # minimum/maximum of supported API versions
+            if not self.api_version_request.matches(
+                    api_version.min_api_version(),
+                    api_version.max_api_version()):
+                raise exception.InvalidGlobalAPIVersion(
+                    req_ver=self.api_version_request.get_string(),
+                    min_ver=api_version.min_api_version().get_string(),
+                    max_ver=api_version.max_api_version().get_string())
 
     def set_legacy_v2(self):
         self.environ[ENV_LEGACY_V2] = True
