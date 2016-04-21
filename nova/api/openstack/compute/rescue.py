@@ -14,7 +14,6 @@
 
 """The rescue mode extension."""
 
-from oslo_config import cfg
 from webob import exc
 
 from nova.api.openstack import common
@@ -23,14 +22,13 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
+import nova.conf
 from nova import exception
 from nova import utils
 
 
 ALIAS = "os-rescue"
-CONF = cfg.CONF
-CONF.import_opt('enable_instance_password',
-                'nova.api.openstack.compute.legacy_v2.servers')
+CONF = nova.conf.CONF
 
 authorize = extensions.os_compute_authorizer(ALIAS)
 
