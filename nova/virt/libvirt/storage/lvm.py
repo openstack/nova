@@ -25,6 +25,7 @@ from oslo_log import log as logging
 from oslo_utils import units
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
@@ -41,9 +42,8 @@ lvm_opts = [
                help='Size in MiB to wipe at start of old volumes. 0 => all'),
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(lvm_opts, 'libvirt')
-CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
 

@@ -23,7 +23,6 @@ from nova.i18n import _
 from nova.virt.hyperv import constants
 
 CONF = nova.conf.CONF
-CONF.import_opt('instances_path', 'nova.compute.manager')
 
 ERROR_INVALID_NAME = 123
 

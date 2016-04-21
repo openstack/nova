@@ -13,7 +13,6 @@
 import itertools
 
 import nova.compute.flavors
-import nova.compute.manager
 import nova.compute.monitors
 import nova.compute.rpcapi
 import nova.conf
@@ -24,11 +23,6 @@ def list_opts():
         ('DEFAULT',
          itertools.chain(
              nova.compute.flavors.flavor_opts,
-             nova.compute.manager.compute_opts,
-             nova.compute.manager.instance_cleaning_opts,
-             nova.compute.manager.interval_opts,
-             nova.compute.manager.running_deleted_opts,
-             nova.compute.manager.timeout_opts,
              nova.compute.rpcapi.rpcapi_opts,
          )),
     ]

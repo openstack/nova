@@ -15,8 +15,11 @@
 #    under the License.
 
 import itertools
+import socket
 
 from oslo_config import cfg
+
+from nova.conf import paths
 
 compute_opts = [
     cfg.BoolOpt('allow_resize_to_same_host',
@@ -126,11 +129,172 @@ allocation_ratio_opts = [
              'and defaulted to 1.0'),
 ]
 
+compute_manager_opts = [
+    cfg.StrOpt('console_host',
+               default=socket.gethostname(),
+               help='Console proxy host to use to connect '
+                    'to instances on this host.'),
+    cfg.StrOpt('default_access_ip_network_name',
+               help='Name of network to use to set access IPs for instances'),
+    cfg.BoolOpt('defer_iptables_apply',
+                default=False,
+                help='Whether to batch up the application of IPTables rules'
+                     ' during a host restart and apply all at the end of the'
+                     ' init phase'),
+    cfg.StrOpt('instances_path',
+               default=paths.state_path_def('instances'),
+               help='Where instances are stored on disk'),
+    cfg.BoolOpt('instance_usage_audit',
+                default=False,
+                help="Generate periodic compute.instance.exists"
+                     " notifications"),
+    cfg.IntOpt('live_migration_retry_count',
+               default=30,
+               help="Number of 1 second retries needed in live_migration"),
+    cfg.BoolOpt('resume_guests_state_on_host_boot',
+                default=False,
+                help='Whether to start guests that were running before the '
+                     'host rebooted'),
+    cfg.IntOpt('network_allocate_retries',
+               default=0,
+               help="Number of times to retry network allocation on failures"),
+    cfg.IntOpt('max_concurrent_builds',
+               default=10,
+               help='Maximum number of instance builds to run concurrently'),
+    cfg.IntOpt('max_concurrent_live_migrations',
+               default=1,
+               help='Maximum number of live migrations to run concurrently. '
+                    'This limit is enforced to avoid outbound live migrations '
+                    'overwhelming the host/network and causing failures. It '
+                    'is not recommended that you change this unless you are '
+                    'very sure that doing so is safe and stable in your '
+                    'environment.'),
+    cfg.IntOpt('block_device_allocate_retries',
+               default=60,
+               help='Number of times to retry block device '
+                    'allocation on failures.\n'
+                    'Starting with Liberty, Cinder can use image volume '
+                    'cache. This may help with block device allocation '
+                    'performance. Look at the cinder '
+                    'image_volume_cache_enabled configuration option.')
+]
+
+interval_opts = [
+    cfg.IntOpt('bandwidth_poll_interval',
+               default=600,
+               help='Interval to pull network bandwidth usage info. Not '
+                    'supported on all hypervisors. Set to -1 to disable. '
+                    'Setting this to 0 will run at the default rate.'),
+    cfg.IntOpt('sync_power_state_interval',
+               default=600,
+               help='Interval to sync power states between the database and '
+                    'the hypervisor. Set to -1 to disable. '
+                    'Setting this to 0 will run at the default rate.'),
+    cfg.IntOpt("heal_instance_info_cache_interval",
+               default=60,
+               help="Number of seconds between instance network information "
+                    "cache updates"),
+    cfg.IntOpt('reclaim_instance_interval',
+               min=0,
+               default=0,
+               help='Interval in seconds for reclaiming deleted instances. '
+                    'It takes effect only when value is greater than 0.'),
+    cfg.IntOpt('volume_usage_poll_interval',
+               default=0,
+               help='Interval in seconds for gathering volume usages'),
+    cfg.IntOpt('shelved_poll_interval',
+               default=3600,
+               help='Interval in seconds for polling shelved instances to '
+                    'offload. Set to -1 to disable.'
+                    'Setting this to 0 will run at the default rate.'),
+    cfg.IntOpt('shelved_offload_time',
+               default=0,
+               help='Time in seconds before a shelved instance is eligible '
+                    'for removing from a host. -1 never offload, 0 offload '
+                    'immediately when shelved'),
+    cfg.IntOpt('instance_delete_interval',
+               default=300,
+               help='Interval in seconds for retrying failed instance file '
+                    'deletes. Set to -1 to disable. '
+                    'Setting this to 0 will run at the default rate.'),
+    cfg.IntOpt('block_device_allocate_retries_interval',
+               default=3,
+               help='Waiting time interval (seconds) between block'
+                    ' device allocation retries on failures'),
+    cfg.IntOpt('scheduler_instance_sync_interval',
+               default=120,
+               help='Waiting time interval (seconds) between sending the '
+                    'scheduler a list of current instance UUIDs to verify '
+                    'that its view of instances is in sync with nova. If the '
+                    'CONF option `scheduler_tracks_instance_changes` is '
+                    'False, changing this option will have no effect.'),
+    cfg.IntOpt('update_resources_interval',
+               default=0,
+               help='Interval in seconds for updating compute resources. A '
+                    'number less than 0 means to disable the task completely. '
+                    'Leaving this at the default of 0 will cause this to run '
+                    'at the default periodic interval. Setting it to any '
+                    'positive value will cause it to run at approximately '
+                    'that number of seconds.'),
+]
+
+timeout_opts = [
+    cfg.IntOpt("reboot_timeout",
+               default=0,
+               help="Automatically hard reboot an instance if it has been "
+                    "stuck in a rebooting state longer than N seconds. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt("instance_build_timeout",
+               default=0,
+               help="Amount of time in seconds an instance can be in BUILD "
+                    "before going into ERROR status. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt("rescue_timeout",
+               default=0,
+               help="Automatically unrescue an instance after N seconds. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt("resize_confirm_window",
+               default=0,
+               help="Automatically confirm resizes after N seconds. "
+                    "Set to 0 to disable."),
+    cfg.IntOpt("shutdown_timeout",
+               default=60,
+               help="Total amount of time to wait in seconds for an instance "
+                    "to perform a clean shutdown."),
+]
+
+running_deleted_opts = [
+    cfg.StrOpt("running_deleted_instance_action",
+               default="reap",
+               choices=('noop', 'log', 'shutdown', 'reap'),
+               help="Action to take if a running deleted instance is detected."
+                    "Set to 'noop' to take no action."),
+    cfg.IntOpt("running_deleted_instance_poll_interval",
+               default=1800,
+               help="Number of seconds to wait between runs of the cleanup "
+                    "task."),
+    cfg.IntOpt("running_deleted_instance_timeout",
+               default=0,
+               help="Number of seconds after being deleted when a running "
+                    "instance should be considered eligible for cleanup."),
+]
+
+instance_cleaning_opts = [
+    cfg.IntOpt('maximum_instance_delete_attempts',
+               default=5,
+               help='The number of times to attempt to reap an instance\'s '
+                    'files.'),
+]
+
 ALL_OPTS = list(itertools.chain(
            compute_opts,
            resource_tracker_opts,
-           allocation_ratio_opts
-           ))
+           allocation_ratio_opts,
+           compute_manager_opts,
+           interval_opts,
+           timeout_opts,
+           running_deleted_opts,
+           instance_cleaning_opts))
 
 
 def register_opts(conf):
