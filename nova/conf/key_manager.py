@@ -15,26 +15,24 @@
 
 from oslo_config import cfg
 
-keymgr_group = cfg.OptGroup(
-    'keymgr',
+key_manager_group = cfg.OptGroup(
+    'key_manager',
     title='Key manager options')
 
-keymgr_opts = [
-    cfg.StrOpt('api_class',
-               default='nova.keymgr.conf_key_mgr.ConfKeyManager',
-               help='The full class name of the key manager API class'),
+key_manager_opts = [
     cfg.StrOpt(
         'fixed_key',
-        help='Fixed key returned by key manager, specified in hex'),
+        help='Fixed key returned by key manager, specified in hex',
+        deprecated_group='keymgr'),
 ]
 
 
 def register_opts(conf):
-    conf.register_group(keymgr_group)
-    conf.register_opts(keymgr_opts, group=keymgr_group)
+    conf.register_group(key_manager_group)
+    conf.register_opts(key_manager_opts, group=key_manager_group)
 
 
 def list_opts():
     return {
-        keymgr_group.name: keymgr_opts
+        key_manager_group.name: key_manager_opts
     }
