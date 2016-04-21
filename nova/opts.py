@@ -17,7 +17,6 @@ import nova.cloudpipe.pipelib
 import nova.cmd.serialproxy
 import nova.cmd.spicehtml5proxy
 import nova.conductor.rpcapi
-import nova.conductor.tasks.live_migrate
 import nova.conf
 import nova.console.rpcapi
 import nova.console.serial
@@ -37,7 +36,6 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             [nova.conductor.tasks.live_migrate.migrate_opt],
              [nova.db.base.db_driver_opt],
              [nova.servicegroup.api.servicegroup_driver_opt],
              nova.db.api.db_opts,

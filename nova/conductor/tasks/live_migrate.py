@@ -10,13 +10,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 import six
 
 from nova.compute import power_state
 from nova.conductor.tasks import base
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -24,15 +24,7 @@ from nova.scheduler import utils as scheduler_utils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
-
-migrate_opt = cfg.IntOpt('migrate_max_retries',
-        default=-1,
-        help='Number of times to retry live-migration before failing. '
-             'If == -1, try until out of hosts. '
-             'If == 0, only try once, no retries.')
-
-CONF = cfg.CONF
-CONF.register_opt(migrate_opt)
+CONF = nova.conf.CONF
 
 
 class LiveMigrationTask(base.TaskBase):
