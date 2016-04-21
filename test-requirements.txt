@@ -4,7 +4,7 @@
 
 hacking<0.11,>=0.10.0
 coverage>=3.6 # Apache-2.0
-fixtures>=1.3.1 # Apache-2.0/BSD
+fixtures<2.0,>=1.3.1 # Apache-2.0/BSD
 mock>=1.2 # BSD
 mox3>=0.7.0 # Apache-2.0
 psycopg2>=2.5 # LGPL/ZPL
