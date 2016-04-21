@@ -16,8 +16,6 @@ import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
 CONF = nova.conf.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):

@@ -15,15 +15,13 @@
 import datetime
 import urllib
 
-from oslo_config import cfg
 from oslo_utils import timeutils
 
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):

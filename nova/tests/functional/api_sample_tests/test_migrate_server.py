@@ -14,14 +14,12 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from oslo_utils import versionutils
 
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):

@@ -13,16 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import exception
 from nova.network import api as network_api
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit import fake_network_cache_model
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
