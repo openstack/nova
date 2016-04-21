@@ -14,10 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import oslo_config.cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
+import nova.conf
 from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
@@ -25,23 +25,8 @@ LOG = logging.getLogger(__name__)
 NOVA_NET_API = 'nova.network.api.API'
 NEUTRON_NET_API = 'nova.network.neutronv2.api.API'
 
-_network_opts = [
-    oslo_config.cfg.StrOpt('network_api_class',
-                           default=NOVA_NET_API,
-                           help='DEPRECATED: The full class name of the '
-                                'network API class to use. ``use_neutron`` '
-                                'should be used instead.',
-                           deprecated_for_removal=True),
-    oslo_config.cfg.BoolOpt('use_neutron',
-                            default=False,
-                            help="""
-Whether to use Neutron or Nova Network as the back end for networking.
-Defaults to False (indicating Nova network). Set to True to use neutron.
-""")
 
-]
-
-oslo_config.cfg.CONF.register_opts(_network_opts)
+CONF = nova.conf.CONF
 
 
 def is_neutron():
@@ -49,8 +34,8 @@ def is_neutron():
 
     This logic exists as a separate config option
     """
-    legacy_class = oslo_config.cfg.CONF.network_api_class
-    use_neutron = oslo_config.cfg.CONF.use_neutron
+    legacy_class = CONF.network_api_class
+    use_neutron = CONF.use_neutron
 
     if legacy_class not in (NEUTRON_NET_API, NOVA_NET_API):
         # Someone actually used this option, this gets a pass for now,
@@ -72,7 +57,7 @@ def is_neutron():
 
 def API(skip_policy_check=False):
     if is_neutron() is None:
-        network_api_class = oslo_config.cfg.CONF.network_api_class
+        network_api_class = CONF.network_api_class
     elif is_neutron():
         network_api_class = NEUTRON_NET_API
     else:

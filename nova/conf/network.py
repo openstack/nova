@@ -17,6 +17,7 @@ from oslo_config import cfg
 
 from nova.conf import paths
 
+NOVA_NET_API = 'nova.network.api.API'
 
 network_opts = [
     cfg.StrOpt("flat_network_bridge",
@@ -135,6 +136,17 @@ with the name 'mtu'.
 
     None
 """),
+    cfg.StrOpt('network_api_class',
+               default=NOVA_NET_API,
+               help='DEPRECATED: The full class name of the '
+                    'network API class to use. ``use_neutron`` '
+                    'should be used instead.',
+               deprecated_for_removal=True),
+    cfg.BoolOpt('use_neutron',
+                default=False,
+                help="Whether to use Neutron or Nova Network as the back end "
+                     "for networking. Defaults to False (indicating Nova "
+                     "network).Set to True to use neutron.")
 ]
 
 linux_net_opts = [
