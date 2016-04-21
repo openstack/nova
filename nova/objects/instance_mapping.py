@@ -140,9 +140,7 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     @db_api.api_context_manager.reader
     def _get_by_project_id_from_db(context, project_id):
         return (context.session.query(api_models.InstanceMapping)
-                .join(api_models.CellMapping)
-                .with_entities(api_models.InstanceMapping,
-                               api_models.CellMapping)
+                .options(joinedload('cell_mapping'))
                 .filter(
                     api_models.InstanceMapping.project_id == project_id)).all()
 
