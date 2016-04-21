@@ -1,4 +1,8 @@
 .. -*- rst -*-
+.. needs:method_verification
+.. needs:parameter_verification
+.. needs:example_verification
+.. needs:body_verification
 
 ==============================================
  Floating IP DNS records (os-floating-ip-dns)

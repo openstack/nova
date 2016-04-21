@@ -1,4 +1,8 @@
 .. -*- rst -*-
+.. needs:method_verification
+.. needs:parameter_verification
+.. needs:example_verification
+.. needs:body_verification
 
 ====================================================================
  Rules for default security group (os-security-group-default-rules)

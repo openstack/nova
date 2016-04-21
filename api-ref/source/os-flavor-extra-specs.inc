@@ -1,4 +1,8 @@
 .. -*- rst -*-
+.. needs:method_verification
+.. needs:parameter_verification
+.. needs:example_verification
+.. needs:body_verification
 
 ======================================================
  Flavors extra-specs (flavors, os-flavor-extra-specs)
