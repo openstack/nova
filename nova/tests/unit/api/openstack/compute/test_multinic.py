@@ -62,11 +62,11 @@ class FixedIpTestV21(test.NoDBTestCase):
         super(FixedIpTestV21, self).setUp()
         fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(compute.api.API, "add_fixed_ip",
-                       compute_api_add_fixed_ip)
-        self.stubs.Set(compute.api.API, "remove_fixed_ip",
-                       compute_api_remove_fixed_ip)
-        self.stubs.Set(compute.api.API, 'get', compute_api_get)
+        self.stub_out('nova.compute.api.API.add_fixed_ip',
+                      compute_api_add_fixed_ip)
+        self.stub_out('nova.compute.api.API.remove_fixed_ip',
+                      compute_api_remove_fixed_ip)
+        self.stub_out('nova.compute.api.API.get', compute_api_get)
         self.controller = self.controller_class.MultinicController()
         self.fake_req = fakes.HTTPRequest.blank('')
 
