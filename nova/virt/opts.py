@@ -12,7 +12,6 @@
 
 import itertools
 
-import nova.virt.libvirt.volume.nfs
 import nova.virt.libvirt.volume.quobyte
 import nova.virt.libvirt.volume.remotefs
 import nova.virt.libvirt.volume.scality
@@ -28,7 +27,6 @@ def list_opts():
     return [
         ('libvirt',
          itertools.chain(
-             nova.virt.libvirt.volume.nfs.volume_opts,
              nova.virt.libvirt.volume.quobyte.volume_opts,
              nova.virt.libvirt.volume.remotefs.libvirt_opts,
              nova.virt.libvirt.volume.scality.volume_opts,
