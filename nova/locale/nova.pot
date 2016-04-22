@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev11\n"
+"Project-Id-Version: nova 13.0.1.dev30\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-18 06:51+0000\n"
+"POT-Creation-Date: 2016-04-22 06:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5702,65 +5702,65 @@ msgstr ""
 msgid "Swap only supports host devices"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1792
+#: nova/virt/libvirt/driver.py:1801
 #, python-format
 msgid ""
 "Error from libvirt while set password for username \"%(user)s\": [Error "
 "Code %(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1816
+#: nova/virt/libvirt/driver.py:1825
 #, python-format
 msgid ""
 "Error from libvirt while quiescing %(instance_name)s: [Error Code "
 "%(error_code)s] %(ex)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:1973
+#: nova/virt/libvirt/driver.py:1982
 msgid "Found no disk to snapshot."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2063
+#: nova/virt/libvirt/driver.py:2072
 #, python-format
 msgid "Unknown type: %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2068
+#: nova/virt/libvirt/driver.py:2077
 msgid "snapshot_id required in create_info"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2117
+#: nova/virt/libvirt/driver.py:2126
 #, python-format
 msgid ""
 "Something went wrong when deleting a volume snapshot: rebasing a "
 "%(protocol)s network disk using qemu-img has not been fully tested"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2171
+#: nova/virt/libvirt/driver.py:2180
 #, python-format
 msgid "Libvirt '%s' or later is required for online deletion of volume snapshots."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2179
+#: nova/virt/libvirt/driver.py:2188
 #, python-format
 msgid "Unknown delete_info type %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2215
+#: nova/virt/libvirt/driver.py:2224
 #, python-format
 msgid "Disk with id: %s not found attached to instance."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2224
+#: nova/virt/libvirt/driver.py:2233
 msgid "filename cannot be None"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2253
+#: nova/virt/libvirt/driver.py:2262
 #, python-format
 msgid "no match found for %s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:2333
+#: nova/virt/libvirt/driver.py:2342
 #, python-format
 msgid ""
 "Relative blockcommit support was not detected. Libvirt '%s' or later is "
@@ -5768,92 +5768,92 @@ msgid ""
 "snapshots."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3209
+#: nova/virt/libvirt/driver.py:3218
 #, python-format
 msgid "%s format is not supported"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3330
+#: nova/virt/libvirt/driver.py:3339
 #, python-format
 msgid "Detaching PCI devices with libvirt < %(ver)s is not permitted"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3410
+#: nova/virt/libvirt/driver.py:3419
 #, python-format
 msgid "Detaching SR-IOV ports with libvirt < %(ver)s is not permitted"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3497
+#: nova/virt/libvirt/driver.py:3506
 #, python-format
 msgid ""
 "Config requested an explicit CPU model, but the current libvirt "
 "hypervisor '%s' does not support selecting CPU models"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3503
+#: nova/virt/libvirt/driver.py:3512
 msgid "Config requested a custom CPU model, but no model name was provided"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3507
+#: nova/virt/libvirt/driver.py:3516
 msgid "A CPU model name should not be set when a host CPU model is requested"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3543
+#: nova/virt/libvirt/driver.py:3552
 #, python-format
 msgid ""
 "Volume sets discard option, but libvirt %(libvirt)s or later is required,"
 " qemu %(qemu)s or later is required."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3685
+#: nova/virt/libvirt/driver.py:3694
 msgid "Unable to get host UUID: /etc/machine-id does not exist"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3693
+#: nova/virt/libvirt/driver.py:3702
 msgid "Unable to get host UUID: /etc/machine-id is empty"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:3884
+#: nova/virt/libvirt/driver.py:3893
 #, python-format
 msgid "Invalid libvirt version %(version)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4961
+#: nova/virt/libvirt/driver.py:4970
 #, python-format
 msgid ""
 "Invalid vcpu_pin_set config, one or more of the specified cpuset is not "
 "online. Online cpuset(s): %(online)s, requested cpuset(s): %(req)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:4968
+#: nova/virt/libvirt/driver.py:4977
 msgid "Invalid vcpu_pin_set config, out of hypervisor cpu range."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5521
+#: nova/virt/libvirt/driver.py:5530
 msgid "Block migration can not be used with shared storage."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5545
+#: nova/virt/libvirt/driver.py:5554
 #, python-format
 msgid ""
 "Cannot block migrate instance %(uuid)s with mapped volumes. Selective "
 "block device migration feature requires libvirt version %(libvirt_ver)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5555
+#: nova/virt/libvirt/driver.py:5564
 msgid ""
 "Live migration can not be used without shared storage except a booted "
 "from volume VM which does not have a local disk."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5635
+#: nova/virt/libvirt/driver.py:5644
 #, python-format
 msgid ""
 "Unable to migrate %(instance_uuid)s: Disk of instance is too "
 "large(available on destination host:%(available)s < need:%(necessary)s)"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5681
+#: nova/virt/libvirt/driver.py:5690
 #, python-format
 msgid ""
 "CPU doesn't have compatibility.\n"
@@ -5863,12 +5863,12 @@ msgid ""
 "Refer to %(u)s"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5751
+#: nova/virt/libvirt/driver.py:5760
 #, python-format
 msgid "The firewall filter for %s does not exist"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5902
+#: nova/virt/libvirt/driver.py:5911
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag "
 "or your destination node does not support retrieving listen addresses.  "
@@ -5877,7 +5877,7 @@ msgid ""
 "address (0.0.0.0 or ::) or the local address (127.0.0.1 or ::1)."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:5936
+#: nova/virt/libvirt/driver.py:5945
 msgid ""
 "Your libvirt version does not support the VIR_DOMAIN_XML_MIGRATABLE flag "
 "or your destination node does not support retrieving listen addresses.  "
@@ -5885,15 +5885,15 @@ msgid ""
 "serial console or upgrade your libvirt version."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:7149
+#: nova/virt/libvirt/driver.py:7158
 msgid "Unable to resize disk down."
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:7157
+#: nova/virt/libvirt/driver.py:7166
 msgid "Migration is not supported for LVM backed instances"
 msgstr ""
 
-#: nova/virt/libvirt/driver.py:7175
+#: nova/virt/libvirt/driver.py:7184
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr ""
@@ -6176,25 +6176,30 @@ msgstr ""
 msgid "Share '%s' is not supported"
 msgstr ""
 
-#: nova/virt/vmwareapi/vm_util.py:407
+#: nova/virt/vmwareapi/vm_util.py:408
 #, python-format
 msgid "%s is not supported."
 msgstr ""
 
-#: nova/virt/vmwareapi/vm_util.py:484
+#: nova/virt/vmwareapi/vm_util.py:485
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr ""
 
-#: nova/virt/vmwareapi/vm_util.py:705 nova/virt/vmwareapi/volumeops.py:363
+#: nova/virt/vmwareapi/vm_util.py:706 nova/virt/vmwareapi/volumeops.py:363
 #: nova/virt/vmwareapi/volumeops.py:563
 msgid "Unable to find iSCSI Target"
 msgstr ""
 
-#: nova/virt/vmwareapi/vm_util.py:1200
+#: nova/virt/vmwareapi/vm_util.py:751
+#, python-format
+msgid "Only %d SCSI controllers are allowed to be created on this instance."
+msgstr ""
+
+#: nova/virt/vmwareapi/vm_util.py:1217
 msgid "No host available on cluster"
 msgstr ""
 
-#: nova/virt/vmwareapi/vm_util.py:1499
+#: nova/virt/vmwareapi/vm_util.py:1516
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr ""
