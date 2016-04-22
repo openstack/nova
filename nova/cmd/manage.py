@@ -79,6 +79,7 @@ from nova.db import migration
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import aggregate as aggregate_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import keypair as keypair_obj
@@ -791,6 +792,8 @@ class DbCommands(object):
         instance_obj.migrate_instance_keypairs,
         request_spec.migrate_instances_add_request_spec,
         keypair_obj.migrate_keypairs_to_api_db,
+        aggregate_obj.migrate_aggregates,
+        aggregate_obj.migrate_aggregate_reset_autoincrement,
     )
 
     def __init__(self):

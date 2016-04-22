@@ -593,3 +593,56 @@ class AggregateObjectMixedTestCase(AggregateObjectCellTestCase):
         new_agg.name = 'new-aggregate'
         self.assertRaises(exception.ObjectActionError,
                           new_agg.create)
+
+
+class AggregateObjectMigrationTestCase(AggregateObjectCellTestCase):
+    """Tests the aggregate in the case where data is migrated to the API db"""
+    def _seed_data(self):
+        for i in range(1, 10):
+            create_aggregate(self.context, i, in_api=False)
+        aggregate_obj.migrate_aggregates(self.context, 50)
+
+    def test_create(self):
+        new_agg = aggregate_obj.Aggregate(self.context)
+        new_agg.name = 'new-aggregate'
+        new_agg.create()
+        result = aggregate_obj.Aggregate.get_by_id(self.context, new_agg.id)
+        self.assertEqual(new_agg.name, result.name)
+
+
+class AggregateMigrationTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(AggregateMigrationTestCase, self).setUp()
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.Database(database='api'))
+        self.context = context.get_admin_context()
+
+    def test_migration(self):
+        db.aggregate_create(self.context, {'name': 'foo'})
+        main_aggregates_len = len(db.aggregate_get_all(self.context))
+        match, done = aggregate_obj.migrate_aggregates(self.context, 50)
+        self.assertEqual(1, main_aggregates_len)
+        self.assertEqual(main_aggregates_len, match)
+        self.assertEqual(main_aggregates_len, done)
+        self.assertEqual(0, len(db.aggregate_get_all(self.context)))
+        self.assertEqual(main_aggregates_len,
+                         len(aggregate_obj.AggregateList.get_all(
+                                                                self.context)))
+
+    def test_migrate_aggregate_reset_autoincrement(self):
+        agg = aggregate_obj.Aggregate(self.context, name='foo')
+        agg.create()
+        match, done = aggregate_obj.migrate_aggregate_reset_autoincrement(
+            self.context, 0)
+        self.assertEqual(0, match)
+        self.assertEqual(0, done)
+
+    def test_migrate_aggregate_reset_autoincrement_no_aggregates(self):
+        # NOTE(danms): This validates the "or 0" default if there are no
+        # aggregates (and thus no max id).
+        match, done = aggregate_obj.migrate_aggregate_reset_autoincrement(
+            self.context, 0)
+        self.assertEqual(0, match)
+        self.assertEqual(0, done)

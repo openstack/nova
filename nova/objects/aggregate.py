@@ -18,6 +18,8 @@ from oslo_utils import excutils
 from oslo_utils import uuidutils
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
+from sqlalchemy.sql import func
+from sqlalchemy.sql import text
 
 from nova.compute import utils as compute_utils
 from nova import db
@@ -558,3 +560,64 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
             all_aggregates = cls._filter_db_aggregates(all_aggregates, hosts)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
                                   all_aggregates)
+
+
+@db_api.main_context_manager.reader
+def _get_main_db_aggregate_ids(context, limit):
+    from nova.db.sqlalchemy import models
+    return [x[0] for x in context.session.query(models.Aggregate.id).
+            filter_by(deleted=0).
+            limit(limit)]
+
+
+def migrate_aggregates(ctxt, count):
+    main_db_ids = _get_main_db_aggregate_ids(ctxt, count)
+    if not main_db_ids:
+        return 0, 0
+
+    count_all = len(main_db_ids)
+    count_hit = 0
+
+    for aggregate_id in main_db_ids:
+        try:
+            aggregate = Aggregate.get_by_id(ctxt, aggregate_id)
+            remove = ['metadata', 'hosts']
+            values = {field: getattr(aggregate, field)
+                      for field in aggregate.fields if field not in remove}
+            _aggregate_create_in_db(ctxt, values, metadata=aggregate.metadata)
+            for host in aggregate.hosts:
+                _host_add_to_db(ctxt, aggregate_id, host)
+            count_hit += 1
+            db.aggregate_delete(ctxt, aggregate.id)
+        except exception.AggregateNotFound:
+            LOG.warning(
+                _LW('Aggregate id %(id)i disappeared during migration'),
+                {'id': aggregate_id})
+        except (exception.AggregateNameExists) as e:
+            LOG.error(str(e))
+
+    return count_all, count_hit
+
+
+def _adjust_autoincrement(context, value):
+    engine = db_api.get_api_engine()
+    if engine.name == 'postgresql':
+        # NOTE(danms): If we migrated some aggregates in the above function,
+        # then we will have confused postgres' sequence for the autoincrement
+        # primary key. MySQL does not care about this, but since postgres does,
+        # we need to reset this to avoid a failure on the next aggregate
+        # creation.
+        engine.execute(
+            text('ALTER SEQUENCE aggregates_id_seq RESTART WITH %i;' % (
+                value)))
+
+
+@db_api.api_context_manager.reader
+def _get_max_aggregate_id(context):
+    return context.session.query(func.max(api_models.Aggregate.id)).one()[0]
+
+
+def migrate_aggregate_reset_autoincrement(ctxt, count):
+    max_id = _get_max_aggregate_id(ctxt) or 0
+    _adjust_autoincrement(ctxt, max_id + 1)
+    return 0, 0
