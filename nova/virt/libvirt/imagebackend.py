@@ -45,9 +45,6 @@ from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF
-CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.net', group='libvirt')
-CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.net',
-                group='libvirt')
 
 LOG = logging.getLogger(__name__)
 IMAGE_API = image.API()

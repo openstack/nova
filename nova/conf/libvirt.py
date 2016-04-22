@@ -343,6 +343,14 @@ libvirt_volume_iser_opts = [
                 help='Use multipath connection of the iSER volume'),
 ]
 
+libvirt_volume_net_opts = [
+    cfg.StrOpt('rbd_user',
+               help='The RADOS client name for accessing rbd volumes'),
+    cfg.StrOpt('rbd_secret_uuid',
+               help='The libvirt UUID of the secret for the rbd_user'
+                    'volumes'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -355,6 +363,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_glusterfs_opts,
     libvirt_volume_iscsi_opts,
     libvirt_volume_iser_opts,
+    libvirt_volume_net_opts,
 ))
 
 
