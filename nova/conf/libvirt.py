@@ -15,6 +15,8 @@
 
 import itertools
 
+from nova.conf import paths
+
 from oslo_config import cfg
 
 # Downtime period in milliseconds
@@ -303,6 +305,13 @@ libvirt_volume_aoe_opts = [
                help='Number of times to rediscover AoE target to find volume'),
 ]
 
+libvirt_volume_glusterfs_opts = [
+    cfg.StrOpt('glusterfs_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help='Directory where the glusterfs volume is mounted on the '
+                    'compute node'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -312,6 +321,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_vif_opts,
     libvirt_volume_opts,
     libvirt_volume_aoe_opts,
+    libvirt_volume_glusterfs_opts,
 ))
 
 
