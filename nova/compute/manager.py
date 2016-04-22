@@ -2897,7 +2897,7 @@ class ComputeManager(manager.Manager):
             image_meta = objects.ImageMeta.from_image_ref(
                 context, self.image_api, image_ref)
         else:
-            image_meta = objects.ImageMeta.from_dict({})
+            image_meta = instance.image_meta
 
         # This instance.exists message should contain the original
         # image_ref, not the new one.  Since the DB has been updated

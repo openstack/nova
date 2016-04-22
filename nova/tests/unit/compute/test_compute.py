@@ -11660,11 +11660,14 @@ class EvacuateHostTestCase(BaseTestCase):
             self.assertRaises(exception.InstanceRecreateNotSupported,
                               lambda: self._rebuild(on_shared_storage=True))
 
-    def test_on_shared_storage_not_provided_host_without_shared_storage(self):
+    @mock.patch('nova.objects.ImageMeta.from_image_ref')
+    def test_on_shared_storage_not_provided_host_without_shared_storage(self,
+            mock_image_meta):
+        # 'spawn' should be called with the image_meta from the image_ref
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
                 mox.IsA(objects.Instance),
-                mox.IsA(objects.ImageMeta),
+                mock_image_meta.return_value,
                 mox.IgnoreArg(), mox.IsA('newpass'),
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
@@ -11675,11 +11678,15 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self._rebuild(on_shared_storage=None)
 
-    def test_on_shared_storage_not_provided_host_with_shared_storage(self):
+    @mock.patch('nova.objects.Instance.image_meta',
+                new_callable=mock.PropertyMock)
+    def test_on_shared_storage_not_provided_host_with_shared_storage(self,
+            mock_image_meta):
+        # 'spawn' should be called with the image_meta from the instance
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
                 mox.IsA(objects.Instance),
-                mox.IsA(objects.ImageMeta),
+                mock_image_meta.return_value,
                 mox.IgnoreArg(), 'newpass',
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
