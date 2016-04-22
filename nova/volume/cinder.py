@@ -366,7 +366,8 @@ class API(object):
                               {'vol': volume_id,
                                'host': connector.get('host'),
                                'msg': six.text_type(exc),
-                               'code': exc.code})
+                               'code': (
+                                exc.code if hasattr(exc, 'code') else None)})
 
     @translate_volume_exception
     def terminate_connection(self, context, volume_id, connector):

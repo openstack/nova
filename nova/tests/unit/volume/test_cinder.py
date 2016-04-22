@@ -293,6 +293,25 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_cinderclient.return_value.volumes. \
             initialize_connection.assert_called_once_with(volume_id, connector)
 
+    @mock.patch('nova.volume.cinder.LOG')
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_initialize_connection_exception_no_code(
+                                self, mock_cinderclient, mock_log):
+        mock_cinderclient.return_value.volumes. \
+            initialize_connection.side_effect = (
+                cinder_exception.ClientException(500, "500"))
+        mock_cinderclient.return_value.volumes. \
+            terminate_connection.side_effect = (
+                test.TestingException)
+
+        connector = {'host': 'fakehost1'}
+        self.assertRaises(cinder_exception.ClientException,
+                          self.api.initialize_connection,
+                          self.ctx,
+                          'id1',
+                          connector)
+        self.assertIsNone(mock_log.error.call_args_list[1][0][1]['code'])
+
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_initialize_connection_rollback(self, mock_cinderclient):
         mock_cinderclient.return_value.volumes.\
