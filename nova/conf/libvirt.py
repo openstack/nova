@@ -370,6 +370,14 @@ libvirt_volume_quobyte_opts = [
                help='Path to a Quobyte Client configuration file.'),
 ]
 
+libvirt_volume_scality_opts = [
+    cfg.StrOpt('scality_sofs_config',
+               help='Path or URL to Scality SOFS configuration file'),
+    cfg.StrOpt('scality_sofs_mount_point',
+               default='$state_path/scality',
+               help='Base dir where Scality SOFS shall be mounted'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -385,6 +393,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_net_opts,
     libvirt_volume_nfs_opts,
     libvirt_volume_quobyte_opts,
+    libvirt_volume_scality_opts,
 ))
 
 

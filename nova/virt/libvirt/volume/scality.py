@@ -13,11 +13,11 @@
 import io
 import os
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from six.moves import urllib
 import six.moves.urllib.parse as urlparse
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import utils
@@ -25,16 +25,7 @@ from nova.virt.libvirt.volume import fs
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.StrOpt('scality_sofs_config',
-               help='Path or URL to Scality SOFS configuration file'),
-    cfg.StrOpt('scality_sofs_mount_point',
-               default='$state_path/scality',
-               help='Base dir where Scality SOFS shall be mounted'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
