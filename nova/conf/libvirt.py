@@ -277,11 +277,19 @@ libvirt_lvm_opts = [
                help='Size in MiB to wipe at start of old volumes. 0 => all'),
 ]
 
+libvirt_utils_opts = [
+    cfg.BoolOpt('snapshot_compression',
+                default=False,
+                help='Compress snapshot images when possible. This '
+                     'currently applies exclusively to qcow2 images'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
     libvirt_imagecache_opts,
     libvirt_lvm_opts,
+    libvirt_utils_opts,
 ))
 
 
