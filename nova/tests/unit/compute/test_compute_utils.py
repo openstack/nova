@@ -46,7 +46,6 @@ from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
 import nova.tests.unit.image.fake
 from nova.tests.unit.objects import test_flavor
-from nova.tests.unit.objects import test_migration
 from nova.tests import uuidsentinel as uuids
 
 
@@ -684,8 +683,7 @@ class ComputeUtilsQuotaDeltaTestCase(test.TestCase):
         deltas = compute_utils.downsize_quota_delta(self.context, inst)
         self.assertEqual(expected_deltas, deltas)
 
-    @mock.patch.object(objects.Flavor, 'get_by_id')
-    def test_reverse_quota_delta(self, mock_get_flavor):
+    def test_reverse_quota_delta(self):
         inst = create_instance(self.context, params=None)
         inst.old_flavor = flavors.get_flavor_by_name('m1.tiny')
         inst.new_flavor = flavors.get_flavor_by_name('m1.medium')
@@ -696,20 +694,8 @@ class ComputeUtilsQuotaDeltaTestCase(test.TestCase):
             'ram': -1 * (inst.new_flavor['memory_mb'] -
                          inst.old_flavor['memory_mb'])
         }
-        updates = {'old_instance_type_id': inst.old_flavor['id'],
-                   'new_instance_type_id': inst.new_flavor['id']}
 
-        fake_migration = test_migration.fake_db_migration(**updates)
-
-        def _flavor_get_by_id(context, type_id):
-            if type_id == updates['old_instance_type_id']:
-                return inst.old_flavor
-            else:
-                return inst.new_flavor
-
-        mock_get_flavor.side_effect = _flavor_get_by_id
-        deltas = compute_utils.reverse_upsize_quota_delta(self.context,
-                                                          fake_migration)
+        deltas = compute_utils.reverse_upsize_quota_delta(self.context, inst)
         self.assertEqual(expected_deltas, deltas)
 
     @mock.patch.object(objects.Quotas, 'reserve')

@@ -1374,7 +1374,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_inst['uuid'], 'finished').AndReturn(
                         fake_mig)
         compute_utils.reverse_upsize_quota_delta(
-            self.context, fake_mig).AndReturn('deltas')
+            self.context, fake_inst).AndReturn('deltas')
 
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
@@ -1432,7 +1432,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         delta = ['delta']
         compute_utils.reverse_upsize_quota_delta(
-            self.context, fake_mig).AndReturn(delta)
+            self.context, fake_inst).AndReturn(delta)
         resvs = ['resvs']
         fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
         compute_utils.reserve_quota_delta(
