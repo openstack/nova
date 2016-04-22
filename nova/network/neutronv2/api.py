@@ -315,7 +315,8 @@ class API(base_api.NetworkAPI):
             # in case the caller forgot to filter the list.
             if port_id is None:
                 continue
-            port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
+            port_req_body = {'port': {'device_id': '', 'device_owner': '',
+                                      'dns_name': ''}}
             if port_binding:
                 port_req_body['port']['binding:host_id'] = None
                 port_req_body['port']['binding:profile'] = {}
