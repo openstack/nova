@@ -65,3 +65,25 @@ class TestNovaAPI(test.NoDBTestCase):
             launcher = mock_service.process_launcher.return_value
             launcher.launch_service.assert_called_once_with(
                 fake_server, workers=123)
+
+    @mock.patch('sys.exit')
+    def test_fails_if_none_started(self, mock_exit):
+        mock_exit.side_effect = test.TestingException
+        self.flags(enabled_apis=[])
+        with mock.patch.object(api, 'service') as mock_service:
+            self.assertRaises(test.TestingException, api.main)
+            mock_exit.assert_called_once_with(1)
+            launcher = mock_service.process_launcher.return_value
+            self.assertFalse(launcher.wait.called)
+
+    @mock.patch('sys.exit')
+    def test_fails_if_all_failed(self, mock_exit):
+        mock_exit.side_effect = test.TestingException
+        self.flags(enabled_apis=['foo', 'bar'])
+        with mock.patch.object(api, 'service') as mock_service:
+            mock_service.WSGIService.side_effect = exception.PasteAppNotFound(
+                name='foo', path='/')
+            self.assertRaises(test.TestingException, api.main)
+            mock_exit.assert_called_once_with(1)
+            launcher = mock_service.process_launcher.return_value
+            self.assertFalse(launcher.wait.called)
