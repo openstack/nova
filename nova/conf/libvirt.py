@@ -267,10 +267,21 @@ libvirt_imagecache_opts = [
                help='How frequently to checksum base images'),
 ]
 
+libvirt_lvm_opts = [
+    cfg.StrOpt('volume_clear',
+               default='zero',
+               choices=('none', 'zero', 'shred'),
+               help='Method used to wipe old volumes.'),
+    cfg.IntOpt('volume_clear_size',
+               default=0,
+               help='Size in MiB to wipe at start of old volumes. 0 => all'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
     libvirt_imagecache_opts,
+    libvirt_lvm_opts,
 ))
 
 
