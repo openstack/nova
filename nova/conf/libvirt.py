@@ -290,6 +290,13 @@ libvirt_vif_opts = [
                 help='Use virtio for bridge interfaces with KVM/QEMU'),
 ]
 
+libvirt_volume_opts = [
+    cfg.ListOpt('qemu_allowed_storage_drivers',
+                default=[],
+                help='Protocols listed here will be accessed directly '
+                     'from QEMU. Currently supported protocols: [gluster]'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -297,6 +304,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_lvm_opts,
     libvirt_utils_opts,
     libvirt_vif_opts,
+    libvirt_volume_opts,
 ))
 
 

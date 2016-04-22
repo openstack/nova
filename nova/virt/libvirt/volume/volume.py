@@ -16,10 +16,10 @@
 
 """Volume drivers for libvirt."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _LE
 from nova.i18n import _LW
@@ -30,15 +30,7 @@ from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.ListOpt('qemu_allowed_storage_drivers',
-                default=[],
-                help='Protocols listed here will be accessed directly '
-                     'from QEMU. Currently supported protocols: [gluster]'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 SHOULD_LOG_DISCARD_WARNING = True
 
