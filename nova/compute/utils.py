@@ -455,16 +455,12 @@ def upsize_quota_delta(context, new_flavor, old_flavor):
     return resize_quota_delta(context, new_flavor, old_flavor, 1, 1)
 
 
-def reverse_upsize_quota_delta(context, migration_ref):
+def reverse_upsize_quota_delta(context, instance):
     """Calculate deltas required to reverse a prior upsizing
     quota adjustment.
     """
-    old_flavor = objects.Flavor.get_by_id(
-        context, migration_ref['old_instance_type_id'])
-    new_flavor = objects.Flavor.get_by_id(
-        context, migration_ref['new_instance_type_id'])
-
-    return resize_quota_delta(context, new_flavor, old_flavor, -1, -1)
+    return resize_quota_delta(context, instance.new_flavor,
+                              instance.old_flavor, -1, -1)
 
 
 def downsize_quota_delta(context, instance):
