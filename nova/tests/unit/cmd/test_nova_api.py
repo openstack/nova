@@ -16,6 +16,7 @@ import mock
 
 from nova.cmd import api
 from nova import config
+from nova import exception
 from nova import test
 
 
@@ -39,3 +40,28 @@ class TestNovaAPI(test.NoDBTestCase):
         # collide on ports.
         self.flags(osapi_compute_listen_port=0)
         api.main()
+
+    def test_continues_on_failure(self):
+        count = [1, 2]
+
+        fake_server = mock.MagicMock()
+        fake_server.workers = 123
+
+        def fake_service(api, **kw):
+            while count:
+                count.pop()
+                raise exception.PasteAppNotFound(name=api, path='/')
+            return fake_server
+
+        self.flags(enabled_apis=['foo', 'bar', 'baz'])
+        with mock.patch.object(api, 'service') as mock_service:
+            mock_service.WSGIService.side_effect = fake_service
+            api.main()
+            mock_service.WSGIService.assert_has_calls([
+                mock.call('foo', use_ssl=False),
+                mock.call('bar', use_ssl=False),
+                mock.call('baz', use_ssl=False),
+            ])
+            launcher = mock_service.process_launcher.return_value
+            launcher.launch_service.assert_called_once_with(
+                fake_server, workers=123)
