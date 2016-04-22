@@ -12,8 +12,6 @@
 
 import itertools
 
-import nova.conf
-import nova.virt.libvirt.driver
 import nova.virt.libvirt.imagebackend
 import nova.virt.libvirt.imagecache
 import nova.virt.libvirt.storage.lvm
@@ -41,7 +39,6 @@ def list_opts():
     return [
         ('libvirt',
          itertools.chain(
-             nova.virt.libvirt.driver.libvirt_opts,
              nova.virt.libvirt.imagebackend.__imagebackend_opts,
              nova.virt.libvirt.imagecache.imagecache_opts,
              nova.virt.libvirt.storage.lvm.lvm_opts,

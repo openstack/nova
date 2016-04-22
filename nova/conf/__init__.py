@@ -52,7 +52,7 @@ from nova.conf import ipv6
 from nova.conf import ironic
 from nova.conf import key_manager
 # from nova.conf import keystone_authtoken
-# from nova.conf import libvirt
+from nova.conf import libvirt
 from nova.conf import mks
 # from nova.conf import matchmaker_redis
 # from nova.conf import metadata
@@ -123,7 +123,7 @@ ipv6.register_opts(CONF)
 ironic.register_opts(CONF)
 key_manager.register_opts(CONF)
 # keystone_authtoken.register_opts(CONF)
-# libvirt.register_opts(CONF)
+libvirt.register_opts(CONF)
 # matchmaker_redis.register_opts(CONF)
 # metadata.register_opts(CONF)
 # metrics.register_opts(CONF)
