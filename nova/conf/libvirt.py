@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
 from oslo_config import cfg
 
 # Downtime period in milliseconds
@@ -213,14 +215,45 @@ libvirt_general_opts = [
                     'kernel (usually 1-99)')
 ]
 
+libvirt_imagebackend_opts = [
+    cfg.StrOpt('images_type',
+               default='default',
+               choices=('raw', 'qcow2', 'lvm', 'rbd', 'ploop', 'default'),
+               help='VM Images format. If default is specified, then'
+                    ' use_cow_images flag is used instead of this one.'),
+    cfg.StrOpt('images_volume_group',
+               help='LVM Volume Group that is used for VM images, when you'
+                    ' specify images_type=lvm.'),
+    cfg.BoolOpt('sparse_logical_volumes',
+                default=False,
+                help='Create sparse logical volumes (with virtualsize)'
+                     ' if this flag is set to True.'),
+    cfg.StrOpt('images_rbd_pool',
+               default='rbd',
+               help='The RADOS pool in which rbd volumes are stored'),
+    cfg.StrOpt('images_rbd_ceph_conf',
+               default='',  # default determined by librados
+               help='Path to the ceph configuration file to use'),
+    cfg.StrOpt('hw_disk_discard',
+               choices=('ignore', 'unmap'),
+               help='Discard option for nova managed disks. Need'
+                    ' Libvirt(1.0.6) Qemu1.5 (raw format) Qemu1.6(qcow2'
+                    ' format)'),
+]
+
+ALL_OPTS = list(itertools.chain(
+    libvirt_general_opts,
+    libvirt_imagebackend_opts,
+))
+
 
 def register_opts(conf):
     conf.register_group(libvirt_group)
-    conf.register_opts(libvirt_general_opts, group=libvirt_group)
+    conf.register_opts(ALL_OPTS, group=libvirt_group)
 
 
 # TODO(hieulq): if not using group name, oslo config will generate duplicate
 # config section. This need to be remove when completely move all libvirt
 # options to this place.
 def list_opts():
-    return {libvirt_group.name: libvirt_general_opts}
+    return {libvirt_group.name: ALL_OPTS}
