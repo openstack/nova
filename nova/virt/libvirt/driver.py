@@ -119,8 +119,6 @@ uefi_logged = False
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume.iscsi',
-                group='libvirt')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
