@@ -1209,6 +1209,11 @@ object_data = {
 
 
 class TestObjectVersions(test.NoDBTestCase):
+
+    def setUp(self):
+        super(test.NoDBTestCase, self).setUp()
+        base.NovaObjectRegistry.register_notification_objects()
+
     def test_versions(self):
         checker = fixture.ObjectVersionChecker(
             base.NovaObjectRegistry.obj_classes())

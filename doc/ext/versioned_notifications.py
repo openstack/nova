@@ -41,6 +41,7 @@ class VersionedNotificationDirective(Directive):
         return self._build_markup(notifications)
 
     def _collect_notifications(self):
+        base.NovaObjectRegistry.register_notification_objects()
         notifications = []
         ovos = base.NovaObjectRegistry.obj_classes()
         for name, cls in ovos.items():
