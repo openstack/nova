@@ -41,8 +41,7 @@ class QuotaIntegrationTestCase(test.TestCase):
 
     def setUp(self):
         super(QuotaIntegrationTestCase, self).setUp()
-        self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   quota_instances=2,
+        self.flags(quota_instances=2,
                    quota_cores=4,
                    quota_floating_ips=1,
                    network_manager='nova.network.manager.FlatDHCPManager')

@@ -64,7 +64,7 @@ class FakeDriverMultiNodeTestCase(BaseTestCase):
 class MultiNodeComputeTestCase(BaseTestCase):
     def setUp(self):
         super(MultiNodeComputeTestCase, self).setUp()
-        self.flags(compute_driver='nova.virt.fake.FakeDriver')
+        self.flags(compute_driver='fake.FakeDriver')
         self.compute = importutils.import_object(CONF.compute_manager)
         self.flags(use_local=True, group='conductor')
         self.conductor = self.start_service('conductor',

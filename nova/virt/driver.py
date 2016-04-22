@@ -1618,9 +1618,9 @@ def load_compute_driver(virtapi, compute_driver=None):
 
     LOG.info(_LI("Loading compute driver '%s'"), compute_driver)
     try:
-        driver = importutils.import_object_ns('nova.virt',
-                                              compute_driver,
-                                              virtapi)
+        driver = importutils.import_object(
+            'nova.virt.%s' % compute_driver,
+            virtapi)
         return utils.check_isinstance(driver, ComputeDriver)
     except ImportError:
         LOG.exception(_LE("Unable to load the virtualization driver"))
