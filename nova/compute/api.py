@@ -418,8 +418,15 @@ class API(base.Base):
         same the network block
         """
         if requested_networks is not None:
+            if requested_networks.no_allocate:
+                # If the network request was specifically 'none' meaning don't
+                # allocate any networks, we just return the number of requested
+                # instances since quotas don't change at all.
+                return max_count
+
             # NOTE(danms): Temporary transition
             requested_networks = requested_networks.as_tuples()
+
         return self.network_api.validate_networks(context, requested_networks,
                                                   max_count)
 
