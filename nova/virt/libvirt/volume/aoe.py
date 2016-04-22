@@ -11,22 +11,15 @@
 #    under the License.
 
 from os_brick.initiator import connector
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.IntOpt('num_aoe_discover_tries',
-               default=3,
-               help='Number of times to rediscover AoE target to find volume'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
