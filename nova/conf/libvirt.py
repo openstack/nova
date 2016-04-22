@@ -361,6 +361,15 @@ libvirt_volume_nfs_opts = [
                     'of the nfs man page for details'),
 ]
 
+libvirt_volume_quobyte_opts = [
+    cfg.StrOpt('quobyte_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help='Directory where the Quobyte volume is mounted on the '
+                    'compute node'),
+    cfg.StrOpt('quobyte_client_cfg',
+               help='Path to a Quobyte Client configuration file.'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -375,6 +384,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_iser_opts,
     libvirt_volume_net_opts,
     libvirt_volume_nfs_opts,
+    libvirt_volume_quobyte_opts,
 ))
 
 

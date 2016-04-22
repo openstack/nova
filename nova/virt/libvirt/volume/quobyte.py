@@ -17,13 +17,11 @@ import errno
 import os
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
 import six
 
 import nova.conf
-from nova.conf import paths
 from nova import exception as nova_exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -34,17 +32,7 @@ from nova.virt.libvirt.volume import fs
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.StrOpt('quobyte_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help='Directory where the Quobyte volume is mounted on the '
-                    'compute node'),
-    cfg.StrOpt('quobyte_client_cfg',
-               help='Path to a Quobyte Client configuration file.'),
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(volume_opts, 'libvirt')
 
 SOURCE_PROTOCOL = 'quobyte'
 SOURCE_TYPE = 'file'
