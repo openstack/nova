@@ -19,26 +19,17 @@ import os
 import tempfile
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six
 
+import nova.conf
 from nova.i18n import _LE, _LW
 from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-libvirt_opts = [
-    cfg.StrOpt('remote_filesystem_transport',
-               default='ssh',
-               choices=('ssh', 'rsync'),
-               help='Use ssh or rsync transport for creating, copying, '
-                    'removing files on the remote host.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(libvirt_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 def mount_share(mount_path, export_path,

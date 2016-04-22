@@ -390,6 +390,14 @@ libvirt_volume_smbfs_opts = [
                     'libvirt-qemu uid and gid must be specified.'),
 ]
 
+libvirt_remotefs_opts = [
+    cfg.StrOpt('remote_filesystem_transport',
+               default='ssh',
+               choices=('ssh', 'rsync'),
+               help='Use ssh or rsync transport for creating, copying, '
+                    'removing files on the remote host.'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -407,6 +415,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_quobyte_opts,
     libvirt_volume_scality_opts,
     libvirt_volume_smbfs_opts,
+    libvirt_remotefs_opts
 ))
 
 
@@ -415,8 +424,5 @@ def register_opts(conf):
     conf.register_opts(ALL_OPTS, group=libvirt_group)
 
 
-# TODO(hieulq): if not using group name, oslo config will generate duplicate
-# config section. This need to be remove when completely move all libvirt
-# options to this place.
 def list_opts():
-    return {libvirt_group.name: ALL_OPTS}
+    return {libvirt_group: ALL_OPTS}
