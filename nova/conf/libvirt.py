@@ -378,6 +378,18 @@ libvirt_volume_scality_opts = [
                help='Base dir where Scality SOFS shall be mounted'),
 ]
 
+libvirt_volume_smbfs_opts = [
+    cfg.StrOpt('smbfs_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help='Directory where the SMBFS shares are mounted on the '
+                    'compute node'),
+    cfg.StrOpt('smbfs_mount_options',
+               default='',
+               help='Mount options passed to the SMBFS client. See '
+                    'mount.cifs man page for details. Note that the '
+                    'libvirt-qemu uid and gid must be specified.'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -394,6 +406,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_nfs_opts,
     libvirt_volume_quobyte_opts,
     libvirt_volume_scality_opts,
+    libvirt_volume_smbfs_opts,
 ))
 
 
