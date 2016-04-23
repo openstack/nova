@@ -34,6 +34,7 @@ from nova import db
 from nova import exception
 from nova.network import driver
 from nova.network import linux_net
+from nova.network import model as network_model
 from nova import objects
 from nova import test
 from nova import utils
@@ -1210,12 +1211,36 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             linux_net._set_device_mtu('fake-dev')
             ex.assert_has_calls(calls)
 
-    def _ovs_vif_port(self, calls):
+    def _ovs_vif_port(self, calls, interface_type=None):
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
             linux_net.create_ovs_vif_port('fake-bridge', 'fake-dev',
                                           'fake-iface-id', 'fake-mac',
-                                          'fake-instance-uuid')
+                                          'fake-instance-uuid',
+                                          interface_type=interface_type)
             ex.assert_has_calls(calls)
+
+    def test_ovs_vif_port_cmd(self):
+        expected = ['--', '--if-exists',
+                    'del-port', 'fake-dev', '--', 'add-port',
+                    'fake-bridge', 'fake-dev',
+                    '--', 'set', 'Interface', 'fake-dev',
+                    'external-ids:iface-id=fake-iface-id',
+                    'external-ids:iface-status=active',
+                    'external-ids:attached-mac=fake-mac',
+                    'external-ids:vm-uuid=fake-instance-uuid'
+                ]
+        cmd = linux_net._create_ovs_vif_cmd('fake-bridge', 'fake-dev',
+                                            'fake-iface-id', 'fake-mac',
+                                            'fake-instance-uuid')
+
+        self.assertEqual(expected, cmd)
+
+        expected += ['type=fake-type']
+        cmd = linux_net._create_ovs_vif_cmd('fake-bridge', 'fake-dev',
+                                            'fake-iface-id', 'fake-mac',
+                                            'fake-instance-uuid',
+                                            'fake-type')
+        self.assertEqual(expected, cmd)
 
     def test_ovs_vif_port(self):
         calls = [
@@ -1230,6 +1255,22 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                           run_as_root=True)
                 ]
         self._ovs_vif_port(calls)
+
+    @mock.patch.object(linux_net, '_ovs_vsctl')
+    @mock.patch.object(linux_net, '_create_ovs_vif_cmd')
+    @mock.patch.object(linux_net, '_set_device_mtu')
+    def test_ovs_vif_port_with_type_vhostuser(self, mock_set_device_mtu,
+                                              mock_create_cmd, mock_vsctl):
+        linux_net.create_ovs_vif_port(
+            'fake-bridge',
+            'fake-dev', 'fake-iface-id', 'fake-mac',
+            "fake-instance-uuid", mtu=1500,
+            interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
+        mock_create_cmd.assert_called_once_with('fake-bridge',
+            'fake-dev', 'fake-iface-id', 'fake-mac',
+            "fake-instance-uuid", network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
+        self.assertFalse(mock_set_device_mtu.called)
+        self.assertTrue(mock_vsctl.called)
 
     def test_ovs_vif_port_with_mtu(self):
         self.flags(network_device_mtu=10000)
@@ -1370,16 +1411,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.driver._exec_ebtables('fake')
         self.assertEqual(2, len(executes))
         self.mox.UnsetStubs()
-
-    def test_ovs_set_vhostuser_type(self):
-        calls = [
-                 mock.call('ovs-vsctl', '--timeout=120', '--', 'set',
-                           'Interface', 'fake-dev', 'type=dpdkvhostuser',
-                           run_as_root=True)
-                 ]
-        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
-            linux_net.ovs_set_vhostuser_port_type('fake-dev')
-            ex.assert_has_calls(calls)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
