@@ -1816,6 +1816,44 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     block_device_mapping=mock.ANY,
                     node='node2', limits=[])
 
+    def test_cleanup_allocated_networks_none_requested(self):
+        # Tests that we don't deallocate networks if 'none' were specifically
+        # requested.
+        fake_inst = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['system_metadata'])
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='none')])
+        with mock.patch.object(self.conductor.network_api,
+                               'deallocate_for_instance') as deallocate:
+            with mock.patch.object(fake_inst, 'save') as mock_save:
+                self.conductor._cleanup_allocated_networks(
+                    self.context, fake_inst, requested_networks)
+        self.assertFalse(deallocate.called)
+        self.assertEqual('False',
+                         fake_inst.system_metadata['network_allocated'],
+                         fake_inst.system_metadata)
+        mock_save.assert_called_once_with()
+
+    def test_cleanup_allocated_networks_auto_or_none_provided(self):
+        # Tests that we deallocate networks if auto-allocating networks or
+        # requested_networks=None.
+        fake_inst = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['system_metadata'])
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='auto')])
+        for req_net in (requested_networks, None):
+            with mock.patch.object(self.conductor.network_api,
+                                   'deallocate_for_instance') as deallocate:
+                with mock.patch.object(fake_inst, 'save') as mock_save:
+                    self.conductor._cleanup_allocated_networks(
+                        self.context, fake_inst, req_net)
+        deallocate.assert_called_once_with(
+            self.context, fake_inst, requested_networks=req_net)
+        self.assertEqual('False',
+                         fake_inst.system_metadata['network_allocated'],
+                         fake_inst.system_metadata)
+        mock_save.assert_called_once_with()
+
 
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         test_compute.BaseTestCase):

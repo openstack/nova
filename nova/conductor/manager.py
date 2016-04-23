@@ -267,8 +267,11 @@ class ComputeTaskManager(base.Base):
     def _cleanup_allocated_networks(
             self, context, instance, requested_networks):
         try:
-            self.network_api.deallocate_for_instance(
-                context, instance, requested_networks=requested_networks)
+            # If we were told not to allocate networks let's save ourselves
+            # the trouble of calling the network API.
+            if not (requested_networks and requested_networks.no_allocate):
+                self.network_api.deallocate_for_instance(
+                    context, instance, requested_networks=requested_networks)
         except Exception:
             msg = _LE('Failed to deallocate networks')
             LOG.exception(msg, instance=instance)
