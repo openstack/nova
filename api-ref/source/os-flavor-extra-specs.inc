@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -11,6 +10,33 @@
 Lists, creates, deletes, and updates the extra-specs or keys for a
 flavor.
 
+List Extra Specs For A Flavor
+=============================
+
+.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs
+
+Lists all extra specs for a flavor, by ID.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - flavor_id: flavor_id
+
+Response
+--------
+
+**Example List Extra Specs For A Flavor: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-list-resp.json
+   :language: javascript
+
 Create Extra Specs For A Flavor
 ===============================
 
@@ -20,8 +46,7 @@ Creates extra specs for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -44,34 +69,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-create-resp.json
    :language: javascript
 
-List Extra Specs For A Flavor
-=============================
-
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs
-
-Lists all extra specs for a flavor, by ID.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - flavor_id: flavor_id
-
-Response
---------
-
-**Example List Extra Specs For A Flavor: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-list-resp.json
-   :language: javascript
-
 Show An Extra Spec For A Flavor
 ===============================
 
@@ -81,8 +78,7 @@ Shows an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -110,8 +106,8 @@ Updates an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), uauthorized(401), forbidden(403)
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -144,8 +140,7 @@ Deletes an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
