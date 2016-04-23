@@ -960,8 +960,14 @@ floating_ip_pools:
   description: |
     The ``floating_ip_pools`` object.
   in: body
-  required: false
+  required: true
   type: array
+floating_ip_pool_name:
+  description: |
+    The name of the floating ip pool.
+  in: body
+  required: true
+  type: string
 floating_ips:
   description: |
     The number of allowed floating IP addresses for each tenant.
