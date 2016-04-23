@@ -4770,7 +4770,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      image_meta, disk_info)
         self.assertNotEqual(cfg.os_cmdline, "")
 
-    def test_get_guest_config_armv7(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_get_guest_storage_config")
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
+    def test_get_guest_config_armv7(self, mock_numa, mock_storage):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.arch = arch.ARMV7
@@ -4799,7 +4802,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      image_meta, disk_info)
         self.assertEqual(cfg.os_mach_type, "vexpress-a15")
 
-    def test_get_guest_config_aarch64(self):
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_get_guest_storage_config")
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
+    def test_get_guest_config_aarch64(self, mock_numa, mock_storage):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.arch = arch.AARCH64
@@ -6243,11 +6249,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(29, fake_timer.counter, "Didn't wait the expected "
                                                  "amount of time")
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_all_pass_with_block_migration(
-            self, mock_cpu, mock_test_file):
+            self, mock_cpu, mock_test_file, mock_svc):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -6274,11 +6281,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          "is_volume_backed": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_all_pass_no_block_migration(
-            self, mock_cpu, mock_test_file):
+            self, mock_cpu, mock_test_file, mock_svc):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -6328,11 +6336,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                            "is_volume_backed": False}
         self.assertDictEqual(expected_result, result.to_legacy_dict())
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_no_instance_cpu_info(
-            self, mock_cpu, mock_test_file):
+            self, mock_cpu, mock_test_file, mock_svc):
         instance_ref = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': jsonutils.dumps({
@@ -6361,9 +6370,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          "is_volume_backed": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_incompatible_cpu_raises(
-            self, mock_cpu):
+            self, mock_cpu, mock_svc):
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -16766,9 +16776,10 @@ class _BaseSnapshotTests(test.NoDBTestCase):
         recv_meta = self.image_service.create(self.context, sent_meta)
         return recv_meta
 
+    @mock.patch.object(host.Host, 'has_min_version')
     @mock.patch.object(imagebackend.Image, 'resolve_driver_format')
     @mock.patch.object(host.Host, 'get_domain')
-    def _snapshot(self, image_id, mock_get_domain, mock_resolve):
+    def _snapshot(self, image_id, mock_get_domain, mock_resolve, mock_version):
         mock_get_domain.return_value = FakeVirtDomain()
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         driver.snapshot(self.context, self.instance_ref, image_id,
