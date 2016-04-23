@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -19,8 +18,7 @@ Lists flavors.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -58,8 +56,8 @@ Creates a flavor.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409), computeFault(500)
 
 Request
 -------
@@ -81,57 +79,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/flavor-manage/flavor-create-post-resp.json
    :language: javascript
 
-Show Flavor Details
-===================
-
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}
-
-Shows details for a flavor.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - flavor_id: flavor_id
-
-Response
---------
-
-**Example Show Flavor Details: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/flavors/flavor-get-resp.json
-   :language: javascript
-
-Delete Flavor
-=============
-
-.. rest_method:: DELETE /v2.1/{tenant_id}/flavors/{flavor_id}
-
-Deletes a flavor.
-
-Normal response codes: 202
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - flavor_id: flavor_id
-
-Response
---------
-
 List Flavors With Details
 =========================
 
@@ -141,8 +88,7 @@ Lists flavors with details.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -170,4 +116,53 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/flavors/flavors-detail-resp.json
    :language: javascript
+
+Show Flavor Details
+===================
+
+.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}
+
+Shows details for a flavor.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - flavor_id: flavor_id
+
+Response
+--------
+
+**Example Show Flavor Details: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/flavors/flavor-get-resp.json
+   :language: javascript
+
+Delete Flavor
+=============
+
+.. rest_method:: DELETE /v2.1/{tenant_id}/flavors/{flavor_id}
+
+Deletes a flavor.
+
+Normal response codes: 202
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - flavor_id: flavor_id
+
+Response
+--------
 
