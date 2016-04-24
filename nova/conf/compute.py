@@ -287,9 +287,26 @@ instance_cleaning_opts = [
 ]
 
 rpcapi_opts = [
-    cfg.StrOpt('compute_topic',
-               default='compute',
-               help='The topic compute nodes listen on'),
+    cfg.StrOpt("compute_topic",
+            default="compute",
+            help="""
+This is the message queue topic that the compute service 'listens' on. It is
+used when the compute service is started up to configure the queue, and
+whenever an RPC call to the compute service is made.
+
+* Possible values:
+
+    Any string, but there is almost never any reason to ever change this value
+    from its default of 'compute'.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    None
+"""),
 ]
 
 ALL_OPTS = list(itertools.chain(
