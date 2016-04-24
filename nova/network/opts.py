@@ -16,7 +16,6 @@ import nova.network
 import nova.network.driver
 import nova.network.floating_ips
 import nova.network.rpcapi
-import nova.network.security_group.openstack_driver
 
 
 def list_opts():
@@ -25,6 +24,5 @@ def list_opts():
          itertools.chain(
              nova.network.driver.driver_opts,
              nova.network.rpcapi.rpcapi_opts,
-             nova.network.security_group.openstack_driver.security_group_opts,
          ))
     ]

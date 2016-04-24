@@ -13,21 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
+import nova.conf
 import nova.network
 
-security_group_opts = [
-    cfg.StrOpt(
-        'security_group_api',
-        default='nova',
-        help='DEPRECATED: The full class name of the security API class',
-        deprecated_for_removal=True),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(security_group_opts)
+CONF = nova.conf.CONF
 
 NOVA_DRIVER = ('nova.compute.api.SecurityGroupAPI')
 NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
