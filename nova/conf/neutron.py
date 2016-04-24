@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
 
 from oslo_config import cfg
 
@@ -34,11 +35,28 @@ neutron_opts = [
                      ' extensions'),
 ]
 
+metadata_proxy_opts = [
+    cfg.BoolOpt(
+        'service_metadata_proxy',
+        default=False,
+        help='Set flag to indicate Neutron will proxy metadata requests and '
+             'resolve instance ids.'),
+    cfg.StrOpt(
+         'metadata_proxy_shared_secret',
+         default='', secret=True,
+         help='Shared secret to validate proxies Neutron metadata requests'),
+]
+
+ALL_OPTS = list(itertools.chain(
+    neutron_opts,
+    metadata_proxy_opts
+))
+
 
 def register_opts(conf):
     conf.register_group(neutron_group)
-    conf.register_opts(neutron_opts, group=neutron_group)
+    conf.register_opts(ALL_OPTS, group=neutron_group)
 
 
 def list_opts():
-    return {neutron_group: neutron_opts}
+    return {neutron_group: ALL_OPTS}
