@@ -15,7 +15,6 @@
 Client side of the compute RPC API.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -30,14 +29,7 @@ from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import service as service_obj
 from nova import rpc
 
-rpcapi_opts = [
-    cfg.StrOpt('compute_topic',
-               default='compute',
-               help='The topic compute nodes listen on'),
-]
-
 CONF = nova.conf.CONF
-CONF.register_opts(rpcapi_opts)
 
 LOG = logging.getLogger(__name__)
 LAST_VERSION = None

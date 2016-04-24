@@ -17,10 +17,10 @@ Unit Tests for nova.compute.rpcapi
 """
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova import context
 from nova import exception
 from nova.objects import block_device as objects_block_dev
@@ -30,7 +30,7 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 class ComputeRpcAPITestCase(test.NoDBTestCase):

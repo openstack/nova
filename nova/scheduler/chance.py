@@ -21,14 +21,12 @@ Chance (Random) Scheduler implementation
 
 import random
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.scheduler import driver
 
-CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
+CONF = nova.conf.CONF
 
 
 class ChanceScheduler(driver.Scheduler):

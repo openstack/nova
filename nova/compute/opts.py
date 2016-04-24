@@ -10,19 +10,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import itertools
-
 import nova.compute.flavors
 import nova.compute.monitors
-import nova.compute.rpcapi
 import nova.conf
 
 
 def list_opts():
     return [
         ('DEFAULT',
-         itertools.chain(
              nova.compute.flavors.flavor_opts,
-             nova.compute.rpcapi.rpcapi_opts,
-         )),
+         ),
     ]

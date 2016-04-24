@@ -286,6 +286,12 @@ instance_cleaning_opts = [
                     'files.'),
 ]
 
+rpcapi_opts = [
+    cfg.StrOpt('compute_topic',
+               default='compute',
+               help='The topic compute nodes listen on'),
+]
+
 ALL_OPTS = list(itertools.chain(
            compute_opts,
            resource_tracker_opts,
@@ -294,7 +300,9 @@ ALL_OPTS = list(itertools.chain(
            interval_opts,
            timeout_opts,
            running_deleted_opts,
-           instance_cleaning_opts))
+           instance_cleaning_opts,
+           rpcapi_opts,
+           ))
 
 
 def register_opts(conf):
