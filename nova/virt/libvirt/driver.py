@@ -407,9 +407,6 @@ NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
-# Live snapshot requirements
-MIN_LIBVIRT_LIVESNAPSHOT_VERSION = (1, 0, 0)
-MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 # BlockJobInfo management requirement
 MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 # Relative block commit & rebase (feature is detected,
@@ -1643,17 +1640,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         state = guest.get_power_state(self._host)
 
-        # NOTE(rmk): Live snapshots require QEMU 1.3 and Libvirt 1.0.0.
-        #            These restrictions can be relaxed as other configurations
-        #            can be validated.
         # NOTE(dgenin): Instances with LVM encrypted ephemeral storage require
         #               cold snapshots. Currently, checking for encryption is
         #               redundant because LVM supports only cold snapshots.
         #               It is necessary in case this situation changes in the
         #               future.
-        if (self._host.has_min_version(MIN_LIBVIRT_LIVESNAPSHOT_VERSION,
-                                       MIN_QEMU_LIVESNAPSHOT_VERSION,
-                                       host.HV_DRIVER_QEMU)
+        if (self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU)
              and source_type not in ('lvm')
              and not CONF.ephemeral_storage_encryption.enabled
              and not CONF.workarounds.disable_libvirt_livesnapshot):
