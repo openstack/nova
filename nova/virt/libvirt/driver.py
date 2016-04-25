@@ -413,7 +413,6 @@ MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
 # libvirt discard feature
-MIN_LIBVIRT_DISCARD_VERSION = (1, 0, 6)
 MIN_QEMU_DISCARD_VERSION = (1, 6, 0)
 # While earlier versions could support NUMA reporting and
 # NUMA placement, not until 1.2.7 was there the ability
@@ -3526,14 +3525,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_disk_config(self, instance, name, disk_mapping, inst_type,
                                image_type=None):
         if CONF.libvirt.hw_disk_discard:
-            if not self._host.has_min_version(MIN_LIBVIRT_DISCARD_VERSION,
-                                              MIN_QEMU_DISCARD_VERSION,
-                                              host.HV_DRIVER_QEMU):
-                msg = (_('Volume sets discard option, but libvirt %(libvirt)s'
-                         ' or later is required, qemu %(qemu)s'
+            if not self._host.has_min_version(hv_ver=MIN_QEMU_DISCARD_VERSION,
+                                              hv_type=host.HV_DRIVER_QEMU):
+                msg = (_('Volume sets discard option, qemu %(qemu)s'
                          ' or later is required.') %
-                      {'libvirt': MIN_LIBVIRT_DISCARD_VERSION,
-                       'qemu': MIN_QEMU_DISCARD_VERSION})
+                      {'qemu': MIN_QEMU_DISCARD_VERSION})
                 raise exception.Invalid(msg)
 
         image = self.image_backend.image(instance,
