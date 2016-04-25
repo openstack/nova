@@ -1362,24 +1362,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDevicePrepareFailed,
                           drvr._prepare_pci_devices_for_use, pci_devices)
 
-    def test_detach_pci_devices_exception(self):
-
-        pci_devices = [dict(hypervisor_name='xxx',
-                            id='id1',
-                            instance_uuid='uuid')]
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.mox.StubOutWithMock(host.Host,
-                                 'has_min_version')
-        host.Host.has_min_version = lambda x, y: False
-
-        self.assertRaises(exception.PciDeviceDetachFailed,
-                          drvr._detach_pci_devices, None, pci_devices)
-
-    @mock.patch.object(host.Host,
-                       'has_min_version', return_value=True)
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
-    def test_detach_pci_devices(self, mocked_get_xml_desc, *args):
+    def test_detach_pci_devices(self, mocked_get_xml_desc):
 
         fake_domXML1_with_pci = (
             """<domain> <devices>
@@ -1422,10 +1406,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(dom)
         drvr._detach_pci_devices(guest, pci_devices)
 
-    @mock.patch.object(host.Host,
-                       'has_min_version', return_value=True)
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
-    def test_detach_pci_devices_timeout(self, mocked_get_xml_desc, *args):
+    def test_detach_pci_devices_timeout(self, mocked_get_xml_desc):
 
         fake_domXML1_with_pci = (
             """<domain> <devices>
