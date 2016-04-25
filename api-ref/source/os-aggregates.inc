@@ -1,16 +1,41 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
-=========================================
- Host aggregates (os-aggregates, action)
-=========================================
+================================
+ Host aggregates (os-aggregates)
+================================
 
 Creates and manages host aggregates. An aggregate assigns metadata to
 groups of compute nodes. Aggregates are only visible to the cloud
 provider.
+
+List Aggregates
+===============
+
+.. rest_method:: GET /v2.1/{tenant_id}/os-aggregates
+
+Lists all aggregates. Includes the ID, name, and availability zone for each aggregate.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+
+Response
+--------
+
+**Example List Aggregates: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-get-resp.json
+   :language: javascript
 
 Create Aggregate
 ================
@@ -21,8 +46,7 @@ Creates an aggregate in an availability zone.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
 
 Request
 -------
@@ -46,33 +70,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-post-resp.json
    :language: javascript
 
-List Aggregates
-===============
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-aggregates
-
-Lists all aggregates. Includes the ID, name, and availability zone for each aggregate.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
-**Example List Aggregates: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-get-resp.json
-   :language: javascript
-
 Show Aggregate Details
 ======================
 
@@ -82,8 +79,7 @@ Shows details for an aggregate. Details include hosts and metadata.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -101,29 +97,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-get-resp.json
    :language: javascript
 
-Delete Aggregate
-================
-
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-aggregates/{aggregate_id}
-
-Deletes an aggregate.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - aggregate_id: aggregate_id
-
-Response
---------
-
 Update Aggregate
 ================
 
@@ -133,8 +106,8 @@ Updates either or both the name and availability zone for an aggregate.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -157,6 +130,28 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregate-update-post-resp.json
    :language: javascript
 
+Delete Aggregate
+================
+
+.. rest_method:: DELETE /v2.1/{tenant_id}/os-aggregates/{aggregate_id}
+
+Deletes an aggregate.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - aggregate_id: aggregate_id
+
+Response
+--------
+
 Add Host
 ========
 
@@ -168,8 +163,8 @@ Specify the ``add_host`` action in the request body.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -203,8 +198,8 @@ Specify the ``remove_host`` action in the request body.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -238,8 +233,8 @@ Specify the ``set_metadata`` action in the request body.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
