@@ -2771,42 +2771,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestFeatureHyperV)
 
     @mock.patch.object(host.Host, 'has_min_version')
-    def test_get_guest_config_windows_hyperv_feature1(self, mock_version):
-        def fake_version(lv_ver=None, hv_ver=None, hv_type=None):
-            if lv_ver == (1, 0, 0) and hv_ver == (1, 1, 0):
-                return True
-            return False
-
-        mock_version.side_effect = fake_version
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        instance_ref['os_type'] = 'windows'
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance_ref,
-                                     _fake_network_info(self, 1),
-                                     image_meta, disk_info)
-
-        self.assertIsInstance(cfg.clock,
-                              vconfig.LibvirtConfigGuestClock)
-        self.assertEqual(cfg.clock.offset, "localtime")
-
-        self.assertEqual(3, len(cfg.features))
-        self.assertIsInstance(cfg.features[0],
-                              vconfig.LibvirtConfigGuestFeatureACPI)
-        self.assertIsInstance(cfg.features[1],
-                              vconfig.LibvirtConfigGuestFeatureAPIC)
-        self.assertIsInstance(cfg.features[2],
-                              vconfig.LibvirtConfigGuestFeatureHyperV)
-
-        self.assertTrue(cfg.features[2].relaxed)
-        self.assertFalse(cfg.features[2].spinlocks)
-        self.assertFalse(cfg.features[2].vapic)
-
-    @mock.patch.object(host.Host, 'has_min_version')
     def test_get_guest_config_windows_hyperv_feature2(self, mock_version):
         mock_version.return_value = True
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
