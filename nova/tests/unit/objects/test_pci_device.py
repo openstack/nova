@@ -27,6 +27,7 @@ from nova.objects import instance
 from nova.objects import pci_device
 from nova import test
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 dev_dict = {
     'compute_node_id': 1,
@@ -108,7 +109,7 @@ fake_db_dev_old = {
 class _TestPciDeviceObject(object):
     def _create_fake_instance(self):
         self.inst = instance.Instance()
-        self.inst.uuid = 'fake-inst-uuid'
+        self.inst.uuid = uuids.instance
         self.inst.pci_devices = pci_device.PciDeviceList()
 
     def _create_fake_pci_device(self, ctxt=None):
@@ -370,7 +371,7 @@ class _TestPciDeviceObject(object):
         devobj.allocate(self.inst)
         self.assertEqual(devobj.status,
                          fields.PciDeviceStatus.ALLOCATED)
-        self.assertEqual(devobj.instance_uuid, 'fake-inst-uuid')
+        self.assertEqual(devobj.instance_uuid, uuids.instance)
         self.assertEqual(len(self.inst.pci_devices), 1)
         self.assertEqual(self.inst.pci_devices[0].vendor_id,
                          'v')
@@ -387,7 +388,7 @@ class _TestPciDeviceObject(object):
     def test_allocate_device_fail_owner(self):
         self._create_fake_instance()
         inst_2 = instance.Instance()
-        inst_2.uuid = 'fake-inst-uuid-2'
+        inst_2.uuid = uuids.instance_2
         devobj = pci_device.PciDevice.create(None, dev_dict)
         devobj.claim(self.inst)
         self.assertRaises(exception.PciDeviceInvalidOwner,
@@ -525,7 +526,7 @@ class _TestSRIOVPciDeviceObject(object):
 
     def _create_fake_instance(self):
         self.inst = instance.Instance()
-        self.inst.uuid = 'fake-inst-uuid'
+        self.inst.uuid = uuids.instance
         self.inst.pci_devices = pci_device.PciDeviceList()
 
     def _create_fake_pci_device(self, ctxt=None):

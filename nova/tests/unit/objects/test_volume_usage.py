@@ -15,6 +15,7 @@ from oslo_utils import timeutils
 
 from nova import objects
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -25,8 +26,8 @@ fake_vol_usage = {
     'deleted_at': None,
     'deleted': 0,
     'id': 1,
-    'volume_id': 'fake-vol-id',
-    'instance_uuid': 'fake-inst-uuid',
+    'volume_id': uuids.volume_id,
+    'instance_uuid': uuids.instance,
     'project_id': 'fake-project-id',
     'user_id': 'fake-user-id',
     'availability_zone': None,
@@ -47,8 +48,8 @@ class _TestVolumeUsage(object):
     @mock.patch('nova.db.vol_usage_update', return_value=fake_vol_usage)
     def test_save(self, mock_upd):
         vol_usage = objects.VolumeUsage(self.context)
-        vol_usage.volume_id = 'fake-vol-id'
-        vol_usage.instance_uuid = 'fake-inst-uuid'
+        vol_usage.volume_id = uuids.volume_id
+        vol_usage.instance_uuid = uuids.instance
         vol_usage.project_id = 'fake-project-id'
         vol_usage.user_id = 'fake-user-id'
         vol_usage.availability_zone = None
@@ -58,15 +59,15 @@ class _TestVolumeUsage(object):
         vol_usage.curr_write_bytes = 40
         vol_usage.save()
         mock_upd.assert_called_once_with(
-            self.context, 'fake-vol-id', 10, 20, 30, 40, 'fake-inst-uuid',
+            self.context, uuids.volume_id, 10, 20, 30, 40, uuids.instance,
             'fake-project-id', 'fake-user-id', None, update_totals=False)
         self.compare_obj(vol_usage, fake_vol_usage)
 
     @mock.patch('nova.db.vol_usage_update', return_value=fake_vol_usage)
     def test_save_update_totals(self, mock_upd):
         vol_usage = objects.VolumeUsage(self.context)
-        vol_usage.volume_id = 'fake-vol-id'
-        vol_usage.instance_uuid = 'fake-inst-uuid'
+        vol_usage.volume_id = uuids.volume_id
+        vol_usage.instance_uuid = uuids.instance
         vol_usage.project_id = 'fake-project-id'
         vol_usage.user_id = 'fake-user-id'
         vol_usage.availability_zone = None
@@ -76,7 +77,7 @@ class _TestVolumeUsage(object):
         vol_usage.curr_write_bytes = 40
         vol_usage.save(update_totals=True)
         mock_upd.assert_called_once_with(
-            self.context, 'fake-vol-id', 10, 20, 30, 40, 'fake-inst-uuid',
+            self.context, uuids.volume_id, 10, 20, 30, 40, uuids.instance,
             'fake-project-id', 'fake-user-id', None, update_totals=True)
         self.compare_obj(vol_usage, fake_vol_usage)
 

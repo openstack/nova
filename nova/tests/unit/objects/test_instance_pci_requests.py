@@ -15,6 +15,7 @@ from oslo_serialization import jsonutils
 
 from nova import objects
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 FAKE_UUID = '79a53d6b-0893-4838-a971-15f4f382e7c2'
@@ -72,36 +73,36 @@ class _TestInstancePCIRequests(object):
     def test_get_by_instance_uuid_and_newness(self, mock_get):
         pcir = objects.InstancePCIRequests
         mock_get.return_value = objects.InstancePCIRequests(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             requests=[objects.InstancePCIRequest(count=1, is_new=False),
                       objects.InstancePCIRequest(count=2, is_new=True)])
         old_req = pcir.get_by_instance_uuid_and_newness(self.context,
-                                                        'fake-uuid',
+                                                        uuids.instance,
                                                         False)
         mock_get.return_value = objects.InstancePCIRequests(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             requests=[objects.InstancePCIRequest(count=1, is_new=False),
                       objects.InstancePCIRequest(count=2, is_new=True)])
         new_req = pcir.get_by_instance_uuid_and_newness(self.context,
-                                                        'fake-uuid',
+                                                        uuids.instance,
                                                         True)
         self.assertEqual(1, old_req.requests[0].count)
         self.assertEqual(2, new_req.requests[0].count)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     def test_get_by_instance_current(self, mock_get):
-        instance = objects.Instance(uuid='fake-uuid',
+        instance = objects.Instance(uuid=uuids.instance,
                                     system_metadata={})
         objects.InstancePCIRequests.get_by_instance(self.context,
                                                     instance)
-        mock_get.assert_called_once_with(self.context, 'fake-uuid')
+        mock_get.assert_called_once_with(self.context, uuids.instance)
 
     def test_get_by_instance_legacy(self):
         fakesysmeta = {
             'pci_requests': jsonutils.dumps([fake_legacy_pci_requests[0]]),
             'new_pci_requests': jsonutils.dumps([fake_legacy_pci_requests[1]]),
         }
-        instance = objects.Instance(uuid='fake-uuid',
+        instance = objects.Instance(uuid=uuids.instance,
                                     system_metadata=fakesysmeta)
         requests = objects.InstancePCIRequests.get_by_instance(self.context,
                                                                instance)
