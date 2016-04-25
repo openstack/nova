@@ -21,6 +21,7 @@ from nova import context
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_request_spec
 
 
@@ -33,6 +34,7 @@ def _req_spec_to_db_format(req_spec):
 
 
 def fake_db_req(**updates):
+    ctxt = context.RequestContext('fake-user', 'fake-project')
     instance_uuid = uuidutils.generate_uuid()
     info_cache = objects.InstanceInfoCache()
     info_cache.instance_uuid = instance_uuid
@@ -41,10 +43,12 @@ def fake_db_req(**updates):
             context.RequestContext('fake-user', 'fake-project'))
     req_spec.id = 42
     req_spec.obj_reset_changes()
+    instance = fake_instance.fake_instance_obj(ctxt, objects.Instance,
+            uuid=instance_uuid)
     db_build_request = {
             'id': 1,
             'project_id': 'fake-project',
-            'instance_uuid': None,
+            'instance_uuid': instance_uuid,
             'user_id': 'fake-user',
             'display_name': '',
             'instance_metadata': jsonutils.dumps({'foo': 'bar'}),
@@ -61,7 +65,7 @@ def fake_db_req(**updates):
             'key_name': None,
             'locked_by': None,
             'request_spec': _req_spec_to_db_format(req_spec),
-            'instance': None,
+            'instance': jsonutils.dumps(instance.obj_to_primitive()),
             'created_at': datetime.datetime(2016, 1, 16),
             'updated_at': datetime.datetime(2016, 1, 16),
     }
@@ -82,10 +86,10 @@ def fake_db_req(**updates):
     return db_build_request
 
 
-def fake_req_obj(context, db_req=None):
+def fake_req_obj(ctxt, db_req=None):
     if db_req is None:
         db_req = fake_db_req()
-    req_obj = objects.BuildRequest(context)
+    req_obj = objects.BuildRequest(ctxt)
     for field in req_obj.fields:
         value = db_req[field]
         # create() can't be called if this is set
@@ -105,6 +109,9 @@ def fake_req_obj(context, db_req=None):
                 setattr(req_obj, field,
                         objects.SecurityGroupList.obj_from_primitive(
                             jsonutils.loads(value)))
+            elif field == 'instance':
+                req_obj.instance = objects.Instance.obj_from_primitive(
+                        jsonutils.loads(value))
         elif field == 'instance_metadata':
             setattr(req_obj, field, jsonutils.loads(value))
         else:

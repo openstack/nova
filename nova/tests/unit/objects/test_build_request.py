@@ -12,10 +12,13 @@
 
 import mock
 
+from oslo_serialization import jsonutils
+
 from nova import exception
 from nova import objects
 from nova.objects import build_request
 from nova.tests.unit import fake_build_request
+from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
 
 
@@ -28,14 +31,41 @@ class _TestBuildRequestObject(object):
         get_by_uuid.return_value = fake_req
 
         req_obj = build_request.BuildRequest.get_by_instance_uuid(self.context,
-                fake_req['request_spec']['instance_uuid'])
+                fake_req['instance_uuid'])
 
         self.assertEqual(fake_req['request_spec']['instance_uuid'],
                          req_obj.request_spec.instance_uuid)
+        self.assertEqual(fake_req['instance_uuid'], req_obj.instance_uuid)
         self.assertEqual(fake_req['project_id'], req_obj.project_id)
         self.assertIsInstance(req_obj.request_spec, objects.RequestSpec)
+        self.assertIsInstance(req_obj.instance, objects.Instance)
         get_by_uuid.assert_called_once_with(self.context,
-                fake_req['request_spec']['instance_uuid'])
+                fake_req['instance_uuid'])
+
+    @mock.patch.object(build_request.BuildRequest,
+            '_get_by_instance_uuid_from_db')
+    def test_get_by_instance_uuid_instance_none(self, get_by_uuid):
+        fake_req = fake_build_request.fake_db_req()
+        fake_req['instance'] = None
+        get_by_uuid.return_value = fake_req
+
+        self.assertRaises(exception.BuildRequestNotFound,
+                build_request.BuildRequest.get_by_instance_uuid, self.context,
+                fake_req['instance_uuid'])
+
+    @mock.patch.object(build_request.BuildRequest,
+            '_get_by_instance_uuid_from_db')
+    def test_get_by_instance_uuid_instance_version_too_new(self, get_by_uuid):
+        fake_req = fake_build_request.fake_db_req()
+        instance = fake_instance.fake_instance_obj(self.context,
+                objects.Instance, uuid=fake_req['instance_uuid'])
+        instance.VERSION = '99'
+        fake_req['instance'] = jsonutils.dumps(instance.obj_to_primitive)
+        get_by_uuid.return_value = fake_req
+
+        self.assertRaises(exception.BuildRequestNotFound,
+                build_request.BuildRequest.get_by_instance_uuid, self.context,
+                fake_req['instance_uuid'])
 
     @mock.patch.object(build_request.BuildRequest,
             '_create_in_db')
@@ -50,6 +80,9 @@ class _TestBuildRequestObject(object):
                 self.assertEqual(fake_req[field], changes[field])
             self.assertEqual(fake_req['request_spec']['id'],
                     changes['request_spec_id'])
+            self.assertEqual(
+                    jsonutils.dumps(req_obj.instance.obj_to_primitive()),
+                    changes['instance'])
             return fake_req
 
         with mock.patch.object(build_request.BuildRequest, '_create_in_db',
@@ -59,6 +92,11 @@ class _TestBuildRequestObject(object):
     def test_create_id_set(self):
         req_obj = build_request.BuildRequest(self.context)
         req_obj.id = 3
+
+        self.assertRaises(exception.ObjectActionError, req_obj.create)
+
+    def test_create_uuid_set(self):
+        req_obj = build_request.BuildRequest(self.context)
 
         self.assertRaises(exception.ObjectActionError, req_obj.create)
 
