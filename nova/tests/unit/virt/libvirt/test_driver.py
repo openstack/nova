@@ -767,6 +767,34 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 break
         self.assertTrue(version_arg_found)
 
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.NEXT_MIN_QEMU_VERSION) - 1)
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_next_min_qemu_version_deprecation_warning(self, mock_warning,
+                                                       mock_get_libversion):
+        # Skip test if there's no currently planned new min version
+        if (versionutils.convert_version_to_int(
+                libvirt_driver.NEXT_MIN_QEMU_VERSION) ==
+            versionutils.convert_version_to_int(
+                libvirt_driver.MIN_QEMU_VERSION)):
+            self.skipTest("NEXT_MIN_QEMU_VERSION == MIN_QEMU_VERSION")
+
+        # Test that a warning is logged if the libvirt version is less than
+        # the next required minimum version.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        # assert that the next min version is in a warning message
+        expected_arg = {'version': versionutils.convert_version_to_str(
+            versionutils.convert_version_to_int(
+                libvirt_driver.NEXT_MIN_QEMU_VERSION))}
+        version_arg_found = False
+        for call in mock_warning.call_args_list:
+            if call[0][1] == expected_arg:
+                version_arg_found = True
+                break
+        self.assertTrue(version_arg_found)
+
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                             libvirt_driver.NEXT_MIN_LIBVIRT_VERSION))
@@ -788,6 +816,34 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         expected_arg = {'version': versionutils.convert_version_to_str(
             versionutils.convert_version_to_int(
                 libvirt_driver.NEXT_MIN_LIBVIRT_VERSION))}
+        version_arg_found = False
+        for call in mock_warning.call_args_list:
+            if call[0][1] == expected_arg:
+                version_arg_found = True
+                break
+        self.assertFalse(version_arg_found)
+
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.NEXT_MIN_QEMU_VERSION))
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_next_min_qemu_version_ok(self, mock_warning, mock_get_libversion):
+        # Skip test if there's no currently planned new min version
+
+        if (versionutils.convert_version_to_int(
+                libvirt_driver.NEXT_MIN_QEMU_VERSION) ==
+            versionutils.convert_version_to_int(
+                libvirt_driver.MIN_QEMU_VERSION)):
+            self.skipTest("NEXT_MIN_QEMU_VERSION == MIN_QEMU_VERSION")
+
+        # Test that a warning is not logged if the libvirt version is greater
+        # than or equal to NEXT_MIN_QEMU_VERSION.
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        # assert that the next min version is in a warning message
+        expected_arg = {'version': versionutils.convert_version_to_str(
+            versionutils.convert_version_to_int(
+                libvirt_driver.NEXT_MIN_QEMU_VERSION))}
         version_arg_found = False
         for call in mock_warning.call_args_list:
             if call[0][1] == expected_arg:
@@ -13737,7 +13793,8 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(stats["memory_mb_used"], 88)
         self.assertEqual(stats["local_gb_used"], 20)
         self.assertEqual(stats["hypervisor_type"], 'QEMU')
-        self.assertEqual(stats["hypervisor_version"], 1001000)
+        self.assertEqual(stats["hypervisor_version"],
+                         fakelibvirt.FAKE_QEMU_VERSION)
         self.assertEqual(stats["hypervisor_hostname"], 'compute1')
         cpu_info = jsonutils.loads(stats["cpu_info"])
         self.assertEqual(cpu_info,
