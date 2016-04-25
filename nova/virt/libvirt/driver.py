@@ -406,8 +406,6 @@ NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
-# BlockJobInfo management requirement
-MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 # Relative block commit & rebase (feature is detected,
 # this version is only used for messaging)
 MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
@@ -2173,20 +2171,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'merge_target_file': 'b.img' or None (if merging file_to_merge into
                                                   active image)
           }
-
-
-        Libvirt blockjob handling required for this method is broken
-        in versions of libvirt that do not contain:
-        http://libvirt.org/git/?p=libvirt.git;h=0f9e67bfad (1.1.1)
-        (Patch is pending in 1.0.5-maint branch as well, but we cannot detect
-        libvirt 1.0.5.5 vs. 1.0.5.6 here.)
         """
-
-        if not self._host.has_min_version(MIN_LIBVIRT_BLOCKJOBINFO_VERSION):
-            ver = '.'.join([str(x) for x in MIN_LIBVIRT_BLOCKJOBINFO_VERSION])
-            msg = _("Libvirt '%s' or later is required for online deletion "
-                    "of volume snapshots.") % ver
-            raise exception.Invalid(msg)
 
         LOG.debug('volume_snapshot_delete: delete_info: %s', delete_info,
                   instance=instance)

@@ -16203,13 +16203,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vda', 'snap.img', 0, flags=0)
 
@@ -16239,13 +16237,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_guest')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_guest(instance).AndReturn(guest)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vda', 'snap.img', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
@@ -16367,13 +16363,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         self.mox.ReplayAll()
 
@@ -16400,13 +16394,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
@@ -16435,12 +16427,10 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
             mock.patch.object(domain, 'XMLDesc', return_value=self.dom_xml),
             mock.patch.object(self.drvr._host, 'get_guest',
                               return_value=guest),
-            mock.patch.object(self.drvr._host, 'has_min_version',
-                              return_value=True),
             mock.patch.object(domain, 'blockRebase'),
             mock.patch.object(domain, 'blockJobInfo',
                               return_value={'cur': 1000, 'end': 1000})
-        ) as (mock_xmldesc, mock_get_guest, mock_has_min_version,
+        ) as (mock_xmldesc, mock_get_guest,
               mock_rebase, mock_job_info):
 
             self.drvr._volume_snapshot_delete(self.c, instance,
@@ -16449,7 +16439,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
             mock_xmldesc.assert_called_once_with(flags=0)
             mock_get_guest.assert_called_once_with(instance)
-            mock_has_min_version.assert_called_once_with((1, 1, 1,))
             mock_rebase.assert_called_once_with('vda', None, 0, flags=0)
             mock_job_info.assert_called_once_with('vda', flags=0)
 
@@ -16468,12 +16457,10 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                               return_value=self.dom_netdisk_xml_2),
             mock.patch.object(self.drvr._host, 'get_guest',
                               return_value=guest),
-            mock.patch.object(self.drvr._host, 'has_min_version',
-                              return_value=True),
             mock.patch.object(domain, 'blockRebase'),
             mock.patch.object(domain, 'blockJobInfo',
                               return_value={'cur': 1000, 'end': 1000})
-        ) as (mock_xmldesc, mock_get_guest, mock_has_min_version,
+        ) as (mock_xmldesc, mock_get_guest,
               mock_rebase, mock_job_info):
 
             self.drvr._volume_snapshot_delete(self.c, instance,
@@ -16482,7 +16469,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
             mock_xmldesc.assert_called_once_with(flags=0)
             mock_get_guest.assert_called_once_with(instance)
-            mock_has_min_version.assert_called_once_with((1, 1, 1,))
             mock_rebase.assert_called_once_with('vdb', None, 0, flags=0)
             mock_job_info.assert_called_once_with('vdb', flags=0)
 
@@ -16556,9 +16542,6 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
         self.mox.StubOutWithMock(self.drvr, '_volume_api')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
-
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         self.drvr._volume_api.update_snapshot_status(
             self.c, self.snapshot_id, 'error_deleting')
@@ -16595,13 +16578,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vdb', 'vdb[1]', 0, flags=0)
 
@@ -16636,13 +16617,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vdb', 'vdb[1]', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE)
@@ -16680,13 +16659,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         self.mox.ReplayAll()
 
@@ -16719,13 +16696,11 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         domain.XMLDesc(flags=0).AndReturn(self.dom_netdisk_xml)
 
         self.mox.StubOutWithMock(self.drvr._host, 'get_domain')
-        self.mox.StubOutWithMock(self.drvr._host, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
         self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.drvr._host.get_domain(instance).AndReturn(domain)
-        self.drvr._host.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vdb', 'vdb[0]', 'vdb[1]', 0,
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
