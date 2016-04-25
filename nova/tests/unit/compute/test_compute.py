@@ -225,8 +225,8 @@ class BaseTestCase(test.TestCase):
                 return {'id': id,
                         'name': 'fake_name',
                         'status': 'active',
-                        'properties': {'kernel_id': 'fake_kernel_id',
-                                       'ramdisk_id': 'fake_ramdisk_id',
+                        'properties': {'kernel_id': uuids.kernel_id,
+                                       'ramdisk_id': uuids.ramdisk_id,
                                        'something_else': 'meow'}}
             else:
                 raise exception.ImageNotFound(image_id=id)
@@ -2160,7 +2160,9 @@ class ComputeTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         instance.task_state = task_states.RESCUING
         instance.save()
-        self.compute.rescue_instance(self.context, instance, None, True, True)
+        self.compute.rescue_instance(self.context, instance, None,
+                                     rescue_image_ref=uuids.fake_image_ref_1,
+                                     clean_shutdown=True)
 
         expected_notifications = ['compute.instance.rescue.start',
                                   'compute.instance.exists',
@@ -2282,7 +2284,7 @@ class ComputeTestCase(BaseTestCase):
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_base_image_when_image_not_specified(self,
             mock_rescue, mock_image_get):
-        image_ref = "image-ref"
+        image_ref = FAKE_IMAGE_REF
         system_meta = {"image_base_image_ref": image_ref}
         rescue_image_meta = {}
         params = {"task_state": task_states.RESCUING,
@@ -4831,7 +4833,7 @@ class ComputeTestCase(BaseTestCase):
         orig_sys_metadata = db.instance_system_metadata_get(self.context,
                 inst_ref['uuid'])
         image_ref = instance["image_ref"]
-        new_image_ref = image_ref + '-new_image_ref'
+        new_image_ref = uuids.new_image_ref
         db.instance_update(self.context, inst_ref['uuid'],
                            {'image_ref': new_image_ref})
 
@@ -7444,8 +7446,8 @@ class ComputeAPITestCase(BaseTestCase):
             'id': 'f9000000-0000-0000-0000-000000000000',
             'name': 'fake_name',
             'status': 'active',
-            'properties': {'kernel_id': 'fake_kernel_id',
-                           'ramdisk_id': 'fake_ramdisk_id'},
+            'properties': {'kernel_id': uuids.kernel_id,
+                           'ramdisk_id': uuids.ramdisk_id},
         }
 
         def fake_show(obj, context, image_id, **kwargs):
@@ -7642,8 +7644,8 @@ class ComputeAPITestCase(BaseTestCase):
         sys_metadata = db.instance_system_metadata_get(self.context,
                 ref[0]['uuid'])
 
-        image_props = {'image_kernel_id': 'fake_kernel_id',
-                 'image_ramdisk_id': 'fake_ramdisk_id',
+        image_props = {'image_kernel_id': uuids.kernel_id,
+                 'image_ramdisk_id': uuids.ramdisk_id,
                  'image_something_else': 'meow', }
         for key, value in six.iteritems(image_props):
             self.assertIn(key, sys_metadata)
@@ -7901,9 +7903,9 @@ class ComputeAPITestCase(BaseTestCase):
         sys_meta = {k: v for k, v in instance.system_metadata.items()
                     if not k.startswith('instance_type')}
         self.assertEqual(sys_meta,
-                {'image_kernel_id': 'fake_kernel_id',
+                {'image_kernel_id': uuids.kernel_id,
                 'image_min_disk': '1',
-                'image_ramdisk_id': 'fake_ramdisk_id',
+                'image_ramdisk_id': uuids.ramdisk_id,
                 'image_something_else': 'meow',
                 'preserved': 'preserve this!'})
 
@@ -7944,7 +7946,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
         # rebuild from it
-        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
+        instance = self._create_fake_instance_obj(
+            params={'image_ref': FAKE_IMAGE_REF})
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
@@ -7958,7 +7961,8 @@ class ComputeAPITestCase(BaseTestCase):
                                      self.fake_image['id'], 'new_password')
 
     def test_rebuild_with_too_little_ram(self):
-        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
+        instance = self._create_fake_instance_obj(
+            params={'image_ref': FAKE_IMAGE_REF})
         instance.flavor.memory_mb = 64
         instance.flavor.root_gb = 1
 
@@ -7976,7 +7980,8 @@ class ComputeAPITestCase(BaseTestCase):
                 instance, self.fake_image['id'], 'new_password')
 
     def test_rebuild_with_too_little_disk(self):
-        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
+        instance = self._create_fake_instance_obj(
+            params={'image_ref': FAKE_IMAGE_REF})
 
         def fake_extract_flavor(_inst, prefix=''):
             if prefix == '':
@@ -8004,7 +8009,8 @@ class ComputeAPITestCase(BaseTestCase):
                 instance, self.fake_image['id'], 'new_password')
 
     def test_rebuild_with_just_enough_ram_and_disk(self):
-        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
+        instance = self._create_fake_instance_obj(
+            params={'image_ref': FAKE_IMAGE_REF})
 
         def fake_extract_flavor(_inst, prefix=''):
             if prefix == '':
@@ -8026,7 +8032,8 @@ class ComputeAPITestCase(BaseTestCase):
                 instance, self.fake_image['id'], 'new_password')
 
     def test_rebuild_with_no_ram_and_disk_reqs(self):
-        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
+        instance = self._create_fake_instance_obj(
+            params={'image_ref': FAKE_IMAGE_REF})
 
         def fake_extract_flavor(_inst, prefix=''):
             if prefix == '':
@@ -8045,7 +8052,8 @@ class ComputeAPITestCase(BaseTestCase):
                 instance, self.fake_image['id'], 'new_password')
 
     def test_rebuild_with_too_large_image(self):
-        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
+        instance = self._create_fake_instance_obj(
+            params={'image_ref': FAKE_IMAGE_REF})
 
         def fake_extract_flavor(_inst, prefix=''):
             if prefix == '':
@@ -8122,7 +8130,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                     mock_get_bdms):
         # Instance started with a placeholder image (for metadata)
         volume_backed_inst_2 = self._create_fake_instance_obj(
-                {'image_ref': 'my_placeholder_img',
+                {'image_ref': FAKE_IMAGE_REF,
                  'root_device_name': '/dev/vda'})
         bdms, volume = self._fake_rescue_block_devices(volume_backed_inst_2)
 
@@ -8264,26 +8272,32 @@ class ComputeAPITestCase(BaseTestCase):
         # Test searching instances by image.
 
         c = context.get_admin_context()
-        instance1 = self._create_fake_instance_obj({'image_ref': '1234'})
-        instance2 = self._create_fake_instance_obj({'image_ref': '4567'})
-        instance3 = self._create_fake_instance_obj({'image_ref': '4567'})
+        instance1 = self._create_fake_instance_obj(
+            {'image_ref': uuids.fake_image_ref_1})
+        instance2 = self._create_fake_instance_obj(
+            {'image_ref': uuids.fake_image_ref_2})
+        instance3 = self._create_fake_instance_obj(
+            {'image_ref': uuids.fake_image_ref_2})
 
         instances = self.compute_api.get_all(c, search_opts={'image': '123'})
         self.assertEqual(len(instances), 0)
 
-        instances = self.compute_api.get_all(c, search_opts={'image': '1234'})
+        instances = self.compute_api.get_all(
+            c, search_opts={'image': uuids.fake_image_ref_1})
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance1['uuid'])
 
-        instances = self.compute_api.get_all(c, search_opts={'image': '4567'})
+        instances = self.compute_api.get_all(
+            c, search_opts={'image': uuids.fake_image_ref_2})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertIn(instance2['uuid'], instance_uuids)
         self.assertIn(instance3['uuid'], instance_uuids)
 
         # Test passing a list as search arg
-        instances = self.compute_api.get_all(c,
-                                    search_opts={'image': ['1234', '4567']})
+        instances = self.compute_api.get_all(
+            c, search_opts={'image': [uuids.fake_image_ref_1,
+                                     uuids.fake_image_ref_2]})
         self.assertEqual(len(instances), 3)
 
     def test_get_all_by_flavor(self):
@@ -10251,22 +10265,25 @@ class ComputeAPITestCase(BaseTestCase):
 
     @mock.patch("nova.db.migration_get_in_progress_by_instance")
     def test_get_migrations_in_progress_by_instance(self, mock_get):
-        migration = test_migration.fake_db_migration(instance_uuid="1234")
+        migration = test_migration.fake_db_migration(
+            instance_uuid=uuids.instance)
         mock_get.return_value = [migration]
-        db.migration_get_in_progress_by_instance(self.context, "1234")
+        db.migration_get_in_progress_by_instance(self.context,
+                                                 uuids.instance)
         migrations = self.compute_api.get_migrations_in_progress_by_instance(
-                self.context, "1234")
+                self.context, uuids.instance)
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
 
     @mock.patch("nova.db.migration_get_by_id_and_instance")
     def test_get_migration_by_id_and_instance(self, mock_get):
-        migration = test_migration.fake_db_migration(instance_uuid="1234")
+        migration = test_migration.fake_db_migration(
+            instance_uuid=uuids.instance)
         mock_get.return_value = migration
         db.migration_get_by_id_and_instance(
                 self.context, migration['id'], uuid)
         res = self.compute_api.get_migration_by_id_and_instance(
-                self.context, migration['id'], "1234")
+                self.context, migration['id'], uuids.instance)
         self.assertEqual(res.id, migration['id'])
 
 
@@ -11407,8 +11424,8 @@ class ComputeInactiveImageTestCase(BaseTestCase):
         def fake_show(meh, context, id, **kwargs):
             return {'id': id, 'name': 'fake_name', 'status': 'deleted',
                     'min_ram': 0, 'min_disk': 0,
-                    'properties': {'kernel_id': 'fake_kernel_id',
-                                   'ramdisk_id': 'fake_ramdisk_id',
+                    'properties': {'kernel_id': uuids.kernel_id,
+                                   'ramdisk_id': uuids.ramdisk_id,
                                    'something_else': 'meow'}}
 
         fake_image.stub_out_image_service(self)

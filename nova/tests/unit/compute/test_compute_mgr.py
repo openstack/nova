@@ -47,6 +47,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova import test
 from nova.tests import fixtures
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.compute import fake_resource_tracker
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
@@ -72,7 +73,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         super(ComputeManagerUnitTestCase, self).setUp()
         self.flags(use_local=True, group='conductor')
         self.compute = importutils.import_object(CONF.compute_manager)
-        self.context = context.RequestContext('fake', 'fake')
+        self.context = context.RequestContext(fakes.FAKE_USER_ID,
+                                              fakes.FAKE_PROJECT_ID)
         fake_server_actions.stub_out_action_events(self.stubs)
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
@@ -183,7 +185,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         avail_nodes_l = list(avail_nodes)
         rts = [self._make_rt(node) for node in avail_nodes_l]
         # Make the 2nd and 3rd ones raise
-        exc = exception.ComputeHostNotFound(host='fake')
+        exc = exception.ComputeHostNotFound(host=uuids.fake_host)
         rts[1].update_available_resource.side_effect = exc
         exc = test.TestingException()
         rts[2].update_available_resource.side_effect = exc
@@ -664,7 +666,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         """
         instance = fake_instance.fake_instance_obj(
                 self.context,
-                project_id='fake',
+                project_id=fakes.FAKE_PROJECT_ID,
                 uuid=uuids.instance,
                 vcpus=1,
                 memory_mb=64,
@@ -711,7 +713,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self, mock_log):
         instance = fake_instance.fake_instance_obj(
                 self.context,
-                project_id='fake',
+                project_id=fakes.FAKE_PROJECT_ID,
                 uuid=uuids.instance,
                 vcpus=1,
                 memory_mb=64,
@@ -735,7 +737,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_instance_stuck_in_deleting(self):
         instance = fake_instance.fake_instance_obj(
                 self.context,
-                project_id='fake',
+                project_id=fakes.FAKE_PROJECT_ID,
                 uuid=uuids.instance,
                 vcpus=1,
                 memory_mb=64,
@@ -772,7 +774,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         instance = fake_instance.fake_instance_obj(
             self.context,
-            project_id='fake',
+            project_id=fakes.FAKE_PROJECT_ID,
             uuid=uuids.instance,
             vcpus=1,
             memory_mb=64,
@@ -1049,7 +1051,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_init_instance_deletes_error_deleting_instance(self):
         instance = fake_instance.fake_instance_obj(
                 self.context,
-                project_id='fake',
+                project_id=fakes.FAKE_PROJECT_ID,
                 uuid=uuids.instance,
                 vcpus=1,
                 memory_mb=64,
@@ -2401,7 +2403,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, vm_state=vm_states.ACTIVE)
         fake_nw_info = network_model.NetworkInfo()
         rescue_image_meta = objects.ImageMeta.from_dict(
-            {'id': 'fake', 'name': 'fake'})
+            {'id': uuids.image_id, 'name': uuids.image_name})
         with test.nested(
             mock.patch.object(self.context, 'elevated',
                               return_value=self.context),
@@ -2436,7 +2438,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             get_rescue_image.assert_called_once_with(
                 self.context, instance, None)
 
-            extra_usage_info = {'rescue_image_name': 'fake'}
+            extra_usage_info = {'rescue_image_name': uuids.image_name}
             notify_calls = [
                 mock.call(self.context, instance, "rescue.start",
                           extra_usage_info=extra_usage_info,
@@ -2852,13 +2854,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                 'rebuild.error', fault=ex)
 
     def test_rebuild_deleting(self):
-        instance = objects.Instance(uuid='fake-uuid')
+        instance = objects.Instance(uuid=uuids.instance)
         ex = exception.UnexpectedDeletingTaskStateError(
             instance_uuid=instance.uuid, expected='expected', actual='actual')
         self._test_rebuild_ex(instance, ex)
 
     def test_rebuild_notfound(self):
-        instance = objects.Instance(uuid='fake-uuid')
+        instance = objects.Instance(uuid=uuids.instance)
         ex = exception.InstanceNotFound(instance_id=instance.uuid)
         self._test_rebuild_ex(instance, ex)
 
@@ -3132,7 +3134,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerBuildInstanceTestCase, self).setUp()
         self.compute = importutils.import_object(CONF.compute_manager)
-        self.context = context.RequestContext('fake', 'fake')
+        self.context = context.RequestContext(fakes.FAKE_USER_ID,
+                                              fakes.FAKE_PROJECT_ID)
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
@@ -4294,7 +4297,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerMigrationTestCase, self).setUp()
         self.compute = importutils.import_object(CONF.compute_manager)
-        self.context = context.RequestContext('fake', 'fake')
+        self.context = context.RequestContext(fakes.FAKE_USER_ID,
+                                              fakes.FAKE_PROJECT_ID)
         self.image = {}
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
@@ -4722,7 +4726,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_get_power_state', return_value=1)
         @mock.patch.object(self.compute, '_get_compute_info',
                            side_effect=exception.ComputeHostNotFound(
-                               host='fake'))
+                               host=uuids.fake_host))
         @mock.patch.object(self.compute.driver,
                            'post_live_migration_at_destination')
         def _do_test(post_live_migration_at_destination, _get_compute_info,

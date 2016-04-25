@@ -23,6 +23,7 @@ from nova import db
 from nova import objects
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 
@@ -182,7 +183,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._create_fake_instance_obj()
         instance.task_state = task_states.UNSHELVING
         instance.save()
-        image = {'id': 'fake_id'}
+        image = {'id': uuids.image_id}
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
@@ -281,7 +282,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         filter_properties = {'limits': limits}
         instance.task_state = task_states.UNSHELVING
         instance.save()
-        image_meta = {'properties': {'base_image_ref': 'fake_id'}}
+        image_meta = {'properties': {'base_image_ref': uuids.image_id}}
         mock_image_meta.return_value = image_meta
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
