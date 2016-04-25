@@ -138,7 +138,7 @@ Here are some top tips around engaging with the Nova community:
    important
 
    -  Don't like the way the community is going?
-   -  Please ask why we ware going that way, and please engage with the
+   -  Please ask why we were going that way, and please engage with the
       debate
    -  If you don't, we are unable to learn from what you have to offer
 
