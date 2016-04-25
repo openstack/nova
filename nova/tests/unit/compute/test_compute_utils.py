@@ -397,7 +397,7 @@ class UsageInfoTestCase(test.TestCase):
         self.addCleanup(fake_notifier.reset)
 
         self.flags(use_local=True, group='conductor')
-        self.flags(compute_driver='nova.virt.fake.FakeDriver',
+        self.flags(compute_driver='fake.FakeDriver',
                    network_manager='nova.network.manager.FlatManager')
         self.compute = importutils.import_object(CONF.compute_manager)
         self.user_id = 'fake'

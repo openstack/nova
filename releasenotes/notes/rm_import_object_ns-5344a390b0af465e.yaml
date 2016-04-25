@@ -1,0 +1,6 @@
+---
+other:
+
+  - Virt drivers are no longer loaded with the import_object_ns
+    function, which means that only virt drivers in the nova.virt
+    namespace can be loaded.

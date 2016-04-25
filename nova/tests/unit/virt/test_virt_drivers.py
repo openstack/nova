@@ -209,11 +209,7 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
     """
 
     # if your driver supports being tested in a fake way, it can go here
-    #
-    # both long form and short form drivers are supported
     new_drivers = {
-        'nova.virt.fake.FakeDriver': 'FakeDriver',
-        'nova.virt.libvirt.LibvirtDriver': 'LibvirtDriver',
         'fake.FakeDriver': 'FakeDriver',
         'libvirt.LibvirtDriver': 'LibvirtDriver'
         }

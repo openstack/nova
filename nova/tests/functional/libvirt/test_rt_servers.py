@@ -73,7 +73,7 @@ class RealTimeServersTest(ServersTestBase):
         self.flags(sysinfo_serial='none', group='libvirt')
 
     def _setup_compute_service(self):
-        self.flags(compute_driver='nova.virt.libvirt.LibvirtDriver')
+        self.flags(compute_driver='libvirt.LibvirtDriver')
 
     def test_no_dedicated_cpu(self):
         flavor = self._create_flavor(extra_spec={'hw:cpu_realtime': 'yes'})
