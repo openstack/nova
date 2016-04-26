@@ -180,6 +180,13 @@ class TestNeutronClient(test.NoDBTestCase):
         client1.list_networks(retrieve_all=False)
         self.assertEqual('new_token2', client1.httpclient.auth.get_token(None))
 
+    @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
+    def test_load_auth_plugin_failed(self, mock_load_from_conf):
+        mock_load_from_conf.return_value = None
+        from neutronclient.common import exceptions as neutron_client_exc
+        self.assertRaises(neutron_client_exc.Unauthorized,
+                          neutronapi._load_auth_plugin, CONF)
+
 
 class TestNeutronv2Base(test.TestCase):
 
