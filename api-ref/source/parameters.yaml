@@ -1289,7 +1289,10 @@ limit_1:
   type: integer
 links:
   description: |
-    Permalinks to resources.
+    Links to the resources in question. See `API Guide / Links and
+    References
+    <http://docs.openstack.org/developer/nova/v2/links_and_references.html>`_
+    for more info.
   in: body
   required: true
   type: array
