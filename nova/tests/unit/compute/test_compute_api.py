@@ -53,7 +53,6 @@ from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.objects import test_migration
-from nova.tests.unit.objects import test_service
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.volume import cinder
@@ -954,7 +953,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(self.context, 'elevated')
-        self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
+        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
         self.mox.StubOutWithMock(self.compute_api.servicegroup_api,
                                  'service_is_up')
         self.mox.StubOutWithMock(compute_utils, 'downsize_quota_delta')
@@ -968,6 +967,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
         rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
 
@@ -1015,9 +1015,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 soft_delete = True
             if inst.vm_state != vm_states.SHELVED_OFFLOADED:
                 self.context.elevated().AndReturn(self.context)
-                db.service_get_by_compute_host(
-                        self.context, inst.host).AndReturn(
-                                test_service.fake_service)
+                objects.Service.get_by_compute_host(self.context,
+                        inst.host).AndReturn(objects.Service())
                 self.compute_api.servicegroup_api.service_is_up(
                         mox.IsA(objects.Service)).AndReturn(
                                 inst.host != 'down-host')
@@ -1047,6 +1046,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 rpcapi.terminate_instance(self.context, inst, [],
                                           reservations=cast_reservations,
                                           delete_type=delete_type)
+
+        if soft_delete:
+            quota.QUOTAS.rollback(self.context, reservations,
+                                  project_id=inst.project_id,
+                                  user_id=inst.user_id)
 
         if commit_quotas:
             # Local delete or when we're testing API cell.
