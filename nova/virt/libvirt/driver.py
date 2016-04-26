@@ -406,7 +406,6 @@ NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
-MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # BlockJobInfo management requirement
 MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
 # Relative block commit & rebase (feature is detected,
@@ -3347,16 +3346,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                                    reason=six.text_type(exc))
 
     def _detach_pci_devices(self, guest, pci_devs):
-
-        # for libvirt version < 1.1.1, this is race condition
-        # so forbid detach if not had this version
-        if not self._host.has_min_version(MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
-            if pci_devs:
-                reason = (_("Detaching PCI devices with libvirt < %(ver)s"
-                           " is not permitted") %
-                           {'ver': MIN_LIBVIRT_DEVICE_CALLBACK_VERSION})
-                raise exception.PciDeviceDetachFailed(reason=reason,
-                                                      dev=pci_devs)
         try:
             for dev in pci_devs:
                 guest.detach_device(self._get_guest_pci_device(dev), live=True)
@@ -3428,16 +3417,6 @@ class LibvirtDriver(driver.ComputeDriver):
             return
 
         if self._has_sriov_port(network_info):
-            # for libvirt version < 1.1.1, this is race condition
-            # so forbid detach if it's an older version
-            if not self._host.has_min_version(
-                            MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
-                reason = (_("Detaching SR-IOV ports with"
-                           " libvirt < %(ver)s is not permitted") %
-                           {'ver': MIN_LIBVIRT_DEVICE_CALLBACK_VERSION})
-                raise exception.PciDeviceDetachFailed(reason=reason,
-                                                      dev=network_info)
-
             # In case of SR-IOV vif types we create pci request per SR-IOV port
             # Therefore we can trust that pci_slot value in the vif is correct.
             sriov_pci_addresses = [
