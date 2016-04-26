@@ -103,10 +103,9 @@ class LibvirtBaseVolumeDriver(object):
         # Configure usage of discard
         if data.get('discard', False) is True:
             min_qemu = nova.virt.libvirt.driver.MIN_QEMU_DISCARD_VERSION
-            min_libvirt = nova.virt.libvirt.driver.MIN_LIBVIRT_DISCARD_VERSION
-            if self.connection._host.has_min_version(min_libvirt,
-                                                     min_qemu,
-                                                     host.HV_DRIVER_QEMU):
+            if self.connection._host.has_min_version(
+                    hv_ver=min_qemu,
+                    hv_type=host.HV_DRIVER_QEMU):
                 conf.driver_discard = 'unmap'
             else:
                 global SHOULD_LOG_DISCARD_WARNING
@@ -114,11 +113,9 @@ class LibvirtBaseVolumeDriver(object):
                     SHOULD_LOG_DISCARD_WARNING = False
                     LOG.warning(_LW('Unable to attach %(type)s volume '
                                     '%(serial)s with discard enabled: qemu '
-                                    '%(qemu)s and libvirt %(libvirt)s or '
-                                    'later are required.'),
+                                    '%(qemu)s or later is required.'),
                                 {
                         'qemu': min_qemu,
-                        'libvirt': min_libvirt,
                         'serial': conf.serial,
                         'type': connection_info['driver_volume_type']
                     })
