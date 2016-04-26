@@ -130,6 +130,18 @@ host_name:
   in: path
   required: true
   type: string
+host_status_body_in:
+  description: |
+    The status of the current host, either 'enabled' or 'disabled'.
+  in: path
+  required: false
+  type: string
+host_maintenance_mode_in:
+  description: |
+    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+  in: path
+  required: false
+  type: string
 hypervisor_id:
   description: |
     The UUID of the hypervisor.
@@ -1170,6 +1182,84 @@ host_status:
   in: body
   required: true
   type: string
+host_service:
+  description: |
+    The service name which is running on the host.
+  in: body
+  required: true
+  type: string
+host_resource_array:
+  description: |
+    The array that includes resource info of the host.
+  in: body
+  required: true
+  type: array
+host_resource:
+  description: |
+    The resource info of the host.
+  in: body
+  required: true
+  type: object
+host_project:
+  description: |
+    The project id (or special name like total, used_now, used_max).
+  in: body
+  required: true
+  type: string
+host_cpu:
+  description: |
+    The cpu info on the host.
+  in: body
+  required: true
+  type: string
+host_memory_mb:
+  description: |
+    The memory info on the host (in MB).
+  in: body
+  required: true
+  type: string
+host_disk_gb:
+  description: |
+    The disk info on the host (in GB).
+  in: body
+  required: true
+  type: string
+host_status_body:
+  description: |
+    The status of the current host, either 'enabled' or 'disabled'.
+  in: body
+  required: true
+  type: string
+host_maintenance_mode:
+  description: |
+    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+  in: body
+  required: true
+  type: string
+host_power_action:
+  description: |
+    The power action on the host.
+  in: body
+  required: true
+  type: string
+host_name_body:
+  description: |
+    The name of the host.
+  in: body
+  required: true
+  type: string
+host_zone:
+  description: |
+    The available zone of the host.
+  in: body
+  required: true
+  type: string
+hosts:
+  description: |
+    An array of host information
+  in: body
+  required: true
+  type: array
 hypervisor_type:
   in: body
   required: true
