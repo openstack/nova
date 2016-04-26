@@ -4391,7 +4391,8 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         mock_process_requested_networks.return_value = [
             None, ['net1', 'net2'], onets, None]
         mock_get_available_networks.return_value = nets
-        mock_process_security_groups.return_value = ['secgrp-uuid1',
+        mock_process_security_groups.return_value = ['default-uuid',
+                                                     'secgrp-uuid1',
                                                      'secgrp-uuid2']
 
         api = neutronapi.API()
@@ -4400,20 +4401,22 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             security_groups=secgroups)
 
         mock_process_security_groups.assert_called_once_with(
-            instance, mock.ANY, ['secgrp1', 'secgrp2'])
+            instance, mock.ANY, ['default', 'secgrp1', 'secgrp2'])
         mock_create_port.assert_has_calls([
             mock.call(
                 mock.ANY, instance,
                 u'net1', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, ['secgrp-uuid1', 'secgrp-uuid2'], None, None),
+                None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'],
+                None, None),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, ['secgrp-uuid1', 'secgrp-uuid2'], None, None)])
+                None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'],
+                None, None)])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
@@ -4510,7 +4513,8 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
         mock_process_requested_networks.return_value = [
             None, ['net1', 'net2'], onets, None]
         mock_get_available_networks.return_value = nets
-        mock_process_security_groups.return_value = ['secgrp-uuid1',
+        mock_process_security_groups.return_value = ['default-uuid',
+                                                     'secgrp-uuid1',
                                                      'secgrp-uuid2']
 
         api = neutronapi.API()
@@ -4521,4 +4525,4 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
             security_groups=secgroups)
 
         mock_process_security_groups.assert_called_once_with(
-            instance, mock.ANY, ['secgrp1', 'secgrp2'])
+            instance, mock.ANY, ['default', 'secgrp1', 'secgrp2'])
