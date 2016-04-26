@@ -59,9 +59,11 @@ class MountTestCase(test.NoDBTestCase):
                 self.fail("Unexpected call with: %s" % filename)
         return exists_effect
 
-    def _check_calls(self, exists, filenames):
+    def _check_calls(self, exists, filenames, trailing=0):
         self.assertEqual([mock.call(x) for x in filenames],
-                         exists.call_args_list)
+                exists.call_args_list[:len(filenames)])
+        self.assertEqual([mock.call(MAP_PARTITION)] * trailing,
+            exists.call_args_list[len(filenames):])
 
     @mock.patch('os.path.exists')
     def test_map_dev_partition_search(self, exists):
@@ -79,8 +81,7 @@ class MountTestCase(test.NoDBTestCase):
             AUTOMAP_PARTITION: False,
             MAP_PARTITION: [False, True]})
         mount = self._test_map_dev_with_trycmd(PARTITION)
-        self._check_calls(exists,
-            [ORIG_DEVICE, AUTOMAP_PARTITION, MAP_PARTITION, MAP_PARTITION])
+        self._check_calls(exists, [ORIG_DEVICE, AUTOMAP_PARTITION], 2)
         self.assertEqual("", mount.error)
         self.assertTrue(mount.mapped)
 
@@ -91,10 +92,21 @@ class MountTestCase(test.NoDBTestCase):
             AUTOMAP_PARTITION: False,
             MAP_PARTITION: False})
         mount = self._test_map_dev_with_trycmd(PARTITION)
-        self._check_calls(exists,
-            [ORIG_DEVICE, AUTOMAP_PARTITION, MAP_PARTITION, MAP_PARTITION])
+        self._check_calls(exists, [ORIG_DEVICE, AUTOMAP_PARTITION],
+                api.MAX_FILE_CHECKS + 1)
         self.assertNotEqual("", mount.error)
         self.assertFalse(mount.mapped)
+
+    @mock.patch('os.path.exists')
+    def test_map_dev_error_then_pass(self, exists):
+        exists.side_effect = self._exists_effect({
+            ORIG_DEVICE: True,
+            AUTOMAP_PARTITION: False,
+            MAP_PARTITION: [False, False, True]})
+        mount = self._test_map_dev_with_trycmd(PARTITION)
+        self._check_calls(exists, [ORIG_DEVICE, AUTOMAP_PARTITION], 3)
+        self.assertEqual("", mount.error)
+        self.assertTrue(mount.mapped)
 
     @mock.patch('os.path.exists')
     def test_map_dev_automap(self, exists):

@@ -17,6 +17,7 @@ import os
 import time
 
 from oslo_log import log as logging
+from oslo_service import loopingcall
 from oslo_utils import importutils
 
 from nova import exception
@@ -27,6 +28,8 @@ from nova.virt.image import model as imgmodel
 LOG = logging.getLogger(__name__)
 
 MAX_DEVICE_WAIT = 30
+MAX_FILE_CHECKS = 6
+FILE_CHECK_INTERVAL = 0.25
 
 
 class Mount(object):
@@ -200,15 +203,24 @@ class Mount(object):
             _out, err = utils.trycmd('kpartx', '-a', self.device,
                                      run_as_root=True, discard_warnings=True)
 
+            @loopingcall.RetryDecorator(
+                    max_retry_count=MAX_FILE_CHECKS - 1,
+                    max_sleep_time=FILE_CHECK_INTERVAL,
+                    exceptions=IOError)
+            def recheck_path(map_path):
+                if not os.path.exists(map_path):
+                    raise IOError()
+
             # Note kpartx does nothing when presented with a raw image,
             # so given we only use it when we expect a partitioned image, fail
-            if not os.path.exists(map_path):
+            try:
+                recheck_path(map_path)
+                self.mapped_device = map_path
+                self.mapped = True
+            except IOError:
                 if not err:
                     err = _('partition %s not found') % self.partition
                 self.error = _('Failed to map partitions: %s') % err
-            else:
-                self.mapped_device = map_path
-                self.mapped = True
         elif self.partition and os.path.exists(automapped_path):
             # Note auto mapping can be enabled with the 'max_part' option
             # to the nbd or loop kernel modules. Beware of possible races
