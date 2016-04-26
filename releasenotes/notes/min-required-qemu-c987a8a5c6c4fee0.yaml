@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The minimum required QEMU version is now checked and
+    has been set to 1.5.3

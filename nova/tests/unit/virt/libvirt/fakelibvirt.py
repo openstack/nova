@@ -152,6 +152,8 @@ VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
 # Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
 FAKE_LIBVIRT_VERSION = 1002001
+# Libvirt version to match MIN_QEMU_VERSION in driver.py
+FAKE_QEMU_VERSION = 1005003
 
 
 class HostInfo(object):
@@ -799,7 +801,7 @@ class DomainSnapshot(object):
 
 class Connection(object):
     def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
-                 hv_version=1001000, host_info=None):
+                 hv_version=FAKE_QEMU_VERSION, host_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'

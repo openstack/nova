@@ -395,12 +395,14 @@ patch_tpool_proxy()
 # for all architectures/hypervisors, as this value rises to
 # meet them.
 MIN_LIBVIRT_VERSION = (1, 2, 1)
+MIN_QEMU_VERSION = (1, 5, 3)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
 # NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
 # one cycle
 NEXT_MIN_LIBVIRT_VERSION = (1, 2, 1)
+NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
@@ -663,6 +665,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 _('Nova requires libvirt version %s or greater.') %
                 self._version_to_string(MIN_LIBVIRT_VERSION))
 
+        if (CONF.libvirt.virt_type in ("qemu", "kvm") and
+            not self._host.has_min_version(hv_ver=MIN_QEMU_VERSION)):
+            raise exception.NovaException(
+                _('Nova requires QEMU version %s or greater.') %
+                self._version_to_string(MIN_QEMU_VERSION))
+
         if (CONF.libvirt.virt_type == 'parallels' and
             not self._host.has_min_version(MIN_LIBVIRT_PARALLELS_VERSION)):
             raise exception.NovaException(
@@ -679,6 +687,14 @@ class LibvirtDriver(driver.ComputeDriver):
                             'in the next release.'),
                         {'version': self._version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
+        if (CONF.libvirt.virt_type in ("qemu", "kvm") and
+            not self._host.has_min_version(NEXT_MIN_QEMU_VERSION)):
+            LOG.warning(_LW('Running Nova with a QEMU version less than '
+                            '%(version)s is deprecated. The required minimum '
+                            'version of QEMU will be raised to %(version)s '
+                            'in the next release.'),
+                        {'version': self._version_to_string(
+                            NEXT_MIN_QEMU_VERSION)})
 
         kvm_arch = arch.from_host()
         if (CONF.libvirt.virt_type in ('kvm', 'qemu') and
