@@ -461,6 +461,7 @@ Response
   - tenant_id: tenant_id
   - updated: updated
   - user_id: user_id
+  - fault: fault
 
 **Example Show Server Details: JSON response**
 
