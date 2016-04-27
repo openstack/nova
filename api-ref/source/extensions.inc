@@ -4,9 +4,9 @@
 .. needs:example_verification
 .. needs:body_verification
 
-=========================
- Extensions (extensions)
-=========================
+=====================================
+ Extensions (extensions) (DEPRECATED)
+=====================================
 
 Lists available extensions and shows information for an extension, by
 alias.
