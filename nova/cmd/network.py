@@ -69,6 +69,8 @@ def main():
         LOG.warning(_LW('Conductor local mode is deprecated and will '
                         'be removed in a subsequent release'))
 
+    LOG.warning(_LW('Nova network is deprecated and will be removed '
+                    'in the future'))
     server = service.Service.create(binary='nova-network',
                                     topic=CONF.network_topic,
                                     db_allowed=CONF.conductor.use_local)
