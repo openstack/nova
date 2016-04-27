@@ -1897,6 +1897,12 @@ parent_group_id:
   in: body
   required: true
   type: string
+password:
+  description: |
+    The password returned from metadata server.
+  in: body
+  required: false
+  type: string
 pause:
   description: |
     The action.
