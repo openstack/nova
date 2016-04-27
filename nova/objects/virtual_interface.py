@@ -21,11 +21,15 @@ from nova.objects import base
 from nova.objects import fields
 
 
+VIF_OPTIONAL_FIELDS = ['network_id']
+
+
 @base.NovaObjectRegistry.register
 class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add tag field
-    VERSION = '1.1'
+    # Version 1.2: Adding a save method
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -44,7 +48,10 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     @staticmethod
     def _from_db_object(context, vif, db_vif):
         for field in vif.fields:
-            setattr(vif, field, db_vif[field])
+            if not db_vif[field] and field in VIF_OPTIONAL_FIELDS:
+                continue
+            else:
+                setattr(vif, field, db_vif[field])
         vif._context = context
         vif.obj_reset_changes()
         return vif
@@ -82,6 +89,16 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         updates = self.obj_get_changes()
         db_vif = db.virtual_interface_create(self._context, updates)
         self._from_db_object(self._context, self, db_vif)
+
+    @base.remotable
+    def save(self):
+        updates = self.obj_get_changes()
+        if 'address' in updates:
+            raise exception.ObjectActionError(action='save',
+                                              reason='address is not mutable')
+        db_vif = db.virtual_interface_update(self._context, self.address,
+                                             updates)
+        return self._from_db_object(self._context, self, db_vif)
 
     @base.remotable_classmethod
     def delete_by_instance_uuid(cls, context, instance_uuid):

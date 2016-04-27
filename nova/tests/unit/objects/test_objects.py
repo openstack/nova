@@ -1195,7 +1195,7 @@ object_data = {
     'VirtCPUFeature': '1.0-3310718d8c72309259a6e39bdefe83ee',
     'VirtCPUModel': '1.0-6a5cc9f322729fc70ddc6733bacd57d3',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
-    'VirtualInterface': '1.1-422f46c1eaa24a1f63d3360c199cc7c0',
+    'VirtualInterface': '1.2-25730967393678bd4da092b98694f971',
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
     'XenapiLiveMigrateData': '1.0-5f982bec68f066e194cd9ce53a24ac4c',

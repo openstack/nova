@@ -6549,6 +6549,28 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         real_vifs = db.virtual_interface_get_all(self.ctxt)
         self._assertEqualListsOfObjects(vifs, real_vifs)
 
+    def test_virtual_interface_update(self):
+        instance_uuid = db.instance_create(self.ctxt, {})['uuid']
+        network_id = db.network_create_safe(self.ctxt, {})['id']
+        create = {'address': 'fake1',
+                  'network_id': network_id,
+                  'instance_uuid': instance_uuid,
+                  'uuid': uuidsentinel.vif_uuid,
+                  'tag': 'foo'}
+        update = {'tag': 'bar'}
+        updated = {'address': 'fake1',
+                   'network_id': network_id,
+                   'instance_uuid': instance_uuid,
+                   'uuid': uuidsentinel.vif_uuid,
+                   'tag': 'bar',
+                   'deleted': 0}
+        ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
+        vif_addr = db.virtual_interface_create(self.ctxt, create)['address']
+        db.virtual_interface_update(self.ctxt, vif_addr, update)
+        updated_vif = db.virtual_interface_get_by_address(self.ctxt,
+                                                          updated['address'])
+        self._assertEqualObjects(updated, updated_vif, ignored_keys)
+
 
 class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
