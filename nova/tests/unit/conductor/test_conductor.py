@@ -1309,13 +1309,18 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                 self.conductor_manager.compute_rpcapi)
 
     def test_migrate_server_fails_with_rebuild(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   vm_state=vm_states.ACTIVE)
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,
-            self.context, None, None, True, True, None, None, None)
+            self.context, instance, None, True, True, None, None, None)
 
     def test_migrate_server_fails_with_flavor(self):
         flavor = flavors.get_flavor_by_name('m1.tiny')
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   vm_state=vm_states.ACTIVE,
+                                                   flavor=flavor)
         self.assertRaises(NotImplementedError, self.conductor.migrate_server,
-            self.context, None, None, True, False, flavor, None, None)
+            self.context, instance, None, True, False, flavor, None, None)
 
     def _build_request_spec(self, instance):
         return {

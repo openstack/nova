@@ -14,6 +14,8 @@
 
 """Compute-related Utilities and helpers."""
 
+import functools
+import inspect
 import itertools
 import string
 import traceback
@@ -32,6 +34,7 @@ from nova.network import model as network_model
 from nova import notifications
 from nova import objects
 from nova import rpc
+from nova import safe_utils
 from nova import utils
 from nova.virt import driver
 
@@ -541,6 +544,29 @@ class EventReporter(object):
                 self.context, uuid, self.event_name, exc_val=exc_val,
                 exc_tb=exc_tb, want_result=False)
         return False
+
+
+def wrap_instance_event(prefix):
+    """Wraps a method to log the event taken on the instance, and result.
+
+    This decorator wraps a method to log the start and result of an event, as
+    part of an action taken on an instance.
+    """
+    @utils.expects_func_args('instance')
+    def helper(function):
+
+        @functools.wraps(function)
+        def decorated_function(self, context, *args, **kwargs):
+            wrapped_func = safe_utils.get_wrapped_function(function)
+            keyed_args = inspect.getcallargs(wrapped_func, self, context,
+                                             *args, **kwargs)
+            instance_uuid = keyed_args['instance']['uuid']
+
+            event_name = '{0}_{1}'.format(prefix, function.__name__)
+            with EventReporter(context, event_name, instance_uuid):
+                return function(self, context, *args, **kwargs)
+        return decorated_function
+    return helper
 
 
 class UnlimitedSemaphore(object):

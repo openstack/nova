@@ -642,6 +642,64 @@ class ComputeUtilsGetRebootTypes(test.NoDBTestCase):
 
 
 class ComputeUtilsTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ComputeUtilsTestCase, self).setUp()
+        self.compute = 'compute'
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id)
+
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
+                       'event_finish_with_failure')
+    def test_wrap_instance_event(self, mock_finish, mock_start):
+        inst = {"uuid": uuids.instance}
+
+        @compute_utils.wrap_instance_event(prefix='compute')
+        def fake_event(self, context, instance):
+            pass
+
+        fake_event(self.compute, self.context, instance=inst)
+
+        self.assertTrue(mock_start.called)
+        self.assertTrue(mock_finish.called)
+
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
+                       'event_finish_with_failure')
+    def test_wrap_instance_event_return(self, mock_finish, mock_start):
+        inst = {"uuid": uuids.instance}
+
+        @compute_utils.wrap_instance_event(prefix='compute')
+        def fake_event(self, context, instance):
+            return True
+
+        retval = fake_event(self.compute, self.context, instance=inst)
+
+        self.assertTrue(retval)
+        self.assertTrue(mock_start.called)
+        self.assertTrue(mock_finish.called)
+
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
+                       'event_finish_with_failure')
+    def test_wrap_instance_event_log_exception(self, mock_finish, mock_start):
+        inst = {"uuid": uuids.instance}
+
+        @compute_utils.wrap_instance_event(prefix='compute')
+        def fake_event(self2, context, instance):
+            raise exception.NovaException()
+
+        self.assertRaises(exception.NovaException, fake_event,
+                          self.compute, self.context, instance=inst)
+
+        self.assertTrue(mock_start.called)
+        self.assertTrue(mock_finish.called)
+        args, kwargs = mock_finish.call_args
+        self.assertIsInstance(kwargs['exc_val'], exception.NovaException)
+
     @mock.patch('netifaces.interfaces')
     def test_get_machine_ips_value_error(self, mock_interfaces):
         # Tests that the utility method does not explode if netifaces raises

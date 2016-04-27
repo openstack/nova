@@ -63,6 +63,7 @@ from nova.compute import resource_tracker
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
+from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
@@ -209,28 +210,6 @@ def wrap_instance_fault(function):
             with excutils.save_and_reraise_exception():
                 compute_utils.add_instance_fault_from_exc(context,
                         kwargs['instance'], e, sys.exc_info())
-
-    return decorated_function
-
-
-@utils.expects_func_args('instance')
-def wrap_instance_event(function):
-    """Wraps a method to log the event taken on the instance, and result.
-
-    This decorator wraps a method to log the start and result of an event, as
-    part of an action taken on an instance.
-    """
-
-    @functools.wraps(function)
-    def decorated_function(self, context, *args, **kwargs):
-        wrapped_func = safe_utils.get_wrapped_function(function)
-        keyed_args = inspect.getcallargs(wrapped_func, self, context, *args,
-                                         **kwargs)
-        instance_uuid = keyed_args['instance']['uuid']
-
-        event_name = 'compute_{0}'.format(function.__name__)
-        with compute_utils.EventReporter(context, event_name, instance_uuid):
-            return function(self, context, *args, **kwargs)
 
     return decorated_function
 
@@ -1710,7 +1689,7 @@ class ComputeManager(manager.Manager):
     @hooks.add_hook('build_instance')
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def _do_build_and_run_instance(self, context, instance, image,
             request_spec, filter_properties, admin_password, injected_files,
@@ -2305,7 +2284,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms, reservations):
         """Terminate an instance on this host."""
@@ -2351,7 +2330,7 @@ class ComputeManager(manager.Manager):
     # can't use that name in grizzly.
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def stop_instance(self, context, instance, clean_shutdown):
         """Stopping an instance on this host."""
@@ -2423,7 +2402,7 @@ class ComputeManager(manager.Manager):
     # can't use that name in grizzly.
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def start_instance(self, context, instance):
         """Starting an instance on this host."""
@@ -2449,7 +2428,7 @@ class ComputeManager(manager.Manager):
                                    exception.TriggerCrashDumpNotSupported,
                                    exception.InstanceNotRunning)
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def trigger_crash_dump(self, context, instance):
         """Trigger crash dump in an instance."""
@@ -2466,7 +2445,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def soft_delete_instance(self, context, instance, reservations):
         """Soft delete an instance on this host."""
@@ -2495,7 +2474,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def restore_instance(self, context, instance):
         """Restore a soft-deleted instance on this host."""
@@ -2561,7 +2540,7 @@ class ComputeManager(manager.Manager):
     @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
@@ -2837,7 +2816,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def reboot_instance(self, context, instance, block_device_info,
                         reboot_type):
@@ -3094,7 +3073,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def set_admin_password(self, context, instance, new_pass):
         """Set the root/admin password for an instance on this host.
@@ -3215,7 +3194,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def rescue_instance(self, context, instance, rescue_password,
                         rescue_image_ref, clean_shutdown):
@@ -3265,7 +3244,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def unrescue_instance(self, context, instance):
         context = context.elevated()
@@ -3297,7 +3276,7 @@ class ComputeManager(manager.Manager):
         self.driver.change_instance_metadata(context, instance, diff)
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations, migration):
 
@@ -3414,7 +3393,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
     def revert_resize(self, context, instance, migration, reservations):
@@ -3482,7 +3461,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
     def finish_revert_resize(self, context, instance, reservations, migration):
@@ -3600,7 +3579,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
                     reservations, request_spec, filter_properties, node,
@@ -3701,7 +3680,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
@@ -3863,7 +3842,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
@@ -3942,7 +3921,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def pause_instance(self, context, instance):
         """Pause an instance on this host."""
@@ -3958,7 +3937,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def unpause_instance(self, context, instance):
         """Unpause a paused instance on this host."""
@@ -4030,7 +4009,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def suspend_instance(self, context, instance):
         """Suspend the given instance."""
@@ -4051,7 +4030,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def resume_instance(self, context, instance):
         """Resume the given suspended instance."""
@@ -4080,7 +4059,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def shelve_instance(self, context, instance, image_id,
                         clean_shutdown):
@@ -4177,7 +4156,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def unshelve_instance(self, context, instance, image,
                           filter_properties, node):
@@ -4957,7 +4936,7 @@ class ComputeManager(manager.Manager):
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration, disk_over_commit):
@@ -4999,7 +4978,7 @@ class ComputeManager(manager.Manager):
         return migrate_data
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         """Check if it is possible to execute live migration.
@@ -5037,7 +5016,7 @@ class ComputeManager(manager.Manager):
         return result
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def pre_live_migration(self, context, instance, block_migration, disk,
                            migrate_data):
@@ -5153,7 +5132,7 @@ class ComputeManager(manager.Manager):
                 self._set_migration_status(migration, 'error')
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def live_migration(self, context, dest, instance, block_migration,
                        migration, migrate_data):
@@ -5185,7 +5164,7 @@ class ComputeManager(manager.Manager):
     # remove migration_id parameter when the compute RPC version
     # is bumped to 5.x.
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def live_migration_force_complete(self, context, instance,
                                       migration_id=None):
@@ -5204,7 +5183,7 @@ class ComputeManager(manager.Manager):
             context, instance, 'live.migration.force.complete.end')
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def live_migration_abort(self, context, instance, migration_id):
         """Abort an in-progress live migration.
@@ -5390,7 +5369,7 @@ class ComputeManager(manager.Manager):
                     ctxt, instance.uuid)
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def post_live_migration_at_destination(self, context, instance,
                                            block_migration):
@@ -5521,7 +5500,7 @@ class ComputeManager(manager.Manager):
         self._set_migration_status(migration, migration_status)
 
     @wrap_exception()
-    @wrap_instance_event
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def rollback_live_migration_at_destination(self, context, instance,
                                                destroy_disks,

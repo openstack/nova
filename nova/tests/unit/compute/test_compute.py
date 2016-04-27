@@ -1309,55 +1309,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertFalse(called['fault_added'])
 
-    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-    @mock.patch.object(objects.InstanceActionEvent,
-                       'event_finish_with_failure')
-    def test_wrap_instance_event(self, mock_finish, mock_start):
-        inst = {"uuid": uuids.instance}
-
-        @compute_manager.wrap_instance_event
-        def fake_event(self, context, instance):
-            pass
-
-        fake_event(self.compute, self.context, instance=inst)
-
-        self.assertTrue(mock_start.called)
-        self.assertTrue(mock_finish.called)
-
-    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-    @mock.patch.object(objects.InstanceActionEvent,
-                       'event_finish_with_failure')
-    def test_wrap_instance_event_return(self, mock_finish, mock_start):
-        inst = {"uuid": uuids.instance}
-
-        @compute_manager.wrap_instance_event
-        def fake_event(self, context, instance):
-            return True
-
-        retval = fake_event(self.compute, self.context, instance=inst)
-
-        self.assertTrue(retval)
-        self.assertTrue(mock_start.called)
-        self.assertTrue(mock_finish.called)
-
-    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
-    @mock.patch.object(objects.InstanceActionEvent,
-                       'event_finish_with_failure')
-    def test_wrap_instance_event_log_exception(self, mock_finish, mock_start):
-        inst = {"uuid": uuids.instance}
-
-        @compute_manager.wrap_instance_event
-        def fake_event(self2, context, instance):
-            raise exception.NovaException()
-
-        self.assertRaises(exception.NovaException, fake_event,
-                          self.compute, self.context, instance=inst)
-
-        self.assertTrue(mock_start.called)
-        self.assertTrue(mock_finish.called)
-        args, kwargs = mock_finish.call_args
-        self.assertIsInstance(kwargs['exc_val'], exception.NovaException)
-
     def test_object_compat(self):
         db_inst = fake_instance.fake_db_instance()
 
