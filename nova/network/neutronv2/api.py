@@ -315,11 +315,12 @@ class API(base_api.NetworkAPI):
             # in case the caller forgot to filter the list.
             if port_id is None:
                 continue
-            port_req_body = {'port': {'device_id': '', 'device_owner': '',
-                                      'dns_name': ''}}
+            port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
             if port_binding:
                 port_req_body['port']['binding:host_id'] = None
                 port_req_body['port']['binding:profile'] = {}
+            if constants.DNS_INTEGRATION in self.extensions:
+                port_req_body['port']['dns_name'] = ''
             try:
                 port_client.update_port(port_id, port_req_body)
             except Exception:

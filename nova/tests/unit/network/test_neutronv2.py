@@ -3548,7 +3548,7 @@ class TestNeutronv2WithMock(test.TestCase):
         api = neutronapi.API()
         api._unbind_ports(mock_ctx, ports, mock_client)
 
-        body = {'port': {'device_id': '', 'device_owner': '', 'dns_name': ''}}
+        body = {'port': {'device_id': '', 'device_owner': ''}}
         if has_ext:
             body['port']['binding:host_id'] = None
             body['port']['binding:profile'] = {}
@@ -3827,6 +3827,20 @@ class TestNeutronv2WithMock(test.TestCase):
         self.assertRaises(exceptions.InternalServerError,
                           self.api.get_floating_ips_by_project,
                           self.context)
+
+    def test_unbind_ports_reset_dns_name(self):
+        neutron = mock.Mock()
+        port_client = mock.Mock()
+        with mock.patch.object(self.api, '_has_port_binding_extension',
+                               return_value=False):
+            self.api.extensions = [constants.DNS_INTEGRATION]
+            ports = [uuids.port_id]
+            self.api._unbind_ports(self.context, ports, neutron, port_client)
+            port_req_body = {'port': {'device_id': '',
+                                      'device_owner': '',
+                                      'dns_name': ''}}
+            port_client.update_port.assert_called_once_with(
+                uuids.port_id, port_req_body)
 
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
