@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 Force-Delete Server (forceDelete Action)
 ========================================
@@ -27,16 +24,18 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
   - forceDelete: forceDelete
 
-**Example Force-Delete Server (Forcedelete Action): JSON request**
+**Example Force-Delete Server (forceDelete Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-deferred-delete/force-delete-post-req.json
    :language: javascript
 
 Response
 --------
+
+No body is returned on a successful submission.
 
 Restore Soft-Deleted Instance (restore Action)
 ==============================================
@@ -63,10 +62,10 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
   - restore: restore
 
-**Example Restore Soft-Deleted Instance (Restore Action): JSON request**
+**Example Restore Soft-Deleted Instance (restore Action): JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-deferred-delete/restore-post-req.json
    :language: javascript
@@ -74,3 +73,4 @@ Request
 Response
 --------
 
+No body is returned on a successful submission.
