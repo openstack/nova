@@ -450,10 +450,6 @@ MIN_LIBVIRT_UEFI_VERSION = (1, 2, 9)
 MIN_LIBVIRT_HYPERV_TIMER_VERSION = (1, 2, 2)
 MIN_QEMU_HYPERV_TIMER_VERSION = (2, 0, 0)
 
-MIN_LIBVIRT_HYPERV_FEATURE_VERSION = (1, 0, 0)
-MIN_LIBVIRT_HYPERV_FEATURE_EXTRA_VERSION = (1, 1, 0)
-MIN_QEMU_HYPERV_FEATURE_VERSION = (1, 1, 0)
-
 # parallels driver support
 MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 
@@ -4149,20 +4145,16 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.features.append(vconfig.LibvirtConfigGuestFeatureAPIC())
 
         if (virt_type in ("qemu", "kvm") and
-                os_type == 'windows' and
-                self._host.has_min_version(MIN_LIBVIRT_HYPERV_FEATURE_VERSION,
-                                           MIN_QEMU_HYPERV_FEATURE_VERSION)):
+                os_type == 'windows'):
             hv = vconfig.LibvirtConfigGuestFeatureHyperV()
             hv.relaxed = True
 
-            if self._host.has_min_version(
-                    MIN_LIBVIRT_HYPERV_FEATURE_EXTRA_VERSION):
-                hv.spinlocks = True
-                # Increase spinlock retries - value recommended by
-                # KVM maintainers who certify Windows guests
-                # with Microsoft
-                hv.spinlock_retries = 8191
-                hv.vapic = True
+            hv.spinlocks = True
+            # Increase spinlock retries - value recommended by
+            # KVM maintainers who certify Windows guests
+            # with Microsoft
+            hv.spinlock_retries = 8191
+            hv.vapic = True
             guest.features.append(hv)
 
     def _check_number_of_serial_console(self, num_ports):
