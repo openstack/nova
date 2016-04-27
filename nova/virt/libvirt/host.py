@@ -894,10 +894,3 @@ class Host(object):
                 return False
         except IOError:
             return False
-
-    def is_migratable_xml_flag(self):
-        """Determines whether libvirt is supporting dump XML suitable for
-        migration.
-        """
-        return getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
-                       None) is not None

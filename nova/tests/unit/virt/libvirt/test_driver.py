@@ -7798,60 +7798,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 drvr._live_migration_uri('dest'),
                 dxml=target_xml, flags=mock.ANY, bandwidth=bandwidth)
 
-    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
-                       create=True)
-    def test_live_migration_fails_with_serial_console_without_migratable(self):
-        self.compute = importutils.import_object(CONF.compute_manager)
-        instance_ref = self.test_instance
-
-        CONF.set_override("enabled", True, "serial_console")
-        dom = fakelibvirt.virDomain
-        migrate_data = objects.LibvirtLiveMigrateData(
-            serial_listen_addr='', target_connect_addr=None,
-            block_migration=False)
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.MigrationError,
-                          drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
-                          False, migrate_data, dom, [])
-
-    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
-                       create=True)
-    def test_live_migration_uses_migrateToURI_without_migratable_flag(self):
-        self.compute = importutils.import_object(CONF.compute_manager)
-        instance_dict = dict(self.test_instance)
-        instance_dict.update({'host': 'fake',
-                              'power_state': power_state.RUNNING,
-                              'vm_state': vm_states.ACTIVE})
-        instance_ref = objects.Instance(**instance_dict)
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        guest = libvirt_guest.Guest(vdmock)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI")
-        _bandwidth = CONF.libvirt.live_migration_bandwidth
-        vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                            flags=mox.IgnoreArg(),
-                            bandwidth=_bandwidth).AndRaise(
-                                fakelibvirt.libvirtError("ERR"))
-
-        # start test
-        migrate_data = objects.LibvirtLiveMigrateData(
-            graphics_listen_addr_vnc='0.0.0.0',
-            graphics_listen_addr_spice='0.0.0.0',
-            serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
-            bdms=[],
-            block_migration=False)
-        self.mox.ReplayAll()
-        self.assertRaises(fakelibvirt.libvirtError,
-                          drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
-                          False, migrate_data, guest, [])
-
     def test_live_migration_uses_migrateToURI_without_dest_listen_addrs(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
@@ -7958,35 +7904,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._live_migration_uri('dest'),
             params=params, flags=151)
 
-    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
-                       create=True)
-    def test_live_migration_fails_without_migratable_flag_or_0_addr(self):
-        self.flags(enabled=True, vncserver_listen='1.2.3.4', group='vnc')
-        self.compute = importutils.import_object(CONF.compute_manager)
-        instance_dict = dict(self.test_instance)
-        instance_dict.update({'host': 'fake',
-                              'power_state': power_state.RUNNING,
-                              'vm_state': vm_states.ACTIVE})
-        instance_ref = objects.Instance(**instance_dict)
-
-        # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI")
-
-        # start test
-        migrate_data = objects.LibvirtLiveMigrateData(
-            graphics_listen_addr_vnc='1.2.3.4',
-            graphics_listen_addr_spice='1.2.3.4',
-            serial_listen_addr='127.0.0.1',
-            target_connect_addr=None,
-            block_migration=False)
-        self.mox.ReplayAll()
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.MigrationError,
-                          drvr._live_migration_operation,
-                          self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock, [])
-
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.
         # Preparing data
@@ -8004,19 +7921,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(vdmock)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
-        if getattr(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
-            vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                                flags=mox.IgnoreArg(),
-                                bandwidth=_bandwidth).AndRaise(
-                                        fakelibvirt.libvirtError('ERR'))
-        else:
-            vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
-            ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
-            vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
-                                 dxml=mox.IgnoreArg(),
-                                 flags=mox.IgnoreArg(),
-                                 bandwidth=_bandwidth).AndRaise(
-                                         fakelibvirt.libvirtError('ERR'))
+        vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
+        ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
+        vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
+                             dxml=mox.IgnoreArg(),
+                             flags=mox.IgnoreArg(),
+                             bandwidth=_bandwidth).AndRaise(
+                                     fakelibvirt.libvirtError('ERR'))
 
         # start test
         migrate_data = objects.LibvirtLiveMigrateData(
