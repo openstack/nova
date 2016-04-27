@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -19,8 +18,7 @@ Lists keypairs that are associated with the account.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -46,8 +44,7 @@ Generates or imports a keypair.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
 
 Request
 -------
@@ -71,29 +68,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/keypairs/keypairs-import-post-resp.json
    :language: javascript
 
-Delete Keypair
-==============
-
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-keypairs/{keypair_name}
-
-Deletes a keypair.
-
-Normal response codes: 202
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - keypair_name: keypair_name
-
-Response
---------
-
 Show Keypair Details
 ====================
 
@@ -103,8 +77,7 @@ Shows details for a keypair that is associated with the account.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -121,4 +94,26 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/keypairs/keypairs-get-resp.json
    :language: javascript
+
+Delete Keypair
+==============
+
+.. rest_method:: DELETE /v2.1/{tenant_id}/os-keypairs/{keypair_name}
+
+Deletes a keypair.
+
+Normal response codes: 202
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - keypair_name: keypair_name
+
+Response
+--------
 
