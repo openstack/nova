@@ -4657,7 +4657,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if pointer_model is None and CONF.libvirt.use_usb_tablet:
             # TODO(sahid): We set pointer_model to keep compatibility
             # until the next release O*. It means operators can continue
-            # to use the depecrated option "use_usb_tablet" or set a
+            # to use the deprecated option "use_usb_tablet" or set a
             # specific device to use
             pointer_model = "usbtablet"
             LOG.warning(_LW('The option "use_usb_tablet" has been '
