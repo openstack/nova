@@ -1992,9 +1992,6 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 loader.set("type", "pflash")
                 loader.set("readonly", "yes")
                 os.append(loader)
-                nvram = self._text_node("nvram", "")
-                nvram.set("template", self.os_loader)
-                os.append(nvram)
             else:
                 os.append(self._text_node("loader", self.os_loader))
         if self.os_initrd is not None:

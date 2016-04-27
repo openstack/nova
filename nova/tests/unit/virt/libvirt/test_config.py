@@ -1896,7 +1896,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.name = "uefi"
         obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
         obj.os_type = "x86_64"
-        obj.os_loader = '/tmp/OVMF.fd'
+        obj.os_loader = '/tmp/OVMF_CODE.fd'
         obj.os_loader_type = 'pflash'
         xml = obj.to_xml()
 
@@ -1908,8 +1908,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <vcpu>1</vcpu>
               <os>
                 <type>x86_64</type>
-                <loader readonly='yes' type='pflash'>/tmp/OVMF.fd</loader>
-                <nvram template="/tmp/OVMF.fd"></nvram>
+                <loader readonly='yes' type='pflash'>/tmp/OVMF_CODE.fd</loader>
               </os>
             </domain>""")
 
