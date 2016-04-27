@@ -422,6 +422,42 @@ marker:
   in: query
   required: false
   type: string
+migration_hidden:
+  description: |
+    The 'hidden' setting of migration to filter.
+  in: query
+  required: false
+  type: string
+migration_host:
+  description: |
+    The source/destination compute node of migration to filter.
+  in: query
+  required: false
+  type: string
+migration_instance_uuid:
+  description: |
+    The uuid of the instance that migration is operated on to filter.
+  in: query
+  required: false
+  type: string
+migration_source_compute:
+  description: |
+    The source compute node of migration to filter.
+  in: query
+  required: false
+  type: string
+migration_status:
+  description: |
+    The status of migration to filter.
+  in: query
+  required: false
+  type: string
+migration_type:
+  description: |
+    The type of migration to filter.
+  in: query
+  required: false
+  type: string
 minDisk:
   description: |
     Filters the response by a minimum disk space, in GiB.
