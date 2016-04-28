@@ -573,8 +573,9 @@ class _BaseTaskTestCase(object):
         @mock.patch.object(conductor_manager.ComputeTaskManager,
                            '_cleanup_allocated_networks')
         @mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+        @mock.patch.object(scheduler_utils, 'build_request_spec')
         @mock.patch.object(scheduler_utils, 'populate_retry')
-        def _test(populate_retry,
+        def _test(populate_retry, build_spec,
                   set_vm_state_and_notify, cleanup_mock):
             # build_instances() is a cast, we need to wait for it to
             # complete
@@ -599,7 +600,7 @@ class _BaseTaskTestCase(object):
                 filter_properties, instances[0].uuid)
             set_vm_state_and_notify.assert_called_once_with(
                 self.context, instances[0].uuid, 'compute_task',
-                'build_instances', updates, mock.ANY, {})
+                'build_instances', updates, mock.ANY, build_spec.return_value)
             cleanup_mock.assert_called_once_with(self.context, mock.ANY, None)
 
         _test()

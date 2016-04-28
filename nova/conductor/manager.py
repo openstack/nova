@@ -488,10 +488,10 @@ class ComputeTaskManager(base.Base):
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
             # have a single instance.
+            request_spec = scheduler_utils.build_request_spec(
+                context, image, instances)
             scheduler_utils.populate_retry(
                 filter_properties, instances[0].uuid)
-            request_spec = scheduler_utils.build_request_spec(
-                    context, image, instances)
             hosts = self._schedule_instances(
                     context, request_spec, filter_properties)
         except Exception as exc:
