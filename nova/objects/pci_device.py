@@ -465,8 +465,9 @@ class PciDeviceList(base.ObjectListBase, base.NovaObject):
 
     def __init__(self, *args, **kwargs):
         super(PciDeviceList, self).__init__(*args, **kwargs)
-        self.objects = []
-        self.obj_reset_changes()
+        if 'objects' not in kwargs:
+            self.objects = []
+            self.obj_reset_changes()
 
     @base.remotable_classmethod
     def get_by_compute_node(cls, context, node_id):

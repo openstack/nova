@@ -451,6 +451,15 @@ fake_pci_devs = [fake_db_dev, fake_db_dev_1]
 
 
 class _TestPciDeviceListObject(object):
+
+    def test_create_pci_device_list(self):
+        ctxt = context.get_admin_context()
+        devobj = pci_device.PciDevice.create(ctxt, dev_dict)
+        pci_device_list = objects.PciDeviceList(
+            context=ctxt, objects=[devobj])
+        self.assertEqual(1, len(pci_device_list))
+        self.assertIsInstance(pci_device_list[0], pci_device.PciDevice)
+
     def test_get_by_compute_node(self):
         ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'pci_device_get_all_by_node')
