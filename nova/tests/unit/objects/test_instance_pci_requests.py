@@ -70,26 +70,6 @@ class _TestInstancePCIRequests(object):
                              [dict(x.items()) for x in request.spec])
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
-    def test_get_by_instance_uuid_and_newness(self, mock_get):
-        pcir = objects.InstancePCIRequests
-        mock_get.return_value = objects.InstancePCIRequests(
-            instance_uuid=uuids.instance,
-            requests=[objects.InstancePCIRequest(count=1, is_new=False),
-                      objects.InstancePCIRequest(count=2, is_new=True)])
-        old_req = pcir.get_by_instance_uuid_and_newness(self.context,
-                                                        uuids.instance,
-                                                        False)
-        mock_get.return_value = objects.InstancePCIRequests(
-            instance_uuid=uuids.instance,
-            requests=[objects.InstancePCIRequest(count=1, is_new=False),
-                      objects.InstancePCIRequest(count=2, is_new=True)])
-        new_req = pcir.get_by_instance_uuid_and_newness(self.context,
-                                                        uuids.instance,
-                                                        True)
-        self.assertEqual(1, old_req.requests[0].count)
-        self.assertEqual(2, new_req.requests[0].count)
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
     def test_get_by_instance_current(self, mock_get):
         instance = objects.Instance(uuid=uuids.instance,
                                     system_metadata={})
@@ -111,10 +91,6 @@ class _TestInstancePCIRequests(object):
         self.assertFalse(requests.requests[0].is_new)
         self.assertEqual('alias_2', requests.requests[1].alias_name)
         self.assertTrue(requests.requests[1].is_new)
-
-    def test_new_compatibility(self):
-        request = objects.InstancePCIRequest(is_new=False)
-        self.assertFalse(request.new)
 
     def test_backport_1_0(self):
         requests = objects.InstancePCIRequests(
