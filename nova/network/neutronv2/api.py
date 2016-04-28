@@ -453,8 +453,8 @@ class API(base_api.NetworkAPI):
         creating ports so it's not necessary to specify it to the
         request.
         """
-        if DEFAULT_SECGROUP in security_groups:
-            security_groups.remove(DEFAULT_SECGROUP)
+        if security_groups == [DEFAULT_SECGROUP]:
+            security_groups = []
         return security_groups
 
     def _process_security_groups(self, instance, neutron, security_groups):
