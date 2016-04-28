@@ -645,6 +645,7 @@ class ComputeAPI(object):
                     pre_migration_result=True)
         if not self.client.can_send_version(version):
             version = '4.0'
+            args.pop('migration')
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'live_migration', instance=instance,
                    dest=dest, block_migration=block_migration,
