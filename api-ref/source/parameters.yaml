@@ -1803,19 +1803,6 @@ metadata_1:
   in: body
   required: false
   type: object
-metadata_3:
-  description: |
-    The associated metadata key and value pairs.
-  in: body
-  required: true
-  type: object
-metadata_4:
-  description: |
-    Metadata key and value pairs. The maximum size for each metadata key and value
-    pair is 255 bytes.
-  in: body
-  required: false
-  type: string
 metadata_compat:
   description: |
     A dictionary of metadata key-and-value pairs, which is maintained for backward
@@ -1842,6 +1829,13 @@ metadata_items_quota_optional:
   in: body
   required: false
   type: integer
+metadata_object:
+  description: |
+    Metadata key and value pairs. The maximum size for each metadata key and value
+    pair is 255 bytes.
+  in: body
+  required: true
+  type: object
 metadata_required:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is

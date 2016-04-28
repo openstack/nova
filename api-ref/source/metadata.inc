@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 =====================================
  Server metadata (servers, metadata)
@@ -37,7 +34,11 @@ Request
 Response
 --------
 
-**Example List All Metadata: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - metadata: metadata_object
+
+**Example List All Metadata:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -65,8 +66,9 @@ Request
 
   - tenant_id: tenant_id
   - server_id: server_id
+  - metadata: metadata_object
 
-**Example Update Metadata Items: JSON request**
+**Example Update Metadata Items:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
@@ -74,7 +76,11 @@ Request
 Response
 --------
 
-**Example Update Metadata Items: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - metadata: metadata_object
+
+**Example Update Metadata Items:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -102,8 +108,9 @@ Request
 
   - tenant_id: tenant_id
   - server_id: server_id
+  - metadata: metadata_object
 
-**Example Create Or Replace Metadata Items: JSON request**
+**Example Create Or Replace Metadata Items:** 
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
@@ -111,7 +118,11 @@ Request
 Response
 --------
 
-**Example Create Or Replace Metadata Items: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - metadata: metadata_object
+
+**Example Create Or Replace Metadata Items:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
@@ -141,7 +152,11 @@ Request
 Response
 --------
 
-**Example Show Metadata Item Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - meta: metadata_object
+
+**Example Show Metadata Item Details:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
@@ -171,7 +186,7 @@ Request
   - server_id: server_id
   - key: key
 
-**Example Create Or Update Metadata Item: JSON request**
+**Example Create Or Update Metadata Item:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-req.json
    :language: javascript
@@ -179,7 +194,11 @@ Request
 Response
 --------
 
-**Example Create Or Update Metadata Item: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - meta: metadata_object
+
+**Example Create Or Update Metadata Item:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-resp.json
    :language: javascript
@@ -209,3 +228,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful DELETE action.
