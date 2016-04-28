@@ -44,6 +44,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova import test
 from nova.tests import fixtures
@@ -442,13 +443,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 security_groups=None)
         startup_instances = [inst, inst, inst]
 
+        def _make_instance_list(db_list):
+            return instance_obj._make_instance_list(
+                    self.context, objects.InstanceList(), db_list, None)
+
         def _do_mock_calls(defer_iptables_apply):
             self.compute.driver.init_host(host=our_host)
             context.get_admin_context().AndReturn(self.context)
-            db.instance_get_all_by_host(
+            objects.InstanceList.get_by_host(
                     self.context, our_host,
-                    columns_to_join=['info_cache', 'metadata']
-                    ).AndReturn(startup_instances)
+                    expected_attrs=['info_cache', 'metadata']
+                    ).AndReturn(_make_instance_list(startup_instances))
             if defer_iptables_apply:
                 self.compute.driver.filter_defer_apply_on()
             self.compute._destroy_evacuated_instances(self.context)
@@ -466,7 +471,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                  'filter_defer_apply_on')
         self.mox.StubOutWithMock(self.compute.driver,
                 'filter_defer_apply_off')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(objects.InstanceList, 'get_by_host')
         self.mox.StubOutWithMock(context, 'get_admin_context')
         self.mox.StubOutWithMock(self.compute,
                 '_destroy_evacuated_instances')
@@ -534,7 +539,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(self.compute.driver, 'init_host')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(objects.InstanceList, 'get_by_host')
         self.mox.StubOutWithMock(context, 'get_admin_context')
         self.mox.StubOutWithMock(self.compute, 'init_virt_events')
         self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
@@ -544,9 +549,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.compute.driver.init_host(host=our_host)
         context.get_admin_context().AndReturn(self.context)
-        db.instance_get_all_by_host(self.context, our_host,
-                                    columns_to_join=['info_cache', 'metadata']
-                                    ).AndReturn([])
+        objects.InstanceList.get_by_host(self.context, our_host,
+                expected_attrs=['info_cache', 'metadata']
+                ).AndReturn(objects.InstanceList())
         self.compute.init_virt_events()
 
         # simulate failed instance
@@ -1301,27 +1306,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.stop_instance.assert_has_calls([call])
             self.assertIsNone(init_return)
 
-    def test_get_instances_on_driver(self):
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_get_instances_on_driver(self, mock_instance_list):
         driver_instances = []
         for x in range(10):
             driver_instances.append(fake_instance.fake_db_instance())
 
-        self.mox.StubOutWithMock(self.compute.driver,
-                'list_instance_uuids')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
+        def _make_instance_list(db_list):
+            return instance_obj._make_instance_list(
+                    self.context, objects.InstanceList(), db_list, None)
 
-        self.compute.driver.list_instance_uuids().AndReturn(
-                [inst['uuid'] for inst in driver_instances])
-        db.instance_get_all_by_filters(
-                self.context,
-                {'uuid': [inst['uuid'] for
-                          inst in driver_instances]},
-                'created_at', 'desc', columns_to_join=None,
-                limit=None, marker=None).AndReturn(driver_instances)
+        driver_uuids = [inst['uuid'] for inst in driver_instances]
+        mock_instance_list.return_value = _make_instance_list(driver_instances)
 
-        self.mox.ReplayAll()
+        with mock.patch.object(self.compute.driver,
+                               'list_instance_uuids') as mock_driver_uuids:
+            mock_driver_uuids.return_value = driver_uuids
+            result = self.compute._get_instances_on_driver(self.context)
 
-        result = self.compute._get_instances_on_driver(self.context)
         self.assertEqual([x['uuid'] for x in driver_instances],
                          [x['uuid'] for x in result])
 
@@ -1336,7 +1338,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual([],
                          [x['uuid'] for x in result])
 
-    def test_get_instances_on_driver_fallback(self):
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_get_instances_on_driver_fallback(self, mock_instance_list):
         # Test getting instances when driver doesn't support
         # 'list_instance_uuids'
         self.compute.host = 'host'
@@ -1353,24 +1356,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 driver_instances.append(instance)
             all_instances.append(instance)
 
-        self.mox.StubOutWithMock(self.compute.driver,
-                'list_instance_uuids')
-        self.mox.StubOutWithMock(self.compute.driver,
-                'list_instances')
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
+        def _make_instance_list(db_list):
+            return instance_obj._make_instance_list(
+                    self.context, objects.InstanceList(), db_list, None)
 
-        self.compute.driver.list_instance_uuids().AndRaise(
-                NotImplementedError())
-        self.compute.driver.list_instances().AndReturn(
-                [inst['name'] for inst in driver_instances])
-        db.instance_get_all_by_filters(
-                self.context, filters,
-                'created_at', 'desc', columns_to_join=None,
-                limit=None, marker=None).AndReturn(all_instances)
+        driver_instance_names = [inst['name'] for inst in driver_instances]
+        mock_instance_list.return_value = _make_instance_list(all_instances)
 
-        self.mox.ReplayAll()
+        with test.nested(
+            mock.patch.object(self.compute.driver, 'list_instance_uuids'),
+            mock.patch.object(self.compute.driver, 'list_instances')
+        ) as (
+            mock_driver_uuids,
+            mock_driver_instances
+        ):
+            mock_driver_uuids.side_effect = NotImplementedError()
+            mock_driver_instances.return_value = driver_instance_names
+            result = self.compute._get_instances_on_driver(self.context,
+                                                           filters)
 
-        result = self.compute._get_instances_on_driver(self.context, filters)
         self.assertEqual([x['uuid'] for x in driver_instances],
                          [x['uuid'] for x in result])
 
