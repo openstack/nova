@@ -353,7 +353,7 @@ be used and interpreted by nova.
        ]
    }
 
--  **Special keys are used to tweek the query**
+-  **Special keys are used to tweak the query**
    ``changes-since`` returns instances updated after the given time,
    ``deleted`` return (or exclude) deleted instances and ``soft_deleted``
    modify behavior of 'deleted' to either include or exclude instances whose
