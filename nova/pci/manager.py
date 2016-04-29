@@ -312,12 +312,14 @@ class PciDevTracker(object):
         existed |= set(mig['instance_uuid'] for mig in migrations)
         existed |= set(inst['uuid'] for inst in orphans)
 
-        for uuid in self.claims.keys():
+        # need to copy keys, because the dict is modified in the loop body
+        for uuid in list(self.claims):
             if uuid not in existed:
                 devs = self.claims.pop(uuid, [])
                 for dev in devs:
                     self._free_device(dev)
-        for uuid in self.allocations.keys():
+        # need to copy keys, because the dict is modified in the loop body
+        for uuid in list(self.allocations):
             if uuid not in existed:
                 devs = self.allocations.pop(uuid, [])
                 for dev in devs:
