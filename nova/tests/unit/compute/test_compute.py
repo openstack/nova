@@ -9940,7 +9940,7 @@ class ComputeAPITestCase(BaseTestCase):
                                           block_migration=True,
                                           disk_over_commit=True,
                                           host_name='fake_dest_host',
-                                          force=force)
+                                          force=force, async=False)
 
             record_action_start.assert_called_once_with(self.context, instance,
                                                         'live-migration')
@@ -9952,7 +9952,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context, instance, host,
                 block_migration=True,
                 disk_over_commit=True,
-                request_spec=fake_spec)
+                request_spec=fake_spec, async=False)
 
         do_test()
         instance.refresh()

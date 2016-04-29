@@ -1970,7 +1970,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                          'fake_dest_host',
                                          block_migration=True,
                                          disk_over_commit=True,
-                                         request_spec=fake_spec)
+                                         request_spec=fake_spec,
+                                         async=False)
 
     def test_swap_volume_volume_api_usage(self):
         # This test ensures that volume_id arguments are passed to volume_api
