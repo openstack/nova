@@ -1325,16 +1325,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual([x['uuid'] for x in driver_instances],
                          [x['uuid'] for x in result])
 
-    @mock.patch('nova.virt.driver.ComputeDriver.list_instance_uuids')
-    @mock.patch('nova.db.api.instance_get_all_by_filters')
-    def test_get_instances_on_driver_empty(self, mock_list, mock_db):
-        mock_list.return_value = []
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_get_instances_on_driver_empty(self, mock_instance_list):
+        with mock.patch.object(self.compute.driver,
+                               'list_instance_uuids') as mock_driver_uuids:
+            mock_driver_uuids.return_value = []
+            result = self.compute._get_instances_on_driver(self.context)
 
-        result = self.compute._get_instances_on_driver(self.context)
-        # instance_get_all_by_filters should not be called
-        self.assertEqual(0, mock_db.call_count)
-        self.assertEqual([],
-                         [x['uuid'] for x in result])
+        # Short circuit DB call, get_by_filters should not be called
+        self.assertEqual(0, mock_instance_list.call_count)
+        self.assertEqual(1, mock_driver_uuids.call_count)
+        self.assertEqual([], [x['uuid'] for x in result])
 
     def test_get_instances_on_driver_fallback(self):
         # Test getting instances when driver doesn't support
