@@ -356,3 +356,10 @@ volume_size = {
     'minimum': 1,
     'maximum': db.MAX_INT
 }
+
+
+flavor_param_positive = copy.deepcopy(volume_size)
+
+
+flavor_param_non_negative = copy.deepcopy(volume_size)
+flavor_param_non_negative['minimum'] = 0
