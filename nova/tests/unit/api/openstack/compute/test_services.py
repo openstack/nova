@@ -27,7 +27,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
 from nova.cells import utils as cells_utils
-from nova.compute import cells_api
+from nova import compute
 from nova import context
 from nova import exception
 from nova import objects
@@ -197,6 +197,8 @@ class ServicesTestV21(test.TestCase):
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
 
+        self.ctxt = context.get_admin_context()
+        self.host_api = compute.HostAPI()
         self._set_up_controller()
         self.controller.host_api.service_get_all = (
             mock.Mock(side_effect=fake_service_get_all(fake_services_list)))
@@ -552,11 +554,17 @@ class ServicesTestV21(test.TestCase):
     def test_services_delete(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
+        compute = self.host_api.db.service_create(self.ctxt,
+            {'host': 'fake-compute-host',
+             'binary': 'nova-compute',
+             'topic': 'compute',
+             'report_count': 0})
+
         with mock.patch.object(self.controller.host_api,
                                'service_delete') as service_delete:
-            self.controller.delete(self.req, '1')
+            self.controller.delete(self.req, compute.id)
             service_delete.assert_called_once_with(
-                self.req.environ['nova.context'], '1')
+                self.req.environ['nova.context'], compute.id)
             self.assertEqual(self.controller.delete.wsgi_code, 204)
 
     def test_services_delete_not_found(self):
@@ -863,7 +871,7 @@ class ServicesCellsTestV21(test.TestCase):
     def setUp(self):
         super(ServicesCellsTestV21, self).setUp()
 
-        host_api = cells_api.HostAPI()
+        host_api = compute.cells_api.HostAPI()
 
         self.ext_mgr = extensions.ExtensionManager()
         self.ext_mgr.extensions = {}
