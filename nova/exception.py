@@ -192,7 +192,7 @@ class CinderConnectionFailed(NovaException):
 
 class Forbidden(NovaException):
     ec2_code = 'AuthFailure'
-    msg_fmt = _("Not authorized.")
+    msg_fmt = _("Forbidden")
     code = 403
 
 
