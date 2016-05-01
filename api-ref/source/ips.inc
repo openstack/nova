@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 ============================
  Servers IPs (servers, ips)
@@ -27,7 +26,6 @@ Request
 -------
 
 .. rest_parameters:: parameters.yaml
-
 
   - server_id: server_id
 
@@ -65,7 +63,6 @@ Request
 -------
 
 .. rest_parameters:: parameters.yaml
-
 
   - server_id: server_id
   - network_label: network_label
