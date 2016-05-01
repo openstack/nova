@@ -104,7 +104,7 @@ def _load_auth_plugin(conf):
     if auth_plugin:
         return auth_plugin
 
-    err_msg = _('Unknown auth plugin: %s') % conf.neutron.auth_plugin
+    err_msg = _('Unknown auth type: %s') % conf.neutron.auth_type
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
 
