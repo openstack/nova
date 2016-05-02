@@ -6942,9 +6942,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                 fakelibvirt.libvirtError("ERR"))
 
         # start test
-        migrate_data = {'pre_live_migration_result':
-                {'graphics_listen_addrs':
-                    {'vnc': '10.0.0.1', 'spice': '10.0.0.2'}}}
         migrate_data = objects.LibvirtLiveMigrateData(
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
