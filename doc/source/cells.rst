@@ -15,6 +15,10 @@
  Cells
 =======
 
+Before reading further, there is a nice overview presentation_ that
+Andrew Laski gave at the Austin (Newton) summit which is worth watching.
+
+.. _presentation: https://www.openstack.org/videos/video/nova-cells-v2-whats-going-on
 
 Cells V1
 ========
