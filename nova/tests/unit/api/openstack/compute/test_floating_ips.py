@@ -21,8 +21,6 @@ import six
 import webob
 
 from nova.api.openstack.compute import floating_ips as fips_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ips \
-        as fips_v2
 from nova.api.openstack import extensions
 from nova import compute
 from nova.compute import utils as compute_utils
@@ -161,14 +159,6 @@ class FloatingIpTestNeutronV21(test.NoDBTestCase):
     def test_floatingip_delete_invalid_id(self):
         ex = exception.InvalidID(id=1)
         self._test_floatingip_delete_not_found(ex, webob.exc.HTTPBadRequest)
-
-
-class FloatingIpTestNeutronV2(FloatingIpTestNeutronV21):
-    floating_ips = fips_v2
-
-    def test_floatingip_delete_invalid_id(self):
-        ex = exception.InvalidID(id=1)
-        self._test_floatingip_delete_not_found(ex, webob.exc.HTTPNotFound)
 
 
 class FloatingIpTestV21(test.TestCase):
@@ -720,33 +710,6 @@ class FloatingIpTestV21(test.TestCase):
                           TEST_INST, body=body)
 
 
-class FloatingIpTestV2(FloatingIpTestV21):
-    floating_ips = fips_v2
-    validation_error = webob.exc.HTTPBadRequest
-
-    def test_not_extended_floating_ip_associate_fixed(self):
-        # Check that fixed_address is ignored if os-extended-floating-ips
-        # is not loaded
-        fixed_address_requested = '192.168.1.101'
-        fixed_address_allocated = '192.168.1.100'
-
-        def fake_associate_floating_ip(*args, **kwargs):
-            self.assertEqual(fixed_address_allocated,
-                             kwargs['fixed_address'])
-
-        self.stubs.Set(network.api.API, "associate_floating_ip",
-                       fake_associate_floating_ip)
-        body = dict(addFloatingIp=dict(address=self.floating_ip,
-                                       fixed_address=fixed_address_requested))
-
-        rsp = self.manager._add_floating_ip(self.fake_req, TEST_INST, body)
-        self.assertEqual(202, rsp.status_int)
-
-    def test_floatingip_delete_invalid_id(self):
-        ex = exception.InvalidID(id=1)
-        self._test_floatingip_delete_not_found(ex, webob.exc.HTTPNotFound)
-
-
 class ExtendedFloatingIpTestV21(test.TestCase):
     floating_ip = "10.10.10.10"
     floating_ip_2 = "10.10.10.11"
@@ -836,10 +799,6 @@ class ExtendedFloatingIpTestV21(test.TestCase):
 
         self.assertIn("Specified fixed address not assigned to instance",
                       ex.explanation)
-
-
-class ExtendedFloatingIpTestV2(ExtendedFloatingIpTestV21):
-    floating_ips = fips_v2
 
 
 class FloatingIPPolicyEnforcementV21(test.NoDBTestCase):

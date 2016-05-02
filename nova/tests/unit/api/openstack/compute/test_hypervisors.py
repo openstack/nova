@@ -20,11 +20,7 @@ from webob import exc
 
 from nova.api.openstack.compute import hypervisors \
         as hypervisors_v21
-from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
-        as hypervisors_v2
-from nova.api.openstack import extensions
 from nova.cells import utils as cells_utils
-from nova import context
 from nova import exception
 from nova import objects
 from nova import test
@@ -436,62 +432,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
                           self.controller.statistics, req)
 
 
-class HypervisorsTestV2(HypervisorsTestV21):
-    DETAIL_HYPERS_DICTS = copy.deepcopy(
-                              HypervisorsTestV21.DETAIL_HYPERS_DICTS)
-    del DETAIL_HYPERS_DICTS[0]['state']
-    del DETAIL_HYPERS_DICTS[1]['state']
-    del DETAIL_HYPERS_DICTS[0]['status']
-    del DETAIL_HYPERS_DICTS[1]['status']
-    del DETAIL_HYPERS_DICTS[0]['service']['disabled_reason']
-    del DETAIL_HYPERS_DICTS[1]['service']['disabled_reason']
-    del DETAIL_HYPERS_DICTS[0]['host_ip']
-    del DETAIL_HYPERS_DICTS[1]['host_ip']
-
-    INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV21.INDEX_HYPER_DICTS)
-    del INDEX_HYPER_DICTS[0]['state']
-    del INDEX_HYPER_DICTS[1]['state']
-    del INDEX_HYPER_DICTS[0]['status']
-    del INDEX_HYPER_DICTS[1]['status']
-
-    def setUp(self):
-        super(HypervisorsTestV2, self).setUp()
-        self.rule_hyp_show = "compute_extension:hypervisors"
-        self.rule = {self.rule_hyp_show: ""}
-
-    def _set_up_controller(self):
-        self.context = context.get_admin_context()
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = hypervisors_v2.HypervisorsController(self.ext_mgr)
-
-    def test_index_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.index, req)
-
-    def test_detail_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.detail, req)
-
-    def test_search_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.search, req,
-                          self.TEST_HYPERS_OBJ[0].id)
-
-    def test_servers_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.servers, req,
-                          self.TEST_HYPERS_OBJ[0].id)
-
-
 _CELL_PATH = 'cell1'
 
 
@@ -571,25 +511,3 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
                        fake_compute_node_statistics)
         self.stubs.Set(self.controller.host_api, 'instance_get_all_by_host',
                        self.fake_instance_get_all_by_host)
-
-
-class CellHypervisorsTestV2(HypervisorsTestV2, CellHypervisorsTestV21):
-    DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV2.DETAIL_HYPERS_DICTS)
-    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
-                                                                   hyp['id']),
-                                service=dict(hyp['service'],
-                                             id=cells_utils.cell_with_item(
-                                                 _CELL_PATH,
-                                                 hyp['service']['id']),
-                                             host=cells_utils.cell_with_item(
-                                                 _CELL_PATH,
-                                                 hyp['service']['host'])))
-                           for hyp in DETAIL_HYPERS_DICTS]
-
-    INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV2.INDEX_HYPER_DICTS)
-    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
-                                                                 hyp['id']))
-                         for hyp in INDEX_HYPER_DICTS]
-
-    def setUp(self):
-        super(CellHypervisorsTestV2, self).setUp()

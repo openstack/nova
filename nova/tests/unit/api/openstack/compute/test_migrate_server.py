@@ -18,8 +18,6 @@ import six
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions as \
-    migrate_server_v2
 from nova.api.openstack.compute import migrate_server as \
     migrate_server_v21
 from nova import exception
@@ -269,13 +267,6 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
             exception.MigrationError(reason=''),
             expected_exc=webob.exc.HTTPInternalServerError,
             check_response=False)
-
-
-class MigrateServerTestsV2(MigrateServerTestsV21):
-    migrate_server = migrate_server_v2
-    controller_name = 'AdminActionsController'
-    validation_error = webob.exc.HTTPBadRequest
-    _api_version = '2'
 
 
 class MigrateServerTestsV225(MigrateServerTestsV21):
