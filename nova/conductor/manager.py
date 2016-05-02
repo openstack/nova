@@ -441,6 +441,10 @@ class ConductorManager(manager.Manager):
     def object_backport(self, context, objinst, target_version):
         return objinst.obj_to_primitive(target_version=target_version)
 
+    def ft_failover(self, context, instance_uuid):
+        ft_tasks = fault_tolerance.FaultToleranceTasks()
+        ft_tasks.failover(context, instance_uuid)
+
 
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.
