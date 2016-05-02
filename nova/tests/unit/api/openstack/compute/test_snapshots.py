@@ -16,7 +16,6 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import volumes as volumes_v2
 from nova.api.openstack.compute import volumes as volumes_v21
 from nova import exception
 from nova import test
@@ -119,8 +118,3 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         self.assertIn('snapshots', resp_dict)
         resp_snapshots = resp_dict['snapshots']
         self.assertEqual(3, len(resp_snapshots))
-
-
-class SnapshotApiTestV2(SnapshotApiTestV21):
-    controller = volumes_v2.SnapshotController()
-    validation_error = webob.exc.HTTPBadRequest

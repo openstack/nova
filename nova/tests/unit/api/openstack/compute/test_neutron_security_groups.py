@@ -472,13 +472,6 @@ class _TestNeutronSecurityGroupRulesBase(object):
         pass
 
 
-class TestNeutronSecurityGroupRulesV2(
-        _TestNeutronSecurityGroupRulesBase,
-        test_security_groups.TestSecurityGroupRulesV2,
-        TestNeutronSecurityGroupRulesTestCase):
-    pass
-
-
 class TestNeutronSecurityGroupRulesV21(
         _TestNeutronSecurityGroupRulesBase,
         test_security_groups.TestSecurityGroupRulesV21,

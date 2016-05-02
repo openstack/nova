@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions as \
-    pause_server_v2
 from nova.api.openstack.compute import pause_server as \
     pause_server_v21
 from nova import exception
@@ -64,15 +62,6 @@ class PauseServerTestsV21(admin_only_action_common.CommonTests):
 
     def test_actions_with_locked_instance(self):
         self._test_actions_with_locked_instance(['_pause', '_unpause'])
-
-
-class PauseServerTestsV2(PauseServerTestsV21):
-    pause_server = pause_server_v2
-    controller_name = 'AdminActionsController'
-    _api_version = '2'
-
-    def test_actions_raise_on_not_implemented(self):
-        pass
 
 
 class PauseServerPolicyEnforcementV21(test.NoDBTestCase):

@@ -19,8 +19,6 @@ import webob
 from oslo_policy import policy as oslo_policy
 
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2.contrib import server_start_stop \
-        as server_v2
 from nova.api.openstack.compute import servers \
         as server_v21
 from nova.compute import api as compute_api
@@ -164,11 +162,3 @@ class ServerStartStopTestV21(test.TestCase):
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, self.req, uuids.instance, body)
-
-
-class ServerStartStopTestV2(ServerStartStopTestV21):
-    start_policy = "compute:start"
-    stop_policy = "compute:stop"
-
-    def _setup_controller(self):
-        self.controller = server_v2.ServerStartStopActionController()

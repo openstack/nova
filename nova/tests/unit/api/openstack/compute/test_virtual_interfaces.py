@@ -16,8 +16,6 @@
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.legacy_v2.contrib import virtual_interfaces \
-        as vi20
 from nova.api.openstack.compute import virtual_interfaces as vi21
 from nova import compute
 from nova.compute import api as compute_api
@@ -116,12 +114,6 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.index, req, FAKE_UUID)
-
-
-class ServerVirtualInterfaceTestV20(ServerVirtualInterfaceTestV21):
-
-    def _set_controller(self):
-        self.controller = vi20.ServerVirtualInterfaceController()
 
 
 class ServerVirtualInterfaceTestV212(ServerVirtualInterfaceTestV21):

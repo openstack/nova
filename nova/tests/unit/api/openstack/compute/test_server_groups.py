@@ -18,9 +18,7 @@ import webob
 
 import mock
 
-from nova.api.openstack.compute.legacy_v2.contrib import server_groups
 from nova.api.openstack.compute import server_groups as sg_v21
-from nova.api.openstack import extensions
 from nova import context
 import nova.db
 from nova import exception
@@ -422,15 +420,6 @@ class ServerGroupTestV21(test.TestCase):
     def test_delete_non_existing_server_group(self):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
                           self.req, 'invalid')
-
-
-class ServerGroupTestV2(ServerGroupTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _setup_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {}
-        self.controller = server_groups.ServerGroupController(ext_mgr)
 
 
 class ServerGroupTestV213(ServerGroupTestV21):

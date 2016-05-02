@@ -15,18 +15,14 @@
 
 import datetime
 
-import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
-from nova.api.openstack import extensions
 import nova.compute.api
 from nova.compute import flavors
-from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -144,36 +140,6 @@ class SchedulerHintsTestCaseV21(test.TestCase):
         self._create_server_with_scheduler_hints_bad_request(param)
 
 
-class SchedulerHintsTestCaseV2(SchedulerHintsTestCaseV21):
-
-    def _set_up_router(self):
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Scheduler_hints'])
-        self.app = compute.APIRouter(init_only=('servers',))
-
-    def _get_request(self):
-        return fakes.HTTPRequest.blank('/fake/servers')
-
-    def test_create_server_bad_hints_long_group(self):
-        # NOTE: v2.0 API cannot handle this bad request case now.
-        # We skip this test for v2.0.
-        pass
-
-    def test_create_server_with_bad_different_host_hint(self):
-        # NOTE: v2.0 API cannot handle this bad request case now.
-        # We skip this test for v2.0.
-        pass
-
-    @mock.patch(
-            'nova.api.openstack.compute.legacy_v2.servers.Controller.create')
-    def test_create_server_with_non_uuid_group_hint(self, mock_create):
-        mock_create.side_effect = exception.InvalidInput(reason='')
-        self._create_server_with_scheduler_hints_bad_request(
-                {'group': 'non-uuid'})
-
-
 class ServersControllerCreateTestV21(test.TestCase):
 
     def setUp(self):
@@ -249,18 +215,3 @@ class ServersControllerCreateTestV21(test.TestCase):
 
         self.stubs.Set(nova.compute.api.API, 'create', create)
         self._test_create_extra(params)
-
-
-class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
-
-    def _set_up_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.no_scheduler_hints_controller = servers_v2.Controller(
-                                                 self.ext_mgr)
-
-    def _verify_availability_zone(self, **kwargs):
-        self.assertEqual(kwargs['scheduler_hints'], {})
-
-    def _get_request(self):
-        return fakes.HTTPRequest.blank('/fake/servers')

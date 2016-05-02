@@ -18,8 +18,6 @@ import mock
 from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import os_tenant_networks \
-        as networks
 from nova.api.openstack.compute import tenant_networks \
         as networks_v21
 from nova import exception
@@ -257,19 +255,6 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         body = {'network': {"cidr": "10.20.105.0/24"}}
         self.assertRaises(self.validation_error,
                           self.controller.create, self.req, body=body)
-
-
-class TenantNetworksTestV2(TenantNetworksTestV21):
-    ctrlr = networks.NetworkController
-    validation_error = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(TenantNetworksTestV2, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-
-    def test_network_create_empty_body(self):
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
-                          self.controller.create, self.req, {})
 
 
 class TenantNetworksEnforcementV21(test.NoDBTestCase):
