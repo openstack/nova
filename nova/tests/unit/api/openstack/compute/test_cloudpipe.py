@@ -20,8 +20,6 @@ from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute import cloudpipe as cloudpipe_v21
-from nova.api.openstack.compute.legacy_v2.contrib import cloudpipe \
-        as cloudpipe_v2
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova import objects
@@ -153,13 +151,6 @@ class CloudpipeTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
-
-
-class CloudpipeTestV2(CloudpipeTestV21):
-    cloudpipe = cloudpipe_v2
-
-    def test_cloudpipe_create_with_bad_project_id_failed(self):
-        pass
 
 
 class CloudpipePolicyEnforcementV21(test.NoDBTestCase):

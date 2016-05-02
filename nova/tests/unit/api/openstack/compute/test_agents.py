@@ -16,7 +16,6 @@ import mock
 import webob.exc
 
 from nova.api.openstack.compute import agents as agents_v21
-from nova.api.openstack.compute.legacy_v2.contrib import agents as agents_v2
 from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -331,34 +330,6 @@ class AgentsTestV21(test.NoDBTestCase):
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
             self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.update, self.req, 1, body=body)
-
-
-class AgentsTestV2(AgentsTestV21):
-    controller = agents_v2.AgentController()
-    validation_error = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(AgentsTestV2, self).setUp()
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-
-    def _get_http_request(self):
-        return fakes.HTTPRequest.blank('', use_admin_context=True)
-
-    def test_agents_update_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.update,
-                          self.non_admin_req, fakes.FAKE_UUID, body={})
-
-    def test_agents_create_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.create,
-                          self.non_admin_req, body={})
-
-    def test_agents_delete_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.delete,
-                          self.non_admin_req, fakes.FAKE_UUID)
-
-    def test_agents_index_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.index,
-                          self.non_admin_req)
 
 
 class AgentsPolicyEnforcementV21(test.NoDBTestCase):

@@ -19,7 +19,6 @@ from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute import cells as cells_ext_v21
-from nova.api.openstack.compute.legacy_v2.contrib import cells as cells_ext_v2
 from nova.api.openstack import extensions
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
@@ -723,54 +722,3 @@ class CellsTestV21(BaseCellsTest):
         req = self._get_request("cells/sync_instances")
         self.assertRaises(exc.HTTPNotImplemented,
                 self.controller.sync_instances, req, {})
-
-
-class CellsTestV2(CellsTestV21):
-    cell_extension = 'compute_extension:cells'
-    bad_request = exc.HTTPBadRequest
-
-    def _get_cell_controller(self, ext_mgr):
-        return cells_ext_v2.Controller(ext_mgr)
-
-    def test_cell_create_name_with_invalid_character_raises(self):
-        pass
-
-    def test_cell_create_rpc_port_with_null(self):
-        body = {'cell': {'name': 'fake',
-                         'username': 'fred',
-                         'password': 'secret',
-                         'rpc_host': 'r3.example.org',
-                         'rpc_port': None,
-                         'type': 'parent'}}
-
-        req = self._get_request("cells")
-        req.environ['nova.context'] = self.context
-        self.controller.create(req, body=body)
-
-    def test_cell_update_rpc_port_with_null(self):
-        body = {'cell': {'name': 'fake',
-                         'username': 'fred',
-                         'password': 'secret',
-                         'rpc_host': 'r3.example.org',
-                         'rpc_port': None,
-                         'type': 'parent'}}
-
-        req = self._get_request("cells")
-        req.environ['nova.context'] = self.context
-        self.controller.update(req, 'cell1', body=body)
-
-    def test_cell_create_name_with_leading_trailing_spaces_compat_mode(self):
-        pass
-
-    def test_cell_create_name_with_leading_trailing_spaces(self):
-        body = {'cell': {'name': '  moocow  ',
-                         'username': 'fred',
-                         'password': 'secret',
-                         'rpc_host': 'r3.example.org',
-                         'type': 'parent'}}
-
-        req = self._get_request("cells")
-        req.environ['nova.context'] = self.context
-        resp = self.controller.create(req, body=body)
-        # NOTE(alex_xu): legacy v2 didn't strip the spaces.
-        self.assertEqual('  moocow  ', resp['cell']['name'])

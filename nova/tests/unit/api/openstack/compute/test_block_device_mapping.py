@@ -22,8 +22,6 @@ from webob import exc
 
 from nova.api.openstack.compute import block_device_mapping
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import extensions
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
 from nova import block_device
 from nova.compute import api as compute_api
@@ -346,42 +344,3 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertFalse(self.validation_fail_instance_destroy_called)
             self.validation_fail_test_validate_called = False
             self.validation_fail_instance_destroy_called = False
-
-
-class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
-    validation_error = exc.HTTPBadRequest
-
-    def _setup_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {'os-volumes': 'fake',
-                                   'os-block-device-mapping-v2-boot': 'fake'}
-        self.controller = servers_v2.Controller(self.ext_mgr)
-        self.ext_mgr_bdm_v2 = extensions.ExtensionManager()
-        self.ext_mgr_bdm_v2.extensions = {'os-volumes': 'fake'}
-        self.no_bdm_v2_controller = servers_v2.Controller(
-            self.ext_mgr_bdm_v2)
-
-    def test_create_instance_with_block_device_mapping_disabled(self):
-        bdm = [{'device_name': 'foo'}]
-
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertIsNone(kwargs['block_device_mapping'], None)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-
-        params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
-        self._test_create(params,
-                          override_controller=self.no_bdm_v2_controller)
-
-    def test_create_instance_with_destination_type_empty_string(self):
-        # Add a check whether the destination type is an empty string
-        # in V2.1 API only. So this test is skipped in V2.0 API
-        pass
-
-    def test_create_instance_with_invalid_destination_type(self):
-        # Add a check whether the destination type is invalid
-        # in V2.1 API only. So this test is skipped in V2.0 API
-        pass

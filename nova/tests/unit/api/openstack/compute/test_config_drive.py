@@ -21,9 +21,7 @@ from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
-from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import exception
@@ -76,15 +74,6 @@ class ConfigDriveTestV21(test.TestCase):
         self.assertNotEqual(len(server_dicts), 0)
         for server_dict in server_dicts:
             self.assertIn('config_drive', server_dict)
-
-
-class ConfigDriveTestV2(ConfigDriveTestV21):
-    def _setup_wsgi(self):
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Config_drive'])
-        self.app = fakes.wsgi_app(init_only=('servers',))
 
 
 class ServersControllerCreateTestV21(test.TestCase):
@@ -230,26 +219,3 @@ class ServersControllerCreateTestV21(test.TestCase):
         req, body = self._create_instance_body_of_config_drive(param)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
-
-
-class ServersControllerCreateTestV2(ServersControllerCreateTestV21):
-    bad_request = webob.exc.HTTPBadRequest
-
-    def _set_up_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = servers_v2.Controller(self.ext_mgr)
-        self.no_config_drive_controller = None
-
-    def _verfiy_config_drive(self, **kwargs):
-        self.assertIsNone(kwargs['config_drive'])
-
-    def _initialize_extension(self):
-        self.ext_mgr.extensions = {'os-config-drive': 'fake'}
-
-    def test_create_instance_with_empty_config_drive(self):
-        param = ''
-        req, body = self._create_instance_body_of_config_drive(param)
-        res = self.controller.create(req, body=body).obj
-        server = res['server']
-        self.assertEqual(fakes.FAKE_UUID, server['id'])

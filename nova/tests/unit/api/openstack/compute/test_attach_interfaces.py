@@ -17,8 +17,6 @@ import mock
 
 from nova.api.openstack.compute import attach_interfaces \
         as attach_interfaces_v21
-from nova.api.openstack.compute.legacy_v2.contrib import attach_interfaces \
-        as attach_interfaces_v2
 from nova.compute import api as compute_api
 from nova import exception
 from nova.network import api as network_api
@@ -452,21 +450,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
     def test_attach_interface_instance_with_non_array_fixed_ips(self):
         param = {'fixed_ips': 'non_array'}
         self._test_attach_interface_with_invalid_parameter(param)
-
-
-class InterfaceAttachTestsV2(InterfaceAttachTestsV21):
-    controller_cls = attach_interfaces_v2.InterfaceAttachmentController
-    validate_exc = exc.HTTPBadRequest
-    in_use_exc = exc.HTTPBadRequest
-
-    def test_attach_interface_instance_with_non_uuid_net_id(self):
-        pass
-
-    def test_attach_interface_instance_with_non_uuid_port_id(self):
-        pass
-
-    def test_attach_interface_instance_with_non_array_fixed_ips(self):
-        pass
 
 
 class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):

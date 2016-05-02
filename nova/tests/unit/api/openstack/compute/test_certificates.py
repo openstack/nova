@@ -22,8 +22,6 @@ from oslo_policy import policy as oslo_policy
 
 from nova.api.openstack.compute import certificates \
         as certificates_v21
-from nova.api.openstack.compute.legacy_v2.contrib import certificates \
-        as certificates_v2
 from nova.cert import rpcapi
 from nova import context
 from nova import exception
@@ -110,9 +108,3 @@ class CertificatesTestV21(test.NoDBTestCase):
             exc.HTTPNotFound,
             self.controller.show,
             self.req, 'root')
-
-
-class CertificatesTestV2(CertificatesTestV21):
-    certificates = certificates_v2
-    certificate_show_extension = 'compute_extension:certificates'
-    certificate_create_extension = 'compute_extension:certificates'

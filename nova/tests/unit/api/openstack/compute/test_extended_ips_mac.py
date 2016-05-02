@@ -17,7 +17,6 @@ from oslo_serialization import jsonutils
 import six
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import extended_ips_mac
 from nova import compute
 from nova import objects
 from nova import test
@@ -106,7 +105,7 @@ def fake_compute_get_all(*args, **kwargs):
 
 class ExtendedIpsMacTestV21(test.TestCase):
     content_type = 'application/json'
-    prefix = '%s:' % extended_ips_mac.Extended_ips_mac.alias
+    prefix = 'OS-EXT-IPS-MAC:'
 
     def setUp(self):
         super(ExtendedIpsMacTestV21, self).setUp()
@@ -153,21 +152,3 @@ class ExtendedIpsMacTestV21(test.TestCase):
         self.assertEqual(res.status_int, 200)
         for _i, server in enumerate(self._get_servers(res.body)):
             self.assertServerStates(server)
-
-
-class ExtendedIpsMacTestV2(ExtendedIpsMacTestV21):
-    content_type = 'application/json'
-    prefix = '%s:' % extended_ips_mac.Extended_ips_mac.alias
-
-    def setUp(self):
-        super(ExtendedIpsMacTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_ips_mac'])
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        return res

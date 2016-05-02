@@ -20,8 +20,6 @@ import webob
 
 from nova.api.openstack.compute import console_output \
         as console_output_v21
-from nova.api.openstack.compute.legacy_v2.contrib import console_output \
-        as console_output_v2
 from nova.compute import api as compute_api
 from nova import exception
 from nova import test
@@ -151,11 +149,6 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
     def test_get_console_output_not_available(self, mock_get_console_output):
         body = {'os-getConsoleOutput': {}}
         self._check_console_output_failure(webob.exc.HTTPNotFound, body)
-
-
-class ConsoleOutputExtensionTestV2(ConsoleOutputExtensionTestV21):
-    controller_class = console_output_v2
-    validation_error = webob.exc.HTTPBadRequest
 
 
 class ConsoleOutpuPolicyEnforcementV21(test.NoDBTestCase):

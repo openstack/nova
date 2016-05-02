@@ -19,8 +19,6 @@ import webob
 
 from nova.api.openstack.compute import console_auth_tokens \
         as console_auth_tokens_v21
-from nova.api.openstack.compute.legacy_v2.contrib import console_auth_tokens \
-        as console_auth_tokens_v2
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -78,7 +76,3 @@ class ConsoleAuthTokensExtensionTestV21(test.NoDBTestCase):
                        _fake_check_token_unauthorized)
         self.assertRaises(webob.exc.HTTPUnauthorized,
                           self.controller.show, self.req, fakes.FAKE_UUID)
-
-
-class ConsoleAuthTokensExtensionTestV2(ConsoleAuthTokensExtensionTestV21):
-    controller_class = console_auth_tokens_v2
