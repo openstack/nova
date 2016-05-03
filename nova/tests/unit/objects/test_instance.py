@@ -481,15 +481,36 @@ class _TestInstanceObject(object):
             'system_metadata', 'extra', 'extra.flavor'])
         mock_send.assert_called_once_with(self.context, mock.ANY, mock.ANY)
 
-    def test_save_related_object_if_none(self):
-        with mock.patch.object(objects.Instance, '_save_pci_requests'
-                ) as save_mock:
-            inst = objects.Instance()
-            inst = objects.Instance._from_db_object(self.context, inst,
-                    self.fake_instance)
-            inst.pci_requests = None
-            inst.save()
-            self.assertTrue(save_mock.called)
+    @mock.patch('nova.db.instance_extra_update_by_uuid')
+    def test_save_object_pci_requests(self, mock_instance_extra_update):
+        expected_json = ('[{"count": 1, "alias_name": null, "is_new": false,'
+                         '"request_id": null, "spec": [{"vendor_id": "8086",'
+                         '"product_id": "1502"}]}]')
+
+        inst = objects.Instance()
+        inst = objects.Instance._from_db_object(self.context, inst,
+                self.fake_instance)
+        inst.obj_reset_changes()
+        pci_req_obj = objects.InstancePCIRequest(
+            count=1, spec=[{'vendor_id': '8086', 'product_id': '1502'}])
+        inst.pci_requests = (
+            objects.InstancePCIRequests(requests=[pci_req_obj]))
+        inst.pci_requests.instance_uuid = inst.uuid
+        inst.save()
+        mock_instance_extra_update.assert_called_once_with(
+            self.context, inst.uuid, mock.ANY)
+        actual_args = (
+            mock_instance_extra_update.call_args[0][2]['pci_requests'])
+        mock_instance_extra_update.reset_mock()
+        self.assertJsonEqual(expected_json, actual_args)
+        inst.pci_requests = None
+        inst.save()
+        mock_instance_extra_update.assert_called_once_with(
+            self.context, inst.uuid, {'pci_requests': None})
+        mock_instance_extra_update.reset_mock()
+        inst.obj_reset_changes()
+        inst.save()
+        self.assertFalse(mock_instance_extra_update.called)
 
     @mock.patch('nova.db.instance_update_and_get_original')
     @mock.patch.object(instance.Instance, '_from_db_object')

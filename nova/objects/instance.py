@@ -540,8 +540,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         pass
 
     def _save_pci_requests(self, context):
-        # NOTE(danms): No need for this yet.
-        pass
+        # TODO(danms): Unfortunately, extra.pci_requests is not a serialized
+        # PciRequests object (!), so we have to handle it specially here.
+        # That should definitely be fixed!
+        self._extra_values_to_save['pci_requests'] = (
+            self.pci_requests.to_json())
 
     def _save_pci_devices(self, context):
         # NOTE(yjiang5): All devices held by PCI tracker, only PCI tracker
