@@ -218,8 +218,7 @@ class ResourceTracker(object):
 
         # Mark the resources in-use for the resize landing on this
         # compute host:
-        self._update_usage_from_migration(context, instance, image_meta,
-                                          migration)
+        self._update_usage_from_migration(context, instance, migration)
         elevated = context.elevated()
         self._update(elevated)
 
@@ -679,8 +678,7 @@ class ResourceTracker(object):
         else:
             return None
 
-    def _update_usage_from_migration(self, context, instance, image_meta,
-                                     migration):
+    def _update_usage_from_migration(self, context, instance, migration):
         """Update usage for a single migration.  The record may
         represent an incoming or outbound migration.
         """
@@ -731,13 +729,6 @@ class ResourceTracker(object):
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
 
-        if image_meta is None:
-            image_meta = objects.ImageMeta.from_instance(instance)
-        # TODO(jaypipes): Remove when image_meta is always passed
-        # as an objects.ImageMeta
-        elif not isinstance(image_meta, objects.ImageMeta):
-            image_meta = objects.ImageMeta.from_dict(image_meta)
-
         if itype:
             usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
@@ -787,8 +778,7 @@ class ResourceTracker(object):
         for migration in filtered.values():
             instance = instances[migration.instance_uuid]
             try:
-                self._update_usage_from_migration(context, instance, None,
-                                                  migration)
+                self._update_usage_from_migration(context, instance, migration)
             except exception.FlavorNotFound:
                 LOG.warning(_LW("Flavor could not be found, skipping "
                                 "migration."), instance_uuid=uuid)
