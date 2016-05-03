@@ -16,7 +16,6 @@ import os
 
 import testscenarios
 
-from nova.api.openstack import API_V21_CORE_EXTENSIONS  # noqa
 import nova.conf
 from nova import test
 from nova.tests.functional import api_paste_fixture
