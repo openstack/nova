@@ -988,7 +988,7 @@ forced_down:
   type: boolean
   description: |
     Whether or not this service was forced down manually by an
-    adminstrator. This value is useful to know that some 3rd party has
+    administrator. This value is useful to know that some 3rd party has
     verified the service should be marked down.
 forceDelete:
   description: |
@@ -1463,7 +1463,7 @@ net_id_1:
   type: string
 networks:
   description: |
-    A ``networks`` object. Required parameter when there are mulitple networks defined
+    A ``networks`` object. Required parameter when there are multiple networks defined
     for the tenant. When you do not specify the networks parameter, the server attaches
     to the only network created for the current tenant.  Optionally, you can create
     one or more NICs on the server.  To provision the server instance with a NIC for
