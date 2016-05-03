@@ -12608,7 +12608,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = {'uuid': 'fake_instance'}
         image_meta = objects.ImageMeta.from_dict({'id': 'fake'})
         root_bdm = {'source_type': 'image',
-                    'detination_type': 'volume',
+                    'destination_type': 'volume',
                     'image_id': 'fake_id'}
         self.flags(virt_type='fake_libvirt_type', group='libvirt')
 
