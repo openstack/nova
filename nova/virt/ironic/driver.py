@@ -22,7 +22,6 @@ bare metal resources.
 """
 import base64
 import gzip
-import logging as py_logging
 import shutil
 import tempfile
 import time
@@ -144,12 +143,6 @@ class IronicDriver(virt_driver.ComputeDriver):
             default='nova.virt.firewall.NoopFirewallDriver')
         self.node_cache = {}
         self.node_cache_time = 0
-
-        ironicclient_log_level = CONF.ironic.client_log_level
-        if ironicclient_log_level:
-            level = py_logging.getLevelName(ironicclient_log_level)
-            logger = py_logging.getLogger('ironicclient')
-            logger.setLevel(level)
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
 

@@ -56,14 +56,6 @@ cafile = cfg.StrOpt(
     help='PEM encoded Certificate Authority to use when verifying HTTPs '
          'connections.')
 
-client_log_level = cfg.StrOpt(
-    'client_log_level',
-    deprecated_for_removal=True,
-    help='Log level override for ironicclient. Set this in '
-         'order to override the global "default_log_levels", '
-         '"verbose", and "debug" settings. '
-         'DEPRECATED: use standard logging configuration.')
-
 admin_tenant_name = cfg.StrOpt(
     'admin_tenant_name',
     help='Ironic keystone tenant name.')
@@ -87,7 +79,6 @@ ALL_OPTS = [api_version,
             admin_auth_token,
             admin_url,
             cafile,
-            client_log_level,
             admin_tenant_name,
             api_max_retries,
             api_retry_interval]
