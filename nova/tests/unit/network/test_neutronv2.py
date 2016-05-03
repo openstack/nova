@@ -136,9 +136,31 @@ class TestNeutronClient(test.NoDBTestCase):
 
     def test_withouttoken(self):
         my_context = context.RequestContext('userid', uuids.my_tenant)
-        self.assertRaises(exceptions.Unauthorized,
+        self.assertRaises(exception.Unauthorized,
                           neutronapi.get_client,
                           my_context)
+
+    @mock.patch.object(client.Client, "list_networks",
+                       side_effect=exceptions.Unauthorized())
+    def test_Unauthorized_user(self, mock_list_networks):
+        my_context = context.RequestContext('userid', uuids.my_tenant,
+                                            auth_token='token',
+                                            is_admin=False)
+        client = neutronapi.get_client(my_context)
+        self.assertRaises(
+            exception.Unauthorized,
+            client.list_networks)
+
+    @mock.patch.object(client.Client, "list_networks",
+                       side_effect=exceptions.Unauthorized())
+    def test_Unauthorized_admin(self, mock_list_networks):
+        my_context = context.RequestContext('userid', uuids.my_tenant,
+                                            auth_token='token',
+                                            is_admin=True)
+        client = neutronapi.get_client(my_context)
+        self.assertRaises(
+            exception.NeutronAdminCredentialConfigurationInvalid,
+            client.list_networks)
 
     def test_withtoken_context_is_admin(self):
         self.flags(url='http://anyhost/', group='neutron')
@@ -189,6 +211,16 @@ class TestNeutronClient(test.NoDBTestCase):
         from neutronclient.common import exceptions as neutron_client_exc
         self.assertRaises(neutron_client_exc.Unauthorized,
                           neutronapi._load_auth_plugin, CONF)
+
+    @mock.patch.object(client.Client, "list_networks",
+                       side_effect=exceptions.Unauthorized())
+    def test_wrapper_exception_translation(self, m):
+        my_context = context.RequestContext('userid', 'my_tenantid',
+                                            auth_token='token')
+        client = neutronapi.get_client(my_context)
+        self.assertRaises(
+            exception.Unauthorized,
+            client.list_networks)
 
 
 class TestNeutronv2Base(test.TestCase):

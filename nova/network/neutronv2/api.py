@@ -70,6 +70,48 @@ def _load_auth_plugin(conf):
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
 
+class ClientWrapper(clientv20.Client):
+    """A Neutron client wrapper class.
+
+    Wraps the callable methods, catches Unauthorized from Neutron and
+    convert it to a 401 for Nova clients.
+    """
+    def __init__(self, base_client, admin):
+        # Expose all attributes from the base_client instance
+        self.__dict__ = base_client.__dict__
+        self.base_client = base_client
+        self.admin = admin
+
+    def __getattribute__(self, name):
+        obj = object.__getattribute__(self, name)
+        if callable(obj):
+            obj = object.__getattribute__(self, 'proxy')(obj)
+        return obj
+
+    def proxy(self, obj):
+        def wrapper(*args, **kwargs):
+            try:
+                ret = obj(*args, **kwargs)
+            except neutron_client_exc.Unauthorized:
+                if not self.admin:
+                    # Token is expired so Neutron is raising a
+                    # unauthorized exception, we should convert it to
+                    # raise a 401 to make client to handle a retry by
+                    # renegerating a valid token and trying a new
+                    # attempt.
+                    raise exception.Unauthorized()
+                # In admin context if token is invalid Neutron client
+                # should be able to regenerate a valid by using the
+                # Neutron admin credential configuration located in
+                # nova.conf.
+                LOG.error(_LE("Neutron client was not able to generate a "
+                              "valid admin token, please verify Neutron "
+                              "admin credential located in nova.conf"))
+                raise exception.NeutronAdminCredentialConfigurationInvalid()
+            return ret
+        return wrapper
+
+
 def get_client(context, admin=False):
     # NOTE(dprince): In the case where no auth_token is present we allow use of
     # neutron admin tenant credentials if it is an admin context.  This is to
@@ -95,12 +137,14 @@ def get_client(context, admin=False):
     if not auth_plugin:
         # We did not get a user token and we should not be using
         # an admin token so log an error
-        raise neutron_client_exc.Unauthorized()
+        raise exception.Unauthorized()
 
-    return clientv20.Client(session=_SESSION,
-                            auth=auth_plugin,
-                            endpoint_override=CONF.neutron.url,
-                            region_name=CONF.neutron.region_name)
+    return ClientWrapper(
+        clientv20.Client(session=_SESSION,
+                         auth=auth_plugin,
+                         endpoint_override=CONF.neutron.url,
+                         region_name=CONF.neutron.region_name),
+        admin=admin or context.is_admin)
 
 
 def _is_not_duplicate(item, items, items_list_name, instance):

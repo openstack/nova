@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
+from nova import exception
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_networks
 
@@ -63,6 +66,12 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_get('os-networks/%s' % uuid)
         self._verify_response('network-show-resp', {}, response, 200)
+
+    @mock.patch('nova.network.api.API.get', side_effect=exception.Unauthorized)
+    def test_network_show_token_expired(self, mock_get):
+        uuid = test_networks.FAKE_NETWORKS[0]['uuid']
+        response = self._do_get('os-networks/%s' % uuid)
+        self.assertEqual(401, response.status_code)
 
     def test_network_create(self):
         response = self._do_post("os-networks",
