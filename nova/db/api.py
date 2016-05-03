@@ -27,28 +27,15 @@ these objects be simple dictionaries.
 
 """
 
-from oslo_config import cfg
 from oslo_db import concurrency
 from oslo_log import log as logging
 
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova.i18n import _LE
 
 
-db_opts = [
-    cfg.BoolOpt('enable_new_services',
-                default=True,
-                help='Services to be added to the available pool on create'),
-    cfg.StrOpt('instance_name_template',
-               default='instance-%08x',
-               help='Template string to be used to generate instance names'),
-    cfg.StrOpt('snapshot_name_template',
-               default='snapshot-%s',
-               help='Template string to be used to generate snapshot names'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(db_opts)
+CONF = nova.conf.CONF
 
 _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 

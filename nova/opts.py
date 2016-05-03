@@ -21,9 +21,6 @@ import nova.conf
 import nova.console.rpcapi
 import nova.console.serial
 import nova.consoleauth.rpcapi
-import nova.db.api
-import nova.db.base
-import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
 import nova.volume
@@ -33,12 +30,7 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             [nova.db.base.db_driver_opt],
-             nova.db.api.db_opts,
-             nova.db.sqlalchemy.api.db_opts,
              nova.exception.exc_log_opts,
              nova.volume._volume_opts,
          )),
-        ('api_database', nova.db.sqlalchemy.api.api_db_opts),
-        ('database', nova.db.sqlalchemy.api.oslo_db_options.database_opts),
     ]
