@@ -2531,11 +2531,24 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.REBUILD)
 
+        # NOTE(sbauza): The migration script we provided in Newton should make
+        # sure that all our instances are currently migrated to have an
+        # attached RequestSpec object but let's consider that the operator only
+        # half migrated all their instances in the meantime.
+        try:
+            request_spec = objects.RequestSpec.get_by_instance_uuid(
+                context, instance.uuid)
+        except exception.RequestSpecNotFound:
+            # Some old instances can still have no RequestSpec object attached
+            # to them, we need to support the old way
+            request_spec = None
+
         self.compute_task_api.rebuild_instance(context, instance=instance,
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
                 preserve_ephemeral=preserve_ephemeral, host=instance.host,
+                request_spec=request_spec,
                 kwargs=kwargs)
 
     @wrap_check_policy
