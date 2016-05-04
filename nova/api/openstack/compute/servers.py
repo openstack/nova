@@ -543,7 +543,7 @@ class ServersController(wsgi.Controller):
         return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 409, 413))
+    @extensions.expected_errors((400, 403, 409))
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
     @validation.schema(schema_server_create, '2.1', '2.18')
     @validation.schema(schema_server_create_v219, '2.19')
@@ -1008,7 +1008,7 @@ class ServersController(wsgi.Controller):
         self._resize(req, id, flavor_ref, **resize_kwargs)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 404, 409, 413))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('rebuild')
     @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
     @validation.schema(schema_server_rebuild, '2.1', '2.18')
