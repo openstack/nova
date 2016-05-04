@@ -26,7 +26,6 @@ import base64
 import binascii
 import os
 
-from Crypto.PublicKey import RSA
 from cryptography import exceptions
 from cryptography.hazmat import backends
 from cryptography.hazmat.primitives.asymmetric import padding
@@ -140,11 +139,23 @@ def generate_key(bits):
     # which version of pysaml2 is installed, Nova is likely to break. So we
     # call "RSA.generate(bits)" which works on both pycrypto and pycryptodome
     # and then wrap it into a paramiko.RSAKey
-    rsa = RSA.generate(bits)
-    key = paramiko.RSAKey(vals=(rsa.e, rsa.n))
-    key.d = rsa.d
-    key.p = rsa.p
-    key.q = rsa.q
+    #
+    # NOTE(coreywright): Paramiko 2 avoids this conundrum by migrating from
+    # PyCrypto/PyCryptodome to cryptography.
+    #
+    # TODO(coreywright): When Paramiko constraint is upgraded to 2.x, then
+    # remove this abstraction and replace the call to this function with a call
+    # to `paramiko.RSAKey.generate(bits)`.
+
+    if paramiko.__version_info__[0] == 2:
+        key = paramiko.RSAKey.generate(bits)
+    else:  # paramiko 1.x
+        from Crypto.PublicKey import RSA
+        rsa = RSA.generate(bits)
+        key = paramiko.RSAKey(vals=(rsa.e, rsa.n))
+        key.d = rsa.d
+        key.p = rsa.p
+        key.q = rsa.q
     return key
 
 
