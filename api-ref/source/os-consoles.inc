@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -10,29 +9,6 @@
 
 Manages server consoles.
 
-Create Console
-==============
-
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/consoles
-
-Creates a console for a server instance.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - server_id: server_id
-
-Response
---------
-
 Lists Consoles
 ==============
 
@@ -42,8 +18,7 @@ Lists all consoles for a server instance.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -61,6 +36,29 @@ Response
 .. literalinclude:: ../../doc/api_samples/consoles/consoles-list-get-resp.json
    :language: javascript
 
+
+Create Console
+==============
+
+.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/consoles
+
+Creates a console for a server instance.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id
+
+Response
+--------
+
 Show Console Details
 ====================
 
@@ -70,8 +68,7 @@ Shows details for a console for a server instance.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -99,8 +96,7 @@ Deletes a console for a server instance.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -125,8 +121,7 @@ This feature is available for ``rdp-html5`` console type only.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
