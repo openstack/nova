@@ -14,6 +14,7 @@
 #    under the License.
 
 
+import binascii
 import os
 
 from oslo_log import log as logging
@@ -54,7 +55,7 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
 
     def _get_passphrase(self, key):
         """Convert raw key to string."""
-        return ''.join(hex(x).replace('0x', '') for x in key)
+        return binascii.hexlify(key).decode('utf-8')
 
     def _open_volume(self, passphrase, **kwargs):
         """Opens the LUKS partition on the volume using the specified

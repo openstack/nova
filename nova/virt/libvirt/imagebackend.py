@@ -647,7 +647,7 @@ class Lvm(Image):
         self.ephemeral_key_uuid = instance.get('ephemeral_key_uuid')
 
         if self.ephemeral_key_uuid is not None:
-            self.key_manager = keymgr.API()
+            self.key_manager = keymgr.API(CONF)
         else:
             self.key_manager = None
 
@@ -727,7 +727,7 @@ class Lvm(Image):
                     # NOTE(dgenin): Key manager corresponding to the
                     # specific backend catches and reraises an
                     # an exception if key retrieval fails.
-                    key = self.key_manager.get_key(kwargs['context'],
+                    key = self.key_manager.get(kwargs['context'],
                             self.ephemeral_key_uuid).get_encoded()
                 except Exception:
                     with excutils.save_and_reraise_exception():

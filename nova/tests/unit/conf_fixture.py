@@ -26,6 +26,7 @@ from nova.tests.unit import utils
 CONF = nova.conf.CONF
 CONF.import_opt('floating_ip_dns_manager', 'nova.network.floating_ips')
 CONF.import_opt('instance_dns_manager', 'nova.network.floating_ips')
+CONF.import_opt('api_class', 'nova.keymgr', group='key_manager')
 
 
 class ConfFixture(config_fixture.Config):
@@ -63,6 +64,9 @@ class ConfFixture(config_fixture.Config):
                               '[0-9a-fk\-]+', 'osapi_v21')
         self.conf.set_default('force_dhcp_release', False)
         self.conf.set_default('periodic_enable', False)
+        self.conf.set_default('api_class',
+                              'nova.keymgr.conf_key_mgr.ConfKeyManager',
+                              group='key_manager')
         policy_opts.set_defaults(self.conf)
         self.addCleanup(utils.cleanup_dns_managers)
         self.addCleanup(ipv6.api.reset_backend)

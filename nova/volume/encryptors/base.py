@@ -41,7 +41,7 @@ class VolumeEncryptor(object):
 
         :param: the connection information used to attach the volume
         """
-        return self._key_manager.get_key(context, self.encryption_key_id)
+        return self._key_manager.get(context, self.encryption_key_id)
 
     @abc.abstractmethod
     def attach_volume(self, context, **kwargs):

@@ -19,6 +19,7 @@ import os
 import shutil
 import tempfile
 
+from castellan import key_manager
 import fixtures
 import mock
 from oslo_concurrency import lockutils
@@ -30,7 +31,6 @@ from oslo_utils import uuidutils
 
 from nova import context
 from nova import exception
-from nova import keymgr
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_processutils
@@ -42,7 +42,7 @@ from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt.storage import rbd_utils
 
 CONF = cfg.CONF
-CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='keymgr')
+CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='key_manager')
 
 
 class FakeSecret(object):
@@ -788,17 +788,17 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.flags(key_size=512, group='ephemeral_storage_encryption')
         self.flags(fixed_key='00000000000000000000000000000000'
                              '00000000000000000000000000000000',
-                   group='keymgr')
+                   group='key_manager')
         self.flags(images_volume_group=self.VG, group='libvirt')
         self.LV = '%s_%s' % (self.INSTANCE['uuid'], self.NAME)
         self.OLD_STYLE_INSTANCE_PATH = None
         self.LV_PATH = os.path.join('/dev', self.VG, self.LV)
         self.PATH = os.path.join('/dev/mapper',
             imagebackend.dmcrypt.volume_name(self.LV))
-        self.key_manager = keymgr.API()
+        self.key_manager = key_manager.API()
         self.INSTANCE['ephemeral_key_uuid'] =\
-            self.key_manager.create_key(self.CONTEXT)
-        self.KEY = self.key_manager.get_key(self.CONTEXT,
+            self.key_manager.create_key(self.CONTEXT, 'AES', 256)
+        self.KEY = self.key_manager.get(self.CONTEXT,
             self.INSTANCE['ephemeral_key_uuid']).get_encoded()
 
         self.lvm = imagebackend.lvm

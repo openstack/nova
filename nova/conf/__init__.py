@@ -50,7 +50,7 @@ from nova.conf import hyperv
 from nova.conf import image_file_url
 from nova.conf import ipv6
 from nova.conf import ironic
-from nova.conf import keymgr
+from nova.conf import key_manager
 # from nova.conf import keystone_authtoken
 # from nova.conf import libvirt
 from nova.conf import mks
@@ -121,7 +121,7 @@ mks.register_opts(CONF)
 image_file_url.register_opts(CONF)
 ipv6.register_opts(CONF)
 ironic.register_opts(CONF)
-keymgr.register_opts(CONF)
+key_manager.register_opts(CONF)
 # keystone_authtoken.register_opts(CONF)
 # libvirt.register_opts(CONF)
 # matchmaker_redis.register_opts(CONF)
