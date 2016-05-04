@@ -389,7 +389,7 @@ marker:
   type: string
 minDisk:
   description: |
-    Filters the response by a minimum disk space, in GB.
+    Filters the response by a minimum disk space, in GiB.
   in: query
   required: false
   type: integer
@@ -1946,7 +1946,7 @@ shelveOffload:
   type: string
 size:
   description: |
-    The size of the volume, in gigabytes (GB).
+    The size of the volume, in gibibytes (GiB).
   in: body
   required: true
   type: integer
