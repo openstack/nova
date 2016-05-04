@@ -31,7 +31,6 @@
 .. include:: os-flavor-extra-specs.inc
 .. include:: os-keypairs.inc
 .. include:: limits.inc
-.. include:: extensions.inc
 .. include:: images.inc
 .. include:: os-agents.inc
 .. include:: os-aggregates.inc
@@ -63,3 +62,4 @@
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-tenant-network.inc
 .. include:: os-volumes.inc
+.. include:: extensions.inc
