@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -12,6 +11,43 @@ Creates a port interface and uses it to attach a port to a server and
 detaches a port interface from a server. Also, lists all port interfaces
 and shows details for a port interface.
 
+List Port Interfaces
+====================
+
+.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-interface
+
+Lists port interfaces that are attached to a server.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+NotImplemented(501)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - interfaceAttachment: interfaceAttachment
+  - port_state: port_state
+  - fixed_ips: fixed_ips
+  - mac_addr: mac_addr
+  - net_id: net_id
+  - port_id: port_id
+
+**Example List Port Interfaces: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-list-resp.json
+   :language: javascript
+
 Create Interface
 ================
 
@@ -21,8 +57,8 @@ Creates a port interface and uses it to attach a port to a server instance.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409), computeFault(500), NotImplemented(501)
 
 Request
 -------
@@ -58,43 +94,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-resp.json
    :language: javascript
 
-List Port Interfaces
-====================
-
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-interface
-
-Lists port interfaces that are attached to a server.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - server_id: server_id
-
-Response
---------
-
-.. rest_parameters:: parameters.yaml
-
-  - interfaceAttachment: interfaceAttachment
-  - port_state: port_state
-  - fixed_ips: fixed_ips
-  - mac_addr: mac_addr
-  - net_id: net_id
-  - port_id: port_id
-
-**Example List Port Interfaces: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-list-resp.json
-   :language: javascript
-
 Show Port Interface Details
 ===========================
 
@@ -104,8 +103,7 @@ Shows details for a port interface that is attached to a server.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -133,8 +131,8 @@ Detaches a port interface.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409), NotImplemented(501) 
 
 Request
 -------
