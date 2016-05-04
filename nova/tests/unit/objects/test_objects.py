@@ -1132,7 +1132,7 @@ object_data = {
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
     'ImageMetaProps': '1.12-6a132dee47931447bf86c03c7006d96c',
-    'Instance': '2.1-416fdd0dfc33dfa12ff2cfdd8cc32e17',
+    'Instance': '2.2-ab450ec9c1f4d429755c48d492b823f0',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
     'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',

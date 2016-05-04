@@ -37,7 +37,6 @@ from nova import context
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.objects import keypair as keypair_obj
 from nova import utils
 from nova.virt import netutils
 
@@ -299,20 +298,20 @@ class InstanceMetadata(object):
             metadata.update(self.extra_md)
         if self.network_config:
             metadata['network_config'] = self.network_config
-        if self.instance.key_name:
-            metadata['public_keys'] = {
-                self.instance.key_name: self.instance.key_data
-            }
 
+        if self.instance.key_name:
             if cells_opts.get_cell_type() == 'compute':
                 cells_api = cells_rpcapi.CellsAPI()
                 keypair = cells_api.get_keypair_at_top(
                   context.get_admin_context(), self.instance.user_id,
                   self.instance.key_name)
             else:
-                keypair = keypair_obj.KeyPair.get_by_name(
-                    context.get_admin_context(), self.instance.user_id,
-                    self.instance.key_name)
+                keypair = self.instance.keypairs[0]
+
+            metadata['public_keys'] = {
+                keypair.name: keypair.public_key,
+            }
+
             metadata['keys'] = [
                 {'name': keypair.name,
                  'type': keypair.type,

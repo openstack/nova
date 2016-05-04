@@ -47,7 +47,8 @@ _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
                                         'new_flavor', 'ec2_ids']
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
-                          'flavor', 'vcpu_model', 'migration_context']
+                          'flavor', 'vcpu_model', 'migration_context',
+                          'keypairs']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -91,7 +92,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                base.NovaObjectDictCompat):
     # Version 2.0: Initial version
     # Version 2.1: Added services
-    VERSION = '2.1'
+    # Version 2.2: Added keypairs
+    VERSION = '2.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -189,7 +191,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'vcpu_model': fields.ObjectField('VirtCPUModel', nullable=True),
         'ec2_ids': fields.ObjectField('EC2Ids'),
         'migration_context': fields.ObjectField('MigrationContext',
-                                                nullable=True)
+                                                nullable=True),
+        'keypairs': fields.ObjectField('KeyPairList'),
         }
 
     obj_extra_fields = ['name']
@@ -197,6 +200,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(Instance, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 2) and 'keypairs' in primitive:
+            del primitive['keypairs']
         if target_version < (2, 1) and 'services' in primitive:
             del primitive['services']
 
@@ -339,6 +344,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     db_inst['extra'].get('migration_context'))
             else:
                 instance.migration_context = None
+        if 'keypairs' in expected_attrs:
+            if have_extra:
+                instance._load_keypairs(db_inst['extra'].get('keypairs'))
         if 'info_cache' in expected_attrs:
             if db_inst.get('info_cache') is None:
                 instance.info_cache = None
@@ -457,6 +465,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 'new': new,
             }
             updates['extra']['flavor'] = jsonutils.dumps(flavor_info)
+        keypairs = updates.pop('keypairs', None)
+        if keypairs:
+            expected_attrs.append('keypairs')
+            updates['extra']['keypairs'] = jsonutils.dumps(
+                keypairs.obj_to_primitive())
         vcpu_model = updates.pop('vcpu_model', None)
         expected_attrs.append('vcpu_model')
         if vcpu_model:
@@ -588,6 +601,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 self.migration_context._save()
         else:
             objects.MigrationContext._destroy(context, self.uuid)
+
+    def _save_keypairs(self, context):
+        # NOTE(danms): Read-only so no need to save this.
+        pass
 
     @base.remotable
     def save(self, expected_vm_state=None,
@@ -842,6 +859,34 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self.migration_context = objects.MigrationContext.obj_from_db_obj(
                 db_context)
 
+    def _load_keypairs(self, db_keypairs=_NO_DATA_SENTINEL):
+        if db_keypairs is _NO_DATA_SENTINEL:
+            inst = objects.Instance.get_by_uuid(self._context, self.uuid,
+                                                expected_attrs=['keypairs'])
+            if 'keypairs' in inst:
+                self.keypairs = inst.keypairs
+                self.keypairs.obj_reset_changes(recursive=True)
+                self.obj_reset_changes(['keypairs'])
+                return
+
+            # NOTE(danms): We need to load from the old location by name
+            # if we don't have them in extra
+            self.keypairs = objects.KeyPairList(objects=[])
+            try:
+                key = objects.KeyPair.get_by_name(self._context,
+                                                  self.user_id,
+                                                  self.key_name)
+                self.keypairs.objects.append(key)
+            except exception.KeypairNotFound:
+                pass
+            # NOTE(danms): If we loaded from legacy, we leave the keypairs
+            # attribute dirty in hopes someone else will save it for us
+
+        elif db_keypairs:
+            self.keypairs = objects.KeyPairList.obj_from_primitive(
+                jsonutils.loads(db_keypairs))
+            self.obj_reset_changes(['keypairs'])
+
     def apply_migration_context(self):
         if self.migration_context:
             self.numa_topology = self.migration_context.new_numa_topology
@@ -912,6 +957,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_ec2_ids()
         elif attrname == 'migration_context':
             self._load_migration_context()
+        elif attrname == 'keypairs':
+            # NOTE(danms): Let keypairs control its own destiny for
+            # resetting changes.
+            return self._load_keypairs()
         elif attrname == 'security_groups':
             self._load_security_groups()
         elif attrname == 'pci_devices':
