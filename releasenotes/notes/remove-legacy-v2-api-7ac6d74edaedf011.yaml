@@ -1,0 +1,10 @@
+---
+upgrade:
+    - The legacy v2 API code was deprecated since Liberty release. The legacy
+      v2 API code was removed in Newton release. We suggest that user should
+      move to v2.1 API which compatible v2 API with more restrict input
+      validation and microversions support. If user is still looking for v2
+      compatible API before switch to v2.1 API, user can use v2.1 API code as
+      v2 API compatible mode. That compatible mode is closer to v2 API
+      behaviour which is v2 API compatible without restrict input validation
+      and microversions support.
