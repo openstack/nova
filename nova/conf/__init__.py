@@ -27,7 +27,7 @@ from nova.conf import barbican
 from nova.conf import base
 from nova.conf import cells
 from nova.conf import cert
-# from nova.conf import cinder
+from nova.conf import cinder
 from nova.conf import cloudpipe
 from nova.conf import compute
 from nova.conf import conductor
@@ -97,7 +97,7 @@ barbican.register_opts(CONF)
 base.register_opts(CONF)
 cells.register_opts(CONF)
 cert.register_opts(CONF)
-# cinder.register_opts(CONF)
+cinder.register_opts(CONF)
 cloudpipe.register_opts(CONF)
 compute.register_opts(CONF)
 conductor.register_opts(CONF)
