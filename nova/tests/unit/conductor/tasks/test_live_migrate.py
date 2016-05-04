@@ -115,37 +115,31 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceInvalidState,
                           self.task._check_instance_is_active)
 
-    def test_check_instance_host_is_up(self):
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-        self.mox.StubOutWithMock(self.task.servicegroup_api, 'service_is_up')
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(servicegroup.API, 'service_is_up')
+    def test_check_instance_host_is_up(self, mock_is_up, mock_get):
+        mock_get.return_value = "service"
+        mock_is_up.return_value = True
 
-        objects.Service.get_by_compute_host(self.context,
-                                            "host").AndReturn("service")
-        self.task.servicegroup_api.service_is_up("service").AndReturn(True)
-
-        self.mox.ReplayAll()
         self.task._check_host_is_up("host")
+        mock_get.assert_called_once_with(self.context, "host")
+        mock_is_up.assert_called_once_with("service")
 
-    def test_check_instance_host_is_up_fails_if_not_up(self):
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-        self.mox.StubOutWithMock(self.task.servicegroup_api, 'service_is_up')
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(servicegroup.API, 'service_is_up')
+    def test_check_instance_host_is_up_fails_if_not_up(self, mock_is_up,
+                                                       mock_get):
+        mock_get.return_value = "service"
+        mock_is_up.return_value = False
 
-        objects.Service.get_by_compute_host(self.context,
-                                            "host").AndReturn("service")
-        self.task.servicegroup_api.service_is_up("service").AndReturn(False)
-
-        self.mox.ReplayAll()
         self.assertRaises(exception.ComputeServiceUnavailable,
                 self.task._check_host_is_up, "host")
+        mock_get.assert_called_once_with(self.context, "host")
+        mock_is_up.assert_called_once_with("service")
 
-    def test_check_instance_host_is_up_fails_if_not_found(self):
-        self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
-
-        objects.Service.get_by_compute_host(
-            self.context, "host").AndRaise(
-            exception.ComputeHostNotFound(host='host'))
-
-        self.mox.ReplayAll()
+    @mock.patch.object(objects.Service, 'get_by_compute_host',
+                       side_effect=exception.ComputeHostNotFound(host='host'))
+    def test_check_instance_host_is_up_fails_if_not_found(self, mock):
         self.assertRaises(exception.ComputeHostNotFound,
             self.task._check_host_is_up, "host")
 
