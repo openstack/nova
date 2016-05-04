@@ -274,14 +274,15 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.assertEqual(vol['availability_zone'],
                          resp_dict['volume']['availabilityZone'])
 
-    def _test_volume_create_bad(self, cinder_exc, api_exc):
+    def _test_volume_translate_exception(self, cinder_exc, api_exc):
+        """Tests that cinder exceptions are correctly translated"""
         def fake_volume_create(self, context, size, name, description,
                                snapshot, **param):
             raise cinder_exc
 
         self.stubs.Set(cinder.API, "create", fake_volume_create)
 
-        vol = {"size": '#$?',
+        vol = {"size": '10',
                "display_name": "Volume Test Name",
                "display_description": "Volume Test Desc",
                "availability_zone": "zone1:host1"}
@@ -289,26 +290,28 @@ class VolumeApiTestV21(test.NoDBTestCase):
 
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         self.assertRaises(api_exc,
-                          volumes.VolumeController().create, req, body=body)
+                          volumes_v21.VolumeController().create, req,
+                          body=body)
 
     @mock.patch.object(cinder.API, 'get_snapshot')
     @mock.patch.object(cinder.API, 'create')
     def test_volume_create_bad_snapshot_id(self, mock_create, mock_get):
-        vol = {"snapshot_id": '1'}
+        vol = {"snapshot_id": '1', "size": 10}
         body = {"volume": vol}
         mock_get.side_effect = exception.SnapshotNotFound(snapshot_id='1')
 
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
         self.assertRaises(webob.exc.HTTPNotFound,
-                          volumes.VolumeController().create, req, body=body)
+                          volumes_v21.VolumeController().create, req,
+                          body=body)
 
     def test_volume_create_bad_input(self):
-        self._test_volume_create_bad(exception.InvalidInput(reason='fake'),
-                                     webob.exc.HTTPBadRequest)
+        self._test_volume_translate_exception(
+            exception.InvalidInput(reason='fake'), webob.exc.HTTPBadRequest)
 
     def test_volume_create_bad_quota(self):
-        self._test_volume_create_bad(exception.OverQuota(overs='fake'),
-                                     webob.exc.HTTPForbidden)
+        self._test_volume_translate_exception(
+            exception.OverQuota(overs='fake'), webob.exc.HTTPForbidden)
 
     def test_volume_index(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes')
