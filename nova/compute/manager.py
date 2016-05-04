@@ -98,7 +98,6 @@ from nova import volume
 from nova.volume import encryptors
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
 

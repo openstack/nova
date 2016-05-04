@@ -74,7 +74,6 @@ from nova.virt.xenapi import volume_utils
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 IMAGE_MACHINE = '1'
 IMAGE_KERNEL = '2'

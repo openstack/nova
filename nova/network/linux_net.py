@@ -46,9 +46,6 @@ LOG = logging.getLogger(__name__)
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we

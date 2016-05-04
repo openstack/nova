@@ -62,7 +62,6 @@ from nova.virt.xenapi.image import utils as image_utils
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,

@@ -17,10 +17,10 @@ import platform
 import socket
 import sys
 
-from oslo_config import cfg
 from six.moves import range
 
 from nova.compute import flavors
+import nova.conf
 import nova.context
 import nova.db
 from nova import exception
@@ -30,8 +30,7 @@ from nova.network import model as network_model
 from nova import objects
 import nova.utils
 
-CONF = cfg.CONF
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 def get_test_admin_context():

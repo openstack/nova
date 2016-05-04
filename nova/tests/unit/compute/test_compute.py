@@ -99,7 +99,6 @@ from nova.volume import cinder
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 FAKE_IMAGE_REF = uuids.image_ref

@@ -37,7 +37,6 @@ from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -45,6 +44,7 @@ from oslo_utils import units
 from oslo_utils import versionutils
 import six
 
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -65,9 +65,7 @@ native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("Queue" if six.PY2 else "queue")
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 # This list is for libvirt hypervisor drivers that need special handling.

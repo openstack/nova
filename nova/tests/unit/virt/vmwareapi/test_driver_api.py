@@ -67,7 +67,6 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volumeops
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 def _fake_create_session(inst):

@@ -20,7 +20,6 @@ from nova import objects
 from nova.virt import block_device as driver_block_device
 
 CONF = nova.conf.CONF
-CONF.import_opt('host', 'nova.netconf')
 
 
 class ImageCacheManager(object):

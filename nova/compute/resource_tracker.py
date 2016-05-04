@@ -45,8 +45,6 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 COMPUTE_RESOURCE_SEMAPHORE = "compute_resources"
 
-CONF.import_opt('my_ip', 'nova.netconf')
-
 
 def _instance_in_resize_state(instance):
     """Returns True if the instance is in one of the resizing states.
