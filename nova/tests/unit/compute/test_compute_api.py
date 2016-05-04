@@ -211,7 +211,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock.patch.object(self.compute_api, '_check_auto_disk_config'),
             mock.patch.object(self.compute_api,
                               '_validate_and_build_base_options',
-                              return_value=({}, max_net_count))
+                              return_value=({}, max_net_count, None))
         ) as (
             get_image,
             check_auto_disk_config,
@@ -3088,7 +3088,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties)
+                    filter_properties, None)
             self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
 
             mock_req_spec_from_components.assert_called_once_with(ctxt,
@@ -3096,6 +3096,42 @@ class _ComputeAPIUnitTestMixIn(object):
                     base_options['pci_requests'], filter_properties,
                     instance_group, base_options['availability_zone'])
             req_spec_mock.create.assert_called_once_with()
+
+        do_test()
+
+    @mock.patch('nova.objects.RequestSpec.from_components')
+    @mock.patch('nova.objects.Instance')
+    @mock.patch('nova.objects.InstanceMapping.create')
+    def test_provision_instances_with_keypair(self, mock_im, mock_instance,
+                                              mock_rs):
+        fake_keypair = objects.KeyPair(name='test')
+
+        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch.object(self.compute_api, 'security_group_api')
+        @mock.patch.object(self.compute_api,
+                           'create_db_entry_for_new_instance')
+        @mock.patch.object(self.compute_api, '_create_build_request')
+        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
+        def do_test(mock_cbdm, mock_cbr, mock_cdb, mock_sg, mock_cniq):
+            mock_cniq.return_value = 1, mock.MagicMock()
+            self.compute_api._provision_instances(self.context,
+                                                  mock.sentinel.flavor,
+                                                  1, 1, mock.MagicMock(),
+                                                  {}, None,
+                                                  None, None, None, {}, None,
+                                                  fake_keypair)
+            self.assertEqual(
+                'test',
+                mock_instance.return_value.keypairs.objects[0].name)
+            self.compute_api._provision_instances(self.context,
+                                                  mock.sentinel.flavor,
+                                                  1, 1, mock.MagicMock(),
+                                                  {}, None,
+                                                  None, None, None, {}, None,
+                                                  None)
+            self.assertEqual(
+                0,
+                len(mock_instance.return_value.keypairs.objects))
 
         do_test()
 
@@ -3169,7 +3205,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties)
+                    filter_properties, None)
             for instance in instances:
                 self.assertTrue(uuidutils.is_uuid_like(instance.uuid))
 
@@ -3288,7 +3324,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     min_count, max_count, base_options, boot_meta,
                     security_groups, block_device_mapping, shutdown_terminate,
                     instance_group, check_server_group_quota,
-                    filter_properties)
+                    filter_properties, None)
             self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
 
             self.assertEqual(instances[0].uuid,
