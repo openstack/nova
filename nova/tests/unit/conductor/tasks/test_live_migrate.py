@@ -60,45 +60,49 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.fake_spec)
 
     def test_execute_with_destination(self):
-        self.mox.StubOutWithMock(self.task, '_check_host_is_up')
-        self.mox.StubOutWithMock(self.task, '_check_requested_destination')
-        self.mox.StubOutWithMock(self.task.compute_rpcapi, 'live_migration')
+        with test.nested(
+            mock.patch.object(self.task, '_check_host_is_up'),
+            mock.patch.object(self.task, '_check_requested_destination'),
+            mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
+        ) as (mock_check_up, mock_check_dest, mock_mig):
+            mock_mig.return_value = "bob"
 
-        self.task._check_host_is_up(self.instance_host)
-        self.task._check_requested_destination()
-        self.task.compute_rpcapi.live_migration(self.context,
+            self.assertEqual("bob", self.task.execute())
+            mock_check_up.assert_called_once_with(self.instance_host)
+            mock_check_dest.assert_called_once_with()
+            mock_mig.assert_called_once_with(
+                self.context,
                 host=self.instance_host,
                 instance=self.instance,
                 dest=self.destination,
                 block_migration=self.block_migration,
                 migration=self.migration,
-                migrate_data=None).AndReturn("bob")
-
-        self.mox.ReplayAll()
-        self.assertEqual("bob", self.task.execute())
+                migrate_data=None)
 
     def test_execute_without_destination(self):
         self.destination = None
         self._generate_task()
         self.assertIsNone(self.task.destination)
 
-        self.mox.StubOutWithMock(self.task, '_check_host_is_up')
-        self.mox.StubOutWithMock(self.task, '_find_destination')
-        self.mox.StubOutWithMock(self.task.compute_rpcapi, 'live_migration')
+        with test.nested(
+            mock.patch.object(self.task, '_check_host_is_up'),
+            mock.patch.object(self.task, '_find_destination'),
+            mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
+            mock.patch.object(self.migration, 'save')
+        ) as (mock_check, mock_find, mock_mig, mock_save):
+            mock_find.return_value = "found_host"
+            mock_mig.return_value = "bob"
 
-        self.task._check_host_is_up(self.instance_host)
-        self.task._find_destination().AndReturn("found_host")
-        self.task.compute_rpcapi.live_migration(self.context,
+            self.assertEqual("bob", self.task.execute())
+            mock_check.assert_called_once_with(self.instance_host)
+            mock_find.assert_called_once_with()
+            mock_mig.assert_called_once_with(self.context,
                 host=self.instance_host,
                 instance=self.instance,
                 dest="found_host",
                 block_migration=self.block_migration,
                 migration=self.migration,
-                migrate_data=None).AndReturn("bob")
-
-        self.mox.ReplayAll()
-        with mock.patch.object(self.migration, 'save') as mock_save:
-            self.assertEqual("bob", self.task.execute())
+                migrate_data=None)
             self.assertTrue(mock_save.called)
             self.assertEqual('found_host', self.migration.dest_compute)
 
