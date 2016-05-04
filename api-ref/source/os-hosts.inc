@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -21,8 +20,7 @@ Lists hosts.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -39,17 +37,44 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hosts/hosts-list-resp.json
    :language: javascript
 
-Enable Host
-===========
+Show Host Details
+=================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-hosts/{host_name}
+.. rest_method:: GET /v2.1/{tenant_id}/os-hosts/{host_name}
 
-Enables or puts a host in maintenance mode.
+Shows details for a host.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - host_name: host_name
+
+Response
+--------
+
+**Example Show Host Details: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hosts/host-get-resp.json
+   :language: javascript
+
+Update Host status
+==================
+
+.. rest_method:: PUT /v2.1/{tenant_id}/os-hosts/{host_name}
+
+Enables, disables a host or put a host in maintenance or normal mode.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -72,34 +97,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hosts/host-put-maintenance-resp.json
    :language: javascript
 
-Show Host Details
-=================
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-hosts/{host_name}
-
-Shows details for a host.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - host_name: host_name
-
-Response
---------
-
-**Example Show Host Details: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-hosts/host-get-resp.json
-   :language: javascript
-
 Reboot Host
 ===========
 
@@ -109,8 +106,8 @@ Reboots a host.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -137,8 +134,8 @@ Shuts down a host.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -165,8 +162,8 @@ Starts a host.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), NotImplemented(501)
 
 Request
 -------
