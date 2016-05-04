@@ -870,12 +870,15 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 return
 
             # NOTE(danms): We need to load from the old location by name
-            # if we don't have them in extra
+            # if we don't have them in extra. Only do this from the main
+            # database as instances were created with keypairs in extra
+            # before keypairs were moved to the api database.
             self.keypairs = objects.KeyPairList(objects=[])
             try:
                 key = objects.KeyPair.get_by_name(self._context,
                                                   self.user_id,
-                                                  self.key_name)
+                                                  self.key_name,
+                                                  localonly=True)
                 self.keypairs.objects.append(key)
             except exception.KeypairNotFound:
                 pass

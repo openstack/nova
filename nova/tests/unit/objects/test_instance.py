@@ -281,6 +281,10 @@ class _TestInstanceObject(object):
         self.assertNotIn('keypairs', inst)
         self.assertEqual('foo', inst.keypairs[0].name)
         self.assertIn('keypairs', inst.obj_what_changed())
+        mock_get.assert_called_once_with(self.context,
+                                         inst.user_id,
+                                         inst.key_name,
+                                         localonly=True)
 
     def test_get_remote(self):
         # isotime doesn't have microseconds and is always UTC

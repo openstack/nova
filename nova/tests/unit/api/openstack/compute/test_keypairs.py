@@ -61,8 +61,8 @@ def db_key_pair_destroy(context, user_id, name):
         raise Exception()
 
 
-def db_key_pair_create_duplicate(context, keypair):
-    raise exception.KeyPairExists(key_name=keypair.get('name', ''))
+def db_key_pair_create_duplicate(context):
+    raise exception.KeyPairExists(key_name='create_duplicate')
 
 
 class KeypairsTestV21(test.TestCase):
@@ -231,7 +231,8 @@ class KeypairsTestV21(test.TestCase):
         self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
     def test_keypair_create_duplicate(self):
-        self.stub_out("nova.db.key_pair_create", db_key_pair_create_duplicate)
+        self.stub_out("nova.objects.KeyPair.create",
+                      db_key_pair_create_duplicate)
         body = {'keypair': {'name': 'create_duplicate'}}
         ex = self.assertRaises(webob.exc.HTTPConflict,
                                self.controller.create, self.req, body=body)
@@ -351,14 +352,17 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
     def setUp(self):
         super(KeypairPolicyTestV21, self).setUp()
 
-        def _db_key_pair_get(context, user_id, name):
-            return dict(test_keypair.fake_keypair,
-                        name='foo', public_key='XXX', fingerprint='YYY',
-                        type='ssh')
+        @staticmethod
+        def _db_key_pair_get(context, user_id, name=None):
+            if name is not None:
+                return dict(test_keypair.fake_keypair,
+                            name='foo', public_key='XXX', fingerprint='YYY',
+                            type='ssh')
+            else:
+                return db_key_pair_get_all_by_user(context, user_id)
 
-        self.stub_out("nova.db.key_pair_get", _db_key_pair_get)
-        self.stub_out("nova.db.key_pair_get_all_by_user",
-                      db_key_pair_get_all_by_user)
+        self.stub_out("nova.objects.keypair.KeyPair._get_from_db",
+                      _db_key_pair_get)
         self.stub_out("nova.db.key_pair_destroy", db_key_pair_destroy)
 
         self.req = fakes.HTTPRequest.blank('')
