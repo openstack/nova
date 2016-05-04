@@ -13,7 +13,6 @@
 import itertools
 
 import nova.network
-import nova.network.driver
 import nova.network.floating_ips
 import nova.network.rpcapi
 
@@ -22,7 +21,6 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             nova.network.driver.driver_opts,
              nova.network.rpcapi.rpcapi_opts,
          ))
     ]

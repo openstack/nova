@@ -664,8 +664,14 @@ security_group_opts = [
                 deprecated_for_removal=True),
 ]
 
+driver_opts = [
+    cfg.StrOpt('network_driver',
+               default='nova.network.linux_net',
+               help='Driver to use for network creation'),
+]
+
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
-                   + security_group_opts)
+                   + security_group_opts + driver_opts)
 
 
 def register_opts(conf):
@@ -673,6 +679,7 @@ def register_opts(conf):
     conf.register_opts(network_opts)
     conf.register_opts(ldap_dns_opts)
     conf.register_opts(security_group_opts)
+    conf.register_opts(driver_opts)
 
 
 def list_opts():
