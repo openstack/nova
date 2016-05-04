@@ -1,12 +1,11 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
-====================================================
- Flavors access (flavors, os-flavor-access, action)
-====================================================
+============================================
+ Flavors access (flavors, os-flavor-access)
+============================================
 
 Lists tenants who have access to a private flavor and adds private
 flavor access to and removes private flavor access from tenants. By
@@ -17,14 +16,13 @@ flavor has ``is_public`` set to ``false`` while a public flavor has
 List Flavor Access Information For Given Flavor
 ===============================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/os-flavor-access
+.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-flavor-access
 
 Lists flavor access information.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -32,6 +30,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
+  - flavor_id: flavor_id
 
 Response
 --------
@@ -44,7 +43,7 @@ Response
 Add Flavor Access To Tenant
 ===========================
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors/os-flavor-access/{flavor_id}/action
+.. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/action
 
 Adds flavor access to a tenant and flavor.
 
@@ -52,8 +51,8 @@ Specify the ``addTenantAccess`` action and the ``tenant_id`` in the request body
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -79,7 +78,7 @@ Response
 Remove Flavor Access From Tenant
 ================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors/os-flavor-access/{flavor_id}/action
+.. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/action
 
 Removes flavor access from a tenant and flavor.
 
@@ -87,8 +86,8 @@ Specify the ``removeTenantAccess`` action and the ``tenant_id`` in the request b
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
