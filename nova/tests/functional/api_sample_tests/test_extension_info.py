@@ -14,14 +14,9 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
 from nova.api.openstack import extensions as api_extensions
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 def fake_soft_extension_authorizer(extension_name, core=False):
@@ -42,10 +37,7 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
         # stack. We default to the v2.1 case.
         template = 'extensions-list-resp'
         if self.api_major_version == 'v2':
-            if self._legacy_v2_code:
-                template = 'extensions-list-resp-v2'
-            else:
-                template = 'extensions-list-resp-v21-compatible'
+            template = 'extensions-list-resp-v21-compatible'
 
         self._verify_response(template, {}, response, 200)
 
@@ -58,10 +50,4 @@ class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_get_extensions(self, soft_auth):
         soft_auth.side_effect = fake_soft_extension_authorizer
         response = self._do_get('extensions/os-agents')
-        # The extension details info are different between legacy v2 and v2.1
-        # stack. namespace link and updated date are different. So keep both
-        # version for testing and default to v2.1
-        template = 'extensions-get-resp'
-        if self._legacy_v2_code:
-            template = 'extensions-get-resp-v2'
-        self._verify_response(template, {}, response, 200)
+        self._verify_response('extensions-get-resp', {}, response, 200)
