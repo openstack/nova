@@ -200,3 +200,22 @@ class BuildRequest(API_BASE):
     key_name = Column(String(255))
     locked_by = Column(Enum('owner', 'admin'))
     instance = Column(Text)
+
+
+class KeyPair(API_BASE):
+    """Represents a public key pair for ssh / WinRM."""
+    __tablename__ = 'key_pairs'
+    __table_args__ = (
+        schema.UniqueConstraint("user_id", "name",
+                                name="uniq_key_pairs0user_id0name"),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+
+    name = Column(String(255), nullable=False)
+
+    user_id = Column(String(255), nullable=False)
+
+    fingerprint = Column(String(255))
+    public_key = Column(Text())
+    type = Column(Enum('ssh', 'x509', name='keypair_types'),
+                  nullable=False, server_default='ssh')
