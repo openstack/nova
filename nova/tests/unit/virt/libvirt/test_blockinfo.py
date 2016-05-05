@@ -359,7 +359,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
         # is sdz
 
         bus_ppc = ("scsi", "sdz")
-        expect_bus = {"ppc": bus_ppc, "ppc64": bus_ppc}
+        expect_bus = {"ppc": bus_ppc, "ppc64": bus_ppc, "ppc64le": bus_ppc}
 
         bus, dev = expect_bus.get(blockinfo.libvirt_utils.get_arch({}),
                                   ("ide", "hdd"))
@@ -392,7 +392,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                              image_meta)
 
         bus_ppc = ("scsi", "sdz")
-        expect_bus = {"ppc": bus_ppc, "ppc64": bus_ppc}
+        expect_bus = {"ppc": bus_ppc, "ppc64": bus_ppc, "ppc64le": bus_ppc}
 
         bus, dev = expect_bus.get(blockinfo.libvirt_utils.get_arch({}),
                                   ("ide", "hdd"))
