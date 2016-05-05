@@ -24,7 +24,6 @@ from nova.db.sqlalchemy import api as db_api
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
-from nova.tests.functional import api_paste_fixture
 from nova.tests.unit import fake_network
 from nova.tests.unit import policy_fixture
 
@@ -40,7 +39,7 @@ PROJECT_ID_ALT = "616c6c796f7572626173656172656f73"
 
 class ServerGroupTestBase(test.TestCase):
     REQUIRES_LOCKING = True
-    api_major_version = 'v2'
+    api_major_version = 'v2.1'
     microversion = None
     _image_ref_parameter = 'imageRef'
     _flavor_ref_parameter = 'flavorRef'
@@ -70,13 +69,8 @@ class ServerGroupTestBase(test.TestCase):
 
         self.useFixture(policy_fixture.RealPolicyFixture())
 
-        if self.api_major_version == 'v2.1':
-            api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-                api_version='v2.1'))
-        else:
-            self.useFixture(api_paste_fixture.ApiPasteLegacyV2Fixture())
-            api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
-                api_version='v2'))
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
 
         self.api = api_fixture.api
         self.api.microversion = self.microversion
@@ -145,11 +139,10 @@ class ServerGroupTestBase(test.TestCase):
         return server
 
 
-class ServerGroupTestV2(ServerGroupTestBase):
-    api_major_version = 'v2'
+class ServerGroupTestV21(ServerGroupTestBase):
 
     def setUp(self):
-        super(ServerGroupTestV2, self).setUp()
+        super(ServerGroupTestV21, self).setUp()
 
         self.start_service('network')
         self.compute = self.start_service('compute')
@@ -472,6 +465,15 @@ class ServerGroupTestV2(ServerGroupTestBase):
 
         host.start()
 
+    def test_soft_affinity_not_supported(self):
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_groups,
+                               {'name': 'fake-name-1',
+                                'policies': ['soft-affinity']})
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Invalid input', ex.response.text)
+        self.assertIn('soft-affinity', ex.response.text)
+
 
 class ServerGroupAffinityConfTest(ServerGroupTestBase):
     api_major_version = 'v2.1'
@@ -557,20 +559,7 @@ class ServerGroupSoftAntiAffinityConfTest(ServerGroupTestBase):
         self.assertEqual(400, failed_server['fault']['code'])
 
 
-class ServerGroupTestV21(ServerGroupTestV2):
-    api_major_version = 'v2.1'
-
-    def test_soft_affinity_not_supported(self):
-        ex = self.assertRaises(client.OpenStackApiException,
-                               self.api.post_server_groups,
-                               {'name': 'fake-name-1',
-                                'policies': ['soft-affinity']})
-        self.assertEqual(400, ex.response.status_code)
-        self.assertIn('Invalid input', ex.response.text)
-        self.assertIn('soft-affinity', ex.response.text)
-
-
-class ServerGroupTestV215(ServerGroupTestV2):
+class ServerGroupTestV215(ServerGroupTestV21):
     api_major_version = 'v2.1'
     microversion = '2.15'
 
@@ -825,3 +814,6 @@ class ServerGroupTestV215(ServerGroupTestV2):
             self._evacuate_with_soft_anti_affinity_policies(
                 self.soft_anti_affinity))
         self.assertEqual(evacuated_server, other_server)
+
+    def test_soft_affinity_not_supported(self):
+        pass

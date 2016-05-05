@@ -47,17 +47,6 @@ class ApiPasteV21Fixture(fixtures.Fixture):
                           group='wsgi')
 
 
-class ApiPasteLegacyV2Fixture(ApiPasteV21Fixture):
-
-    def _replace_line(self, target_file, line):
-        # NOTE(johnthetubaguy) this is hack so we test the legacy_v2 code
-        # even though its disable by default in api-paste.ini
-        line = line.replace(
-            "/v2: openstack_compute_api_v21_legacy_v2_compatible",
-            "/v2: openstack_compute_api_legacy_v2")
-        target_file.write(line)
-
-
 class ApiPasteNoProjectId(ApiPasteV21Fixture):
 
     def _replace_line(self, target_file, line):
