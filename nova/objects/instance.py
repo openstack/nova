@@ -20,13 +20,16 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import versionutils
+from sqlalchemy.orm import joinedload
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova import notifications
 from nova import objects
 from nova.objects import base
@@ -1260,3 +1263,38 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             instance.obj_reset_changes(['fault'])
 
         return faults_by_uuid.keys()
+
+
+@db_api.main_context_manager.writer
+def _migrate_instance_keypairs(ctxt, count):
+    db_extras = ctxt.session.query(models.InstanceExtra).\
+        options(joinedload('instance')).\
+        filter_by(keypairs=None).\
+        filter_by(deleted=0).\
+        limit(count).\
+        all()
+
+    count_all = len(db_extras)
+    count_hit = 0
+    for db_extra in db_extras:
+        key_name = db_extra.instance.key_name
+        keypairs = objects.KeyPairList(objects=[])
+        if key_name:
+            try:
+                key = objects.KeyPair.get_by_name(ctxt,
+                                                  db_extra.instance.user_id,
+                                                  key_name)
+                keypairs.objects.append(key)
+            except exception.KeypairNotFound:
+                LOG.warning(
+                    _LW('Instance %(uuid)s keypair %(keyname)s not found'),
+                    {'uuid': db_extra.instance_uuid, 'keyname': key_name})
+        db_extra.keypairs = jsonutils.dumps(keypairs.obj_to_primitive())
+        db_extra.save(ctxt.session)
+        count_hit += 1
+
+    return count_all, count_hit
+
+
+def migrate_instance_keypairs(ctxt, count):
+    return _migrate_instance_keypairs(ctxt, count)

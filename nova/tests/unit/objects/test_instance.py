@@ -23,6 +23,7 @@ from oslo_utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
+from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
@@ -1731,3 +1732,41 @@ class TestInstanceObjectMisc(test.TestCase):
         self.assertEqual(['metadata', 'extra', 'extra.numa_topology'],
                          instance._expected_cols(['metadata',
                                                   'numa_topology']))
+
+    def test_migrate_instance_keypairs(self):
+        ctxt = context.RequestContext('foo', 'bar')
+        key = objects.KeyPair(context=ctxt,
+                              user_id=ctxt.user_id,
+                              name='testkey',
+                              public_key='keydata',
+                              type='ssh')
+        key.create()
+        inst1 = objects.Instance(context=ctxt,
+                                 user_id=ctxt.user_id,
+                                 project_id=ctxt.project_id,
+                                 key_name='testkey')
+        inst1.create()
+        inst2 = objects.Instance(context=ctxt,
+                                 user_id=ctxt.user_id,
+                                 project_id=ctxt.project_id,
+                                 key_name='testkey',
+                                 keypairs=objects.KeyPairList(
+                                     objects=[key]))
+        inst2.create()
+        inst3 = objects.Instance(context=ctxt,
+                                 user_id=ctxt.user_id,
+                                 project_id=ctxt.project_id,
+                                 key_name='missingkey')
+        inst3.create()
+
+        hit, done = instance.migrate_instance_keypairs(ctxt, 10)
+        self.assertEqual(2, hit)
+        self.assertEqual(2, done)
+        db_extra = db.instance_extra_get_by_instance_uuid(
+            ctxt, inst1.uuid, ['keypairs'])
+        self.assertIsNotNone(db_extra.keypairs)
+        db_extra = db.instance_extra_get_by_instance_uuid(
+            ctxt, inst3.uuid, ['keypairs'])
+        obj = base.NovaObject.obj_from_primitive(
+            jsonutils.loads(db_extra['keypairs']))
+        self.assertEqual([], obj.objects)
