@@ -17,7 +17,6 @@ import mock
 import webob
 
 from nova.api.openstack.compute import admin_password as admin_password_v21
-from nova.api.openstack.compute.legacy_v2 import servers
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -129,20 +128,6 @@ class AdminPasswordTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self._get_action(),
                           self.fake_req, 'fake', body=body)
-
-
-class AdminPasswordTestV2(AdminPasswordTestV21):
-    validiation_error = webob.exc.HTTPBadRequest
-
-    def _get_action(self):
-        class FakeExtManager(object):
-            def is_loaded(self, ext):
-                return False
-        return servers.Controller(ext_mgr=FakeExtManager()).\
-                                    _action_change_password
-
-    def _check_status(self, expected_status, res, controller_method):
-        self.assertEqual(expected_status, res.status_int)
 
 
 class AdminPasswordPolicyEnforcementV21(test.NoDBTestCase):

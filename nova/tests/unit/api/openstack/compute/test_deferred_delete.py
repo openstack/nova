@@ -17,7 +17,6 @@ import mock
 import webob
 
 from nova.api.openstack.compute import deferred_delete as dd_v21
-from nova.api.openstack.compute.legacy_v2.contrib import deferred_delete
 from nova.compute import api as compute_api
 from nova import context
 from nova import exception
@@ -141,10 +140,6 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.assertRaises(webob.exc.HTTPConflict, self.extension._restore,
                 self.fake_req, self.fake_uuid, self.fake_input_dict)
-
-
-class DeferredDeleteExtensionTestV2(DeferredDeleteExtensionTestV21):
-    ext_ver = deferred_delete.DeferredDeleteController
 
 
 class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):

@@ -22,7 +22,6 @@ from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.compute import consoles as consoles_v21
-from nova.api.openstack.compute.legacy_v2 import consoles as consoles_v2
 from nova.compute import vm_states
 from nova import console
 from nova import exception
@@ -293,12 +292,3 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
     def test_show_console_fail_policy(self):
         self._test_fail_policy("os_compute_api:os-consoles:show",
                                self.controller.show, data='20')
-
-
-class ConsolesControllerTestV2(ConsolesControllerTestV21):
-    def _set_up_controller(self):
-        self.controller = consoles_v2.Controller()
-
-    def _test_fail_policy(self, rule, action, data=None):
-        # V2 API don't have policy
-        pass

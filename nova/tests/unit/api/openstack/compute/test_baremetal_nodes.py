@@ -21,9 +21,6 @@ from webob import exc
 
 from nova.api.openstack.compute import baremetal_nodes \
         as b_nodes_v21
-from nova.api.openstack.compute.legacy_v2.contrib import baremetal_nodes \
-        as b_nodes_v2
-from nova.api.openstack import extensions
 from nova import context
 from nova import test
 from nova.tests.unit.virt.ironic import utils as ironic_utils
@@ -216,14 +213,3 @@ class BareMetalNodesTestV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller._remove_interface,
                           self.request, 'fake-id', 'fake-body')
-
-
-@mock.patch.object(b_nodes_v2, '_get_ironic_client',
-                   lambda *_: FAKE_IRONIC_CLIENT)
-class BareMetalNodesTestV2(BareMetalNodesTestV21):
-    mod = b_nodes_v2
-
-    def _setup(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = b_nodes_v2.BareMetalNodeController(self.ext_mgr)

@@ -22,8 +22,6 @@ from webob import exc
 from nova.api.openstack.compute import block_device_mapping_v1 \
         as block_device_mapping
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import extensions
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova import db
@@ -352,74 +350,3 @@ class BlockDeviceMappingTestV21(test.TestCase):
                   'block_device_mapping_v2': bdm_v2}
         self.assertRaises(exc.HTTPBadRequest, self._test_create, params,
                           override_controller=both_controllers)
-
-
-class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
-    validation_error = exc.HTTPBadRequest
-
-    def _setup_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {'os-volumes': 'fake'}
-        self.controller = servers_v2.Controller(self.ext_mgr)
-        self.ext_mgr_no_vols = extensions.ExtensionManager()
-        self.ext_mgr_no_vols.extensions = {}
-        self.no_volumes_controller = servers_v2.Controller(
-            self.ext_mgr_no_vols)
-
-    def test_create_instance_with_volumes_disabled(self):
-        bdm = [{'device_name': 'foo'}]
-        params = {'block_device_mapping': bdm}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertIsNone(kwargs['block_device_mapping'])
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create(params,
-                          override_controller=self.no_volumes_controller)
-
-    def test_create_instance_decide_format_legacy(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-volumes': 'fake',
-                              'os-block-device-mapping-v2-boot': 'fake'}
-        controller = servers_v2.Controller(self.ext_mgr)
-        bdm = [{'device_name': 'foo1',
-                'volume_id': fakes.FAKE_UUID,
-                'delete_on_termination': 1}]
-
-        expected_legacy_flag = True
-
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            legacy_bdm = kwargs.get('legacy_bdm', True)
-            self.assertEqual(legacy_bdm, expected_legacy_flag)
-            return old_create(*args, **kwargs)
-
-        def _validate_bdm(*args, **kwargs):
-            pass
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self.stubs.Set(compute_api.API, '_validate_bdm',
-                       _validate_bdm)
-
-        self._test_create({}, override_controller=controller)
-
-        params = {'block_device_mapping': bdm}
-        self._test_create(params, override_controller=controller)
-
-    def test_create_instance_with_size_empty_string(self):
-        # Add a check whether the size is an empty string
-        # in V2.1 API only. So this test is skipped in V2.0 API
-        pass
-
-    def test_create_instance_with_size_zero(self):
-        # Add a check whether the size is zero in V2.1 API only.
-        # So this test is skipped in V2.0 API
-        pass
-
-    def test_create_instance_with_size_greater_than_limit(self):
-        # Add a check whether size is greater than the limit
-        # in V2.1 API only. So this test is skipped in V2.0 API
-        pass
