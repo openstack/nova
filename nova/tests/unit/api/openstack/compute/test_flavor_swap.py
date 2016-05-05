@@ -104,12 +104,3 @@ class FlavorSwapTestV21(test.NoDBTestCase):
         flavors = self._get_flavors(res.body)
         self.assertFlavorSwap(flavors[0], '512')
         self.assertFlavorSwap(flavors[1], '')
-
-
-class FlavorSwapTestV2(FlavorSwapTestV21):
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('flavors',)))
-        return res

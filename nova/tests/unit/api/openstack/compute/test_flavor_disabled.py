@@ -103,12 +103,3 @@ class FlavorDisabledTestV21(test.NoDBTestCase):
         flavors = self._get_flavors(res.body)
         self.assertFlavorDisabled(flavors[0], 'False')
         self.assertFlavorDisabled(flavors[1], 'True')
-
-
-class FlavorDisabledTestV2(FlavorDisabledTestV21):
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('flavors',)))
-        return res

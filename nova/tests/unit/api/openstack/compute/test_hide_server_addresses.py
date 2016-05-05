@@ -137,13 +137,3 @@ class HideServerAddressesTestV21(test.TestCase):
         res = self._make_request(self.base_url + '/' + fakes.get_fake_uuid())
 
         self.assertEqual(res.status_int, 404)
-
-
-class HideServerAddressesTestV2(HideServerAddressesTestV21):
-
-    def _setup_wsgi(self):
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Hide_server_addresses'])
-        self.wsgi_app = fakes.wsgi_app(init_only=('servers',))

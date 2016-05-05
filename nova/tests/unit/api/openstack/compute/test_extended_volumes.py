@@ -148,18 +148,6 @@ class ExtendedVolumesTestV21(test.TestCase):
             self.assertEqual(self.exp_volumes_detail[i], actual)
 
 
-class ExtendedVolumesTestV2(ExtendedVolumesTestV21):
-
-    def _setup_app(self):
-        return fakes.wsgi_app(init_only=('servers',))
-
-    def _setUp(self):
-        self.flags(
-                   osapi_compute_extension=['nova.api.openstack.compute.'
-                                            'contrib.select_extensions'],
-                   osapi_compute_ext_list=['Extended_volumes'])
-
-
 class ExtendedVolumesTestV23(ExtendedVolumesTestV21):
 
     exp_volumes_show = [

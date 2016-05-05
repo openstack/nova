@@ -35,7 +35,8 @@ class UrlmapTest(test.NoDBTestCase):
         # Test URL path specifying v2 returns v2 content.
         req = webob.Request.blank('/v2/')
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',),
+                                                  v2_compatible=True))
         self.assertEqual(200, res.status_int)
         self.assertEqual("application/json", res.content_type)
         body = jsonutils.loads(res.body)
@@ -46,7 +47,8 @@ class UrlmapTest(test.NoDBTestCase):
         req = webob.Request.blank('/')
         req.content_type = "application/json;version=2"
         req.accept = "application/json"
-        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',),
+                                                  v2_compatible=True))
         self.assertEqual(200, res.status_int)
         self.assertEqual("application/json", res.content_type)
         body = jsonutils.loads(res.body)
@@ -56,7 +58,8 @@ class UrlmapTest(test.NoDBTestCase):
         # Test Accept header specifying v2 returns v2 content.
         req = webob.Request.blank('/')
         req.accept = "application/json;version=2"
-        res = req.get_response(fakes.wsgi_app(init_only=('versions',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',),
+                                                  v2_compatible=True))
         self.assertEqual(200, res.status_int)
         self.assertEqual("application/json", res.content_type)
         body = jsonutils.loads(res.body)
@@ -67,7 +70,7 @@ class UrlmapTest(test.NoDBTestCase):
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175.json'
         req = webob.Request.blank(url)
         req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app(init_only=('images',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('images',)))
         self.assertEqual(200, res.status_int)
         self.assertEqual("application/json", res.content_type)
         body = jsonutils.loads(res.body)
@@ -79,7 +82,7 @@ class UrlmapTest(test.NoDBTestCase):
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175'
         req = webob.Request.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
-        res = req.get_response(fakes.wsgi_app(init_only=('images',)))
+        res = req.get_response(fakes.wsgi_app_v21(init_only=('images',)))
         self.assertEqual(200, res.status_int)
         self.assertEqual("application/json", res.content_type)
         body = jsonutils.loads(res.body)

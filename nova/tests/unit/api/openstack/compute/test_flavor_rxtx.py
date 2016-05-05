@@ -108,9 +108,3 @@ class FlavorRxtxTestV21(test.NoDBTestCase):
         flavors = self._get_flavors(res.body)
         self.assertFlavorRxtx(flavors[0], '1.0')
         self.assertFlavorRxtx(flavors[1], '')
-
-
-class FlavorRxtxTestV20(FlavorRxtxTestV21):
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('flavors',))
