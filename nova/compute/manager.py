@@ -1916,7 +1916,7 @@ class ComputeManager(manager.Manager):
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
-                    'create.end', fault=e)
+                    'create.error', fault=e)
         except exception.ComputeResourcesUnavailable as e:
             LOG.debug(e.format_message(), instance=instance)
             self._notify_about_instance_usage(context, instance,
@@ -1991,7 +1991,7 @@ class ComputeManager(manager.Manager):
                 exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
-                    'create.end', fault=e)
+                    'create.error', fault=e)
 
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'create.end',
