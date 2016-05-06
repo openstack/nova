@@ -1,5 +1,6 @@
 .. -*- rst -*-
-.. needs:parameter_verification
+.. TODO(sdague) parameter microversions need to be gone through in the
+   response (request side should be good)
 .. needs:example_verification
 .. needs:body_verification
 
@@ -156,14 +157,24 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - changes-since: changes-since
+  - limit: limit
+  - marker: marker
+  - sort_key: sort_key
+  - sort_dir: sort_dir
+  - changes-since: changes_since_server
   - image: image_query
   - flavor: flavor_query
   - name: server_name_query
   - status: server_status_query
-  - host: host_query
-  - limit: limit
-  - marker: marker
+  - ip: ip_query
+  - reservation_id: reservation_id_query
+  - all_tenants: all_tenants_query
+  - deleted: deleted_query
+  - ip6: ip6_query
+  - tags: tags_query
+  - tags-any: tags_any_query
+  - not-tags: not_tags_query
+  - not-tags-any: not_tags_any_query
 
 Response
 --------
@@ -273,6 +284,9 @@ Request
   - imageRef: imageRef
   - security_groups: security_groups
   - metadata: metadata
+  - accessIPv4: accessIPv4_in
+  - accessIPv6: accessIPv6_in
+  - adminPass: adminPass
   - user_data: user_data
   - os-availability-zone:availability_zone: os-availability-zone:availability_zone
   - networks: networks
@@ -291,6 +305,7 @@ Request
   - key_name: key_name
   - os:scheduler_hints: os:scheduler_hints
   - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - description: server_description
 
 **Example Create Server: JSON request**
 
@@ -303,15 +318,42 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server: server
-  - adminPass: adminPass
+  - addresses: addresses
+  - created: created
+  - flavor: flavor
+  - hostId: hostId
   - id: server_id
+  - image: image
+  - key_name: key_name_resp
   - links: links
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
-  - security_groups: security_groups
+  - metadata: metadata_compat
+  - name: server_name
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - config_drive: config_drive_resp
+  - OS-DCF:diskConfig: disk_config
+  - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
+  - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
+  - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
+  - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
+  - OS-EXT-STS:power_state: OS-EXT-STS:power_state
+  - OS-EXT-STS:task_state: OS-EXT-STS:task_state
+  - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
+  - os-extended-volumes:volumes_attached: os-extended-volumes:volumes_attached
+  - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
+  - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
+  - progress: progress
+  - security_groups: security_groups_obj
+  - security_group.name: name
+  - status: server_status
+  - host_status: host_status
+  - tenant_id: tenant_id_body
+  - updated: updated
+  - user_id: user_id
 
 **Example Create Server: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
+.. literalinclude:: ../../doc/api_samples/all_extensions/server-create-resp.json
    :language: javascript
 
 
@@ -346,14 +388,24 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - changes-since: changes-since
+  - limit: limit
+  - marker: marker
+  - sort_key: sort_key
+  - sort_dir: sort_dir
+  - changes-since: changes_since_server
   - image: image_query
   - flavor: flavor_query
   - name: server_name_query
   - status: server_status_query
-  - host: host_query
-  - limit: limit
-  - marker: marker
+  - ip: ip_query
+  - reservation_id: reservation_id_query
+  - all_tenants: all_tenants_query
+  - deleted: deleted_query
+  - ip6: ip6_query
+  - tags: tags_query
+  - tags-any: tags_any_query
+  - not-tags: not_tags_query
+  - not-tags-any: not_tags_any_query
 
 Response
 --------
@@ -367,11 +419,14 @@ Response
   - hostId: hostId
   - id: server_id
   - image: image
-  - key_name: key_name
+  - key_name: key_name_resp
   - links: links
-  - metadata: metadata
-  - name: name
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - metadata: metadata_compat
+  - name: server_name
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - config_drive: config_drive_resp
+  - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
@@ -384,19 +439,16 @@ Response
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
   - security_groups: security_groups_obj
-  - security_group.description: description
-  - security_group.id: id
   - security_group.name: name
-  - security_group.rules: rules
   - status: server_status
   - host_status: host_status
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
 
 **Example List Servers Detailed: JSON response**
 
-.. literalinclude:: /../../doc/api_samples/servers/servers-details-resp.json
+.. literalinclude:: /../../doc/api_samples/all_extensions/servers-details-resp.json
    :language: javascript
 
 
@@ -446,11 +498,14 @@ Response
   - hostId: hostId
   - id: server_id
   - image: image
-  - key_name: key_name
+  - key_name: key_name_resp
   - links: links
-  - metadata: metadata
+  - metadata: metadata_compat
   - name: server_name
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
+  - config_drive: config_drive_resp
+  - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
   - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
@@ -463,19 +518,16 @@ Response
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
   - security_groups: security_groups_obj
-  - security_group.description: description
-  - security_group.id: id
   - security_group.name: name
-  - security_group.rules: rules
   - status: server_status
   - host_status: host_status
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
 
 **Example Show Server Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/servers/server-get-resp.json
+.. literalinclude:: ../../doc/api_samples/all_extensions/server-get-resp.json
    :language: javascript
 
 Update Server
@@ -483,13 +535,7 @@ Update Server
 
 .. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}
 
-Updates the editable attributes of a server.
-
-Preconditions
-
-The server must exist.
-
-You can edit the ``accessIPv4``, ``accessIPv6``, ``diskConfig`` and ``name`` attributes.
+Updates the editable attributes of an existing server.
 
 Normal response codes: 200
 
@@ -503,10 +549,11 @@ Request
 
   - tenant_id: tenant_id
   - server_id: server_id_path
-  - accessIPv4: accessIPv4
-  - accessIPv6: accessIPv6
+  - accessIPv4: accessIPv4_in
+  - accessIPv6: accessIPv6_in
   - name: server_name
   - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - description: server_description
 
 **Example Update server name: JSON request**
 
@@ -542,7 +589,9 @@ Response
   - key_name: key_name
   - links: links
   - metadata: metadata
-  - name: name
+  - name: server_name
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
@@ -556,10 +605,7 @@ Response
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
   - progress: progress
   - security_groups: security_groups_obj
-  - security_group.description: description
-  - security_group.id: id
   - security_group.name: name
-  - security_group.rules: rules
   - status: server_status
   - host_status: host_status
   - tenant_id: tenant_id

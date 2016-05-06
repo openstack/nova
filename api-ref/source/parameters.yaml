@@ -278,7 +278,15 @@ all_projects:
   type: boolean
 all_tenants:
   description: |
-    Specify the ``all_tenants=1`` query parameter to ping instances for all tenants.
+    Specify the ``all_tenants=1`` query parameter to ping instances
+    for all tenants. By default this is only allowed by admin users.
+  in: query
+  required: false
+  type: integer
+all_tenants_query:
+  description: |
+    Specify the ``all_tenants=1`` query parameter to list all instances
+    for all projects. By default this is only allowed by admin users.
   in: query
   required: false
   type: integer
@@ -320,9 +328,20 @@ changes-since:
   in: query
   required: false
   type: string
-changes-since_1:
+changes_since_server:
   description: |
-    Filters the response by a date and time stamp when the server last changed status.
+    Filters the response by a date and time stamp when the server last
+    changed status. To help keep track of changes this may also return
+    recently deleted servers.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
   in: query
   required: false
   type: string
@@ -337,6 +356,15 @@ delete_info:
   in: query
   required: true
   type: string
+deleted_query:
+  in: query
+  required: false
+  type: boolean
+  description: |
+    Show deleted items. In some circumstances deleted items will still
+    be accessible via the backend database, however there is no
+    contract on how long, so this parameter should be used with
+    caution. It is typically only available to administrators.
 exclude:
   description: |
     Specify ``exclude=uuid[,uuid...]`` to exclude the instances from the results.
@@ -370,6 +398,19 @@ include:
   in: query
   required: false
   type: string
+ip_query:
+  description: |
+    An IPv4 address to filter results by.
+  in: query
+  required: false
+  type: string
+ip6_query:
+  description: |
+    An IPv6 address to filter results by.
+  in: query
+  required: false
+  type: string
+  min_version: 2.5
 limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -411,6 +452,12 @@ minRam_1:
   in: query
   required: false
   type: integer
+reservation_id_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A reservation id as returned by a servers multiple create call.
 server_name_query:
   description: |
     Filters the response by a server name, as a string.  You can use regular expressions
@@ -465,6 +512,40 @@ server_status_query:
   in: query
   required: false
   type: string
+# TODO(sdague): when server-tags actually get documented, these should
+# be updated.
+tags_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that match
+    all tags in this list will be returned.
+  min_version: 2.26
+tags_any_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that match
+    any tag in this list will be returned.
+  min_version: 2.26
+not_tags_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that don't
+    match all tags in this list will be returned.
+  min_version: 2.26
+not_tags_any_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that don't
+    match any tags in this list will be returned.
+  min_version: 2.26
 type_1:
   description: |
     Filters the response by an image type. For example, ``snapshot`` or ``backup``.
@@ -500,7 +581,7 @@ OS-DCF:diskConfig:
   in: body
   required: false
   type: string
-OS-DCF:diskConfig_1:
+disk_config:
   description: |
     Disk configuration. The value is either:
 
@@ -597,10 +678,24 @@ accessIPv4:
   required: true
   type: string
   description: |
-    IPv4 address that should be used to access this server.
+    IPv4 address that should be used to access this server. May be
+    automatically set by the provider.
 accessIPv6:
   in: body
   required: true
+  type: string
+  description: |
+    IPv6 address that should be used to access this server. May be
+    automatically set by the provider.
+accessIPv4_in:
+  in: body
+  required: false
+  type: string
+  description: |
+    IPv4 address that should be used to access this server.
+accessIPv6_in:
+  in: body
+  required: false
   type: string
   description: |
     IPv6 address that should be used to access this server.
@@ -760,6 +855,12 @@ config_drive:
     End User Guide.
   in: body
   required: false
+  type: boolean
+config_drive_resp:
+  description: |
+    Indicates whether or not a config drive was used for this server.
+  in: body
+  required: true
   type: boolean
 confirmResize:
   description: |
@@ -1257,7 +1358,7 @@ key_name:
   in: body
   required: false
   type: string
-key_name_1:
+key_name_resp:
   description: |
     The name of associated key pair, if any.
   in: body
@@ -1346,10 +1447,10 @@ metadata_1:
   in: body
   required: false
   type: object
-metadata_2:
+metadata_compat:
   description: |
     A dictionary of metadata key-and-value pairs, which is maintained for backward
-    compatibility. The API always returns an empty metadata dictionary.
+    compatibility.
   in: body
   required: true
   type: object
@@ -1428,6 +1529,15 @@ server_name:
   in: body
   required: true
   type: string
+server_description:
+  type: string
+  in: body
+  required: false
+  min_version: 2.19
+  description: |
+    A free form description of the server. Limited to 255 characters
+    in length. Before microversion 2.19 this was set to the server
+    name.
 name_8:
   description: |
     Name of the extension.
@@ -1999,6 +2109,12 @@ tag:
     A string value that identifies the event.
   in: body
   required: false
+  type: string
+tenant_id_body:
+  description: |
+    The UUID of the tenant this server is owned by.
+  in: body
+  required: true
   type: string
 to_port:
   description: |
