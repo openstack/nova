@@ -20,7 +20,6 @@
 #
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import units
 import six
@@ -31,19 +30,7 @@ from nova.i18n import _
 from nova.i18n import _LW
 from nova.virt.libvirt import utils
 
-
-lvm_opts = [
-    cfg.StrOpt('volume_clear',
-               default='zero',
-               choices=('none', 'zero', 'shred'),
-               help='Method used to wipe old volumes.'),
-    cfg.IntOpt('volume_clear_size',
-               default=0,
-               help='Size in MiB to wipe at start of old volumes. 0 => all'),
-]
-
 CONF = nova.conf.CONF
-CONF.register_opts(lvm_opts, 'libvirt')
 LOG = logging.getLogger(__name__)
 
 
