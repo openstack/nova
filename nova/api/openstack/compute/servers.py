@@ -227,6 +227,10 @@ class ServersController(wsgi.Controller):
             states = common.task_and_vm_state_from_status(statuses)
             vm_state, task_state = states
             if not vm_state and not task_state:
+                if api_version_request.is_supported(req, min_version='2.38'):
+                    msg = _('Invalid status value')
+                    raise exc.HTTPBadRequest(explanation=msg)
+
                 return {'servers': []}
             search_opts['vm_state'] = vm_state
             # When we search by vm state, task state will return 'default'.
