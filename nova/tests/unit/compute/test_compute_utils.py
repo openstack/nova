@@ -36,6 +36,7 @@ from nova.image import glance
 from nova.network import api as network_api
 from nova.network import model
 from nova import objects
+from nova.objects import base
 from nova.objects import block_device as block_device_obj
 from nova import rpc
 from nova import test
@@ -99,12 +100,10 @@ class ComputeValidateDeviceTestCase(test.NoDBTestCase):
 
         self.data = []
 
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
-                      lambda context, instance: self.data)
-
     def _validate_device(self, device=None):
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                self.context, self.instance['uuid'])
+        bdms = base.obj_make_list(self.context,
+            objects.BlockDeviceMappingList(), objects.BlockDeviceMapping,
+            self.data)
         return compute_utils.get_device_name_for_instance(
             self.instance, bdms, device)
 
