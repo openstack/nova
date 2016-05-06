@@ -29,7 +29,7 @@ class LimitsController(wsgi.Controller):
 
     @extensions.expected_errors(())
     def index(self, req):
-        """Return all global and rate limit information."""
+        """Return all global limit information."""
         context = req.environ['nova.context']
         authorize(context)
         project_id = req.params.get('tenant_id', context.project_id)
@@ -38,10 +38,8 @@ class LimitsController(wsgi.Controller):
         abs_limits = {k: v['limit'] for k, v in quotas.items()}
 
         builder = self._get_view_builder(req)
-        # NOTE(sdague): rate_limits is vestigial, but their is common
-        # code between v2 legacy and v2.1 so we have to pass an empty
-        # list.
-        return builder.build([], abs_limits)
+
+        return builder.build(abs_limits)
 
     def _get_view_builder(self, req):
         return limits_views.ViewBuilderV21()
