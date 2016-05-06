@@ -18,6 +18,7 @@ Common Auth Middleware.
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_log import versionutils
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 import webob.dec
@@ -25,6 +26,7 @@ import webob.exc
 
 from nova import context
 from nova.i18n import _
+from nova.i18n import _LW
 from nova import wsgi
 
 
@@ -65,13 +67,12 @@ def _load_pipeline(loader, pipeline):
 
 def pipeline_factory(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
-
-    pipeline = local_conf[CONF.auth_strategy]
-    if not CONF.api_rate_limit:
-        limit_name = CONF.auth_strategy + '_nolimit'
-        pipeline = local_conf.get(limit_name, pipeline)
-    pipeline = pipeline.split()
-    return _load_pipeline(loader, pipeline)
+    versionutils.report_deprecated_feature(
+        LOG,
+        _LW("The legacy V2 API code tree has been removed in Newton. "
+            "Please remove legacy v2 API entry from api-paste.ini, and use "
+            "V2.1 API or V2.1 API compat mode instead")
+    )
 
 
 def pipeline_factory_v21(loader, global_conf, **local_conf):
