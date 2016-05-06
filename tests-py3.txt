@@ -89,8 +89,6 @@ nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsWithTagsTestCase
 nova.tests.unit.test_api_validation.Base64TestCase
 nova.tests.unit.test_bdm.BlockDeviceMappingEc2CloudTestCase
-nova.tests.unit.test_block_device.BlockDeviceTestCase
-nova.tests.unit.test_block_device.TestBlockDeviceDict
 nova.tests.unit.test_cinder.CinderTestCase
 nova.tests.unit.test_cinder.CinderV2TestCase
 nova.tests.unit.test_configdrive2.ConfigDriveTestCase
