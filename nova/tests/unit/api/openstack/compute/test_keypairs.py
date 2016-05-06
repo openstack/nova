@@ -20,8 +20,6 @@ import webob
 from oslo_policy import policy as oslo_policy
 
 from nova.api.openstack.compute import keypairs as keypairs_v21
-from nova.api.openstack.compute.legacy_v2.contrib import keypairs \
-        as keypairs_v2
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova import exception
@@ -429,45 +427,6 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
         self.KeyPairController.delete(self.req, 'FAKE')
 
 
-class KeypairsTestV2(KeypairsTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _setup_app_and_controller(self):
-        self.app_server = fakes.wsgi_app(init_only=('servers',))
-        self.controller = keypairs_v2.KeypairController()
-
-    def test_keypair_create_with_name_leading_trailing_spaces(
-            self):
-        body = {'keypair': {'name': '  test  '}}
-        self.req.set_legacy_v2()
-        res_dict = self.controller.create(self.req, body=body)
-        self.assertEqual('  test  ', res_dict['keypair']['name'])
-
-    def test_keypair_create_with_name_leading_trailing_spaces_compat_mode(
-            self):
-        pass
-
-    def test_create_server_keypair_name_with_leading_trailing(self):
-        pass
-
-    @mock.patch.object(compute_api.API, 'create')
-    def test_create_server_keypair_name_with_leading_trailing_compat_mode(
-            self, mock_create):
-        mock_create.return_value = (
-            objects.InstanceList(objects=[
-                fakes.stub_instance_obj(ctxt=None, id=1)]),
-            None)
-        req = fakes.HTTPRequest.blank(self.base_url + '/servers')
-        req.method = 'POST'
-        req.headers["content-type"] = "application/json"
-        req.body = jsonutils.dump_as_bytes({'server': {'name': 'test',
-                                               'flavorRef': 1,
-                                               'keypair_name': '  abc  ',
-                                               'imageRef': FAKE_UUID}})
-        res = req.get_response(self.app_server)
-        self.assertEqual(202, res.status_code)
-
-
 class KeypairsTestV22(KeypairsTestV21):
     wsgi_api_version = '2.2'
 
@@ -594,11 +553,3 @@ class KeypairsTestV210(KeypairsTestV22):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.create,
                           req, body=body)
-
-
-class KeypairPolicyTestV2(KeypairPolicyTestV21):
-    KeyPairController = keypairs_v2.KeypairController()
-    policy_path = 'compute_extension:keypairs'
-
-    def _assert_keypair_create(self, mock_create, req):
-        mock_create.assert_called_with(req, 'fake_user', 'create_test')

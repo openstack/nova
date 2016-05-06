@@ -22,10 +22,6 @@ import webob
 
 from nova.api.openstack.compute import flavor_access as flavor_access_v21
 from nova.api.openstack.compute import flavor_manage as flavormanage_v21
-from nova.api.openstack.compute.legacy_v2.contrib import flavor_access \
-        as flavor_access_v2
-from nova.api.openstack.compute.legacy_v2.contrib import flavormanage \
-        as flavormanage_v2
 from nova.compute import flavors
 from nova import exception
 from nova import test
@@ -424,60 +420,6 @@ class PrivateFlavorManageTestV21(test.TestCase):
         body = self._get_response()
         for key in self.expected["flavor"]:
             self.assertEqual(body["flavor"][key], self.expected["flavor"][key])
-
-
-class FlavorManageTestV2(FlavorManageTestV21):
-    controller = flavormanage_v2.FlavorManageController()
-    validation_error = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(FlavorManageTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
-                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
-
-    @property
-    def app(self):
-        return fakes.wsgi_app(init_only=('flavors',),
-                              fake_auth_context=self._get_http_request().
-                                  environ['nova.context'])
-
-    def _get_http_request(self, url=''):
-        return fakes.HTTPRequest.blank(url, use_admin_context=False)
-
-    def test_create_with_name_leading_trailing_spaces(self):
-        req = self._get_http_request(url=self.base_url)
-        self.request_body['flavor']['name'] = '  test  '
-        body = self._create_flavor_success_case(self.request_body, req)
-        self.assertEqual('test', body['flavor']['name'])
-
-    def test_create_with_name_leading_trailing_spaces_compat_mode(self):
-        pass
-
-
-class PrivateFlavorManageTestV2(PrivateFlavorManageTestV21):
-    controller = flavormanage_v2.FlavorManageController()
-
-    def setUp(self):
-        super(PrivateFlavorManageTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
-                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
-        self.flavor_access_controller = (flavor_access_v2.
-                                         FlavorAccessController())
-
-    @property
-    def app(self):
-        return fakes.wsgi_app(init_only=('flavors',),
-                              fake_auth_context=self._get_http_request().
-                                  environ['nova.context'])
-
-    def _get_http_request(self, url=''):
-        return fakes.HTTPRequest.blank(url, use_admin_context=False)
 
 
 class FlavorManagerPolicyEnforcementV21(test.NoDBTestCase):

@@ -22,8 +22,6 @@ import six
 from webob import exc
 
 from nova.api.openstack.compute import instance_actions as instance_actions_v21
-from nova.api.openstack.compute.legacy_v2.contrib import instance_actions \
-        as instance_actions_v2
 from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.db.sqlalchemy import models
@@ -106,16 +104,6 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         mock_instance_get.return_value = self._get_instance_other_project(req)
         self.assertRaises(exception.Forbidden, self.controller.show, req,
                           str(uuid.uuid4()), '1')
-
-
-class InstanceActionsPolicyTestV2(InstanceActionsPolicyTestV21):
-    instance_actions = instance_actions_v2
-
-    def _set_policy_rules(self):
-        rules = {'compute:get': '',
-                 'compute_extension:instance_actions':
-                     'project_id:%(project_id)s'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
 
 class InstanceActionsTestV21(test.NoDBTestCase):
@@ -238,13 +226,3 @@ class InstanceActionsTestV221(InstanceActionsTestV21):
                  want_objects=False):
         self.assertEqual('yes', context.read_deleted)
         return objects.Instance(uuid=instance_uuid)
-
-
-class InstanceActionsTestV2(InstanceActionsTestV21):
-    instance_actions = instance_actions_v2
-
-    def _set_policy_rules(self):
-        rules = {'compute:get': '',
-                 'compute_extension:instance_actions': '',
-                 'compute_extension:instance_actions:events': 'is_admin:True'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))

@@ -23,7 +23,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import security_groups
+from nova.api.openstack.compute import security_groups
 from nova import compute
 from nova import context
 import nova.db
@@ -410,12 +410,6 @@ class TestNeutronSecurityGroupsV21(
                            security_groups=[sg1['id']],
                            port_security_enabled=False,
                            device_id=test_security_groups.FAKE_UUID1)
-
-
-class TestNeutronSecurityGroupsV2(TestNeutronSecurityGroupsV21):
-    secgrp_ctl_cls = security_groups.SecurityGroupController
-    server_secgrp_ctl_cls = security_groups.ServerSecurityGroupController
-    secgrp_act_ctl_cls = security_groups.SecurityGroupActionController
 
 
 class TestNeutronSecurityGroupRulesTestCase(TestNeutronSecurityGroupsTestCase):

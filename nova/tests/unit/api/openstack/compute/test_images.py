@@ -25,7 +25,6 @@ import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute import images as images_v21
-from nova.api.openstack.compute.legacy_v2 import images
 from nova.api.openstack.compute.views import images as images_view
 from nova import exception
 from nova.image import glance
@@ -407,11 +406,3 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['1'], 'marker': [IMAGE_FIXTURES[0]['id']]},
                         matchers.DictMatches(params))
-
-
-class ImagesControllerTestV2(ImagesControllerTestV21):
-    image_controller_class = images.Controller
-    http_request = fakes.HTTPRequest
-
-    def _check_response(self, controller_method, response, expected_code):
-        self.assertEqual(expected_code, response.status_int)

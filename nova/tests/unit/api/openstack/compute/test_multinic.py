@@ -16,8 +16,6 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import multinic \
-        as multinic_v2
 from nova.api.openstack.compute import multinic as multinic_v21
 from nova import compute
 from nova import exception
@@ -162,16 +160,6 @@ class FixedIpTestV21(test.NoDBTestCase):
                           self.controller._remove_fixed_ip,
                           self.fake_req,
                           UUID, body=body)
-
-
-class FixedIpTestV2(FixedIpTestV21):
-    controller_class = multinic_v2
-    validation_error = webob.exc.HTTPBadRequest
-
-    def test_remove_fixed_ip_invalid_address(self):
-        # NOTE(cyeoh): This test is disabled for the V2 API because it is
-        # has poorer input validation.
-        pass
 
 
 class MultinicPolicyEnforcementV21(test.NoDBTestCase):
