@@ -13,17 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.legacy_v2 import limits
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import quota
 
-
-# NOTE(alex_xu): This is just for keeping backward compatible with v2 endpoint
-# in api-paste.ini. This will be removed after v2 API code deprecated in the
-# future.
-RateLimitingMiddleware = limits.RateLimitingMiddleware
 
 QUOTAS = quota.QUOTAS
 ALIAS = 'limits'
