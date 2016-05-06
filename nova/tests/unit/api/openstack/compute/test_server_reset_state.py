@@ -17,8 +17,6 @@ import webob
 
 from nova.api.openstack.compute import admin_actions \
         as admin_actions_v21
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
-        as admin_actions_v2
 from nova.compute import vm_states
 from nova import exception
 from nova import objects
@@ -120,8 +118,3 @@ class ResetStateTestsV21(test.NoDBTestCase):
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
-
-
-class ResetStateTestsV2(ResetStateTestsV21):
-    admin_act = admin_actions_v2
-    bad_request = webob.exc.HTTPBadRequest

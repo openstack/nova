@@ -15,9 +15,7 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import rescue as rescue_v2
 from nova.api.openstack.compute import rescue as rescue_v21
-from nova.api.openstack import extensions
 from nova import compute
 import nova.conf
 from nova import exception
@@ -196,24 +194,6 @@ class RescueTestV21(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
-
-
-class RescueTestV20(RescueTestV21):
-
-    def _set_up_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-rescue-with-image': 'fake'}
-        return rescue_v2.RescueController(ext_mgr)
-
-    def test_rescue_with_invalid_property(self):
-        # NOTE(cyeoh): input validation in original v2 code does not
-        # check for invalid properties.
-        pass
-
-    def test_rescue_disable_password(self):
-        # NOTE(cyeoh): Original v2.0 code does not support disabling
-        # the admin password being returned through a conf setting
-        pass
 
 
 class RescuePolicyEnforcementV21(test.NoDBTestCase):

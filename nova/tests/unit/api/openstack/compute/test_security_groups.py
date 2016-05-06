@@ -19,8 +19,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import security_groups as \
-    secgroups_v2
 from nova.api.openstack.compute import security_groups as \
     secgroups_v21
 from nova.api.openstack import wsgi
@@ -781,12 +779,6 @@ class TestSecurityGroupsV21(test.TestCase):
                                                       mock.ANY)
 
 
-class TestSecurityGroupsV2(TestSecurityGroupsV21):
-    secgrp_ctl_cls = secgroups_v2.SecurityGroupController
-    server_secgrp_ctl_cls = secgroups_v2.ServerSecurityGroupController
-    secgrp_act_ctl_cls = secgroups_v2.SecurityGroupActionController
-
-
 class TestSecurityGroupRulesV21(test.TestCase):
     secgrp_ctl_cls = secgroups_v21.SecurityGroupRulesController
 
@@ -1262,10 +1254,6 @@ class TestSecurityGroupRulesV21(test.TestCase):
                           self.req, {'security_group_rule': rule})
 
 
-class TestSecurityGroupRulesV2(TestSecurityGroupRulesV21):
-    secgrp_ctl_cls = secgroups_v2.SecurityGroupRulesController
-
-
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
 UUID3 = '00000000-0000-0000-0000-000000000003'
@@ -1395,12 +1383,6 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class SecurityGroupsOutputTestV2(SecurityGroupsOutputTestV21):
-
-    def _setup_app(self):
-        return fakes.wsgi_app(init_only=('servers',))
 
 
 class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):

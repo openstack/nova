@@ -16,10 +16,8 @@
 import webob
 
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2.contrib import quota_classes
 from nova.api.openstack.compute import quota_classes \
        as quota_classes_v21
-from nova.api.openstack import extensions
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -139,26 +137,6 @@ class QuotaClassSetsTestV21(test.TestCase):
                                     'ram': 51200, 'unsupported': 12}}
         self.assertRaises(self.validation_error, self.controller.update,
                           self.req, 'test_class', body=body)
-
-
-class QuotaClassSetsTestV2(QuotaClassSetsTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _setup(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {}
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-        self.controller = quota_classes.QuotaClassSetsController(ext_mgr)
-
-    def test_quotas_show_as_unauthorized_user(self):
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.show,
-                          self.non_admin_req, 'test_class')
-
-    def test_quotas_update_as_user(self):
-        body = {'quota_class_set': {}}
-        self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          self.non_admin_req, 'test_class', body=body)
 
 
 class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):

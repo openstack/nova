@@ -21,8 +21,6 @@ from oslo_utils import timeutils
 from six.moves import range
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import simple_tenant_usage as \
-    simple_tenant_usage_v2
 from nova.api.openstack.compute import simple_tenant_usage as \
     simple_tenant_usage_v21
 from nova.compute import vm_states
@@ -256,11 +254,6 @@ class SimpleTenantUsageTestV21(test.TestCase):
             'start=%s' % (NOW - datetime.timedelta(5)).isoformat())
 
 
-class SimpleTenantUsageTestV2(SimpleTenantUsageTestV21):
-    policy_rule_prefix = "compute_extension:simple_tenant_usage"
-    controller = simple_tenant_usage_v2.SimpleTenantUsageController()
-
-
 class SimpleTenantUsageControllerTestV21(test.TestCase):
     controller = simple_tenant_usage_v21.SimpleTenantUsageController()
 
@@ -308,10 +301,6 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
         self.assertIsNone(flavor)
 
 
-class SimpleTenantUsageControllerTestV2(SimpleTenantUsageControllerTestV21):
-    controller = simple_tenant_usage_v2.SimpleTenantUsageController()
-
-
 class SimpleTenantUsageUtilsV21(test.NoDBTestCase):
     simple_tenant_usage = simple_tenant_usage_v21
 
@@ -327,7 +316,3 @@ class SimpleTenantUsageUtilsV21(test.NoDBTestCase):
                           self.simple_tenant_usage.parse_strtime,
                           "2014-02-21 13:47:20.824060",
                           "%Y-%m-%dT%H:%M:%S.%f")
-
-
-class SimpleTenantUsageUtilsV2(SimpleTenantUsageUtilsV21):
-    simple_tenant_usage = simple_tenant_usage_v2

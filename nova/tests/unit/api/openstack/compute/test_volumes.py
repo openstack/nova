@@ -25,11 +25,7 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack.compute import assisted_volume_snapshots \
         as assisted_snaps_v21
-from nova.api.openstack.compute.legacy_v2.contrib import \
-        assisted_volume_snapshots as assisted_snaps_v2
-from nova.api.openstack.compute.legacy_v2.contrib import volumes
 from nova.api.openstack.compute import volumes as volumes_v21
-from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import vm_states
@@ -350,13 +346,6 @@ class VolumeApiTestV21(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(404, resp.status_int)
         self.assertIn('Volume 456 could not be found.', resp.body)
-
-
-class VolumeApiTestV2(VolumeApiTestV21):
-
-    @property
-    def app(self):
-        return fakes.wsgi_app(init_only=('os-volumes', 'servers'))
 
 
 class VolumeAttachTestsV21(test.NoDBTestCase):
@@ -749,47 +738,6 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           body=body)
 
 
-class VolumeAttachTestsV2(VolumeAttachTestsV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _set_up_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-volume-attachment-update'}
-        self.attachments = volumes.VolumeAttachmentController(ext_mgr)
-        ext_mgr_no_update = extensions.ExtensionManager()
-        ext_mgr_no_update.extensions = {}
-        self.attachments_no_update = volumes.VolumeAttachmentController(
-                                                 ext_mgr_no_update)
-
-    def test_swap_volume_no_extension(self):
-        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap,
-                          self.attachments_no_update)
-
-    @mock.patch.object(compute_api.API, 'attach_volume',
-                       return_value=[])
-    def test_attach_volume_with_extra_arg(self, mock_attach):
-        # NOTE(gmann): V2 does not perform strong input validation
-        # so volume is attached successfully even with extra arg in
-        # request body.
-        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
-                                    'device': '/dev/fake',
-                                    'extra': 'extra_arg'}}
-        req = fakes.HTTPRequest.blank('/v2/servers/id/os-volume_attachments')
-        req.method = 'POST'
-        req.body = jsonutils.dump_as_bytes({})
-        req.headers['content-type'] = 'application/json'
-        req.environ['nova.context'] = self.context
-        result = self.attachments.create(req, FAKE_UUID, body=body)
-        self.assertEqual('00000000-aaaa-aaaa-aaaa-000000000000',
-                         result['volumeAttachment']['id'])
-
-    def test_swap_volume_with_extra_arg(self):
-        # NOTE(gmann): V2 does not perform strong input validation.
-        # Volume is swapped successfully even with extra arg in
-        # request body. So 'pass' this test for V2.
-        pass
-
-
 class CommonBadRequestTestCase(object):
 
     resource = None
@@ -836,19 +784,6 @@ class BadRequestVolumeTestCaseV21(CommonBadRequestTestCase,
     bad_request = exception.ValidationError
 
 
-class BadRequestVolumeTestCaseV2(BadRequestVolumeTestCaseV21):
-    controller_cls = volumes.VolumeController
-    bad_request = exc.HTTPBadRequest
-
-
-class BadRequestAttachmentTestCase(CommonBadRequestTestCase,
-                                   test.NoDBTestCase):
-    resource = 'servers/' + FAKE_UUID + '/os-volume_attachments'
-    entity_name = 'volumeAttachment'
-    controller_cls = volumes.VolumeAttachmentController
-    kwargs = {'server_id': FAKE_UUID}
-
-
 class BadRequestSnapshotTestCaseV21(CommonBadRequestTestCase,
                                     test.NoDBTestCase):
 
@@ -856,11 +791,6 @@ class BadRequestSnapshotTestCaseV21(CommonBadRequestTestCase,
     entity_name = 'snapshot'
     controller_cls = volumes_v21.SnapshotController
     bad_request = exception.ValidationError
-
-
-class BadRequestSnapshotTestCaseV2(BadRequestSnapshotTestCaseV21):
-    controller_cls = volumes.SnapshotController
-    bad_request = exc.HTTPBadRequest
 
 
 class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
@@ -910,16 +840,6 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
                 req, body=body)
 
 
-class AssistedSnapshotCreateTestCaseV2(AssistedSnapshotCreateTestCaseV21):
-    assisted_snaps = assisted_snaps_v2
-    bad_request = webob.exc.HTTPBadRequest
-
-    def test_assisted_create_with_unexpected_attr(self):
-        # NOTE: legacy v2.0 API cannot handle this kind of invalid requests.
-        # So we need to skip the test on legacy v2.0 API.
-        pass
-
-
 class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     assisted_snaps = assisted_snaps_v21
 
@@ -950,13 +870,6 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                 req, '5')
-
-
-class AssistedSnapshotDeleteTestCaseV2(AssistedSnapshotDeleteTestCaseV21):
-    assisted_snaps = assisted_snaps_v2
-
-    def _check_status(self, expected_status, res, controller_method):
-        self.assertEqual(expected_status, res.status_int)
 
 
 class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):

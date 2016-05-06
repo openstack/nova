@@ -18,8 +18,6 @@ import mock
 from oslo_config import cfg
 
 from nova.api.metadata import password
-from nova.api.openstack.compute.legacy_v2.contrib import server_password \
-    as server_password_v2
 from nova.api.openstack.compute import server_password \
     as server_password_v21
 from nova import compute
@@ -30,8 +28,6 @@ from nova.tests.unit import fake_instance
 
 
 CONF = cfg.CONF
-CONF.import_opt('osapi_compute_ext_list',
-                'nova.api.openstack.compute.legacy_v2.contrib')
 
 
 class ServerPasswordTestV21(test.NoDBTestCase):
@@ -74,11 +70,6 @@ class ServerPasswordTestV21(test.NoDBTestCase):
 
         res = self.controller.index(self.fake_req, 'fake')
         self.assertEqual(res['password'], '')
-
-
-class ServerPasswordTestV2(ServerPasswordTestV21):
-    server_password = server_password_v2
-    delete_call = 'self.controller.delete'
 
 
 class ServerPasswordPolicyEnforcementV21(test.NoDBTestCase):

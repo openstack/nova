@@ -15,8 +15,6 @@
 
 import six
 
-from nova.api.openstack.compute.legacy_v2.contrib import used_limits \
-        as used_limits_v2
 from nova.api.openstack.compute import used_limits \
         as used_limits_v21
 from nova.api.openstack import extensions
@@ -257,18 +255,3 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
         self.assertNotIn('totalRAMUsed', abs_limits)
-
-
-class UsedLimitsTestCaseV2(UsedLimitsTestCaseV21):
-    used_limit_extension = "compute_extension:used_limits_for_admin"
-
-    def _set_up_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = used_limits_v2.UsedLimitsController(self.ext_mgr)
-        self.mox.StubOutWithMock(used_limits_v2, 'authorize_for_admin')
-        self.authorize = used_limits_v2.authorize_for_admin
-
-
-class UsedLimitsTestCaseV2WithoutServerGroupQuotas(UsedLimitsTestCaseV2):
-    used_limit_extension = "compute_extension:used_limits_for_admin"
-    include_server_group_quotas = False
