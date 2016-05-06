@@ -1400,7 +1400,7 @@ class TestNeutronv2(TestNeutronv2Base):
             for net, fip, port, request_id in requested_networks:
                 self.moxed_client.update_port(port)
         for port in ports:
-            self.moxed_client.delete_port(port)
+            self.moxed_client.delete_port(port).InAnyOrder("delete_port_group")
 
         self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
         api.db.instance_info_cache_update(self.context,
