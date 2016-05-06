@@ -241,9 +241,36 @@ libvirt_imagebackend_opts = [
                     ' format)'),
 ]
 
+libvirt_imagecache_opts = [
+    cfg.StrOpt('image_info_filename_pattern',
+               default='$instances_path/$image_cache_subdirectory_name/'
+                       '%(image)s.info',
+               help='Allows image information files to be stored in '
+                    'non-standard locations'),
+    cfg.BoolOpt('remove_unused_kernels',
+                default=True,
+                deprecated_for_removal=True,
+                help='DEPRECATED: Should unused kernel images be removed? '
+                     'This is only safe to enable if all compute nodes have '
+                     'been updated to support this option (running Grizzly or '
+                     'newer level compute). This will be the default behavior '
+                     'in the 13.0.0 release.'),
+    cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
+               default=3600,
+               help='Unused resized base images younger than this will not be '
+                    'removed'),
+    cfg.BoolOpt('checksum_base_images',
+                default=False,
+                help='Write a checksum for files in _base to disk'),
+    cfg.IntOpt('checksum_interval_seconds',
+               default=3600,
+               help='How frequently to checksum base images'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
+    libvirt_imagecache_opts,
 ))
 
 
