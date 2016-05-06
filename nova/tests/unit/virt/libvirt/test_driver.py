@@ -2937,11 +2937,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
                                             image_meta)
-        with test.nested(
-                mock.patch.object(drvr, "_has_uefi_support",
-                                  return_value=True)):
+        with mock.patch.object(drvr, "_has_uefi_support",
+                               return_value=True) as mock_support:
             cfg = drvr._get_guest_config(instance_ref, [],
                                          image_meta, disk_info)
+            mock_support.assert_called_once_with()
             self.assertEqual(cfg.os_loader_type, "pflash")
 
     def test_get_guest_config_with_block_device(self):
