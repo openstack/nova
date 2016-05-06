@@ -1360,8 +1360,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.PciDevicePrepareFailed,
                           drvr._prepare_pci_devices_for_use, pci_devices)
 
+    @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
-    def test_detach_pci_devices(self, mocked_get_xml_desc):
+    def test_detach_pci_devices(self, mocked_get_xml_desc, mock_conn):
 
         fake_domXML1_with_pci = (
             """<domain> <devices>
@@ -1404,8 +1405,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(dom)
         drvr._detach_pci_devices(guest, pci_devices)
 
+    @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
-    def test_detach_pci_devices_timeout(self, mocked_get_xml_desc):
+    def test_detach_pci_devices_timeout(self, mocked_get_xml_desc, mock_conn):
 
         fake_domXML1_with_pci = (
             """<domain> <devices>
@@ -7473,9 +7475,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertFalse(mock_exist.called)
         self.assertFalse(mock_shutil.called)
 
+    @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(host.Host, "has_min_version", return_value=False)
     @mock.patch.object(fakelibvirt.Domain, "XMLDesc")
-    def test_live_migration_copy_disk_paths(self, mock_xml, mock_version):
+    def test_live_migration_copy_disk_paths(self, mock_xml, mock_version,
+                                            mock_conn):
         xml = """
         <domain>
           <name>dummy</name>
@@ -7516,13 +7520,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual((["/var/lib/nova/instance/123/disk.root",
                           "/dev/mapper/somevol"], ['vda', 'vdd']), paths)
 
+    @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     @mock.patch('nova.virt.driver.get_block_device_info')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     @mock.patch.object(fakelibvirt.Domain, "XMLDesc")
     def test_live_migration_copy_disk_paths_selective_block_migration(
             self, mock_xml, mock_get_instance,
-            mock_block_device_info, mock_version):
+            mock_block_device_info, mock_version, mock_conn):
         xml = """
         <domain>
           <name>dummy</name>
@@ -7654,6 +7659,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(time, "time")
     @mock.patch.object(time, "sleep",
                        side_effect=lambda x: eventlet.sleep(0))
+    @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(host.DomainJobInfo, "for_domain")
     @mock.patch.object(objects.Instance, "save")
     @mock.patch.object(objects.Migration, "save")
@@ -7668,6 +7674,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         mock_save,
                                         mock_mig_save,
                                         mock_job_info,
+                                        mock_conn,
                                         mock_sleep,
                                         mock_time,
                                         expected_mig_status=None):
@@ -7986,6 +7993,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             (900, 400),
         ], list(steps))
 
+    @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(utils, "spawn")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_live_migration_monitor")
     @mock.patch.object(host.Host, "get_guest")
@@ -7993,7 +8001,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_live_migration_copy_disk_paths")
     def test_live_migration_main(self, mock_copy_disk_path, mock_running,
-                                 mock_guest, mock_monitor, mock_thread):
+                                 mock_guest, mock_monitor, mock_thread,
+                                 mock_conn):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         dom = fakelibvirt.Domain(drvr._get_connection(),
@@ -13442,8 +13451,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.live_migration_force_complete(self.test_instance)
         pause.assert_called_once_with(self.test_instance)
 
+    @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(fakelibvirt.virDomain, "abortJob")
-    def test_live_migration_abort(self, mock_abort):
+    def test_live_migration_abort(self, mock_abort, mock_conn):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", False)
         guest = libvirt_guest.Guest(dom)
@@ -15749,7 +15759,8 @@ class LibvirtNonblockingTestCase(test.NoDBTestCase):
         drvr.set_host_enabled = mock.Mock()
         jsonutils.to_primitive(drvr._conn, convert_instances=True)
 
-    def test_tpool_execute_calls_libvirt(self):
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    def test_tpool_execute_calls_libvirt(self, mock_svc):
         conn = fakelibvirt.virConnect()
         conn.is_expected = True
 
