@@ -42,10 +42,6 @@ def qemu_img_info(path, format=None):
     """Return an object containing the parsed output from qemu-img info."""
     # TODO(mikal): this code should not be referring to a libvirt specific
     # flag.
-    # NOTE(sirp): The config option import must go here to avoid an import
-    # cycle
-    CONF.import_opt('images_type', 'nova.virt.libvirt.imagebackend',
-                    group='libvirt')
     if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
         raise exception.DiskNotFound(location=path)
 

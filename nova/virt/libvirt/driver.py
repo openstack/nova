@@ -119,8 +119,6 @@ uefi_logged = False
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('hw_disk_discard', 'nova.virt.libvirt.imagebackend',
-                group='libvirt')
 CONF.import_opt('iscsi_use_multipath', 'nova.virt.libvirt.volume.iscsi',
                 group='libvirt')
 

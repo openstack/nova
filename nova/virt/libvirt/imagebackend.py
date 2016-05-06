@@ -20,7 +20,6 @@ import functools
 import os
 import shutil
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -45,34 +44,7 @@ from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
 
-__imagebackend_opts = [
-    cfg.StrOpt('images_type',
-               default='default',
-               choices=('raw', 'qcow2', 'lvm', 'rbd', 'ploop', 'default'),
-               help='VM Images format. If default is specified, then'
-                    ' use_cow_images flag is used instead of this one.'),
-    cfg.StrOpt('images_volume_group',
-               help='LVM Volume Group that is used for VM images, when you'
-                    ' specify images_type=lvm.'),
-    cfg.BoolOpt('sparse_logical_volumes',
-                default=False,
-                help='Create sparse logical volumes (with virtualsize)'
-                     ' if this flag is set to True.'),
-    cfg.StrOpt('images_rbd_pool',
-               default='rbd',
-               help='The RADOS pool in which rbd volumes are stored'),
-    cfg.StrOpt('images_rbd_ceph_conf',
-               default='',  # default determined by librados
-               help='Path to the ceph configuration file to use'),
-    cfg.StrOpt('hw_disk_discard',
-               choices=('ignore', 'unmap'),
-               help='Discard option for nova managed disks. Need'
-                    ' Libvirt(1.0.6) Qemu1.5 (raw format) Qemu1.6(qcow2'
-                    ' format)'),
-        ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(__imagebackend_opts, 'libvirt')
 CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume.net', group='libvirt')
 CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume.net',
                 group='libvirt')
