@@ -355,6 +355,38 @@ class VMwareVMOps(object):
         Cookie = collections.namedtuple('Cookie', ['name', 'value'])
         return host_name, [Cookie(name, value)]
 
+    def _fetch_vsphere_image(self, context, vi, image_ds_loc):
+        """Fetch image which is located on a vSphere datastore."""
+        location = vi.ii.vsphere_location
+        LOG.debug("Using vSphere location: %s", location)
+
+        LOG.debug("Copying image file data %(image_id)s to "
+                  "%(file_path)s on the data store "
+                  "%(datastore_name)s",
+                  {'image_id': vi.ii.image_id,
+                   'file_path': image_ds_loc,
+                   'datastore_name': vi.datastore.name},
+                  instance=vi.instance)
+
+        location_url = ds_obj.DatastoreURL.urlparse(location)
+        datacenter_path = location_url.datacenter_path
+        datacenter_moref = ds_util.get_datacenter_ref(
+            self._session, datacenter_path)
+
+        datastore_name = location_url.datastore_name
+        src_path = ds_obj.DatastorePath(datastore_name, location_url.path)
+        ds_util.file_copy(
+            self._session, str(src_path), datacenter_moref,
+            str(image_ds_loc), vi.dc_info.ref)
+
+        LOG.debug("Copied image file data %(image_id)s to "
+                  "%(file_path)s on the data store "
+                  "%(datastore_name)s",
+                  {'image_id': vi.ii.image_id,
+                   'file_path': image_ds_loc,
+                   'datastore_name': vi.datastore.name},
+                  instance=vi.instance)
+
     def _fetch_image_as_file(self, context, vi, image_ds_loc):
         """Download image as an individual file to host via HTTP PUT."""
         session = self._session
@@ -558,6 +590,8 @@ class VMwareVMOps(object):
             image_fetch = self._fetch_image_as_ova
         elif disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
             image_fetch = self._fetch_image_as_vapp
+        elif vi.ii.vsphere_location:
+            image_fetch = self._fetch_vsphere_image
         else:
             image_fetch = self._fetch_image_as_file
 
@@ -692,7 +726,8 @@ class VMwareVMOps(object):
               admin_password, network_info, block_device_info=None):
 
         client_factory = self._session.vim.client.factory
-        image_info = images.VMwareImage.from_image(instance.image_ref,
+        image_info = images.VMwareImage.from_image(context,
+                                                   instance.image_ref,
                                                    image_meta)
         extra_specs = self._get_extra_specs(instance.flavor, image_meta)
 
@@ -1170,7 +1205,8 @@ class VMwareVMOps(object):
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         # Get the image details of the instance
-        image_info = images.VMwareImage.from_image(image_meta.id,
+        image_info = images.VMwareImage.from_image(context,
+                                                   image_meta.id,
                                                    image_meta)
         vi = VirtualMachineInstanceConfigInfo(instance,
                                               image_info,

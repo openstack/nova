@@ -204,6 +204,14 @@ def get_allowed_datastore_types(disk_type):
     return ALL_SUPPORTED_DS_TYPES - frozenset([constants.DATASTORE_TYPE_VSAN])
 
 
+def get_datacenter_ref(session, dc_path):
+    return session._call_method(
+        session.vim,
+        "FindByInventoryPath",
+        session.vim.service_content.searchIndex,
+        inventoryPath=dc_path)
+
+
 def file_delete(session, ds_path, dc_ref):
     LOG.debug("Deleting the datastore file %s", ds_path)
     vim = session.vim

@@ -58,6 +58,7 @@ class VMwareImage(object):
                  container_format=constants.CONTAINER_FORMAT_BARE,
                  file_type=constants.DEFAULT_DISK_FORMAT,
                  linked_clone=None,
+                 vsphere_location=None,
                  vif_model=constants.DEFAULT_VIF_MODEL):
         """VMwareImage holds values for use in building VMs.
 
@@ -69,6 +70,7 @@ class VMwareImage(object):
             container_format (str): container format (bare or ova)
             file_type (str): vmdk or iso
             linked_clone (bool): use linked clone, or don't
+            vsphere_location (str): image location in datastore or None
             vif_model (str): virtual machine network interface
         """
         self.image_id = image_id
@@ -78,6 +80,7 @@ class VMwareImage(object):
         self.container_format = container_format
         self.disk_type = disk_type
         self.file_type = file_type
+        self.vsphere_location = vsphere_location
 
         # NOTE(vui): This should be removed when we restore the
         # descriptor-based validation.
@@ -108,9 +111,10 @@ class VMwareImage(object):
         return self.container_format == constants.CONTAINER_FORMAT_OVA
 
     @classmethod
-    def from_image(cls, image_id, image_meta):
+    def from_image(cls, context, image_id, image_meta):
         """Returns VMwareImage, the subset of properties the driver uses.
 
+        :param context - context
         :param image_id - image id of image
         :param image_meta - image metadata object we are working with
         :return: vmware image object
@@ -134,7 +138,8 @@ class VMwareImage(object):
         props = {
             'image_id': image_id,
             'linked_clone': linked_clone,
-            'container_format': container_format
+            'container_format': container_format,
+            'vsphere_location': get_vsphere_location(context, image_id)
         }
 
         if image_meta.obj_attr_is_set('size'):
@@ -170,6 +175,20 @@ class VMwareImage(object):
                 props[v] = properties.get(k)
 
         return cls(**props)
+
+
+def get_vsphere_location(context, image_id):
+    """Get image location in vsphere or None."""
+    # image_id can be None if the instance is booted using a volume.
+    if image_id:
+        metadata = IMAGE_API.get(context, image_id, include_locations=True)
+        locations = metadata.get('locations')
+        if locations:
+            for loc in locations:
+                loc_url = loc.get('url')
+                if loc_url and loc_url.startswith('vsphere://'):
+                    return loc_url
+    return None
 
 
 def start_transfer(context, read_file_handle, data_size,
