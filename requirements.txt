@@ -13,6 +13,7 @@ lxml>=2.3 # BSD
 Routes!=2.0,!=2.1,>=1.12.3;python_version=='2.7' # MIT
 Routes!=2.0,>=1.12.3;python_version!='2.7' # MIT
 cryptography>=1.0 # BSD/Apache-2.0
+pycrypto>=2.6  # Public Domain
 WebOb>=1.2.3 # MIT
 greenlet>=0.3.2 # MIT
 PasteDeploy>=1.5.0 # MIT
