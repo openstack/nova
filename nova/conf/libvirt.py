@@ -297,6 +297,12 @@ libvirt_volume_opts = [
                      'from QEMU. Currently supported protocols: [gluster]'),
 ]
 
+libvirt_volume_aoe_opts = [
+    cfg.IntOpt('num_aoe_discover_tries',
+               default=3,
+               help='Number of times to rediscover AoE target to find volume'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -305,6 +311,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_utils_opts,
     libvirt_vif_opts,
     libvirt_volume_opts,
+    libvirt_volume_aoe_opts,
 ))
 
 
