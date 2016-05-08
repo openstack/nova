@@ -170,9 +170,8 @@ class BootFromVolumeTest(test.TestCase):
                 name='test_server', imageRef=IMAGE_UUID,
                 flavorRef=2, min_count=1, max_count=1,
                 block_device_mapping=[dict(
-                        volume_id='1',
+                        volume_id='ca9fe3f5-cede-43cb-8050-1672acabe348',
                         device_name='/dev/vda',
-                        virtual='root',
                         delete_on_termination=False,
                         )]
                 ))
@@ -180,15 +179,16 @@ class BootFromVolumeTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app(
-            init_only=('os-volumes_boot', 'servers')))
+        res = req.get_response(fakes.wsgi_app_v21(
+            init_only=('os-volumes', 'servers')))
         self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
         self.assertEqual(CONF.password_length, len(server['adminPass']))
         self.assertEqual(1, len(self._block_device_mapping_seen))
         self.assertTrue(self._legacy_bdm_seen)
-        self.assertEqual('1', self._block_device_mapping_seen[0]['volume_id'])
+        self.assertEqual('ca9fe3f5-cede-43cb-8050-1672acabe348',
+                         self._block_device_mapping_seen[0]['volume_id'])
         self.assertEqual('/dev/vda',
                          self._block_device_mapping_seen[0]['device_name'])
 
@@ -208,8 +208,8 @@ class BootFromVolumeTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         req.headers['content-type'] = 'application/json'
-        res = req.get_response(fakes.wsgi_app(
-            init_only=('os-volumes_boot', 'servers')))
+        res = req.get_response(fakes.wsgi_app_v21(
+            init_only=('os-volumes', 'servers')))
         self.assertEqual(202, res.status_int)
         server = jsonutils.loads(res.body)['server']
         self.assertEqual(FAKE_UUID, server['id'])
