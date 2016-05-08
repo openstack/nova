@@ -24,9 +24,6 @@ from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 
 CONF = nova.conf.CONF
-CONF.import_opt('qemu_allowed_storage_drivers',
-                'nova.virt.libvirt.volume.volume',
-                group='libvirt')
 
 volume_opts = [
     cfg.StrOpt('glusterfs_mount_point_base',
