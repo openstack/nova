@@ -21,7 +21,6 @@ import copy
 
 import os
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 
 import nova.conf
@@ -38,14 +37,7 @@ from nova.virt import osinfo
 
 LOG = logging.getLogger(__name__)
 
-libvirt_vif_opts = [
-    cfg.BoolOpt('use_virtio_for_bridges',
-                default=True,
-                help='Use virtio for bridge interfaces with KVM/QEMU'),
-]
-
 CONF = nova.conf.CONF
-CONF.register_opts(libvirt_vif_opts, 'libvirt')
 
 # vhostuser queues support
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
@@ -728,7 +720,7 @@ class LibvirtGenericVIFDriver(object):
                     ip6_addr = ips['address']
 
         ptype = 'NovaVMPort'
-        if (cfg.CONF.libvirt.virt_type == 'lxc'):
+        if (CONF.libvirt.virt_type == 'lxc'):
             ptype = 'NameSpacePort'
 
         cmd_args = ("--oper=add --uuid=%s --instance_uuid=%s --vn_uuid=%s "

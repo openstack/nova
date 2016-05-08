@@ -284,12 +284,19 @@ libvirt_utils_opts = [
                      'currently applies exclusively to qcow2 images'),
 ]
 
+libvirt_vif_opts = [
+    cfg.BoolOpt('use_virtio_for_bridges',
+                default=True,
+                help='Use virtio for bridge interfaces with KVM/QEMU'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
     libvirt_imagecache_opts,
     libvirt_lvm_opts,
     libvirt_utils_opts,
+    libvirt_vif_opts,
 ))
 
 
