@@ -24,7 +24,6 @@ import re
 
 from lxml import etree
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import arch
@@ -38,15 +37,7 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import volumeutils
 
-libvirt_opts = [
-    cfg.BoolOpt('snapshot_compression',
-                default=False,
-                help='Compress snapshot images when possible. This '
-                     'currently applies exclusively to qcow2 images'),
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(libvirt_opts, 'libvirt')
 LOG = logging.getLogger(__name__)
 
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
