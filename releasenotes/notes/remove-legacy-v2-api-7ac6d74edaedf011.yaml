@@ -7,4 +7,6 @@ upgrade:
       compatible API before switch to v2.1 API, user can use v2.1 API code as
       v2 API compatible mode. That compatible mode is closer to v2 API
       behaviour which is v2 API compatible without restrict input validation
-      and microversions support.
+      and microversions support. So if using openstack_compute_api_legacy_v2
+      in /etc/nova/api-paste.ini for the API endpoint /v2, user need to switch
+      the endpoint to openstack_compute_api_v21_legacy_v2_compatible instead.
