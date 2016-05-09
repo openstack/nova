@@ -1756,6 +1756,32 @@ class _ComputeAPIUnitTestMixIn(object):
                               fake_inst, flavor_id='flavor-id')
             self.assertFalse(mock_save.called)
 
+    @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
+    @mock.patch.object(compute_utils, 'upsize_quota_delta')
+    @mock.patch.object(compute_utils, 'reserve_quota_delta')
+    def test_resize_quota_exceeds_fails_instance(self, mock_reserve,
+                                                 mock_upsize, mock_flavor):
+        fake_inst = self._create_instance_obj()
+        fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
+                            name='foo', disabled=False)
+        mock_flavor.return_value = fake_flavor
+        deltas = dict(cores=1, ram=1)
+        mock_upsize.return_value = deltas
+        usage = dict(in_use=0, reserved=0)
+        quotas = {'instances': 1, 'cores': -1, 'ram': -1}
+        usages = {'instances': usage, 'cores': usage, 'ram': usage}
+        overs = ['ram']
+        over_quota_args = dict(quotas=quotas,
+                               usages=usages,
+                               overs=overs)
+        mock_reserve.side_effect = exception.OverQuota(**over_quota_args)
+
+        with mock.patch.object(fake_inst, 'save') as mock_save:
+            self.assertRaises(exception.TooManyInstances,
+                              self.compute_api.resize, self.context,
+                              fake_inst, flavor_id='flavor-id')
+            self.assertFalse(mock_save.called)
+
     def test_check_instance_quota_exceeds_with_multiple_resources(self):
         quotas = {'cores': 1, 'instances': 1, 'ram': 512}
         usages = {'cores': dict(in_use=1, reserved=0),

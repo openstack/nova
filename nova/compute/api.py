@@ -291,19 +291,19 @@ class API(base.Base):
         # - set cores headroom based on instances headroom:
         if quotas.get('cores') == -1:
             if deltas.get('cores'):
-                hc = headroom['instances'] * deltas['cores']
+                hc = headroom.get('instances', 1) * deltas['cores']
                 headroom['cores'] = hc / deltas.get('instances', 1)
             else:
-                headroom['cores'] = headroom['instances']
+                headroom['cores'] = headroom.get('instances', 1)
 
         # If quota_ram is unlimited [-1]:
         # - set ram headroom based on instances headroom:
         if quotas.get('ram') == -1:
             if deltas.get('ram'):
-                hr = headroom['instances'] * deltas['ram']
+                hr = headroom.get('instances', 1) * deltas['ram']
                 headroom['ram'] = hr / deltas.get('instances', 1)
             else:
-                headroom['ram'] = headroom['instances']
+                headroom['ram'] = headroom.get('instances', 1)
 
         return headroom
 
@@ -331,7 +331,7 @@ class API(base.Base):
                       'cores': req_cores, 'ram': req_ram}
             headroom = self._get_headroom(quotas, usages, deltas)
 
-            allowed = headroom['instances']
+            allowed = headroom.get('instances', 1)
             # Reduce 'allowed' instances in line with the cores & ram headroom
             if instance_type['vcpus']:
                 allowed = min(allowed,
