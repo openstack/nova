@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -30,8 +29,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -63,8 +61,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
 
 Request
 -------
@@ -96,8 +93,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -131,8 +127,7 @@ Policy defaults enable only users with the administrative role to perform this o
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -166,8 +161,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
