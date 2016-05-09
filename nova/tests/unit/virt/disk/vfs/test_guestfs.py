@@ -310,3 +310,21 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         vfs.setup(mount=False)
         self.assertFalse(setup_os.called)
+
+    @mock.patch('os.access')
+    @mock.patch('os.uname', return_value=('Linux', '', 'kernel_name'))
+    def test_appliance_setup_inspect_capabilties_fail_with_ubuntu(self,
+                                                                  mock_uname,
+                                                                  mock_access):
+        # In ubuntu os will default host kernel as 600 permission
+        m = mock.MagicMock()
+        m.launch.side_effect = Exception
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
+        with mock.patch('eventlet.tpool.Proxy', return_value=m):
+            self.assertRaises(exception.LibguestfsCannotReadKernel,
+                                    vfs.inspect_capabilities)
+            m.add_drive.assert_called_once_with('/dev/null')
+            m.launch.assert_called_once_with()
+            mock_access.assert_called_once_with('/boot/vmlinuz-kernel_name',
+                                                mock.ANY)
+            mock_uname.assert_called_once_with()
