@@ -34,6 +34,13 @@
             $(this).text('Show All');
         }});
 
+    // if ?expand_all is in the query string, then expand all
+    // sections. This is useful for linking to nested elements, which
+    // only work if that element is expanded.
+    if (window.location.search.substring(1).indexOf("expand_all") > -1); {
+      $('#expand-all').click();
+    }
+
     // Wire up the search button
     $('#search-btn').on('click', function(e) {
       searchPage();
