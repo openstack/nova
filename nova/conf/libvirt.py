@@ -334,6 +334,15 @@ libvirt_volume_iscsi_opts = [
     # instead
 ]
 
+libvirt_volume_iser_opts = [
+    cfg.IntOpt('num_iser_scan_tries',
+               default=5,
+               help='Number of times to rescan iSER target to find volume'),
+    cfg.BoolOpt('iser_use_multipath',
+                default=False,
+                help='Use multipath connection of the iSER volume'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -345,6 +354,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_aoe_opts,
     libvirt_volume_glusterfs_opts,
     libvirt_volume_iscsi_opts,
+    libvirt_volume_iser_opts,
 ))
 
 
