@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -19,8 +18,7 @@ Lists the volumes associated with the account.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -46,8 +44,8 @@ Creates a volume.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -86,8 +84,7 @@ Lists all volumes with details.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -113,8 +110,8 @@ Shows details for a volume.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -141,8 +138,8 @@ Deletes a volume.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -155,6 +152,32 @@ Request
 Response
 --------
 
+List Snapshots
+==============
+
+.. rest_method:: GET /v2.1/{tenant_id}/os-snapshots
+
+Lists snapshots.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+
+Response
+--------
+
+**Example List Snapshots: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
+   :language: javascript
+
 Create Snapshot
 ===============
 
@@ -164,8 +187,7 @@ Creates a snapshot.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -188,33 +210,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-volumes/snapshot-create-resp.json
    :language: javascript
 
-List Snapshots
-==============
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-snapshots
-
-Lists snapshots.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
-**Example List Snapshots: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-volumes/snapshots-list-resp.json
-   :language: javascript
-
 List Snapshots With Details
 ===========================
 
@@ -224,8 +219,7 @@ Lists all snapshots with details.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -251,8 +245,8 @@ Shows details for a snapshot.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -281,8 +275,8 @@ This operation is asynchronous. You must list snapshots repeatedly to determine 
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
