@@ -14,7 +14,6 @@
 
 """The rescue mode extension."""
 
-from oslo_utils import uuidutils
 import webob
 from webob import exc
 
@@ -23,7 +22,6 @@ from nova.api.openstack import extensions as exts
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.i18n import _
 from nova import utils
 
 
@@ -35,15 +33,6 @@ class RescueController(wsgi.Controller):
         super(RescueController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
-
-    def _rescue_image_validation(self, image_ref):
-        image_uuid = image_ref.split('/').pop()
-
-        if not uuidutils.is_uuid_like(image_uuid):
-            msg = _("Invalid rescue_image_ref provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        return image_uuid
 
     @wsgi.action('rescue')
     def _rescue(self, req, id, body):
@@ -61,8 +50,8 @@ class RescueController(wsgi.Controller):
             rescue_image_ref = None
             if self.ext_mgr.is_loaded("os-extended-rescue-with-image"):
                 if body['rescue'] and 'rescue_image_ref' in body['rescue']:
-                    rescue_image_ref = self._rescue_image_validation(
-                       body['rescue']['rescue_image_ref'])
+                    rescue_image_ref = common.image_uuid_from_href(
+                       body['rescue']['rescue_image_ref'], 'rescue_image_ref')
             self.compute_api.rescue(context, instance,
                 rescue_password=password, rescue_image_ref=rescue_image_ref)
         except exception.InstanceIsLocked as e:
