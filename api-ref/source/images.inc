@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -23,12 +22,12 @@ List Images
 
 .. rest_method:: GET /v2.1/{tenant_id}/images
 
-list images.
+List images.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
@@ -45,34 +44,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/images/images-list-get-resp.json
    :language: javascript
 
-Show Image Details
-==================
-
-.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}
-
-Shows details for an image.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - image_id: image_id
-
-Response
---------
-
-**Example Show Image Details: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/images/images-details-get-resp.json
-   :language: javascript
-
 List Images With Details
 ========================
 
@@ -82,8 +53,8 @@ List images with details.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
@@ -101,17 +72,16 @@ Response
    :language: javascript
 
 
-Delete Image
-============
+Show Image Details
+==================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/images/{image_id}
+.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}
 
-Deletes an image.
+Shows details for an image.
 
-Normal response codes: 204
+Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -124,6 +94,60 @@ Request
 Response
 --------
 
+**Example Show Image Details: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/images/images-details-get-resp.json
+   :language: javascript
+
+Delete Image
+============
+
+.. rest_method:: DELETE /v2.1/{tenant_id}/images/{image_id}
+
+Deletes an image.
+
+Normal response codes: 204
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - image_id: image_id
+
+Response
+--------
+
+List Image Metadata
+===================
+
+.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata
+
+List metadata of an image.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - image_id: image_id
+
+Response
+--------
+
+**Example Show Image Metadata Details: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/images/image-metadata-get-resp.json
+   :language: javascript
+
 Create Image Metadata
 =====================
 
@@ -133,8 +157,8 @@ Create an image metadata.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), requestEntityTooLarge(413)
 
 Request
 -------
@@ -166,8 +190,8 @@ Update an image metadata
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), requestEntityTooLarge(413)
 
 Request
 -------
@@ -190,45 +214,16 @@ Response
 .. literalinclude:: ../../doc/api_samples/images/image-metadata-put-resp.json
    :language: javascript
 
-Show Image Metadata Details
-===========================
-
-.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata
-
-Shows details for an image metadata.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - image_id: image_id
-
-Response
---------
-
-**Example Show Image Metadata Details: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/images/image-metadata-get-resp.json
-   :language: javascript
-
-Show Image Metadata Item Details
-================================
+Show Image Metadata Item
+========================
 
 .. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
 
-Shows details for a metadata item, by key, for an image.
+Shows metadata item, by key, for an image.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -256,8 +251,7 @@ Creates or updates a metadata item, by key, for an image.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -290,8 +284,7 @@ Deletes a metadata item, by key, for an image.
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
