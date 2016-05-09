@@ -895,6 +895,9 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'virtual_interfaces', 'tag')
         self.assertColumnExists(engine, 'block_device_mapping', 'tag')
 
+    def _check_332(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'keypairs')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

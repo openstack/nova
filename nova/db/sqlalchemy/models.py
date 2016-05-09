@@ -376,6 +376,7 @@ class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
     flavor = orm.deferred(Column(Text))
     vcpu_model = orm.deferred(Column(Text))
     migration_context = orm.deferred(Column(Text))
+    keypairs = orm.deferred(Column(Text))
     instance = orm.relationship(Instance,
                             backref=orm.backref('extra',
                                                 uselist=False),
