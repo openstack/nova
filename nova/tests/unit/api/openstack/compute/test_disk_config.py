@@ -437,17 +437,3 @@ class DiskConfigTestCaseV21(test.TestCase):
 
         req.body = jsonutils.dump_as_bytes(body)
         req.get_response(self.app)
-
-
-class DiskConfigTestCaseV2(DiskConfigTestCaseV21):
-    def _set_up_app(self):
-        self.flags(verbose=True,
-        osapi_compute_extension=[
-            'nova.api.openstack.compute.contrib.select_extensions'],
-        osapi_compute_ext_list=['Disk_config'])
-
-        self.app = compute.APIRouter(init_only=('servers', 'images'))
-
-    def _get_expected_msg_for_invalid_disk_config(self):
-        return ('{{"badRequest": {{"message": "{0} must be either'
-                ' \'MANUAL\' or \'AUTO\'.", "code": 400}}}}')
