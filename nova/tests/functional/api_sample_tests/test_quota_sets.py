@@ -51,6 +51,12 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         self._verify_response('quotas-show-defaults-get-resp',
                               {}, response, 200)
 
+    def test_show_quotas_detail(self):
+        # Get api sample to show quotas detail.
+        response = self._do_get('os-quota-sets/fake_tenant/detail')
+        self._verify_response('quotas-show-detail-get-resp',
+                              {}, response, 200)
+
     def test_update_quotas(self):
         # Get api sample to update quotas.
         response = self._do_put('os-quota-sets/fake_tenant',
