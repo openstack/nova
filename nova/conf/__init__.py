@@ -40,6 +40,7 @@ from nova.conf import crypto
 # from nova.conf import database
 # from nova.conf import disk
 from nova.conf import ephemeral_storage
+from nova.conf import flavors
 from nova.conf import floating_ips
 from nova.conf import glance
 from nova.conf import guestfs
@@ -113,6 +114,7 @@ crypto.register_opts(CONF)
 # disk.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
 floating_ips.register_opts(CONF)
+flavors.register_opts(CONF)
 glance.register_opts(CONF)
 guestfs.register_opts(CONF)
 # host.register_opts(CONF)
