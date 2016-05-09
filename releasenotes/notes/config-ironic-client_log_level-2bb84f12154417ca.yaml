@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The deprecated configuration option ``client_log_level`` of the section
+    ``[ironic]`` has been deleted. Please use the config options
+    ``log_config_append`` or ``default_log_levels`` of the ``[DEFAULT]``
+    section.
