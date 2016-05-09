@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -148,8 +147,8 @@ body. The possible server status values are:
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -245,8 +244,22 @@ Troubleshooting
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404), conflict(409), entityTooLarge(413)
+
+..
+  TODO(sdague): leave these notes for later when fixing the body
+  language. They are commented out so they won't render, but are
+  useful to not have to look this up again later.
+
+  A conflict(409) is returned in the event of trying to allocated already
+  allocated resources (such as networks) to the server in question.
+
+  entityTooLarge(413) is returned if the ``user_data`` exceeds what is
+  allowed by the backend.
+
+  All other failure conditions map to 400, and will need to be
+  disambiguated by the error string returned.
 
 Request
 -------
@@ -324,10 +337,8 @@ HostId is unique per account and is not globally unique.
 
 Normal response codes: 200
 
-Error response codes: computeFault (400, 500, …), serviceUnavailable
-(503), badRequest (400), unauthorized (401), forbidden (403),
-badMethod (405)
-
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -412,8 +423,8 @@ The server must exist.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
@@ -482,8 +493,8 @@ You can edit the ``accessIPv4``, ``accessIPv6``, ``diskConfig`` and ``name`` att
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -597,8 +608,16 @@ Troubleshooting
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
+
+..
+   TODO(sdague): for later phase of updating body.
+
+   conflict is returned under 2 conditions. When the instance is
+   locked, so can't be deleted, or if the instance is in some other
+   state which makes it not possible to delete.
+
 
 Request
 -------
