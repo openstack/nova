@@ -52,6 +52,12 @@ api_version:
   type: string
   description: >
     The API version as returned in the links from the ``GET /`` call.
+associate_host:
+  description: |
+    The name of the host to associate.
+  in: body
+  required: true
+  type: string
 architecture:
   description: |
     The name of the cpu architecture.

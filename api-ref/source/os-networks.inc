@@ -1,19 +1,58 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
+.. NOTE(sdague): for future verification only worry about the non
+   deprecated methods in this file. Let's not spend a ton of brain
+   power on the associate/disassociate that's going away.
 
 ========================
  Networks (os-networks)
 ========================
+
+.. warning:: The networks API was designed to work with
+             ``nova-network``. Some features are proxied to
+             ``neutron`` when appropriate, but as with all translation
+             proxies, this is far from perfect compatibility. These
+             APIs should be avoided in new applications in favor of
+             using ``neutron`` directly.
 
 Creates, lists, shows information for, and deletes networks.
 
 Adds network to a project, disassociates a network from a project, and
 disassociates a project from a network.
 
+
 Associates host with and disassociates host from a network.
+
+List Networks
+=============
+
+.. rest_method:: GET /v2.1/{tenant_id}/os-networks
+
+Lists networks for the project.
+
+Policy defaults enable all users to perform this operation. Cloud
+providers can change these permissions through the ``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+
+Response
+--------
+
+**Example List Networks: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-networks/networks-list-resp.json
+   :language: javascript
 
 Create Network
 ==============
@@ -22,12 +61,13 @@ Create Network
 
 Creates a network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the
+owner of the network to perform this operation. Cloud providers can change
+these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409), NotImplemented(501)
 
 Request
 -------
@@ -49,35 +89,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-networks/network-create-resp.json
    :language: javascript
 
-List Networks
-=============
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-networks
-
-Lists networks for the project.
-
-Policy defaults enable all users to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
-**Example List Networks: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-networks/networks-list-resp.json
-   :language: javascript
-
 Add Network
 ===========
 
@@ -85,12 +96,13 @@ Add Network
 
 Adds a network to a project.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through the
+``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), NotImplemented(501)
 
 Request
 -------
@@ -114,12 +126,12 @@ Show Network Details
 
 Shows details for a network.
 
-Policy defaults enable all users to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable all users to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -144,12 +156,13 @@ Delete Network
 
 Deletes a network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the
+owner of the network to perform this operation. Cloud providers can change
+these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -162,21 +175,28 @@ Request
 Response
 --------
 
-Associate Host
-==============
+There is no body content for the response of a successful DELETE query.
+
+Associate Host (DEPRECATED)
+===========================
 
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
+
+.. warning::
+   This API is only available with ``nova-network`` which is
+   deprecated. It should be avoided in any new applications.
 
 Associates a network with a host.
 
 Specify the ``associate_host`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner
+of the network to perform this operation. Cloud providers can change these
+permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -185,8 +205,9 @@ Request
 
   - tenant_id: tenant_id
   - network_id: network_id
+  - associate_host: associate_host
 
-**Example Associate Host: JSON request**
+**Example Associate Host to Network: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-networks-associate/network-associate-host-req.json
    :language: javascript
@@ -194,55 +215,28 @@ Request
 Response
 --------
 
-Disassociate Host
-=================
+There is no body content for the response of a successful POST query.
+
+Disassociate Network (DEPRECATED)
+=================================
 
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
-Disassociates a host from a network.
-
-Specify the ``disassociate_host`` action in the request body.
-
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
-
-Normal response codes: 202
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - network_id: network_id
-
-**Example Disassociate Host: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-host-req.json
-   :language: javascript
-
-Response
---------
-
-Disassociate Network
-====================
-
-.. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
+.. warning::
+   This API is only available with ``nova-network`` which is
+   deprecated. It should be avoided in any new applications.
 
 Disassociates a network from a project. You can then reuse the network.
 
 Specify the ``disassociate`` action in the request body.
 
-Specify the ``disassociate`` action in the request body.
-
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the
+owner of the network to perform this operation. Cloud providers can change
+these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -260,23 +254,28 @@ Request
 Response
 --------
 
-Disassociate Project
-====================
+There is no body content for the response of a successful POST query.
+
+Disassociate Host (DEPRECATED)
+==============================
 
 .. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
 
-Disassociates a project from a network.
+.. warning::
+   This API is only available with ``nova-network`` which is
+   deprecated. It should be avoided in any new applications.
 
-Specify the ``disassociate_project`` action in the request body.
+Disassociates a host from a network.
 
-Specify the ``disassociate_project`` action in the request body.
+Specify the ``disassociate_host`` action in the request body.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the
+owner of the network to perform this operation. Cloud providers can change
+these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -286,7 +285,47 @@ Request
   - tenant_id: tenant_id
   - network_id: network_id
 
-**Example Disassociate Project: JSON request**
+**Example Disassociate Host from Network: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-host-req.json
+   :language: javascript
+
+Response
+--------
+
+There is no body content for the response of a successful POST query.
+
+
+Disassociate Project (DEPRECATED)
+=================================
+
+.. rest_method:: POST /v2.1/{tenant_id}/os-networks/{network_id}/action
+
+.. warning::
+   This API is only available with ``nova-network`` which is
+   deprecated. It should be avoided in any new applications.
+
+Disassociates a project from a network.
+
+Specify the ``disassociate_project`` action in the request body.
+
+Policy defaults enable only users with the administrative role or the
+owner of the network to perform this operation. Cloud providers can change
+these permissions through the ``policy.json`` file.
+
+Normal response codes: 202
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - network_id: network_id
+
+**Example Disassociate Project from Network: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-project-req.json
    :language: javascript
@@ -294,3 +333,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful POST query.
