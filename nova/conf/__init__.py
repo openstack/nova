@@ -70,6 +70,7 @@ from nova.conf import quota
 from nova.conf import rdp
 from nova.conf import remote_debug
 from nova.conf import rpc
+from nova.conf import s3
 from nova.conf import scheduler
 # from nova.conf import security
 from nova.conf import serial_console
@@ -141,6 +142,7 @@ pci.register_opts(CONF)
 quota.register_opts(CONF)
 rdp.register_opts(CONF)
 rpc.register_opts(CONF)
+s3.register_opts(CONF)
 scheduler.register_opts(CONF)
 # security.register_opts(CONF)
 serial_console.register_opts(CONF)
