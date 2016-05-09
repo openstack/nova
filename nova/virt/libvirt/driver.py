@@ -4862,7 +4862,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          "function is not implemented for this platform. "))
             return 0
 
-        if CONF.vcpu_pin_set is None:
+        if not CONF.vcpu_pin_set:
             return total_pcpus
 
         available_ids = hardware.get_vcpu_pin_set()
