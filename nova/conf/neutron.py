@@ -13,11 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import itertools
 
+from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
-neutron_group = cfg.OptGroup('neutron', title='Neutron Options')
+NEUTRON_GROUP = 'neutron'
+
+neutron_group = cfg.OptGroup(NEUTRON_GROUP, title='Neutron Options')
+neutron_options = None
 
 neutron_opts = [
     cfg.StrOpt('url',
@@ -52,11 +57,42 @@ ALL_OPTS = list(itertools.chain(
     metadata_proxy_opts
 ))
 
+deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
+                                             group=NEUTRON_GROUP)],
+                'insecure': [cfg.DeprecatedOpt('api_insecure',
+                                               group=NEUTRON_GROUP)],
+                'timeout': [cfg.DeprecatedOpt('url_timeout',
+                                              group=NEUTRON_GROUP)]}
+
+
+def _gen_opts_from_plugins():
+    opts = copy.deepcopy(neutron_options)
+    opts.insert(0, ks_loading.get_auth_common_conf_options()[0])
+    # NOTE(dims): There are a lot of auth plugins, we just generate
+    # the config options for a few common ones
+    plugins = ['password', 'v2password', 'v3password']
+    for name in plugins:
+        plugin = ks_loading.get_plugin_loader(name)
+        for plugin_option in ks_loading.get_auth_plugin_conf_options(plugin):
+            for option in opts:
+                if option.name == plugin_option.name:
+                    break
+            else:
+                opts.append(plugin_option)
+    opts.sort(key=lambda x: x.name)
+    return opts
+
 
 def register_opts(conf):
+    global neutron_options
     conf.register_group(neutron_group)
     conf.register_opts(ALL_OPTS, group=neutron_group)
+    neutron_options = ks_loading.register_session_conf_options(
+        conf, NEUTRON_GROUP, deprecated_opts=deprecations)
+    ks_loading.register_auth_conf_options(conf, NEUTRON_GROUP)
 
 
 def list_opts():
-    return {neutron_group: ALL_OPTS}
+    return {
+        neutron_group: ALL_OPTS + _gen_opts_from_plugins()
+    }
