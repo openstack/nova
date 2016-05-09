@@ -162,7 +162,6 @@ class TenantNetworkController(wsgi.Controller):
                 msg = _("Address could not be converted.")
                 raise exc.HTTPBadRequest(explanation=msg)
 
-        networks = []
         try:
             if CONF.enable_network_quota:
                 reservation = QUOTAS.reserve(context, networks=1)
