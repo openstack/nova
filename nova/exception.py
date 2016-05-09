@@ -26,26 +26,20 @@ import functools
 import inspect
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 import six
 import webob.exc
 from webob import util as woutil
 
+import nova.conf
 from nova.i18n import _, _LE
 from nova import safe_utils
 
 LOG = logging.getLogger(__name__)
 
-exc_log_opts = [
-    cfg.BoolOpt('fatal_exception_format_errors',
-                default=False,
-                help='Make exception message format errors fatal'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(exc_log_opts)
+CONF = nova.conf.CONF
 
 
 class ConvertedException(webob.exc.WSGIHTTPException):
