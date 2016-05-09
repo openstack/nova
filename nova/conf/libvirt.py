@@ -351,6 +351,16 @@ libvirt_volume_net_opts = [
                     'volumes'),
 ]
 
+libvirt_volume_nfs_opts = [
+    cfg.StrOpt('nfs_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help='Directory where the NFS volume is mounted on the'
+                    ' compute node'),
+    cfg.StrOpt('nfs_mount_options',
+               help='Mount options passed to the NFS client. See section '
+                    'of the nfs man page for details'),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -364,6 +374,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_iscsi_opts,
     libvirt_volume_iser_opts,
     libvirt_volume_net_opts,
+    libvirt_volume_nfs_opts,
 ))
 
 
