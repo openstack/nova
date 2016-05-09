@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -19,10 +18,11 @@ List Hypervisors
 
 Lists hypervisors.
 
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -45,6 +45,8 @@ List Hypervisors Details
 .. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/detail
 
 Lists hypervisors details.
+
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -72,10 +74,11 @@ Show Hypervisor Statistics
 
 Shows summary statistics for all hypervisors over all compute nodes.
 
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -99,10 +102,12 @@ Show Hypervisor Details
 
 Shows details for a hypervisor.
 
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
+ugh the ``policy.json`` file.
+
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -127,10 +132,12 @@ Show Hypervisor Uptime
 
 Shows the uptime for a hypervisor.
 
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
+ugh the ``policy.json`` file.
+
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -154,6 +161,9 @@ Search Hypervisor
 .. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/{hypervisor_id}/search
 
 Search hypervisor by given hypervisor id.
+
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
+ugh the ``policy.json`` file.
 
 Normal response code: 200
 
@@ -181,6 +191,9 @@ List Hypervisor Servers
 .. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/{hypervisor_id}/servers
 
 List all servers belong to given hypervisor.
+
+Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
+ugh the ``policy.json`` file.
 
 Normal response code: 200
 
