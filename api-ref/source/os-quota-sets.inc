@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -11,6 +10,56 @@
 Permits administrators, depending on policy settings, to view default
 quotas, view details for quotas, revert quotas to defaults, and update
 the quotas for a project or a project and user.
+
+Show A Quota
+============
+
+.. rest_method:: GET /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}
+
+Show the quota for a project or a project and a user.
+
+In the request URI, you specify both the ID of the administrative project and the ID of the project for which you want to show quota.
+
+To show a quota for a project and a user, specify the ``user_id`` query parameter.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - admin_tenant_id: admin_tenant_id
+  - tenant_id: tenant_id
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - quota_set: quota_set
+  - cores: cores
+  - fixed_ips: fixed_ips
+  - floating_ips: floating_ips
+  - id: id
+  - injected_file_content_bytes: injected_file_content_bytes
+  - injected_file_path_bytes: injected_file_path_bytes
+  - injected_files: injected_files
+  - instances: instances
+  - key_pairs: key_pairs
+  - metadata_items: metadata_items
+  - ram: ram
+  - security_group_rules: security_group_rules
+  - security_groups: security_groups
+  - server_groups: server_groups
+  - server_group_members: server_group_members
+
+**Example Show A Quota: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-quota-sets/user-quotas-show-get-resp.json
+   :language: javascript
 
 Update Quotas
 =============
@@ -27,8 +76,7 @@ To update a quota for a project and a user, specify the ``user_id`` query parame
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -105,8 +153,7 @@ To revert quotas for a project and a user, specify the ``user_id`` query paramet
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -126,57 +173,6 @@ Query Parameters
 Response
 --------
 
-Show A Quota
-============
-
-.. rest_method:: GET /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}
-
-Show the quota for a project or a project and a user.
-
-In the request URI, you specify both the ID of the administrative project and the ID of the project for which you want to show quota.
-
-To show a quota for a project and a user, specify the ``user_id`` query parameter.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - admin_tenant_id: admin_tenant_id
-  - tenant_id: tenant_id
-
-Response
---------
-
-.. rest_parameters:: parameters.yaml
-
-  - quota_set: quota_set
-  - cores: cores
-  - fixed_ips: fixed_ips
-  - floating_ips: floating_ips
-  - id: id
-  - injected_file_content_bytes: injected_file_content_bytes
-  - injected_file_path_bytes: injected_file_path_bytes
-  - injected_files: injected_files
-  - instances: instances
-  - key_pairs: key_pairs
-  - metadata_items: metadata_items
-  - ram: ram
-  - security_group_rules: security_group_rules
-  - security_groups: security_groups
-  - server_groups: server_groups
-  - server_group_members: server_group_members
-
-**Example Show A Quota: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-quota-sets/user-quotas-show-get-resp.json
-   :language: javascript
-
 List Default Quotas For Tenant
 ==============================
 
@@ -188,8 +184,7 @@ In the request URI, you specify both the ID of the administrative project and th
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -226,3 +221,52 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-show-defaults-get-resp.json
    :language: javascript
 
+Show The Detail of Quota
+========================
+
+.. rest_method:: GET /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}/detail
+
+Show the detail of quota for a project or a project and a user.
+
+In the request URI, you specify both the ID of the administrative project and the ID of the project for which you want to show the detail of quota.
+
+To show a quota for a project and a user, specify the ``user_id`` query parameter.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - admin_tenant_id: admin_tenant_id
+  - tenant_id: tenant_id
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - quota_set: quota_set
+  - cores: cores
+  - fixed_ips: fixed_ips
+  - floating_ips: floating_ips
+  - id: id
+  - injected_file_content_bytes: injected_file_content_bytes
+  - injected_file_path_bytes: injected_file_path_bytes
+  - injected_files: injected_files
+  - instances: instances
+  - key_pairs: key_pairs
+  - metadata_items: metadata_items
+  - ram: ram
+  - security_group_rules: security_group_rules
+  - security_groups: security_groups
+  - server_groups: server_groups
+  - server_group_members: server_group_members
+
+**Example Show A Quota: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-show-detail-get-resp.json
+   :language: javascript
