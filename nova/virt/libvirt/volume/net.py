@@ -10,23 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
-volume_opts = [
-    cfg.StrOpt('rbd_user',
-               help='The RADOS client name for accessing rbd volumes'),
-    cfg.StrOpt('rbd_secret_uuid',
-               help='The libvirt UUID of the secret for the rbd_user '
-                    'volumes'),
-    ]
 
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtNetVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
