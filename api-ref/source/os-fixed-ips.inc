@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -9,7 +8,7 @@
 ==========================
 
 Shows data for a fixed IP, such as host name, CIDR, and address. Also,
-reserves and frees a fixed IP address.
+reserves and releases a fixed IP address.
 
 Show Fixed Ip Details
 =====================
@@ -20,8 +19,7 @@ Shows details for a fixed IP address.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -50,8 +48,7 @@ To reserve a fixed IP address, specify ``reserve`` in the request body. To relea
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
