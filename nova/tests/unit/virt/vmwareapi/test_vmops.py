@@ -2259,7 +2259,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual(str(tmp_image_ds_loc), expected_image_path)
 
     @mock.patch.object(uuidutils, 'generate_uuid', return_value='tmp-uuid')
-    def test_prepare_sparse_image(self, mock_generate_uuid):
+    @mock.patch.object(ds_util, 'mkdir')
+    def test_prepare_sparse_image(self, mock_mkdir, mock_generate_uuid):
         vi = self._make_vm_config_info(is_sparse_disk=True)
         tmp_dir_loc, tmp_image_ds_loc = self._vmops._prepare_sparse_image(vi)
 
@@ -2269,6 +2270,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
         self.assertEqual(str(tmp_dir_loc), expected_tmp_dir_path)
         self.assertEqual(str(tmp_image_ds_loc), expected_image_path)
+        mock_mkdir.assert_called_once_with(self._session,
+                                           tmp_image_ds_loc.parent,
+                                           vi.dc_info.ref)
 
     @mock.patch.object(ds_util, 'mkdir')
     @mock.patch.object(vm_util, 'create_virtual_disk')
