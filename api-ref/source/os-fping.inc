@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -21,12 +20,14 @@ Specify the ``all_tenants=1`` query parameter to ping instances for all tenants.
 
 GET /os-fping?all_tenants=1Specify the ``include`` and ``exclude`` query parameters to filter the results. For example:
 
-GET /os-fping?all_tenants=1&include=uuid1,uuid2&exclude=uuid3,uuid4Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+GET /os-fping?all_tenants=1&include=uuid1,uuid2&exclude=uuid3,uuid4
+Policy defaults enable only users with the administrative role or the
+owner of the server to perform this operation. Cloud providers can
+change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: serviceUnavailable(503), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -59,12 +60,14 @@ Ping An Instance
 
 Run the fping utility to ping an instance and report whether it is alive.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the
+owner of the server to perform this operation. Cloud providers can
+change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: serviceUnavailable(503), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
