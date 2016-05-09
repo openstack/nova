@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -10,6 +9,36 @@
 
 Creates, lists, shows information for, and deletes project networks.
 
+List Project Networks
+=====================
+
+.. rest_method:: GET /v2.1/{tenant_id}/os-tenant-networks
+
+Lists all project networks.
+
+Policy defaults enable only users with the administrative role or
+the owner of the network to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+
+Response
+--------
+
+**Example List Project Networks: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-list-res.json
+   :language: javascript
+
 Create Project Network
 ======================
 
@@ -17,12 +46,13 @@ Create Project Network
 
 Creates a project network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to
+perform this operation. Cloud providers can change these permissions
+through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409), serviceUnavailable(503)
 
 Request
 -------
@@ -44,35 +74,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-post-res.json
    :language: javascript
 
-List Project Networks
-=====================
-
-.. rest_method:: GET /v2.1/{tenant_id}/os-tenant-networks
-
-Lists all project networks.
-
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Response
---------
-
-**Example List Project Networks: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/os-tenant-networks/networks-list-res.json
-   :language: javascript
-
 Show Project Network Details
 ============================
 
@@ -80,12 +81,13 @@ Show Project Network Details
 
 Shows details for a project network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the network to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -110,12 +112,13 @@ Delete Project Network
 
 Deletes a project network.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the network to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -127,3 +130,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE query.
