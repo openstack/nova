@@ -312,7 +312,11 @@ class IronicDriver(virt_driver.ComputeDriver):
             vcpus_used = vcpus = instance_info['vcpus']
             memory_mb_used = memory_mb = instance_info['memory_mb']
             local_gb_used = local_gb = instance_info['local_gb']
-        elif self._node_resources_unavailable(node):
+
+        # Always checking allows us to catch the case where Nova thinks there
+        # are available resources on the Node, but Ironic does not (because it
+        # is not in a usable state): https://launchpad.net/bugs/1503453
+        if self._node_resources_unavailable(node):
             # The node's current state is such that it should not present any
             # of its resources to Nova
             vcpus = 0
