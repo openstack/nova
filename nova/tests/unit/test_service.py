@@ -146,6 +146,23 @@ class ServiceTestCase(test.NoDBTestCase):
                                'nova.tests.unit.test_service.FakeManager')
         serv.start()
 
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    def test_start_updates_version(self, mock_get_by_host_and_binary):
+        # test that the service version gets updated on services startup
+        service_obj = mock.Mock()
+        service_obj.binary = 'fake-binary'
+        service_obj.host = 'fake-host'
+        service_obj.version = -42
+        mock_get_by_host_and_binary.return_value = service_obj
+
+        serv = service.Service(self.host, self.binary, self.topic,
+                              'nova.tests.unit.test_service.FakeManager')
+        serv.start()
+
+        # test service version got updated and saved:
+        service_obj.save.assert_called_once_with()
+        self.assertEqual(objects.service.SERVICE_VERSION, service_obj.version)
+
     def _test_service_check_create_race(self, ex):
         self.manager_mock = self.mox.CreateMock(FakeManager)
         self.mox.StubOutWithMock(sys.modules[__name__], 'FakeManager',
