@@ -19,8 +19,10 @@ from oslo_config import cfg
 flavor_opts = [
     cfg.StrOpt('default_flavor',
                default='m1.small',
-               help='Default flavor to use for the EC2 API only. The Nova API '
-               'does not support a default flavor.'),
+               deprecated_for_removal=True,
+               deprecated_reason='The EC2 API is deprecated',
+               help='DEPRECATED: Default flavor to use for the EC2 API only. '
+                    'The Nova API does not support a default flavor.'),
 ]
 
 
