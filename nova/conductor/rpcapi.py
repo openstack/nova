@@ -256,7 +256,7 @@ class ComputeTaskAPI(object):
     1.2 - Added build_instances
     1.3 - Added unshelve_instance
     1.4 - Added reservations to migrate_server.
-    1.5 - Added the leagacy_bdm parameter to build_instances
+    1.5 - Added the legacy_bdm parameter to build_instances
     1.6 - Made migrate_server use instance objects
     1.7 - Do not send block_device_mapping and legacy_bdm to build_instances
     1.8 - Add rebuild_instance

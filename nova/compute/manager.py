@@ -1205,7 +1205,7 @@ class ComputeManager(manager.Manager):
 
         Passes straight through to the virtualization driver.
 
-        Synchronise the call because we may still be in the middle of
+        Synchronize the call because we may still be in the middle of
         creating the instance.
         """
         @utils.synchronized(instance.uuid)
@@ -2589,7 +2589,7 @@ class ComputeManager(manager.Manager):
         :param preserve_ephemeral: True if the default ephemeral storage
                                    partition must be preserved on rebuild
         :param migration: a Migration object if one was created for this
-                          rebuild operation (if it's a part of evacaute)
+                          rebuild operation (if it's a part of evacuate)
         :param scheduled_node: A node of the host chosen by the scheduler. If a
                                host was specified by the user, this will be
                                None

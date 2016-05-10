@@ -1520,7 +1520,7 @@ class Allocation(BASE, models.ModelBase):
 
 
 class ResourceProviderAggregate(BASE, models.ModelBase):
-    """Assocate a resource provider with an aggregate."""
+    """Associate a resource provider with an aggregate."""
 
     __tablename__ = 'resource_provider_aggregates'
     __table_args__ = (
