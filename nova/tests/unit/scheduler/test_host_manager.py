@@ -222,6 +222,40 @@ class HostManagerTestCase(test.NoDBTestCase):
                 fake_properties)
         self._verify_result(info, result)
 
+    def test_get_filtered_hosts_with_requested_destination(self):
+        dest = objects.Destination(host='fake_host1', node='fake-node')
+        fake_properties = objects.RequestSpec(requested_destination=dest,
+                                              ignore_hosts=[],
+                                              instance_uuid='fake-uuid1',
+                                              force_hosts=[],
+                                              force_nodes=[])
+
+        info = {'expected_objs': [self.fake_hosts[0]],
+                'expected_fprops': fake_properties}
+
+        self._mock_get_filtered_hosts(info)
+
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
+                fake_properties)
+        self._verify_result(info, result)
+
+    def test_get_filtered_hosts_with_wrong_requested_destination(self):
+        dest = objects.Destination(host='dummy', node='fake-node')
+        fake_properties = objects.RequestSpec(requested_destination=dest,
+                                              ignore_hosts=[],
+                                              instance_uuid='fake-uuid1',
+                                              force_hosts=[],
+                                              force_nodes=[])
+
+        info = {'expected_objs': [],
+                'expected_fprops': fake_properties}
+
+        self._mock_get_filtered_hosts(info)
+
+        result = self.host_manager.get_filtered_hosts(self.fake_hosts,
+                fake_properties)
+        self._verify_result(info, result)
+
     def test_get_filtered_hosts_with_ignore(self):
         fake_properties = objects.RequestSpec(
             instance_uuid=uuids.instance,
