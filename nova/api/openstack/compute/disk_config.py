@@ -131,24 +131,41 @@ class DiskConfig(extensions.V21APIExtensionBase):
     def get_resources(self):
         return []
 
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    # making 'body_deprecated_param' as optional to avoid changes for
-    # server_update & server_rebuild
-    def server_create(self, server_dict, create_kwargs,
-                      body_deprecated_param=None):
+    def _extend_server(self, server_dict, create_kwargs):
+        """Extends server create/update/rebuild/resize.
+
+        This extends the server create/update/rebuild/resize
+        operations to add disk_config into the mix. Because all these
+        methods act similarly a common method is used.
+
+        """
         if API_DISK_CONFIG in server_dict:
             api_value = server_dict[API_DISK_CONFIG]
             internal_value = disk_config_from_api(api_value)
             create_kwargs[INTERNAL_DISK_CONFIG] = internal_value
 
-    server_update = server_create
-    server_rebuild = server_create
-    server_resize = server_create
+    # Extend server for the 4 extended points
+    def server_create(self, server_dict, create_kwargs, body_deprecated):
+        self._extend_server(server_dict, create_kwargs)
 
+    def server_update(self, server_dict, update_kwargs):
+        self._extend_server(server_dict, update_kwargs)
+
+    def server_rebuild(self, server_dict, rebuild_kwargs):
+        self._extend_server(server_dict, rebuild_kwargs)
+
+    def server_resize(self, server_dict, resize_kwargs):
+        self._extend_server(server_dict, resize_kwargs)
+
+    # Extend schema for the 4 extended points
     def get_server_create_schema(self, version):
         return disk_config.server_create
 
-    get_server_update_schema = get_server_create_schema
-    get_server_rebuild_schema = get_server_create_schema
-    get_server_resize_schema = get_server_create_schema
+    def get_server_update_schema(self, version):
+        return disk_config.server_create
+
+    def get_server_rebuild_schema(self, version):
+        return disk_config.server_create
+
+    def get_server_resize_schema(self, version):
+        return disk_config.server_create
