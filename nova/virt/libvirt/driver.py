@@ -994,7 +994,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 rbd_user=CONF.libvirt.rbd_user)
 
     def _cleanup_rbd(self, instance):
-        LibvirtDriver._get_rbd_driver().cleanup_volumes(instance)
+        # NOTE(nic): On revert_resize, the cleanup steps for the root
+        # volume are handled with an "rbd snap rollback" command,
+        # and none of this is needed (and is, in fact, harmful) so
+        # filter out non-ephemerals from the list
+        if instance.task_state == task_states.RESIZE_REVERTING:
+            filter_fn = lambda disk: (disk.startswith(instance.uuid) and
+                                      disk.endswith('disk.local'))
+        else:
+            filter_fn = lambda disk: disk.startswith(instance.uuid)
+        LibvirtDriver._get_rbd_driver().cleanup_volumes(filter_fn)
 
     def _cleanup_lvm(self, instance, block_device_info):
         """Delete all LVM disks for given instance object."""
@@ -2546,6 +2555,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # cleanup rescue volume
         lvm.remove_volumes([lvmdisk for lvmdisk in self._lvm_disks(instance)
                                 if lvmdisk.endswith('.rescue')])
+        if CONF.libvirt.images_type == 'rbd':
+            filter_fn = lambda disk: (disk.startswith(instance.uuid) and
+                                      disk.endswith('.rescue'))
+            LibvirtDriver._get_rbd_driver().cleanup_volumes(filter_fn)
 
     def poll_rebooting_instances(self, timeout, instances):
         pass
