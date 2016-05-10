@@ -26,7 +26,6 @@ import nova.db.base
 import nova.db.sqlalchemy.api
 import nova.exception
 import nova.image.download.file
-import nova.servicegroup.api
 import nova.volume
 
 
@@ -35,7 +34,6 @@ def list_opts():
         ('DEFAULT',
          itertools.chain(
              [nova.db.base.db_driver_opt],
-             [nova.servicegroup.api.servicegroup_driver_opt],
              nova.db.api.db_opts,
              nova.db.sqlalchemy.api.db_opts,
              nova.exception.exc_log_opts,

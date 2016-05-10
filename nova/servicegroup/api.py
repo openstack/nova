@@ -16,10 +16,10 @@
 
 """Define APIs for the servicegroup access."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 
+import nova.conf
 from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
@@ -28,16 +28,8 @@ _driver_name_class_mapping = {
     'db': 'nova.servicegroup.drivers.db.DbDriver',
     'mc': 'nova.servicegroup.drivers.mc.MemcachedDriver'
 }
-_default_driver = 'db'
-servicegroup_driver_opt = cfg.StrOpt('servicegroup_driver',
-                                     default=_default_driver,
-                                     help='The driver for servicegroup '
-                                          'service.',
-                                     choices=sorted(
-                                        _driver_name_class_mapping.keys()))
 
-CONF = cfg.CONF
-CONF.register_opt(servicegroup_driver_opt)
+CONF = nova.conf.CONF
 
 # NOTE(geekinutah): By default drivers wait 5 seconds before reporting
 INITIAL_REPORTING_DELAY = 5
