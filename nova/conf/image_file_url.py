@@ -23,6 +23,10 @@ image_file_url_group = cfg.OptGroup(
 
 filesystems = cfg.ListOpt(
     name='filesystems',
+    deprecated_for_removal=True,
+    deprecated_reason='The feature to download images from glance via '
+                      'filesystem is not used and will be removed in the '
+                      'future.',
     default=[],
     help=_('List of file systems that are configured '
            'in this file in the '
@@ -37,9 +41,17 @@ filesystem_opts = [
                 help=_('A unique ID given to each file system.  This is '
                        'value is set in Glance and agreed upon here so '
                        'that the operator knowns they are dealing with '
-                       'the same file system.')),
+                       'the same file system.'),
+                deprecated_for_removal=True,
+                deprecated_reason='The feature to download images from glance '
+                                  'via filesystem is not used and will be '
+                                  'removed in the future.'),
      cfg.StrOpt('mountpoint',
-                help=_('The path at which the file system is mounted.')),
+                help=_('The path at which the file system is mounted.'),
+                deprecated_for_removal=True,
+                deprecated_reason='The feature to download images from glance '
+                                  'via filesystem is not used and will be '
+                                  'removed in the future.'),
 ]
 
 ALL_OPTS = [filesystems]
