@@ -152,11 +152,11 @@ class ControlauthMemcacheEncodingTestCase(test.NoDBTestCase):
     def test_authorize_console_encoding(self):
         with test.nested(
                 mock.patch.object(self.manager.mc_instance,
-                                  'set', return_value=True),
+                                  'set', return_value=None),
                 mock.patch.object(self.manager.mc_instance,
                                   'get', return_value='["token"]'),
                 mock.patch.object(self.manager.mc,
-                                  'set', return_value=True),
+                                  'set', return_value=None),
                 mock.patch.object(self.manager.mc,
                                   'get', return_value=None),
                 mock.patch.object(self.manager.mc,
