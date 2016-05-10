@@ -13,16 +13,16 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
 import webob
 import webob.exc
 
 import nova.api.auth
+import nova.conf
 from nova import test
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 class TestNovaKeystoneContextMiddleware(test.NoDBTestCase):

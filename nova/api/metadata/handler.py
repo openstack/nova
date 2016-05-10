@@ -19,7 +19,6 @@ import hashlib
 import hmac
 import os
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import secretutils as secutils
 import six
@@ -38,21 +37,6 @@ from nova.network.neutronv2 import api as neutronapi
 from nova import wsgi
 
 CONF = nova.conf.CONF
-CONF.import_opt('use_forwarded_for', 'nova.api.auth')
-
-metadata_opts = [
-    cfg.IntOpt('metadata_cache_expiration',
-               default=15,
-               help='Time in seconds to cache metadata; 0 to disable '
-                    'metadata caching entirely (not recommended). Increasing'
-                    'this should improve response times of the metadata API '
-                    'when under heavy load. Higher values may increase memory'
-                    'usage and result in longer times for host metadata '
-                    'changes to take effect.')
-]
-
-CONF.register_opts(metadata_opts)
-
 LOG = logging.getLogger(__name__)
 
 

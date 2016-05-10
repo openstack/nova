@@ -12,10 +12,6 @@
 
 import itertools
 
-import nova.api.auth
-import nova.api.metadata.base
-import nova.api.metadata.handler
-import nova.api.metadata.vendordata_json
 import nova.api.openstack
 import nova.api.openstack.common
 import nova.api.openstack.compute
@@ -31,11 +27,7 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             [nova.api.metadata.vendordata_json.file_opt],
              [nova.api.openstack.compute.allow_instance_snapshots_opt],
-             nova.api.auth.auth_opts,
-             nova.api.metadata.base.metadata_opts,
-             nova.api.metadata.handler.metadata_opts,
              nova.api.openstack.common.osapi_opts,
              nova.api.openstack.compute.legacy_v2.contrib.ext_opts,
              nova.api.openstack.compute.legacy_v2.contrib.fping.fping_opts,

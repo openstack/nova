@@ -16,7 +16,6 @@ Common Auth Middleware.
 
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_log import versionutils
 from oslo_middleware import request_id
@@ -24,35 +23,14 @@ from oslo_serialization import jsonutils
 import webob.dec
 import webob.exc
 
+import nova.conf
 from nova import context
 from nova.i18n import _
 from nova.i18n import _LW
 from nova import wsgi
 
 
-auth_opts = [
-    cfg.BoolOpt('api_rate_limit',
-                default=False,
-                help='Whether to use per-user rate limiting for the api. '
-                     'This option is only used by v2 api. Rate limiting '
-                     'is removed from v2.1 api.'),
-    cfg.StrOpt('auth_strategy',
-               default='keystone',
-               choices=('keystone', 'noauth2'),
-               help='''
-The strategy to use for auth: keystone or noauth2. noauth2 is designed for
-testing only, as it does no actual credential checking. noauth2 provides
-administrative credentials only if 'admin' is specified as the username.
-'''),
-    cfg.BoolOpt('use_forwarded_for',
-                default=False,
-                help='Treat X-Forwarded-For as the canonical remote address. '
-                     'Only enable this if you have a sanitizing proxy.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(auth_opts)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 

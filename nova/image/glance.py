@@ -46,7 +46,6 @@ from nova import signature_utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
-CONF.import_opt('auth_strategy', 'nova.api.auth')
 
 supported_glance_versions = (1, 2)
 
