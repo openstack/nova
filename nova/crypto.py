@@ -128,39 +128,8 @@ def generate_x509_fingerprint(pem_key):
                      'Error message: %s') % ex)
 
 
-def generate_key(bits):
-    """Generate a paramiko RSAKey"""
-    # NOTE(dims): pycryptodome has changed the signature of the RSA.generate
-    # call. specifically progress_func has been dropped. paramiko still uses
-    # pycrypto. However some projects like latest pysaml2 have switched from
-    # pycrypto to pycryptodome as pycrypto seems to have been abandoned.
-    # paramiko project has started transition to pycryptodome as well but
-    # there is no release yet with that support. So at the moment depending on
-    # which version of pysaml2 is installed, Nova is likely to break. So we
-    # call "RSA.generate(bits)" which works on both pycrypto and pycryptodome
-    # and then wrap it into a paramiko.RSAKey
-    #
-    # NOTE(coreywright): Paramiko 2 avoids this conundrum by migrating from
-    # PyCrypto/PyCryptodome to cryptography.
-    #
-    # TODO(coreywright): When Paramiko constraint is upgraded to 2.x, then
-    # remove this abstraction and replace the call to this function with a call
-    # to `paramiko.RSAKey.generate(bits)`.
-
-    if paramiko.__version_info__[0] == 2:
-        key = paramiko.RSAKey.generate(bits)
-    else:  # paramiko 1.x
-        from Crypto.PublicKey import RSA
-        rsa = RSA.generate(bits)
-        key = paramiko.RSAKey(vals=(rsa.e, rsa.n))
-        key.d = rsa.d
-        key.p = rsa.p
-        key.q = rsa.q
-    return key
-
-
 def generate_key_pair(bits=2048):
-    key = generate_key(bits)
+    key = paramiko.RSAKey.generate(bits)
     keyout = six.StringIO()
     key.write_private_key(keyout)
     private_key = keyout.getvalue()
