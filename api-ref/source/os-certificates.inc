@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -19,8 +18,7 @@ Creates a certificate.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -46,8 +44,8 @@ Shows details for a certificate.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: notImplemented(501), unauthorized(401),
+forbidden(403), itemNotFound(404)
 
 Request
 -------
