@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -25,8 +24,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -44,43 +42,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
-Create Or Replace Metadata Items
-================================
-
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/metadata
-
-Creates or replaces one or more metadata items for a server.
-
-Creates any metadata items that do not already exist in the server. Removes and completely replaces any metadata items that already exist in the server with the metadata items in the request.
-
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
-
-Normal response codes: 200
-
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-  - server_id: server_id
-
-**Example Create Or Replace Metadata Items: JSON request**
-
-.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
-   :language: javascript
-
-Response
---------
-
-**Example Create Or Replace Metadata Items: JSON response**
-
-.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
-   :language: javascript
-
 Update Metadata Items
 =====================
 
@@ -94,8 +55,8 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -118,6 +79,43 @@ Response
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
    :language: javascript
 
+Create Or Replace Metadata Items
+================================
+
+.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/metadata
+
+Creates or replaces one or more metadata items for a server.
+
+Creates any metadata items that do not already exist in the server. Removes and completely replaces any metadata items that already exist in the server with the metadata items in the request.
+
+Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id
+
+**Example Create Or Replace Metadata Items: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
+   :language: javascript
+
+Response
+--------
+
+**Example Create Or Replace Metadata Items: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-resp.json
+   :language: javascript
+
 Show Metadata Item Details
 ==========================
 
@@ -129,8 +127,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -162,8 +159,8 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------
@@ -198,8 +195,7 @@ Policy defaults enable only users with the administrative role or the owner of t
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
 Request
 -------
