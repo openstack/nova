@@ -14,18 +14,17 @@
 
 import os
 
-from oslo_config import cfg
 import testscenarios
 
 from nova.api.openstack import API_V21_CORE_EXTENSIONS  # noqa
+import nova.conf
 from nova import test
 from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import api_samples_test_base
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_utils
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_link_prefix', 'nova.api.openstack.common')
+CONF = nova.conf.CONF
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.legacy_v2.extensions')
 

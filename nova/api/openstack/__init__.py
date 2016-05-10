@@ -18,7 +18,6 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import routes
 import six
@@ -28,6 +27,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LC
@@ -40,34 +40,8 @@ from nova import utils
 from nova import wsgi as base_wsgi
 
 
-api_opts = [
-        cfg.ListOpt('extensions_blacklist',
-                    default=[],
-                    help='DEPRECATED: A list of v2.1 API extensions to never '
-                    'load. Specify the extension aliases here. '
-                    'This option will be removed in the near future. '
-                    'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
-        cfg.ListOpt('extensions_whitelist',
-                    default=[],
-                    help='DEPRECATED: If the list is not empty then a v2.1 '
-                    'API extension will only be loaded if it exists in this '
-                    'list. Specify the extension aliases here. '
-                    'This option will be removed in the near future. '
-                    'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
-        cfg.StrOpt('project_id_regex',
-                   help='DEPRECATED: The validation regex for project_ids '
-                   'used in urls. This defaults to [0-9a-f\-]+ if not set, '
-                   'which matches normal uuids created by keystone.',
-                   deprecated_for_removal=True, deprecated_group='osapi_v21')
-]
-api_opts_group = cfg.OptGroup(name='osapi_v21', title='API v2.1 Options')
-
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.register_group(api_opts_group)
-CONF.register_opts(api_opts, api_opts_group)
+CONF = nova.conf.CONF
 
 # List of v21 API extensions which are considered to form
 # the core API and so must be present
