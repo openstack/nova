@@ -2271,6 +2271,12 @@ to_port:
   in: body
   required: true
   type: integer
+trigger_crash_dump:
+  in: body
+  required: true
+  type: none
+  description: |
+    Specifies the trigger crash dump action should be run
 type:
   description: |
     The snapshot type. A valid value is ``qcow2``.
