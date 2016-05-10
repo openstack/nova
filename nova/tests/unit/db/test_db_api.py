@@ -1436,6 +1436,16 @@ class MigrationTestCase(test.TestCase):
         dests = [x['dest_compute'] for x in migrations]
         self.assertEqual(['host1', 'host3'], dests)
 
+    def test_get_migrations_by_filters_instance_uuid(self):
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters={})
+        for migration in migrations:
+            filters = {'instance_uuid': migration['instance_uuid']}
+            instance_migrations = db.migration_get_all_by_filters(
+                self.ctxt, filters)
+            self.assertEqual(1, len(instance_migrations))
+            self.assertEqual(migration['instance_uuid'],
+                             instance_migrations[0]['instance_uuid'])
+
     def test_migration_get_unconfirmed_by_dest_compute(self):
         # Ensure no migrations are returned.
         results = db.migration_get_unconfirmed_by_dest_compute(self.ctxt, 10,
