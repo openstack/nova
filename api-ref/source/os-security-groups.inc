@@ -8,7 +8,7 @@
  Security groups (os-security-groups)
 ======================================
 
-Lists, shows information for, creates, and deletes security groups.
+Lists, shows information for, creates, updates and deletes security groups.
 
 List Security Groups
 ====================
@@ -19,8 +19,7 @@ Lists security groups.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -55,8 +54,7 @@ Creates a security group.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -99,8 +97,7 @@ Shows details for a security group.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -136,8 +133,7 @@ Updates a security group.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -180,8 +176,7 @@ Deletes a security group.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -194,6 +189,8 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful DELETE query.
+
 List Security Groups By Server
 ==============================
 
@@ -203,8 +200,7 @@ Lists security groups for a server.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -228,5 +224,5 @@ Response
 
 **Example List security groups by server: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-security-groups/security-groups-list-get-resp.json
+.. literalinclude:: ../../doc/api_samples/os-security-groups/server-security-groups-list-resp.json
    :language: javascript
