@@ -16,9 +16,12 @@
 import mock
 import six.moves.urllib.parse as urlparse
 
+import nova.conf
 from nova import exception
 from nova.image.download import file as tm_file
 from nova import test
+
+CONF = nova.conf.CONF
 
 
 class TestFileTransferModule(test.NoDBTestCase):
@@ -27,6 +30,8 @@ class TestFileTransferModule(test.NoDBTestCase):
     def test_filesystem_success(self, copy_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
+        # register opts for dynamically created group 'image_file_url:gluster'
+        nova.conf.image_file_url.register_opts(CONF)
 
         mountpoint = '/gluster'
         url = 'file:///gluster/my/image/path'
@@ -52,6 +57,8 @@ class TestFileTransferModule(test.NoDBTestCase):
     def test_filesystem_mismatched_mountpoint(self, copy_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
+        # register opts for dynamically created group 'image_file_url:gluster'
+        nova.conf.image_file_url.register_opts(CONF)
 
         mountpoint = '/gluster'
         # Should include the mountpoint before my/image/path
@@ -78,6 +85,8 @@ class TestFileTransferModule(test.NoDBTestCase):
     def test_filesystem_mismatched_filesystem(self, copy_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         self.flags(group='image_file_url', filesystems=['gluster'])
+        # register opts for dynamically created group 'image_file_url:gluster'
+        nova.conf.image_file_url.register_opts(CONF)
 
         mountpoint = '/gluster'
         # Should include the mountpoint before my/image/path
