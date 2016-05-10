@@ -148,7 +148,7 @@ body. The possible server status values are:
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401),
-forbidden(403), itemNotFound(404)
+forbidden(403)
 
 Request
 -------
@@ -338,7 +338,7 @@ HostId is unique per account and is not globally unique.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401),
-forbidden(403), itemNotFound(404)
+forbidden(403)
 
 Request
 -------
