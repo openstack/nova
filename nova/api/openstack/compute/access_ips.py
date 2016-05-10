@@ -76,12 +76,12 @@ class AccessIPs(extensions.V21APIExtensionBase):
     def get_resources(self):
         return []
 
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    # making 'body_deprecated_param' as optional to avoid changes for
-    # server_update & server_rebuild
-    def server_create(self, server_dict, create_kwargs,
-                      body_deprecated_param=None):
+    def _extend_server(self, server_dict, create_kwargs):
+        """Extends the server create/update/rebuild operations.
+
+        This extends the server create/update/rebuild operations to
+        add accessIPs into each of these.
+        """
         if AccessIPs.v4_key in server_dict:
             access_ip_v4 = server_dict.get(AccessIPs.v4_key)
             if access_ip_v4:
@@ -95,11 +95,27 @@ class AccessIPs(extensions.V21APIExtensionBase):
             else:
                 create_kwargs['access_ip_v6'] = None
 
-    server_update = server_create
-    server_rebuild = server_create
+    # Extend server for the 3 extended points
 
+    # NOTE(sdague): the server create extension point takes 3 args,
+    # but as we throw away one, our unit tests only provide 2. Make
+    # arg 3 optional given that we're going to tear all this out soon
+    # once extensions are gone.
+    def server_create(self, server_dict, create_kwargs, body_deprecated=None):
+        self._extend_server(server_dict, create_kwargs)
+
+    def server_update(self, server_dict, update_kwargs):
+        self._extend_server(server_dict, update_kwargs)
+
+    def server_rebuild(self, server_dict, rebuild_kwargs):
+        self._extend_server(server_dict, rebuild_kwargs)
+
+    # Extend schema for the 3 extended points
     def get_server_create_schema(self, version):
         return access_ips.server_create
 
-    get_server_update_schema = get_server_create_schema
-    get_server_rebuild_schema = get_server_create_schema
+    def get_server_update_schema(self, version):
+        return access_ips.server_create
+
+    def get_server_rebuild_schema(self, version):
+        return access_ips.server_create
