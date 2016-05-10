@@ -17,7 +17,6 @@
 Management class for Pool-related functions (join, eject, etc).
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
@@ -32,14 +31,7 @@ from nova.virt.xenapi import vm_utils
 
 LOG = logging.getLogger(__name__)
 
-xenapi_pool_opts = [
-    cfg.BoolOpt('use_join_force',
-                default=True,
-                help='To use for hosts with different CPUs'),
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(xenapi_pool_opts, 'xenserver')
 
 
 class ResourcePool(object):

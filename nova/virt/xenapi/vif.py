@@ -17,9 +17,9 @@
 
 """VIF drivers for XenAPI."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
@@ -27,12 +27,7 @@ from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 
 
-xenapi_ovs_integration_bridge_opt = cfg.StrOpt('ovs_integration_bridge',
-                        default='xapi1',
-                        help='Name of Integration Bridge used by Open vSwitch')
-
-CONF = cfg.CONF
-CONF.register_opt(xenapi_ovs_integration_bridge_opt, 'xenserver')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
