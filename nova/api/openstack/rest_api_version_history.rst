@@ -343,3 +343,10 @@ user documentation.
   API request::
 
     GET /v2.1/{tenant_id}/os-hypervisors?marker={hypervisor_id}&limit={limit}
+
+2.34
+----
+
+  Checks in ``os-migrateLive`` before live-migration actually starts are now
+  made in background. ``os-migrateLive`` is not throwing `400 Bad Request` if
+  pre-live-migration checks fail.
