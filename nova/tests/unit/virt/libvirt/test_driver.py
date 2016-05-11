@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import deque
 import contextlib
 import copy
 import datetime
@@ -7689,10 +7690,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Migration, "save")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
     @mock.patch.object(fakelibvirt.virDomain, "abortJob")
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "pause")
     def _test_live_migration_monitoring(self,
                                         job_info_records,
                                         time_records,
                                         expect_result,
+                                        mock_pause,
                                         mock_abort,
                                         mock_running,
                                         mock_save,
@@ -7701,9 +7704,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         mock_conn,
                                         mock_sleep,
                                         mock_time,
-                                        expected_mig_status=None):
+                                        expected_mig_status=None,
+                                        scheduled_action=None,
+                                        scheduled_action_executed=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
+        drvr.active_migrations[instance.uuid] = deque()
         dom = fakelibvirt.Domain(drvr._get_connection(), "<domain/>", True)
         guest = libvirt_guest.Guest(dom)
         finish_event = eventlet.event.Event()
@@ -7718,6 +7724,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         finish_event.send()
                     elif rec == "domain-stop":
                         dom.destroy()
+                    elif rec == "force_complete":
+                        drvr.active_migrations[instance.uuid].append("pause")
                 else:
                     if len(time_records) > 0:
                         time_records.pop(0)
@@ -7751,7 +7759,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      dom,
                                      finish_event,
                                      [])
-
+        if scheduled_action_executed:
+            if scheduled_action == 'pause':
+                self.assertTrue(mock_pause.called)
+        else:
+            if scheduled_action == 'pause':
+                self.assertFalse(mock_pause.called)
         mock_mig_save.assert_called_with()
 
         if expect_result == self.EXPECT_SUCCESS:
@@ -7777,6 +7790,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             else:
                 fake_recover_method.assert_called_once_with(
                     self.context, instance, dest, False, migrate_data)
+        self.assertNotIn(instance.uuid, drvr.active_migrations)
 
     def test_live_migration_monitor_success(self):
         # A normal sequence where see all the normal job states
@@ -7797,6 +7811,129 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records, [],
                                              self.EXPECT_SUCCESS)
+
+    def test_live_migration_handle_pause_normal(self):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled in between VIR_DOMAIN_JOB_UNBOUNDED
+        domain_info_records = [
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "force_complete",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_SUCCESS,
+                                             scheduled_action="pause",
+                                             scheduled_action_executed=True)
+
+    def test_live_migration_handle_pause_on_start(self):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled in case of job type VIR_DOMAIN_JOB_NONE and finish_event is
+        # not ready yet
+        domain_info_records = [
+            "force_complete",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_SUCCESS,
+                                             scheduled_action="pause",
+                                             scheduled_action_executed=True)
+
+    def test_live_migration_handle_pause_on_finish(self):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled in case of job type VIR_DOMAIN_JOB_NONE and finish_event is
+        # ready
+        domain_info_records = [
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            "force_complete",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_SUCCESS,
+                                             scheduled_action="pause",
+                                             scheduled_action_executed=False)
+
+    def test_live_migration_handle_pause_on_cancel(self):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled in case of job type VIR_DOMAIN_JOB_CANCELLED
+        domain_info_records = [
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            "force_complete",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_FAILURE,
+                                             expected_mig_status='cancelled',
+                                             scheduled_action="pause",
+                                             scheduled_action_executed=False)
+
+    def test_live_migration_handle_pause_on_failure(self):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled in case of job type VIR_DOMAIN_JOB_FAILED
+        domain_info_records = [
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            "force_complete",
+            host.DomainJobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_FAILURE,
+                                             scheduled_action="pause",
+                                             scheduled_action_executed=False)
 
     def test_live_migration_monitor_success_race(self):
         # A normalish sequence but we're too slow to see the
@@ -13401,11 +13538,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           lambda x: x,
                           lambda x: x)
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "pause")
-    def test_live_migration_force_complete(self, pause):
+    def test_live_migration_force_complete(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.live_migration_force_complete(self.test_instance)
-        pause.assert_called_once_with(self.test_instance)
+        instance = fake_instance.fake_instance_obj(
+            None, name='instancename', id=1,
+            uuid='c83a75d4-4d53-4be5-9a40-04d9c0389ff8')
+        drvr.active_migrations[instance.uuid] = deque()
+        drvr.live_migration_force_complete(instance)
+        self.assertEqual(
+            1, drvr.active_migrations[instance.uuid].count("pause"))
 
     @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(fakelibvirt.virDomain, "abortJob")

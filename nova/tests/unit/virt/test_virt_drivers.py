@@ -13,6 +13,7 @@
 #    under the License.
 
 import base64
+from collections import deque
 import sys
 import traceback
 
@@ -667,6 +668,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_live_migration_force_complete(self):
         instance_ref, network_info = self._get_running_instance()
+        self.connection.active_migrations[instance_ref.uuid] = deque()
         self.connection.live_migration_force_complete(instance_ref)
 
     @catch_notimplementederror

@@ -1133,6 +1133,10 @@ class NoUniqueMatch(NovaException):
     code = 409
 
 
+class NoActiveMigrationForInstance(NotFound):
+    msg_fmt = _("Active live migration for instance %(instance_id)s not found")
+
+
 class MigrationNotFound(NotFound):
     msg_fmt = _("Migration %(migration_id)s could not be found.")
 
