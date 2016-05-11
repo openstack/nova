@@ -1,15 +1,16 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ==================
  Hosts (os-hosts)
 ==================
 
-Manages physical hosts. Some virt drivers don not support all host
+Manages physical hosts. Some virt drivers do not support all host
 functions. For more information, see `nova virt support
 matrix <http://docs.openstack.org/developer/nova/support-matrix.html>`__
+
+Policy defaults enable only users with the administrative role to perform
+all os-hosts related operations. Cloud providers can change these permissions
+through the ``policy.json`` file.
 
 List Hosts
 ==========
@@ -32,7 +33,14 @@ Request
 Response
 --------
 
-**Example List Hosts: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - hosts: hosts
+  - zone: host_zone
+  - host_name: host_name_body
+  - service: host_service
+
+**Example List Hosts**
 
 .. literalinclude:: ../../doc/api_samples/os-hosts/hosts-list-resp.json
    :language: javascript
@@ -59,7 +67,17 @@ Request
 Response
 --------
 
-**Example Show Host Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - host: host_resource_array
+  - resource: host_resource
+  - host.project: host_project
+  - host.cpu: host_cpu
+  - host.memory_mb: host_memory_mb
+  - host.disk_gb: host_disk_gb
+  - host.host: host_name_body
+
+**Example Show Host Details**
 
 .. literalinclude:: ../../doc/api_samples/os-hosts/host-get-resp.json
    :language: javascript
@@ -83,6 +101,8 @@ Request
 
   - tenant_id: tenant_id
   - host_name: host_name
+  - status: host_status_body_in
+  - maintenance_mode: host_maintenance_mode_in
 
 **Example Enable Host: JSON request**
 
@@ -92,7 +112,13 @@ Request
 Response
 --------
 
-**Example Enable Host: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - host: host_name_body
+  - status: host_status_body 
+  - maintenance_mode: host_maintenance_mode
+
+**Example Enable Host**
 
 .. literalinclude:: ../../doc/api_samples/os-hosts/host-put-maintenance-resp.json
    :language: javascript
@@ -119,6 +145,11 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - host: host_name_body
+  - power_action: host_power_action
 
 **Example Reboot Host: JSON response**
 
@@ -148,7 +179,12 @@ Request
 Response
 --------
 
-**Example Shut Down Host: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - host: host_name_body
+  - power_action: host_power_action
+
+**Example Shut Down Host**
 
 .. literalinclude:: ../../doc/api_samples/os-hosts/host-get-shutdown.json
    :language: javascript
@@ -176,7 +212,12 @@ Request
 Response
 --------
 
-**Example Start Host: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - host: host_name_body
+  - power_action: host_power_action
+
+**Example Start Host**
 
 .. literalinclude:: ../../doc/api_samples/os-hosts/host-get-startup.json
    :language: javascript
