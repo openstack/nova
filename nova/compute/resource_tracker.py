@@ -366,6 +366,7 @@ class ResourceTracker(object):
         # to initialize
         if self.compute_node:
             self._copy_resources(resources)
+            self._setup_pci_tracker(context, resources)
             return
 
         # now try to get the compute node record from the
@@ -373,6 +374,7 @@ class ResourceTracker(object):
         self.compute_node = self._get_compute_node(context)
         if self.compute_node:
             self._copy_resources(resources)
+            self._setup_pci_tracker(context, resources)
             return
 
         # there was no local copy and none in the database
@@ -385,6 +387,20 @@ class ResourceTracker(object):
         LOG.info(_LI('Compute_service record created for '
                      '%(host)s:%(node)s'),
                  {'host': self.host, 'node': self.nodename})
+
+        self._setup_pci_tracker(context, resources)
+
+    def _setup_pci_tracker(self, context, resources):
+        if not self.pci_tracker:
+            n_id = self.compute_node.id if self.compute_node else None
+            self.pci_tracker = pci_manager.PciDevTracker(context, node_id=n_id)
+            if 'pci_passthrough_devices' in resources:
+                dev_json = resources.pop('pci_passthrough_devices')
+                self.pci_tracker.update_devices_from_hypervisor_resources(
+                        dev_json)
+
+            dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
+            self.compute_node.pci_device_pools = dev_pools_obj
 
     def _copy_resources(self, resources):
         """Copy resource values to initialise compute_node and related
@@ -487,15 +503,6 @@ class ResourceTracker(object):
         if self.disabled:
             return
 
-        if 'pci_passthrough_devices' in resources:
-            # TODO(jaypipes): Move this into _init_compute_node()
-            if not self.pci_tracker:
-                n_id = self.compute_node.id if self.compute_node else None
-                self.pci_tracker = pci_manager.PciDevTracker(context,
-                                                             node_id=n_id)
-            dev_json = resources.pop('pci_passthrough_devices')
-            self.pci_tracker.update_devices_from_hypervisor_resources(dev_json)
-
         # Grab all instances assigned to this node:
         instances = objects.InstanceList.get_by_host_and_node(
             context, self.host, self.nodename,
@@ -522,12 +529,9 @@ class ResourceTracker(object):
         # this periodic task, and also because the resource tracker is not
         # notified when instances are deleted, we need remove all usages
         # from deleted instances.
-        if self.pci_tracker:
-            self.pci_tracker.clean_usage(instances, migrations, orphans)
-            dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
-            self.compute_node.pci_device_pools = dev_pools_obj
-        else:
-            self.compute_node.pci_device_pools = objects.PciDevicePoolList()
+        self.pci_tracker.clean_usage(instances, migrations, orphans)
+        dev_pools_obj = self.pci_tracker.stats.to_device_pools_obj()
+        self.compute_node.pci_device_pools = dev_pools_obj
 
         self._report_final_resource_view()
 
