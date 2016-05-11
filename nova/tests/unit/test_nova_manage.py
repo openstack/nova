@@ -21,6 +21,7 @@ import mock
 from oslo_utils import uuidutils
 
 from nova.cmd import manage
+from nova import conf
 from nova import context
 from nova import db
 from nova.db import migration
@@ -32,6 +33,8 @@ from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
 from nova.tests.unit import test_flavors
+
+CONF = conf.CONF
 
 
 class FixedIpCommandsTestCase(test.TestCase):
@@ -882,3 +885,26 @@ class CellV2CommandsTestCase(test.TestCase):
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
                     uuid)
             self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+
+    def test_map_cell0(self):
+        ctxt = context.RequestContext()
+        database_connection = 'fake:/foobar//'
+        self.commands.map_cell0(database_connection)
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
+                objects.CellMapping.CELL0_UUID)
+        self.assertEqual('cell0', cell_mapping.name)
+        self.assertEqual('none:///', cell_mapping.transport_url)
+        self.assertEqual(database_connection, cell_mapping.database_connection)
+
+    def test_map_cell0_default_database(self):
+        CONF.set_default('connection',
+                         'fake://netloc/nova_api',
+                         group='api_database')
+        ctxt = context.RequestContext()
+        self.commands.map_cell0()
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
+                objects.CellMapping.CELL0_UUID)
+        self.assertEqual('cell0', cell_mapping.name)
+        self.assertEqual('none:///', cell_mapping.transport_url)
+        self.assertEqual('fake://netloc/nova_api_cell0',
+                         cell_mapping.database_connection)

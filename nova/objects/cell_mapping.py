@@ -22,6 +22,8 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
+    CELL0_UUID = '00000000-0000-0000-0000-000000000000'
+
     fields = {
         'id': fields.IntegerField(read_only=True),
         'uuid': fields.UUIDField(),
