@@ -142,10 +142,11 @@ class _TestInstanceObject(object):
         exp_cols.remove('vcpu_model')
         exp_cols.remove('ec2_ids')
         exp_cols.remove('migration_context')
+        exp_cols.remove('keypairs')
         exp_cols = list(filter(lambda x: 'flavor' not in x, exp_cols))
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model',
-                         'extra.migration_context'])
+                         'extra.migration_context', 'extra.keypairs'])
 
         fake_topology = (test_instance_numa_topology.
                          fake_db_topology['numa_topology'])
@@ -158,6 +159,10 @@ class _TestInstanceObject(object):
             test_vcpu_model.fake_vcpumodel.obj_to_primitive())
         fake_mig_context = jsonutils.dumps(
             test_mig_ctxt.fake_migration_context_obj.obj_to_primitive())
+        fake_keypairlist = objects.KeyPairList(objects=[
+            objects.KeyPair(name='foo')])
+        fake_keypairs = jsonutils.dumps(
+            fake_keypairlist.obj_to_primitive())
         fake_service = {'created_at': None, 'updated_at': None,
                         'deleted_at': None, 'deleted': False, 'id': 123,
                         'host': 'fake-host', 'binary': 'nova-fake',
@@ -174,6 +179,7 @@ class _TestInstanceObject(object):
                                  'flavor': fake_flavor,
                                  'vcpu_model': fake_vcpu_model,
                                  'migration_context': fake_mig_context,
+                                 'keypairs': fake_keypairs,
                                  })
         db.instance_get_by_uuid(
             self.context, 'uuid',
@@ -190,6 +196,7 @@ class _TestInstanceObject(object):
         for attr in instance.INSTANCE_OPTIONAL_ATTRS:
             self.assertTrue(inst.obj_attr_is_set(attr))
         self.assertEqual(123, inst.services[0].id)
+        self.assertEqual('foo', inst.keypairs[0].name)
 
     def test_lazy_load_services_on_deleted_instance(self):
         # We should avoid trying to hit the database to reload the instance
@@ -234,6 +241,46 @@ class _TestInstanceObject(object):
         inst = objects.Instance(context=self.context, uuid=uuids.instance)
         self.assertRaises(exception.ObjectActionError,
                           inst.obj_load_attr, 'foo')
+
+    def test_create_and_load_keypairs_from_extra(self):
+        inst = objects.Instance(context=self.context,
+                                user_id=self.context.user_id,
+                                project_id=self.context.project_id)
+        inst.keypairs = objects.KeyPairList(objects=[
+            objects.KeyPair(name='foo')])
+        inst.create()
+
+        inst = objects.Instance.get_by_uuid(self.context, inst.uuid,
+                                            expected_attrs=['keypairs'])
+        self.assertEqual('foo', inst.keypairs[0].name)
+
+    def test_lazy_load_keypairs_from_extra(self):
+        inst = objects.Instance(context=self.context,
+                                user_id=self.context.user_id,
+                                project_id=self.context.project_id)
+        inst.keypairs = objects.KeyPairList(objects=[
+            objects.KeyPair(name='foo')])
+        inst.create()
+
+        inst = objects.Instance.get_by_uuid(self.context, inst.uuid)
+        self.assertNotIn('keypairs', inst)
+        self.assertEqual('foo', inst.keypairs[0].name)
+        self.assertNotIn('keypairs', inst.obj_what_changed())
+
+    @mock.patch('nova.objects.KeyPair.get_by_name')
+    def test_lazy_load_keypairs_from_legacy(self, mock_get):
+        mock_get.return_value = objects.KeyPair(name='foo')
+
+        inst = objects.Instance(context=self.context,
+                                user_id=self.context.user_id,
+                                key_name='foo',
+                                project_id=self.context.project_id)
+        inst.create()
+
+        inst = objects.Instance.get_by_uuid(self.context, inst.uuid)
+        self.assertNotIn('keypairs', inst)
+        self.assertEqual('foo', inst.keypairs[0].name)
+        self.assertIn('keypairs', inst.obj_what_changed())
 
     def test_get_remote(self):
         # isotime doesn't have microseconds and is always UTC
