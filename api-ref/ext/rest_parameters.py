@@ -170,7 +170,7 @@ class RestParametersDirective(Table):
             return [error]
 
         if not len(self.arguments) >= 1:
-            self.state_machine.reporter.error(
+            error = self.state_machine.reporter.error(
                 'No reference file defined',
                 nodes.literal_block(self.block_text, self.block_text),
                 line=self.lineno)
