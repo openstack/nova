@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -38,12 +37,13 @@ List Floating Ip Addresses
 
 Lists floating IP addresses associated with the tenant or account.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role
+or the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -65,16 +65,19 @@ Create (Allocate) Floating Ip Address
 
 .. rest_method:: POST /v2.1/{tenant_id}/os-floating-ips
 
-Creates, or allocates, a floating IP address for the current project. By default, the floating IP address is allocated from the public pool.
+Creates, or allocates, a floating IP address for the current project.
+By default, the floating IP address is allocated from the public pool.
 
-If more than one floating IP address pool is available, use the ``pool`` parameter to specify from which pool to allocate the IP address.
+If more than one floating IP address pool is available, use the
+``pool`` parameter to specify from which pool to allocate the IP address.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -104,12 +107,13 @@ Show Floating Ip Address Details
 
 Shows details for a floating IP address, by ID, that is associated with the tenant or account.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -132,16 +136,20 @@ Delete (Deallocate) Floating Ip Address
 
 .. rest_method:: DELETE /v2.1/{tenant_id}/os-floating-ips/{floating_ip_id}
 
-Deletes, or deallocates, a floating IP address from the current project and returns it to the pool from which it was allocated.
+Deletes, or deallocates, a floating IP address from the current project and
+returns it to the pool from which it was allocated.
 
-If the IP address is still associated with a running instance, it is automatically disassociated from that instance.
+If the IP address is still associated with a running instance,
+it is automatically disassociated from that instance.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
 
 Request
 -------
