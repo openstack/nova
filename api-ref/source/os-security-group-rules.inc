@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -14,7 +13,8 @@ Create Security Group Rule
 
 .. rest_method:: POST /v2.1/{tenant_id}/os-security-group-rules
 
-Creates a rule for a security group.
+Creates a rule for a security group. Either ``cidr`` or ``group_id`` must be
+specified when creating a rule.
 
 Normal response codes: 200
 
@@ -31,7 +31,7 @@ Request
   - ip_protocol: ip_protocol
   - from_port: from_port
   - to_port: to_port
-  - cidr: cidr
+  - cidr: secgroup_rule_cidr
   - group_id: group_id
 
 .. TODO(sdague): we currently have no samples here
@@ -43,18 +43,23 @@ Request
 Response
 --------
 
+The ``group`` is empty if ``group_id`` was not provided on the request.
+
+The ``ip_range`` is empty if ``cidr`` was not provided on the request.
+
 .. rest_parameters:: parameters.yaml
 
   - security_group_rule: security_group_rule
   - ip_protocol: ip_protocol
   - from_port: from_port
   - to_port: to_port
-  - ip_range: ip_range
-  - cidr: cidr
-  - id: id
+  - ip_range: secgroup_rule_ip_range
+  - cidr: secgroup_rule_cidr
+  - id: secgroup_rule_id
   - group: group
   - parent_group_id: parent_group_id
   - name: name
+  - tenant_id: secgroup_tenant_id_body
 
 .. TODO(sdague): we currently have no samples here
    **Example Create security group rule: JSON response**
