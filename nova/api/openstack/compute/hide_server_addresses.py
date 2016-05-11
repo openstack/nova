@@ -15,21 +15,13 @@
 
 """Extension for hiding server addresses in certain states."""
 
-from oslo_config import cfg
-
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import vm_states
-
-opts = [
-    cfg.ListOpt('osapi_hide_server_address_states',
-                default=[vm_states.BUILDING],
-                help='List of instance states that should hide network info'),
-]
+import nova.conf
 
 
-CONF = cfg.CONF
-CONF.register_opts(opts)
+CONF = nova.conf.CONF
 
 ALIAS = 'os-hide-server-addresses'
 authorize = extensions.os_compute_soft_authorizer(ALIAS)

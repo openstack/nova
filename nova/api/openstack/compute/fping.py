@@ -17,7 +17,6 @@
 import itertools
 import os
 
-from oslo_config import cfg
 import six
 from webob import exc
 
@@ -25,6 +24,7 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+import nova.conf
 from nova.i18n import _
 from nova import utils
 
@@ -32,9 +32,7 @@ ALIAS = "os-fping"
 
 authorize = extensions.os_compute_authorizer(ALIAS)
 
-CONF = cfg.CONF
-CONF.import_opt('fping_path', 'nova.api.openstack.compute.legacy_v2.contrib.'
-                'fping')
+CONF = nova.conf.CONF
 
 
 class FpingController(wsgi.Controller):

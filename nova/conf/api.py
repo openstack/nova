@@ -72,10 +72,29 @@ osapi_opts = [
                     'to glance resources'),
 ]
 
+allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
+        default=True,
+        help='Permit instance snapshot operations.')
+
+# NOTE(edleafe): I should import the value directly from
+# nova.compute.vm_states, but that creates a circular import. Since this value
+# is not likely to be changed, I'm copy/pasting it here.
+BUILDING = "building"  # VM only exists in DB
+osapi_hide_opt = cfg.ListOpt('osapi_hide_server_address_states',
+                 default=[BUILDING],
+                 help='List of instance states that should hide network info')
+
+fping_path_opt = cfg.StrOpt("fping_path",
+                 default="/usr/sbin/fping",
+                 help="Full path to fping.")
+
 ALL_OPTS = (auth_opts +
             metadata_opts +
             [file_opt] +
             osapi_opts +
+            [allow_instance_snapshots_opt] +
+            [osapi_hide_opt] +
+            [fping_path_opt] +
             [])
 # Please note that final empty list in the line above is just to allow adding
 # additional options in later patches without changing the last line. Once they
@@ -87,6 +106,9 @@ def register_opts(conf):
     conf.register_opts(metadata_opts)
     conf.register_opt(file_opt)
     conf.register_opts(osapi_opts)
+    conf.register_opt(allow_instance_snapshots_opt)
+    conf.register_opt(osapi_hide_opt)
+    conf.register_opt(fping_path_opt)
 
 
 def list_opts():
