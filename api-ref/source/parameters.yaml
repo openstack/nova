@@ -1497,6 +1497,36 @@ limit_1:
   in: body
   required: true
   type: integer
+limits:
+  description: |
+    Data structure that contains both absolute limits within a deployment.
+  in: body
+  required: true
+  type: object
+limits_absolutes:
+  description: |
+    Name/value pairs that set quota limits within a deployment.
+  in: body
+  required: true
+  type: object
+limits_rate_regex:
+  description: |
+    A regular expression defining the URI path to apply the limit to.
+  in: body
+  required: true
+  type: string
+limits_rate_uri:
+  description: |
+    A human readable URI that is used as a friendly description of where the api rate limit is applied.
+  in: body
+  required: true
+  type: string
+limits_rates:
+  description: |
+    An empty list for backwards compatibility purposes.
+  in: body
+  required: true
+  type: array
 links:
   description: |
     Links to the resources in question. See `API Guide / Links and
