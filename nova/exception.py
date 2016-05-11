@@ -1339,6 +1339,10 @@ class MigrationPreCheckError(MigrationError):
     msg_fmt = _("Migration pre-check error: %(reason)s")
 
 
+class MigrationPreCheckClientException(MigrationError):
+    msg_fmt = _("Client exception during Migration Pre check: %(reason)s")
+
+
 class MigrationSchedulerRPCError(MigrationError):
     msg_fmt = _("Migration select destinations error: %(reason)s")
 
