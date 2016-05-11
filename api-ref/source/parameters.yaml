@@ -868,6 +868,13 @@ confirmResize:
   in: body
   required: true
   type: string
+console_output:
+  in: body
+  required: true
+  type: string
+  description: |
+    The console output as a string. Control characters will be escaped
+    to create a valid json string.
 cores:
   description: |
     The number of allowed instance cores for each tenant.
@@ -1378,7 +1385,8 @@ key_pairs_1:
   type: integer
 length:
   description: |
-    The number of lines to fetch from the end of console log. ``-1`` indicates unlimited.
+    The number of lines to fetch from the end of console log. All
+    lines will be returned if this is not specified.
   in: body
   required: false
   type: string
