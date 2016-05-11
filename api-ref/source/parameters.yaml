@@ -859,7 +859,12 @@ cidr:
   type: string
 code:
   description: |
-    The HTTP response code for the event.
+    The HTTP response code for the event. The following codes are currently used:
+
+      * 200 - successfully submitted event
+      * 404 - the instance specified by ``server_uuid`` was not found
+      * 422 - no host was found for the server specified by ``server_uuid``,
+         so there is no route to this server.
   in: body
   required: true
   type: string
@@ -1010,6 +1015,26 @@ evacuate:
     Specify the ``evacuate`` action in the request body.
   in: body
   required: true
+  type: string
+event_name:
+  description: |
+    The event name. A valid value is ``network-changed``, ``network-vif-plugged``,
+    ``network-vif-unplugged``, or ``network-vif-deleted``.
+  in: body
+  required: true
+  type: string
+event_status:
+  description: |
+    The event status. A valid value is ``failed``, ``completed``, or ``in-progress``.
+    Default is ``completed``.
+  in: body
+  required: false
+  type: string
+event_tag:
+  description: |
+    A string value that identifies the event.
+  in: body
+  required: false
   type: string
 events:
   description: |
@@ -1607,13 +1632,6 @@ name_10:
   in: body
   required: true
   type: string
-name_2:
-  description: |
-    The event name. A valid value is ``network- changed``, ``network- vif-plugged``,
-    ``network-vif-unplugged``, or ``network-vif- deleted``.
-  in: body
-  required: true
-  type: string
 name_3:
   description: |
     The name to associate with the keypair.
@@ -2152,6 +2170,12 @@ service_state:
   type: string
   description: |
     The state of the service. One of ``up`` or ``down``.
+service_status:
+  in: body
+  required: true
+  type: string
+  description: |
+    The status of the service. One of ``enabled`` or ``disabled``.
 shelve:
   description: |
     The action.
@@ -2195,13 +2219,6 @@ source_type:
   in: body
   required: true
   type: string
-status:
-  description: |
-    The event status. A valid value is ``failed``, ``completed``, or ``in-progress``.
-    Default is ``completed``.
-  in: body
-  required: false
-  type: string
 server_status:
   description: |
     The server status.
@@ -2213,12 +2230,6 @@ suspend:
     The action.
   in: body
   required: true
-  type: string
-tag:
-  description: |
-    A string value that identifies the event.
-  in: body
-  required: false
   type: string
 tenant_id_body:
   description: |
