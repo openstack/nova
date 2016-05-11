@@ -25,6 +25,7 @@ from nova import context
 from nova import exception
 from nova.objects import block_device as objects_block_dev
 from nova.objects import migrate_data as migrate_data_obj
+from nova.objects import migration as migration_obj
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
@@ -305,9 +306,45 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 migrate_data={}, version='4.8')
 
     def test_live_migration_force_complete(self):
-        self._test_compute_api('live_migration_force_complete', 'cast',
-                instance=self.fake_instance_obj,
-                migration_id='1', version='4.9')
+        migration = migration_obj.Migration()
+        migration.id = 1
+        migration.source_compute = 'fake'
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        version = '4.12'
+        rpcapi = compute_rpcapi.ComputeAPI()
+        mock_client = mock.MagicMock()
+        rpcapi.client = mock_client
+        mock_client.can_send_version.return_value = True
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.live_migration_force_complete(ctxt, self.fake_instance_obj,
+                                             migration)
+        mock_client.prepare.assert_called_with(server=migration.source_compute,
+                                               version=version)
+        mock_cctx.cast.assert_called_with(ctxt,
+                                          'live_migration_force_complete',
+                                          instance=self.fake_instance_obj)
+
+    def test_live_migration_force_complete_backward_compatibility(self):
+        migration = migration_obj.Migration()
+        migration.id = 1
+        migration.source_compute = 'fake'
+        version = '4.9'
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        mock_client = mock.MagicMock()
+        rpcapi.client = mock_client
+        mock_client.can_send_version.return_value = False
+        mock_cctx = mock.MagicMock()
+        mock_client.prepare.return_value = mock_cctx
+        rpcapi.live_migration_force_complete(ctxt, self.fake_instance_obj,
+                                             migration)
+        mock_client.prepare.assert_called_with(server=migration.source_compute,
+                                               version=version)
+        mock_cctx.cast.assert_called_with(ctxt,
+                                          'live_migration_force_complete',
+                                          instance=self.fake_instance_obj,
+                                          migration_id=migration.id)
 
     def test_live_migration_abort(self):
         self._test_compute_api('live_migration_abort', 'cast',

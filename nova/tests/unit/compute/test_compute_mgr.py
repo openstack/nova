@@ -4637,23 +4637,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _do_test()
 
-    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
-    def test_live_migration_pause_vm_invalid_migration_state(
-            self, add_instance_fault_from_exc):
-
-        instance = objects.Instance(id=1234, uuid=str(uuid.uuid4()))
-        migration = objects.Migration()
-        migration.status = 'aborted'
-        migration.id = 0
-
-        @mock.patch.object(objects.Migration, 'get_by_id',
-                           return_value=migration)
-        def _do_test(get_by_id):
-            self.assertRaises(exception.InvalidMigrationState,
-                              self.compute.live_migration_force_complete,
-                              self.context, instance, migration.id)
-        _do_test()
-
     def test_post_live_migration_at_destination_success(self):
 
         @mock.patch.object(self.instance, 'save')

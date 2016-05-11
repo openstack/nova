@@ -499,7 +499,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.11')
+    target = messaging.Target(version='4.12')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5158,23 +5158,21 @@ class ComputeManager(manager.Manager):
                       block_migration, migration,
                       migrate_data)
 
+    # TODO(tdurakov): migration_id is used since 4.12 rpc api version
+    # remove migration_id parameter when the compute RPC version
+    # is bumped to 5.x.
     @wrap_exception()
     @wrap_instance_event
     @wrap_instance_fault
-    def live_migration_force_complete(self, context, instance, migration_id):
+    def live_migration_force_complete(self, context, instance,
+                                      migration_id=None):
         """Force live migration to complete.
 
         :param context: Security context
         :param instance: The instance that is being migrated
-        :param migration_id: ID of ongoing migration
-
+        :param migration_id: ID of ongoing migration; is currently not used,
+        and isn't removed for backward compatibility
         """
-        migration = objects.Migration.get_by_id(context, migration_id)
-        if migration.status != 'running':
-            raise exception.InvalidMigrationState(migration_id=migration_id,
-                                                  instance_uuid=instance.uuid,
-                                                  state=migration.status,
-                                                  method='force complete')
 
         self._notify_about_instance_usage(
             context, instance, 'live.migration.force.complete.start')

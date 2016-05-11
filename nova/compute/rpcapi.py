@@ -310,6 +310,8 @@ class ComputeAPI(object):
         ... Mitaka supports messaging version 4.11. So, any changes to
         existing methods in 4.x after that point should be done so that they
         can handle the version_cap being set to 4.11
+
+        * 4.12 - Remove migration_id from live_migration_force_complete
     '''
 
     VERSION_ALIASES = {
@@ -634,12 +636,16 @@ class ComputeAPI(object):
                    dest=dest, block_migration=block_migration,
                    migrate_data=migrate_data, **args)
 
-    def live_migration_force_complete(self, ctxt, instance, migration_id):
-        version = '4.9'
-        cctxt = self.client.prepare(server=_compute_host(None, instance),
-                version=version)
+    def live_migration_force_complete(self, ctxt, instance, migration):
+        version = '4.12'
+        kwargs = {}
+        if not self.client.can_send_version(version):
+            version = '4.9'
+            kwargs['migration_id'] = migration.id
+        cctxt = self.client.prepare(server=_compute_host(
+            migration.source_compute, instance), version=version)
         cctxt.cast(ctxt, 'live_migration_force_complete', instance=instance,
-                   migration_id=migration_id)
+                   **kwargs)
 
     def live_migration_abort(self, ctxt, instance, migration_id):
         version = '4.10'
