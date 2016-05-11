@@ -3321,6 +3321,12 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    def test_create_instance_invalid_availability_zone(self):
+        self.body['server']['availability_zone'] = 'invalid::::zone'
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
     @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.FixedIpNotFoundForAddress(
                         address='dummy'))
