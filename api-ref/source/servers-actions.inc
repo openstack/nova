@@ -8,7 +8,7 @@
  Servers - run an action (servers, action)
 ===========================================
 
-Enables all users to performs an action on a server. Specify the action
+Enables all users to perform an action on a server. Specify the action
 in the request body.
 
 You can associate a fixed or floating IP address with a server instance,
