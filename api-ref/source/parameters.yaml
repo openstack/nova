@@ -552,6 +552,24 @@ user_id_1:
   in: query
   required: false
   type: string
+user_id_query_quota:
+  description: |
+    ID of user to list the quotas for.
+  in: query
+  required: false
+  type: string
+user_id_query_quota_delete:
+  description: |
+    ID of user to delete quotas for.
+  in: query
+  required: false
+  type: string
+user_id_query_set_quota:
+  description: |
+    ID of user to set the quotas for.
+  in: query
+  required: false
+  type: string
 
 # variables in body
 accessIPv4:
@@ -791,7 +809,14 @@ cores:
   in: body
   required: true
   type: integer
-cores_1:
+cores_quota_details:
+  description: |
+    The object of detailed cores quota, including in_use, limit and
+    reserved number of cores.
+  in: body
+  required: true
+  type: object
+cores_quota_optional:
   description: |
     The number of allowed instance cores for each tenant.
   in: body
@@ -1006,14 +1031,21 @@ fixed_ips_1:
   in: body
   required: true
   type: array
-fixed_ips_2:
+fixed_ips_quota:
   description: |
     The number of allowed fixed IP addresses for each tenant. Must be equal to or
     greater than the number of allowed instances.
   in: body
   required: true
   type: integer
-fixed_ips_3:
+fixed_ips_quota_details:
+  description: |
+    The object of detailed fixed ips quota, including in_use, limit and
+    reserved number of fixed ips.
+  in: body
+  required: true
+  type: object
+fixed_ips_quota_optional:
   description: |
     The number of allowed fixed IP addresses for each tenant. Must be equal to or
     greater than the number of allowed instances.
@@ -1051,7 +1083,14 @@ floating_ips:
   in: body
   required: true
   type: integer
-floating_ips_1:
+floating_ips_quota_details:
+  description: |
+    The object of detailed floating ips quota, including in_use, limit and
+    reserved number of floating ips.
+  in: body
+  required: true
+  type: object
+floating_ips_quota_optional:
   description: |
     The number of allowed floating IP addresses for each tenant.
   in: body
@@ -1305,7 +1344,15 @@ injected_file_content_bytes:
   in: body
   required: true
   type: integer
-injected_file_content_bytes_1:
+injected_file_content_bytes_quota_details:
+  description: |
+    The object of detailed injected file content bytes quota,
+    including in_use, limit and reserved number of injected
+    file content bytes.
+  in: body
+  required: true
+  type: object
+injected_file_content_bytes_quota_optional:
   description: |
     The number of allowed bytes of content for each injected file.
   in: body
@@ -1317,7 +1364,15 @@ injected_file_path_bytes:
   in: body
   required: true
   type: integer
-injected_file_path_bytes_1:
+injected_file_path_bytes_quota_details:
+  description: |
+    The object of detailed injected file path bytes quota,
+    including in_use, limit and reserved number of injected
+    file path bytes.
+  in: body
+  required: true
+  type: object
+injected_file_path_bytes_quota_optional:
   description: |
     The number of allowed bytes for each injected file path.
   in: body
@@ -1329,7 +1384,14 @@ injected_files:
   in: body
   required: true
   type: integer
-injected_files_1:
+injected_files_quota_details:
+  description: |
+    The object of detailed injected files quota, including in_use, limit and
+    reserved number of injected files.
+  in: body
+  required: true
+  type: object
+injected_files_quota_optional:
   description: |
     The number of allowed injected files for each tenant.
   in: body
@@ -1347,7 +1409,14 @@ instances:
   in: body
   required: true
   type: integer
-instances_1:
+instances_quota_details:
+  description: |
+    The object of detailed instances quota, including in_use, limit and
+    reserved number of instances.
+  in: body
+  required: true
+  type: object
+instances_quota_optional:
   description: |
     The number of allowed instances for each tenant.
   in: body
@@ -1402,7 +1471,14 @@ key_pairs:
   in: body
   required: true
   type: integer
-key_pairs_1:
+key_pairs_quota_details:
+  description: |
+    The object of detailed key pairs quota, including in_use, limit and
+    reserved number of key pairs.
+  in: body
+  required: true
+  type: object
+key_pairs_quota_optional:
   description: |
     The number of allowed key pairs for each user.
   in: body
@@ -1499,7 +1575,14 @@ metadata_items:
   in: body
   required: true
   type: integer
-metadata_items_1:
+metadata_items_quota_details:
+  description: |
+    The object of detailed key metadata items quota, including in_use,
+    limit and reserved number of metadata items.
+  in: body
+  required: true
+  type: object
+metadata_items_quota_optional:
   description: |
     The number of allowed metadata items for each instance.
   in: body
@@ -1912,13 +1995,26 @@ quota_set:
   in: body
   required: true
   type: string
+quota_tenant_or_user_id_body:
+  description: |
+    The UUID of the tenant/user the quotas listed for.
+  in: body
+  required: true
+  type: string
 ram:
   description: |
     The amount of allowed instance RAM, in MB, for each tenant.
   in: body
   required: true
   type: integer
-ram_1:
+ram_quota_details:
+  description: |
+    The object of detailed key ram quota, including in_use,
+    limit and reserved number of ram.
+  in: body
+  required: true
+  type: object
+ram_quota_optional:
   description: |
     The amount of allowed instance RAM, in MB, for each tenant.
   in: body
@@ -2077,6 +2173,19 @@ security_group_rules:
   in: body
   required: false
   type: integer
+security_group_rules_quota:
+  description: |
+    The number of allowed rules for each security group.
+  in: body
+  required: true
+  type: integer
+security_group_rules_quota_details:
+  description: |
+    The object of detailed security group rules quota, including in_use,
+    limit and reserved number of security group rules.
+  in: body
+  required: true
+  type: object
 security_groups:
   description: |
     One or more security groups. Specify the name of the security group in the ``name``
@@ -2085,24 +2194,31 @@ security_groups:
   in: body
   required: false
   type: array
-security_groups_1:
-  description: |
-    The number of allowed security groups for each tenant.
-  in: body
-  required: true
-  type: integer
-security_groups_3:
-  description: |
-    The number of allowed security groups for each tenant.
-  in: body
-  required: false
-  type: integer
 security_groups_obj:
   description: |
     Security groups object.
   in: body
   required: true
   type: array
+security_groups_quota:
+  description: |
+    The number of allowed security groups for each tenant.
+  in: body
+  required: true
+  type: integer
+security_groups_quota_details:
+  description: |
+    The object of detailed security groups, including in_use,
+    limit and reserved number of security groups.
+  in: body
+  required: true
+  type: object
+security_groups_quota_optional:
+  description: |
+    The number of allowed security groups for each tenant.
+  in: body
+  required: false
+  type: integer
 server:
   description: |
     server.
@@ -2130,7 +2246,14 @@ server_group_members:
   in: body
   required: true
   type: integer
-server_group_members_1:
+server_group_members_quota_details:
+  description: |
+    The object of detailed server group members, including in_use,
+    limit and reserved number of server group members.
+  in: body
+  required: true
+  type: object
+server_group_members_quota_optional:
   description: |
     The number of allowed members for each server group.
   in: body
@@ -2148,7 +2271,14 @@ server_groups_1:
   in: body
   required: true
   type: array
-server_groups_2:
+server_groups_quota_details:
+  description: |
+    The object of detailed server groups, including in_use,
+    limit and reserved number of server groups.
+  in: body
+  required: true
+  type: object
+server_groups_quota_optional:
   description: |
     The number of allowed server groups for each tenant.
   in: body
