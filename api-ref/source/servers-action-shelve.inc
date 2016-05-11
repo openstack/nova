@@ -1,9 +1,8 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
-.. needs:body_verification
 
-Shelve Server (Shelve Action)
+
+Shelve Server (shelve Action)
 =============================
 
 .. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
@@ -45,15 +44,21 @@ Request
   - server_id: server_id
   - shelve: shelve
 
-**Example Shelve server: JSON request**
+|
+
+**Example Shelve server (shelve Action):**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-shelve.json
    :language: javascript
 
+
 Response
 --------
 
-Shelf-Offload (Remove) Server (Shelveoffload Action)
+No body is returned on successful request.
+
+
+Shelf-Offload (Remove) Server (shelveOffload Action)
 ====================================================
 
 .. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
@@ -93,15 +98,21 @@ Request
   - server_id: server_id
   - shelveOffload: shelveOffload
 
-**Example Shelve server: JSON request**
+|
+
+**Example Shelf-Offload server (shelveOffload Action)**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-shelve-offload.json
    :language: javascript
 
+
 Response
 --------
 
-Unshelve (Restore) Shelved Server (Unshelve Action)
+No body is returned on successful request.
+
+
+Unshelve (Restore) Shelved Server (unshelve Action)
 ===================================================
 
 .. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
@@ -141,11 +152,15 @@ Request
   - server_id: server_id
   - unshelve: unshelve
 
-**Example Unshelve server: JSON request**
+|
+
+**Example Unshelve server (unshelve Action):**
 
 .. literalinclude:: ../../doc/api_samples/os-shelve/os-unshelve.json
    :language: javascript
 
+
 Response
 --------
 
+No body is returned on successful request.
