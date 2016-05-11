@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:method_verification
 .. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
@@ -23,8 +22,7 @@ Creates an assisted volume snapshot.
 
 Normal response codes: 200
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400),unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -70,8 +68,8 @@ DELETE /os-assisted-volume-snapshots?delete_info='{"volume_id": "521752a6-acf6-4
 
 Normal response codes: 204
 
-Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
-unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404)
 
 Request
 -------
