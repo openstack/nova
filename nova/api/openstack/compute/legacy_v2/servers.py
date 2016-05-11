@@ -18,7 +18,6 @@ import base64
 import re
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import netutils
@@ -43,17 +42,7 @@ from nova import policy
 from nova import utils
 
 
-server_opts = [
-    cfg.BoolOpt('enable_instance_password',
-                default=True,
-                help='Enables returning of the instance password by the'
-                     ' relevant server API calls such as create, rebuild'
-                     ' or rescue, If the hypervisor does not support'
-                     ' password injection then the password returned will'
-                     ' not be correct'),
-]
 CONF = nova.conf.CONF
-CONF.register_opts(server_opts)
 
 LOG = logging.getLogger(__name__)
 

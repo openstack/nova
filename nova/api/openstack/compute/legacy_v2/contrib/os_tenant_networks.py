@@ -15,13 +15,13 @@
 
 import netaddr
 import netaddr.core as netexc
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 import webob
 from webob import exc
 
 from nova.api.openstack import extensions
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -30,25 +30,7 @@ import nova.network
 from nova import quota
 
 
-CONF = cfg.CONF
-
-os_network_opts = [
-    cfg.BoolOpt("enable_network_quota",
-                default=False,
-                help='Enables or disables quota checking for tenant '
-                     'networks'),
-    cfg.StrOpt('use_neutron_default_nets',
-                     default="False",
-                     help='Control for checking for default networks'),
-    cfg.StrOpt('neutron_default_tenant_id',
-                     default="default",
-                     help='Default tenant id when creating neutron '
-                          'networks'),
-    cfg.IntOpt('quota_networks',
-               default=3,
-               help='Number of private networks allowed per project'),
-]
-CONF.register_opts(os_network_opts)
+CONF = nova.conf.CONF
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
