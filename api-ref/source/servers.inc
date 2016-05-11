@@ -524,6 +524,7 @@ Response
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - fault: fault
 
 **Example Show Server Details: JSON response**
 
