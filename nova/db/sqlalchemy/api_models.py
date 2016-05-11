@@ -74,9 +74,11 @@ class Aggregate(API_BASE):
     uuid = Column(String(36))
     name = Column(String(255))
     _hosts = orm.relationship(AggregateHost,
-                    primaryjoin='Aggregate.id == AggregateHost.aggregate_id')
+                    primaryjoin='Aggregate.id == AggregateHost.aggregate_id',
+                    cascade='delete')
     _metadata = orm.relationship(AggregateMetadata,
-                primaryjoin='Aggregate.id == AggregateMetadata.aggregate_id')
+                primaryjoin='Aggregate.id == AggregateMetadata.aggregate_id',
+                cascade='delete')
 
     @property
     def _extra_keys(self):

@@ -110,25 +110,30 @@ class _TestAggregateObject(object):
         self.assertEqual(fake_aggregate['id'], agg.id)
         self.assertFalse(get_by_uuid.called)
 
-    @mock.patch.object(db, 'aggregate_create')
-    def test_create(self, mock_aggregate_create):
-        mock_aggregate_create.return_value = fake_aggregate
-
+    @mock.patch('nova.objects.aggregate._aggregate_create_in_db')
+    @mock.patch('nova.db.aggregate_create')
+    def test_create(self, create_mock, api_create_mock):
+        api_create_mock.return_value = fake_aggregate
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
         agg.uuid = uuidsentinel.fake_agg
         agg.create()
+        api_create_mock.assert_called_once_with(
+                self.context,
+                {'name': 'foo', 'uuid': uuidsentinel.fake_agg},
+                metadata={'one': 'two'})
+        self.assertFalse(create_mock.called)
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
-        mock_aggregate_create.assert_called_once_with(self.context,
+        api_create_mock.assert_called_once_with(self.context,
             {'name': 'foo', 'uuid': uuidsentinel.fake_agg},
             metadata={'one': 'two'})
 
+    @mock.patch('nova.objects.aggregate._aggregate_create_in_db')
     @mock.patch.object(db, 'aggregate_create')
-    def test_recreate_fails(self, mock_aggregate_create):
-        mock_aggregate_create.return_value = fake_aggregate
-
+    def test_recreate_fails(self, create_mock, api_create_mock):
+        api_create_mock.return_value = fake_aggregate
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
@@ -136,9 +141,29 @@ class _TestAggregateObject(object):
         agg.create()
         self.assertRaises(exception.ObjectActionError, agg.create)
 
-        mock_aggregate_create.assert_called_once_with(self.context,
+        api_create_mock.assert_called_once_with(self.context,
             {'name': 'foo', 'uuid': uuidsentinel.fake_agg},
             metadata={'one': 'two'})
+
+    @mock.patch('nova.objects.aggregate._aggregate_delete_from_db')
+    @mock.patch('nova.db.aggregate_delete')
+    def test_destroy(self, delete_mock, api_delete_mock):
+        agg = aggregate.Aggregate(context=self.context)
+        agg.id = 123
+        agg.destroy()
+        self.assertFalse(delete_mock.called)
+        api_delete_mock.assert_called_with(self.context, 123)
+
+    @mock.patch('nova.objects.aggregate._aggregate_delete_from_db')
+    @mock.patch('nova.db.aggregate_delete')
+    def test_destroy_cell(self, delete_mock, api_delete_mock):
+        api_delete_mock.side_effect = exception.AggregateNotFound(
+                                                            aggregate_id=123)
+        agg = aggregate.Aggregate(context=self.context)
+        agg.id = 123
+        agg.destroy()
+        delete_mock.assert_called_with(self.context, 123)
+        api_delete_mock.assert_called_with(self.context, 123)
 
     @mock.patch('nova.objects.aggregate._aggregate_update_to_db')
     @mock.patch('nova.db.aggregate_update')
@@ -258,14 +283,6 @@ class _TestAggregateObject(object):
         mock_api_metadata_add.assert_called_once_with(self.context,
                                                       123,
                                                       {'toadd': 'myval'})
-
-    @mock.patch.object(db, 'aggregate_delete')
-    def test_destroy(self, mock_aggregate_delete):
-        agg = aggregate.Aggregate(context=self.context)
-        agg.id = 123
-        agg.destroy()
-
-        mock_aggregate_delete.assert_called_once_with(self.context, 123)
 
     @mock.patch.object(db, 'aggregate_host_add')
     def test_add_host(self, mock_host_add):

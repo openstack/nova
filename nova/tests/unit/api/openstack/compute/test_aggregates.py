@@ -154,6 +154,17 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                      {"name": "test",
                                       "availability_zone": "nova1"}})
 
+    @mock.patch.object(compute_api.AggregateAPI, 'create_aggregate')
+    def test_create_with_unmigrated_aggregates(self, mock_create_aggregate):
+        mock_create_aggregate.side_effect = \
+                exception.ObjectActionError(action='create',
+                    reason='main database still contains aggregates')
+
+        self.assertRaises(exc.HTTPConflict, self.controller.create,
+                          self.req, body={"aggregate":
+                                     {"name": "test",
+                                      "availability_zone": "nova1"}})
+
     def test_create_with_incorrect_availability_zone(self):
         def stub_create_aggregate(context, name, availability_zone):
             raise exception.InvalidAggregateAction(action='create_aggregate',

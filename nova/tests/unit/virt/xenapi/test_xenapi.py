@@ -3032,10 +3032,10 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         aggregate = self._aggregate_setup()
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host")
-        result = db.aggregate_get(self.context, aggregate.id)
+        result = objects.Aggregate.get_by_id(self.context, aggregate.id)
         self.assertTrue(fake_init_pool.called)
         self.assertThat(self.fake_metadata,
-                        matchers.DictMatches(result['metadetails']))
+                        matchers.DictMatches(result.metadata))
 
     def test_join_slave(self):
         # Ensure join_slave gets called when the request gets to master.
@@ -3111,12 +3111,12 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         aggregate = self._aggregate_setup(metadata=self.fake_metadata)
         self.conn._pool.remove_from_aggregate(self.context, aggregate, "host")
-        result = db.aggregate_get(self.context, aggregate.id)
+        result = objects.Aggregate.get_by_id(self.context, aggregate.id)
         self.assertTrue(fake_clear_pool.called)
         self.assertThat({'availability_zone': 'fake_zone',
                 pool_states.POOL_FLAG: 'XenAPI',
                 pool_states.KEY: pool_states.ACTIVE},
-                matchers.DictMatches(result['metadetails']))
+                matchers.DictMatches(result.metadata))
 
     def test_remote_master_non_empty_pool(self):
         # Ensure AggregateError is raised if removing the master.
@@ -3183,7 +3183,9 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         # let's mock the fact that the aggregate is ready!
         metadata = {pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.ACTIVE}
-        db.aggregate_metadata_add(self.context, aggr.id, metadata)
+        self.api.update_aggregate_metadata(self.context,
+                                           aggr.id,
+                                           metadata)
         for aggregate_host in values[fake_zone]:
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr.id, aggregate_host)

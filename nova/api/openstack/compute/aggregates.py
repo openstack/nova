@@ -71,6 +71,9 @@ class AggregateController(wsgi.Controller):
             aggregate = self.api.create_aggregate(context, name, avail_zone)
         except exception.AggregateNameExists as e:
             raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.ObjectActionError:
+            raise exc.HTTPConflict(explanation=_(
+                'Not all aggregates have been migrated to the API database'))
         except exception.InvalidAggregateAction as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
