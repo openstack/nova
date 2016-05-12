@@ -13,7 +13,6 @@
 import itertools
 
 import nova.virt.libvirt.volume.remotefs
-import nova.virt.libvirt.volume.scality
 import nova.virt.libvirt.volume.smbfs
 import nova.virt.xenapi.agent
 import nova.virt.xenapi.vmops
@@ -24,7 +23,6 @@ def list_opts():
         ('libvirt',
          itertools.chain(
              nova.virt.libvirt.volume.remotefs.libvirt_opts,
-             nova.virt.libvirt.volume.scality.volume_opts,
              nova.virt.libvirt.volume.smbfs.volume_opts,
          )),
     ]
