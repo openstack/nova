@@ -152,6 +152,7 @@ class FakeDriver(driver.ComputeDriver):
           }
         self._mounts = {}
         self._interfaces = {}
+        self.active_migrations = {}
         if not _FAKE_NODES:
             set_nodes([CONF.host])
 

@@ -26,6 +26,7 @@ Supports KVM, LXC, QEMU, UML, XEN and Parallels.
 """
 
 import collections
+from collections import deque
 import contextlib
 import errno
 import functools
@@ -370,6 +371,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._remotefs = remotefs.RemoteFilesystem()
 
         self._live_migration_flags = self._block_migration_flags = 0
+        self.active_migrations = {}
 
     def _get_volume_drivers(self):
         return libvirt_volume_drivers
@@ -5932,12 +5934,43 @@ class LibvirtDriver(driver.ComputeDriver):
                                 recover_method, block_migration,
                                 migrate_data, dom, finish_event,
                                 disk_paths):
+        on_migration_failure = deque()
         data_gb = self._live_migration_data_gb(instance, disk_paths)
         downtime_steps = list(self._migration_downtime_steps(data_gb))
         completion_timeout = int(
             CONF.libvirt.live_migration_completion_timeout * data_gb)
         progress_timeout = CONF.libvirt.live_migration_progress_timeout
         migration = migrate_data.migration
+
+        def _check_scheduled_migration_task():
+            tasks = self.active_migrations.get(instance.uuid, deque())
+            while tasks:
+                task = tasks.popleft()
+                if task == 'pause':
+                    try:
+                        self.pause(instance)
+                        on_migration_failure.append("unpause")
+                    except Exception as e:
+                        LOG.warning(_LW("Failed to pause instance during "
+                                        "live-migration %s"),
+                                    e, instance=instance)
+
+        def _recover_scheduled_migration_task():
+            while on_migration_failure:
+                task = on_migration_failure.popleft()
+                # NOTE(tdurakov): there is still possibility to leave
+                # instance paused in case of live-migration failure.
+                # This check guarantee that instance will be resumed
+                # in this case
+                if task == 'unpause':
+                    try:
+                        state = guest.get_power_state(self._host)
+                        if state == power_state.PAUSED:
+                            guest.resume()
+                    except Exception as e:
+                        LOG.warning(_LW("Failed to resume paused instance "
+                                        "before live-migration rollback %s"),
+                                    e, instance=instance)
 
         n = 0
         start = time.time()
@@ -5998,6 +6031,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # This is where we wire up calls to change live
                 # migration status. eg change max downtime, cancel
                 # the operation, change max bandwidth
+                _check_scheduled_migration_task()
                 now = time.time()
                 elapsed = now - start
                 abort = False
@@ -6026,6 +6060,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     except libvirt.libvirtError as e:
                         LOG.warning(_LW("Failed to abort migration %s"),
                                  e, instance=instance)
+                        self._clear_empty_migration(instance)
                         raise
 
                 # See if we need to increase the max downtime. We
@@ -6115,6 +6150,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Migration did not succeed
                 LOG.error(_LE("Migration operation has aborted"),
                           instance=instance)
+                _recover_scheduled_migration_task()
                 recover_method(context, instance, dest, block_migration,
                                migrate_data)
                 break
@@ -6122,6 +6158,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Migration was stopped by admin
                 LOG.warning(_LW("Migration operation was cancelled"),
                          instance=instance)
+                _recover_scheduled_migration_task()
                 recover_method(context, instance, dest, block_migration,
                                migrate_data, migration_status='cancelled')
                 break
@@ -6130,6 +6167,14 @@ class LibvirtDriver(driver.ComputeDriver):
                          info.type, instance=instance)
 
             time.sleep(0.5)
+        self._clear_empty_migration(instance)
+
+    def _clear_empty_migration(self, instance):
+        try:
+            del self.active_migrations[instance.uuid]
+        except KeyError:
+            LOG.warning(_LW("There are no records in active migrations "
+                            "for instance"), instance=instance)
 
     def _live_migration(self, context, instance, dest, post_method,
                         recover_method, block_migration,
@@ -6175,6 +6220,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                      device_names)
 
         finish_event = eventlet.event.Event()
+        self.active_migrations[instance.uuid] = deque()
 
         def thread_finished(thread, event):
             LOG.debug("Migration operation thread notification",
@@ -6204,7 +6250,11 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(pkoniszewski): currently only pause during live migration is
         # supported to force live migration to complete, so just try to pause
         # the instance
-        self.pause(instance)
+        try:
+            self.active_migrations[instance.uuid].append('pause')
+        except KeyError:
+            raise exception.NoActiveMigrationForInstance(
+                instance_id=instance.uuid)
 
     def _try_fetch_image(self, context, path, image_id, instance,
                          fallback_from_host=None):
