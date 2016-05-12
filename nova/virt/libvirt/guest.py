@@ -33,11 +33,13 @@ from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
+import time
 
 from nova.compute import power_state
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
+from nova.i18n import _LW
 from nova import utils
 from nova.virt import hardware
 from nova.virt.libvirt import compat
@@ -145,6 +147,46 @@ class Guest(object):
         """Stops a running guest."""
         self._domain.destroy()
 
+    def _sync_guest_time(self):
+        """Try to set VM time to the current value.  This is typically useful
+        when clock wasn't running on the VM for some time (e.g. during
+        suspension or migration), especially if the time delay exceeds NTP
+        tolerance.
+
+        It is not guaranteed that the time is actually set (it depends on guest
+        environment, especially QEMU agent presence) or that the set time is
+        very precise (NTP in the guest should take care of it if needed).
+        """
+        t = time.time()
+        seconds = int(t)
+        nseconds = int((t - seconds) * 10 ** 9)
+        try:
+            self._domain.setTime(time={'seconds': seconds,
+                                       'nseconds': nseconds})
+        except libvirt.libvirtError as e:
+            code = e.get_error_code()
+            if code == libvirt.VIR_ERR_AGENT_UNRESPONSIVE:
+                LOG.debug('Failed to set time: QEMU agent unresponsive',
+                          instance_uuid=self.uuid)
+            elif code == libvirt.VIR_ERR_NO_SUPPORT:
+                LOG.debug('Failed to set time: not supported',
+                          instance_uuid=self.uuid)
+            elif code == libvirt.VIR_ERR_ARGUMENT_UNSUPPORTED:
+                LOG.debug('Failed to set time: agent not configured',
+                          instance_uuid=self.uuid)
+            else:
+                LOG.warning(_LW('Failed to set time: %(reason)s'),
+                            {'reason': e}, instance_uuid=self.uuid)
+        except Exception as ex:
+            # The highest priority is not to let this method crash and thus
+            # disrupt its caller in any way.  So we swallow this error here,
+            # to be absolutely safe.
+            LOG.debug('Failed to set time: %(reason)s',
+                      {'reason': ex}, instance_uuid=self.uuid)
+        else:
+            LOG.debug('Time updated to: %d.%09d', seconds, nseconds,
+                      instance_uuid=self.uuid)
+
     def inject_nmi(self):
         """Injects an NMI to a guest."""
         self._domain.injectNMI()
@@ -152,6 +194,7 @@ class Guest(object):
     def resume(self):
         """Resumes a suspended guest."""
         self._domain.resume()
+        self._sync_guest_time()
 
     def enable_hairpin(self):
         """Enables hairpin mode for this guest."""

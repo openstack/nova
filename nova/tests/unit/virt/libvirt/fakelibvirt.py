@@ -124,7 +124,8 @@ VIR_ERR_INTERNAL_ERROR = 950
 VIR_ERR_CONFIG_UNSUPPORTED = 951
 VIR_ERR_NO_NODE_DEVICE = 667
 VIR_ERR_NO_SECRET = 66
-
+VIR_ERR_AGENT_UNRESPONSIVE = 86
+VIR_ERR_ARGUMENT_UNSUPPORTED = 74
 # Readonly
 VIR_CONNECT_RO = 1
 
@@ -562,6 +563,9 @@ class Domain(object):
 
     def blockStats(self, device):
         return [2, 10000242400, 234, 2343424234, 34]
+
+    def setTime(self, time=None, flags=0):
+        pass
 
     def suspend(self):
         self._state = VIR_DOMAIN_PAUSED
