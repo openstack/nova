@@ -64,7 +64,6 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
-CONF.import_opt('network_topic', 'nova.network.rpcapi')
 
 
 class RPCAllocateFixedIP(object):

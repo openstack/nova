@@ -43,7 +43,6 @@ from nova.pci import whitelist as pci_whitelist
 
 CONF = nova.conf.CONF
 
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 LOG = logging.getLogger(__name__)
 
 soft_external_network_attach_authorize = extensions.soft_core_authorizer(

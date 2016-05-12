@@ -40,7 +40,6 @@ LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
 CONF = nova.conf.CONF
-CONF.import_opt('network_topic', 'nova.network.rpcapi')
 
 
 class FloatingIP(object):

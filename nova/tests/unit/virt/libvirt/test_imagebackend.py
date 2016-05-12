@@ -23,12 +23,12 @@ from castellan import key_manager
 import fixtures
 import mock
 from oslo_concurrency import lockutils
-from oslo_config import cfg
 from oslo_config import fixture as config_fixture
 from oslo_utils import imageutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
@@ -41,8 +41,7 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt.storage import rbd_utils
 
-CONF = cfg.CONF
-CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='key_manager')
+CONF = nova.conf.CONF
 
 
 class FakeSecret(object):
