@@ -333,6 +333,21 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         constr_columns = [constr['column_names'] for constr in constrs]
         self.assertNotIn(['request_spec_id'], constr_columns)
 
+    def _check_016(self, engine, data):
+        self.assertColumnExists(engine, 'resource_providers', 'id')
+        self.assertIndexExists(engine, 'resource_providers',
+                               'resource_providers_name_idx')
+        self.assertIndexExists(engine, 'resource_providers',
+                               'resource_providers_uuid_idx')
+
+        self.assertColumnExists(engine, 'inventories', 'id')
+        self.assertIndexExists(engine, 'inventories',
+                               'inventories_resource_class_id_idx')
+
+        self.assertColumnExists(engine, 'allocations', 'id')
+        self.assertColumnExists(engine, 'resource_provider_aggregates',
+                                'aggregate_id')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,

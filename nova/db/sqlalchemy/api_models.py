@@ -25,6 +25,7 @@ from sqlalchemy.orm import backref
 from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
+from sqlalchemy import Unicode
 
 from nova.db.sqlalchemy import types
 
@@ -216,3 +217,87 @@ class KeyPair(API_BASE):
     public_key = Column(Text())
     type = Column(Enum('ssh', 'x509', name='keypair_types'),
                   nullable=False, server_default='ssh')
+
+
+class ResourceProvider(API_BASE):
+    """Represents a mapping to a providers of resources."""
+
+    __tablename__ = "resource_providers"
+    __table_args__ = (
+        Index('resource_providers_uuid_idx', 'uuid'),
+        schema.UniqueConstraint('uuid',
+            name='uniq_resource_providers0uuid'),
+        Index('resource_providers_name_idx', 'name'),
+        schema.UniqueConstraint('name',
+            name='uniq_resource_providers0name')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    uuid = Column(String(36), nullable=False)
+    name = Column(Unicode(200), nullable=True)
+    generation = Column(Integer, default=0)
+    can_host = Column(Integer, default=0)
+
+
+class Inventory(API_BASE):
+    """Represents a quantity of available resource."""
+
+    __tablename__ = "inventories"
+    __table_args__ = (
+        Index('inventories_resource_provider_id_idx',
+              'resource_provider_id'),
+        Index('inventories_resource_class_id_idx',
+              'resource_class_id'),
+        Index('inventories_resource_provider_resource_class_idx',
+              'resource_provider_id', 'resource_class_id'),
+        schema.UniqueConstraint('resource_provider_id', 'resource_class_id',
+            name='uniq_inventories0resource_provider_resource_class')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = Column(Integer, nullable=False)
+    resource_class_id = Column(Integer, nullable=False)
+    total = Column(Integer, nullable=False)
+    reserved = Column(Integer, nullable=False)
+    min_unit = Column(Integer, nullable=False)
+    max_unit = Column(Integer, nullable=False)
+    step_size = Column(Integer, nullable=False)
+    allocation_ratio = Column(Float, nullable=False)
+    resource_provider = orm.relationship(
+        "ResourceProvider",
+        primaryjoin=('and_(Inventory.resource_provider_id == '
+                     'ResourceProvider.id)'),
+        foreign_keys=resource_provider_id)
+
+
+class Allocation(API_BASE):
+    """A use of inventory."""
+
+    __tablename__ = "allocations"
+    __table_args__ = (
+        Index('allocations_resource_provider_class_used_idx',
+              'resource_provider_id', 'resource_class_id',
+              'used'),
+        Index('allocations_resource_class_id_idx',
+              'resource_class_id'),
+        Index('allocations_consumer_id_idx', 'consumer_id')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = Column(Integer, nullable=False)
+    consumer_id = Column(String(36), nullable=False)
+    resource_class_id = Column(Integer, nullable=False)
+    used = Column(Integer, nullable=False)
+
+
+class ResourceProviderAggregate(API_BASE):
+    """Assocate a resource provider with an aggregate."""
+
+    __tablename__ = 'resource_provider_aggregates'
+    __table_args__ = (
+        Index('resource_provider_aggregates_aggregate_id_idx',
+              'aggregate_id'),
+    )
+
+    resource_provider_id = Column(Integer, primary_key=True, nullable=False)
+    aggregate_id = Column(Integer, primary_key=True, nullable=False)
