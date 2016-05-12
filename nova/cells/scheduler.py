@@ -84,6 +84,9 @@ class CellsScheduler(base.Base):
         # FIXME(danms): Same for ec2_ids
         instance_values.pop('ec2_ids', None)
 
+        # FIXME(danms): Same for keypairs
+        instance_values.pop('keypairs', None)
+
         instances = []
         num_instances = len(instance_uuids)
         security_groups = (

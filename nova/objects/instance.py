@@ -466,7 +466,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             }
             updates['extra']['flavor'] = jsonutils.dumps(flavor_info)
         keypairs = updates.pop('keypairs', None)
-        if keypairs:
+        if keypairs is not None:
             expected_attrs.append('keypairs')
             updates['extra']['keypairs'] = jsonutils.dumps(
                 keypairs.obj_to_primitive())

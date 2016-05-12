@@ -842,6 +842,8 @@ class API(base.Base):
                                                    context.user_id,
                                                    key_name)
             key_data = key_pair.public_key
+        else:
+            key_pair = None
 
         root_device_name = block_device.prepend_dev(
                 block_device.properties_root_device_name(
@@ -908,7 +910,7 @@ class API(base.Base):
 
         # return the validated options and maximum number of instances allowed
         # by the network quotas
-        return base_options, max_network_count
+        return base_options, max_network_count, key_pair
 
     def _create_build_request(self, context, instance, base_options,
             request_spec, security_groups, num_instances, index):
@@ -947,7 +949,8 @@ class API(base.Base):
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
-            instance_group, check_server_group_quota, filter_properties):
+            instance_group, check_server_group_quota, filter_properties,
+            key_pair):
         # Reserve quotas
         num_instances, quotas = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -973,6 +976,9 @@ class API(base.Base):
                 instance = objects.Instance(context=context)
                 instance.uuid = instance_uuid
                 instance.update(base_options)
+                instance.keypairs = objects.KeyPairList(objects=[])
+                if key_pair:
+                    instance.keypairs.objects.append(key_pair)
                 instance = self.create_db_entry_for_new_instance(context,
                         instance_type, boot_meta, instance, security_groups,
                         block_device_mapping, num_instances, i,
@@ -1151,13 +1157,14 @@ class API(base.Base):
         self._check_auto_disk_config(image=boot_meta,
                                      auto_disk_config=auto_disk_config)
 
-        base_options, max_net_count = self._validate_and_build_base_options(
-                context, instance_type, boot_meta, image_href, image_id,
-                kernel_id, ramdisk_id, display_name, display_description,
-                key_name, key_data, security_groups, availability_zone,
-                user_data, metadata, access_ip_v4, access_ip_v6,
-                requested_networks, config_drive, auto_disk_config,
-                reservation_id, max_count)
+        base_options, max_net_count, key_pair = \
+                self._validate_and_build_base_options(
+                    context, instance_type, boot_meta, image_href, image_id,
+                    kernel_id, ramdisk_id, display_name, display_description,
+                    key_name, key_data, security_groups, availability_zone,
+                    user_data, metadata, access_ip_v4, access_ip_v6,
+                    requested_networks, config_drive, auto_disk_config,
+                    reservation_id, max_count)
 
         # max_net_count is the maximum number of instances requested by the
         # user adjusted for any network quota constraints, including
@@ -1187,7 +1194,8 @@ class API(base.Base):
         instances = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
                 block_device_mapping, shutdown_terminate,
-                instance_group, check_server_group_quota, filter_properties)
+                instance_group, check_server_group_quota, filter_properties,
+                key_pair)
 
         for instance in instances:
             self._record_action_start(context, instance,
