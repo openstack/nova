@@ -532,7 +532,7 @@ def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     instance = objects.Instance.get_by_uuid(
         ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache',
                                            'metadata', 'system_metadata',
-                                           'security_groups'])
+                                           'security_groups', 'keypairs'])
     return InstanceMetadata(instance, address)
 
 
