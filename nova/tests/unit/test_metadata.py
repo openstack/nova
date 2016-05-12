@@ -1232,7 +1232,7 @@ class MetadataHandlerTestCase(test.TestCase):
                          "have been called, the context was given")
         mock_uuid.assert_called_once_with('CONTEXT', 'foo',
             expected_attrs=['ec2_ids', 'flavor', 'info_cache', 'metadata',
-                            'system_metadata', 'security_groups'])
+                            'system_metadata', 'security_groups', 'keypairs'])
         imd.assert_called_once_with(inst, 'bar')
 
     @mock.patch.object(context, 'get_admin_context')
@@ -1249,7 +1249,7 @@ class MetadataHandlerTestCase(test.TestCase):
         mock_context.assert_called_once_with()
         mock_uuid.assert_called_once_with('CONTEXT', 'foo',
             expected_attrs=['ec2_ids', 'flavor', 'info_cache', 'metadata',
-                            'system_metadata', 'security_groups'])
+                            'system_metadata', 'security_groups', 'keypairs'])
         imd.assert_called_once_with(inst, 'bar')
 
 
