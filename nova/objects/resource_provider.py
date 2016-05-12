@@ -13,14 +13,14 @@
 from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
-from nova.db.sqlalchemy import models
+from nova.db.sqlalchemy import api_models as models
 from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
 
-@db_api.main_context_manager.writer
+@db_api.api_context_manager.writer
 def _create_rp_in_db(context, updates):
     db_rp = models.ResourceProvider()
     db_rp.update(updates)
@@ -28,7 +28,7 @@ def _create_rp_in_db(context, updates):
     return db_rp
 
 
-@db_api.main_context_manager.reader
+@db_api.api_context_manager.reader
 def _get_rp_by_uuid_from_db(context, uuid):
     result = context.session.query(models.ResourceProvider).filter_by(
         uuid=uuid).first()
@@ -129,7 +129,7 @@ class _HasAResourceProvider(base.NovaObject):
         return target
 
 
-@db_api.main_context_manager.writer
+@db_api.api_context_manager.writer
 def _create_inventory_in_db(context, updates):
     db_inventory = models.Inventory()
     db_inventory.update(updates)
@@ -137,7 +137,7 @@ def _create_inventory_in_db(context, updates):
     return db_inventory
 
 
-@db_api.main_context_manager.writer
+@db_api.api_context_manager.writer
 def _update_inventory_in_db(context, id_, updates):
     result = context.session.query(
         models.Inventory).filter_by(id=id_).update(updates)
@@ -199,7 +199,7 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db_api.main_context_manager.reader
+    @db_api.api_context_manager.reader
     def _get_all_by_resource_provider(context, rp_uuid):
         return context.session.query(models.Inventory).\
             options(joinedload('resource_provider')).\

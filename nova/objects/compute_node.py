@@ -297,28 +297,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                 pools = jsonutils.dumps(pools.obj_to_primitive())
             updates['pci_stats'] = pools
 
-    def _should_manage_inventory(self):
-        related_binaries = ['nova-api', 'nova-conductor', 'nova-scheduler']
-        required_version = 10
-        min_ver = objects.Service.get_minimum_version_multi(self._context,
-                                                            related_binaries)
-        return min_ver >= required_version
-
-    def _update_inventory(self, updates):
-        """Update inventory records from legacy model values
-
-        :param updates: Legacy model update dict which will be modified when
-                        we return
-        """
-        # NOTE(danms): Here we update our inventory records with our
-        # resource information. Since this information is prepared in
-        # updates against our older compute_node columns, we need to
-        # zero those values after we have updated the inventory
-        # records so that it is clear that they have been migrated.
-        # We return True or False here based on whether we found
-        # inventory records to update. If not, then we need to signal
-        # to our caller that _create_inventory() needs to be called
-        # instead
+    def update_inventory(self):
+        """Update inventory records from legacy model values."""
 
         inventory_list = \
             objects.InventoryList.get_all_by_resource_provider_uuid(
@@ -338,29 +318,21 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                             inventory.resource_class)
                 continue
 
-            if key in updates:
+            if key in self.obj_what_changed():
                 inventory.total = getattr(self, key)
-                updates[key] = 0
-
                 inventory.save()
+
         return True
 
-    def _create_inventory(self, updates):
+    def create_inventory(self):
         """Create the initial inventory objects for this compute node.
 
         This is only ever called once, either for the first time when a compute
         is created, or after an upgrade where the required services have
         reached the required version.
-
-        :param updates: Legacy model update dict which will be modified when
-                        we return
         """
         rp = objects.ResourceProvider(context=self._context, uuid=self.uuid)
         rp.create()
-
-        # NOTE(danms): Until we remove the columns from compute_nodes,
-        # we need to constantly zero out each value in our updates to
-        # signal that we wrote the value into inventory instead.
 
         cpu = objects.Inventory(context=self._context,
                                 resource_provider=rp,
@@ -372,7 +344,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                                 step_size=1,
                                 allocation_ratio=self.cpu_allocation_ratio)
         cpu.create()
-        updates['vcpus'] = 0
 
         mem = objects.Inventory(context=self._context,
                                 resource_provider=rp,
@@ -384,7 +355,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                                 step_size=1,
                                 allocation_ratio=self.ram_allocation_ratio)
         mem.create()
-        updates['memory_mb'] = 0
 
         # FIXME(danms): Eventually we want to not write this record
         # if the compute host is on shared storage. We'll need some
@@ -401,7 +371,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                                  step_size=1,
                                  allocation_ratio=self.disk_allocation_ratio)
         disk.create()
-        updates['local_gb'] = 0
 
     @base.remotable
     def create(self):
@@ -417,9 +386,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         self._convert_host_ip_to_db_format(updates)
         self._convert_supported_instances_to_db_format(updates)
         self._convert_pci_stats_to_db_format(updates)
-
-        if self._should_manage_inventory():
-            self._create_inventory(updates)
 
         db_compute = db.compute_node_create(self._context, updates)
         # NOTE(danms): compute_node_create() operates on (and returns) the
@@ -441,10 +407,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         self._convert_supported_instances_to_db_format(updates)
         self._convert_pci_stats_to_db_format(updates)
 
-        if self._should_manage_inventory():
-            if not self._update_inventory(updates):
-                # NOTE(danms): This only happens once
-                self._create_inventory(updates)
         db_compute = db.compute_node_update(self._context, self.id, updates)
         # NOTE(danms): compute_node_update() operates on (and returns) the
         # compute node model only. We need to get the full inventory-based
