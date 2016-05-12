@@ -17,12 +17,12 @@
 """Super simple fake memcache client."""
 
 from oslo_cache import core as cache
-from oslo_config import cfg
 
+import nova.conf
 from nova.i18n import _
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 WEEK = 604800
 
