@@ -570,6 +570,13 @@ user_id_query_set_quota:
   in: query
   required: false
   type: string
+user_id_server_group:
+  description: |
+    The user ID who owns the server group.
+  min_version: 2.13
+  in: query
+  required: false
+  type: string
 
 # variables in body
 accessIPv4:
@@ -1588,6 +1595,13 @@ metadata_items_quota_optional:
   in: body
   required: false
   type: integer
+metadata_required:
+  description: |
+    Metadata key and value pairs. The maximum size of the metadata key and value is
+    255 bytes each. This field is never used, always kept empty.
+  in: body
+  required: true
+  type: object
 migrate:
   description: |
     The action.
@@ -1597,12 +1611,6 @@ migrate:
 name:
   description: |
     The security group name.
-  in: body
-  required: true
-  type: string
-name_10:
-  description: |
-    The name of the server group.
   in: body
   required: true
   type: string
@@ -1630,6 +1638,12 @@ name_9:
     The name of floating IP pools.
   in: body
   required: false
+  type: string
+name_server_group:
+  description: |
+    The name of the server group.
+  in: body
+  required: true
   type: string
 namespace:
   description: |
@@ -1905,8 +1919,9 @@ policies:
   description: |
     A list of one or more policy names to associate with the server group. The list
     must contain at least one policy name. The current valid policy names are ``anti-affinity``
-    and ``affinity``.  Each policy name must be a non-empty string with no leading
-    or trailing spaces. Maximum length is 255 characters.
+    , ``affinity``, ``soft-anti-affinity`` and 'soft-affinity', the latter two were
+    added in microversion 2.15.  Each policy name must be a non-empty string with
+    no leading or trailing spaces. Maximum length is 255 characters.
   in: body
   required: true
   type: array
@@ -1980,6 +1995,13 @@ project_id:
   description: |
     Creates the cloudpipe for a project. If omitted, the project ID defaults to the
     calling tenant.
+  in: body
+  required: false
+  type: string
+project_id_server_group:
+  description: |
+    The project ID who owns the server group.
+  min_version: 2.13
   in: body
   required: false
   type: string
@@ -2271,6 +2293,12 @@ server_groups_1:
   in: body
   required: true
   type: array
+server_groups_list:
+  description: |
+    The list of existing server groups.
+  in: body
+  required: true
+  type: list
 server_groups_quota_details:
   description: |
     The object of detailed server groups, including in_use,

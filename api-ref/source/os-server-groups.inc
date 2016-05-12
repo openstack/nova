@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -41,14 +40,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server_groups: server_groups
+  - server_groups: server_groups_list
   - id: server_group_id
-  - name: name
+  - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata
-  - project_id: project_id
-  - user_id: user_id
+  - metadata: metadata_required
+  - project_id: project_id_server_group
+  - user_id: user_id_server_group
 
 **Example List Server Groups: JSON response**
 
@@ -85,14 +84,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server_groups: server_groups
+  - server_groups: server_groups_list
   - id: server_group_id
-  - name: name
+  - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata
-  - project_id: project_id
-  - user_id: user_id
+  - metadata: metadata_required
+  - project_id: project_id_server_group
+  - user_id: user_id_server_group
 
 **Example Create Server Group: JSON response**
 
@@ -123,14 +122,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - server_groups: server_groups
+  - server_groups: server_groups_list
   - id: server_group_id
-  - name: name
+  - name: name_server_group
   - policies: policies
   - members: members
-  - metadata: metadata
-  - project_id: project_id
-  - user_id: user_id
+  - metadata: metadata_required
+  - project_id: project_id_server_group
+  - user_id: user_id_server_group
 
 **Example Show Server Group Details: JSON response**
 
