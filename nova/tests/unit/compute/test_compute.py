@@ -11387,12 +11387,14 @@ class EvacuateHostTestCase(BaseTestCase):
         for bdm in bdms:
             db.block_device_mapping_destroy(self.context, bdm['id'])
 
-    def test_rebuild_on_host_with_shared_storage(self):
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    def test_rebuild_on_host_with_shared_storage(self, mock_image_meta):
         """Confirm evacuate scenario on shared storage."""
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        mock_image_meta.return_value = {'disk_format': 'qcow2'}
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance), {}, mox.IgnoreArg(), 'newpass',
-                network_info=mox.IgnoreArg(),
+                mox.IsA(objects.Instance), mock_image_meta.return_value,
+                mox.IgnoreArg(), 'newpass', network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
@@ -11460,11 +11462,14 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self._rebuild(on_shared_storage=None)
 
-    def test_on_shared_storage_not_provided_host_with_shared_storage(self):
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    def test_on_shared_storage_not_provided_host_with_shared_storage(self,
+            mock_image_meta):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
+        mock_image_meta.return_value = {'disk_format': 'qcow2'}
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance), {}, mox.IgnoreArg(), 'newpass',
-                network_info=mox.IgnoreArg(),
+                mox.IsA(objects.Instance), mock_image_meta.return_value,
+                mox.IgnoreArg(), 'newpass', network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)

@@ -2784,7 +2784,8 @@ class ComputeManager(manager.Manager):
         if image_ref:
             image_meta = self.image_api.get(context, image_ref)
         else:
-            image_meta = {}
+            image_meta = utils.get_image_from_system_metadata(
+                instance.system_metadata)
 
         # This instance.exists message should contain the original
         # image_ref, not the new one.  Since the DB has been updated
