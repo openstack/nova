@@ -413,7 +413,8 @@ class ComputeCellsAPI(compute_api.API):
                        disk_bus, device_type):
         """Attach an existing volume to an existing instance."""
         volume = self.volume_api.get(context, volume_id)
-        self.volume_api.check_attach(context, volume, instance=instance)
+        self.volume_api.check_availability_zone(context, volume,
+                                                instance=instance)
 
         return self._call_to_cells(context, instance, 'attach_volume',
                 volume_id, device, disk_bus, device_type)

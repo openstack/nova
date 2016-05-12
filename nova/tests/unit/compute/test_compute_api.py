@@ -378,9 +378,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_v_api.get.return_value = volume
             self.compute_api.attach_volume(
                 self.context, instance, volume['id'])
-            mock_v_api.check_attach.assert_called_once_with(self.context,
-                                                            volume,
-                                                            instance=instance)
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
             mock_v_api.reserve_volume.assert_called_once_with(self.context,
                                                               volume['id'])
             mock_attach.assert_called_once_with(self.context,
@@ -405,9 +404,8 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertRaises(test.TestingException,
                               self.compute_api.attach_volume,
                               self.context, instance, volume['id'])
-            mock_v_api.check_attach.assert_called_once_with(self.context,
-                                                            volume,
-                                                            instance=instance)
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
             mock_v_api.reserve_volume.assert_called_once_with(self.context,
                                                               volume['id'])
             self.assertEqual(0, mock_attach.call_count)
@@ -3898,9 +3896,8 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
             mock_v_api.get.return_value = volume
             self.compute_api.attach_volume(
                 self.context, instance, volume['id'])
-            mock_v_api.check_attach.assert_called_once_with(self.context,
-                                                          volume,
-                                                          instance=instance)
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
             mock_attach.assert_called_once_with(self.context, instance,
                                                 'attach_volume', volume['id'],
                                                 None, None, None)

@@ -9354,13 +9354,13 @@ class ComputeAPITestCase(BaseTestCase):
 
         with test.nested(
             mock.patch.object(cinder.API, 'get', return_value=fake_volume),
-            mock.patch.object(cinder.API, 'check_attach'),
+            mock.patch.object(cinder.API, 'check_availability_zone'),
             mock.patch.object(cinder.API, 'reserve_volume'),
             mock.patch.object(compute_rpcapi.ComputeAPI,
                 'reserve_block_device_name', return_value=bdm),
             mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-        ) as (mock_get, mock_check_attach, mock_reserve_vol, mock_reserve_bdm,
-                mock_attach):
+        ) as (mock_get, mock_check_availability_zone, mock_reserve_vol,
+                mock_reserve_bdm, mock_attach):
 
             self.compute_api.attach_volume(
                     self.context, instance, 'fake-volume-id',
@@ -9371,7 +9371,7 @@ class ComputeAPITestCase(BaseTestCase):
                     disk_bus='ide', device_type='cdrom')
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
-            self.assertEqual(mock_check_attach.call_args,
+            self.assertEqual(mock_check_availability_zone.call_args,
                              mock.call(
                                  self.context, fake_volume, instance=instance))
             mock_reserve_vol.assert_called_once_with(
@@ -9403,8 +9403,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         called = {}
 
-        def fake_check_attach(*args, **kwargs):
-            called['fake_check_attach'] = True
+        def fake_check_availability_zone(*args, **kwargs):
+            called['fake_check_availability_zone'] = True
 
         def fake_reserve_volume(*args, **kwargs):
             called['fake_reserve_volume'] = True
@@ -9424,7 +9424,8 @@ class ComputeAPITestCase(BaseTestCase):
             return bdm
 
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
-        self.stub_out('nova.volume.cinder.API.check_attach', fake_check_attach)
+        self.stub_out('nova.volume.cinder.API.check_availability_zone',
+                      fake_check_availability_zone)
         self.stub_out('nova.volume.cinder.API.reserve_volume',
                        fake_reserve_volume)
         self.stub_out('nova.compute.rpcapi.ComputeAPI.'
@@ -9435,7 +9436,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = self._create_fake_instance_obj()
         self.compute_api.attach_volume(self.context, instance, 1, device=None)
-        self.assertTrue(called.get('fake_check_attach'))
+        self.assertTrue(called.get('fake_check_availability_zone'))
         self.assertTrue(called.get('fake_reserve_volume'))
         self.assertTrue(called.get('fake_volume_get'))
         self.assertTrue(called.get('fake_rpc_reserve_block_device_name'))

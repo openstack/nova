@@ -145,8 +145,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch.object(cinder.az, 'get_instance_availability_zone',
                        return_value='zone1')
-    def test_check_attach_availability_zone_differs(self,
-                                                    mock_get_instance_az):
+    def test_check_availability_zone_differs(self, mock_get_instance_az):
         self.flags(cross_az_attach=False, group='cinder')
         volume = {'id': uuids.volume_id,
                   'status': 'available',
@@ -155,7 +154,8 @@ class CinderApiTestCase(test.NoDBTestCase):
         instance = fake_instance_obj(self.ctx)
 
         self.assertRaises(exception.InvalidVolume,
-                          self.api.check_attach, self.ctx, volume, instance)
+                          self.api.check_availability_zone,
+                          self.ctx, volume, instance)
         mock_get_instance_az.assert_called_once_with(self.ctx, instance)
 
     def test_check_attach(self):
