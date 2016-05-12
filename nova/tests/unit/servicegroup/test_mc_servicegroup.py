@@ -28,8 +28,7 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         super(MemcachedServiceGroupTestCase, self).setUp()
         self.mc_client = mock.MagicMock()
         mgc_mock.return_value = self.mc_client
-        self.flags(memcached_servers='ignored',
-                   servicegroup_driver='mc')
+        self.flags(servicegroup_driver='mc')
         self.servicegroup_api = servicegroup.API()
 
     def test_is_up(self):
