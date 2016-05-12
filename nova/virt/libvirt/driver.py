@@ -5257,9 +5257,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # Compare CPU
         if not instance.vcpu_model or not instance.vcpu_model.model:
             source_cpu_info = src_compute_info['cpu_info']
-            self._compare_cpu(None, source_cpu_info)
+            self._compare_cpu(None, source_cpu_info, instance)
         else:
-            self._compare_cpu(instance.vcpu_model, None)
+            self._compare_cpu(instance.vcpu_model, None, instance)
 
         # Create file on storage, to be checked on source host
         filename = self._create_shared_storage_test_file()
@@ -5477,7 +5477,7 @@ class LibvirtDriver(driver.ComputeDriver):
                        'necessary': necessary})
             raise exception.MigrationPreCheckError(reason=reason)
 
-    def _compare_cpu(self, guest_cpu, host_cpu_str):
+    def _compare_cpu(self, guest_cpu, host_cpu_str, instance):
         """Check the host is compatible with the requested CPU
 
         :param guest_cpu: nova.objects.VirtCPUModel or None
@@ -5517,7 +5517,9 @@ class LibvirtDriver(driver.ComputeDriver):
         m = _("CPU doesn't have compatibility.\n\n%(ret)s\n\nRefer to %(u)s")
         # unknown character exists in xml, then libvirt complains
         try:
-            ret = self._host.compare_cpu(cpu.to_xml())
+            cpu_xml = cpu.to_xml()
+            LOG.debug("cpu compare xml: %s", cpu_xml, instance=instance)
+            ret = self._host.compare_cpu(cpu_xml)
         except libvirt.libvirtError as e:
             error_code = e.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_SUPPORT:
