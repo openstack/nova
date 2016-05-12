@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -25,6 +24,19 @@ Error response codes: unauthorized(401), forbidden(403)
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - aggregates: aggregates
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - hosts: aggregate_host_list
+  - id: aggregate_id_body
+  - metadata: aggregate_metadata
+  - name: aggregate_name
+  - updated_at: updated_consider_null
+
 **Example List Aggregates: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-list-get-resp.json
@@ -46,8 +58,9 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
+  - aggregate: aggregate
   - name: aggregate_name
-  - availability_zone: availability_zone
+  - availability_zone: aggregate_az_optional
 
 **Example Create Aggregate: JSON request**
 
@@ -56,6 +69,17 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregate: aggregate
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - id: aggregate_id_body
+  - name: aggregate_name
+  - updated_at: updated_consider_null
 
 **Example Create Aggregate: JSON response**
 
@@ -83,6 +107,19 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - aggregate: aggregate
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - hosts: hosts
+  - id: aggregate_id_body
+  - metadata: aggregate_metadata
+  - name: aggregate_name
+  - updated_at: updated_consider_null
+
 **Example Show Aggregate Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-aggregates/aggregates-get-resp.json
@@ -106,6 +143,9 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - aggregate_id: aggregate_id
+  - aggregate: aggregate
+  - name: aggregate_name_optional
+  - availability_zone: aggregate_az_optional
 
 **Example Update Aggregate: JSON request**
 
@@ -114,6 +154,19 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregate: aggregate
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - hosts: hosts
+  - id: aggregate_id_body
+  - metadata: aggregate_metadata
+  - name: aggregate_name
+  - updated_at: updated_consider_null
 
 **Example Update Aggregate: JSON response**
 
@@ -148,7 +201,7 @@ Add Host
 
 Adds a host to an aggregate.
 
-Specify the ``add_host`` action in the request body.
+Specify the ``add_host`` action and host name in the request body.
 
 Normal response codes: 200
 
@@ -161,6 +214,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - aggregate_id: aggregate_id
+  - add_host: aggregate_add_host
+  - host: host_name_body
 
 **Example Add Host: JSON request**
 
@@ -169,6 +224,19 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregate: aggregate
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - hosts: hosts
+  - id: aggregate_id_body
+  - metadata: aggregate_metadata
+  - name: aggregate_name
+  - updated_at: updated_consider_null
 
 **Example Add Host: JSON response**
 
@@ -182,7 +250,7 @@ Remove Host
 
 Removes a host from an aggregate.
 
-Specify the ``remove_host`` action in the request body.
+Specify the ``remove_host`` action and host name in the request body.
 
 Normal response codes: 200
 
@@ -195,6 +263,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - aggregate_id: aggregate_id
+  - remove_host: aggregate_remove_host
+  - host: host_name_body
 
 **Example Remove Host: JSON request**
 
@@ -203,6 +273,19 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregate: aggregate
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - hosts: hosts
+  - id: aggregate_id_body
+  - metadata: aggregate_metadata
+  - name: aggregate_name
+  - updated_at: updated_consider_null
 
 **Example Remove Host: JSON response**
 
@@ -229,6 +312,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - aggregate_id: aggregate_id
+  - set_metadata: set_metadata
+  - metadata: metadata_set_required
 
 **Example Create Or Update Aggregate Metadata: JSON request**
 
@@ -237,6 +322,19 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregate: aggregate
+  - availability_zone: aggregate_az
+  - created_at: created
+  - deleted_at: deleted_at
+  - deleted: deleted
+  - hosts: hosts
+  - id: aggregate_id_body
+  - metadata: aggregate_metadata
+  - name: aggregate_name
+  - updated_at: updated_consider_null
 
 **Example Create Or Update Aggregate Metadata: JSON response**
 
