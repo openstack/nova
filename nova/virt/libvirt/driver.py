@@ -101,6 +101,7 @@ from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import instancejobtracker
+from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
@@ -5304,22 +5305,8 @@ class LibvirtDriver(driver.ComputeDriver):
             md_obj.from_legacy_dict(dest_check_data)
             dest_check_data = md_obj
 
-        listen_addrs = None
-        # We are building listen_addrs of vnc/spice from
-        # LibvirtLiveMigrateData; in some certains (e.g. an old-code
-        # destination host) those fields may have not been set and we
-        # want to avoid any unfortunates exceptions raised.
-        # TODO(sahid): The method
-        # _check_graphics_addresses_can_live_migrate_should to take an
-        # object LibvirtLiveMigrate itself.
-        if (dest_check_data.obj_attr_is_set('graphics_listen_addr_vnc')
-            or dest_check_data.obj_attr_is_set('graphics_listen_addr_spice')):
-            listen_addrs = {'vnc': None, 'spice': None}
-        if dest_check_data.obj_attr_is_set('graphics_listen_addr_vnc'):
-            listen_addrs['vnc'] = dest_check_data.graphics_listen_addr_vnc
-        if dest_check_data.obj_attr_is_set('graphics_listen_addr_spice'):
-            listen_addrs['spice'] = dest_check_data.graphics_listen_addr_spice
-
+        listen_addrs = libvirt_migrate.graphics_listen_addrs(
+            dest_check_data)
         migratable_flag = self._host.is_migratable_xml_flag()
         if not migratable_flag or not listen_addrs:
             # In this context want to ensure we do not have to migrate
@@ -5644,90 +5631,6 @@ class LibvirtDriver(driver.ComputeDriver):
                       e, instance=instance)
             raise
 
-    def _update_xml(self, xml_str, migrate_bdm_info, listen_addrs,
-                    serial_listen_addr):
-        xml_doc = etree.fromstring(xml_str)
-
-        if migrate_bdm_info:
-            xml_doc = self._update_volume_xml(xml_doc, migrate_bdm_info)
-        if listen_addrs:
-            xml_doc = self._update_graphics_xml(xml_doc, listen_addrs)
-        else:
-            self._check_graphics_addresses_can_live_migrate(listen_addrs)
-        if serial_listen_addr:
-            xml_doc = self._update_serial_xml(xml_doc, serial_listen_addr)
-        else:
-            self._verify_serial_console_is_disabled()
-
-        return etree.tostring(xml_doc)
-
-    def _update_graphics_xml(self, xml_doc, listen_addrs):
-
-        # change over listen addresses
-        for dev in xml_doc.findall('./devices/graphics'):
-            gr_type = dev.get('type')
-            listen_tag = dev.find('listen')
-            if gr_type in ('vnc', 'spice'):
-                if listen_tag is not None:
-                    listen_tag.set('address', listen_addrs[gr_type])
-                if dev.get('listen') is not None:
-                    dev.set('listen', listen_addrs[gr_type])
-
-        return xml_doc
-
-    def _update_volume_xml(self, xml_doc, migrate_bdm_info):
-        """Update XML using device information of destination host."""
-
-        # Update volume xml
-        parser = etree.XMLParser(remove_blank_text=True)
-        disk_nodes = xml_doc.findall('./devices/disk')
-
-        bdm_info_by_serial = {x.serial: x for x in migrate_bdm_info}
-        for pos, disk_dev in enumerate(disk_nodes):
-            serial_source = disk_dev.findtext('serial')
-            bdm_info = bdm_info_by_serial.get(serial_source)
-            if (serial_source is None or
-                    not bdm_info or not bdm_info.connection_info or
-                    serial_source not in bdm_info_by_serial):
-                continue
-            conf = self._get_volume_config(
-                bdm_info.connection_info, bdm_info.as_disk_info())
-            xml_doc2 = etree.XML(conf.to_xml(), parser)
-            serial_dest = xml_doc2.findtext('serial')
-
-            # Compare source serial and destination serial number.
-            # If these serial numbers match, continue the process.
-            if (serial_dest and (serial_source == serial_dest)):
-                LOG.debug("Find same serial number: pos=%(pos)s, "
-                          "serial=%(num)s",
-                          {'pos': pos, 'num': serial_source})
-                for cnt, item_src in enumerate(disk_dev):
-                    # If source and destination have same item, update
-                    # the item using destination value.
-                    for item_dst in xml_doc2.findall(item_src.tag):
-                        disk_dev.remove(item_src)
-                        item_dst.tail = None
-                        disk_dev.insert(cnt, item_dst)
-
-                # If destination has additional items, thses items should be
-                # added here.
-                for item_dst in list(xml_doc2):
-                    item_dst.tail = None
-                    disk_dev.insert(cnt, item_dst)
-
-        return xml_doc
-
-    def _update_serial_xml(self, xml_doc, listen_addr):
-        for dev in xml_doc.findall("./devices/serial[@type='tcp']/source"):
-            if dev.get('host') is not None:
-                dev.set('host', listen_addr)
-
-        for dev in xml_doc.findall("./devices/console[@type='tcp']/source"):
-            if dev.get('host') is not None:
-                dev.set('host', listen_addr)
-
-        return xml_doc
-
     def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
         LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
 
@@ -5808,15 +5711,8 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 migration_flags = self._live_migration_flags
 
-            listen_addrs = {}
-            if 'graphics_listen_addr_vnc' in migrate_data:
-                listen_addrs['vnc'] = str(
-                    migrate_data.graphics_listen_addr_vnc)
-            if 'graphics_listen_addr_spice' in migrate_data:
-                listen_addrs['spice'] = str(
-                    migrate_data.graphics_listen_addr_spice)
-            serial_listen_addr = (migrate_data.serial_listen_addr if
-                'serial_listen_addr' in migrate_data else None)
+            listen_addrs = libvirt_migrate.graphics_listen_addrs(
+                migrate_data)
             if ('target_connect_addr' in migrate_data and
                     migrate_data.target_connect_addr is not None):
                 dest = migrate_data.target_connect_addr
@@ -5828,11 +5724,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                  None,
                                  CONF.libvirt.live_migration_bandwidth)
             else:
-                old_xml_str = guest.get_xml_desc(dump_migratable=True)
-                new_xml_str = self._update_xml(old_xml_str,
-                                               migrate_data.bdms,
-                                               listen_addrs,
-                                               serial_listen_addr)
+                new_xml_str = libvirt_migrate.get_updated_guest_xml(
+                    # TODO(sahid): It's not a really well idea to pass
+                    # the method _get_volume_config and we should to find
+                    # a way to avoid this in future.
+                    guest, migrate_data, self._get_volume_config)
                 if self._host.has_min_version(
                         MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
                     params = {

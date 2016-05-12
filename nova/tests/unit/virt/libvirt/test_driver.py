@@ -96,6 +96,7 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
 from nova.virt.libvirt.storage import rbd_utils
@@ -7042,7 +7043,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mget_info,\
                 mock.patch.object(drvr._host, 'get_domain') as mget_domain,\
                 mock.patch.object(fakelibvirt.virDomain, 'migrateToURI2'),\
-                mock.patch.object(drvr, '_update_xml') as mupdate:
+                mock.patch.object(
+                    libvirt_migrate, 'get_updated_guest_xml') as mupdate:
 
             mget_info.side_effect = exception.InstanceNotFound(
                                      instance_id='foo')
@@ -7051,8 +7053,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertFalse(drvr._live_migration_operation(
                              self.context, instance_ref, 'dest', False,
                              migrate_data, test_mock, []))
-            mupdate.assert_called_once_with(target_xml, migrate_data.bdms,
-                                            {}, '')
+            # guest object is created under this method we do not have
+            # other choice than using mock.ANY
+            mupdate.assert_called_once_with(
+                mock.ANY, migrate_data, mock.ANY)
 
     def test_live_migration_with_valid_target_connect_addr(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -7090,7 +7094,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         test_mock = mock.MagicMock()
 
-        with mock.patch.object(drvr, '_update_xml') as mupdate:
+        with mock.patch.object(libvirt_migrate,
+                               'get_updated_guest_xml') as mupdate:
 
             test_mock.XMLDesc.return_value = target_xml
             drvr._live_migration_operation(self.context, instance_ref,
@@ -7137,13 +7142,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conf.source_type = "block"
         conf.source_path = bdmi.connection_info['data'].get('device_path')
 
-        with mock.patch.object(drvr, '_get_volume_config',
-                               return_value=conf):
+        guest = libvirt_guest.Guest(mock.MagicMock())
+        with test.nested(
+                mock.patch.object(drvr, '_get_volume_config',
+                                  return_value=conf),
+                mock.patch.object(guest, 'get_xml_desc',
+                                  return_value=initial_xml)):
+            config = libvirt_migrate.get_updated_guest_xml(guest,
+                            objects.LibvirtLiveMigrateData(bdms=[bdmi]),
+                            drvr._get_volume_config)
             parser = etree.XMLParser(remove_blank_text=True)
-            xml_doc = etree.fromstring(initial_xml, parser)
-            config = drvr._update_volume_xml(xml_doc, [bdmi])
-            xml_doc = etree.fromstring(target_xml, parser)
-            self.assertEqual(etree.tostring(xml_doc), etree.tostring(config))
+            config = etree.fromstring(config, parser)
+            target_xml = etree.fromstring(target_xml, parser)
+            self.assertEqual(etree.tostring(target_xml),
+                             etree.tostring(config))
 
     def test_live_migration_uri(self):
         hypervisor_uri_map = (
@@ -7232,11 +7244,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conf.source_type = "block"
         conf.source_path = bdmi.connection_info['data'].get('device_path')
 
-        with mock.patch.object(drvr, '_get_volume_config',
-                               return_value=conf):
-            xml_doc = etree.fromstring(initial_xml)
-            config = drvr._update_volume_xml(xml_doc, [bdmi])
-            self.assertEqual(target_xml, etree.tostring(config))
+        guest = libvirt_guest.Guest(mock.MagicMock())
+        with test.nested(
+                mock.patch.object(drvr, '_get_volume_config',
+                                  return_value=conf),
+                mock.patch.object(guest, 'get_xml_desc',
+                                  return_value=initial_xml)):
+            config = libvirt_migrate.get_updated_guest_xml(guest,
+                objects.LibvirtLiveMigrateData(bdms=[bdmi]),
+                drvr._get_volume_config)
+            self.assertEqual(target_xml, config)
 
     def test_update_volume_xml_no_connection_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7257,11 +7274,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                                  format='qcow')
         bdmi.connection_info = {}
         conf = vconfig.LibvirtConfigGuestDisk()
-        with mock.patch.object(drvr, '_get_volume_config',
-                               return_value=conf):
-            xml_doc = etree.fromstring(initial_xml)
-            config = drvr._update_volume_xml(xml_doc, [bdmi])
-            self.assertEqual(target_xml, etree.tostring(config))
+        guest = libvirt_guest.Guest(mock.MagicMock())
+        with test.nested(
+                mock.patch.object(drvr, '_get_volume_config',
+                                  return_value=conf),
+                mock.patch.object(guest, 'get_xml_desc',
+                                  return_value=initial_xml)):
+            config = libvirt_migrate.get_updated_guest_xml(
+                guest,
+                objects.LibvirtLiveMigrateData(bdms=[bdmi]),
+                drvr._get_volume_config)
+            self.assertEqual(target_xml, config)
 
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI2")
     @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
@@ -7378,9 +7401,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._update_xml',
+    @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
                 return_value='')
-    @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc', return_value='')
+    @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc',
+                return_value='<xml></xml>')
     def test_live_migration_uses_migrateToURI3(
             self, mock_old_xml, mock_new_xml, mock_migrateToURI3,
             mock_min_version):
