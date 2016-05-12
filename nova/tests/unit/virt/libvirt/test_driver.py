@@ -16238,38 +16238,54 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
         self.assertRaises(exception.QemuGuestAgentNotEnabled,
                           self.drvr._can_quiesce, instance, image_meta)
 
-    def test_volume_snapshot_create_outer_success(self):
+    @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_volume_snapshot_create')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_volume_refresh_connection_info')
+    def test_volume_snapshot_create_outer_success(self, mock_refresh,
+                                                  mock_snap_create, mock_loop):
+        class FakeLoopingCall(object):
+            def __init__(self, func):
+                self.func = func
+
+            def start(self, *a, **k):
+                try:
+                    self.func()
+                except loopingcall.LoopingCallDone:
+                    pass
+                return self
+
+            def wait(self):
+                return None
+
+        mock_loop.side_effect = FakeLoopingCall
+
         instance = objects.Instance(**self.inst)
 
         domain = FakeVirtDomain(fake_xml=self.dom_xml, id=1)
         guest = libvirt_guest.Guest(domain)
 
-        self.mox.StubOutWithMock(self.drvr._host, 'get_guest')
-        self.mox.StubOutWithMock(self.drvr, '_volume_api')
-        self.mox.StubOutWithMock(self.drvr, '_volume_snapshot_create')
+        @mock.patch.object(self.drvr, '_volume_api')
+        @mock.patch.object(self.drvr._host, 'get_guest')
+        def _test(mock_get_guest, mock_vol_api):
+            mock_get_guest.return_value = guest
+            mock_vol_api.get_snapshot.return_value = {'status': 'available'}
+            self.drvr.volume_snapshot_create(self.c, instance,
+                                             self.volume_uuid,
+                                             self.create_info)
+            mock_get_guest.assert_called_once_with(instance)
+            mock_snap_create.assert_called_once_with(
+                    self.c, instance, guest, self.volume_uuid,
+                    self.create_info['new_file'])
+            mock_vol_api.update_snapshot_status.assert_called_once_with(
+                    self.c, self.create_info['snapshot_id'], 'creating')
+            mock_vol_api.get_snapshot.assert_called_once_with(
+                    self.c, self.create_info['snapshot_id'])
+            mock_refresh.assert_called_once_with(
+                    self.c, instance, self.volume_uuid)
 
-        self.drvr._host.get_guest(instance).AndReturn(guest)
-
-        self.drvr._volume_snapshot_create(self.c,
-                                          instance,
-                                          guest,
-                                          self.volume_uuid,
-                                          self.create_info['new_file'])
-
-        self.drvr._volume_api.update_snapshot_status(
-            self.c, self.create_info['snapshot_id'], 'creating')
-
-        self.mox.StubOutWithMock(self.drvr._volume_api, 'get_snapshot')
-        self.drvr._volume_api.get_snapshot(self.c,
-            self.create_info['snapshot_id']).AndReturn({'status': 'available'})
-        self.mox.StubOutWithMock(self.drvr, '_volume_refresh_connection_info')
-        self.drvr._volume_refresh_connection_info(self.c, instance,
-                                                  self.volume_uuid)
-
-        self.mox.ReplayAll()
-
-        self.drvr.volume_snapshot_create(self.c, instance, self.volume_uuid,
-                                         self.create_info)
+        _test()
 
     def test_volume_snapshot_create_outer_failure(self):
         instance = objects.Instance(**self.inst)
