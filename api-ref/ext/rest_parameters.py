@@ -41,12 +41,33 @@ in both naming and ordering of parameters at every declaration.
 
 """
 
+from collections import OrderedDict
+
 from docutils import nodes
 from docutils.parsers.rst.directives.tables import Table
 from docutils.statemachine import ViewList
 from sphinx.util.compat import Directive
-
 import yaml
+
+
+def ordered_load(stream, Loader=yaml.Loader, object_pairs_hook=OrderedDict):
+    """Load yaml as an ordered dict
+
+    This allows us to inspect the order of the file on disk to make
+    sure it was correct by our rules.
+    """
+    class OrderedLoader(Loader):
+        pass
+
+    def construct_mapping(loader, node):
+        loader.flatten_mapping(node)
+        return object_pairs_hook(loader.construct_pairs(node))
+
+    OrderedLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        construct_mapping)
+
+    return yaml.load(stream, OrderedLoader)
 
 
 def full_name(cls):
@@ -107,21 +128,25 @@ class RestMethodDirective(Directive):
 
         return [target, section]
 
+# cache for file -> yaml so we only do the load and check of a yaml
+# file once during a sphinx processing run.
+YAML_CACHE = {}
+
 
 class RestParametersDirective(Table):
 
     headers = ["Name", "In", "Type", "Description"]
 
-    def yaml_from_file(self, fpath):
-        """Collect Parameter stanzas from inline + file.
+    def _load_param_file(self, fpath):
+        global YAML_CACHE
+        if fpath in YAML_CACHE:
+            return YAML_CACHE[fpath]
 
-        This allows use to reference an external file for the actual
-        parameter definitions.
-        """
         # self.app.info("Fpath: %s" % fpath)
         try:
             with open(fpath, 'r') as stream:
-                lookup = yaml.load(stream)
+                lookup = ordered_load(stream)
+                self._check_yaml_sorting(fpath, lookup)
         except IOError:
             self.env.warn(
                 self.env.docname,
@@ -130,6 +155,52 @@ class RestParametersDirective(Table):
         except yaml.YAMLError as exc:
             self.app.warn(exc)
             raise
+
+        YAML_CACHE[fpath] = lookup
+        return lookup
+
+    def _check_yaml_sorting(self, fpath, yaml_data):
+        """check yaml sorting
+
+        Assuming we got an ordered dict, we iterate through it
+        basically doing a gnome sort test
+        (https://en.wikipedia.org/wiki/Gnome_sort) and ensure the item
+        we are looking at is > the last item we saw. This is done at
+        the section level first, so we're grouped, then alphabetically
+        by lower case name within a section. Every time there is a
+        mismatch we raise an info message (will later be a warn).
+        """
+        sections = {"header": 1, "path": 2, "query": 3, "body": 4}
+
+        last = None
+        for key, value in yaml_data.items():
+            if last is None:
+                last = (key, value)
+                continue
+            # ensure that sections only go up
+            current_section = value['in']
+            last_section = last[1]['in']
+            if sections[current_section] < sections[last_section]:
+                self.app.info(
+                    "Section out of order. All parameters in section ``%s`` "
+                    "should be after section ``%s``. (see ``%s``)" % (
+                        last_section,
+                        current_section,
+                        last[0]))
+            if (sections[value['in']] == sections[last[1]['in']] and
+                key.lower() < last[0].lower()):
+                self.app.info(
+                    "Parameters out of order ``%s`` should be after ``%s``" % (
+                        last[0], key))
+            last = (key, value)
+
+    def yaml_from_file(self, fpath):
+        """Collect Parameter stanzas from inline + file.
+
+        This allows use to reference an external file for the actual
+        parameter definitions.
+        """
+        lookup = self._load_param_file(fpath)
 
         content = "\n".join(self.content)
         parsed = yaml.load(content)
