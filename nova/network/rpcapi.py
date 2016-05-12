@@ -16,7 +16,6 @@
 Client side of the network RPC API.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
@@ -24,18 +23,8 @@ import nova.conf
 from nova.objects import base as objects_base
 from nova import rpc
 
-rpcapi_opts = [
-    cfg.StrOpt('network_topic',
-               default='network',
-               help='The topic network nodes listen on'),
-    cfg.BoolOpt('multi_host',
-                default=False,
-                help='Default value for multi_host in networks. Also, if set, '
-                     'some rpc network calls will be sent directly to host.'),
-]
 
 CONF = nova.conf.CONF
-CONF.register_opts(rpcapi_opts)
 
 
 class NetworkAPI(object):
