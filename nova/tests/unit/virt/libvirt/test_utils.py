@@ -540,13 +540,9 @@ disk size: 4.4M
         context = 'opaque context'
         target = '/tmp/targetfile'
         image_id = '4'
-        user_id = 'fake'
-        project_id = 'fake'
-        libvirt_utils.fetch_image(context, target, image_id,
-                                  user_id, project_id)
+        libvirt_utils.fetch_image(context, target, image_id)
         mock_images.assert_called_once_with(
-            context, image_id, target, user_id, project_id,
-            max_size=0)
+            context, image_id, target, max_size=0)
 
     @mock.patch('nova.virt.images.fetch')
     def test_fetch_initrd_image(self, mock_images):
@@ -556,13 +552,9 @@ disk size: 4.4M
                                           user_name="pie")
         target = '/tmp/targetfile'
         image_id = '4'
-        user_id = 'fake'
-        project_id = 'fake'
-        libvirt_utils.fetch_raw_image(_context, target, image_id,
-                                      user_id, project_id)
+        libvirt_utils.fetch_raw_image(_context, target, image_id)
         mock_images.assert_called_once_with(
-            _context, image_id, target, user_id, project_id,
-            max_size=0)
+            _context, image_id, target, max_size=0)
 
     def test_fetch_raw_image(self):
 
@@ -621,8 +613,6 @@ disk size: 4.4M
 
         context = 'opaque context'
         image_id = '4'
-        user_id = 'fake'
-        project_id = 'fake'
 
         target = 't.qcow2'
         self.executes = []
@@ -631,22 +621,20 @@ disk size: 4.4M
                               '-f', 'qcow2'),
                              ('rm', 't.qcow2.part'),
                              ('mv', 't.qcow2.converted', 't.qcow2')]
-        images.fetch_to_raw(context, image_id, target, user_id, project_id,
-                            max_size=1)
+        images.fetch_to_raw(context, image_id, target, max_size=1)
         self.assertEqual(self.executes, expected_commands)
 
         target = 't.raw'
         self.executes = []
         expected_commands = [('mv', 't.raw.part', 't.raw')]
-        images.fetch_to_raw(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
 
         target = 'backing.qcow2'
         self.executes = []
         expected_commands = [('rm', '-f', 'backing.qcow2.part')]
         self.assertRaises(exception.ImageUnacceptable,
-                          images.fetch_to_raw,
-                          context, image_id, target, user_id, project_id)
+                          images.fetch_to_raw, context, image_id, target)
         self.assertEqual(self.executes, expected_commands)
 
         target = 'big.qcow2'
@@ -654,8 +642,7 @@ disk size: 4.4M
         expected_commands = [('rm', '-f', 'big.qcow2.part')]
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
                           images.fetch_to_raw,
-                          context, image_id, target, user_id, project_id,
-                          max_size=1)
+                          context, image_id, target, max_size=1)
         self.assertEqual(self.executes, expected_commands)
 
         del self.executes

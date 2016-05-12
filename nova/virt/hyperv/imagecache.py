@@ -104,9 +104,7 @@ class ImageCache(object):
 
             if not vhd_path:
                 try:
-                    images.fetch(context, image_id, base_vhd_path,
-                                 instance.user_id,
-                                 instance.project_id)
+                    images.fetch(context, image_id, base_vhd_path)
 
                     format_ext = self._vhdutils.get_vhd_format(base_vhd_path)
                     vhd_path = base_vhd_path + '.' + format_ext.lower()

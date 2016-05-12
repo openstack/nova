@@ -65,4 +65,4 @@ class QemuTestCase(test.NoDBTestCase):
         self.assertRaisesRegex(exception.ImageUnacceptable,
                                'Image href123 is unacceptable.*',
                                images.fetch_to_raw,
-                               None, 'href123', '/no/path', None, None)
+                               None, 'href123', '/no/path')

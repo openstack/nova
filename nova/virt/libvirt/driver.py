@@ -2944,17 +2944,13 @@ class LibvirtDriver(driver.ComputeDriver):
             raw('kernel').cache(fetch_func=libvirt_utils.fetch_raw_image,
                                 context=context,
                                 filename=fname,
-                                image_id=disk_images['kernel_id'],
-                                user_id=instance.user_id,
-                                project_id=instance.project_id)
+                                image_id=disk_images['kernel_id'])
             if disk_images['ramdisk_id']:
                 fname = imagecache.get_cache_fname(disk_images, 'ramdisk_id')
                 raw('ramdisk').cache(fetch_func=libvirt_utils.fetch_raw_image,
                                      context=context,
                                      filename=fname,
-                                     image_id=disk_images['ramdisk_id'],
-                                     user_id=instance.user_id,
-                                     project_id=instance.project_id)
+                                     image_id=disk_images['ramdisk_id'])
 
         inst_type = instance.get_flavor()
 
@@ -6260,10 +6256,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _try_fetch_image(self, context, path, image_id, instance,
                          fallback_from_host=None):
         try:
-            libvirt_utils.fetch_image(context, path,
-                                      image_id,
-                                      instance.user_id,
-                                      instance.project_id)
+            libvirt_utils.fetch_image(context, path, image_id)
         except exception.ImageNotFound:
             if not fallback_from_host:
                 raise
@@ -6487,8 +6480,6 @@ class LibvirtDriver(driver.ComputeDriver):
                         context=context,
                         filename=filename,
                         image_id=image_id,
-                        user_id=instance.user_id,
-                        project_id=instance.project_id,
                         size=size)
         except exception.ImageNotFound:
             if not fallback_from_host:
