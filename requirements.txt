@@ -10,10 +10,10 @@ eventlet!=0.18.3,>=0.18.2 # MIT
 Jinja2>=2.8 # BSD License (3 clause)
 keystonemiddleware!=4.1.0,>=4.0.0 # Apache-2.0
 lxml>=2.3 # BSD
-Routes!=2.0,!=2.1,>=1.12.3;python_version=='2.7' # MIT
-Routes!=2.0,>=1.12.3;python_version!='2.7' # MIT
-cryptography>=1.0 # BSD/Apache-2.0
-pycrypto>=2.6  # Public Domain
+Routes!=2.0,!=2.1,!=2.3.0,>=1.12.3;python_version=='2.7' # MIT
+Routes!=2.0,!=2.3.0,>=1.12.3;python_version!='2.7' # MIT
+cryptography!=1.3.0,>=1.0 # BSD/Apache-2.0
+pycrypto>=2.6 # Public Domain
 WebOb>=1.2.3 # MIT
 greenlet>=0.3.2 # MIT
 PasteDeploy>=1.5.0 # MIT
@@ -23,7 +23,7 @@ sqlalchemy-migrate>=0.9.6 # Apache-2.0
 netaddr!=0.7.16,>=0.7.12 # BSD
 netifaces>=0.10.4 # MIT
 paramiko>=1.16.0 # LGPL
-Babel>=1.3 # BSD
+Babel!=2.3.0,!=2.3.1,!=2.3.2,!=2.3.3,>=1.3 # BSD
 iso8601>=0.1.9 # MIT
 jsonschema!=2.5.0,<3.0.0,>=2.0.0 # MIT
 python-cinderclient>=1.3.1 # Apache-2.0
