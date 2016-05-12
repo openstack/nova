@@ -184,7 +184,7 @@ node_id:
   in: path
   required: true
   type: string
-port_id_1:
+port_id_path:
   description: |
     The UUID of the port.
   in: path
@@ -1099,16 +1099,10 @@ fixed_ip:
   type: string
 fixed_ips:
   description: |
-    Fixed IP addresses with subnet IDs.  If you request a specific fixed IP address
-    without a ``net_id``, the request returns a ``Bad Request (400)`` response code.
+    Fixed IP addresses.  If you request a specific fixed IP address without
+    a ``net_id``, the request returns a ``Bad Request (400)`` response code.
   in: body
   required: false
-  type: array
-fixed_ips_1:
-  description: |
-    Fixed IP addresses with subnet IDs.
-  in: body
-  required: true
   type: array
 fixed_ips_quota:
   description: |
@@ -1131,6 +1125,12 @@ fixed_ips_quota_optional:
   in: body
   required: false
   type: integer
+fixed_ips_resp:
+  description: |
+    Fixed IP addresses with subnet IDs.
+  in: body
+  required: true
+  type: array
 flavor:
   description: |
     The ID and links for the flavor for your server instance. A flavor is a combination
@@ -1621,9 +1621,27 @@ interfaceAttachment:
   in: body
   required: true
   type: string
+interfaceAttachment_resp:
+  description: |
+    The interface attachment.
+  in: body
+  required: true
+  type: object
+interfaceAttachments:
+  description: |
+    List of the interface attachments.
+  in: body
+  required: true
+  type: array
 ip_address:
   description: |
     The IP address.
+  in: body
+  required: true
+  type: string
+ip_address_req:
+  description: |
+    The IP address. It is required when ``fixed_ips`` is specified.
   in: body
   required: true
   type: string
@@ -1839,7 +1857,7 @@ net_id:
   in: body
   required: false
   type: string
-net_id_1:
+net_id_resp:
   description: |
     The network ID.
   in: body
@@ -2144,7 +2162,7 @@ port_id:
   in: body
   required: false
   type: string
-port_id_2:
+port_id_resp:
   description: |
     The port ID.
   in: body
@@ -2586,6 +2604,12 @@ source_type:
   description: |
     The source type of the volume. A valid value is ``blank``, ``snapshot``, ``volume``,
     or ``image``.
+  in: body
+  required: true
+  type: string
+subnet_id:
+  description: |
+    The UUID of the subnet.
   in: body
   required: true
   type: string

@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -29,19 +28,21 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
 
 .. rest_parameters:: parameters.yaml
 
-  - interfaceAttachment: interfaceAttachment
+  - interfaceAttachments: interfaceAttachments
   - port_state: port_state
-  - fixed_ips: fixed_ips
+  - fixed_ips: fixed_ips_resp
+  - ip_address: ip_address
+  - subnet_id: subnet_id
   - mac_addr: mac_addr
-  - net_id: net_id
-  - port_id: port_id
+  - net_id: net_id_resp
+  - port_id: port_id_resp
 
 **Example List Port Interfaces: JSON response**
 
@@ -66,11 +67,12 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
   - interfaceAttachment: interfaceAttachment
   - port_id: port_id
   - net_id: net_id
   - fixed_ips: fixed_ips
+  - ip_address: ip_address_req
 
 **Example Create Interface: JSON request**
 
@@ -82,11 +84,13 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - interfaceAttachment: interfaceAttachment
-  - fixed_ips: fixed_ips
+  - interfaceAttachment: interfaceAttachment_resp
+  - fixed_ips: fixed_ips_resp
+  - ip_address: ip_address
+  - subnet_id: subnet_id
   - mac_addr: mac_addr
-  - net_id: net_id
-  - port_id: port_id
+  - net_id: net_id_resp
+  - port_id: port_id_resp
   - port_state: port_state
 
 **Example Create Interface: JSON response**
@@ -111,11 +115,22 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
-  - port_id: port_id
+  - server_id: server_id_path
+  - port_id: port_id_path
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - interfaceAttachment: interfaceAttachment_resp
+  - port_state: port_state
+  - fixed_ips: fixed_ips_resp
+  - ip_address: ip_address
+  - subnet_id: subnet_id
+  - mac_addr: mac_addr
+  - net_id: net_id_resp
+  - port_id: port_id_resp
 
 **Example Show Port Interface Details: JSON response**
 
@@ -140,9 +155,10 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
-  - port_id: port_id
+  - server_id: server_id_path
+  - port_id: port_id_path
 
 Response
 --------
 
+No body is returned on successful request.
