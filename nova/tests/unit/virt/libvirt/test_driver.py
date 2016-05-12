@@ -14774,6 +14774,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             drvr.image_backend.remove_snap.assert_called_once_with(
                     libvirt_utils.RESIZE_SNAPSHOT_NAME, ignore_errors=True)
 
+    def test_finish_revert_migration_snap_backend_image_does_not_exist(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.image_backend = mock.Mock()
+        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.check_image_exists.return_value = False
+        ins_ref = self._create_instance()
+
+        with test.nested(
+                mock.patch.object(rbd_utils, 'RBDDriver'),
+                mock.patch.object(utils, 'get_image_from_system_metadata'),
+                mock.patch.object(drvr, '_create_domain_and_network'),
+                mock.patch.object(drvr, '_get_guest_xml')) as (
+                mock_rbd, mock_image, mock_cdn, mock_ggx):
+            mock_image.return_value = {'disk_format': 'raw'}
+            drvr.finish_revert_migration('', ins_ref, None, power_on=False)
+            self.assertFalse(drvr.image_backend.rollback_to_snap.called)
+            self.assertFalse(drvr.image_backend.remove_snap.called)
+
     def test_cleanup_failed_migration(self):
         self.mox.StubOutWithMock(shutil, 'rmtree')
         shutil.rmtree('/fake/inst')
@@ -14864,6 +14882,29 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                               delay_on_retry=True, attempts=5)
             mock_remove.assert_called_once_with(
                     libvirt_utils.RESIZE_SNAPSHOT_NAME, ignore_errors=True)
+
+    def test_cleanup_resize_snap_backend_image_does_not_exist(self):
+        CONF.set_override('policy_dirs', [], group='oslo_policy')
+        ins_ref = self._create_instance({'host': CONF.host})
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.image_backend = mock.Mock()
+        drvr.image_backend.image.return_value = drvr.image_backend
+        drvr.image_backend.check_image_exists.return_value = False
+
+        with test.nested(
+                mock.patch.object(os.path, 'exists'),
+                mock.patch.object(libvirt_utils, 'get_instance_path'),
+                mock.patch.object(utils, 'execute'),
+                mock.patch.object(drvr.image_backend, 'remove_snap')) as (
+                mock_exists, mock_get_path, mock_exec, mock_remove):
+            mock_exists.return_value = True
+            mock_get_path.return_value = '/fake/inst'
+
+            drvr._cleanup_resize(ins_ref, _fake_network_info(self, 1))
+            mock_get_path.assert_called_once_with(ins_ref, forceold=True)
+            mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
+                                              delay_on_retry=True, attempts=5)
+            self.assertFalse(mock_remove.called)
 
     def test_get_instance_disk_info_exception(self):
         instance = self._create_instance()

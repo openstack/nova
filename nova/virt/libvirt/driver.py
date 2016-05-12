@@ -1060,8 +1060,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # reasonably assumed that no such instances exist in the wild
         # anymore, it should be set back to False (the default) so it will
         # throw errors, like it should.
-        backend.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
-                            ignore_errors=True)
+        if backend.check_image_exists():
+            backend.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                                ignore_errors=True)
 
         if instance.host != CONF.host:
             self._undefine_domain(instance)
@@ -7200,14 +7201,15 @@ class LibvirtDriver(driver.ComputeDriver):
         # anymore, the try/except/finally should be removed,
         # and ignore_errors should be set back to False (the default) so
         # that problems throw errors, like they should.
-        try:
-            backend.rollback_to_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
-        except exception.SnapshotNotFound:
-            LOG.warning(_LW("Failed to rollback snapshot (%s)"),
-                        libvirt_utils.RESIZE_SNAPSHOT_NAME)
-        finally:
-            backend.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
-                                ignore_errors=True)
+        if backend.check_image_exists():
+            try:
+                backend.rollback_to_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
+            except exception.SnapshotNotFound:
+                LOG.warning(_LW("Failed to rollback snapshot (%s)"),
+                            libvirt_utils.RESIZE_SNAPSHOT_NAME)
+            finally:
+                backend.remove_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME,
+                                    ignore_errors=True)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
