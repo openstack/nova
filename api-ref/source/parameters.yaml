@@ -793,6 +793,12 @@ alias:
   in: body
   required: true
   type: string
+attachment_id_resp:
+  description: |
+    The UUID of the attachment.
+  in: body
+  required: true
+  type: string
 availability_zone:
   description: |
     The availability zone.
@@ -978,6 +984,12 @@ device:
     the same behavior as if the device name parameter is not supplied on the request.
   in: body
   required: false
+  type: string
+device_resp:
+  description: |
+    Name of the device such as, ``/dev/vdb``.
+  in: body
+  required: true
   type: string
 device_name:
   description: |
@@ -2370,13 +2382,31 @@ volumeAttachment:
   description: |
     A dictionary representation of a volume attachment.
   in: body
-  required: false
-  type: object
+  required: true
+  type: string
+volumeAttachments:
+  description: |
+    List of the volume attachments.
+  in: body
+  required: true
+  type: array
 volumeId:
   description: |
     The UUID of the volume to attach.
   in: body
-  required: false
+  required: true
+  type: string
+volumeId_resp:
+  description: |
+    The UUID of the attached volume.
+  in: body
+  required: true
+  type: string
+volumeId_swap:
+  description: |
+    The UUID of the volume to attach instead of the attached volume.
+  in: body
+  required: true
   type: string
 volume_id:
   description: |

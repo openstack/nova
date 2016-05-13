@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -25,8 +24,21 @@ Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 Request
 -------
 
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id_path
+
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - volumeAttachments: volumeAttachments
+  - device: device_resp
+  - id: attachment_id_resp
+  - serverId: server_id
+  - volumeId: volumeId_resp
 
 Attach a volume to an instance
 ==============================
@@ -42,8 +54,24 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 Request
 -------
 
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id_path
+  - volumeAttachment: volumeAttachment
+  - volumeId: volumeId
+  - device: device
+
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - volumeAttachment: volumeAttachment
+  - device: device_resp
+  - id: attachment_id_resp
+  - serverId: server_id
+  - volumeId: volumeId_resp
 
 Show a detail of a volume attachment
 ====================================
@@ -59,8 +87,22 @@ Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 Request
 -------
 
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id_path
+  - attachment_id: attachment_id
+
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - volumeAttachment: volumeAttachment
+  - device: device_resp
+  - id: attachment_id_resp
+  - serverId: server_id
+  - volumeId: volumeId_resp
 
 Update a volume attachment
 ==========================
@@ -76,8 +118,18 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 Request
 -------
 
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id_path
+  - attachment_id: attachment_id
+  - volumeAttachment: volumeAttachment
+  - volumeId: volumeId_swap
+
 Response
 --------
+
+No body is returned on successful request.
 
 Detach a volume from an instance
 ================================
@@ -93,5 +145,13 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 Request
 -------
 
+.. rest_parameters:: parameters.yaml
+
+  - tenant_id: tenant_id
+  - server_id: server_id_path
+  - attachment_id: attachment_id
+
 Response
 --------
+
+No body is returned on successful request.
