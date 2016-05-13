@@ -98,7 +98,7 @@ class ConfKeyManagerTestCase(test.NoDBTestCase):
         key_id = self.key_mgr.create_key(self.ctxt, 'AES', 256)
         self.key_mgr.delete(self.ctxt, key_id)
 
-        # key won't acutally be deleted
+        # key won't actually be deleted
         self.assertEqual(self.key,
                          self.key_mgr.get(self.ctxt, key_id))
 
