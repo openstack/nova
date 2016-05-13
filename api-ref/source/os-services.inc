@@ -45,7 +45,7 @@ Response
   - disabled_reason: disabled_reason
   - host: host
   - state: service_state
-  - status: status
+  - status: service_status
   - updated_at: updated
   - forced_down: forced_down
   - zone: OS-EXT-AZ:availability_zone
@@ -90,7 +90,7 @@ Response
   - service: service
   - binary: binary
   - host: host
-  - status: status
+  - status: service_status
 
 **Example Enable Scheduling For A Compute Service: JSON response**
 
@@ -132,7 +132,7 @@ Response
   - service: service
   - binary: binary
   - host: host
-  - status: status
+  - status: service_status
 
 **Example Disable Scheduling For A Compute Service: JSON response**
 
@@ -176,7 +176,7 @@ Response
   - binary: binary
   - disabled_reason: disabled_reason
   - host: host
-  - status: status
+  - status: service_status
 
 **Example Log Disabled Compute Service Information: JSON response**
 

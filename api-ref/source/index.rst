@@ -56,10 +56,10 @@
 .. include:: os-security-groups.inc
 .. include:: os-security-group-default-rules.inc
 .. include:: os-security-group-rules.inc
-.. include:: os-server-external-events.inc
 .. include:: os-server-groups.inc
 .. include:: os-services.inc
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-tenant-network.inc
 .. include:: os-volumes.inc
+.. include:: os-server-external-events.inc
 .. include:: extensions.inc
