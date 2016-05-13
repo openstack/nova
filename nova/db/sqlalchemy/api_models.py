@@ -308,8 +308,8 @@ class Inventory(API_BASE):
     allocation_ratio = Column(Float, nullable=False)
     resource_provider = orm.relationship(
         "ResourceProvider",
-        primaryjoin=('and_(Inventory.resource_provider_id == '
-                     'ResourceProvider.id)'),
+        primaryjoin=('Inventory.resource_provider_id == '
+                     'ResourceProvider.id'),
         foreign_keys=resource_provider_id)
 
 
