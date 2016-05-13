@@ -9001,7 +9001,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        "_is_post_copy_enabled")
     def test_live_migration_monitor_postcopy_switch(self,
             mock_postcopy_enabled, mock_should_switch):
-        # A normal sequence where migration is swtiched to postcopy mode
+        # A normal sequence where migration is switched to postcopy mode
         mock_postcopy_enabled.return_value = True
         switch_values = [False, False, True]
         mock_should_switch.return_value = switch_values
