@@ -1147,18 +1147,13 @@ from_port:
   in: body
   required: true
   type: integer
-from_port_1:
-  description: |
-    Port at start of range.
-  in: body
-  required: true
-  type: integer
 group:
   description: |
-    A ``group`` object. Includes the tenant ID and the source security group name.
+    A ``group`` object. Includes the ``tenant_id`` and the source security
+    group ``name``.
   in: body
   required: true
-  type: string
+  type: object
 group_id:
   description: |
     The source security group ID.
@@ -1450,30 +1445,13 @@ ip_protocol:
   in: body
   required: true
   type: string
-ip_protocol_1:
-  description: |
-    The IP protocol: ICMP, TCP, or UDP.
-  in: body
-  required: true
-  type: string
 ip_range:
   description: |
     The range of IP addresses to use for creating floating IPs.
   in: body
   required: true
   type: string
-ip_range_1:
-  description: |
-    An IP range object.
-  in: body
-  required: true
-  type: string
-ip_range_2:
-  description: |
-    An ``ip_range`` object.
-  in: body
-  required: true
-  type: string
+# TODO(mriedem): this needs to be renamed and used in os-floating-ips-bulk.inc
 ip_range_3:
   description: |
     The range of IP addresses from which to bulk-delete floating IPs.
@@ -2040,6 +2018,30 @@ rules_1:
   in: body
   required: true
   type: string
+secgroup_rule_cidr:
+  description: |
+    The CIDR for address range.
+  in: body
+  required: false
+  type: string
+secgroup_rule_id:
+  description: |
+    The security group rule ID.
+  in: body
+  required: true
+  type: string
+secgroup_rule_ip_range:
+  description: |
+    An IP range object. Includes the security group rule ``cidr``.
+  in: body
+  required: true
+  type: object
+secgroup_tenant_id_body:
+  description: |
+    The UUID of the tenant that owns this security group.
+  in: body
+  required: true
+  type: string
 security_group:
   description: |
     Specify the ``security_group`` action in the request body.
@@ -2241,12 +2243,6 @@ tenant_id_body:
 to_port:
   description: |
     The port at end of range.
-  in: body
-  required: true
-  type: integer
-to_port_1:
-  description: |
-    Port at end of range.
   in: body
   required: true
   type: integer
