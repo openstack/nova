@@ -19,7 +19,11 @@ from oslo_config import cfg
 auth_opts = [
     cfg.BoolOpt("api_rate_limit",
             default=False,
+            deprecated_for_removal=True,
+            deprecated_group="DEFAULT",
             help="""
+*DEPRECATED*
+
 Determines whether rate limiting for the API is per-user. This option is only
 used by v2 API. Rate limiting is removed from v2.1 API.
 
@@ -345,7 +349,7 @@ to use.
 
 Possible values:
 
-    Either "True" or "False" (default)
+    True, False (default)
 
 * Related options:
 
