@@ -40,12 +40,6 @@ aggregate_name:
   in: body
   required: true
   type: string
-alias_1:
-  description: |
-    An alias for the extension name. For example, ``os-server-external-events``.
-  in: path
-  required: true
-  type: string
 api_version:
   in: path
   required: true
@@ -957,12 +951,6 @@ description:
   in: body
   required: true
   type: string
-description_1:
-  description: |
-    Text describing this extension's purpose.
-  in: body
-  required: true
-  type: string
 description_2:
   description: |
     The security group description.
@@ -1029,6 +1017,25 @@ extension:
   in: body
   required: true
   type: object
+extension_description:
+  description: |
+    Text describing this extension's purpose.
+  in: body
+  required: true
+  type: string
+extension_links:
+  description: |
+    Links pertaining to this extension. This is a list of dictionaries, each including
+    keys ``href`` and ``rel``.
+  in: body
+  required: true
+  type: array
+extension_name:
+  description: |
+    Name of the extension.
+  in: body
+  required: true
+  type: string
 extensions:
   description: |
     List of ``extension`` objects.
@@ -1513,13 +1520,6 @@ links:
   in: body
   required: true
   type: array
-links_1:
-  description: |
-    Links pertaining to this extension. This is a list of dictionaries, each including
-    keys ``href`` and ``rel``.
-  in: body
-  required: true
-  type: array
 lock:
   description: |
     The action.
@@ -1654,12 +1654,6 @@ server_description:
     A free form description of the server. Limited to 255 characters
     in length. Before microversion 2.19 this was set to the server
     name.
-name_8:
-  description: |
-    Name of the extension.
-  in: body
-  required: true
-  type: string
 name_9:
   description: |
     The name of floating IP pools.
