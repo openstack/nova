@@ -142,13 +142,20 @@ class _TestNUMA(object):
                 objects.NUMAPagesTopology(
                     size_kb=4, total=1548736, used=0),
                 objects.NUMAPagesTopology(
-                    size_kb=2048, total=513, used=0)])  # 1,002G
+                    size_kb=2048, total=513, used=0),
+                objects.NUMAPagesTopology(
+                    size_kb=1048576, total=4, used=1, reserved=1)])
 
         pagesize = 2048
-
         self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
         self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 21))
         self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 19 + 1))
+
+        pagesize = 1048576
+        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20))
+        self.assertTrue(cell.can_fit_hugepages(pagesize, 2 ** 20 * 2))
+        self.assertFalse(cell.can_fit_hugepages(pagesize, 2 ** 20 * 3))
+
         self.assertRaises(
             exception.MemoryPageSizeNotSupported,
             cell.can_fit_hugepages, 12345, 2 ** 20)
@@ -238,6 +245,13 @@ class _TestNUMA(object):
                                  siblings=[set([5, 6])],
                                  mempages=[pt2])
         self.assertNotEqual(cell1, cell2)
+
+    def test_reserved_property_not_set(self):
+        p = objects.NUMAPagesTopology(
+            # To have reserved not set is similar than to have receive
+            # a NUMAPageTopology version 1.0
+            size_kb=1024, total=64, used=32)
+        self.assertEqual(32, p.free)
 
 
 class TestNUMA(test_objects._LocalTest,

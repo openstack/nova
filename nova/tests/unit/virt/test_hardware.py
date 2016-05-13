@@ -1367,6 +1367,79 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[2].cpu_usage, 0)
         self.assertEqual(hostusage.cells[2].memory_usage, 0)
 
+    def _topo_usage_reserved_page_size(self):
+        reserved = hw.numa_get_reserved_huge_pages()
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
+                             cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(
+                                     size_kb=2048,
+                                     total=512,
+                                     used=128,
+                                     reserved=reserved[0][2048])],
+                             siblings=[], pinned_cpus=set([])),
+            objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
+                             cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(
+                                     size_kb=1048576,
+                                     total=5,
+                                     used=2,
+                                     reserved=reserved[1][1048576])],
+                             siblings=[], pinned_cpus=set([])),
+        ])
+        instance1 = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(
+                id=0, cpuset=set([0, 1]), memory=256, pagesize=2048),
+            objects.InstanceNUMACell(
+                id=1, cpuset=set([2, 3]), memory=1024, pagesize=1048576),
+        ])
+        return hosttopo, instance1
+
+    def test_numa_get_reserved_huge_pages(self):
+        reserved = hw.numa_get_reserved_huge_pages()
+        self.assertEqual({}, reserved)
+        self.flags(reserved_huge_pages=[
+            {'node': 3, 'size': 2048, 'count': 128},
+            {'node': 3, 'size': '1GB', 'count': 4},
+            {'node': 6, 'size': '2MB', 'count': 64},
+            {'node': 9, 'size': '1GB', 'count': 1}])
+        reserved = hw.numa_get_reserved_huge_pages()
+        self.assertEqual({2048: 128, 1048576: 4}, reserved[3])
+        self.assertEqual({2048: 64}, reserved[6])
+        self.assertEqual({1048576: 1}, reserved[9])
+
+    def test_reserved_hugepgaes_success(self):
+        self.flags(reserved_huge_pages=[
+            {'node': 0, 'size': 2048, 'count': 128},
+            {'node': 1, 'size': 1048576, 'count': 1}])
+        hosttopo, instance1 = self._topo_usage_reserved_page_size()
+        hostusage = hw.numa_usage_from_instances(
+            hosttopo, [instance1])
+
+        self.assertEqual(hostusage.cells[0].mempages[0].size_kb, 2048)
+        self.assertEqual(hostusage.cells[0].mempages[0].total, 512)
+        self.assertEqual(hostusage.cells[0].mempages[0].used, 256)
+        # 128 already used + 128 used by instance + 128 reserved
+        self.assertEqual(hostusage.cells[0].mempages[0].free, 128)
+
+        self.assertEqual(hostusage.cells[1].mempages[0].size_kb, 1048576)
+        self.assertEqual(hostusage.cells[1].mempages[0].total, 5)
+        self.assertEqual(hostusage.cells[1].mempages[0].used, 3)
+        # 2 already used + 1 used by instance + 1 reserved
+        self.assertEqual(hostusage.cells[1].mempages[0].free, 1)
+
+    def test_reserved_huge_pages_invalid_format(self):
+        self.flags(reserved_huge_pages=[{'node': 0, 'size': 2048}])
+        self.assertRaises(
+            exception.InvalidReservedMemoryPagesOption,
+            self._topo_usage_reserved_page_size)
+
+    def test_reserved_huge_pages_invalid_value(self):
+        self.flags(reserved_huge_pages=["0:foo:bar"])
+        self.assertRaises(
+            exception.InvalidReservedMemoryPagesOption,
+            self._topo_usage_reserved_page_size)
+
     def test_topo_usage_none(self):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,

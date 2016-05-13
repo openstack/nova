@@ -13,6 +13,7 @@
 # under the License.
 
 from oslo_config import cfg
+from oslo_config import types
 
 from nova.conf import paths
 
@@ -348,6 +349,30 @@ Interdependencies to other options:
   configured as HVM.
  """)
 
+reserved_huge_pages = cfg.MultiOpt(
+    "reserved_huge_pages",
+    item_type=types.Dict,
+    help="""Reserves a number of huge/large memory pages per NUMA host cells
+
+Possible values:
+
+* A list of valid key=value which reflect NUMA node ID, page size
+  (Default unit is KiB) and number of pages to be reserved.
+
+    reserved_huge_pages = node=0,size=2048,count=64
+    reserved_huge_pages = node=1,size=1GB,count=1
+
+  In this example we are reserving on NUMA node 0 64 pages of 2MiB
+  and on NUMA node 1 1 page of 1GiB.
+
+Services which consume this:
+
+* nova-compute
+
+Related options:
+
+* None""")
+
 
 ALL_OPTS = [vcpu_pin_set,
             compute_driver,
@@ -367,7 +392,8 @@ ALL_OPTS = [vcpu_pin_set,
             image_cache_subdirectory_name,
             remove_unused_base_images,
             remove_unused_original_minimum_age_seconds,
-            pointer_model]
+            pointer_model,
+            reserved_huge_pages]
 
 
 def register_opts(conf):
