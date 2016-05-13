@@ -338,8 +338,8 @@ class RestParametersDirective(Table):
         # formatting because it doesn't let tables just be the right
         # size.
         tgroup.extend(
-             nodes.colspec(colwidth=col_width, colname='c' + str(idx))
-             for idx, col_width in enumerate(self.col_widths)
+            nodes.colspec(colwidth=col_width, colname='c' + str(idx))
+            for idx, col_width in enumerate(self.col_widths)
         )
 
         thead = nodes.thead()
