@@ -26,7 +26,6 @@ import tempfile
 import boto.s3.connection
 from lxml import etree
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.api.ec2 import ec2utils
@@ -40,37 +39,7 @@ from nova import utils
 
 
 LOG = logging.getLogger(__name__)
-
-s3_opts = [
-    cfg.StrOpt('image_decryption_dir',
-               default='/tmp',
-               help='Parent directory for tempdir used for image decryption'),
-    cfg.StrOpt('s3_host',
-               default='$my_ip',
-               help='Hostname or IP for OpenStack to use when accessing '
-                    'the S3 api'),
-    cfg.IntOpt('s3_port',
-               default=3333,
-               min=1,
-               max=65535,
-               help='Port used when accessing the S3 api'),
-    cfg.StrOpt('s3_access_key',
-               default='notchecked',
-               help='Access key to use for S3 server for images'),
-    cfg.StrOpt('s3_secret_key',
-               default='notchecked',
-               help='Secret key to use for S3 server for images'),
-    cfg.BoolOpt('s3_use_ssl',
-               default=False,
-               help='Whether to use SSL when talking to S3'),
-    cfg.BoolOpt('s3_affix_tenant',
-               default=False,
-               help='Whether to affix the tenant id to the access key '
-                    'when downloading from S3'),
-    ]
-
 CONF = nova.conf.CONF
-CONF.register_opts(s3_opts)
 
 
 class S3ImageService(object):
