@@ -4943,7 +4943,7 @@ def migration_get_all_by_filters(context, filters):
     query = model_query(context, models.Migration)
     if "status" in filters:
         status = filters["status"]
-        status = [status] if isinstance(status, str) else status
+        status = [status] if isinstance(status, six.string_types) else status
         query = query.filter(models.Migration.status.in_(status))
     if "host" in filters:
         host = filters["host"]
