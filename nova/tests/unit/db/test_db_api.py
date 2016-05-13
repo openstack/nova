@@ -1417,6 +1417,14 @@ class MigrationTestCase(test.TestCase):
         for migration in migrations:
             self.assertIn(migration['status'], filters['status'])
 
+    def test_get_migrations_by_filters_unicode_status(self):
+        self._create(status=u"unicode")
+        filters = {"status": u"unicode"}
+        migrations = db.migration_get_all_by_filters(self.ctxt, filters)
+        self.assertEqual(1, len(migrations))
+        for migration in migrations:
+            self.assertIn(migration['status'], filters['status'])
+
     def test_get_migrations_by_filters_with_type(self):
         self._create(status="special", source_compute="host9",
                      migration_type="evacuation")
