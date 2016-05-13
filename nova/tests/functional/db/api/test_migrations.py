@@ -290,6 +290,12 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertUniqueConstraintExists(engine, 'build_requests',
                 ['instance_uuid'])
 
+    def _check_014(self, engine, data):
+        for column in ['name', 'public_key']:
+            self.assertColumnExists(engine, 'key_pairs', column)
+        self.assertUniqueConstraintExists(engine, 'key_pairs',
+                                          ['user_id', 'name'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
