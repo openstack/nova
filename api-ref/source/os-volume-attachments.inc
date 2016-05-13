@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ===================================================================
@@ -40,6 +39,11 @@ Response
   - serverId: server_id
   - volumeId: volumeId_resp
 
+**Example List volume attachments for an instance: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/list-volume-attachments-resp.json
+   :language: javascript
+
 Attach a volume to an instance
 ==============================
 
@@ -62,6 +66,11 @@ Request
   - volumeId: volumeId
   - device: device
 
+**Example Attach a volume to an instance: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/attach-volume-to-server-req.json
+   :language: javascript
+
 Response
 --------
 
@@ -72,6 +81,11 @@ Response
   - id: attachment_id_resp
   - serverId: server_id
   - volumeId: volumeId_resp
+
+**Example Attach a volume to an instance: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/attach-volume-to-server-resp.json
+   :language: javascript
 
 Show a detail of a volume attachment
 ====================================
@@ -104,6 +118,11 @@ Response
   - serverId: server_id
   - volumeId: volumeId_resp
 
+**Example Show a detail of a volume attachment: JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/volume-attachment-detail-resp.json
+   :language: javascript
+
 Update a volume attachment
 ==========================
 
@@ -125,6 +144,11 @@ Request
   - attachment_id: attachment_id
   - volumeAttachment: volumeAttachment
   - volumeId: volumeId_swap
+
+**Example Update a volume attachment: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-volumes/update-volume-req.json
+   :language: javascript
 
 Response
 --------
