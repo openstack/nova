@@ -335,8 +335,32 @@ class MetadataTestCase(test.TestCase):
         fakes.stub_out_key_pair_funcs(self.stubs)
         inst = self.instance.obj_clone()
         inst_md = base.InstanceMetadata(inst)
+        expected_paths = [
+            'ec2/2009-04-04/user-data',
+            'ec2/2009-04-04/meta-data.json',
+            'ec2/latest/user-data',
+            'ec2/latest/meta-data.json',
+            'openstack/2012-08-10/meta_data.json',
+            'openstack/2012-08-10/user_data',
+            'openstack/2013-04-04/meta_data.json',
+            'openstack/2013-04-04/user_data',
+            'openstack/2013-10-17/meta_data.json',
+            'openstack/2013-10-17/user_data',
+            'openstack/2013-10-17/vendor_data.json',
+            'openstack/2015-10-15/meta_data.json',
+            'openstack/2015-10-15/user_data',
+            'openstack/2015-10-15/vendor_data.json',
+            'openstack/2015-10-15/network_data.json',
+            'openstack/latest/meta_data.json',
+            'openstack/latest/user_data',
+            'openstack/latest/vendor_data.json',
+            'openstack/latest/network_data.json',
+        ]
+        actual_paths = []
         for (path, value) in inst_md.metadata_for_config_drive():
+            actual_paths.append(path)
             self.assertIsNotNone(path)
+        self.assertEqual(expected_paths, actual_paths)
 
     def test_InstanceMetadata_queries_network_API_when_needed(self):
         network_info_from_api = []
