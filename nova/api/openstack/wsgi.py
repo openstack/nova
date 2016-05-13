@@ -802,7 +802,7 @@ class Resource(wsgi.Application):
                     contents = self.deserialize(meth, content_type, body)
         except exception.InvalidContentType:
             msg = _("Unsupported Content-Type")
-            return Fault(webob.exc.HTTPBadRequest(explanation=msg))
+            return Fault(webob.exc.HTTPUnsupportedMediaType(explanation=msg))
         except exception.MalformedRequestBody:
             msg = _("Malformed request body")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))

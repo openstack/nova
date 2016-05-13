@@ -418,9 +418,9 @@ class ResourceTest(test.NoDBTestCase):
         req.content_type = None
         req.body = '{"body": {"key": "value"}}'
         response = req.get_response(app)
-        expected_unsupported_type_body = {'badRequest':
-            {'message': 'Unsupported Content-Type', 'code': 400}}
-        self.assertEqual(response.status_int, 400)
+        expected_unsupported_type_body = {'badMediaType':
+            {'message': 'Unsupported Content-Type', 'code': 415}}
+        self.assertEqual(response.status_int, 415)
         self.assertEqual(expected_unsupported_type_body,
                          jsonutils.loads(response.body))
 
