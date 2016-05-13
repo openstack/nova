@@ -181,7 +181,7 @@ class RestParametersDirective(Table):
             current_section = value['in']
             last_section = last[1]['in']
             if sections[current_section] < sections[last_section]:
-                self.app.info(
+                self.app.warn(
                     "Section out of order. All parameters in section ``%s`` "
                     "should be after section ``%s``. (see ``%s``)" % (
                         last_section,
@@ -189,7 +189,7 @@ class RestParametersDirective(Table):
                         last[0]))
             if (sections[value['in']] == sections[last[1]['in']] and
                 key.lower() < last[0].lower()):
-                self.app.info(
+                self.app.warn(
                     "Parameters out of order ``%s`` should be after ``%s``" % (
                         last[0], key))
             last = (key, value)

@@ -34,30 +34,12 @@ aggregate_id:
   in: path
   required: true
   type: string
-aggregate_name:
-  description: |
-    The name of the aggregate.
-  in: body
-  required: true
-  type: string
 api_version:
   in: path
   required: true
   type: string
   description: >
     The API version as returned in the links from the ``GET /`` call.
-associate_host:
-  description: |
-    The name of the host to associate.
-  in: body
-  required: true
-  type: string
-architecture:
-  description: |
-    The name of the cpu architecture.
-  in: body
-  required: true
-  type: string
 attachment_id:
   description: |
     The UUID of the attachment.
@@ -124,6 +106,12 @@ floating_ip_id:
   in: path
   required: true
   type: string
+host_maintenance_mode_in:
+  description: |
+    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+  in: path
+  required: false
+  type: string
 host_name:
   description: |
     The name of the host.
@@ -133,12 +121,6 @@ host_name:
 host_status_body_in:
   description: |
     The status of the current host, either 'enabled' or 'disabled'.
-  in: path
-  required: false
-  type: string
-host_maintenance_mode_in:
-  description: |
-    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
   in: path
   required: false
   type: string
@@ -410,12 +392,6 @@ include:
   in: query
   required: false
   type: string
-ip_query:
-  description: |
-    An IPv4 address to filter results by.
-  in: query
-  required: false
-  type: string
 ip6_query:
   description: |
     An IPv6 address to filter results by.
@@ -423,6 +399,12 @@ ip6_query:
   required: false
   type: string
   min_version: 2.5
+ip_query:
+  description: |
+    An IPv4 address to filter results by.
+  in: query
+  required: false
+  type: string
 limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -464,12 +446,41 @@ minRam_1:
   in: query
   required: false
   type: integer
+name_7:
+  description: |
+    Filters the response by an image name, as a string.
+  in: query
+  required: false
+  type: string
+not_tags_any_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that don't
+    match any tags in this list will be returned.
+  min_version: 2.26
+not_tags_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that don't
+    match all tags in this list will be returned.
+  min_version: 2.26
 reservation_id_query:
   in: query
   required: false
   type: string
   description: |
     A reservation id as returned by a servers multiple create call.
+server_1:
+  description: |
+    Filters the response by a server, as a URL.
+  format: uri
+  in: query
+  required: false
+  type: string
 server_name_query:
   description: |
     Filters the response by a server name, as a string.  You can use regular expressions
@@ -481,16 +492,9 @@ server_name_query:
   in: query
   required: false
   type: string
-name_7:
+server_status_query:
   description: |
-    Filters the response by an image name, as a string.
-  in: query
-  required: false
-  type: string
-server_1:
-  description: |
-    Filters the response by a server, as a URL.
-  format: uri
+    Filters the response by a server status, as a string. For example, ``ACTIVE``.
   in: query
   required: false
   type: string
@@ -518,22 +522,8 @@ status_1:
   in: query
   required: false
   type: string
-server_status_query:
-  description: |
-    Filters the response by a server status, as a string. For example, ``ACTIVE``.
-  in: query
-  required: false
-  type: string
 # TODO(sdague): when server-tags actually get documented, these should
 # be updated.
-tags_query:
-  in: query
-  required: false
-  type: string
-  description: |
-    A list of tags to filter the server list by. Servers that match
-    all tags in this list will be returned.
-  min_version: 2.26
 tags_any_query:
   in: query
   required: false
@@ -542,21 +532,13 @@ tags_any_query:
     A list of tags to filter the server list by. Servers that match
     any tag in this list will be returned.
   min_version: 2.26
-not_tags_query:
+tags_query:
   in: query
   required: false
   type: string
   description: |
-    A list of tags to filter the server list by. Servers that don't
-    match all tags in this list will be returned.
-  min_version: 2.26
-not_tags_any_query:
-  in: query
-  required: false
-  type: string
-  description: |
-    A list of tags to filter the server list by. Servers that don't
-    match any tags in this list will be returned.
+    A list of tags to filter the server list by. Servers that match
+    all tags in this list will be returned.
   min_version: 2.26
 type_1:
   description: |
@@ -572,125 +554,6 @@ user_id_1:
   type: string
 
 # variables in body
-fault:
-  description: |
-    A fault object. Only displayed in the failed response.
-  in: body
-  required: false
-  type: object
-OS-DCF:diskConfig:
-  description: |
-    Controls how the API partitions the disk when you create, rebuild, or resize servers.
-    A server inherits the ``OS-DCF:diskConfig`` value from the image from which it
-    was created, and an image inherits the ``OS-DCF:diskConfig`` value from the server
-    from which it was created. To override the inherited setting, you can include
-    this attribute in the request body of a server create, rebuild, or resize request.  If
-    the ``OS-DCF:diskConfig`` value for an image is ``MANUAL``, you cannot create
-    a server from that image and set its ``OS-DCF:diskConfig`` value to ``AUTO``.
-    A valid value is:
-
-    - ``AUTO``. The API builds the server with a single partition the size of the
-      target flavor disk. The API automatically adjusts the file system to fit the
-      entire partition.
-
-    - ``MANUAL``. The API builds the server by using whatever partition scheme and
-      file system is in the source image. If the target flavor disk is larger, the API
-      does not partition the remaining disk space.
-  in: body
-  required: false
-  type: string
-disk_config:
-  description: |
-    Disk configuration. The value is either:
-
-    - ``AUTO``. The API builds the server with a single partition the size of
-      the target flavor disk. The API automatically adjusts the file system to
-      fit the entire partition.
-
-    - ``MANUAL``. The API builds the server by using the partition scheme and
-      file system that is in the source image. If the target flavor disk is
-      larger, The API does not partition the remaining disk space.
-  in: body
-  required: true
-  type: string
-OS-EXT-AZ:availability_zone:
-  description: |
-    The availability zone.
-  in: body
-  required: true
-  type: string
-OS-EXT-SRV-ATTR:host:
-  description: |
-    The host name. Appears in the response for administrative users only.
-  in: body
-  required: true
-  type: string
-OS-EXT-SRV-ATTR:hypervisor_hostname:
-  description: |
-    The hypervisor host name. Appears in the response for administrative users only.
-  in: body
-  required: true
-  type: string
-OS-EXT-SRV-ATTR:instance_name:
-  description: |
-    The instance name. The Compute API generates the instance name from the instance
-    name template. Appears in the response for administrative users only.
-  in: body
-  required: true
-  type: string
-OS-EXT-STS:power_state:
-  description: |
-    The power state of the instance.
-  in: body
-  required: true
-  type: integer
-OS-EXT-STS:task_state:
-  description: |
-    The task state of the instance.
-  in: body
-  required: true
-  type: string
-OS-EXT-STS:vm_state:
-  description: |
-    The VM state.
-  in: body
-  required: true
-  type: string
-OS-SRV-USG:launched_at:
-  description: |
-    The date and time when the server was launched.
-
-    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
-
-    ::
-
-      CCYY-MM-DDThh:mm:ss±hh:mm
-
-    For example, ``2015-08-27T09:49:58-05:00``.
-
-    The ``hh±:mm`` value, if included, is the time zone as an offset from UTC.
-    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
-  in: body
-  required: true
-  type: string
-OS-SRV-USG:terminated_at:
-  description: |
-    The date and time when the server was deleted.
-
-    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
-
-    ::
-
-      CCYY-MM-DDThh:mm:ss±hh:mm
-
-    For example, ``2015-08-27T09:49:58-05:00``.
-
-    The ``±hh:mm`` value, if included, is the time zone as an offset from UTC.
-
-    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
-  in: body
-  required: true
-  type: string
 accessIPv4:
   in: body
   required: true
@@ -698,6 +561,12 @@ accessIPv4:
   description: |
     IPv4 address that should be used to access this server. May be
     automatically set by the provider.
+accessIPv4_in:
+  in: body
+  required: false
+  type: string
+  description: |
+    IPv4 address that should be used to access this server.
 accessIPv6:
   in: body
   required: true
@@ -705,12 +574,6 @@ accessIPv6:
   description: |
     IPv6 address that should be used to access this server. May be
     automatically set by the provider.
-accessIPv4_in:
-  in: body
-  required: false
-  type: string
-  description: |
-    IPv4 address that should be used to access this server.
 accessIPv6_in:
   in: body
   required: false
@@ -724,12 +587,6 @@ addFixedIp:
   required: true
   type: string
 addFloatingIp:
-  description: |
-    The action.
-  in: body
-  required: true
-  type: string
-addSecurityGroup:
   description: |
     The action.
   in: body
@@ -751,6 +608,12 @@ addresses:
   in: body
   required: true
   type: object
+addSecurityGroup:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
 adminPass:
   description: |
     The administrative password of the server.
@@ -787,9 +650,27 @@ agent_id_str:
   in: body
   required: true
   type: string
+aggregate_name:
+  description: |
+    The name of the aggregate.
+  in: body
+  required: true
+  type: string
 alias:
   description: |
     A short name by which this extension is also known.
+  in: body
+  required: true
+  type: string
+architecture:
+  description: |
+    The name of the cpu architecture.
+  in: body
+  required: true
+  type: string
+associate_host:
+  description: |
+    The name of the host to associate.
   in: body
   required: true
   type: string
@@ -916,24 +797,18 @@ cores_1:
   in: body
   required: false
   type: integer
-createBackup:
-  description: |
-    The action.
-  in: body
-  required: true
-  type: string
-createImage:
-  description: |
-    The action.
-  in: body
-  required: true
-  type: string
 create_info:
   description: |
     Information for snapshot creation.
   in: body
   required: true
   type: object
+createBackup:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
 created:
   description: |
     The date and time when the resource was created. The date and time
@@ -946,6 +821,12 @@ created:
     For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
     value, if included, is the time zone as an offset from UTC.  In
     the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+createImage:
+  description: |
+    The action.
   in: body
   required: true
   type: string
@@ -984,15 +865,29 @@ device:
   in: body
   required: false
   type: string
+device_name:
+  description: |
+    A path to the device for the volume that you want to use to boot the server.
+  in: body
+  required: true
+  type: string
 device_resp:
   description: |
     Name of the device such as, ``/dev/vdb``.
   in: body
   required: true
   type: string
-device_name:
+disk_config:
   description: |
-    A path to the device for the volume that you want to use to boot the server.
+    Disk configuration. The value is either:
+
+    - ``AUTO``. The API builds the server with a single partition the size of
+      the target flavor disk. The API automatically adjusts the file system to
+      fit the entire partition.
+
+    - ``MANUAL``. The API builds the server by using the partition scheme and
+      file system that is in the source image. If the target flavor disk is
+      larger, The API does not partition the remaining disk space.
   in: body
   required: true
   type: string
@@ -1079,6 +974,12 @@ extensions:
   in: body
   required: true
   type: array
+fault:
+  description: |
+    A fault object. Only displayed in the failed response.
+  in: body
+  required: false
+  type: object
 fixed_address:
   description: |
     The fixed IP address with which you want to associate the floating IP address.
@@ -1119,12 +1020,6 @@ fixed_ips_3:
   in: body
   required: false
   type: integer
-flavorRef:
-  description: |
-    The flavor reference, as a UUID or full URL, for the flavor for your server instance.
-  in: body
-  required: true
-  type: string
 flavor:
   description: |
     The ID and links for the flavor for your server instance. A flavor is a combination
@@ -1132,18 +1027,24 @@ flavor:
   in: body
   required: true
   type: object
-floating_ip_pools:
+flavorRef:
   description: |
-    The ``floating_ip_pools`` object.
+    The flavor reference, as a UUID or full URL, for the flavor for your server instance.
   in: body
   required: true
-  type: array
+  type: string
 floating_ip_pool_name:
   description: |
     The name of the floating ip pool.
   in: body
   required: true
   type: string
+floating_ip_pools:
+  description: |
+    The ``floating_ip_pools`` object.
+  in: body
+  required: true
+  type: array
 floating_ips:
   description: |
     The number of allowed floating IP addresses for each tenant.
@@ -1209,9 +1110,27 @@ host:
   in: body
   required: false
   type: string
-hostId:
+host_cpu:
   description: |
-    The ID of the host.
+    The cpu info on the host.
+  in: body
+  required: true
+  type: string
+host_disk_gb:
+  description: |
+    The disk info on the host (in GB).
+  in: body
+  required: true
+  type: string
+host_maintenance_mode:
+  description: |
+    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+  in: body
+  required: true
+  type: string
+host_memory_mb:
+  description: |
+    The memory info on the host (in MB).
   in: body
   required: true
   type: string
@@ -1219,6 +1138,42 @@ host_migration:
   description: |
     The host to which to migrate the server. If you omit this parameter, the scheduler
     chooses a host.
+  in: body
+  required: true
+  type: string
+host_name_body:
+  description: |
+    The name of the host.
+  in: body
+  required: true
+  type: string
+host_power_action:
+  description: |
+    The power action on the host.
+  in: body
+  required: true
+  type: string
+host_project:
+  description: |
+    The project id (or special name like total, used_now, used_max).
+  in: body
+  required: true
+  type: string
+host_resource:
+  description: |
+    The resource info of the host.
+  in: body
+  required: true
+  type: object
+host_resource_array:
+  description: |
+    The array that includes resource info of the host.
+  in: body
+  required: true
+  type: array
+host_service:
+  description: |
+    The service name which is running on the host.
   in: body
   required: true
   type: string
@@ -1239,75 +1194,21 @@ host_status:
   in: body
   required: true
   type: string
-host_service:
-  description: |
-    The service name which is running on the host.
-  in: body
-  required: true
-  type: string
-host_resource_array:
-  description: |
-    The array that includes resource info of the host.
-  in: body
-  required: true
-  type: array
-host_resource:
-  description: |
-    The resource info of the host.
-  in: body
-  required: true
-  type: object
-host_project:
-  description: |
-    The project id (or special name like total, used_now, used_max).
-  in: body
-  required: true
-  type: string
-host_cpu:
-  description: |
-    The cpu info on the host.
-  in: body
-  required: true
-  type: string
-host_memory_mb:
-  description: |
-    The memory info on the host (in MB).
-  in: body
-  required: true
-  type: string
-host_disk_gb:
-  description: |
-    The disk info on the host (in GB).
-  in: body
-  required: true
-  type: string
 host_status_body:
   description: |
     The status of the current host, either 'enabled' or 'disabled'.
   in: body
   required: true
   type: string
-host_maintenance_mode:
-  description: |
-    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
-  in: body
-  required: true
-  type: string
-host_power_action:
-  description: |
-    The power action on the host.
-  in: body
-  required: true
-  type: string
-host_name_body:
-  description: |
-    The name of the host.
-  in: body
-  required: true
-  type: string
 host_zone:
   description: |
     The available zone of the host.
+  in: body
+  required: true
+  type: string
+hostId:
+  description: |
+    The ID of the host.
   in: body
   required: true
   type: string
@@ -1341,12 +1242,6 @@ id_2:
   in: body
   required: true
   type: integer
-server_id:
-  description: |
-    The UUID of the server.
-  in: body
-  required: true
-  type: string
 id_4:
   description: |
     The snapshot ID.
@@ -1365,18 +1260,19 @@ id_6:
   in: body
   required: true
   type: string
-virtual_interface_id:
-  description: |
-    The UUID of the virtual interface.
-  in: body
-  required: true
-  type: string
 id_9:
   description: |
     The ID of the quota set.
   in: body
   required: false
   type: string
+image:
+  description: |
+    The UUID and links for the image for your server instance. The ``image`` object
+    might be an empty string when you boot the server from a volume.
+  in: body
+  required: true
+  type: object
 imageRef:
   description: |
     The image reference, as a UUID or full URL, for the image to use for your server
@@ -1391,13 +1287,6 @@ imageRef_1:
   in: body
   required: false
   type: string
-image:
-  description: |
-    The UUID and links for the image for your server instance. The ``image`` object
-    might be an empty string when you boot the server from a volume.
-  in: body
-  required: true
-  type: object
 images:
   description: |
     Image information.
@@ -1410,12 +1299,6 @@ in_use:
   in: body
   required: true
   type: integer
-injectNetworkInfo:
-  description: |
-    The action.
-  in: body
-  required: true
-  type: string
 injected_file_content_bytes:
   description: |
     The number of allowed bytes of content for each injected file.
@@ -1452,6 +1335,12 @@ injected_files_1:
   in: body
   required: false
   type: integer
+injectNetworkInfo:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
 instances:
   description: |
     The number of allowed instances for each tenant.
@@ -1584,13 +1473,6 @@ metadata_1:
   in: body
   required: false
   type: object
-metadata_compat:
-  description: |
-    A dictionary of metadata key-and-value pairs, which is maintained for backward
-    compatibility.
-  in: body
-  required: true
-  type: object
 metadata_3:
   description: |
     The associated metadata key and value pairs.
@@ -1604,6 +1486,13 @@ metadata_4:
   in: body
   required: false
   type: string
+metadata_compat:
+  description: |
+    A dictionary of metadata key-and-value pairs, which is maintained for backward
+    compatibility.
+  in: body
+  required: true
+  type: object
 metadata_items:
   description: |
     The number of allowed metadata items for each instance.
@@ -1653,21 +1542,6 @@ name_5:
   in: body
   required: true
   type: string
-server_name:
-  description: |
-    The server name.
-  in: body
-  required: true
-  type: string
-server_description:
-  type: string
-  in: body
-  required: false
-  min_version: 2.19
-  description: |
-    A free form description of the server. Limited to 255 characters
-    in length. Before microversion 2.19 this was set to the server
-    name.
 name_9:
   description: |
     The name of floating IP pools.
@@ -1700,6 +1574,14 @@ network_label_body:
     The network label, such as ``public`` or ``private``.
   in: body
   required: true
+  type: string
+network_uuid:
+  description: |
+    To provision the server instance with a NIC for a network, specify the UUID of
+    the network in the ``uuid`` attribute in a ``networks`` object. Required if you
+    omit the ``port`` attribute.
+  in: body
+  required: false
   type: string
 networks:
   description: |
@@ -1748,6 +1630,70 @@ os-availability-zone:availability_zone:
   in: body
   required: false
   type: string
+OS-DCF:diskConfig:
+  description: |
+    Controls how the API partitions the disk when you create, rebuild, or resize servers.
+    A server inherits the ``OS-DCF:diskConfig`` value from the image from which it
+    was created, and an image inherits the ``OS-DCF:diskConfig`` value from the server
+    from which it was created. To override the inherited setting, you can include
+    this attribute in the request body of a server create, rebuild, or resize request.  If
+    the ``OS-DCF:diskConfig`` value for an image is ``MANUAL``, you cannot create
+    a server from that image and set its ``OS-DCF:diskConfig`` value to ``AUTO``.
+    A valid value is:
+
+    - ``AUTO``. The API builds the server with a single partition the size of the
+      target flavor disk. The API automatically adjusts the file system to fit the
+      entire partition.
+
+    - ``MANUAL``. The API builds the server by using whatever partition scheme and
+      file system is in the source image. If the target flavor disk is larger, the API
+      does not partition the remaining disk space.
+  in: body
+  required: false
+  type: string
+OS-EXT-AZ:availability_zone:
+  description: |
+    The availability zone.
+  in: body
+  required: true
+  type: string
+OS-EXT-SRV-ATTR:host:
+  description: |
+    The host name. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+OS-EXT-SRV-ATTR:hypervisor_hostname:
+  description: |
+    The hypervisor host name. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+OS-EXT-SRV-ATTR:instance_name:
+  description: |
+    The instance name. The Compute API generates the instance name from the instance
+    name template. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+OS-EXT-STS:power_state:
+  description: |
+    The power state of the instance.
+  in: body
+  required: true
+  type: integer
+OS-EXT-STS:task_state:
+  description: |
+    The task state of the instance.
+  in: body
+  required: true
+  type: string
+OS-EXT-STS:vm_state:
+  description: |
+    The VM state.
+  in: body
+  required: true
+  type: string
 os-extended-volumes:volumes_attached:
   description: |
     The attached volumes, if any.
@@ -1766,13 +1712,13 @@ os-getRDPConsole:
   in: body
   required: true
   type: string
-os-getSPICEConsole:
+os-getSerialConsole:
   description: |
     The action.
   in: body
   required: true
   type: string
-os-getSerialConsole:
+os-getSPICEConsole:
   description: |
     The action.
   in: body
@@ -1787,6 +1733,41 @@ os-getVNCConsole:
 os-resetState:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+OS-SRV-USG:launched_at:
+  description: |
+    The date and time when the server was launched.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+
+    The ``hh±:mm`` value, if included, is the time zone as an offset from UTC.
+    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
+  in: body
+  required: true
+  type: string
+OS-SRV-USG:terminated_at:
+  description: |
+    The date and time when the server was deleted.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+
+    The ``±hh:mm`` value, if included, is the time zone as an offset from UTC.
+
+    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
   in: body
   required: true
   type: string
@@ -2110,18 +2091,18 @@ security_groups_1:
   in: body
   required: true
   type: integer
-security_groups_obj:
-  description: |
-    Security groups object.
-  in: body
-  required: true
-  type: array
 security_groups_3:
   description: |
     The number of allowed security groups for each tenant.
   in: body
   required: false
   type: integer
+security_groups_obj:
+  description: |
+    Security groups object.
+  in: body
+  required: true
+  type: array
 server:
   description: |
     server.
@@ -2134,6 +2115,15 @@ server_2:
   in: body
   required: true
   type: object
+server_description:
+  type: string
+  in: body
+  required: false
+  min_version: 2.19
+  description: |
+    A free form description of the server. Limited to 255 characters
+    in length. Before microversion 2.19 this was set to the server
+    name.
 server_group_members:
   description: |
     The number of allowed members for each server group.
@@ -2164,6 +2154,24 @@ server_groups_2:
   in: body
   required: false
   type: integer
+server_id:
+  description: |
+    The UUID of the server.
+  in: body
+  required: true
+  type: string
+server_name:
+  description: |
+    The server name.
+  in: body
+  required: true
+  type: string
+server_status:
+  description: |
+    The server status.
+  in: body
+  required: true
+  type: string
 server_uuid:
   description: |
     The UUID of the server instance to which the API dispatches the event.  You must
@@ -2184,12 +2192,6 @@ service:
   type: object
   description: |
     Object representing a compute service
-services:
-  in: body
-  required: true
-  type: array
-  description: |
-    An array of service objects
 service_state:
   in: body
   required: true
@@ -2202,6 +2204,12 @@ service_status:
   type: string
   description: |
     The status of the service. One of ``enabled`` or ``disabled``.
+services:
+  in: body
+  required: true
+  type: array
+  description: |
+    An array of service objects
 shelve:
   description: |
     The action.
@@ -2242,12 +2250,6 @@ source_type:
   description: |
     The source type of the volume. A valid value is ``blank``, ``snapshot``, ``volume``,
     or ``image``.
-  in: body
-  required: true
-  type: string
-server_status:
-  description: |
-    The server status.
   in: body
   required: true
   type: string
@@ -2332,26 +2334,12 @@ user_id:
   in: body
   required: true
   type: string
-network_uuid:
-  description: |
-    To provision the server instance with a NIC for a network, specify the UUID of
-    the network in the ``uuid`` attribute in a ``networks`` object. Required if you
-    omit the ``port`` attribute.
-  in: body
-  required: false
-  type: string
 version:
   description: |
     The version.
   in: body
   required: true
   type: string
-versions:
-  type: array
-  in: body
-  required: true
-  description: >
-    A list of version objects that describe the API versions available.
 version_id:
   type: string
   in: body
@@ -2385,6 +2373,18 @@ version_status:
     - ``CURRENT``: this is the preferred version of the API to use
     - ``SUPPORTED``: this is an older, but still supported version of the API
     - ``DEPRECATED``: a deprecated version of the API that is slated for removal
+versions:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of version objects that describe the API versions available.
+virtual_interface_id:
+  description: |
+    The UUID of the virtual interface.
+  in: body
+  required: true
+  type: string
 virtual_interfaces:
   description: |
     A ``virtual_interfaces`` object.
@@ -2397,6 +2397,18 @@ volume:
   in: body
   required: false
   type: object
+volume_id:
+  description: |
+    The source volume ID.
+  in: body
+  required: true
+  type: string
+volume_type:
+  description: |
+    The unique identifier for a volume type.
+  in: body
+  required: false
+  type: string
 volumeAttachment:
   description: |
     A dictionary representation of a volume attachment.
@@ -2426,18 +2438,6 @@ volumeId_swap:
     The UUID of the volume to attach instead of the attached volume.
   in: body
   required: true
-  type: string
-volume_id:
-  description: |
-    The source volume ID.
-  in: body
-  required: true
-  type: string
-volume_type:
-  description: |
-    The unique identifier for a volume type.
-  in: body
-  required: false
   type: string
 vpn_ip:
   description: |
