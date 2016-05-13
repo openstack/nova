@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -34,6 +33,13 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - addresses: addresses
+  - network_label: network_label_body
+  - addr: ip_address
+  - version: version
+
 **Example List Ips: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/server-ips/server-ips-resp.json
@@ -63,6 +69,12 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - network_label: network_label_body
+  - addr: ip_address
+  - version: version
 
 **Example Show Ip Details: JSON response**
 

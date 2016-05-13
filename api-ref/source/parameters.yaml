@@ -1438,6 +1438,12 @@ interfaceAttachment:
   in: body
   required: true
   type: string
+ip_address:
+  description: |
+    The IP address.
+  in: body
+  required: true
+  type: string
 ip_protocol:
   description: |
     The IP protocol. A valid value is ICMP, TCP, or UDP.
@@ -1678,6 +1684,12 @@ net_id:
 net_id_1:
   description: |
     The network ID.
+  in: body
+  required: true
+  type: string
+network_label_body:
+  description: |
+    The network label, such as ``public`` or ``private``.
   in: body
   required: true
   type: string
