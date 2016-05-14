@@ -17,47 +17,168 @@ from oslo_config import cfg
 
 
 auth_opts = [
-    cfg.BoolOpt('api_rate_limit',
-                default=False,
-                help='Whether to use per-user rate limiting for the api. '
-                     'This option is only used by v2 api. Rate limiting '
-                     'is removed from v2.1 api.'),
-    cfg.StrOpt('auth_strategy',
-               default='keystone',
-               choices=('keystone', 'noauth2'),
-               help='''
-The strategy to use for auth: keystone or noauth2. noauth2 is designed for
-testing only, as it does no actual credential checking. noauth2 provides
-administrative credentials only if 'admin' is specified as the username.
-'''),
-    cfg.BoolOpt('use_forwarded_for',
-                default=False,
-                help='Treat X-Forwarded-For as the canonical remote address. '
-                     'Only enable this if you have a sanitizing proxy.'),
+    cfg.BoolOpt("api_rate_limit",
+            default=False,
+            help="""
+Determines whether rate limiting for the API is per-user. This option is only
+used by v2 API. Rate limiting is removed from v2.1 API.
+
+* Possible values:
+
+    True, False (default)
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
+    cfg.StrOpt("auth_strategy",
+            default="keystone",
+            choices=("keystone", "noauth2"),
+            help="""
+This determines the strategy to use for authentication: keystone or noauth2.
+'noauth2' is designed for testing only, as it does no actual credential
+checking. 'noauth2' provides administrative credentials only if 'admin' is
+specified as the username.
+
+* Possible values:
+
+    Either 'keystone' (default) or 'noauth2'.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
+    cfg.BoolOpt("use_forwarded_for",
+            default=False,
+            help="""
+When True, the 'X-Forwarded-For' header is treated as the canonical remote
+address. When False (the default), the 'remote_address' header is used.
+
+You should only enable this if you have an HTML sanitizing proxy.
+
+* Possible values:
+
+    True, False (default)
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
 ]
 
 metadata_opts = [
-    cfg.StrOpt('config_drive_skip_versions',
-               default=('1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 '
-                        '2007-12-15 2008-02-01 2008-09-01'),
-               help='List of metadata versions to skip placing into the '
-                    'config drive'),
-    cfg.StrOpt('vendordata_driver',
-               default='nova.api.metadata.vendordata_json.JsonFileVendorData',
-               help='DEPRECATED: Driver to use for vendor data',
-               deprecated_for_removal=True),
-    cfg.IntOpt('metadata_cache_expiration',
-               default=15,
-               help='Time in seconds to cache metadata; 0 to disable '
-                    'metadata caching entirely (not recommended). Increasing'
-                    'this should improve response times of the metadata API '
-                    'when under heavy load. Higher values may increase memory'
-                    'usage and result in longer times for host metadata '
-                    'changes to take effect.'),
+    cfg.StrOpt("config_drive_skip_versions",
+            default=("1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 "
+                     "2007-12-15 2008-02-01 2008-09-01"),
+            help="""
+When gathering the existing metadata for a config drive, the EC2-style metadata
+is returned for all versions that don't appear in this option. As of the
+Liberty release, the available versions are:
+
+    1.0
+    2007-01-19
+    2007-03-01
+    2007-08-29
+    2007-10-10
+    2007-12-15
+    2008-02-01
+    2008-09-01
+    2009-04-04
+
+The option is in the format of a single string, with each version separated by
+a space.
+
+* Possible values:
+
+    Any string that represents zero or more versions, separated by spaces. The
+    default is "1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 2007-12-15
+    2008-02-01 2008-09-01".
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
+    cfg.StrOpt("vendordata_driver",
+            default="nova.api.metadata.vendordata_json.JsonFileVendorData",
+            deprecated_for_removal=True,
+            help="""
+DEPRECATED: When returning instance metadata, this is the class that is used
+for getting vendor metadata when that class isn't specified in the individual
+request. The value should be the full dot-separated path to the class to use.
+
+* Possible values:
+
+    Any valid dot-separated class path that can be imported. The default is
+    'nova.api.metadata.vendordata_json.JsonFileVendorData'.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
+    cfg.IntOpt("metadata_cache_expiration",
+            default=15,
+            help="""
+This option is the time (in seconds) to cache metadata. When set to 0, metadata
+caching is disabled entirely; this is generally not recommended for performance
+reasons. Increasing this setting should improve response times of the metadata
+API when under heavy load. Higher values may increase memory usage, and result
+in longer times for host metadata changes to take effect.
+
+* Possible values:
+
+    Zero or any positive integer. The default is 15.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+"""),
 ]
 
-file_opt = cfg.StrOpt('vendordata_jsonfile_path',
-                      help='File to load JSON formatted vendor data from')
+file_opt = cfg.StrOpt("vendordata_jsonfile_path",
+        help="""
+Cloud providers may store custom data in vendor data file that will then be
+available to the instances via the metadata service, and to the rendering of
+config-drive. The default class for this, JsonFileVendorData, loads this
+information from a JSON file, whose path is configured by this option. If there
+is no path set by this option, the class returns an empty dictionary.
+
+* Possible values:
+
+    Any string representing the path to the data file, or an empty string
+    (default).
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+""")
 
 osapi_opts = [
     cfg.IntOpt('osapi_max_limit',
