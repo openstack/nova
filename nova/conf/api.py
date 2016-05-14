@@ -236,21 +236,83 @@ resources. If it is empty (the default), the URLs are returned unchanged.
 """),
 ]
 
-allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
+allow_instance_snapshots_opt = cfg.BoolOpt("allow_instance_snapshots",
         default=True,
-        help='Permit instance snapshot operations.')
+        help="""
+Operators can turn off the ability for a user to take snapshots of their
+instances by setting this option to False. When disabled, any attempt to take a
+snapshot will result in a HTTP 400 response ("Bad Request").
+
+* Possible values:
+
+    True (default), False
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+""")
 
 # NOTE(edleafe): I would like to import the value directly from
 # nova.compute.vm_states, but that creates a circular import. Since this value
 # is not likely to be changed, I'm copy/pasting it here.
 BUILDING = "building"  # VM only exists in DB
 osapi_hide_opt = cfg.ListOpt('osapi_hide_server_address_states',
-                 default=[BUILDING],
-                 help='List of instance states that should hide network info')
+        default=[BUILDING],
+        help="""
+This option is a list of all instance states for which network address
+information should not be returned from the API.
+
+* Possible values:
+
+    A list of strings, where each string is a valid VM state, as defined in
+    nova/compute/vm_states.py. As of the Newton release, they are:
+
+    * "active"
+    * "building"
+    * "paused"
+    * "suspended"
+    * "stopped"
+    * "rescued"
+    * "resized"
+    * "soft-delete"
+    * "deleted"
+    * "error"
+    * "shelved"
+    * "shelved_offloaded"
+
+    The default value is ["building"].
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+""")
 
 fping_path_opt = cfg.StrOpt("fping_path",
-                 default="/usr/sbin/fping",
-                 help="Full path to fping.")
+        default="/usr/sbin/fping",
+        help="""
+The full path to the fping binary.
+
+* Possible values:
+
+    Any string representing a valid file path. The default is
+    "/usr/sbin/fping".
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    None
+""")
 
 os_network_opts = [
     cfg.BoolOpt("enable_network_quota",
