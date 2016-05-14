@@ -316,28 +316,100 @@ The full path to the fping binary.
 
 os_network_opts = [
     cfg.BoolOpt("enable_network_quota",
-                default=False,
-                help='Enables or disables quota checking for tenant '
-                     'networks'),
+            default=False,
+            help="""
+This option is used to enable or disable quota checking for tenant networks.
+
+* Services that use this:
+
+    ``nova-api``
+
+Possible values:
+
+    True, False (default)
+
+* Related options:
+
+    quota_networks
+"""),
     cfg.StrOpt('use_neutron_default_nets',
-                     default="False",
-                     help='Control for checking for default networks'),
+            default="False",
+            help="""
+When "True" (note that this is a string value, not a boolean), the
+TenantNetworkController will query the Neutron API to get the default networks
+to use.
+
+* Services that use this:
+
+    ``nova-api``
+
+Possible values:
+
+    Either "True" or "False" (default)
+
+* Related options:
+
+    neutron_default_tenant_id
+"""),
     cfg.StrOpt('neutron_default_tenant_id',
-                     default="default",
-                     help='Default tenant id when creating neutron '
-                          'networks'),
+            default="default",
+            help="""
+When getting the default network from the Neutron API, this is the tenant ID
+(also referred in some places as the 'project ID') to use. The default is the
+string 'default'.
+
+* Services that use this:
+
+    ``nova-api``
+
+Possible values:
+
+    A string representing a valid tenant ID
+
+* Related options:
+
+    use_neutron_default_nets
+"""),
     cfg.IntOpt('quota_networks',
-               default=3,
-               help='Number of private networks allowed per project'),
+            default=3,
+            help="""
+This option controls the number of private networks that can be created per
+project (or per tenant).
+
+* Services that use this:
+
+    ``nova-api``
+
+Possible values:
+
+    Any positive integer. The default is 3.
+
+* Related options:
+
+    enable_network_quota
+"""),
 ]
 
 enable_inst_pw_opt = cfg.BoolOpt('enable_instance_password',
-                default=True,
-                help='Enables returning of the instance password by the'
-                     ' relevant server API calls such as create, rebuild'
-                     ' or rescue, If the hypervisor does not support'
-                     ' password injection then the password returned will'
-                     ' not be correct')
+        default=True,
+        help="""
+Enables returning of the instance password by the relevant server API calls
+such as create, rebuild, evacuate, or rescue. If the hypervisor does not
+support password injection, then the password returned will not be correct, so
+if your hypervisor does not support password injection, set this to False.
+
+* Services that use this:
+
+    ``nova-api``
+
+Possible values:
+
+    True (default), False
+
+* Related options:
+
+    None
+""")
 
 ALL_OPTS = (auth_opts +
             metadata_opts +
