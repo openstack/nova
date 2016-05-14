@@ -8330,17 +8330,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.call(context=self.context,
                           target=backfile_path,
                           image_id=self.test_instance['image_ref'],
-                          user_id=self.test_instance['user_id'],
-                          project_id=self.test_instance['project_id'],
                           max_size=25165824),
                 mock.call(self.context, kernel_path,
-                          self.test_instance['kernel_id'],
-                          self.test_instance['user_id'],
-                          self.test_instance['project_id']),
+                          self.test_instance['kernel_id']),
                 mock.call(self.context, ramdisk_path,
-                          self.test_instance['ramdisk_id'],
-                          self.test_instance['user_id'],
-                          self.test_instance['project_id']),
+                          self.test_instance['ramdisk_id']),
             ])
 
     @mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image')
@@ -15224,16 +15218,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         imagebackend.Image.cache(context=mox.IgnoreArg(),
                                 fetch_func=mox.IgnoreArg(),
                                 filename=mox.IgnoreArg(),
-                                image_id=mox.IgnoreArg(),
-                                project_id=mox.IgnoreArg(),
-                                user_id=mox.IgnoreArg()).MultipleTimes()
+                                image_id=mox.IgnoreArg()).MultipleTimes()
 
         imagebackend.Image.cache(context=mox.IgnoreArg(),
                                 fetch_func=mox.IgnoreArg(),
                                 filename=mox.IgnoreArg(),
                                 image_id=mox.IgnoreArg(),
-                                project_id=mox.IgnoreArg(),
-                                size=None, user_id=mox.IgnoreArg())
+                                size=None)
 
         image_meta = objects.ImageMeta.from_dict(
             {'id': 'fake', 'name': 'fake'})
@@ -15346,16 +15337,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         imagebackend.Image.cache(context=mox.IgnoreArg(),
                                 fetch_func=mox.IgnoreArg(),
                                 filename=mox.IgnoreArg(),
-                                image_id=mox.IgnoreArg(),
-                                project_id=mox.IgnoreArg(),
-                                user_id=mox.IgnoreArg()).MultipleTimes()
+                                image_id=mox.IgnoreArg()).MultipleTimes()
 
         imagebackend.Image.cache(context=mox.IgnoreArg(),
                                 fetch_func=mox.IgnoreArg(),
                                 filename=mox.IgnoreArg(),
                                 image_id=mox.IgnoreArg(),
-                                project_id=mox.IgnoreArg(),
-                                size=None, user_id=mox.IgnoreArg())
+                                size=None)
 
         instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
                                             content=mox.IgnoreArg(),
