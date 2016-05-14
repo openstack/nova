@@ -25,7 +25,9 @@ api_opts = [
 *DEPRECATED*
 
 This option is a list of all of the v2.1 API extensions to never load. However,
-it will be removed in the near future, after which point all the API will run.
+it will be removed in the near future, after which the all the functionality
+that was previously in extensions will be part of the standard API, and thus
+always accessible.
 
 * Possible values:
 
@@ -50,7 +52,9 @@ it will be removed in the near future, after which point all the API will run.
 This is a list of extensions. If it is empty, then *all* extensions except
 those specified in the extensions_blacklist option will be loaded. If it is not
 empty, then only those extensions in this list will be loaded, provided that
-they are also not in the extensions_blacklist option.
+they are also not in the extensions_blacklist option. Once this deprecated
+option is removed, after which the all the functionality that was previously in
+extensions will be part of the standard API, and thus always accessible.
 
 * Possible values:
 
