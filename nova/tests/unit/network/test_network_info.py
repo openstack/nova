@@ -865,7 +865,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
 
         self.netinfo[0]['network']['subnets'][0] = ipv4_subnet
         self.netinfo[0]['network']['subnets'][1] = ipv6_subnet
-        self.netinfo[0]['network']['mtu'] = 1500
+        self.netinfo[0]['network']['meta']['mtu'] = 1500
 
     def test_get_network_metadata_json(self):
 
@@ -1141,7 +1141,7 @@ class TestNetworkMetadata(test.NoDBTestCase):
             '11111111-1111-1111-1111-111111111111')
 
         self.netinfo[1]['network']['subnets'][0] = ipv4_subnet
-        self.netinfo[1]['network']['mtu'] = 1500
+        self.netinfo[1]['network']['meta']['mtu'] = 1500
 
         network_json = netutils.get_network_metadata(self.netinfo)
         self.assertEqual(expected_json, network_json)
