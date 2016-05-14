@@ -77,7 +77,6 @@ import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
-from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
@@ -15209,22 +15208,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
                                mox.IgnoreArg())
-        imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
-                                        ).AndReturn(fake_imagebackend.Raw())
-        imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
-                                        ).AndReturn(fake_imagebackend.Raw())
-        imagebackend.Backend.image(instance, 'disk.rescue', 'default'
-                                        ).AndReturn(fake_imagebackend.Raw())
-        imagebackend.Image.cache(context=mox.IgnoreArg(),
-                                fetch_func=mox.IgnoreArg(),
-                                filename=mox.IgnoreArg(),
-                                image_id=mox.IgnoreArg()).MultipleTimes()
 
-        imagebackend.Image.cache(context=mox.IgnoreArg(),
-                                fetch_func=mox.IgnoreArg(),
-                                filename=mox.IgnoreArg(),
-                                image_id=mox.IgnoreArg(),
-                                size=None)
+        mock_backend = mock.MagicMock()
+        imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
+                                        ).AndReturn(mock_backend.kernel)
+        imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
+                                        ).AndReturn(mock_backend.ramdisk)
+        imagebackend.Backend.image(instance, 'disk.rescue', 'default'
+                                        ).AndReturn(mock_backend.root)
 
         image_meta = objects.ImageMeta.from_dict(
             {'id': 'fake', 'name': 'fake'})
@@ -15245,6 +15236,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr.rescue(self.context, instance,
                     network_info, image_meta, rescue_password)
         self.mox.VerifyAll()
+
+        # cache() should have been called on the 3 disk backends
+        for backend in (mock_backend.kernel, mock_backend.ramdisk,
+                        mock_backend.root):
+            backend.cache.assert_called()
 
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')
@@ -15325,25 +15321,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
                                     mox.IgnoreArg())
 
+        mock_backend = mock.MagicMock()
         imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
-                                    ).AndReturn(fake_imagebackend.Raw())
+                                    ).AndReturn(mock_backend.kernel)
         imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
-                                    ).AndReturn(fake_imagebackend.Raw())
+                                    ).AndReturn(mock_backend.ramdisk)
         imagebackend.Backend.image(instance, 'disk.rescue', 'default'
-                                    ).AndReturn(fake_imagebackend.Raw())
+                                    ).AndReturn(mock_backend.root)
         imagebackend.Backend.image(instance, 'disk.config.rescue', 'raw'
-                                   ).AndReturn(fake_imagebackend.Raw())
-
-        imagebackend.Image.cache(context=mox.IgnoreArg(),
-                                fetch_func=mox.IgnoreArg(),
-                                filename=mox.IgnoreArg(),
-                                image_id=mox.IgnoreArg()).MultipleTimes()
-
-        imagebackend.Image.cache(context=mox.IgnoreArg(),
-                                fetch_func=mox.IgnoreArg(),
-                                filename=mox.IgnoreArg(),
-                                image_id=mox.IgnoreArg(),
-                                size=None)
+                                    ).AndReturn(mock_backend.config)
 
         instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
                                             content=mox.IgnoreArg(),
@@ -15372,6 +15358,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         expected_call = [mock.call(os.path.join(CONF.instances_path,
                                                 configdrive_path))]
         mock_make.assert_has_calls(expected_call)
+
+        # cache() should habe been called on the 3 non-config disk backends
+        for backend in (mock_backend.kernel, mock_backend.ramdisk,
+                        mock_backend.root):
+            backend.cache.assert_called()
+
+        # import_file() should have been called for the config disk
+        mock_backend.config.import_file.assert_called()
 
     @mock.patch('shutil.rmtree')
     @mock.patch('nova.utils.execute')
