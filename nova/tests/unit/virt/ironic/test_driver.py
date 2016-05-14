@@ -1015,8 +1015,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
     @mock.patch.object(ironic_driver.IronicDriver, '_start_firewall')
     @mock.patch.object(ironic_driver.IronicDriver, '_plug_vifs')
-    @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def test_spawn_node_configdrive_fail(self, mock_cleanup_deploy,
+    def test_spawn_node_configdrive_fail(self,
                                          mock_pvifs, mock_sf, mock_configdrive,
                                          mock_node, mock_save,
                                          mock_required_by):
@@ -1034,14 +1033,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
             pass
 
         mock_configdrive.side_effect = TestException()
-        self.assertRaises(TestException, self.driver.spawn,
-                          self.ctx, instance, image_meta, [], None)
+        with mock.patch.object(self.driver, '_cleanup_deploy',
+                               autospec=True) as mock_cleanup_deploy:
+            self.assertRaises(TestException, self.driver.spawn,
+                              self.ctx, instance, image_meta, [], None)
 
         mock_node.get.assert_called_once_with(
                 node_uuid, fields=ironic_driver._NODE_FIELDS)
         mock_node.validate.assert_called_once_with(node_uuid)
-        mock_cleanup_deploy.assert_called_with(self.ctx, node, instance, None,
-                                               flavor=flavor)
+        mock_cleanup_deploy.assert_called_with(node, instance, None)
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')

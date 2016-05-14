@@ -743,8 +743,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                     msg = (_LE("Failed to build configdrive: %s") %
                            six.text_type(e))
                     LOG.error(msg, instance=instance)
-                    self._cleanup_deploy(context, node, instance, network_info,
-                                         flavor=flavor)
+                    self._cleanup_deploy(node, instance, network_info)
 
             LOG.info(_LI("Config drive for instance %(instance)s on "
                          "baremetal node %(node)s created."),
