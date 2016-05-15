@@ -446,6 +446,35 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return instance
 
+    @staticmethod
+    def _validate_network_id(net_id, network_uuids):
+        """Validates that a requested network id.
+
+        This method performs two checks:
+
+        1. That the network id is in the proper uuid format.
+        2. That the network is not a duplicate when using nova-network.
+
+        :param net_id: The network id to validate.
+        :param network_uuids: A running list of requested network IDs that have
+            passed validation already.
+        :raises: webob.exc.HTTPBadRequest if validation fails
+        """
+        if not uuidutils.is_uuid_like(net_id):
+            # NOTE(mriedem): Neutron would allow a network id with a br- prefix
+            # back in Folsom so continue to honor that.
+            # TODO(mriedem): Need to figure out if this is still a valid case.
+            br_uuid = net_id.split('-', 1)[-1]
+            if not uuidutils.is_uuid_like(br_uuid):
+                msg = _("Bad networks format: network uuid is "
+                        "not in proper format (%s)") % net_id
+                raise exc.HTTPBadRequest(explanation=msg)
+
+        # duplicate networks are allowed only for neutron v2.0
+        if net_id in network_uuids and not utils.is_neutron():
+            expl = _("Duplicate networks (%s) are not allowed") % net_id
+            raise exc.HTTPBadRequest(explanation=expl)
+
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
         networks = []
@@ -474,24 +503,10 @@ class ServersController(wsgi.Controller):
                         raise exc.HTTPBadRequest(explanation=msg)
                 else:
                     request.network_id = network['uuid']
+                    self._validate_network_id(
+                        request.network_id, network_uuids)
+                    network_uuids.append(request.network_id)
 
-                if (not request.port_id and
-                        not uuidutils.is_uuid_like(request.network_id)):
-                    br_uuid = request.network_id.split('-', 1)[-1]
-                    if not uuidutils.is_uuid_like(br_uuid):
-                        msg = _("Bad networks format: network uuid is "
-                                "not in proper format "
-                                "(%s)") % request.network_id
-                        raise exc.HTTPBadRequest(explanation=msg)
-
-                # duplicate networks are allowed only for neutron v2.0
-                if (not utils.is_neutron() and request.network_id and
-                        request.network_id in network_uuids):
-                    expl = (_("Duplicate networks"
-                              " (%s) are not allowed") %
-                            request.network_id)
-                    raise exc.HTTPBadRequest(explanation=expl)
-                network_uuids.append(request.network_id)
                 networks.append(request)
             except KeyError as key:
                 expl = _('Bad network format: missing %s') % key
