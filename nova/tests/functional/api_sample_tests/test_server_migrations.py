@@ -47,6 +47,7 @@ class ServerMigrationsSampleJsonTest(test_servers.ServersSampleBase):
         migration = objects.Migration()
         migration.id = 1
         migration.status = 'running'
+        migration.source_compute = self.compute.host
         get_by_id_and_instance.return_value = migration
         self._do_post('servers/%s/action' % self.uuid, 'live-migrate-server',
                       {'hostname': self.compute.host})

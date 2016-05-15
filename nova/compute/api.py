@@ -3439,7 +3439,7 @@ class API(base.Base):
             context, instance, instance_actions.LIVE_MIGRATION_FORCE_COMPLETE)
 
         self.compute_rpcapi.live_migration_force_complete(
-            context, instance, migration.id)
+            context, instance, migration)
 
     @check_instance_lock
     @check_instance_cell

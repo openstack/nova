@@ -3673,11 +3673,11 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch.object(
                 rpcapi, 'live_migration_force_complete') as lm_force_complete:
             self.compute_api.live_migrate_force_complete(
-                self.context, instance, migration.id)
+                self.context, instance, migration)
 
             lm_force_complete.assert_called_once_with(self.context,
                                                       instance,
-                                                      0)
+                                                      migration)
             action_start.assert_called_once_with(
                 self.context, instance.uuid, 'live_migration_force_complete',
                 want_result=False)
