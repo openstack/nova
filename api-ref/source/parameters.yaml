@@ -126,7 +126,7 @@ host_status_body_in:
   type: string
 hypervisor_id:
   description: |
-    The UUID of the hypervisor.
+    The ID of the hypervisor.
   in: path
   required: true
   type: string
@@ -1005,6 +1005,13 @@ cores_quota_optional:
   in: body
   required: false
   type: integer
+cpu_info:
+  description: |
+    The cpu information object. The content of this field is hypervisor
+    specific.
+  in: body
+  required: true
+  type: object
 create_info:
   description: |
     Information for snapshot creation.
@@ -1038,6 +1045,14 @@ createImage:
   in: body
   required: true
   type: string
+current_workload:
+  description: |
+    The current_workload is the number of tasks the hypervisor is responsible for. This will be
+    equal or greater than the number of active VMs on the system (it can be greater when VMs
+    are being deleted and the hypervisor is still cleaning up).
+  in: body
+  required: true
+  type: integer
 delete_on_termination:
   description: |
     To delete the boot volume when the server is destroyed, specify ``true``.
@@ -1085,6 +1100,12 @@ device_resp:
   in: body
   required: true
   type: string
+disk_available_least:
+  description: |
+    The actual free disk on this hypervisor(in GB).
+  in: body
+  required: true
+  type: integer
 disk_config:
   description: |
     Disk configuration. The value is either:
@@ -1435,6 +1456,12 @@ forceDelete:
   in: body
   required: true
   type: string
+free_ram_mb:
+  description: |
+    The free RAM in this hypervisor(in MB).
+  in: body
+  required: true
+  type: integer
 from_port:
   description: |
     The port at start of range.
@@ -1475,6 +1502,12 @@ host_cpu:
 host_disk_gb:
   description: |
     The disk info on the host (in GB).
+  in: body
+  required: true
+  type: string
+host_ip:
+  description: |
+    The IP address of the hypervisor's host.
   in: body
   required: true
   type: string
@@ -1574,12 +1607,96 @@ hosts:
   in: body
   required: true
   type: array
+hypervisor:
+  description: |
+    The hypervisor object.
+  in: body
+  required: true
+  type: object
+hypervisor_count:
+  description: |
+    The number of hypervisors.
+  in: body
+  required: true
+  type: integer
+hypervisor_free_disk_gb:
+  description: |
+    The free disk remaining on this hypervisor(in GB).
+  in: body
+  required: true
+  type: integer
+hypervisor_hostname:
+  description: |
+    The hypervisor host name.
+  in: body
+  required: true
+  type: string
+hypervisor_id_body:
+  description: |
+    The id of the hypervisor.
+  in: body
+  required: true
+  type: integer
+hypervisor_service:
+  description: |
+    The hypervisor service object.
+  in: body
+  required: true
+  type: object
+hypervisor_state:
+  description: |
+    The state of the hypervisor. One of ``up`` or ``down``.
+  in: body
+  required: true
+  type: string
+hypervisor_statistics:
+  description: |
+    The object of the hypervisors' statics.
+  in: body
+  required: true
+  type: object
+hypervisor_status:
+  description: |
+    The status of the hypervisor. One of ``enabled`` or ``disabled``.
+  in: body
+  required: true
+  type: string
 hypervisor_type:
   in: body
   required: true
   type: string
   description: |
     The hypervisor type for the agent. Currently only ``xen`` is supported.
+hypervisor_type_body:
+  description: |
+    The hypervisor type.
+  in: body
+  required: true
+  type: string
+hypervisor_vcpus:
+  description: |
+    The number of vcpu in this hypervisor.
+  in: body
+  required: true
+  type: integer
+hypervisor_vcpus_used:
+  description: |
+    The number of vcpu used in this hypervisor.
+  in: body
+  required: true
+  type: integer
+hypervisor_version:
+  description: |
+    The hypervisor version.
+  in: body
+  required: true
+  type: integer
+hypervisors:
+  description: |
+    An array of hypervisor information.
+  in: body
+  required: true
+  type: array
 id:
   description: |
     The security group name or UUID.
@@ -1883,6 +2000,18 @@ links:
   in: body
   required: true
   type: array
+local_gb:
+  description: |
+    The disk in this hypervisor(in GB).
+  in: body
+  required: true
+  type: integer
+local_gb_used:
+  description: |
+    The disk used in this hypervisor(in GB).
+  in: body
+  required: true
+  type: integer
 lock:
   description: |
     The action.
@@ -1913,6 +2042,18 @@ members:
   in: body
   required: true
   type: array
+memory_mb:
+  description: |
+    The memory of this hypervisor(in MB).
+  in: body
+  required: true
+  type: integer
+memory_mb_used:
+  description: |
+    The memory used in this hypervisor(in MB).
+  in: body
+  required: true
+  type: integer
 metadata:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
@@ -2543,6 +2684,18 @@ rules_1:
   in: body
   required: true
   type: string
+running_vms:
+  description: |
+    The number of running vms on this hypervisor.
+  in: body
+  required: true
+  type: integer
+running_vms_total:
+  description: |
+    The total number of running vms on all hypervisors.
+  in: body
+  required: true
+  type: integer
 secgroup_rule_cidr:
   description: |
     The CIDR for address range.
@@ -2746,6 +2899,19 @@ service:
   type: object
   description: |
     Object representing a compute service
+service_disable_reason:
+  in: body
+  required: true
+  type: string
+  description: |
+    The disable reason of the service, ``null`` if the service is enabled or
+    disabled without reason provided.
+service_id_body:
+  in: body
+  required: true
+  type: integer
+  description: |
+    The id of the service
 service_state:
   in: body
   required: true
@@ -2879,6 +3045,13 @@ updated:
     For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
     value, if included, is the time zone as an offset from UTC.  In
     the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+uptime:
+  description: |
+    The total uptime of the hypervisor and information about average
+    load.
   in: body
   required: true
   type: string

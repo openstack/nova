@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -27,6 +26,14 @@ Error response codes: unauthorized(401), forbidden(403)
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - hypervisors: hypervisors
+  - hypervisor_hostname: hypervisor_hostname
+  - id: hypervisor_id_body
+  - state: hypervisor_state
+  - status: hypervisor_status
+
 **Example List Hypervisors: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-list-resp.json
@@ -48,6 +55,33 @@ Error response codes: unauthorized(401), forbidden(403)
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - hypervisors: hypervisors
+  - cpu_info: cpu_info
+  - current_workload: current_workload
+  - status: hypervisor_status
+  - state: hypervisor_state
+  - disk_available_least: disk_available_least
+  - host_ip: host_ip
+  - free_disk_gb: hypervisor_free_disk_gb
+  - free_ram_mb: free_ram_mb
+  - hypervisor_hostname: hypervisor_hostname
+  - hypervisor_type: hypervisor_type_body
+  - hypervisor_version: hypervisor_version
+  - id: hypervisor_id_body
+  - local_gb: local_gb
+  - local_gb_used: local_gb_used
+  - memory_mb: memory_mb
+  - memory_mb_used: memory_mb_used
+  - running_vms: running_vms
+  - service: hypervisor_service
+  - service.host: host_name_body
+  - service.id: service_id_body
+  - service.disable_reason: service_disable_reason
+  - vcpus: hypervisor_vcpus
+  - vcpus_used: hypervisor_vcpus_used
+
 **Example List Hypervisors Details: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-detail-resp.json
@@ -68,6 +102,22 @@ Error response codes: unauthorized(401), forbidden(403)
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - hypervisor_statistics: hypervisor_statistics
+  - count: hypervisor_count
+  - current_workload: current_workload
+  - disk_available_least: disk_available_least
+  - free_disk_gb: hypervisor_free_disk_gb
+  - free_ram_mb: free_ram_mb
+  - local_gb: local_gb
+  - local_gb_used: local_gb_used
+  - memory_mb: memory_mb
+  - memory_mb_used: memory_mb_used
+  - running_vms: running_vms_total
+  - vcpus: hypervisor_vcpus
+  - vcpus_used: hypervisor_vcpus_used
 
 **Example Show Hypervisor Statistics: JSON response**
 
@@ -98,6 +148,33 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - hypervisor: hypervisor
+  - cpu_info: cpu_info
+  - state: hypervisor_state
+  - status: hypervisor_status
+  - current_workload: current_workload
+  - disk_available_least: disk_available_least
+  - host_ip: host_ip
+  - free_disk_gb: hypervisor_free_disk_gb
+  - free_ram_mb: free_ram_mb
+  - hypervisor_hostname: hypervisor_hostname
+  - hypervisor_type: hypervisor_type_body
+  - hypervisor_version: hypervisor_version
+  - id: hypervisor_id_body
+  - local_gb: local_gb
+  - local_gb_used: local_gb_used
+  - memory_mb: memory_mb
+  - memory_mb_used: memory_mb_used
+  - running_vms: running_vms
+  - service: hypervisor_service
+  - service.host: host_name_body
+  - service.id: service_id_body
+  - service.disable_reason: service_disable_reason
+  - vcpus: hypervisor_vcpus
+  - vcpus_used: hypervisor_vcpus_used
+
 **Example Show Hypervisor Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-show-resp.json
@@ -126,6 +203,15 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - hypervisor: hypervisor
+  - hypervisor_hostname: hypervisor_hostname
+  - id: hypervisor_id_body
+  - state: hypervisor_state
+  - status: hypervisor_status
+  - uptime: uptime
 
 **Example Show Hypervisor Uptime: JSON response**
 
@@ -156,6 +242,14 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - hypervisors: hypervisors
+  - hypervisor_hostname: hypervisor_hostname
+  - id: hypervisor_id_body
+  - state: hypervisor_state
+  - status: hypervisor_status
+
 **Example Search Hypervisor: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-search-resp.json
@@ -184,6 +278,17 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - hypervisors: hypervisors
+  - hypervisor_hostname: hypervisor_hostname
+  - id: hypervisor_id_body
+  - state: hypervisor_state
+  - status: hypervisor_status
+  - servers: servers
+  - servers.uuid: server_uuid
+  - servers.name: server_name
 
 **Example List Hypervisor Servers: JSON request**
 
