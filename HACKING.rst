@@ -63,6 +63,7 @@ Nova Specific Commandments
 - [N350] Policy registration should be in the central location ``nova/policies/``
 - [N351] Do not use the oslo_policy.policy.Enforcer.enforce() method.
 - [N352] LOG.warn is deprecated. Enforce use of LOG.warning.
+- [N353] Validate that context objects is not passed in logging calls.
 
 Creating Unit Tests
 -------------------

@@ -278,7 +278,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                                       "%(volume_id)s at %(mountpoint)s"),
                                   {'volume_id': volume_id,
                                    'mountpoint': self['mount_device']},
-                                  context=context, instance=instance)
+                                  instance=instance)
                     volume_api.terminate_connection(context, volume_id,
                                                     connector)
         self['connection_info'] = connection_info
@@ -310,8 +310,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                                          "%(volume_id)s at %(mount_point)s."),
                                      {'volume_id': volume_id,
                                       'mount_point': self['mount_device']},
-                                     exc_info=True, context=context,
-                                     instance=instance)
+                                     exc_info=True, instance=instance)
                     volume_api.terminate_connection(context, volume_id,
                                                     connector)
 
@@ -484,30 +483,29 @@ def convert_volume(volume_bdm):
 
 def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
     def _log_and_attach(bdm):
-        context = attach_args[0]
         instance = attach_args[1]
         if bdm.get('volume_id'):
             LOG.info(_LI('Booting with volume %(volume_id)s at '
                          '%(mountpoint)s'),
                      {'volume_id': bdm.volume_id,
                       'mountpoint': bdm['mount_device']},
-                     context=context, instance=instance)
+                     instance=instance)
         elif bdm.get('snapshot_id'):
             LOG.info(_LI('Booting with volume snapshot %(snapshot_id)s at '
                          '%(mountpoint)s'),
                      {'snapshot_id': bdm.snapshot_id,
                       'mountpoint': bdm['mount_device']},
-                     context=context, instance=instance)
+                     instance=instance)
         elif bdm.get('image_id'):
             LOG.info(_LI('Booting with volume-backed-image %(image_id)s at '
                          '%(mountpoint)s'),
                      {'image_id': bdm.image_id,
                       'mountpoint': bdm['mount_device']},
-                     context=context, instance=instance)
+                     instance=instance)
         else:
             LOG.info(_LI('Booting with blank volume at %(mountpoint)s'),
                      {'mountpoint': bdm['mount_device']},
-                     context=context, instance=instance)
+                     instance=instance)
 
         bdm.attach(*attach_args, **attach_kwargs)
 
