@@ -22,4 +22,6 @@ class SchedulerReportClient(object):
 
         :param compute_node: updated nova.objects.ComputeNode to report
         """
+        if not compute_node.update_inventory():
+            compute_node.create_inventory()
         compute_node.save()
