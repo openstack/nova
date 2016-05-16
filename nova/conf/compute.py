@@ -309,6 +309,23 @@ whenever an RPC call to the compute service is made.
 """),
 ]
 
+db_opts = [
+    cfg.StrOpt('osapi_compute_unique_server_name_scope',
+               default='',
+               help='When set, compute API will consider duplicate hostnames '
+                    'invalid within the specified scope, regardless of case. '
+                    'Should be empty, "project" or "global".'),
+    cfg.BoolOpt('enable_new_services',
+                default=True,
+                help='Services to be added to the available pool on create'),
+    cfg.StrOpt('instance_name_template',
+               default='instance-%08x',
+               help='Template string to be used to generate instance names'),
+    cfg.StrOpt('snapshot_name_template',
+               default='snapshot-%s',
+               help='Template string to be used to generate snapshot names'),
+]
+
 ALL_OPTS = list(itertools.chain(
            compute_opts,
            resource_tracker_opts,
@@ -319,6 +336,7 @@ ALL_OPTS = list(itertools.chain(
            running_deleted_opts,
            instance_cleaning_opts,
            rpcapi_opts,
+           db_opts,
            ))
 
 
