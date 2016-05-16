@@ -197,7 +197,7 @@ git_cmd = ["git", "log", "--pretty=format:'%ad, commit %h'", "--date=local",
     "-n1"]
 try:
     html_last_updated_fmt = subprocess.Popen(
-        git_cmd, stdout=subprocess.PIPE).communicate()[0]
+        git_cmd, stdout=subprocess.PIPE).communicate()[0].decode()
 except Exception:
     warnings.warn('Cannot get last updated time from git repository. '
                   'Not setting "html_last_updated_fmt".')

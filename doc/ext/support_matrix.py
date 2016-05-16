@@ -317,7 +317,7 @@ class SupportMatrixDirective(rst.Directive):
         summaryhead.append(header)
 
         # then one column for each hypervisor driver
-        impls = matrix.targets.keys()
+        impls = list(matrix.targets.keys())
         impls.sort()
         for key in impls:
             target = matrix.targets[key]
@@ -350,7 +350,7 @@ class SupportMatrixDirective(rst.Directive):
                 classes=["sp_feature_" + feature.status]))
 
             # and then one column for each hypervisor driver
-            impls = matrix.targets.keys()
+            impls = list(matrix.targets.keys())
             impls.sort()
             for key in impls:
                 target = matrix.targets[key]
