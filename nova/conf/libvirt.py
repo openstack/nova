@@ -38,6 +38,10 @@ libvirt_group = cfg.OptGroup("libvirt",
                              help="""
 Libvirt options allows cloud administrator to configure related
 libvirt hypervisor driver to be used within an OpenStack deployment.
+
+Almost all of the libvirt config options are influence by ``virt_type`` config
+which describes the virtualization type (or so called domain type) libvirt
+should use for specific features such as live migration, snapshot.
 """)
 
 libvirt_general_opts = [
@@ -238,66 +242,125 @@ Related options:
   an effect.
 """),
     cfg.StrOpt('live_migration_inbound_addr',
-               help='Live migration target ip or hostname '
-                    '(if this option is set to None, which is the default, '
-                    'the hostname of the migration target '
-                    'compute node will be used)'),
+               help="""
+The IP address or hostname to be used as the target for live migration traffic.
+
+If this option is set to None, the hostname of the migration target compute
+node will be used.
+
+This option is useful in environments where the live-migration traffic can
+impact the network plane significantly. A separate network for live-migration
+traffic can then use this config option and avoids the impact on the
+management network.
+
+Possible values:
+
+* A valid IP address or hostname, else None.
+"""),
+    # TODO(hieulq): change to URIOpt for validating schemas with next release
+    # of oslo_config.
     cfg.StrOpt('live_migration_uri',
-               help='Override the default libvirt live migration target URI '
-                    '(which is dependent on virt_type) '
-                    '(any included "%s" is replaced with '
-                    'the migration target hostname)'),
+               help="""
+Live migration target URI to use.
+
+Override the default libvirt live migration target URI (which is dependent
+on virt_type). Any included "%s" is replaced with the migration target
+hostname.
+
+If this option is set to None (which is the default), Nova will automatically
+generate the `live_migration_uri` value based on only 3 supported `virt_type`
+in following list:
+* 'kvm': 'qemu+tcp://%s/system'
+* 'qemu': 'qemu+tcp://%s/system'
+* 'xen': 'xenmigr://%s/system'
+
+Related options:
+* ``live_migration_inbound_addr``: If ``live_migration_inbound_addr`` value
+  is not None, the ip/hostname address of target compute node is used instead
+  of ``live_migration_uri`` as the uri for live migration.
+"""),
     cfg.BoolOpt('live_migration_tunnelled',
                 default=False,
-                help='Whether to use tunnelled migration, where migration '
-                     'data is transported over the libvirtd connection. If '
-                     'True, we use the VIR_MIGRATE_TUNNELLED migration flag, '
-                     'avoiding the need to configure the network to allow '
-                     'direct hypervisor to hypervisor communication. If '
-                     'False, use the native transport. If not set, Nova '
-                     'will choose a sensible default based on, for example '
-                     'the availability of native encryption support in the '
-                     'hypervisor.'),
+                help="""
+Enable tunnelled migration.
+
+This option enables the tunnelled migration feature, where migration data is
+transported over the libvirtd connection. If enabled, we use the
+VIR_MIGRATE_TUNNELLED migration flag, avoiding the need to configure
+the network to allow direct hypervisor to hypervisor communication.
+If False, use the native transport. If not set, Nova will choose a
+sensible default based on, for example the availability of native
+encryption support in the hypervisor. Enable this option will definitely
+impact performance massively.
+
+Note that this option is NOT compatible with use of block migration.
+
+Possible values:
+
+* Supersedes and (if set) overrides the deprecated 'live_migration_flag' and
+  'block_migration_flag' to enable tunneled migration.
+"""),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
-               help='Maximum bandwidth(in MiB/s) to be used during migration. '
-                    'If set to 0, will choose a suitable default. Some '
-                    'hypervisors do not support this feature and will return '
-                    'an error if bandwidth is not 0. Please refer to the '
-                    'libvirt documentation for further details'),
+               help="""
+Maximum bandwidth(in MiB/s) to be used during migration.
+
+If set to 0, the hypervisor will choose a suitable default. Some hypervisors
+do not support this feature and will return an error if bandwidth is not 0.
+Please refer to the libvirt documentation for further details.
+"""),
+    # TODO(hieulq): Need to add min argument by moving from
+    # LIVE_MIGRATION_DOWNTIME_MIN constant.
     cfg.IntOpt('live_migration_downtime',
                default=500,
-               help='Maximum permitted downtime, in milliseconds, for live '
-                    'migration switchover. Will be rounded up to a minimum '
-                    'of %dms. Use a large value if guest liveness is '
-                    'unimportant.' % LIVE_MIGRATION_DOWNTIME_MIN),
+               help="""
+Maximum permitted downtime, in milliseconds, for live migration
+switchover.
+
+Will be rounded up to a minimum of %dms. Use a large value if guest liveness
+is unimportant.
+""" % LIVE_MIGRATION_DOWNTIME_MIN),
+    # TODO(hieulq): Need to add min argument by moving from
+    # LIVE_MIGRATION_DOWNTIME_STEPS_MIN constant.
     cfg.IntOpt('live_migration_downtime_steps',
                default=10,
-               help='Number of incremental steps to reach max downtime value. '
-                    'Will be rounded up to a minimum of %d steps' %
-                    LIVE_MIGRATION_DOWNTIME_STEPS_MIN),
+               help="""
+Number of incremental steps to reach max downtime value.
+
+Will be rounded up to a minimum of %d steps.
+""" % LIVE_MIGRATION_DOWNTIME_STEPS_MIN),
+    # TODO(hieulq): Need to add min argument by moving from
+    # LIVE_MIGRATION_DOWNTIME_DELAY_MIN constant.
     cfg.IntOpt('live_migration_downtime_delay',
                default=75,
-               help='Time to wait, in seconds, between each step increase '
-                    'of the migration downtime. Minimum delay is %d seconds. '
-                    'Value is per GiB of guest RAM + disk to be transferred, '
-                    'with lower bound of a minimum of 2 GiB per device' %
-                    LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
+               help="""
+Time to wait, in seconds, between each step increase of the migration
+downtime.
+
+Minimum delay is %d seconds. Value is per GiB of guest RAM + disk to be
+transferred, with lower bound of a minimum of 2 GiB per device.
+""" % LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
     cfg.IntOpt('live_migration_completion_timeout',
                default=800,
                mutable=True,
-               help='Time to wait, in seconds, for migration to successfully '
-                    'complete transferring data before aborting the '
-                    'operation. Value is per GiB of guest RAM + disk to be '
-                    'transferred, with lower bound of a minimum of 2 GiB. '
-                    'Should usually be larger than downtime delay * downtime '
-                    'steps. Set to 0 to disable timeouts.'),
+               help="""
+Time to wait, in seconds, for migration to successfully complete transferring
+data before aborting the operation.
+
+Value is per GiB of guest RAM + disk to be transferred, with lower bound of
+a minimum of 2 GiB. Should usually be larger than downtime delay * downtime
+steps. Set to 0 to disable timeouts.
+Default is 800.
+"""),
     cfg.IntOpt('live_migration_progress_timeout',
                default=150,
                mutable=True,
-               help='Time to wait, in seconds, for migration to make forward '
-                    'progress in transferring data before aborting the '
-                    'operation. Set to 0 to disable timeouts.'),
+               help="""
+Time to wait, in seconds, for migration to make forward progress in
+transferring data before aborting the operation.
+
+Set to 0 to disable timeouts.
+"""),
     cfg.BoolOpt('live_migration_permit_post_copy',
                 default=False,
                 help="""
@@ -326,6 +389,7 @@ Related options:
                 default=False,
                 help="""
 This option allows nova to start live migration with auto converge on.
+
 Auto converge throttles down CPU if a progress of on-going live migration
 is slow. Auto converge will only be used if this flag is set to True and
 post copy is not permitted or post copy is unavailable due to the version
@@ -338,7 +402,21 @@ Related options:
 """),
     cfg.StrOpt('snapshot_image_format',
                choices=('raw', 'qcow2', 'vmdk', 'vdi'),
-               help='Snapshot image format. Defaults to same as source image'),
+               help="""
+Determine the snapshot image format when sending to the image service.
+
+If set, this decides what format is used when sending the snapshot to the
+image service.
+If not set, defaults to same type as source image.
+
+Possible values:
+
+* ``raw``: RAW disk format
+* ``qcow2``: KVM default disk format
+* ``vmdk``: VMWare default disk format
+* ``vdi``: VirtualBox default disk format
+* If not set, defaults to same type as source image.
+"""),
     cfg.StrOpt('disk_prefix',
                help="""
 Override the default disk prefix for the devices attached to an instance.
@@ -462,14 +540,6 @@ events`, refer https://libvirt.org/formatdomain.html#elementsPerf .
     The supported events list can be found in
     https://libvirt.org/html/libvirt-libvirt-domain.html , which
     you may need to search key words ``VIR_PERF_PARAM_*``
-
-* Services that use this:
-
-    ``nova-compute``
-
-* Related options:
-    None
-
 """),
 ]
 
@@ -728,10 +798,6 @@ Directory where the Virtuozzo Storage clusters are mounted on the compute node.
 
 This option defines non-standard mountpoint for Vzstorage cluster.
 
-* Services that use this:
-
-    ``nova-compute``
-
 * Related options:
 
     vzstorage_mount_* group of parameters
@@ -744,10 +810,6 @@ Mount owner user name.
 
 This option defines the owner user of Vzstorage cluster mountpoint.
 
-* Services that use this:
-
-    ``nova-compute``
-
 * Related options:
 
     vzstorage_mount_* group of parameters
@@ -759,10 +821,6 @@ This option defines the owner user of Vzstorage cluster mountpoint.
 Mount owner group name.
 
 This option defines the owner group of Vzstorage cluster mountpoint.
-
-* Services that use this:
-
-    ``nova-compute``
 
 * Related options:
 
@@ -779,10 +837,6 @@ in the format similar to one of chmod(1) utility, like this: 0770.
 It consists of one to four digits ranging from 0 to 7, with missing
 lead digits assumed to be 0's.
 
-* Services that use this:
-
-    ``nova-compute``
-
 * Related options:
 
     vzstorage_mount_* group of parameters
@@ -796,10 +850,6 @@ Path to vzstorage client log.
 This option defines the log of cluster operations,
 it should include "%(cluster_name)s" template to separate
 logs from multiple shares.
-
-* Services that use this:
-
-    ``nova-compute``
 
 * Related options:
 
@@ -825,10 +875,6 @@ vstorage-hwflush-check(1) utility.
 This option defines the path which should include "%(cluster_name)s"
 template to separate caches from multiple shares.
 
-* Services that use this:
-
-    ``nova-compute``
-
 * Related options:
 
     vzstorage_mount_opts may include more detailed cache options.
@@ -845,10 +891,6 @@ Format is a python string representation of arguments list, like:
 "[\'-v\', \'-R\', \'500\']"
 Shouldn\'t include -c, -l, -C, -u, -g and -m as those have
 explicit vzstorage_* options.
-
-* Services that use this:
-
-    ``nova-compute``
 
 * Related options:
 
