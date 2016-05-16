@@ -614,6 +614,12 @@ addSecurityGroup:
   in: body
   required: true
   type: string
+addTenantAccess:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
 adminPass:
   description: |
     The administrative password of the server.
@@ -1027,6 +1033,18 @@ flavor:
   in: body
   required: true
   type: object
+flavor_access:
+  description: |
+    A list of dictionaries, each with the keys ``flavor_id`` and ``tenant_id``.
+  in: body
+  required: true
+  type: array
+flavor_id_body:
+  description: |
+    The ID of the flavor.
+  in: body
+  required: true
+  type: string
 flavorRef:
   description: |
     The flavor reference, as a UUID or full URL, for the flavor for your server instance.
@@ -1954,6 +1972,12 @@ removeSecurityGroup:
   in: body
   required: true
   type: string
+removeTenantAccess:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
 rescue:
   description: |
     The action.
@@ -2261,7 +2285,7 @@ suspend:
   type: string
 tenant_id_body:
   description: |
-    The UUID of the tenant this server is owned by.
+    The UUID of the tenant in a multi-tenancy cloud.
   in: body
   required: true
   type: string
