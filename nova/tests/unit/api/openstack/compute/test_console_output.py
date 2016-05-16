@@ -99,7 +99,8 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
         self.stub_out('nova.compute.api.API.get_console_output',
                       fake_get_console_output_all_characters)
         output = self._get_console_output()
-        expect = string.digits + string.letters + string.punctuation + ' \t\n'
+        expect = (string.digits + string.ascii_letters +
+                  string.punctuation + ' \t\n')
         self.assertEqual({'output': expect}, output)
 
     def test_get_text_console_no_instance(self):
