@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ============================
@@ -16,7 +15,9 @@ List Ips
 
 Lists IP addresses that are assigned to an instance.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of
+the server to perform this operation. Cloud providers can change these
+permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -52,7 +53,9 @@ Show Ip Details
 
 Shows IP addresses details for a network label of a server instance.
 
-Policy defaults enable only users with the administrative role or the owner of the server to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role or the owner of
+the server to perform this operation. Cloud providers can change these
+permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
