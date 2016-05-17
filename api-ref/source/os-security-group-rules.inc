@@ -16,6 +16,10 @@ Create Security Group Rule
 Creates a rule for a security group. Either ``cidr`` or ``group_id`` must be
 specified when creating a rule.
 
+.. note::
+    nova-network only supports ingress rules. If you want to define egress
+    rules you must use the Neutron networking service.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403)
