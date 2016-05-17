@@ -143,11 +143,13 @@ class RequestContext(context.RequestContext):
         self.project_name = project_name
         self.is_admin = is_admin
 
-        # NOTE(dheeraj): The following attribute is used by cellsv2 to store
+        # NOTE(dheeraj): The following attributes are used by cellsv2 to store
         # connection information for connecting to the target cell.
         # It is only manipulated using the target_cell contextmanager
         # provided by this module
         self.db_connection = None
+        self.mq_connection = None
+
         self.user_auth_plugin = user_auth_plugin
         if self.is_admin is None:
             self.is_admin = policy.check_is_admin(self)
@@ -282,19 +284,26 @@ def authorize_quota_class_context(context, class_name):
 
 @contextmanager
 def target_cell(context, cell_mapping):
-    """Adds database connection information to the context for communicating
-    with the given target cell.
+    """Adds database and message queue connection information to the context
+    for communicating with the given target cell.
 
-    :param context: The RequestContext to add database connection information
+    :param context: The RequestContext to add connection information
     :param cell_mapping: A objects.CellMapping object
     """
     original_db_connection = context.db_connection
-    # avoid circular import
+    original_mq_connection = context.mq_connection
+    # avoid circular imports
     from nova import db
-    connection_string = cell_mapping.database_connection
-    context.db_connection = db.create_context_manager(connection_string)
+    from nova import rpc
+    db_connection_string = cell_mapping.database_connection
+    context.db_connection = db.create_context_manager(db_connection_string)
+    # NOTE(melwitt): none:// url is a special value meaning do not switch
+    if not cell_mapping.transport_url.startswith('none'):
+        transport_url = cell_mapping.transport_url
+        context.mq_connection = rpc.create_transport(transport_url)
 
     try:
         yield context
     finally:
         context.db_connection = original_db_connection
+        context.mq_connection = original_mq_connection

@@ -49,6 +49,53 @@ class TestRPC(testtools.TestCase):
         super(TestRPC, self).setUp()
         self.useFixture(RPCResetFixture())
 
+    @mock.patch('oslo_messaging.RPCClient')
+    def test_cell_client(self, mock_rpcclient):
+        default_client = mock.Mock()
+        dynamic_client = mock.Mock()
+        mock_rpcclient.return_value = dynamic_client
+        ctxt = mock.Mock()
+        ctxt.mq_connection = 'fake://'
+
+        class FakeAPI(object):
+            def __init__(self):
+                self.client = default_client
+
+            def rpc_api_function(self, context):
+                rpc.get_cell_client(context, self.client).do_rpc()
+
+        rpcapi = FakeAPI()
+        rpcapi.rpc_api_function(ctxt)
+        # verify a dynamic client was created
+        mock_rpcclient.assert_called_once_with(
+                ctxt.mq_connection, default_client.target,
+                version_cap=default_client.version_cap,
+                serializer=default_client.serializer)
+        # verify dynamic client handled the rpc
+        dynamic_client.do_rpc.assert_called_once_with()
+
+    @mock.patch('oslo_messaging.RPCClient')
+    def test_cell_client_no_switch(self, mock_rpcclient):
+        default_client = mock.Mock()
+        dynamic_client = mock.Mock()
+        mock_rpcclient.return_value = dynamic_client
+        ctxt = mock.Mock()
+        ctxt.mq_connection = None
+
+        class FakeAPI(object):
+            def __init__(self):
+                self.client = default_client
+
+            def rpc_api_function(self, context):
+                rpc.get_cell_client(context, self.client).do_rpc()
+
+        rpcapi = FakeAPI()
+        rpcapi.rpc_api_function(ctxt)
+        # verify a dynamic client was not created
+        self.assertFalse(mock_rpcclient.called)
+        # verify default client handled the rpc
+        default_client.do_rpc.assert_called_once_with()
+
     @mock.patch.object(rpc, 'get_allowed_exmods')
     @mock.patch.object(rpc, 'RequestContextSerializer')
     @mock.patch.object(messaging, 'get_transport')
@@ -248,6 +295,18 @@ class TestRPC(testtools.TestCase):
 
         mock_prep.assert_called_once_with(publisher_id='service.foo')
         self.assertEqual('notifier', notifier)
+
+    @mock.patch.object(rpc, 'get_allowed_exmods')
+    @mock.patch.object(messaging, 'get_transport')
+    def test_create_transport(self, mock_transport, mock_exmods):
+        exmods = mock_exmods.return_value
+        transport = rpc.create_transport(mock.sentinel.url)
+        self.assertEqual(mock_transport.return_value, transport)
+        mock_exmods.assert_called_once_with()
+        mock_transport.assert_called_once_with(rpc.CONF,
+                                               url=mock.sentinel.url,
+                                               allowed_remote_exmods=exmods,
+                                               aliases=rpc.TRANSPORT_ALIASES)
 
     def _test_init(self, mock_notif, mock_noti_trans, mock_trans, mock_ser,
                    mock_exmods, notif_format, expected_driver_topic_kwargs):
