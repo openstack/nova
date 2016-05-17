@@ -1,0 +1,6 @@
+---
+deprecations:
+  - All barbican config options in Nova are now
+    deprecated and may be removed as early as 15.0.0
+    release. All of these options are moved to the
+    Castellan library.
