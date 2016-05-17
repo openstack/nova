@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ===============================================================
  Server consoles (servers, os-consoles, os-console-auth-token)
@@ -28,10 +25,20 @@ Request
   - tenant_id: tenant_id
   - server_id: server_id
 
+
 Response
 --------
 
-**Example List consoles: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - consoles: consoles
+  - console: console
+  - console_type: console_type
+  - id: console_id_in_body
+
+|
+
+**Example List Consoles**
 
 .. literalinclude:: ../../doc/api_samples/consoles/consoles-list-get-resp.json
    :language: javascript
@@ -56,15 +63,19 @@ Request
   - tenant_id: tenant_id
   - server_id: server_id
 
+
 Response
 --------
+
+No body content is returned on a successful POST.
+
 
 Show Console Details
 ====================
 
 .. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/consoles/{console_id}
 
-Shows details for a console for a server instance.
+Shows console details for a server instance.
 
 Normal response codes: 200
 
@@ -79,13 +90,27 @@ Request
   - server_id: server_id
   - console_id: console_id
 
+
 Response
 --------
 
-**Example List consoles: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - console: console
+  - console_type: console_type
+  - host: console_host
+  - id: console_id_in_body
+  - instance_name: instance_name
+  - password: console_password
+  - port: port
+
+|
+
+**Example Show Console Details**
 
 .. literalinclude:: ../../doc/api_samples/consoles/consoles-get-resp.json
    :language: javascript
+
 
 Delete Console
 ==============
@@ -105,19 +130,23 @@ Request
 
   - tenant_id: tenant_id
   - server_id: server_id
-  - console_id: console_id
+  - id: console_id
 
 Response
 --------
+
+No body content is returned on a successful DELETE.
+
 
 Show Console Authentication Token
 =================================
 
 .. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-console-auth-token
 
-Shows the authentication token for a console for a server instance.
+Given the console authentication token for a server instance,
+shows the related connection information.
 
-This feature is available for ``rdp-html5`` console type only.
+This method is available for ``rdp-html5`` console type only.
 
 Normal response codes: 200
 
@@ -131,10 +160,22 @@ Request
   - tenant_id: tenant_id
   - server_id: server_id
 
+|
+
 Response
 --------
 
-**Example List consoles: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - console: console
+  - instance_uuid: instance_id
+  - host: console_host
+  - port: port
+  - internal_access_path: internal_access_path
+
+|
+
+**Example Show Console Authentication Token**
 
 .. literalinclude:: ../../doc/api_samples/os-console-auth-tokens/get-console-connect-info-get-resp.json
    :language: javascript
