@@ -26,7 +26,6 @@ from nova.i18n import _
 from nova import objects
 
 CONF = nova.conf.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 
 
 ALIAS = 'os-floating-ips-bulk'

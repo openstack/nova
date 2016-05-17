@@ -15,12 +15,12 @@
 
 import uuid as uuid_lib
 
-from oslo_config import cfg
 from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute import cloudpipe as cloudpipe_v21
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import exception
 from nova import objects
 from nova import test
@@ -29,8 +29,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import matchers
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
+CONF = nova.conf.CONF
 
 
 project_id = str(uuid_lib.uuid4().hex)

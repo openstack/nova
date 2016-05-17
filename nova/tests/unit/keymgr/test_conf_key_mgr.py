@@ -21,16 +21,15 @@ import binascii
 import codecs
 
 from castellan.common.objects import symmetric_key as key
-from oslo_config import cfg
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.keymgr import conf_key_mgr
 from nova import test
 
 
-CONF = cfg.CONF
-CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='key_manager')
+CONF = nova.conf.CONF
 decode_hex = codecs.getdecoder("hex_codec")
 
 
