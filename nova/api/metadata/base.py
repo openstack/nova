@@ -28,12 +28,16 @@ import six
 
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
+from nova.api.metadata import vendordata
+from nova.api.metadata import vendordata_dynamic
+from nova.api.metadata import vendordata_json
 from nova import availability_zones as az
 from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 import nova.conf
 from nova import context
+from nova.i18n import _LI, _LW
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
@@ -56,18 +60,26 @@ VERSIONS = [
     '2009-04-04',
 ]
 
+# NOTE(mikal): think of these strings as version numbers. They traditionally
+# correlate with OpenStack release dates, with all the changes for a given
+# release bundled into a single version. Note that versions in the future are
+# hidden from the listing, but can still be requested explicitly, which is
+# required for testing purposes. We know this isn't great, but its inherited
+# from EC2, which this needs to be compatible with.
 FOLSOM = '2012-08-10'
 GRIZZLY = '2013-04-04'
 HAVANA = '2013-10-17'
 LIBERTY = '2015-10-15'
-NEWTON = '2016-06-30'
+NEWTON_ONE = '2016-06-30'
+NEWTON_TWO = '2016-10-06'
 
 OPENSTACK_VERSIONS = [
     FOLSOM,
     GRIZZLY,
     HAVANA,
     LIBERTY,
-    NEWTON,
+    NEWTON_ONE,
+    NEWTON_TWO,
 ]
 
 VERSION = "version"
@@ -75,6 +87,7 @@ CONTENT = "content"
 CONTENT_DIR = "content"
 MD_JSON_NAME = "meta_data.json"
 VD_JSON_NAME = "vendor_data.json"
+VD2_JSON_NAME = "vendor_data2.json"
 NW_JSON_NAME = "network_data.json"
 UD_NAME = "user_data"
 PASS_NAME = "password"
@@ -96,7 +109,8 @@ class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 network_info=None, vd_driver=None, network_metadata=None):
+                 network_info=None, vd_driver=None, network_metadata=None,
+                 request_context=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
         network operations or lengthy cpu operations.
@@ -182,6 +196,19 @@ class InstanceMetadata(object):
 
         self.route_configuration = None
 
+        # NOTE(mikal): the decision to not pass extra_md here like we
+        # do to the StaticJSON driver is deliberate. extra_md will
+        # contain the admin password for the instance, and we shouldn't
+        # pass that to external services.
+        self.vendordata_providers = {
+            'StaticJSON': vendordata_json.JsonFileVendorData(
+                instance=instance, address=address,
+                extra_md=extra_md, network_info=network_info),
+            'DynamicJSON': vendordata_dynamic.DynamicVendorData(
+                instance=instance, address=address,
+                network_info=network_info, context=request_context)
+        }
+
     def _route_configuration(self):
         if self.route_configuration:
             return self.route_configuration
@@ -189,6 +216,7 @@ class InstanceMetadata(object):
         path_handlers = {UD_NAME: self._user_data,
                          PASS_NAME: self._password,
                          VD_JSON_NAME: self._vendor_data,
+                         VD2_JSON_NAME: self._vendor_data2,
                          MD_JSON_NAME: self._metadata_as_json,
                          NW_JSON_NAME: self._network_data,
                          VERSION: self._handle_version,
@@ -342,7 +370,7 @@ class InstanceMetadata(object):
         if self._check_os_version(LIBERTY, version):
             metadata['project_id'] = self.instance.project_id
 
-        if self._check_os_version(NEWTON, version):
+        if self._check_os_version(NEWTON_ONE, version):
             metadata['devices'] = self._get_device_metadata()
 
         self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
@@ -425,6 +453,8 @@ class InstanceMetadata(object):
             ret.append(VD_JSON_NAME)
         if self._check_os_version(LIBERTY, version):
             ret.append(NW_JSON_NAME)
+        if self._check_os_version(NEWTON_TWO, version):
+            ret.append(VD2_JSON_NAME)
 
         return ret
 
@@ -446,7 +476,43 @@ class InstanceMetadata(object):
     def _vendor_data(self, version, path):
         if self._check_os_version(HAVANA, version):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
-            return jsonutils.dump_as_bytes(self.vddriver.get())
+
+            # NOTE(mikal): backwards compatability... If the deployer has
+            # specified providers, and one of those providers is StaticJSON,
+            # then do that thing here. Otherwise, if the deployer has
+            # specified an old style driver here, then use that. This second
+            # bit can be removed once old style vendordata is fully deprecated
+            # and removed.
+            if (CONF.vendordata_providers and
+                'StaticJSON' in CONF.vendordata_providers):
+                return jsonutils.dump_as_bytes(
+                    self.vendordata_providers['StaticJSON'].get())
+            else:
+                # TODO(mikal): when we removed the old style vendordata
+                # drivers, we need to remove self.vddriver as well.
+                return jsonutils.dump_as_bytes(self.vddriver.get())
+
+        raise KeyError(path)
+
+    def _vendor_data2(self, version, path):
+        if self._check_os_version(NEWTON_TWO, version):
+            self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
+
+            j = {}
+            for provider in CONF.vendordata_providers:
+                if provider == 'StaticJSON':
+                    j['static'] = self.vendordata_providers['StaticJSON'].get()
+                else:
+                    values = self.vendordata_providers[provider].get()
+                    for key in list(values):
+                        if key in j:
+                            LOG.warning(_LW('Removing duplicate metadata key: '
+                                            '%s'), key, instance=self.instance)
+                            del values[key]
+                    j.update(values)
+
+            return jsonutils.dump_as_bytes(j)
+
         raise KeyError(path)
 
     def _check_version(self, required, requested, versions=VERSIONS):
@@ -490,7 +556,7 @@ class InstanceMetadata(object):
                 if OPENSTACK_VERSIONS != versions:
                     LOG.debug("future versions %s hidden in version list",
                               [v for v in OPENSTACK_VERSIONS
-                               if v not in versions])
+                               if v not in versions], instance=self.instance)
                 versions += ["latest"]
             else:
                 versions = VERSIONS + ["latest"]
@@ -544,6 +610,11 @@ class InstanceMetadata(object):
                 path = 'openstack/%s/%s' % (version, NW_JSON_NAME)
                 yield (path, self.lookup(path))
 
+            if self._check_version(NEWTON_TWO, version,
+                                   ALL_OPENSTACK_VERSIONS):
+                path = 'openstack/%s/%s' % (version, VD2_JSON_NAME)
+                yield (path, self.lookup(path))
+
         for (cid, content) in six.iteritems(self.content):
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
@@ -578,24 +649,11 @@ class RouteConfiguration(object):
         return path_handler(version, path)
 
 
-class VendorDataDriver(object):
-    """The base VendorData Drivers should inherit from."""
-
-    def __init__(self, *args, **kwargs):
-        """Init method should do all expensive operations."""
-        self._data = {}
-
-    def get(self):
-        """Return a dictionary of primitives to be rendered in metadata
-
-        :return: A dictionary or primitives.
-        """
-        return self._data
-
-
 def get_metadata_by_address(address):
     ctxt = context.get_admin_context()
     fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
+    LOG.info(_LI('Fixed IP %(ip)s translates to instance UUID %(uuid)s'),
+             {'ip': address, 'uuid': fixed_ip['instance_uuid']})
 
     return get_metadata_by_instance_id(fixed_ip['instance_uuid'],
                                        address,
@@ -653,3 +711,8 @@ def find_path_in_tree(data, path_tokens):
                 raise KeyError("/".join(path_tokens[0:i]))
             data = data[path_tokens[i]]
     return data
+
+
+# NOTE(mikal): this alias is to stop old style vendordata plugins from breaking
+# post refactor. It should be removed when we finish deprecating those plugins.
+VendorDataDriver = vendordata.VendorDataDriver
