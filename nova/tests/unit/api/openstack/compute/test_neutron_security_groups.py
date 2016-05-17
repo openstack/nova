@@ -508,7 +508,11 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
             req.body = encodeutils.safe_encode(self._encode_body(body))
         req.content_type = self.content_type
         req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
+
+        # NOTE: This 'os-security-groups' is for enabling security_groups
+        #       attribute on response body.
+        res = req.get_response(fakes.wsgi_app_v21(
+            init_only=('servers', 'os-security-groups')))
         return res
 
     def _encode_body(self, body):
