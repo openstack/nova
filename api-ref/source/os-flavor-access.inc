@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ============================================
  Flavors access (flavors, os-flavor-access)
@@ -35,19 +32,25 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - flavor_access: flavor_access
+  - tenant_id: tenant_id_body
+  - flavor_id: flavor_id_body
+
 **Example List Flavor Access Information For Given Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-list-resp.json
    :language: javascript
 
-Add Flavor Access To Tenant
-===========================
+Add Flavor Access To Tenant (addTenantAccess Action)
+====================================================
 
 .. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/action
 
 Adds flavor access to a tenant and flavor.
 
-Specify the ``addTenantAccess`` action and the ``tenant_id`` in the request body.
+Specify the ``addTenantAccess`` action and the ``tenant`` in the request body.
 
 Normal response codes: 200
 
@@ -61,6 +64,8 @@ Request
 
   - tenant_id: tenant_id
   - flavor_id: flavor_id
+  - addTenantAccess: addTenantAccess
+  - tenant: tenant_id_body
 
 **Example Add Flavor Access To Tenant: JSON request**
 
@@ -70,19 +75,25 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - flavor_access: flavor_access
+  - tenant_id: tenant_id_body
+  - flavor_id: flavor_id_body
+
 **Example Add Flavor Access To Tenant: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavor-access/flavor-access-add-tenant-resp.json
    :language: javascript
 
-Remove Flavor Access From Tenant
-================================
+Remove Flavor Access From Tenant (removeTenantAccess Action)
+============================================================
 
 .. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/action
 
 Removes flavor access from a tenant and flavor.
 
-Specify the ``removeTenantAccess`` action and the ``tenant_id`` in the request body.
+Specify the ``removeTenantAccess`` action and the ``tenant`` in the request body.
 
 Normal response codes: 200
 
@@ -96,6 +107,8 @@ Request
 
   - tenant_id: tenant_id
   - flavor_id: flavor_id
+  - removeTenantAccess: removeTenantAccess
+  - tenant: tenant_id_body
 
 **Example Remove Flavor Access From Tenant: JSON request**
 
@@ -104,6 +117,12 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - flavor_access: flavor_access
+  - tenant_id: tenant_id_body
+  - flavor_id: flavor_id_body
 
 **Example Remove Flavor Access From Tenant: JSON response**
 
