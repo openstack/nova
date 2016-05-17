@@ -1704,9 +1704,6 @@ def _validate_unique_server_name(context, name):
         instance_with_same_name = base_query.count()
 
     else:
-        LOG.warning(_LW('Unknown osapi_compute_unique_server_name_scope value:'
-                        ' %s. Flag must be empty, "global" or "project"'),
-                    CONF.osapi_compute_unique_server_name_scope)
         return
 
     if instance_with_same_name > 0:

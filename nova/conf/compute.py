@@ -2,7 +2,6 @@
 # needs:check_deprecation_status
 # needs:check_opt_group_and_type
 # needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
 
 
 # Copyright 2015 Huawei Technology corp.
@@ -21,7 +20,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import itertools
 import socket
 
 from oslo_config import cfg
@@ -482,34 +480,98 @@ whenever an RPC call to the compute service is made.
 ]
 
 db_opts = [
+
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
                default='',
-               help='When set, compute API will consider duplicate hostnames '
-                    'invalid within the specified scope, regardless of case. '
-                    'Should be empty, "project" or "global".'),
+               choices=['', 'project', 'global'],
+               help="""
+Sets the scope of the check for unique instance names.
+
+The default doesn't check for unique names. If a scope for the name check is
+set, a launch of a new instance or an update of an existing instance with a
+duplicate name will result in an ''InstanceExists'' error. The uniqueness is
+case-insensitive. Setting this option can increase the usability for end
+users as they don't have to distinguish among instances with the same name
+by their IDs.
+
+Possible values:
+
+* '': An empty value means that no uniqueness check is done and duplicate
+  names are possible.
+* "project": The instance name check is done only for instances within the
+  same project.
+* "global": The instance name check is done for all instances regardless of
+  the project.
+"""),
+
     cfg.BoolOpt('enable_new_services',
                 default=True,
-                help='Services to be added to the available pool on create'),
+                help="""
+Enable new services on this host automatically.
+
+When a new service (for example "nova-compute") starts up, it gets
+registered in the database as an enabled service. Sometimes it can be useful
+to register new services in disabled state and then enabled them at a later
+point in time. This option can set this behavior for all services per host.
+
+Possible values:
+
+* ``True``: Each new service is enabled as soon as it registers itself.
+* ``False``: Services must be enabled via a REST API call or with the CLI
+  with ``nova service-enable <hostname> <binary>``, otherwise they are not
+  ready to use.
+"""),
+
     cfg.StrOpt('instance_name_template',
                default='instance-%08x',
-               help='Template string to be used to generate instance names'),
+               help="""
+Template string to be used to generate instance names.
+
+This template controls the creation of the database name of an instance. This
+is *not* the display name you enter when creating an instance (via Horizon
+or CLI). For a new deployment it is advisable to change the default value
+(which uses the database autoincrement) to another value which makes use
+of the attributes of an instance, like ``instance-%(uuid)s``. If you
+already have instances in your deployment when you change this, your
+deployment will break.
+
+Possible values:
+
+* A string which either uses the instance database ID (like the
+  default)
+* A string with a list of named database columns, for example ``%(id)d``
+  or ``%(uuid)s`` or ``%(hostname)s``.
+
+Related options:
+
+* not to be confused with: ``multi_instance_display_name_template``
+"""),
+
+    # TODO(markus_z): 2016-04-04: This is not used anymore. The class
+    # "models.Snapshot" uses it but this class is not used anymore.
+    # This class got introduced with commit 0ba0859 but all calls
+    # to it got removed with commit 5d197cb. This cleanup must
+    # have missed the class "models.Snapshot" and a new change
+    # should remove it completely.
     cfg.StrOpt('snapshot_name_template',
                default='snapshot-%s',
-               help='Template string to be used to generate snapshot names'),
+               deprecated_for_removal=True,
+               deprecated_reason='This is not used anymore and will be '
+                                 'removed in the O release.',
+               help='Template string to be used to generate snapshot names')
 ]
 
-ALL_OPTS = list(itertools.chain(
-           compute_opts,
-           resource_tracker_opts,
-           allocation_ratio_opts,
-           compute_manager_opts,
-           interval_opts,
-           timeout_opts,
-           running_deleted_opts,
-           instance_cleaning_opts,
-           rpcapi_opts,
-           db_opts,
-           ))
+
+ALL_OPTS = (compute_opts +
+            resource_tracker_opts +
+            allocation_ratio_opts +
+            compute_manager_opts +
+            interval_opts +
+            timeout_opts +
+            running_deleted_opts +
+            instance_cleaning_opts +
+            rpcapi_opts +
+            db_opts)
 
 
 def register_opts(conf):
