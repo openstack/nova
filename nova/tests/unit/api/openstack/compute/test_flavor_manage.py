@@ -15,7 +15,6 @@
 
 import datetime
 
-import mock
 from oslo_serialization import jsonutils
 import six
 import webob
@@ -320,27 +319,6 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.stubs.Set(flavors, "create", fake_create)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._create,
                           self._get_http_request(), body=expected)
-
-    @mock.patch('nova.compute.flavors.create',
-                side_effect=exception.FlavorCreateFailed)
-    def test_flavor_create_db_failed(self, mock_create):
-        request_dict = {
-            "flavor": {
-                "name": "test",
-                'id': "12345",
-                "ram": 512,
-                "vcpus": 2,
-                "disk": 1,
-                "OS-FLV-EXT-DATA:ephemeral": 1,
-                "swap": 512,
-                "rxtx_factor": 1,
-                "os-flavor-access:is_public": True,
-            }
-        }
-        ex = self.assertRaises(webob.exc.HTTPInternalServerError,
-                               self.controller._create,
-                               self._get_http_request(), body=request_dict)
-        self.assertIn('Unable to create flavor', ex.explanation)
 
     def test_invalid_memory_mb(self):
         """Check negative and decimal number can't be accepted."""
