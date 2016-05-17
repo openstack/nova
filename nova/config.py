@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_cache import core as cache
 from oslo_db import options
 from oslo_log import log
 
@@ -44,7 +43,6 @@ def parse_args(argv, default_config_files=None, configure_db=True,
     options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
                          sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
-    cache.configure(CONF)
     config.set_middleware_defaults()
 
     CONF(argv[1:],
