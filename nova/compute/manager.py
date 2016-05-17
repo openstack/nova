@@ -26,6 +26,7 @@ terminating it.
 """
 
 import base64
+import binascii
 import contextlib
 import functools
 import inspect
@@ -1259,10 +1260,11 @@ class ComputeManager(manager.Manager):
 
         def _decode(f):
             path, contents = f
+            # Py3 raises binascii.Error instead of TypeError as in Py27
             try:
                 decoded = base64.b64decode(contents)
                 return path, decoded
-            except TypeError:
+            except (TypeError, binascii.Error):
                 raise exception.Base64Exception(path=path)
 
         return [_decode(f) for f in injected_files]
