@@ -19,8 +19,8 @@ from nova.virt.ironic import ironic_states
 
 def get_test_validation(**kw):
     return type('interfaces', (object,),
-               {'power': kw.get('power', True),
-                'deploy': kw.get('deploy', True),
+               {'power': kw.get('power', {'result': True}),
+                'deploy': kw.get('deploy', {'result': True}),
                 'console': kw.get('console', True),
                 'rescue': kw.get('rescue', True)})()
 
