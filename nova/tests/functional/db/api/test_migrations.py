@@ -73,6 +73,33 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
 
         return True
 
+    def filter_metadata_diff(self, diff):
+        # Filter out diffs that shouldn't cause a sync failure.
+
+        new_diff = []
+
+        # Define a whitelist of ForeignKeys that exist on the model but not in
+        # the database. They will be removed from the model at a later time.
+        fkey_whitelist = {'build_requests': ['request_spec_id']}
+
+        for element in diff:
+            if isinstance(element, list):
+                # modify_nullable is a list
+                new_diff.append(element)
+            else:
+                # tuple with action as first element. Different actions have
+                # different tuple structures.
+                if element[0] == 'add_fk':
+                    fkey = element[1]
+                    tablename = fkey.table.name
+                    column_keys = fkey.column_keys
+                    if (tablename in fkey_whitelist and
+                            column_keys == fkey_whitelist[tablename]):
+                        continue
+
+                new_diff.append(element)
+        return new_diff
+
 
 class TestNovaAPIMigrationsSQLite(NovaAPIModelsSync,
                                   test_base.DbTestCase,
@@ -295,6 +322,16 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             self.assertColumnExists(engine, 'key_pairs', column)
         self.assertUniqueConstraintExists(engine, 'key_pairs',
                                           ['user_id', 'name'])
+
+    def _check_015(self, engine, data):
+        build_requests_table = db_utils.get_table(engine, 'build_requests')
+        for column in ['request_spec_id', 'user_id', 'security_groups',
+                'config_drive']:
+            self.assertTrue(build_requests_table.columns[column].nullable)
+        inspector = reflection.Inspector.from_engine(engine)
+        constrs = inspector.get_unique_constraints('build_requests')
+        constr_columns = [constr['column_names'] for constr in constrs]
+        self.assertNotIn(['request_spec_id'], constr_columns)
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,

@@ -172,20 +172,17 @@ class BuildRequest(API_BASE):
         Index('build_requests_project_id_idx', 'project_id'),
         schema.UniqueConstraint('instance_uuid',
             name='uniq_build_requests0instance_uuid'),
-        schema.UniqueConstraint('request_spec_id',
-            name='uniq_build_requests0request_spec_id')
         )
 
     id = Column(Integer, primary_key=True)
-    request_spec_id = Column(Integer, ForeignKey('request_specs.id'),
-            nullable=False)
+    request_spec_id = Column(Integer, ForeignKey('request_specs.id'))
     request_spec = orm.relationship(RequestSpec,
             foreign_keys=request_spec_id,
             back_populates='build_request',
             primaryjoin=request_spec_id == RequestSpec.id)
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
-    user_id = Column(String(255), nullable=False)
+    user_id = Column(String(255))
     display_name = Column(String(255))
     instance_metadata = Column(Text)
     progress = Column(Integer)
@@ -195,8 +192,8 @@ class BuildRequest(API_BASE):
     access_ip_v4 = Column(types.IPAddress())
     access_ip_v6 = Column(types.IPAddress())
     info_cache = Column(Text)
-    security_groups = Column(Text, nullable=False)
-    config_drive = Column(Boolean, default=False, nullable=False)
+    security_groups = Column(Text)
+    config_drive = Column(Boolean, default=False)
     key_name = Column(String(255))
     locked_by = Column(Enum('owner', 'admin'))
     instance = Column(Text)
