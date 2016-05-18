@@ -1,9 +1,3 @@
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -21,26 +15,42 @@
 
 from oslo_config import cfg
 
-enable_guestfs_debug_opts = cfg.BoolOpt('debug',
-                                        default=False,
-                                        help="""
-Enable the debug mode of "libguestfs".
-
-If this node uses "libguestfs" (for example to inject data or passwords),
-this option can be used to turn its debug mode on.
-
-Possible values:
-* True: turn debug on. This integrates libguestfs's logs into the log
-  of OpenStack.
-* False: turn debug off
+guestfs_group = cfg.OptGroup('guestfs',
+                             title='Guestfs Options',
+                             help="""
+libguestfs is a set of tools for accessing and modifying virtual
+machine (VM) disk images. You can use this for viewing and editing
+files inside guests, scripting changes to VMs, monitoring disk
+used/free statistics, creating guests, P2V, V2V, performing backups,
+cloning VMs, building VMs, formatting disks and resizing disks.
 """)
 
-ALL_OPTS = [enable_guestfs_debug_opts]
+enable_guestfs_debug_opts = [
+    cfg.BoolOpt('debug',
+                default=False,
+                help="""
+Enable/disables guestfs logging.
+
+This configures guestfs to debug messages and push them to Openstack
+logging system. When set to True, it traces libguestfs API calls and
+enable verbose debug messages. In order to use the above feature,
+"libguestfs" package must be installed.
+
+Related options:
+Since libguestfs access and modifies VM's managed by libvirt, below options
+should be set to give access to those VM's.
+    * libvirt.inject_key
+    * libvirt.inject_partition
+    * libvirt.inject_password
+""")
+]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS, group="guestfs")
+    conf.register_group(guestfs_group)
+    conf.register_opts(enable_guestfs_debug_opts,
+                       group=guestfs_group)
 
 
 def list_opts():
-    return {"guestfs": ALL_OPTS}
+    return {guestfs_group: enable_guestfs_debug_opts}
