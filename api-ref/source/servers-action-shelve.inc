@@ -41,7 +41,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
   - shelve: shelve
 
 |
@@ -95,7 +95,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
   - shelveOffload: shelveOffload
 
 |
@@ -149,7 +149,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - tenant_id: tenant_id
-  - server_id: server_id
+  - server_id: server_id_path
   - unshelve: unshelve
 
 |
