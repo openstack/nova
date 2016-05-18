@@ -200,20 +200,30 @@ class ComputeTaskManager(base.Base):
                                              instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
-                                   reservations, clean_shutdown)
+                                   reservations, clean_shutdown, request_spec)
         else:
             raise NotImplementedError()
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
-                      reservations, clean_shutdown):
+                      reservations, clean_shutdown, request_spec):
         image = utils.get_image_from_system_metadata(
             instance.system_metadata)
 
-        request_spec = scheduler_utils.build_request_spec(
-            context, image, [instance], instance_type=flavor)
+        # NOTE(sbauza): If a reschedule occurs when prep_resize(), then
+        # it only provides filter_properties legacy dict back to the
+        # conductor with no RequestSpec part of the payload.
+        if not request_spec:
+            request_spec = objects.RequestSpec.from_components(
+                context, instance.uuid, image,
+                instance.flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, None, instance.availability_zone)
+
         task = self._build_cold_migrate_task(context, instance, flavor,
-                                             filter_properties, request_spec,
+                                             request_spec,
                                              reservations, clean_shutdown)
+        # TODO(sbauza): Provide directly the RequestSpec object once
+        # _set_vm_state_and_notify() accepts it
+        legacy_spec = request_spec.to_legacy_request_spec_dict()
         try:
             task.execute()
         except exception.NoValidHost as ex:
@@ -223,7 +233,7 @@ class ComputeTaskManager(base.Base):
             updates = {'vm_state': vm_state, 'task_state': None}
             self._set_vm_state_and_notify(context, instance.uuid,
                                           'migrate_server',
-                                          updates, ex, request_spec)
+                                          updates, ex, legacy_spec)
 
             # if the flavor IDs match, it's migrate; otherwise resize
             if flavor.id == instance.instance_type_id:
@@ -239,14 +249,14 @@ class ComputeTaskManager(base.Base):
                 updates = {'vm_state': vm_state, 'task_state': None}
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
-                                              updates, ex, request_spec)
+                                              updates, ex, legacy_spec)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 updates = {'vm_state': instance.vm_state,
                            'task_state': None}
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
-                                              updates, ex, request_spec)
+                                              updates, ex, legacy_spec)
 
     def _set_vm_state_and_notify(self, context, instance_uuid, method, updates,
                                  ex, request_spec):
@@ -351,10 +361,10 @@ class ComputeTaskManager(base.Base):
                                               request_spec)
 
     def _build_cold_migrate_task(self, context, instance, flavor,
-                                 filter_properties, request_spec, reservations,
+                                 request_spec, reservations,
                                  clean_shutdown):
         return migrate.MigrationTask(context, instance, flavor,
-                                     filter_properties, request_spec,
+                                     request_spec,
                                      reservations, clean_shutdown,
                                      self.compute_rpcapi,
                                      self.scheduler_client)

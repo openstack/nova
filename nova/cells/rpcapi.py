@@ -558,7 +558,12 @@ class CellsAPI(object):
 
     def resize_instance(self, ctxt, instance, extra_instance_updates,
                        scheduler_hint, flavor, reservations,
-                       clean_shutdown=True):
+                       clean_shutdown=True,
+                       request_spec=None):
+        # NOTE(sbauza): Since Cells v1 is quite feature-frozen, we don't want
+        # to pass down request_spec to the manager and rather keep the
+        # cell conductor providing a new RequestSpec like the original
+        # behaviour
         flavor_p = jsonutils.to_primitive(flavor)
         version = '1.33'
         msg_args = {'instance': instance,
