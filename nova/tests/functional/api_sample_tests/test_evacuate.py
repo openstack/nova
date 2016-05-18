@@ -16,6 +16,7 @@
 import mock
 
 import nova.conf
+from nova import objects
 from nova.tests.functional.api_sample_tests import test_servers
 
 CONF = nova.conf.CONF
@@ -144,3 +145,50 @@ class EvacuateJsonTestV214(EvacuateJsonTest):
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=None, preserve_ephemeral=mock.ANY,
                 host=None, request_spec=mock.ANY)
+
+
+class EvacuateJsonTestV229(EvacuateJsonTestV214):
+    microversion = '2.29'
+    scenarios = [('v2_29', {'api_major_version': 'v2.1'})]
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_server_evacuate(self, compute_node_get_all_by_host, rebuild_mock):
+        # Note (wingwj): The host can't be the same one
+        req_subs = {
+            'host': 'testHost',
+            "adminPass": "MySecretPass",
+            "force": "false",
+        }
+        fake_computes = objects.ComputeNodeList(
+            objects=[objects.ComputeNode(host='testHost',
+                                         hypervisor_hostname='host')])
+        compute_node_get_all_by_host.return_value = fake_computes
+        self._test_evacuate(req_subs, 'server-evacuate-req',
+                            server_resp=None, expected_resp_code=200)
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=None, preserve_ephemeral=mock.ANY,
+                host=None, request_spec=mock.ANY)
+
+    @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_host')
+    def test_server_evacuate_with_force(self, compute_node_get_all_by_host,
+                                        rebuild_mock):
+        # Note (wingwj): The host can't be the same one
+        req_subs = {
+            'host': 'testHost',
+            "adminPass": "MySecretPass",
+            "force": "True",
+        }
+        self._test_evacuate(req_subs, 'server-evacuate-req',
+                            server_resp=None, expected_resp_code=200)
+        self.assertEqual(0, compute_node_get_all_by_host.call_count)
+        rebuild_mock.assert_called_once_with(mock.ANY, instance=mock.ANY,
+                orig_image_ref=mock.ANY, image_ref=mock.ANY,
+                injected_files=mock.ANY, new_pass="MySecretPass",
+                orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
+                on_shared_storage=None, preserve_ephemeral=mock.ANY,
+                host='testHost', request_spec=mock.ANY)

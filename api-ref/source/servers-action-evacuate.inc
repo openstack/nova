@@ -27,6 +27,7 @@ Request
   - host: host
   - adminPass: adminPass_evacuate_rebuild_request
   - onSharedStorage: on_shared_storage
+  - force: force_evacuate
 
 |
 

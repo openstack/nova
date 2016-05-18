@@ -10035,7 +10035,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
 
-    def test_evacuate(self):
+    def _test_evacuate(self, force=None):
         instance = self._create_fake_instance_obj(services=True)
         self.assertIsNone(instance.task_state)
 
@@ -10044,25 +10044,37 @@ class ComputeAPITestCase(BaseTestCase):
         fake_spec = objects.RequestSpec()
 
         def fake_rebuild_instance(*args, **kwargs):
-            instance.host = kwargs['host']
+            # NOTE(sbauza): Host can be set to None, we need to fake a correct
+            # destination if this is the case.
+            instance.host = kwargs['host'] or 'fake_dest_host'
             instance.save()
 
         @mock.patch.object(self.compute_api.compute_task_api,
                            'rebuild_instance')
+        @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
         @mock.patch.object(objects.RequestSpec,
                            'get_by_instance_uuid')
         @mock.patch.object(self.compute_api.servicegroup_api, 'service_is_up')
-        def do_test(service_is_up, get_by_instance_uuid, rebuild_instance):
+        def do_test(service_is_up, get_by_instance_uuid, get_all_by_host,
+                    rebuild_instance):
             service_is_up.return_value = False
             get_by_instance_uuid.return_value = fake_spec
             rebuild_instance.side_effect = fake_rebuild_instance
+            get_all_by_host.return_value = objects.ComputeNodeList(
+                objects=[objects.ComputeNode(
+                    host='fake_dest_host',
+                    hypervisor_hostname='fake_dest_node')])
 
             self.compute_api.evacuate(ctxt,
                                       instance,
                                       host='fake_dest_host',
                                       on_shared_storage=True,
-                                      admin_password=None)
-
+                                      admin_password=None,
+                                      force=force)
+            if force is False:
+                host = None
+            else:
+                host = 'fake_dest_host'
             rebuild_instance.assert_called_once_with(
                 ctxt,
                 instance=instance,
@@ -10075,7 +10087,7 @@ class ComputeAPITestCase(BaseTestCase):
                 recreate=True,
                 on_shared_storage=True,
                 request_spec=fake_spec,
-                host='fake_dest_host')
+                host=host)
         do_test()
 
         instance.refresh()
@@ -10088,6 +10100,32 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual('accepted', migs[0].status)
         self.assertEqual('compute.instance.evacuate',
                          fake_notifier.NOTIFICATIONS[0].event_type)
+        if force is False:
+            req_dest = fake_spec.requested_destination
+            self.assertIsNotNone(req_dest)
+            self.assertIsInstance(req_dest, objects.Destination)
+            self.assertEqual('fake_dest_host', req_dest.host)
+            self.assertEqual('fake_dest_node', req_dest.node)
+
+    def test_evacuate(self):
+        self._test_evacuate()
+
+    def test_evacuate_with_not_forced_host(self):
+        self._test_evacuate(force=False)
+
+    def test_evacuate_with_forced_host(self):
+        self._test_evacuate(force=True)
+
+    @mock.patch('nova.servicegroup.api.API.service_is_up',
+                return_value=False)
+    def test_fail_evacuate_with_non_existing_destination(self, _service_is_up):
+        instance = self._create_fake_instance_obj(services=True)
+        self.assertIsNone(instance.task_state)
+
+        self.assertRaises(exception.ComputeHostNotFound,
+                self.compute_api.evacuate, self.context.elevated(), instance,
+                host='fake_dest_host', on_shared_storage=True,
+                admin_password=None, force=False)
 
     def test_fail_evacuate_from_non_existing_host(self):
         inst = {}
