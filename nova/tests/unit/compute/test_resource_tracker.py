@@ -284,16 +284,6 @@ class BaseTestCase(test.TestCase):
             compute.update(values)
         return compute
 
-    def _create_compute_node_obj(self, context):
-        # Use the db representation of a compute node returned
-        # by _create_compute_node() to create an equivalent compute
-        # node object.
-        compute = self._create_compute_node()
-        compute_obj = objects.ComputeNode()
-        compute_obj = objects.ComputeNode._from_db_object(
-            context, compute_obj, compute)
-        return compute_obj
-
     def _create_service(self, host="fakehost", compute=None):
         if compute:
             compute = [compute]
@@ -448,7 +438,6 @@ class BaseTestCase(test.TestCase):
         driver = self._driver()
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
-        tracker.compute_node = self._create_compute_node_obj(self.context)
         return tracker
 
 
