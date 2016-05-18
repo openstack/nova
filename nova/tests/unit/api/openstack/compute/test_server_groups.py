@@ -27,10 +27,6 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests import uuidsentinel
 
-FAKE_UUID1 = 'a47ae74e-ab08-447f-8eee-ffd43fc46c16'
-FAKE_UUID2 = 'c6e6430a-6563-4efa-9542-5e93c9e97d18'
-FAKE_UUID3 = 'b8713410-9ba3-e913-901b-13410ca90121'
-
 
 class AttrDict(dict):
     def __getattr__(self, k):

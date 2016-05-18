@@ -46,7 +46,6 @@ FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 FAKE_UUID_A = '00000000-aaaa-aaaa-aaaa-000000000000'
 FAKE_UUID_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
 FAKE_UUID_C = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
-FAKE_UUID_D = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
 
 IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
