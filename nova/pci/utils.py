@@ -76,7 +76,7 @@ def get_pci_address(domain, bus, slot, func):
 
 def get_function_by_ifname(ifname):
     """Given the device name, returns the PCI address of a device
-    and returns True if the address in a physical function.
+    and returns True if the address is in a physical function.
     """
     dev_path = "/sys/class/net/%s/device" % ifname
     sriov_totalvfs = 0
