@@ -89,7 +89,6 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
-CONF.import_opt('connection', 'oslo_db.options', group='database')
 
 QUOTAS = quota.QUOTAS
 

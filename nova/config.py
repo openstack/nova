@@ -15,20 +15,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_db import options
 from oslo_log import log
 
 from nova.common import config
 import nova.conf
-from nova.conf import paths
 from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova import rpc
 from nova import version
 
 
 CONF = nova.conf.CONF
-
-_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
 _EXTRA_DEFAULT_LOG_LEVELS = ['glanceclient=WARN']
 
@@ -40,8 +36,6 @@ def parse_args(argv, default_config_files=None, configure_db=True,
     # and add only the extra levels that Nova needs
     log.set_defaults(default_log_levels=log.get_default_log_levels() +
                      _EXTRA_DEFAULT_LOG_LEVELS)
-    options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
-                         sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
     config.set_middleware_defaults()
 
