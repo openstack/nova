@@ -220,7 +220,8 @@ libvirt_general_opts = [
 libvirt_imagebackend_opts = [
     cfg.StrOpt('images_type',
                default='default',
-               choices=('raw', 'qcow2', 'lvm', 'rbd', 'ploop', 'default'),
+               choices=('raw', 'flat', 'qcow2', 'lvm', 'rbd', 'ploop',
+                        'default'),
                help='VM Images format. If default is specified, then'
                     ' use_cow_images flag is used instead of this one.'),
     cfg.StrOpt('images_volume_group',

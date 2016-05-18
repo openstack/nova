@@ -430,10 +430,15 @@ class Image(object):
         pass
 
 
-class Raw(Image):
+class Flat(Image):
+    """The Flat backend uses either raw or qcow2 storage. It never uses
+    a backing store, so when using qcow2 it copies an image rather than
+    creating an overlay. By default it creates raw files, but will use qcow2
+    when creating a disk from a qcow2 if force_raw_images is not set in config.
+    """
     def __init__(self, instance=None, disk_name=None, path=None):
         self.disk_name = disk_name
-        super(Raw, self).__init__("file", "raw", is_block_dev=False)
+        super(Flat, self).__init__("file", "raw", is_block_dev=False)
 
         self.path = (path or
                      os.path.join(libvirt_utils.get_instance_path(instance),
@@ -459,11 +464,11 @@ class Raw(Image):
 
     def _supports_encryption(self):
         # NOTE(dgenin): Kernel, ramdisk and disk.config are fetched using
-        # the Raw backend regardless of which backend is configured for
-        # ephemeral storage. Encryption for the Raw backend is not yet
+        # the Flat backend regardless of which backend is configured for
+        # ephemeral storage. Encryption for the Flat backend is not yet
         # implemented so this loophole is necessary to allow other
         # backends already supporting encryption to function. This can
-        # be removed once encryption for Raw is implemented.
+        # be removed once encryption for Flat is implemented.
         if self.disk_name not in ['kernel', 'ramdisk', 'disk.config']:
             return False
         else:
@@ -480,7 +485,6 @@ class Raw(Image):
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
-                # class Raw is misnamed, format may not be 'raw' in all cases
                 image = imgmodel.LocalFileImage(target,
                                                 self.driver_format)
                 disk.extend(image, size)
@@ -1069,12 +1073,13 @@ class Ploop(Image):
 class Backend(object):
     def __init__(self, use_cow):
         self.BACKEND = {
-            'raw': Raw,
+            'raw': Flat,
+            'flat': Flat,
             'qcow2': Qcow2,
             'lvm': Lvm,
             'rbd': Rbd,
             'ploop': Ploop,
-            'default': Qcow2 if use_cow else Raw
+            'default': Qcow2 if use_cow else Flat
         }
 
     def backend(self, image_type=None):
