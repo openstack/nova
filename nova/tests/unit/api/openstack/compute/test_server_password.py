@@ -15,8 +15,6 @@
 
 import mock
 
-from oslo_config import cfg
-
 from nova.api.metadata import password
 from nova.api.openstack.compute import server_password \
     as server_password_v21
@@ -25,9 +23,6 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
-
-
-CONF = cfg.CONF
 
 
 class ServerPasswordTestV21(test.NoDBTestCase):

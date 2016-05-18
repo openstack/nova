@@ -15,17 +15,15 @@
 
 import copy
 
-from oslo_config import cfg
 import six
 
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):

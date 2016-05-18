@@ -13,10 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 import datetime
 
+import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
@@ -25,9 +24,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):

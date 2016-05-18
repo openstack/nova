@@ -15,15 +15,12 @@
 
 import datetime
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 # NOTE(ShaoHe Feng) here I can not use uuidsentinel, it generate a random

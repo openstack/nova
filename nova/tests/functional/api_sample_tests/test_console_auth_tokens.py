@@ -14,14 +14,12 @@
 
 import re
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
