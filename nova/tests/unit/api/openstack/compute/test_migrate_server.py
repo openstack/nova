@@ -32,6 +32,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
     validation_error = exception.ValidationError
     _api_version = '2.1'
     disk_over_commit = False
+    force = None
 
     def setUp(self):
         super(MigrateServerTestsV21, self).setUp()
@@ -58,7 +59,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                '_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname'), {})}
+                                       'hostname', self.force), {})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -67,7 +68,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         method_translations = {'_migrate': 'resize',
                                '_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': self._get_migration_body(host=None)}
-        args_map = {'_migrate_live': ((False, self.disk_over_commit, None),
+        args_map = {'_migrate_live': ((False, self.disk_over_commit, None,
+                                       self.force),
                                       {})}
         self._test_actions(['_migrate', '_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
@@ -83,7 +85,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
                                '_migrate_live': 'live_migrate'}
         body_map = self._get_migration_body(host='hostname')
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname'), {})}
+                                       'hostname', self.force), {})}
         exception_arg = {'_migrate': 'migrate',
                          '_migrate_live': 'os-migrateLive'}
         self._test_actions_raise_conflict_on_invalid_state(
@@ -98,7 +100,7 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         body_map = {'_migrate_live':
                     self._get_migration_body(host='hostname')}
         args_map = {'_migrate_live': ((False, self.disk_over_commit,
-                                       'hostname'), {})}
+                                       'hostname', self.force), {})}
         self._test_actions_with_locked_instance(
             ['_migrate', '_migrate_live'], body_map=body_map,
             args_map=args_map, method_translations=method_translations)
@@ -122,7 +124,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
         instance = self._stub_instance_get()
         self.compute_api.live_migrate(self.context, instance, False,
-                                      self.disk_over_commit, 'hostname')
+                                      self.disk_over_commit, 'hostname',
+                                      self.force)
 
         self.mox.ReplayAll()
 
@@ -201,7 +204,8 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         instance = self._stub_instance_get(uuid=uuid)
         self.compute_api.live_migrate(self.context, instance, False,
                                       self.disk_over_commit,
-                                      'hostname').AndRaise(fake_exc)
+                                      'hostname', self.force
+                                      ).AndRaise(fake_exc)
 
         self.mox.ReplayAll()
 
@@ -304,7 +308,8 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
         method_translations = {'_migrate_live': 'live_migrate'}
         body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
                                       'block_migration': 'auto'}}}
-        args_map = {'_migrate_live': ((None, None, 'hostname'), {})}
+        args_map = {'_migrate_live': ((None, None, 'hostname', self.force),
+                                      {})}
         self._test_actions(['_migrate_live'], body_map=body_map,
                            method_translations=method_translations,
                            args_map=args_map)
@@ -321,6 +326,44 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
     def test_migrate_live_migration_with_old_nova_not_supported(self):
         self._test_migrate_live_failed_with_exception(
             exception.LiveMigrationWithOldNovaNotSupported())
+
+
+class MigrateServerTestsV230(MigrateServerTestsV225):
+
+    force = False
+
+    def setUp(self):
+        super(MigrateServerTestsV230, self).setUp()
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.30')
+
+    def _test_live_migrate(self, force=False):
+        if force is True:
+            litteral_force = 'true'
+        else:
+            litteral_force = 'false'
+        method_translations = {'_migrate_live': 'live_migrate'}
+        body_map = {'_migrate_live': {'os-migrateLive': {'host': 'hostname',
+                                      'block_migration': 'auto',
+                                      'force': litteral_force}}}
+        args_map = {'_migrate_live': ((None, None, 'hostname', force),
+                                      {})}
+        self._test_actions(['_migrate_live'], body_map=body_map,
+                           method_translations=method_translations,
+                           args_map=args_map)
+
+    def test_live_migrate(self):
+        self._test_live_migrate()
+
+    def test_live_migrate_with_forced_host(self):
+        self._test_live_migrate(force=True)
+
+    def test_forced_live_migrate_with_no_provided_host(self):
+        body = {'os-migrateLive':
+                {'force': 'true'}}
+        self.assertRaises(self.validation_error,
+                          self.controller._migrate_live,
+                          self.req, fakes.FAKE_UUID, body=body)
 
 
 class MigrateServerPolicyEnforcementV21(test.NoDBTestCase):

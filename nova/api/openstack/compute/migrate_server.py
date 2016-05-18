@@ -24,6 +24,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.i18n import _
 
 ALIAS = "os-migrate-server"
 
@@ -63,7 +64,8 @@ class MigrateServerController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('os-migrateLive')
     @validation.schema(migrate_server.migrate_live, "2.1", "2.24")
-    @validation.schema(migrate_server.migrate_live_v2_25, "2.25")
+    @validation.schema(migrate_server.migrate_live_v2_25, "2.25", "2.29")
+    @validation.schema(migrate_server.migrate_live_v2_30, "2.30")
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
@@ -71,7 +73,14 @@ class MigrateServerController(wsgi.Controller):
 
         host = body["os-migrateLive"]["host"]
         block_migration = body["os-migrateLive"]["block_migration"]
+        force = None
 
+        if api_version_request.is_supported(req, min_version='2.30'):
+            force = body["os-migrateLive"].get("force", False)
+            force = strutils.bool_from_string(force, strict=True)
+            if force is True and not host:
+                message = _("Can't force to a non-provided destination")
+                raise exc.HTTPBadRequest(explanation=message)
         if api_version_request.is_supported(req, min_version='2.25'):
             if block_migration == 'auto':
                 block_migration = None
@@ -90,7 +99,7 @@ class MigrateServerController(wsgi.Controller):
         try:
             instance = common.get_instance(self.compute_api, context, id)
             self.compute_api.live_migrate(context, instance, block_migration,
-                                          disk_over_commit, host)
+                                          disk_over_commit, host, force)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.NoValidHost,

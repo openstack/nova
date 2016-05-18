@@ -170,6 +170,7 @@ Request
   - host: host_migration
   - block_migration: block_migration
   - disk_over_commit: disk_over_commit
+  - force: force_live_migrate
 
 **Example Live-Migrate Server (os-migrateLive Action): JSON request**
 
