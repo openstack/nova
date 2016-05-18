@@ -1205,33 +1205,14 @@ class CellV2Commands(object):
             instance = instances[-1]
             print('Next marker: - %s' % instance.uuid)
 
-    # TODO(melwitt): Remove this when the oslo.messaging function
-    # for assembling a transport url from ConfigOpts is available
-    @args('--transport-url', metavar='<transport url>', required=True,
-          dest='transport_url',
-          help='The transport url for the cell message queue')
-    @args('--name', metavar='<name>', help='The name of the cell')
-    @args('--verbose', action='store_true',
-          help='Return and output the uuid of the created cell')
-    def map_cell_and_hosts(self, transport_url, name=None, verbose=False):
-        """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
-
-        Users not dividing their cloud into multiple cells will be a single
-        cell v2 deployment and should specify:
-
-          nova-manage cell_v2 map_cell_and_hosts --config-file <nova.conf>
-
-        Users running multiple cells can add a cell v2 by specifying:
-
-          nova-manage cell_v2 map_cell_and_hosts --config-file <cell nova.conf>
-        """
+    def _map_cell_and_hosts(self, transport_url, name=None, verbose=False):
         ctxt = context.RequestContext()
         cell_mapping_uuid = cell_mapping = None
         # First, try to detect if a CellMapping has already been created
         compute_nodes = objects.ComputeNodeList.get_all(ctxt)
         if not compute_nodes:
             print(_('No hosts found to map to cell, exiting.'))
-            return(0)
+            return None
         missing_nodes = []
         for compute_node in compute_nodes:
             try:
@@ -1253,7 +1234,7 @@ class CellV2Commands(object):
                 cell_mapping_uuid = host_mapping.cell_mapping.uuid
         if not missing_nodes:
             print(_('All hosts are already mapped to cell(s), exiting.'))
-            return(0)
+            return cell_mapping_uuid
         # Create the cell mapping in the API database
         if cell_mapping_uuid is not None:
             cell_mapping = objects.CellMapping.get_by_uuid(
@@ -1272,6 +1253,33 @@ class CellV2Commands(object):
             host_mapping.create()
         if verbose:
             print(cell_mapping_uuid)
+        return cell_mapping_uuid
+
+    # TODO(melwitt): Remove this when the oslo.messaging function
+    # for assembling a transport url from ConfigOpts is available
+    @args('--transport-url', metavar='<transport url>', required=True,
+          dest='transport_url',
+          help='The transport url for the cell message queue')
+    @args('--name', metavar='<name>', help='The name of the cell')
+    @args('--verbose', action='store_true',
+          help='Return and output the uuid of the created cell')
+    def map_cell_and_hosts(self, transport_url, name=None, verbose=False):
+        """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
+
+        Users not dividing their cloud into multiple cells will be a single
+        cell v2 deployment and should specify:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <nova.conf>
+
+        Users running multiple cells can add a cell v2 by specifying:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <cell nova.conf>
+        """
+        self._map_cell_and_hosts(transport_url, name, verbose)
+        # online_data_migrations established a pattern of 0 meaning everything
+        # is done, 1 means run again to do more work. This command doesn't do
+        # partial work so 0 is appropriate.
+        return 0
 
 
 CATEGORIES = {
