@@ -93,9 +93,6 @@ class FlavorManageController(wsgi.Controller):
                 'Not all flavors have been migrated to the API database'))
         except exception.InvalidInput as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
-        except exception.FlavorCreateFailed as exc:
-            raise webob.exc.HTTPInternalServerError(explanation=
-                exc.format_message())
 
         return self._view_builder.show(req, flavor)
 

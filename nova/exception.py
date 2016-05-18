@@ -1492,10 +1492,6 @@ class AggregateHostExists(NovaException):
     msg_fmt = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 
 
-class FlavorCreateFailed(NovaException):
-    msg_fmt = _("Unable to create flavor")
-
-
 class InstancePasswordSetFailed(NovaException):
     msg_fmt = _("Failed to set admin password on %(instance)s "
                 "because %(reason)s")

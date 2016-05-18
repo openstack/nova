@@ -444,14 +444,14 @@ class CreateInstanceTypeTest(test.TestCase):
             self.assertEqual(f.flavorid, new_list[i].flavorid)
 
     def test_duplicate_names_fail(self):
-        # Ensures that name duplicates raise FlavorCreateFailed.
+        # Ensures that name duplicates raise FlavorExists
         flavors.create('flavor', 256, 1, 120, 200, 'flavor1')
         self.assertRaises(exception.FlavorExists,
                           flavors.create,
                           'flavor', 64, 1, 120)
 
     def test_duplicate_flavorids_fail(self):
-        # Ensures that flavorid duplicates raise FlavorCreateFailed.
+        # Ensures that flavorid duplicates raise FlavorExists
         flavors.create('flavor1', 64, 1, 120, flavorid='flavorid')
         self.assertRaises(exception.FlavorIdExists,
                           flavors.create,
