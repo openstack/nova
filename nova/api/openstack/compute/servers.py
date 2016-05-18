@@ -589,7 +589,11 @@ class ServersController(wsgi.Controller):
         # TODO(Shao He, Feng) move this policy check to os-availabilty-zone
         # extension after refactor it.
         parse_az = self.compute_api.parse_availability_zone
-        availability_zone, host, node = parse_az(context, availability_zone)
+        try:
+            availability_zone, host, node = parse_az(context,
+                                                     availability_zone)
+        except exception.InvalidInput as err:
+            raise exc.HTTPBadRequest(explanation=six.text_type(err))
         if host or node:
             authorize(context, {}, 'create:forced_host')
 
