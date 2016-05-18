@@ -250,14 +250,6 @@ libvirt_imagecache_opts = [
                        '%(image)s.info',
                help='Allows image information files to be stored in '
                     'non-standard locations'),
-    cfg.BoolOpt('remove_unused_kernels',
-                default=True,
-                deprecated_for_removal=True,
-                help='DEPRECATED: Should unused kernel images be removed? '
-                     'This is only safe to enable if all compute nodes have '
-                     'been updated to support this option (running Grizzly or '
-                     'newer level compute). This will be the default behavior '
-                     'in the 13.0.0 release.'),
     cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
                default=3600,
                help='Unused resized base images younger than this will not be '
