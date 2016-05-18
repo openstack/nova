@@ -710,6 +710,71 @@ availability_zone:
   in: body
   required: false
   type: string
+baremetal_cpus:
+  in: body
+  required: true
+  type: string
+  description: |
+    Number of cpus the node has. Note: this is json string, even
+    though it will look like an int value.
+baremetal_disk:
+  in: body
+  required: true
+  type: string
+  description: |
+    Amount of disk in GiB the node has. Note: this is json string,
+    even though it will look like an int value.
+baremetal_host:
+  in: body
+  required: true
+  type: string
+  description: |
+    This will always have the value "IRONIC MANAGED".
+baremetal_id:
+  in: body
+  required: true
+  type: string
+  description: |
+    UUID of baremetal node
+baremetal_instance_uuid:
+  in: body
+  required: true
+  type: string
+  description: |
+    UUID of server instance on this node
+baremetal_interfaces:
+  in: body
+  required: true
+  type: array
+  description: |
+    A list of interface objects for active interfaces on the baremetal
+    node. Each will have an ``address`` field with the address.
+baremetal_mem:
+  in: body
+  required: true
+  type: string
+  description: |
+    Amount of memory in MiB the node has. Note: this is json string,
+    even though it will look like an int value.
+baremetal_node:
+  in: body
+  required: true
+  type: object
+  description: |
+    A baremetal node object
+baremetal_nodes:
+  in: body
+  required: true
+  type: array
+  description: |
+    An array of baremetal node objects
+baremetal_taskstate:
+  in: body
+  required: true
+  type: string
+  description: |
+    The Ironic task state for the node. See Ironic project for more
+    details.
 binary:
   description: |
     The binary name of the service.
