@@ -52,16 +52,13 @@ class BaseProxyTestCase(test.NoDBTestCase):
     @mock.patch('nova.console.websocketproxy.NovaWebSocketProxy.start_server')
     def test_proxy(self, mock_start, mock_init, mock_gmr, mock_log,
                    mock_exists):
-        # Force verbose=False so something else testing nova.cmd.baseproxy
-        # doesn't impact the call to mocked NovaWebSocketProxy.__init__.
-        self.flags(verbose=False)
         baseproxy.proxy('0.0.0.0', '6080')
         mock_log.assert_called_once_with(baseproxy.CONF, 'nova')
         mock_gmr.mock_assert_called_once_with(version)
         mock_init.assert_called_once_with(
             listen_host='0.0.0.0', listen_port='6080', source_is_ipv6=False,
-            verbose=False, cert='self.pem', key=None, ssl_only=False,
-            daemon=False, record=None, traffic=False,
+            cert='self.pem', key=None, ssl_only=False,
+            daemon=False, record=None, traffic=True,
             web='/usr/share/spice-html5', file_only=True,
             RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
         mock_start.assert_called_once_with()
