@@ -1,6 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
-
 
 Shelve Server (shelve Action)
 =============================
