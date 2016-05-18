@@ -800,6 +800,16 @@ class ServerActionsControllerTestV21(test.TestCase):
                           self.controller._action_resize,
                           self.req, FAKE_UUID, body=body)
 
+    @mock.patch('nova.compute.api.API.resize',
+                side_effect=exception.PciRequestAliasNotDefined(
+                    alias='fake_name'))
+    def test_resize_pci_alias_not_defined(self, mock_resize):
+        # Tests that PciRequestAliasNotDefined is translated to a 400 error.
+        body = dict(resize=dict(flavorRef="http://localhost/3"))
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_resize,
+                          self.req, FAKE_UUID, body=body)
+
     def test_confirm_resize_server(self):
         body = dict(confirmResize=None)
 
