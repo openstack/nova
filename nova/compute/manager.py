@@ -4660,7 +4660,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, "volume.attach", extra_usage_info=info)
 
-    def _driver_detach_volume(self, context, instance, bdm):
+    def _driver_detach_volume(self, context, instance, bdm, connection_info):
         """Do the actual driver detach using block device mapping."""
         mp = bdm.device_name
         volume_id = bdm.volume_id
@@ -4669,11 +4669,6 @@ class ComputeManager(manager.Manager):
                   {'volume_id': volume_id, 'mp': mp},
                   context=context, instance=instance)
 
-        connection_info = jsonutils.loads(bdm.connection_info)
-        # NOTE(vish): We currently don't use the serial when disconnecting,
-        #             but added for completeness in case we ever do.
-        if connection_info and 'serial' not in connection_info:
-            connection_info['serial'] = volume_id
         try:
             if not self.driver.instance_exists(instance):
                 LOG.warning(_LW('Detaching volume from unknown instance'),
@@ -4698,8 +4693,6 @@ class ComputeManager(manager.Manager):
                               {'volume_id': volume_id, 'mp': mp},
                               context=context, instance=instance)
                 self.volume_api.roll_detaching(context, volume_id)
-
-        return connection_info
 
     def _detach_volume(self, context, volume_id, instance, destroy_bdm=True,
                        attachment_id=None):
@@ -4745,8 +4738,21 @@ class ComputeManager(manager.Manager):
                 self.notifier.info(context, 'volume.usage',
                                    compute_utils.usage_volume_info(vol_usage))
 
-        connection_info = self._driver_detach_volume(context, instance, bdm)
+        connection_info = jsonutils.loads(bdm.connection_info)
         connector = self.driver.get_volume_connector(instance)
+        if CONF.host == instance.host:
+            # Only attempt to detach and disconnect from the volume if the
+            # instance is currently associated with the local compute host.
+            self._driver_detach_volume(context, instance, bdm, connection_info)
+        elif not destroy_bdm:
+            LOG.debug("Skipping _driver_detach_volume during remote rebuild.",
+                      instance=instance)
+        elif destroy_bdm:
+            LOG.error(_LE("Unable to call for a driver detach of volume "
+                          "%(vol_id)s due to the instance being registered to "
+                          "the remote host %(inst_host)s."),
+                      {'vol_id': volume_id, 'inst_host': instance.host},
+                      instance=instance)
 
         if connection_info and not destroy_bdm and (
            connector.get('host') != instance.host):
@@ -4934,7 +4940,8 @@ class ComputeManager(manager.Manager):
         try:
             bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
                     context, volume_id, instance.uuid)
-            self._driver_detach_volume(context, instance, bdm)
+            connection_info = jsonutils.loads(bdm.connection_info)
+            self._driver_detach_volume(context, instance, bdm, connection_info)
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:

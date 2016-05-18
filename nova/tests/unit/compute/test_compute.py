@@ -358,7 +358,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         }
         self.fake_volume = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
-                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb'})
+                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb',
+                 'connection_info': jsonutils.dumps({})})
         self.instance_object = objects.Instance._from_db_object(
                 self.context, objects.Instance(),
                 fake_instance.fake_db_instance())
@@ -433,7 +434,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                     self.context, 'fake', instance, 'fake_id')
             mock_internal_detach.assert_called_once_with(self.context,
                                                          instance,
-                                                         fake_bdm)
+                                                         fake_bdm, {})
             self.assertTrue(mock_destroy.called)
 
     def test_await_block_device_created_too_slow(self):
@@ -11220,9 +11221,11 @@ class EvacuateHostTestCase(BaseTestCase):
     @mock.patch.object(cinder.API, 'detach')
     @mock.patch.object(compute_manager.ComputeManager, '_prep_block_device')
     @mock.patch.object(compute_manager.ComputeManager, '_driver_detach_volume')
-    def test_rebuild_on_host_with_volumes(self, mock_drv_detach, mock_prep,
-                                          mock_detach):
-        """Confirm evacuate scenario reconnects volumes."""
+    def test_rebuild_on_remote_host_with_volumes(self, mock_drv_detach,
+                                                 mock_prep, mock_detach):
+        """Confirm that the evacuate scenario does not attempt a driver detach
+           when rebuilding an instance with volumes on a remote host
+        """
         values = {'instance_uuid': self.inst.uuid,
                   'source_type': 'volume',
                   'device_name': '/dev/vdc',
@@ -11259,10 +11262,7 @@ class EvacuateHostTestCase(BaseTestCase):
         for bdm in bdms:
             db.block_device_mapping_destroy(self.context, bdm['id'])
 
-        mock_drv_detach.assert_called_once_with(
-            test.MatchType(context.RequestContext),
-            test.MatchType(objects.Instance),
-            test.MatchType(objects.BlockDeviceMapping))
+        self.assertFalse(mock_drv_detach.called)
         # make sure volumes attach, detach are called
         mock_detach.assert_called_once_with(
             test.MatchType(context.RequestContext),
