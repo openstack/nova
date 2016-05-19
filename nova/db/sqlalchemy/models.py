@@ -371,6 +371,7 @@ class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
     id = Column(Integer, primary_key=True, autoincrement=True)
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'),
                            nullable=False)
+    device_metadata = orm.deferred(Column(Text))
     numa_topology = orm.deferred(Column(Text))
     pci_requests = orm.deferred(Column(Text))
     flavor = orm.deferred(Column(Text))

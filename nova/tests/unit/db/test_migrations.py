@@ -911,6 +911,11 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             'console_auth_tokens_token_hash_idx',
             ['token_hash'])
 
+    def _check_334(self, engine, data):
+        self.assertColumnExists(engine, 'instance_extra', 'device_metadata')
+        self.assertColumnExists(engine, 'shadow_instance_extra',
+                                        'device_metadata')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
