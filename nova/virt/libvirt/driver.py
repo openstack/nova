@@ -150,6 +150,7 @@ libvirt_volume_drivers = [
     'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
     'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
     'local=nova.virt.libvirt.volume.volume.LibvirtVolumeDriver',
+    'drbd=nova.virt.libvirt.volume.drbd.LibvirtDRBDVolumeDriver',
     'fake=nova.virt.libvirt.volume.volume.LibvirtFakeVolumeDriver',
     'rbd=nova.virt.libvirt.volume.net.LibvirtNetVolumeDriver',
     'sheepdog=nova.virt.libvirt.volume.net.LibvirtNetVolumeDriver',

@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    The libvirt compute driver now supports attaching volumes of type "drbd".
+    See the `DRBD documentation`_ for more information.
+
+    .. _DRBD documentation: http://docs.linbit.com/docs/users-guide-9.0/p-apps/#s-openstack-transport-protocol
