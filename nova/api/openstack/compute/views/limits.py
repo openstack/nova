@@ -38,6 +38,9 @@ class ViewBuilder(object):
             "security_group_rules": ["maxSecurityGroupRules"],
     }
 
+    # TODO(sdague): once legacy v2 is removed, remove rate_limits
+    # parameter entirely and just hard code it to the empty list, it's
+    # vestigial and only needs to exsit for compat reasons.
     def build(self, rate_limits, absolute_limits):
         rate_limits = self._build_rate_limits(rate_limits)
         absolute_limits = self._build_absolute_limits(absolute_limits)
