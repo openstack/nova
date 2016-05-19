@@ -12,12 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_serialization import jsonutils
 
+from nova import db
 from nova.objects import base
 from nova.objects import fields
 
 
-@base.NovaObjectRegistry.register_if(False)
+@base.NovaObjectRegistry.register
 class DeviceBus(base.NovaObject):
     VERSION = '1.0'
 
@@ -88,9 +90,29 @@ class DiskMetadata(DeviceMetadata):
 
 
 @base.NovaObjectRegistry.register
-class DeviceMetadataList(base.ObjectListBase, base.NovaObject):
+class InstanceDeviceMetadata(base.NovaObject):
     VERSION = '1.0'
     fields = {
-        'objects': fields.ListOfObjectsField('DeviceMetadata',
-                                             subclasses=True),
+        'devices': fields.ListOfObjectsField('DeviceMetadata',
+                                                     subclasses=True),
     }
+
+    @classmethod
+    def obj_from_db(cls, context, db_requests):
+        primitive = jsonutils.loads(db_requests)
+        device_metadata = cls.obj_from_primitive(primitive)
+        return device_metadata
+
+    @base.remotable_classmethod
+    def get_by_instance_uuid(cls, context, instance_uuid):
+        db_extra = db.instance_extra_get_by_instance_uuid(
+                context, instance_uuid, columns=['device_metadata'])
+        if not db_extra or db_extra['device_metadata'] is None:
+            return None
+
+        primitive = jsonutils.loads(db_extra['device_metadata'])
+        device_metadata = cls.obj_from_primitive(primitive)
+        return device_metadata
+
+    def _to_json(self):
+        return jsonutils.dumps(self.obj_to_primitive())
