@@ -20,7 +20,6 @@ from nova.tests.unit.image import fake
 
 
 CONF = nova.conf.CONF
-CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
 
 
 class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
