@@ -697,6 +697,12 @@ alias:
   in: body
   required: true
   type: string
+alive:
+  description: |
+    Returns true if the instance is alive.
+  in: body
+  required: true
+  type: boolean
 architecture:
   description: |
     The name of the cpu architecture.
@@ -2014,7 +2020,7 @@ progress:
   type: integer
 project_id:
   description: |
-    Creates the cloudpipe for a project. If omitted, the project ID defaults to the
+    The UUID of the project. If omitted, the project ID defaults to the
     calling tenant.
   in: body
   required: false
@@ -2263,7 +2269,7 @@ security_groups_quota_optional:
   type: integer
 server:
   description: |
-    server.
+    A ``server`` object.
   in: body
   required: true
   type: object
