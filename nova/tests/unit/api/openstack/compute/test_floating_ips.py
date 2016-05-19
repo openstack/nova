@@ -269,6 +269,15 @@ class FloatingIpTestV21(test.TestCase):
         self.assertIsNone(view['floating_ip']['fixed_ip'])
         self.assertIsNone(view['floating_ip']['instance_id'])
 
+    def test_translate_floating_ip_view_neutronesque(self):
+        uuid = 'ca469a10-fa76-11e5-86aa-5e5517507c66'
+        fixed_id = 'ae900cf4-fb73-11e5-86aa-5e5517507c66'
+        floating_ip = objects.floating_ip.NeutronFloatingIP(id=uuid,
+            address='1.2.3.4', pool='pool', context='ctxt',
+            fixed_ip_id=fixed_id)
+        view = self.floating_ips._translate_floating_ip_view(floating_ip)
+        self.assertEqual(uuid, view['floating_ip']['id'])
+
     def test_translate_floating_ip_view_dict(self):
         floating_ip = {'id': 0, 'address': '10.0.0.10', 'pool': 'nova',
                        'fixed_ip': None}
