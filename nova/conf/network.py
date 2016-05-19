@@ -64,30 +64,19 @@ Related options:
             default=False,
             help="""
 This option determines whether the network setup information is injected into
-the VM before it is booted.
-
-Please note that this option is only used when using nova-network instead of
-Neutron in your deployment.
-
-Related options:
-
-    ``use_neutron``
+the VM before it is booted. While it was originally designed to be used only by
+nova-network, it is also used by the vmware and xenapi virt drivers to control
+whether network information is injected into a VM.
 """),
     cfg.StrOpt("flat_interface",
             help="""
 This option is the name of the virtual interface of the VM on which the bridge
-will be built.
-
-Please note that this option is only used when using nova-network instead of
-Neutron in your deployment.
+will be built. While it was originally designed to be used only by
+nova-network, it is also used by libvirt for the bridge interface name.
 
 Possible values:
 
     Any valid virtual interface name, such as 'eth0'
-
-Related options:
-
-    ``use_neutron``
 """),
     cfg.IntOpt("vlan_start",
             default=100,
@@ -115,20 +104,17 @@ Related options:
     cfg.StrOpt("vlan_interface",
             help="""
 This option is the name of the virtual interface of the VM on which the VLAN
-bridge will be built.
+bridge will be built. While it was originally designed to be used only by
+nova-network, it is also used by libvirt and xenapi for the bridge interface
+name.
 
-Please note that this option is only used when using nova-network instead of
-Neutron in your deployment. It also will be ignored if the configuration option
-for `network_manager` is not set to the default of
+Please note that this setting will be ignored in nova-network if the
+configuration option for `network_manager` is not set to the default of
 'nova.network.manager.VlanManager'.
 
 Possible values:
 
     Any valid virtual interface name, such as 'eth0'
-
-Related options:
-
-    ``use_neutron``
 """),
     cfg.IntOpt("num_networks",
             default=1,
