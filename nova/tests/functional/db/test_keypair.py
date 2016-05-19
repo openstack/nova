@@ -134,3 +134,46 @@ class KeyPairObjectTestCase(test.NoDBTestCase):
         count = objects.KeyPairList.get_count_by_user(self.context,
                                                       self.context.user_id)
         self.assertEqual(2, count)
+
+    def test_migrate_keypairs(self):
+        self._api_kp(name='apikey')
+        self._main_kp(name='mainkey1')
+        self._main_kp(name='mainkey2')
+        self._main_kp(name='mainkey3')
+        total, done = keypair.migrate_keypairs_to_api_db(self.context, 2)
+        self.assertEqual(2, total)
+        self.assertEqual(2, done)
+
+        # NOTE(danms): This only fetches from the API DB
+        api_keys = objects.KeyPairList._get_from_db(self.context,
+                                                    self.context.user_id)
+        self.assertEqual(3, len(api_keys))
+
+        # NOTE(danms): This only fetches from the main DB
+        main_keys = db_api.key_pair_get_all_by_user(self.context,
+                                                    self.context.user_id)
+        self.assertEqual(1, len(main_keys))
+
+        self.assertEqual((1, 1),
+                         keypair.migrate_keypairs_to_api_db(self.context, 100))
+        self.assertEqual((0, 0),
+                         keypair.migrate_keypairs_to_api_db(self.context, 100))
+
+    def test_migrate_keypairs_bails_on_unmigrated_instances(self):
+        objects.Instance(context=self.context, user_id=self.context.user_id,
+                         project_id=self.context.project_id).create()
+        self._api_kp(name='apikey')
+        self._main_kp(name='mainkey1')
+        total, done = keypair.migrate_keypairs_to_api_db(self.context, 100)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+
+    def test_migrate_keypairs_skips_existing(self):
+        self._api_kp(name='mykey')
+        self._main_kp(name='mykey')
+        total, done = keypair.migrate_keypairs_to_api_db(self.context, 100)
+        self.assertEqual(1, total)
+        self.assertEqual(1, done)
+        total, done = keypair.migrate_keypairs_to_api_db(self.context, 100)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
