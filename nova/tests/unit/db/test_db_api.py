@@ -1334,6 +1334,7 @@ class MigrationTestCase(test.TestCase):
         self._create(status='error')
         self._create(status='failed')
         self._create(status='accepted')
+        self._create(status='completed')
         self._create(source_compute='host2', source_node='b',
                 dest_compute='host1', dest_node='a')
         self._create(source_compute='host2', dest_compute='host3')
