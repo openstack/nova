@@ -876,10 +876,94 @@ class CellV2CommandsTestCase(test.TestCase):
                 instance_uuid=instance_uuids[0],
                 cell_mapping=cell_mapping).create()
 
-        self.commands.map_instances(cell_uuid, verbose=True)
-        output = sys.stdout.getvalue().strip()
+        self.commands.map_instances(cell_uuid)
 
-        self.assertIn('%s already mapped to cell' % instance_uuids[0], output)
+        for uuid in instance_uuids:
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
+                    uuid)
+            self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+
+        mappings = objects.InstanceMappingList.get_by_project_id(ctxt,
+                ctxt.project_id)
+        self.assertEqual(3, len(mappings))
+
+    def test_map_instances_two_batches(self):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        instance_uuids = []
+        # Batch size is 50 in map_instances
+        for i in range(60):
+            uuid = uuidutils.generate_uuid()
+            instance_uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id,
+                             uuid=uuid).create()
+
+        ret = self.commands.map_instances(cell_uuid)
+        self.assertEqual(0, ret)
+
+        for uuid in instance_uuids:
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
+                    uuid)
+            self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+
+    def test_map_instances_max_count(self):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        instance_uuids = []
+        for i in range(6):
+            uuid = uuidutils.generate_uuid()
+            instance_uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id,
+                             uuid=uuid).create()
+
+        ret = self.commands.map_instances(cell_uuid, max_count=3)
+        self.assertEqual(1, ret)
+
+        for uuid in instance_uuids[:3]:
+            # First three are mapped
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
+                    uuid)
+            self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+        for uuid in instance_uuids[3:]:
+            # Last three are not
+            self.assertRaises(exception.InstanceMappingNotFound,
+                    objects.InstanceMapping.get_by_instance_uuid, ctxt,
+                    uuid)
+
+    def test_map_instances_marker_deleted(self):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        instance_uuids = []
+        for i in range(6):
+            uuid = uuidutils.generate_uuid()
+            instance_uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id,
+                             uuid=uuid).create()
+
+        ret = self.commands.map_instances(cell_uuid, max_count=3)
+        self.assertEqual(1, ret)
+
+        # Instances are mapped in the order created so we know the marker is
+        # based off the third instance.
+        marker = instance_uuids[2].replace('-', ' ')
+        marker_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
+                marker)
+        marker_mapping.destroy()
+
+        ret = self.commands.map_instances(cell_uuid)
+        self.assertEqual(0, ret)
 
         for uuid in instance_uuids:
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
