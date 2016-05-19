@@ -39,4 +39,6 @@ class UserData(extensions.V21APIExtensionBase):
         create_kwargs['user_data'] = server_dict.get(ATTRIBUTE_NAME)
 
     def get_server_create_schema(self, version):
+        if version == '2.0':
+            return schema_user_data.server_create_v20
         return schema_user_data.server_create
