@@ -230,9 +230,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
         self.assertUniqueConstraintExists(engine, 'request_specs',
                 ['instance_uuid'])
-        if engine.name != 'ibm_db_sa':
-            self.assertIndexExists(engine, 'request_specs',
-                    'request_spec_instance_uuid_idx')
+        self.assertIndexExists(engine, 'request_specs',
+                               'request_spec_instance_uuid_idx')
 
     def _check_005(self, engine, data):
         # flavors
@@ -250,9 +249,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             'value']:
             self.assertColumnExists(engine, 'flavor_extra_specs', column)
 
-        if engine.name != 'ibm_db_sa':
-            self.assertIndexExists(engine, 'flavor_extra_specs',
-                'flavor_extra_specs_flavor_id_key_idx')
+        self.assertIndexExists(engine, 'flavor_extra_specs',
+                               'flavor_extra_specs_flavor_id_key_idx')
         self.assertUniqueConstraintExists(engine, 'flavor_extra_specs',
             ['flavor_id', 'key'])
 
