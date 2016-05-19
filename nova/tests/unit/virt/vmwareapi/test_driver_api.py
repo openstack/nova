@@ -48,7 +48,6 @@ from nova import test
 from nova.tests.unit import fake_instance
 import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
-from nova.tests.unit import test_flavors
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
@@ -67,6 +66,42 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volumeops
 
 CONF = nova.conf.CONF
+
+DEFAULT_FLAVORS = [
+    {'memory_mb': 512, 'root_gb': 1, 'deleted_at': None, 'name': 'm1.tiny',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 1, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '1',
+     'vcpu_weight': None, 'id': 2},
+    {'memory_mb': 2048, 'root_gb': 20, 'deleted_at': None, 'name': 'm1.small',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 1, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '2',
+     'vcpu_weight': None, 'id': 5},
+    {'memory_mb': 4096, 'root_gb': 40, 'deleted_at': None, 'name': 'm1.medium',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 2, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '3',
+     'vcpu_weight': None, 'id': 1},
+    {'memory_mb': 8192, 'root_gb': 80, 'deleted_at': None, 'name': 'm1.large',
+     'deleted': 0, 'created_at': None, 'ephemeral_gb': 0, 'updated_at': None,
+     'disabled': False, 'vcpus': 4, 'extra_specs': {}, 'swap': 0,
+     'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '4',
+     'vcpu_weight': None, 'id': 3},
+    {'memory_mb': 16384, 'root_gb': 160, 'deleted_at': None,
+     'name': 'm1.xlarge', 'deleted': 0, 'created_at': None, 'ephemeral_gb': 0,
+     'updated_at': None, 'disabled': False, 'vcpus': 8, 'extra_specs': {},
+     'swap': 0, 'rxtx_factor': 1.0, 'is_public': True, 'flavorid': '5',
+     'vcpu_weight': None, 'id': 4}
+]
+
+CONTEXT = context.RequestContext('fake', 'fake', is_admin=False)
+
+DEFAULT_FLAVOR_OBJS = [
+    objects.Flavor._obj_from_primitive(CONTEXT, objects.Flavor.VERSION,
+                                       {'nova_object.data': flavor})
+    for flavor in DEFAULT_FLAVORS
+]
 
 
 def _fake_create_session(inst):
@@ -290,7 +325,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(2, self.attempts)
 
     def _get_instance_type_by_name(self, type):
-        for instance_type in test_flavors.DEFAULT_FLAVOR_OBJS:
+        for instance_type in DEFAULT_FLAVOR_OBJS:
             if instance_type.name == type:
                 return instance_type
         if type == 'm1.micro':
