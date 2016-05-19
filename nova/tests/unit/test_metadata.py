@@ -49,6 +49,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+from nova.tests import uuidsentinel as uuids
 from nova.virt import netutils
 
 CONF = cfg.CONF
@@ -71,7 +72,7 @@ def fake_inst_obj(context):
         launch_index=1,
         reservation_id='r-xxxxxxxx',
         user_data=ENCODE_USER_DATA_STRING,
-        image_ref=7,
+        image_ref=uuids.image_ref,
         kernel_id=None,
         ramdisk_id=None,
         vcpus=1,
@@ -278,7 +279,7 @@ class MetadataTestCase(test.TestCase):
 
     def test_image_type_ramdisk(self):
         inst = self.instance.obj_clone()
-        inst['ramdisk_id'] = 'ari-853667c0'
+        inst['ramdisk_id'] = uuids.ramdisk_id
         md = fake_InstanceMetadata(self.stubs, inst)
         data = md.lookup("/latest/meta-data/ramdisk-id")
 
@@ -287,7 +288,7 @@ class MetadataTestCase(test.TestCase):
 
     def test_image_type_kernel(self):
         inst = self.instance.obj_clone()
-        inst['kernel_id'] = 'aki-c2e26ff2'
+        inst['kernel_id'] = uuids.kernel_id
         md = fake_InstanceMetadata(self.stubs, inst)
         data = md.lookup("/2009-04-04/meta-data/kernel-id")
 
