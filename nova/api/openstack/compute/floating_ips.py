@@ -44,12 +44,31 @@ def _translate_floating_ip_view(floating_ip):
         'ip': floating_ip['address'],
         'pool': floating_ip['pool'],
     }
+
+    # If fixed_ip is unset on floating_ip, then we can't get any of the next
+    # stuff, so we'll just short-circuit
+    if 'fixed_ip' not in floating_ip:
+        result['fixed_ip'] = None
+        result['instance_id'] = None
+        return {'floating_ip': result}
+
+    # TODO(rlrossit): These look like dicts, but they're actually versioned
+    # objects, so we need to do these contain checks because they will not be
+    # caught by the exceptions below (it raises NotImplementedError and
+    # OrphanedObjectError. This comment can probably be removed when
+    # the dict syntax goes away.
     try:
-        result['fixed_ip'] = floating_ip['fixed_ip']['address']
+        if 'address' in floating_ip['fixed_ip']:
+            result['fixed_ip'] = floating_ip['fixed_ip']['address']
+        else:
+            result['fixed_ip'] = None
     except (TypeError, KeyError, AttributeError):
         result['fixed_ip'] = None
     try:
-        result['instance_id'] = floating_ip['fixed_ip']['instance_uuid']
+        if 'instance_uuid' in floating_ip['fixed_ip']:
+            result['instance_id'] = floating_ip['fixed_ip']['instance_uuid']
+        else:
+            result['instance_id'] = None
     except (TypeError, KeyError, AttributeError):
         result['instance_id'] = None
     return {'floating_ip': result}
