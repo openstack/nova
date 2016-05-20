@@ -141,6 +141,7 @@ libvirt_general_opts = [
                     LIVE_MIGRATION_DOWNTIME_DELAY_MIN),
     cfg.IntOpt('live_migration_completion_timeout',
                default=800,
+               mutable=True,
                help='Time to wait, in seconds, for migration to successfully '
                     'complete transferring data before aborting the '
                     'operation. Value is per GiB of guest RAM + disk to be '
@@ -149,6 +150,7 @@ libvirt_general_opts = [
                     'steps. Set to 0 to disable timeouts.'),
     cfg.IntOpt('live_migration_progress_timeout',
                default=150,
+               mutable=True,
                help='Time to wait, in seconds, for migration to make forward '
                     'progress in transferring data before aborting the '
                     'operation. Set to 0 to disable timeouts.'),
