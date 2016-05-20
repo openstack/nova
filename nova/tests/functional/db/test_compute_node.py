@@ -28,7 +28,7 @@ class ComputeNodeTestCase(test.TestCase):
                                       memory_mb_used=0, free_ram_mb=0,
                                       free_disk_gb=0, hypervisor_type='danvm',
                                       hypervisor_version=1, cpu_info='barf',
-                                      cpu_allocation_ratio=1.0,
+                                      cpu_allocation_ratio=1.0, host='foo',
                                       ram_allocation_ratio=1.0,
                                       disk_allocation_ratio=1.0)
 
@@ -59,3 +59,9 @@ class ComputeNodeTestCase(test.TestCase):
                 self.assertEqual(1024, obj.total)
             elif obj.resource_class == fields.ResourceClass.DISK_GB:
                 self.assertEqual(2000, obj.total)
+
+    def test_recreate_rp(self):
+        self.cn.create_inventory()
+        rp = self.cn._ensure_resource_provider()
+        self.assertEqual('compute-%s-%s' % ('foo', self.cn.uuid),
+                         rp.name)
