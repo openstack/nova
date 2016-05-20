@@ -48,6 +48,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._livemigrationops = mock.MagicMock()
         self.driver._migrationops = mock.MagicMock()
         self.driver._rdpconsoleops = mock.MagicMock()
+        self.driver._serialconsoleops = mock.MagicMock()
 
     @mock.patch.object(driver.utilsfactory, 'get_hostutils')
     def test_check_minimum_windows_version(self, mock_get_hostutils):
@@ -112,10 +113,11 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
     def test_init_host(self, mock_InstanceEventHandler):
         self.driver.init_host(mock.sentinel.host)
 
-        self.driver._vmops.restart_vm_log_writers.assert_called_once_with()
+        mock_start_console_handlers = (
+            self.driver._serialconsoleops.start_console_handlers)
+        mock_start_console_handlers.assert_called_once_with()
         mock_InstanceEventHandler.assert_called_once_with(
-            state_change_callback=self.driver.emit_event,
-            running_state_callback=self.driver._vmops.log_vm_serial_output)
+            state_change_callback=self.driver.emit_event)
         fake_event_handler = mock_InstanceEventHandler.return_value
         fake_event_handler.start_listener.assert_called_once_with()
 
@@ -428,7 +430,19 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.instance)
 
     def test_get_console_output(self):
-        self.driver.get_console_output(
-            mock.sentinel.context, mock.sentinel.instance)
-        self.driver._vmops.get_console_output.assert_called_once_with(
-            mock.sentinel.instance)
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        self.driver.get_console_output(self.context, mock_instance)
+
+        mock_get_console_output = (
+            self.driver._serialconsoleops.get_console_output)
+        mock_get_console_output.assert_called_once_with(
+            mock_instance.name)
+
+    def test_get_serial_console(self):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        self.driver.get_console_output(self.context, mock_instance)
+
+        mock_get_serial_console = (
+            self.driver._serialconsoleops.get_console_output)
+        mock_get_serial_console.assert_called_once_with(
+            mock_instance.name)

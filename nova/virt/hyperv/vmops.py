@@ -24,17 +24,14 @@ import time
 from eventlet import timeout as etimeout
 from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
-from os_win.utils.io import ioutils
 from os_win import utilsfactory
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_service import loopingcall
 from oslo_utils import excutils
-from oslo_utils import fileutils
 from oslo_utils import importutils
 from oslo_utils import units
 from oslo_utils import uuidutils
-import six
 
 from nova.api.metadata import base as instance_metadata
 import nova.conf
@@ -46,6 +43,7 @@ from nova.virt import hardware
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import serialconsoleops
 from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
@@ -105,9 +103,9 @@ class VMOps(object):
         self._pathutils = pathutils.PathUtils()
         self._volumeops = volumeops.VolumeOps()
         self._imagecache = imagecache.ImageCache()
+        self._serial_console_ops = serialconsoleops.SerialConsoleOps()
         self._vif_driver = None
         self._load_vif_driver_class()
-        self._vm_log_writers = {}
 
     def _load_vif_driver_class(self):
         try:
@@ -244,7 +242,8 @@ class VMOps(object):
 
         try:
             self.create_instance(instance, network_info, block_device_info,
-                                 root_vhd_path, eph_vhd_path, vm_gen)
+                                 root_vhd_path, eph_vhd_path,
+                                 vm_gen)
 
             if configdrive.required_by(instance):
                 configdrive_path = self._create_config_drive(instance,
@@ -293,6 +292,16 @@ class VMOps(object):
                                        instance_name,
                                        ebs_root)
 
+        # For the moment, we use COM port 1 when getting the serial console
+        # log as well as interactive sessions. In the future, the way in which
+        # we consume instance serial ports may become configurable.
+        #
+        # Note that Hyper-V instances will always have 2 COM ports
+        serial_ports = {
+            constants.DEFAULT_SERIAL_CONSOLE_PORT:
+                constants.SERIAL_PORT_TYPE_RW}
+        self._create_vm_com_port_pipes(instance, serial_ports)
+
         for vif in network_info:
             LOG.debug('Creating nic for instance', instance=instance)
             self._vmutils.create_nic(instance_name,
@@ -302,8 +311,6 @@ class VMOps(object):
 
         if CONF.hyperv.enable_instance_metrics_collection:
             self._metricsutils.enable_vm_metrics_collection(instance_name)
-
-        self._create_vm_com_port_pipe(instance)
 
     def _attach_drive(self, instance_name, path, drive_addr, ctrl_disk_addr,
                       controller_type, drive_type=constants.DISK):
@@ -504,6 +511,11 @@ class VMOps(object):
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
         LOG.debug("Power off instance", instance=instance)
+
+        # We must make sure that the console log workers are stopped,
+        # otherwise we won't be able to delete or move the VM log files.
+        self._serial_console_ops.stop_console_handler(instance.name)
+
         if retry_interval <= 0:
             retry_interval = SHUTDOWN_TIME_INCREMENT
 
@@ -535,18 +547,9 @@ class VMOps(object):
 
     def _set_vm_state(self, instance, req_state):
         instance_name = instance.name
-        instance_uuid = instance.uuid
 
         try:
             self._vmutils.set_vm_state(instance_name, req_state)
-
-            if req_state in (os_win_const.HYPERV_VM_STATE_DISABLED,
-                             os_win_const.HYPERV_VM_STATE_REBOOT):
-                self._delete_vm_console_log(instance)
-            if req_state in (os_win_const.HYPERV_VM_STATE_ENABLED,
-                             os_win_const.HYPERV_VM_STATE_REBOOT):
-                self.log_vm_serial_output(instance_name,
-                                          instance_uuid)
 
             LOG.debug("Successfully changed state of VM %(instance_name)s"
                       " to: %(req_state)s", {'instance_name': instance_name,
@@ -596,89 +599,11 @@ class VMOps(object):
         """Resume guest state when a host is booted."""
         self.power_on(instance, block_device_info)
 
-    def log_vm_serial_output(self, instance_name, instance_uuid):
-        # Uses a 'thread' that will run in background, reading
-        # the console output from the according named pipe and
-        # write it to a file.
-        console_log_path = self._pathutils.get_vm_console_log_paths(
-            instance_name)[0]
-        pipe_path = r'\\.\pipe\%s' % instance_uuid
-
-        @utils.synchronized(pipe_path)
-        def log_serial_output():
-            vm_log_writer = self._vm_log_writers.get(instance_uuid)
-            if vm_log_writer and vm_log_writer.is_active():
-                LOG.debug("Instance %s log writer is already running.",
-                          instance_name)
-            else:
-                vm_log_writer = ioutils.IOThread(
-                    pipe_path, console_log_path,
-                    self._MAX_CONSOLE_LOG_FILE_SIZE)
-                vm_log_writer.start()
-                self._vm_log_writers[instance_uuid] = vm_log_writer
-
-        log_serial_output()
-
-    def get_console_output(self, instance):
-        console_log_paths = (
-            self._pathutils.get_vm_console_log_paths(instance.name))
-
-        try:
-            instance_log = ''
-            # Start with the oldest console log file.
-            for console_log_path in console_log_paths[::-1]:
-                if os.path.exists(console_log_path):
-                    with open(console_log_path, 'rb') as fp:
-                        instance_log += fp.read()
-            return instance_log
-        except IOError as err:
-            raise exception.ConsoleLogOutputException(
-                instance_id=instance.uuid, reason=six.text_type(err))
-
-    def _delete_vm_console_log(self, instance):
-        console_log_files = self._pathutils.get_vm_console_log_paths(
-            instance.name)
-
-        vm_log_writer = self._vm_log_writers.get(instance.uuid)
-        if vm_log_writer:
-            vm_log_writer.join()
-
-        for log_file in console_log_files:
-            fileutils.delete_if_exists(log_file)
-
-    def copy_vm_console_logs(self, vm_name, dest_host):
-        local_log_paths = self._pathutils.get_vm_console_log_paths(
-            vm_name)
-        remote_log_paths = self._pathutils.get_vm_console_log_paths(
-            vm_name, remote_server=dest_host)
-
-        for local_log_path, remote_log_path in zip(local_log_paths,
-                                                   remote_log_paths):
-            if self._pathutils.exists(local_log_path):
-                self._pathutils.copy(local_log_path,
-                                     remote_log_path)
-
-    def _create_vm_com_port_pipe(self, instance):
-        # Creates a pipe to the COM 0 serial port of the specified vm.
-        pipe_path = r'\\.\pipe\%s' % instance.uuid
-        self._vmutils.get_vm_serial_port_connection(
-            instance.name, update_connection=pipe_path)
-
-    def restart_vm_log_writers(self):
-        # Restart the VM console log writers after nova compute restarts.
-        active_instances = self._vmutils.get_active_instances()
-        for instance_name in active_instances:
-            instance_path = self._pathutils.get_instance_dir(instance_name)
-
-            # Skip instances that are not created by Nova
-            if not os.path.exists(instance_path):
-                continue
-
-            vm_serial_conn = self._vmutils.get_vm_serial_port_connection(
-                instance_name)
-            if vm_serial_conn:
-                instance_uuid = os.path.basename(vm_serial_conn)
-                self.log_vm_serial_output(instance_name, instance_uuid)
+    def _create_vm_com_port_pipes(self, instance, serial_ports):
+        for port_number, port_type in serial_ports.items():
+            pipe_path = r'\\.\pipe\%s_%s' % (instance.uuid, port_type)
+            self._vmutils.set_vm_serial_port_connection(
+                instance.name, port_number, pipe_path)
 
     def copy_vm_dvd_disks(self, vm_name, dest_host):
         dvd_disk_paths = self._vmutils.get_vm_dvd_disk_paths(vm_name)

@@ -76,3 +76,27 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
             self.assertRaises(exception.AdminRequired,
                               self._pathutils._get_instances_sub_dir,
                               fake_dir_name)
+
+    def test_copy_vm_console_logs(self):
+        fake_local_logs = [mock.sentinel.log_path,
+                           mock.sentinel.archived_log_path]
+        fake_remote_logs = [mock.sentinel.remote_log_path,
+                            mock.sentinel.remote_archived_log_path]
+
+        self._pathutils.exists = mock.Mock(return_value=True)
+        self._pathutils.copy = mock.Mock()
+        self._pathutils.get_vm_console_log_paths = mock.Mock(
+            side_effect=[fake_local_logs, fake_remote_logs])
+
+        self._pathutils.copy_vm_console_logs(mock.sentinel.instance_name,
+                                            mock.sentinel.dest_host)
+
+        self._pathutils.get_vm_console_log_paths.assert_has_calls(
+            [mock.call(mock.sentinel.instance_name),
+             mock.call(mock.sentinel.instance_name,
+                       remote_server=mock.sentinel.dest_host)])
+        self._pathutils.copy.assert_has_calls([
+            mock.call(mock.sentinel.log_path,
+                      mock.sentinel.remote_log_path),
+            mock.call(mock.sentinel.archived_log_path,
+                      mock.sentinel.remote_archived_log_path)])

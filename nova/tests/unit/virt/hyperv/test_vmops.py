@@ -21,8 +21,6 @@ from os_win import exceptions as os_win_exc
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_utils import units
-import six
-import testtools
 
 from nova import exception
 from nova import objects
@@ -64,6 +62,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vhdutils = mock.MagicMock()
         self._vmops._pathutils = mock.MagicMock()
         self._vmops._hostutils = mock.MagicMock()
+        self._vmops._serial_console_ops = mock.MagicMock()
 
     @mock.patch('nova.network.is_neutron')
     @mock.patch('nova.virt.hyperv.vmops.importutils.import_object')
@@ -385,7 +384,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.attach_volumes')
     @mock.patch.object(vmops.VMOps, '_attach_drive')
-    def _test_create_instance(self, mock_attach_drive, mock_attach_volumes,
+    @mock.patch.object(vmops.VMOps, '_create_vm_com_port_pipes')
+    def _test_create_instance(self, mock_create_pipes,
+                              mock_attach_drive, mock_attach_volumes,
                               fake_root_path, fake_ephemeral_path,
                               enable_instance_metrics,
                               vm_gen=constants.VM_GEN_1):
@@ -429,6 +430,13 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_attach_volumes.assert_called_once_with(mock.sentinel.DEV_INFO,
                                                     mock_instance.name,
                                                     ebs_root)
+
+        expected_port_settings = {
+            constants.DEFAULT_SERIAL_CONSOLE_PORT:
+                constants.SERIAL_PORT_TYPE_RW}
+        mock_create_pipes.assert_called_once_with(
+            mock_instance, expected_port_settings)
+
         self._vmops._vmutils.create_nic.assert_called_once_with(
             mock_instance.name, mock.sentinel.ID, mock.sentinel.ADDRESS)
         mock_vif_driver.plug.assert_called_once_with(mock_instance,
@@ -812,6 +820,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         with mock.patch.object(self._vmops, '_set_vm_state') as mock_set_state:
             self._vmops.power_off(instance, timeout)
 
+            serialops = self._vmops._serial_console_ops
+            serialops.stop_console_handler.assert_called_once_with(
+                instance.name)
             if set_state_expected:
                 mock_set_state.assert_called_once_with(
                     instance, os_win_const.HYPERV_VM_STATE_DISABLED)
@@ -832,6 +843,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
         self._vmops.power_off(instance, 1, 0)
 
+        serialops = self._vmops._serial_console_ops
+        serialops.stop_console_handler.assert_called_once_with(
+            instance.name)
         mock_soft_shutdown.assert_called_once_with(
             instance, 1, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(mock_set_state.called)
@@ -865,22 +879,12 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_set_vm_state.assert_called_once_with(
             mock_instance, os_win_const.HYPERV_VM_STATE_ENABLED)
 
-    @mock.patch.object(vmops.VMOps, 'log_vm_serial_output')
-    @mock.patch.object(vmops.VMOps, '_delete_vm_console_log')
-    def _test_set_vm_state(self, mock_delete_vm_console_log,
-                           mock_log_vm_output, state):
+    def _test_set_vm_state(self, state):
         mock_instance = fake_instance.fake_instance_obj(self.context)
 
         self._vmops._set_vm_state(mock_instance, state)
         self._vmops._vmutils.set_vm_state.assert_called_once_with(
             mock_instance.name, state)
-        if state in (os_win_const.HYPERV_VM_STATE_DISABLED,
-                     os_win_const.HYPERV_VM_STATE_REBOOT):
-            mock_delete_vm_console_log.assert_called_once_with(mock_instance)
-        if state in (os_win_const.HYPERV_VM_STATE_ENABLED,
-                     os_win_const.HYPERV_VM_STATE_REBOOT):
-            mock_log_vm_output.assert_called_once_with(mock_instance.name,
-                                                       mock_instance.uuid)
 
     def test_set_vm_state_disabled(self):
         self._test_set_vm_state(state=os_win_const.HYPERV_VM_STATE_DISABLED)
@@ -924,159 +928,25 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.FAKE_VM_NAME, vmops.SHUTDOWN_TIME_INCREMENT)
         self.assertFalse(result)
 
-    @mock.patch.object(vmops.ioutils, 'IOThread')
-    def _test_log_vm_serial_output(self, mock_io_thread,
-                                   worker_running=False,
-                                   worker_exists=False):
-        self._vmops._pathutils.get_vm_console_log_paths.return_value = (
-            mock.sentinel.log_path, )
-        fake_instance_uuid = 'fake-uuid'
-        fake_existing_worker = mock.Mock()
-        fake_existing_worker.is_active.return_value = worker_running
-        fake_log_writers = {fake_instance_uuid: fake_existing_worker}
-        self._vmops._vm_log_writers = (
-            fake_log_writers if worker_exists else {})
-
-        self._vmops.log_vm_serial_output(mock.sentinel.instance_name,
-                                         fake_instance_uuid)
-
-        if not (worker_exists and worker_running):
-            expected_pipe_path = r'\\.\pipe\%s' % fake_instance_uuid
-            expected_current_worker = mock_io_thread.return_value
-            expected_current_worker.start.assert_called_once_with()
-            mock_io_thread.assert_called_once_with(
-                expected_pipe_path, mock.sentinel.log_path,
-                self._vmops._MAX_CONSOLE_LOG_FILE_SIZE)
-        else:
-            expected_current_worker = fake_existing_worker
-        self.assertEqual(expected_current_worker,
-                        self._vmops._vm_log_writers[fake_instance_uuid])
-
-    def test_log_vm_serial_output_unexisting_worker(self):
-        self._test_log_vm_serial_output()
-
-    def test_log_vm_serial_output_worker_stopped(self):
-        self._test_log_vm_serial_output(worker_exists=True)
-
-    def test_log_vm_serial_output_worker_running(self):
-        self._test_log_vm_serial_output(worker_exists=True,
-                                        worker_running=True)
-
-    def test_copy_vm_console_logs(self):
-        fake_local_paths = (mock.sentinel.FAKE_PATH,
-                            mock.sentinel.FAKE_PATH_ARCHIVED)
-        fake_remote_paths = (mock.sentinel.FAKE_REMOTE_PATH,
-                             mock.sentinel.FAKE_REMOTE_PATH_ARCHIVED)
-
-        self._vmops._pathutils.get_vm_console_log_paths.side_effect = [
-            fake_local_paths, fake_remote_paths]
-        self._vmops._pathutils.exists.side_effect = [True, False]
-
-        self._vmops.copy_vm_console_logs(mock.sentinel.FAKE_VM_NAME,
-                                         mock.sentinel.FAKE_DEST)
-
-        calls = [mock.call(mock.sentinel.FAKE_VM_NAME),
-                 mock.call(mock.sentinel.FAKE_VM_NAME,
-                           remote_server=mock.sentinel.FAKE_DEST)]
-        self._vmops._pathutils.get_vm_console_log_paths.assert_has_calls(calls)
-
-        calls = [mock.call(mock.sentinel.FAKE_PATH),
-                 mock.call(mock.sentinel.FAKE_PATH_ARCHIVED)]
-        self._vmops._pathutils.exists.assert_has_calls(calls)
-
-        self._vmops._pathutils.copy.assert_called_once_with(
-            mock.sentinel.FAKE_PATH, mock.sentinel.FAKE_REMOTE_PATH)
-
-    @mock.patch.object(vmops.ioutils, 'IOThread')
-    def test_log_vm_serial_output(self, fake_iothread):
-        self._vmops._pathutils.get_vm_console_log_paths.return_value = [
-            mock.sentinel.FAKE_PATH]
-
-        self._vmops.log_vm_serial_output(mock.sentinel.FAKE_VM_NAME,
-                                         self.FAKE_UUID)
-
-        pipe_path = r'\\.\pipe\%s' % self.FAKE_UUID
-        fake_iothread.assert_called_once_with(
-            pipe_path, mock.sentinel.FAKE_PATH,
-            self._vmops._MAX_CONSOLE_LOG_FILE_SIZE)
-        fake_iothread.return_value.start.assert_called_once_with()
-
-    @testtools.skip('mock_open in 1.2 read only works once 1475661')
-    @mock.patch("os.path.exists")
-    def test_get_console_output(self, fake_path_exists):
+    def test_create_vm_com_port_pipes(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_serial_ports = {
+            1: constants.SERIAL_PORT_TYPE_RO,
+            2: constants.SERIAL_PORT_TYPE_RW
+        }
 
-        fake_path_exists.return_value = True
-        self._vmops._pathutils.get_vm_console_log_paths.return_value = (
-            mock.sentinel.FAKE_PATH, mock.sentinel.FAKE_PATH_ARCHIVED)
+        self._vmops._create_vm_com_port_pipes(mock_instance,
+                                              mock_serial_ports)
+        expected_calls = []
+        for port_number, port_type in mock_serial_ports.items():
+            expected_pipe = r'\\.\pipe\%s_%s' % (mock_instance.uuid,
+                                                 port_type)
+            expected_calls.append(mock.call(mock_instance.name,
+                                            port_number,
+                                            expected_pipe))
 
-        with mock.patch('nova.virt.hyperv.vmops.open',
-                        mock.mock_open(read_data=self.FAKE_LOG),
-                        create=True):
-            instance_log = self._vmops.get_console_output(mock_instance)
-            # get_vm_console_log_paths returns 2 paths.
-            self.assertEqual(self.FAKE_LOG * 2, instance_log)
-
-            expected_calls = [mock.call(mock.sentinel.FAKE_PATH_ARCHIVED),
-                              mock.call(mock.sentinel.FAKE_PATH)]
-            fake_path_exists.assert_has_calls(expected_calls, any_order=False)
-
-    @mock.patch.object(six.moves.builtins, 'open')
-    @mock.patch("os.path.exists")
-    def test_get_console_output_exception(self, fake_path_exists, fake_open):
-        fake_vm = mock.MagicMock()
-        fake_open.side_effect = IOError
-        fake_path_exists.return_value = True
-        self._vmops._pathutils.get_vm_console_log_paths.return_value = (
-            mock.sentinel.fake_console_log_path,
-            mock.sentinel.fake_console_log_archived)
-
-        with mock.patch('nova.virt.hyperv.vmops.open', fake_open, create=True):
-            self.assertRaises(exception.ConsoleLogOutputException,
-                              self._vmops.get_console_output,
-                              fake_vm)
-
-    @mock.patch.object(vmops.fileutils, 'delete_if_exists')
-    def test_delete_vm_console_log(self, mock_delete_if_exists):
-        mock_instance = fake_instance.fake_instance_obj(self.context)
-        self._vmops._pathutils.get_vm_console_log_paths.return_value = (
-            mock.sentinel.FAKE_PATH, )
-        mock_log_writer = mock.MagicMock()
-        self._vmops._vm_log_writers[mock_instance['uuid']] = mock_log_writer
-
-        self._vmops._delete_vm_console_log(mock_instance)
-
-        mock_log_writer.join.assert_called_once_with()
-        mock_delete_if_exists.assert_called_once_with(mock.sentinel.FAKE_PATH)
-
-    def test_create_vm_com_port_pipe(self):
-        mock_instance = fake_instance.fake_instance_obj(self.context)
-        pipe_path = r'\\.\pipe\%s' % mock_instance['uuid']
-
-        self._vmops._create_vm_com_port_pipe(mock_instance)
-
-        get_vm_serial_port = self._vmops._vmutils.get_vm_serial_port_connection
-        get_vm_serial_port.assert_called_once_with(mock_instance['name'],
-                                                   update_connection=pipe_path)
-
-    @mock.patch.object(vmops.VMOps, "log_vm_serial_output")
-    @mock.patch("os.path.basename")
-    @mock.patch("os.path.exists")
-    def test_restart_vm_log_writers(self, mock_exists, mock_basename,
-                                    mock_log_vm_output):
-        self._vmops._vmutils.get_active_instances.return_value = [
-            mock.sentinel.FAKE_VM_NAME, mock.sentinel.FAKE_VM_NAME_OTHER]
-        mock_exists.side_effect = [True, False]
-
-        self._vmops.restart_vm_log_writers()
-
-        calls = [mock.call(mock.sentinel.FAKE_VM_NAME),
-                 mock.call(mock.sentinel.FAKE_VM_NAME_OTHER)]
-        self._vmops._pathutils.get_instance_dir.assert_has_calls(calls)
-        get_vm_serial_port = self._vmops._vmutils.get_vm_serial_port_connection
-        get_vm_serial_port.assert_called_once_with(mock.sentinel.FAKE_VM_NAME)
-        mock_log_vm_output.assert_called_once_with(mock.sentinel.FAKE_VM_NAME,
-                                                   mock_basename.return_value)
+        mock_set_conn = self._vmops._vmutils.set_vm_serial_port_connection
+        mock_set_conn.assert_has_calls(expected_calls)
 
     def test_list_instance_uuids(self):
         fake_uuid = '4f54fb69-d3a2-45b7-bb9b-b6e6b3d893b3'
