@@ -19,11 +19,30 @@ from oslo_config import cfg
 
 consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',
     default='consoleauth',
-    help='The topic console auth proxy nodes listen on')
+    help="""
+This option allows you to change the message topic used by nova-consoleauth
+service when communicating via the AMQP server. Nova Console Authentication
+server authenticates nova consoles. Users can then access their instances
+through VNC clients. The Nova API service uses a message queue to
+communicate with nova-consoleauth to get a VNC console.
+
+Possible Values:
+
+  * 'consoleauth' (default) or Any string representing topic exchange name.
+""")
 
 console_token_ttl = cfg.IntOpt('console_token_ttl',
     default=600,
-    help='How many seconds before deleting tokens')
+    help="""
+This option indicates the lifetime of a console auth token. A console auth
+token is used in authorizing console access for a user. Once the auth token
+time to live count has elapsed, the token is considered expired. Expired
+tokens are then deleted.
+
+Possible values:
+
+  * Any positive integer. The default is 600.
+""")
 
 CONSOLEAUTH_OPTS = [consoleauth_topic_opt, console_token_ttl]
 
