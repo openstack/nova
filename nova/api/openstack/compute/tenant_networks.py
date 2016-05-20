@@ -158,7 +158,7 @@ class TenantNetworkController(wsgi.Controller):
                 reservation = QUOTAS.reserve(context, networks=1)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many networks.")
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise exc.HTTPForbidden(explanation=msg)
 
         kwargs['project_id'] = context.project_id
 
