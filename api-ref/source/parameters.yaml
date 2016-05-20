@@ -365,6 +365,15 @@ exclude:
   in: query
   required: false
   type: string
+flavor_is_public_query:
+  in: query
+  required: false
+  type: boolean
+  description: |
+    Filters the flavor list by only public flavors. By default ``non
+    admin`` users only see public flavors, and ``admin`` users can see
+    additional non public flavors.
+
 flavor_query:
   description: |
     Filters the response by a flavor, as a UUID. A flavor is a combination of memory,
@@ -424,25 +433,13 @@ marker:
   type: string
 minDisk:
   description: |
-    Filters the response by a minimum disk space, in GiB.
-  in: query
-  required: false
-  type: integer
-minDisk_1:
-  description: |
-    Filters the response by a minimum disk size. For example, ``100``.
+    Filters the response by a minimum disk space, in GiB. For example, ``100``.
   in: query
   required: false
   type: integer
 minRam:
   description: |
-    Filters the response by a minimum RAM, in MB.
-  in: query
-  required: false
-  type: integer
-minRam_1:
-  description: |
-    Filters the response by a minimum RAM size. For example, ``512``.
+    Filters the response by a minimum RAM, in MB. For example, ``512``.
   in: query
   required: false
   type: integer
@@ -1143,22 +1140,124 @@ flavor:
   type: object
 flavor_access:
   description: |
-    A list of dictionaries, each with the keys ``flavor_id`` and ``tenant_id``.
+    A list of objects, each with the keys ``flavor_id`` and ``tenant_id``.
   in: body
   required: true
   type: array
+flavor_cpus:
+  in: body
+  required: true
+  type: int
+  description: |
+    The number of virtual cpus that will be allocated to the server.
+flavor_disabled:
+  in: body
+  required: false
+  type: boolean
+  description: |
+    Whether or not the flavor has been administratively disabled.
+    This is typically only visible to administrative users.
+flavor_disk:
+  in: body
+  required: true
+  type: int
+  description: |
+    The size of the root disk that will be created in GiB. If 0 the
+    root disk will be set to exactly the size of the image used to
+    deploy the instance.
+flavor_ephem_disk:
+  in: body
+  required: true
+  type: int
+  description: |
+    The size of the ephemeral disk that will be created, in
+    GiB. Ephemeral disks may be written over on server state
+    changes. So should only be used as a scratch space for
+    applications that are aware of it's limitations. Defaults to 0.
+flavor_ephem_disk_in:
+  in: body
+  required: false
+  type: int
+  description: |
+    The size of the ephemeral disk that will be created, in
+    GiB. Ephemeral disks may be written over on server state
+    changes. So should only be used as a scratch space for
+    applications that are aware of it's limitations. Defaults to 0.
 flavor_id_body:
   description: |
-    The ID of the flavor.
+    The ID of the flavor. While people often make this look like
+    an int, this is really a string.
   in: body
   required: true
   type: string
+flavor_is_public:
+  in: body
+  required: true
+  type: boolean
+  description: |
+    Wheter the flavor is public (available to all projects) or scoped
+    to a set of projects. Default is True if not specified.
+flavor_is_public_in:
+  in: body
+  required: false
+  type: boolean
+  description: |
+    Wheter the flavor is public (available to all projects) or scoped
+    to a set of projects. Default is True if not specified.
+flavor_name:
+  in: body
+  required: true
+  type: string
+  description: |
+    The display name of a flavor.
+flavor_ram:
+  in: body
+  required: true
+  type: int
+  description: |
+    The amount of RAM a flavor has, in MiB.
+flavor_rxtx_factor:
+  in: body
+  required: true
+  type: float
+  description: |
+    The receive / transimit factor (as a float) that will be set on
+    ports if the network backend supports the QOS extension.
+    Otherwise it will be ignored. It defaults to 1.0.
+flavor_rxtx_factor_in:
+  in: body
+  required: false
+  type: float
+  description: |
+    The receive / transimit factor (as a float) that will be set on
+    ports if the network backend supports the QOS extension.
+    Otherwise it will be ignored. It defaults to 1.0.
+flavor_swap:
+  in: body
+  required: true
+  type: int
+  description: |
+    The size of a dedicated swap disk that will be allocated, in
+    GiB. If 0 (the default), no dedicated swap disk will be created.
+flavor_swap_in:
+  in: body
+  required: false
+  type: int
+  description: |
+    The size of a dedicated swap disk that will be allocated, in
+    GiB. If 0 (the default), no dedicated swap disk will be created.
 flavorRef:
   description: |
     The flavor reference, as a UUID or full URL, for the flavor for your server instance.
   in: body
   required: true
   type: string
+flavors:
+  description: |
+    An array of flavor objects.
+  in: body
+  required: true
+  type: array
 floating_ip_pool_name:
   description: |
     The name of the floating ip pool.
