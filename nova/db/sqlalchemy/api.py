@@ -1801,6 +1801,8 @@ def instance_destroy(context, instance_uuid, constraint=None):
     # column 'deleted' in 'tags' table.
     context.session.query(models.Tag).filter_by(
         resource_id=instance_uuid).delete()
+    context.session.query(models.ConsoleAuthToken).filter_by(
+        instance_uuid=instance_uuid).delete()
 
     return instance_ref
 

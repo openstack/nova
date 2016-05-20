@@ -1530,3 +1530,32 @@ class ResourceProviderAggregate(BASE, models.ModelBase):
 
     resource_provider_id = Column(Integer, primary_key=True, nullable=False)
     aggregate_id = Column(Integer, primary_key=True, nullable=False)
+
+
+class ConsoleAuthToken(BASE, NovaBase):
+    """Represents a console auth token"""
+
+    __tablename__ = 'console_auth_tokens'
+    __table_args__ = (
+        Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
+        Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
+        Index('console_auth_tokens_token_hash_idx', 'token_hash'),
+        schema.UniqueConstraint("token_hash",
+                                name="uniq_console_auth_tokens0token_hash")
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+    token_hash = Column(String(255), nullable=False)
+    console_type = Column(String(255), nullable=False)
+    host = Column(String(255), nullable=False)
+    port = Column(Integer, nullable=False)
+    internal_access_path = Column(String(255))
+    instance_uuid = Column(String(36), nullable=False)
+    expires = Column(Integer, nullable=False)
+
+    instance = orm.relationship(
+        "Instance",
+        backref='console_auth_tokens',
+        primaryjoin='and_(ConsoleAuthToken.instance_uuid == Instance.uuid,'
+                    'Instance.deleted == 0)',
+        foreign_keys=instance_uuid
+    )
