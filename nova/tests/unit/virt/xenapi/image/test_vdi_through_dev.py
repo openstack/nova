@@ -17,6 +17,7 @@ import contextlib
 import tarfile
 
 import eventlet
+import six
 
 from nova.image import glance
 from nova import test
@@ -147,14 +148,14 @@ class TestTarGzProducer(test.NoDBTestCase):
         self.assertEqual('writefile', producer.output)
 
     def test_start(self):
-        outf = self.mox.CreateMock(file)
+        outf = six.StringIO()
         producer = vdi_through_dev.TarGzProducer('fpath', outf,
             '100', 'fname')
 
         tfile = self.mox.CreateMock(tarfile.TarFile)
         tinfo = self.mox.CreateMock(tarfile.TarInfo)
 
-        inf = self.mox.CreateMock(file)
+        inf = self.mox.CreateMock(open)
 
         self.mox.StubOutWithMock(vdi_through_dev, 'tarfile')
         self.mox.StubOutWithMock(producer, '_open_file')

@@ -55,7 +55,7 @@ class SecurityGroupControllerBase(wsgi.Controller):
             security_group_api=self.security_group_api, skip_policy_check=True)
 
     def _format_security_group_rule(self, context, rule, group_rule_data=None):
-        """Return a secuity group rule in desired API response format.
+        """Return a security group rule in desired API response format.
 
         If group_rule_data is passed in that is used rather than querying
         for it.
@@ -339,7 +339,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
             instance = common.get_instance(self.compute_api, context,
                                            server_id)
             groups = self.security_group_api.get_instance_security_groups(
-                context, instance.uuid, True)
+                context, instance, True)
         except (exception.SecurityGroupNotFound,
                 exception.InstanceNotFound) as exp:
             msg = exp.format_message()
@@ -438,7 +438,10 @@ class SecurityGroupsOutputController(wsgi.Controller):
         if not len(servers):
             return
         key = "security_groups"
-        context = _authorize_context(req)
+        context = req.environ['nova.context']
+        if not softauth(context):
+            return
+
         if not openstack_driver.is_neutron_security_groups():
             for server in servers:
                 instance = req.get_db_instance(server['id'])
@@ -472,8 +475,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
                     ATTRIBUTE_NAME, [{'name': 'default'}])
 
     def _show(self, req, resp_obj):
-        if not softauth(req.environ['nova.context']):
-            return
         if 'server' in resp_obj.obj:
             self._extend_servers(req, [resp_obj.obj['server']])
 
@@ -487,8 +488,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        if not softauth(req.environ['nova.context']):
-            return
         self._extend_servers(req, list(resp_obj.obj['servers']))
 
 

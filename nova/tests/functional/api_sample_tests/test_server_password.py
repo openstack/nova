@@ -13,13 +13,11 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ServerPasswordSampleJsonTests(test_servers.ServersSampleBase):
@@ -47,8 +45,7 @@ class ServerPasswordSampleJsonTests(test_servers.ServersSampleBase):
         mock_extract_password.return_value = password
         uuid = self._post_server()
         response = self._do_get('servers/%s/os-server-password' % uuid)
-        subs = self._get_regexes()
-        subs['encrypted_password'] = password.replace('+', '\\+')
+        subs = {'encrypted_password': password.replace('+', '\\+')}
         self._verify_response('get-password-resp', subs, response, 200)
 
     def test_reset_password(self):

@@ -1,0 +1,19 @@
+---
+deprecations:
+  - |
+    Nova used to support the concept that ``service managers`` were
+    replaceable components. There are many config options where you can
+    replace a manager by specifying a new class. This concept is
+    deprecated in Mitaka as are the following config options.
+
+      * [cells] manager
+      * metadata_manager
+      * compute_manager
+      * console_manager
+      * consoleauth_manager
+      * cert_manager
+      * scheduler_manager
+
+    Many of these will be removed in Newton. Users of these options
+    are encouraged to work with Nova upstream on any features missing
+    in the default implementations that are needed.

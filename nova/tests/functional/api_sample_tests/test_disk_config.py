@@ -13,14 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class DiskConfigJsonTest(test_servers.ServersSampleBase):
@@ -45,7 +42,7 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
     def test_list_servers_detail(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''
@@ -55,21 +52,11 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
     def test_get_server(self):
         uuid = self._post_server(use_common_server_api_samples=False)
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''
         self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_update_server(self):
-        uuid = self._post_server(use_common_server_api_samples=False)
-        response = self._do_put('servers/%s' % uuid,
-                                'server-update-put-req', {})
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = ''
-        subs['access_ip_v6'] = ''
-        self._verify_response('server-update-put-resp', subs, response, 200)
 
     def test_resize_server(self):
         self.flags(allow_resize_to_same_host=True)
@@ -89,7 +76,6 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-action-rebuild-req', subs)
-        subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''

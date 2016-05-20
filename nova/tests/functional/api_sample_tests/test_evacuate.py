@@ -14,16 +14,11 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
-from nova.compute import api as compute_api
-from nova.compute import manager as compute_manager
-from nova.servicegroup import api as service_group_api
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class EvacuateJsonTest(test_servers.ServersSampleBase):
@@ -60,19 +55,20 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
             """Simulate validation of instance does not exist."""
             return False
 
-        self.stubs.Set(service_group_api.API, 'service_is_up',
-                       fake_service_is_up)
-        self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
-                       fake_service_get_by_compute_host)
-        self.stubs.Set(compute_manager.ComputeManager,
-                       '_check_instance_exists',
-                       fake_check_instance_exists)
+        self.stub_out(
+            'nova.servicegroup.api.API.service_is_up',
+            fake_service_is_up)
+        self.stub_out(
+            'nova.compute.api.HostAPI.service_get_by_compute_host',
+            fake_service_get_by_compute_host)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager._check_instance_exists',
+            fake_check_instance_exists)
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  server_req, req_subs)
         if server_resp:
-            subs = self._get_regexes()
-            self._verify_response(server_resp, subs, response,
+            self._verify_response(server_resp, {}, response,
                                   expected_resp_code)
         else:
             # NOTE(gibi): no server_resp means we expect empty body as
@@ -95,7 +91,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
-                host='testHost')
+                host='testHost', request_spec=mock.ANY)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
     def test_server_evacuate_find_host(self, rebuild_mock):
@@ -111,7 +107,7 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=False, preserve_ephemeral=mock.ANY,
-                host=None)
+                host=None, request_spec=mock.ANY)
 
 
 class EvacuateJsonTestV214(EvacuateJsonTest):
@@ -132,7 +128,7 @@ class EvacuateJsonTestV214(EvacuateJsonTest):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=None, preserve_ephemeral=mock.ANY,
-                host='testHost')
+                host='testHost', request_spec=mock.ANY)
 
     @mock.patch('nova.conductor.manager.ComputeTaskManager.rebuild_instance')
     def test_server_evacuate_find_host(self, rebuild_mock):
@@ -147,4 +143,4 @@ class EvacuateJsonTestV214(EvacuateJsonTest):
                 injected_files=mock.ANY, new_pass="MySecretPass",
                 orig_sys_metadata=mock.ANY, bdms=mock.ANY, recreate=mock.ANY,
                 on_shared_storage=None, preserve_ephemeral=mock.ANY,
-                host=None)
+                host=None, request_spec=mock.ANY)

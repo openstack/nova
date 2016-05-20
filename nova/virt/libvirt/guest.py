@@ -123,7 +123,7 @@ class Guest(object):
             domain = host.write_instance_config(xml)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a domain with XML: %s') %
+                LOG.error(_LE('Error defining a domain with XML: %s'),
                           encodeutils.safe_decode(xml))
         return cls(domain)
 
@@ -138,7 +138,7 @@ class Guest(object):
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE('Error launching a defined domain '
-                              'with XML: %s') %
+                              'with XML: %s'),
                           self._encoded_xml, errors='ignore')
 
     def poweroff(self):
@@ -166,7 +166,7 @@ class Guest(object):
                     check_exit_code=[0, 1])
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error enabling hairpin mode with XML: %s') %
+                LOG.error(_LE('Error enabling hairpin mode with XML: %s'),
                           self._encoded_xml, errors='ignore')
 
     def get_interfaces(self):
@@ -185,6 +185,22 @@ class Guest(object):
             interfaces.append(target.get('dev'))
 
         return interfaces
+
+    def get_interface_by_mac(self, mac):
+        """Lookup a LibvirtConfigGuestInterface by the MAC address.
+
+        :param mac: MAC address of the guest interface.
+        :type mac: str
+        :returns: nova.virt.libvirt.config.LibvirtConfigGuestInterface instance
+            if found, else None
+        """
+
+        if mac:
+            interfaces = self.get_all_devices(
+                vconfig.LibvirtConfigGuestInterface)
+            for interface in interfaces:
+                if interface.mac_addr == mac:
+                    return interface
 
     def get_vcpus_info(self):
         """Returns virtual cpus information of guest.
@@ -231,7 +247,9 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
-        self._domain.attachDeviceFlags(conf.to_xml(), flags=flags)
+        device_xml = conf.to_xml()
+        LOG.debug("attach device xml: %s", device_xml)
+        self._domain.attachDeviceFlags(device_xml, flags=flags)
 
     def get_disk(self, device):
         """Returns the disk mounted at device
@@ -338,7 +356,9 @@ class Guest(object):
         """
         flags = persistent and libvirt.VIR_DOMAIN_AFFECT_CONFIG or 0
         flags |= live and libvirt.VIR_DOMAIN_AFFECT_LIVE or 0
-        self._domain.detachDeviceFlags(conf.to_xml(), flags=flags)
+        device_xml = conf.to_xml()
+        LOG.debug("detach device xml: %s", device_xml)
+        self._domain.detachDeviceFlags(device_xml, flags=flags)
 
     def get_xml_desc(self, dump_inactive=False, dump_sensitive=False,
                      dump_migratable=False):
@@ -374,7 +394,7 @@ class Guest(object):
         """Returns information on Guest
 
         :param host: a host.Host object with current
-                     connection. Unfortunatly we need to pass it
+                     connection. Unfortunately we need to pass it
                      because of a workaround with < version 1.2..11
 
         :returns list: [state, maxMem, memory, nrVirtCpu, cpuTime]

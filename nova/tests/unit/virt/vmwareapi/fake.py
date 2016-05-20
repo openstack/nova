@@ -35,7 +35,8 @@ from nova.virt.vmwareapi import constants
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
-            'files', 'ClusterComputeResource', 'HostStorageSystem']
+            'files', 'ClusterComputeResource', 'HostStorageSystem',
+            'Folder']
 
 _FAKE_FILE_SIZE = 1024
 _FAKE_VCENTER_UUID = '497c514c-ef5e-4e7f-8d93-ec921993b93a'
@@ -51,6 +52,7 @@ def reset():
     """Resets the db contents."""
     cleanup()
     create_network()
+    create_folder()
     create_host_network_system()
     create_host_storage_system()
     ds_ref1 = create_datastore('ds1', 1024, 500)
@@ -364,8 +366,9 @@ class VirtualIDEController(DataObject):
 
 class VirtualLsiLogicController(DataObject):
     """VirtualLsiLogicController class."""
-    def __init__(self, key=0, scsiCtlrUnitNumber=0):
+    def __init__(self, key=0, scsiCtlrUnitNumber=0, busNumber=0):
         self.key = key
+        self.busNumber = busNumber
         self.scsiCtlrUnitNumber = scsiCtlrUnitNumber
         self.device = []
 
@@ -527,6 +530,14 @@ class VirtualMachine(ManagedObject):
             self.set("config.hardware.device", devices)
         except AttributeError:
             pass
+
+
+class Folder(ManagedObject):
+    """Folder class."""
+
+    def __init__(self):
+        super(Folder, self).__init__("Folder")
+        self.set("childEntity", [])
 
 
 class Network(ManagedObject):
@@ -868,7 +879,13 @@ class Datacenter(ManagedObject):
     def __init__(self, name="ha-datacenter", ds_ref=None):
         super(Datacenter, self).__init__("dc")
         self.set("name", name)
-        self.set("vmFolder", "vm_folder_ref")
+        if _db_content.get("Folder", None) is None:
+            create_folder()
+        folder_ref = _db_content["Folder"][
+            list(_db_content["Folder"].keys())[0]].obj
+        folder_do = DataObject()
+        folder_do.ManagedObjectReference = [folder_ref]
+        self.set("vmFolder", folder_ref)
         if _db_content.get("Network", None) is None:
             create_network()
         net_ref = _db_content["Network"][
@@ -935,6 +952,12 @@ def create_res_pool():
     res_pool = ResourcePool()
     _create_object('ResourcePool', res_pool)
     return res_pool.obj
+
+
+def create_folder():
+    folder = Folder()
+    _create_object('Folder', folder)
+    return folder.obj
 
 
 def create_network():
@@ -1292,11 +1315,21 @@ class FakeVim(object):
         task_mdo = create_task(method, "success", result=vm_ref)
         return task_mdo.obj
 
+    def _create_folder(self, method, *args, **kwargs):
+        return create_folder()
+
     def _reconfig_vm(self, method, *args, **kwargs):
         """Reconfigures a VM and sets the properties supplied."""
         vm_ref = args[0]
         vm_mdo = _get_vm_mdo(vm_ref)
         vm_mdo.reconfig(self.client.factory, kwargs.get("spec"))
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
+
+    def _rename(self, method, *args, **kwargs):
+        vm_ref = args[0]
+        vm_mdo = _get_vm_mdo(vm_ref)
+        vm_mdo.set('name', kwargs['newName'])
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
@@ -1558,8 +1591,14 @@ class FakeVim(object):
         elif attr_name == "CreateVM_Task":
             return lambda *args, **kwargs: self._create_vm(attr_name,
                                                 *args, **kwargs)
+        elif attr_name == "CreateFolder":
+            return lambda *args, **kwargs: self._create_folder(attr_name,
+                                                *args, **kwargs)
         elif attr_name == "ReconfigVM_Task":
             return lambda *args, **kwargs: self._reconfig_vm(attr_name,
+                                                *args, **kwargs)
+        elif attr_name == "Rename_Task":
+            return lambda *args, **kwargs: self._rename(attr_name,
                                                 *args, **kwargs)
         elif attr_name == "CreateVirtualDisk_Task":
             return lambda *args, **kwargs: self._create_copy_disk(attr_name,

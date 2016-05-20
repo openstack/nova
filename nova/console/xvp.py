@@ -20,40 +20,17 @@ import signal
 
 import jinja2
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 
+import nova.conf
 from nova import context
 from nova import db
 from nova.i18n import _, _LE
-from nova import paths
 from nova import utils
 
 
-xvp_opts = [
-    cfg.StrOpt('console_xvp_conf_template',
-               default=paths.basedir_def('nova/console/xvp.conf.template'),
-               help='XVP conf template'),
-    cfg.StrOpt('console_xvp_conf',
-               default='/etc/xvp.conf',
-               help='Generated XVP conf file'),
-    cfg.StrOpt('console_xvp_pid',
-               default='/var/run/xvp.pid',
-               help='XVP master process pid file'),
-    cfg.StrOpt('console_xvp_log',
-               default='/var/log/xvp.log',
-               help='XVP log file'),
-    cfg.IntOpt('console_xvp_multiplex_port',
-               default=5900,
-               min=1,
-               max=65535,
-               help='Port for XVP to multiplex VNC connections on'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(xvp_opts)
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 

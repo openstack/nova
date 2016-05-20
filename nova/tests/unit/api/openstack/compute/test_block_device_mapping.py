@@ -22,8 +22,6 @@ from webob import exc
 
 from nova.api.openstack.compute import block_device_mapping
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import extensions
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
 from nova import block_device
 from nova.compute import api as compute_api
@@ -53,7 +51,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()
         self._setup_controller()
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
 
         self.bdm = [{
             'no_device': None,
@@ -88,7 +86,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
 
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
 
         if override_controller:
             override_controller.create(req, body=body).obj['server']
@@ -231,6 +229,20 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
+    def _test_create_instance_with_destination_type_error(self,
+                                                          destination_type):
+        self.bdm[0]['destination_type'] = destination_type
+
+        params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
+        self.assertRaises(self.validation_error,
+                          self._test_create, params, no_image=True)
+
+    def test_create_instance_with_destination_type_empty_string(self):
+        self._test_create_instance_with_destination_type_error('')
+
+    def test_create_instance_with_invalid_destination_type(self):
+        self._test_create_instance_with_destination_type_error('fake')
+
     def test_create_instance_bdm(self):
         bdm = [{
             'source_type': 'volume',
@@ -329,35 +341,6 @@ class BlockDeviceMappingTestV21(test.TestCase):
             self.assertRaises(exc.HTTPBadRequest,
                               self._test_create, params)
             self.assertTrue(self.validation_fail_test_validate_called)
-            self.assertTrue(self.validation_fail_instance_destroy_called)
+            self.assertFalse(self.validation_fail_instance_destroy_called)
             self.validation_fail_test_validate_called = False
             self.validation_fail_instance_destroy_called = False
-
-
-class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
-    validation_error = exc.HTTPBadRequest
-
-    def _setup_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {'os-volumes': 'fake',
-                                   'os-block-device-mapping-v2-boot': 'fake'}
-        self.controller = servers_v2.Controller(self.ext_mgr)
-        self.ext_mgr_bdm_v2 = extensions.ExtensionManager()
-        self.ext_mgr_bdm_v2.extensions = {'os-volumes': 'fake'}
-        self.no_bdm_v2_controller = servers_v2.Controller(
-            self.ext_mgr_bdm_v2)
-
-    def test_create_instance_with_block_device_mapping_disabled(self):
-        bdm = [{'device_name': 'foo'}]
-
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertIsNone(kwargs['block_device_mapping'], None)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-
-        params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
-        self._test_create(params,
-                          override_controller=self.no_bdm_v2_controller)

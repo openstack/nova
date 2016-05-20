@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from oslo_vmware import exceptions as vexc
 from oslo_vmware import vim_util
 
@@ -28,8 +27,6 @@ from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vm_util
-
-CONF = cfg.CONF
 
 
 class VMwareVifTestCase(test.NoDBTestCase):
@@ -210,9 +207,9 @@ class VMwareVifTestCase(test.NoDBTestCase):
         network_info = utils.get_test_network_info()
         vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
                                     'is_neutron', 'fake_model', network_info)
-        expected = [{'iface_id': 'vif-xxx-yyy-zzz',
-                     'mac_address': 'fake',
-                     'network_name': 'fake',
+        expected = [{'iface_id': utils.FAKE_VIF_UUID,
+                     'mac_address': utils.FAKE_VIF_MAC,
+                     'network_name': utils.FAKE_NETWORK_BRIDGE,
                      'network_ref': 'fake_ref',
                      'vif_model': 'fake_model'}]
         self.assertEqual(expected, vif_info)
@@ -253,6 +250,25 @@ class VMwareVifTestCase(test.NoDBTestCase):
         self.assertEqual(expected_ref, network_ref)
         mock_check.assert_called_once_with('fake-session')
 
+    @mock.patch.object(vif, '_check_ovs_supported_version')
+    def test_get_neutron_network_ovs_logical_switch_id(self, mock_check):
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_OVS,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network,
+                                  details={'nsx-logical-switch-id':
+                                           'fake-nsx-id'})]
+        )[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        expected_ref = {'type': 'OpaqueNetwork',
+                        'network-id': 'fake-nsx-id',
+                        'network-type': 'nsx.LogicalSwitch',
+                        'use-external-id': True}
+        self.assertEqual(expected_ref, network_ref)
+        mock_check.assert_called_once_with('fake-session')
+
     @mock.patch.object(network_util, 'get_network_with_the_name')
     def test_get_neutron_network_dvs(self, mock_network_name):
         fake_network_obj = {'type': 'DistributedVirtualPortgroup',
@@ -269,6 +285,26 @@ class VMwareVifTestCase(test.NoDBTestCase):
                                                vif_info)
         mock_network_name.assert_called_once_with('fake-session',
                                                   'fa0',
+                                                  'fake-cluster')
+        self.assertEqual(fake_network_obj, network_ref)
+
+    @mock.patch.object(network_util, 'get_network_with_the_name')
+    def test_get_neutron_network_dvs_vif_details(self, mock_network_name):
+        fake_network_obj = {'type': 'DistributedVirtualPortgroup',
+                            'dvpg': 'pg1',
+                            'dvsw': 'fake-props'}
+        mock_network_name.return_value = fake_network_obj
+        vif_info = network_model.NetworkInfo([
+                network_model.VIF(type=network_model.VIF_TYPE_DVS,
+                                  details={'dvs_port_key': 'key1',
+                                           'dvs_port_group_name': 'pg1'},
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=self._network)])[0]
+        network_ref = vif._get_neutron_network('fake-session',
+                                               'fake-cluster',
+                                               vif_info)
+        mock_network_name.assert_called_once_with('fake-session',
+                                                  'pg1',
                                                   'fake-cluster')
         self.assertEqual(fake_network_obj, network_ref)
 

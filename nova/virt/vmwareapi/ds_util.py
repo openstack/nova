@@ -40,7 +40,7 @@ DcInfo = collections.namedtuple('DcInfo',
                                 ['ref', 'name', 'vmFolder'])
 
 # A cache for datastore/datacenter mappings. The key will be
-# the datastore moref. The value will the the DcInfo object.
+# the datastore moref. The value will be the DcInfo object.
 _DS_DC_MAPPING = {}
 
 
@@ -202,6 +202,14 @@ def get_allowed_datastore_types(disk_type):
     if disk_type == constants.DISK_TYPE_STREAM_OPTIMIZED:
         return ALL_SUPPORTED_DS_TYPES
     return ALL_SUPPORTED_DS_TYPES - frozenset([constants.DATASTORE_TYPE_VSAN])
+
+
+def get_datacenter_ref(session, dc_path):
+    return session._call_method(
+        session.vim,
+        "FindByInventoryPath",
+        session.vim.service_content.searchIndex,
+        inventoryPath=dc_path)
 
 
 def file_delete(session, ds_path, dc_ref):
@@ -484,3 +492,22 @@ def get_dc_info(session, ds_ref):
 def dc_cache_reset():
     global _DS_DC_MAPPING
     _DS_DC_MAPPING = {}
+
+
+def get_connected_hosts(session, datastore):
+    """Get all the hosts to which the datastore is connected.
+
+    :param datastore: Reference to the datastore entity
+    :return: List of managed object references of all connected
+             hosts
+    """
+    host_mounts = session._call_method(vutil, 'get_object_property',
+                                       datastore, 'host')
+    if not hasattr(host_mounts, 'DatastoreHostMount'):
+        return []
+
+    connected_hosts = []
+    for host_mount in host_mounts.DatastoreHostMount:
+        connected_hosts.append(host_mount.key.value)
+
+    return connected_hosts

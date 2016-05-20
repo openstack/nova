@@ -13,16 +13,11 @@
 #    under the License.
 
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import context
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('public_interface', 'nova.network.linux_net')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
@@ -70,9 +65,8 @@ class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
     def test_floating_ips_list_empty(self):
         response = self._do_get('os-floating-ips')
 
-        subs = self._get_regexes()
         self._verify_response('floating-ips-list-empty-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_floating_ips_list(self):
         self._do_post('os-floating-ips',
@@ -83,32 +77,28 @@ class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
                       {})
 
         response = self._do_get('os-floating-ips')
-        subs = self._get_regexes()
         self._verify_response('floating-ips-list-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_floating_ips_create_nopool(self):
         response = self._do_post('os-floating-ips',
                                  'floating-ips-create-nopool-req',
                                  {})
-        subs = self._get_regexes()
         self._verify_response('floating-ips-create-resp',
-                              subs, response, 200)
+                              {}, response, 200)
 
     def test_floating_ips_create(self):
         response = self._do_post('os-floating-ips',
                                  'floating-ips-create-req',
                                  {"pool": CONF.default_floating_pool})
-        subs = self._get_regexes()
-        self._verify_response('floating-ips-create-resp', subs, response, 200)
+        self._verify_response('floating-ips-create-resp', {}, response, 200)
 
     def test_floating_ips_get(self):
         self.test_floating_ips_create()
         # NOTE(sdague): the first floating ip will always have 1 as an id,
         # but it would be better if we could get this from the create
         response = self._do_get('os-floating-ips/%d' % 1)
-        subs = self._get_regexes()
-        self._verify_response('floating-ips-get-resp', subs, response, 200)
+        self._verify_response('floating-ips-get-resp', {}, response, 200)
 
     def test_floating_ips_delete(self):
         self.test_floating_ips_create()

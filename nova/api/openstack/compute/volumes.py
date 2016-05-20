@@ -18,12 +18,14 @@
 from oslo_utils import strutils
 from webob import exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import volumes as volumes_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
+from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -55,9 +57,21 @@ def _translate_volume_summary_view(context, vol):
     d['createdAt'] = vol['created_at']
 
     if vol['attach_status'] == 'attached':
+        # NOTE(ildikov): The attachments field in the volume info that
+        # Cinder sends is converted to an OrderedDict with the
+        # instance_uuid as key to make it easier for the multiattach
+        # feature to check the required information. Multiattach will
+        # be enable in the Nova API in Newton.
+        # The format looks like the following:
+        # attachments = {'instance_uuid': {
+        #                   'attachment_id': 'attachment_uuid',
+        #                   'mountpoint': '/dev/sda/
+        #                    }
+        #                }
+        attachment = vol['attachments'].items()[0]
         d['attachments'] = [_translate_attachment_detail_view(vol['id'],
-            vol['instance_uuid'],
-            vol['mountpoint'])]
+            attachment[0],
+            attachment[1].get('mountpoint'))]
     else:
         d['attachments'] = [{}]
 
@@ -212,6 +226,19 @@ def _translate_attachment_summary_view(volume_id, instance_uuid, mountpoint):
     return d
 
 
+def _check_request_version(req, min_version, method, server_id, server_state):
+    if not api_version_request.is_supported(req, min_version=min_version):
+        exc_inv = exception.InstanceInvalidState(
+                attr='vm_state',
+                instance_uuid=server_id,
+                state=server_state,
+                method=method)
+        common.raise_http_conflict_for_instance_invalid_state(
+                exc_inv,
+                method,
+                server_id)
+
+
 class VolumeAttachmentController(wsgi.Controller):
     """The volume attachment API controller for the OpenStack API.
 
@@ -278,6 +305,12 @@ class VolumeAttachmentController(wsgi.Controller):
         device = body['volumeAttachment'].get('device')
 
         instance = common.get_instance(self.compute_api, context, server_id)
+
+        if instance.vm_state in (vm_states.SHELVED,
+                                 vm_states.SHELVED_OFFLOADED):
+            _check_request_version(req, '2.20', 'attach_volume',
+                                   server_id, instance.vm_state)
+
         try:
             device = self.compute_api.attach_volume(context, instance,
                                                     volume_id, device)
@@ -371,7 +404,10 @@ class VolumeAttachmentController(wsgi.Controller):
         volume_id = id
 
         instance = common.get_instance(self.compute_api, context, server_id)
-
+        if instance.vm_state in (vm_states.SHELVED,
+                                 vm_states.SHELVED_OFFLOADED):
+            _check_request_version(req, '2.20', 'detach_volume',
+                                   server_id, instance.vm_state)
         try:
             volume = self.volume_api.get(context, volume_id)
         except exception.VolumeNotFound as e:
@@ -513,7 +549,7 @@ class SnapshotController(wsgi.Controller):
         res = [entity_maker(context, snapshot) for snapshot in limited_list]
         return {'snapshots': res}
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors((400, 403))
     @validation.schema(volumes_schema.snapshot_create)
     def create(self, req, body):
         """Creates a new snapshot."""
@@ -530,9 +566,12 @@ class SnapshotController(wsgi.Controller):
         else:
             create_func = self.volume_api.create_snapshot
 
-        new_snapshot = create_func(context, volume_id,
-                                   snapshot.get('display_name'),
-                                   snapshot.get('display_description'))
+        try:
+            new_snapshot = create_func(context, volume_id,
+                                       snapshot.get('display_name'),
+                                       snapshot.get('display_description'))
+        except exception.OverQuota as e:
+            raise exc.HTTPForbidden(explanation=e.format_message())
 
         retval = _translate_snapshot_detail_view(context, new_snapshot)
         return {'snapshot': retval}

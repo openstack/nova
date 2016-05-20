@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The 'memcached_server' option in DEFAULT section which was deprecated in
+    Mitaka has been completely removed in Newton. This has been replaced by
+    options from oslo cache section.

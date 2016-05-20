@@ -17,7 +17,6 @@ import testtools
 import webob.exc
 
 from nova.api.openstack.compute import hosts as os_hosts_v21
-from nova.api.openstack.compute.legacy_v2.contrib import hosts as os_hosts_v2
 from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context as context_maker
@@ -26,6 +25,7 @@ from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_hosts
+from nova.tests import uuidsentinel
 
 
 def stub_service_get_all(context, disabled=None):
@@ -139,11 +139,11 @@ class HostTestCaseV21(test.TestCase):
 
     def _setup_stubs(self):
         # Pretend we have fake_hosts.HOST_LIST in the DB
-        self.stubs.Set(db, 'service_get_all',
-                       stub_service_get_all)
+        self.stub_out('nova.db.service_get_all',
+                      stub_service_get_all)
         # Only hosts in our fake DB exist
-        self.stubs.Set(db, 'service_get_by_host_and_binary',
-                       stub_service_get_by_host_and_binary)
+        self.stub_out('nova.db.service_get_by_host_and_binary',
+                      stub_service_get_by_host_and_binary)
         # 'host_c1' always succeeds, and 'host_c2'
         self.stubs.Set(self.hosts_api, 'set_host_enabled',
                        stub_set_host_enabled)
@@ -193,8 +193,8 @@ class HostTestCaseV21(test.TestCase):
         def stub_service_get_all_notimpl(self, req):
             return [{'host': 'notimplemented', 'topic': None,
                      'availability_zone': None}]
-        self.stubs.Set(db, 'service_get_all',
-                       stub_service_get_all_notimpl)
+        self.stub_out('nova.db.service_get_all',
+                      stub_service_get_all_notimpl)
         body = {key: val}
         self.assertRaises(webob.exc.HTTPNotImplemented,
                           self.controller.update,
@@ -323,6 +323,7 @@ class HostTestCaseV21(test.TestCase):
 
         dic = {'service_id': s_ref['id'],
                'host': s_ref['host'],
+               'uuid': uuidsentinel.compute_node,
                'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
                'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
                'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
@@ -373,43 +374,6 @@ class HostTestCaseV21(test.TestCase):
         self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
-
-
-class HostTestCaseV20(HostTestCaseV21):
-    validation_ex = webob.exc.HTTPBadRequest
-    policy_ex = webob.exc.HTTPForbidden
-    Controller = os_hosts_v2.HostController
-
-    def test_list_hosts_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.index, fakes.HTTPRequest.blank(''))
-
-    def test_host_maintenance_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.update, fakes.HTTPRequest.blank(''),
-                          'host_c1', {'maintenance_mode': 'enable'})
-
-    def test_startup_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.startup, fakes.HTTPRequest.blank(''),
-                          'host_c1')
-
-    def test_reboot_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.reboot, fakes.HTTPRequest.blank(''),
-                          'host_c1')
-
-    def test_shutdown_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.shutdown,
-                          fakes.HTTPRequest.blank(''),
-                          'host_c1')
-
-    def test_show_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.show,
-                          fakes.HTTPRequest.blank(''),
-                          1)
 
 
 class HostsPolicyEnforcementV21(test.NoDBTestCase):

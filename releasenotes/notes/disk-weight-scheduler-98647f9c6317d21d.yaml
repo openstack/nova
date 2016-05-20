@@ -1,0 +1,8 @@
+---
+features:
+  - A disk space scheduling filter is now available,
+    which prefers compute nodes with the most available
+    disk space.  By default, free disk space is given equal
+    importance to available RAM.  To increase the priority
+    of free disk space in scheduling, increase the
+    disk_weight_multiplier option.

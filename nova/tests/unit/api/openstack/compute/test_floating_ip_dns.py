@@ -21,8 +21,6 @@ import webob
 
 from nova.api.openstack.compute import floating_ip_dns \
         as fipdns_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ip_dns \
-        as fipdns_v2
 from nova import context
 from nova import db
 from nova import exception
@@ -360,38 +358,6 @@ class FloatingIpDNSTestV21(test.TestCase):
                                side_effect=NotImplementedError()):
             self.assertRaises(webob.exc.HTTPNotImplemented,
                               self.domain_controller.index, self.req)
-
-
-class FloatingIpDNSTestV2(FloatingIpDNSTestV21):
-    floating_ip_dns = fipdns_v2
-
-    def _check_status(self, expected_status, res, controller_methord):
-        self.assertEqual(expected_status, res.status_int)
-
-    def _bad_request(self):
-        return webob.exc.HTTPUnprocessableEntity
-
-    def test_update_dns_domain_with_non_admin(self):
-        body = {'domain_entry':
-                {'scope': 'private',
-                 'project': 'testproject'}}
-        self.assertRaises(exception.AdminRequired,
-                          self.domain_controller.update,
-                          self.req, _quote_domain(domain), body=body)
-
-    def test_delete_dns_domain_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired,
-                          self.domain_controller.delete,
-                          self.req, _quote_domain(domain))
-
-    def test_create_domain(self):
-        self._test_create_domain(self.admin_req)
-
-    def test_delete_domain(self):
-        self._test_delete_domain(self.admin_req)
-
-    def test_delete_domain_notfound(self):
-        self._test_delete_domain_notfound(self.admin_req)
 
 
 class FloatingIPDNSDomainPolicyEnforcementV21(test.NoDBTestCase):

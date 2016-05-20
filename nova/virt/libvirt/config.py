@@ -79,7 +79,6 @@ class LibvirtConfigObject(object):
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
         xml_str = etree.tostring(root, pretty_print=pretty_print)
-        LOG.debug("Generated XML %s ", (xml_str,))
         return xml_str
 
 
@@ -714,6 +713,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.driver_format = None
         self.driver_cache = None
         self.driver_discard = None
+        self.driver_io = None
         self.source_path = None
         self.source_protocol = None
         self.source_name = None
@@ -757,6 +757,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 drv.set("cache", self.driver_cache)
             if self.driver_discard is not None:
                 drv.set("discard", self.driver_discard)
+            if self.driver_io is not None:
+                drv.set("io", self.driver_io)
             dev.append(drv)
 
         if self.source_type == "file":
@@ -854,6 +856,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.driver_format = c.get('type')
                 self.driver_cache = c.get('cache')
                 self.driver_discard = c.get('discard')
+                self.driver_io = c.get('io')
             elif c.tag == 'source':
                 if self.source_type == 'file':
                     self.source_path = c.get('file')
@@ -1250,6 +1253,84 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             dev.append(bandwidth)
 
         return dev
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestInterface, self).parse_dom(xmldoc)
+
+        self.net_type = xmldoc.get('type')
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'mac':
+                self.mac_addr = c.get('address')
+            elif c.tag == 'model':
+                self.model = c.get('type')
+            elif c.tag == 'driver':
+                self.driver_name = c.get('name')
+                self.vhost_queues = c.get('queues')
+            elif c.tag == 'source':
+                if self.net_type == 'direct':
+                    self.source_dev = c.get('dev')
+                    self.source_mode = c.get('mode', 'private')
+                elif self.net_type == 'vhostuser':
+                    self.vhostuser_type = c.get('type')
+                    self.vhostuser_mode = c.get('mode')
+                    self.vhostuser_path = c.get('path')
+                elif self.net_type == 'hostdev':
+                    for sub in c.getchildren():
+                        if sub.tag == 'address' and sub.get('type') == 'pci':
+                            # strip the 0x prefix on each attribute since
+                            # format_dom puts them back on - note that
+                            # LibvirtConfigGuestHostdevPCI does not do this...
+                            self.source_dev = (
+                                pci_utils.get_pci_address(
+                                    sub.get('domain')[2:],
+                                    sub.get('bus')[2:],
+                                    sub.get('slot')[2:],
+                                    sub.get('function')[2:]
+                                )
+                            )
+                else:
+                    self.source_dev = c.get('bridge')
+            elif c.tag == 'target':
+                self.target_dev = c.get('dev')
+            elif c.tag == 'script':
+                self.script = c.get('path')
+            elif c.tag == 'vlan':
+                # NOTE(mriedem): The vlan element can have multiple tag
+                # sub-elements but we're currently only storing a single tag
+                # id in the vlan attribute.
+                for sub in c.getchildren():
+                    if sub.tag == 'tag' and sub.get('id'):
+                        self.vlan = sub.get('id')
+                        break
+            elif c.tag == 'virtualport':
+                self.vporttype = c.get('type')
+                for sub in c.getchildren():
+                    if sub.tag == 'parameters':
+                        for k, v in dict(sub.attrib).items():
+                            self.add_vport_param(k, v)
+            elif c.tag == 'filterref':
+                self.filtername = c.get('filter')
+                for sub in c.getchildren():
+                    if sub.tag == 'parameter':
+                        self.add_filter_param(sub.get('name'),
+                                              sub.get('value'))
+            elif c.tag == 'bandwidth':
+                for sub in c.getchildren():
+                    # Note that only average is mandatory, burst and peak are
+                    # optional (and all are ints).
+                    if sub.tag == 'inbound':
+                        self.vif_inbound_average = int(sub.get('average'))
+                        if sub.get('burst'):
+                            self.vif_inbound_burst = int(sub.get('burst'))
+                        if sub.get('peak'):
+                            self.vif_inbound_peak = int(sub.get('peak'))
+                    elif sub.tag == 'outbound':
+                        self.vif_outbound_average = int(sub.get('average'))
+                        if sub.get('burst'):
+                            self.vif_outbound_burst = int(sub.get('burst'))
+                        if sub.get('peak'):
+                            self.vif_outbound_peak = int(sub.get('peak'))
 
     def add_filter_param(self, key, value):
         self.filterparams.append({'key': key, 'value': value})
@@ -1858,6 +1939,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.sysinfo = None
         self.os_type = None
         self.os_loader = None
+        self.os_loader_type = None
         self.os_kernel = None
         self.os_initrd = None
         self.os_cmdline = None
@@ -1903,7 +1985,14 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         if self.os_kernel is not None:
             os.append(self._text_node("kernel", self.os_kernel))
         if self.os_loader is not None:
-            os.append(self._text_node("loader", self.os_loader))
+            # Generate XML nodes for UEFI boot.
+            if self.os_loader_type == "pflash":
+                loader = self._text_node("loader", self.os_loader)
+                loader.set("type", "pflash")
+                loader.set("readonly", "yes")
+                os.append(loader)
+            else:
+                os.append(self._text_node("loader", self.os_loader))
         if self.os_initrd is not None:
             os.append(self._text_node("initrd", self.os_initrd))
         if self.os_cmdline is not None:
@@ -1977,6 +2066,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
     def parse_dom(self, xmldoc):
         # Note: This cover only for: LibvirtConfigGuestDisks
         #                            LibvirtConfigGuestHostdevPCI
+        #                            LibvirtConfigGuestInterface
         #                            LibvirtConfigGuestUidMap
         #                            LibvirtConfigGuestGidMap
         #                            LibvirtConfigGuestCPU
@@ -1989,6 +2079,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         self.devices.append(obj)
                     elif d.tag == 'hostdev' and d.get('type') == 'pci':
                         obj = LibvirtConfigGuestHostdevPCI()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
+                    elif d.tag == 'interface':
+                        obj = LibvirtConfigGuestInterface()
                         obj.parse_dom(d)
                         self.devices.append(obj)
             if c.tag == 'idmap':

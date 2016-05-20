@@ -35,9 +35,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         super(TestGlanceStore, self).setUp()
         self.store = glance.GlanceStore()
 
-        self.flags(host='1.1.1.1',
-                   port=123,
-                   api_insecure=False, group='glance')
+        self.flags(api_servers=['http://localhost:9292'], group='glance')
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
                    group='xenserver')
@@ -61,7 +59,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
     def _get_params(self):
         return {'image_id': 'fake_image_uuid',
-                'endpoint': 'http://1.1.1.1:123',
+                'endpoint': 'http://localhost:9292',
                 'sr_path': '/fake/sr/path',
                 'extra_headers': {'X-Auth-Token': 'foobar',
                                   'X-Roles': '',
@@ -108,14 +106,16 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                  mock.call('glance', 'download_vhd2',
                            endpoint='http://10.0.0.1:9293',
                            **params)]
-        log_calls = [mock.call(mock.ANY, {'callback_result': '10.0.1.1',
-                                          'attempts': 3, 'attempt': 1,
-                                          'fn': 'download_vhd2',
-                                          'plugin': 'glance'}),
-                     mock.call(mock.ANY, {'callback_result': '10.0.0.1',
-                                          'attempts': 3, 'attempt': 2,
-                                          'fn': 'download_vhd2',
-                                          'plugin': 'glance'})]
+        log_calls = [mock.call(mock.ANY,
+                               {'callback_result': 'http://10.0.1.1:9292',
+                                'attempts': 3, 'attempt': 1,
+                                'fn': 'download_vhd2',
+                                'plugin': 'glance'}),
+                     mock.call(mock.ANY,
+                               {'callback_result': 'http://10.0.0.1:9293',
+                                'attempts': 3, 'attempt': 2,
+                                'fn': 'download_vhd2',
+                                'plugin': 'glance'})]
 
         glance_api_servers = ['10.0.1.1:9292',
                               'http://10.0.0.1:9293']

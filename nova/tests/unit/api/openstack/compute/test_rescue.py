@@ -13,19 +13,16 @@
 #   under the License.
 
 import mock
-from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import rescue as rescue_v2
 from nova.api.openstack.compute import rescue as rescue_v21
-from nova.api.openstack import extensions
 from nova import compute
+import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
 
 
@@ -44,6 +41,10 @@ def fake_compute_get(*args, **kwargs):
 
 
 class RescueTestV21(test.NoDBTestCase):
+
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+    image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
+
     def setUp(self):
         super(RescueTestV21, self).setUp()
 
@@ -139,16 +140,26 @@ class RescueTestV21(test.NoDBTestCase):
                           self.fake_req, UUID, body=body)
 
     @mock.patch('nova.compute.api.API.rescue')
+    def test_rescue_with_bad_image_specified(self, mock_compute_api_rescue):
+        body = {"rescue": {"adminPass": "ABC123",
+                           "rescue_image_ref": "img-id"}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._rescue,
+                          self.fake_req, UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.rescue')
     def test_rescue_with_image_specified(self, mock_compute_api_rescue):
         instance = fake_compute_get()
         body = {"rescue": {"adminPass": "ABC123",
-                           "rescue_image_ref": "img-id"}}
+            "rescue_image_ref": self.image_href}}
         resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
         self.assertEqual("ABC123", resp_json['adminPass'])
 
-        mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
-                                                   rescue_password=u'ABC123',
-                                                   rescue_image_ref=u'img-id')
+        mock_compute_api_rescue.assert_called_with(
+            mock.ANY,
+            instance,
+            rescue_password=u'ABC123',
+            rescue_image_ref=self.image_uuid)
 
     @mock.patch('nova.compute.api.API.rescue')
     def test_rescue_without_image_specified(self, mock_compute_api_rescue):
@@ -183,24 +194,6 @@ class RescueTestV21(test.NoDBTestCase):
         self.assertRaises(exception.ValidationError,
                           self.controller._rescue,
                           self.fake_req, UUID, body=body)
-
-
-class RescueTestV20(RescueTestV21):
-
-    def _set_up_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-rescue-with-image': 'fake'}
-        return rescue_v2.RescueController(ext_mgr)
-
-    def test_rescue_with_invalid_property(self):
-        # NOTE(cyeoh): input validation in original v2 code does not
-        # check for invalid properties.
-        pass
-
-    def test_rescue_disable_password(self):
-        # NOTE(cyeoh): Original v2.0 code does not support disabling
-        # the admin password being returned through a conf setting
-        pass
 
 
 class RescuePolicyEnforcementV21(test.NoDBTestCase):

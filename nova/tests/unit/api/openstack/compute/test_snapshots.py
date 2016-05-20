@@ -16,7 +16,6 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import volumes as volumes_v2
 from nova.api.openstack.compute import volumes as volumes_v21
 from nova import exception
 from nova import test
@@ -32,7 +31,7 @@ class SnapshotApiTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(SnapshotApiTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         self.stubs.Set(cinder.API, "create_snapshot",
                        fakes.stub_snapshot_create)
@@ -119,8 +118,3 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         self.assertIn('snapshots', resp_dict)
         resp_snapshots = resp_dict['snapshots']
         self.assertEqual(3, len(resp_snapshots))
-
-
-class SnapshotApiTestV2(SnapshotApiTestV21):
-    controller = volumes_v2.SnapshotController()
-    validation_error = webob.exc.HTTPBadRequest

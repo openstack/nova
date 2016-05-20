@@ -227,3 +227,16 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     @obj_base.remotable_classmethod
     def destroy(cls, context, ips):
         db.floating_ip_bulk_destroy(context, ips)
+
+
+# We don't want to register this object because it will not be passed
+# around on RPC, it just makes our lives a lot easier in the API when
+# dealing with floating IP operations
+@obj_base.NovaObjectRegistry.register_if(False)
+class NeutronFloatingIP(FloatingIP):
+    # Version 1.0: Initial Version
+    VERSION = '1.0'
+    fields = {
+        'id': fields.UUIDField(),
+        'fixed_ip_id': fields.UUIDField(nullable=True)
+    }

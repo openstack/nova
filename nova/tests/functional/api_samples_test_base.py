@@ -22,6 +22,8 @@ import six
 from nova import test
 from nova.tests.functional import integrated_helpers
 
+PROJECT_ID = "6f70656e737461636b20342065766572"
+
 
 class NoMatch(test.TestingException):
     pass
@@ -66,6 +68,27 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     sample_dir = None
     microversion = None
     _use_common_server_api_samples = False
+
+    def __init__(self, *args, **kwargs):
+        super(ApiSampleTestBase, self).__init__(*args, **kwargs)
+        self.subs = {}  # TODO(auggy): subs should really be a class
+
+    @property
+    def subs(self):
+        return self._subs
+
+    @subs.setter
+    def subs(self, value):
+        non_strings =  \
+            {k: v for k, v in value.items() if
+             (not k == 'compute_host') and
+             (not isinstance(v, six.string_types))}
+        if len(non_strings) > 0:
+            raise TypeError("subs can't contain non-string values:"
+                            "\n%(non_strings)s" %
+                            {'non_strings': non_strings})
+        else:
+            self._subs = value
 
     @classmethod
     def _get_sample_path(cls, name, dirname, suffix='', api_version=None):
@@ -125,9 +148,20 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             name, self.microversion), 'w') as outf:
             outf.write(data)
 
-    def _compare_result(self, subs, expected, result, result_str):
+    def _compare_result(self, expected, result, result_str):
+
         matched_value = None
-        if isinstance(expected, dict):
+        # None
+        if expected is None:
+            if result is None:
+                pass
+            elif result == u'':
+                pass  # TODO(auggy): known issue Bug#1544720
+            else:
+                raise NoMatch('%(result_str)s: Expected None, got %(result)s.'
+                        % {'result_str': result_str, 'result': result})
+        # dictionary
+        elif isinstance(expected, dict):
             if not isinstance(result, dict):
                 raise NoMatch('%(result_str)s: %(result)s is not a dict.'
                         % {'result_str': result_str, 'result': result})
@@ -149,9 +183,11 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                         {'ex_delta': ex_delta, 'result_str': result_str,
                            'res_delta': res_delta})
             for key in ex_keys:
-                res = self._compare_result(subs, expected[key], result[key],
+                # TODO(auggy): pass key name along as well for error reporting
+                res = self._compare_result(expected[key], result[key],
                                            result_str)
                 matched_value = res or matched_value
+        # list
         elif isinstance(expected, list):
             if not isinstance(result, list):
                 raise NoMatch(
@@ -163,7 +199,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             for res_obj in result:
                 for i, ex_obj in enumerate(expected):
                     try:
-                        matched_value = self._compare_result(subs, ex_obj,
+                        matched_value = self._compare_result(ex_obj,
                                                              res_obj,
                                                              result_str)
                         del expected[i]
@@ -185,6 +221,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             if error:
                 raise NoMatch('\n'.join(error))
+        # template string
         elif isinstance(expected, six.string_types) and '%' in expected:
             # NOTE(vish): escape stuff for regex
             for char in '[]<>?':
@@ -195,7 +232,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             if expected.startswith("%(int:"):
                 result = str(result)
                 expected = expected.replace('int:', '')
-            expected = expected % subs
+
+            expected = expected % self.subs
             expected = '^%s$' % expected
             match = re.match(expected, result)
             if not match:
@@ -209,12 +247,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             except IndexError:
                 if match.groups():
                     matched_value = match.groups()[0]
-        else:
-            if isinstance(expected, six.string_types):
-                # NOTE(danms): Ignore whitespace in this comparison
-                expected = expected.strip()
-                if isinstance(result, six.string_types):
-                    result = result.strip()
+        # string
+        elif isinstance(expected, six.string_types):
+
+            # NOTE(danms): Ignore whitespace in this comparison
+            expected = expected.strip()
+            if isinstance(result, six.string_types):
+                result = result.strip()
+
             if expected != result:
                 # NOTE(tdurakov):this attempt to parse string as JSON
                 # is needed for correct comparison of hypervisor.cpu_info,
@@ -225,7 +265,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 try:
                     expected = objectify(expected)
                     result = objectify(result)
-                    return self._compare_result(subs, expected, result,
+                    return self._compare_result(expected, result,
                                                 result_str)
                 except ValueError:
                     pass
@@ -235,6 +275,21 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                         '%(result)s' % {'expected': expected,
                                         'result_str': result_str,
                                         'result': result})
+        # int
+        elif isinstance(expected, (six.integer_types, float)):
+            if expected != result:
+                raise NoMatch(
+                        'Values do not match:\n'
+                        'Template: %(expected)s\n%(result_str)s: '
+                        '%(result)s' % {'expected': expected,
+                                        'result_str': result_str,
+                                        'result': result})
+
+        else:
+            raise ValueError(
+                'Unexpected type %(expected_type)s'
+                % {'expected_type': type(expected)})
+
         return matched_value
 
     def generalize_subs(self, subs, vanilla_regexes):
@@ -250,13 +305,32 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
     def _update_links(self, sample_data):
         """Process sample data and update version specific links."""
-        url_re = self._get_host() + "/v(2\.1|2)"
+        # replace version urls
+        url_re = self._get_host() + "/v(2|2\.1)/" + PROJECT_ID
         new_url = self._get_host() + "/" + self.api_major_version
+        if self._project_id:
+            new_url += "/" + PROJECT_ID
         updated_data = re.sub(url_re, new_url, sample_data)
+
+        # replace unversioned urls
+        url_re = self._get_host() + "/" + PROJECT_ID
+        new_url = self._get_host()
+        if self._project_id:
+            new_url += "/" + PROJECT_ID
+        updated_data = re.sub(url_re, new_url, updated_data)
         return updated_data
 
     def _verify_response(self, name, subs, response, exp_code,
                          update_links=True):
+
+        # Always also include the laundry list of base regular
+        # expressions for possible key values in our templates. Test
+        # specific patterns (the value of ``subs``) can override
+        # these.
+        regexes = self._get_regexes()
+        regexes.update(subs)
+        subs = regexes
+        self.subs = subs
         self.assertEqual(exp_code, response.status_code)
         response_data = response.content
         response_data = pretty_data(response_data)
@@ -273,7 +347,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             self._write_sample(name, response_data)
             sample_data = response_data
         else:
-            with file(self._get_sample(name,
+            with open(self._get_sample(name,
                                        self.microversion)) as sample:
                 sample_data = sample.read()
                 if update_links:
@@ -282,7 +356,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         try:
             template_data = objectify(template_data)
             response_data = objectify(response_data)
-            response_result = self._compare_result(subs, template_data,
+            response_result = self._compare_result(template_data,
                                                    response_data, "Response")
             # NOTE(danms): replace some of the subs with patterns for the
             # doc/api_samples check, which won't have things like the
@@ -291,9 +365,12 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             vanilla_regexes = self._get_regexes()
             subs['compute_host'] = vanilla_regexes['host_name']
             subs['id'] = vanilla_regexes['id']
+            subs['uuid'] = vanilla_regexes['uuid']
+            subs['image_id'] = vanilla_regexes['uuid']
             subs = self.generalize_subs(subs, vanilla_regexes)
+            self.subs = subs
             sample_data = objectify(sample_data)
-            self._compare_result(subs, template_data, sample_data, "Sample")
+            self._compare_result(template_data, sample_data, "Sample")
             return response_result
         except NoMatch:
             raise
@@ -351,57 +428,53 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
     def _get_compute_endpoint(self):
         # NOTE(sdague): "openstack" is stand in for project_id, it
         # should be more generic in future.
-        return '%s/%s' % (self._get_host(), 'openstack')
+        if self._project_id:
+            return '%s/%s' % (self._get_host(), PROJECT_ID)
+        else:
+            return self._get_host()
 
     def _get_vers_compute_endpoint(self):
         # NOTE(sdague): "openstack" is stand in for project_id, it
         # should be more generic in future.
-        return '%s/%s/%s' % (self._get_host(), self.api_major_version,
-                             'openstack')
+        if self._project_id:
+            return '%s/%s/%s' % (self._get_host(), self.api_major_version,
+                                 PROJECT_ID)
+        else:
+            return '%s/%s' % (self._get_host(), self.api_major_version)
 
     def _get_response(self, url, method, body=None, strip_version=False,
-                      api_version=None, headers=None):
+                      headers=None):
         headers = headers or {}
         headers['Content-Type'] = 'application/json'
         headers['Accept'] = 'application/json'
-        if api_version:
-            headers['X-OpenStack-Nova-API-Version'] = api_version
         return self.api.api_request(url, body=body, method=method,
                 headers=headers, strip_version=strip_version)
 
-    def _do_options(self, url, strip_version=False, api_version=None,
-                    headers=None):
+    def _do_options(self, url, strip_version=False, headers=None):
         return self._get_response(url, 'OPTIONS', strip_version=strip_version,
-                                  api_version=(api_version or
-                                               self.microversion),
                                   headers=headers)
 
-    def _do_get(self, url, strip_version=False, api_version=None,
-                headers=None):
+    def _do_get(self, url, strip_version=False, headers=None):
         return self._get_response(url, 'GET', strip_version=strip_version,
-                                  api_version=(api_version or
-                                               self.microversion),
                                   headers=headers)
 
-    def _do_post(self, url, name, subs, method='POST', api_version=None,
-                 headers=None):
-        body = self._read_template(name) % subs
+    def _do_post(self, url, name, subs, method='POST', headers=None):
+        self.subs = subs
+        body = self._read_template(name) % self.subs
         sample = self._get_sample(name, self.microversion)
         if self.generate_samples and not os.path.exists(sample):
                 self._write_sample(name, body)
-        return self._get_response(url, method, body,
-                                  api_version=(api_version or
-                                               self.microversion),
-                                  headers=headers)
+        return self._get_response(url, method, body, headers=headers)
 
-    def _do_put(self, url, name, subs, api_version=None, headers=None):
-        return self._do_post(url, name, subs, method='PUT',
-                             api_version=(api_version or
-                                          self.microversion),
-                             headers=headers)
+    def _do_put(self, url, name=None, subs=None, headers=None):
+        # name indicates that we have a body document. While the HTTP
+        # spec implies that PUT is supposed to have one, we have some
+        # APIs which don't.
+        if name:
+            return self._do_post(
+                url, name, subs, method='PUT', headers=headers)
+        else:
+            return self._get_response(url, 'PUT', headers=headers)
 
-    def _do_delete(self, url, api_version=None, headers=None):
-        return self._get_response(url, 'DELETE',
-                                  api_version=(api_version or
-                                               self.microversion),
-                                  headers=headers)
+    def _do_delete(self, url, headers=None):
+        return self._get_response(url, 'DELETE', headers=headers)

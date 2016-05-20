@@ -5,24 +5,22 @@
 # Translators:
 # Xiao Xi LIU <liuxx@cn.ibm.com>, 2014
 # 颜海峰 <yanheven@gmail.com>, 2014
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
-# zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-10-07 05:39+0000\n"
-"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
-"Language-Team: Chinese (China)\n"
-"Language: zh-CN\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:29+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2016-03-08 01:29+0000\n"
+"Last-Translator: Gaoxiao Zhu <zhu.gaoxiao@h3c.com>\n"
+"Language: zh-CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Chinese (China)\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "查找VDI失败"
@@ -50,20 +48,15 @@ msgid ""
 "Aggregate %(aggregate_id)s: unrecoverable state during operation on %(host)s"
 msgstr "聚集 %(aggregate_id)s：在 %(host)s 上执行操作期间，处于不可恢复状态"
 
+msgid "An error occurred while deallocating network."
+msgstr "重新分配网络时发生错误。"
+
 msgid "An error occurred while refreshing the network cache."
 msgstr "刷新网络缓存时发生错误。"
 
 #, python-format
-msgid "Attach volume failed: %s"
-msgstr "连接卷失败：%s"
-
-#, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "绑定PCI设备%(dev)s 到 %(dom)s 失败。"
-
-#, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr "不能迁移带有映射卷的实例%s "
 
 msgid "Cannot cleanup migration files"
 msgstr "无法清除迁移文件"
@@ -200,17 +193,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "必须设置环境变量'NETWORK_ID'。"
 
 #, python-format
-msgid "Environment: %s"
-msgstr "Environment: %s"
-
-#, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"针对“%(method)s”与 Glance 服务器“%(host)s:%(port)s”联系时出错，%(extra)s。"
-
-#, python-format
 msgid "Error copying key: %s"
 msgstr "复制key：%s 出错"
 
@@ -345,8 +327,8 @@ msgid "Error trying to reschedule"
 msgstr "尝试重新调度时出错"
 
 #, python-format
-msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "更新节点 %(node)s: %(e)s 资源时发生错误。"
+msgid "Error updating resources for node %(node)s."
+msgstr "更新节点 %(node)s资源时发生错误。"
 
 msgid "Error waiting for responses from neighbor cells"
 msgstr "等待来自相邻cell的响应发生错误"
@@ -358,10 +340,6 @@ msgstr "尝试清除镜像%s时出错"
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
 msgstr "写入 %(path)s: %(exception)s 出错"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr "从串口终端管道输入到虚拟机终端日志文件时发生错误。Error：%s"
 
 #, python-format
 msgid "Error: %s"
@@ -387,9 +365,6 @@ msgstr "运行%(name)s %(type)s-hook: %(obj)s时发生异常"
 
 msgid "Exception while creating table."
 msgstr "创建表时发生异常。"
-
-msgid "Exception while seeding instance_types table"
-msgstr "将 instance_types 表作为种子时发生异常"
 
 #, python-format
 msgid "Exception while waiting completion of volume snapshots: %s"
@@ -436,12 +411,6 @@ msgstr "未能将虚拟机 %(instance_name)s 状态更改为%(req_state)s"
 
 msgid "Failed to check if instance shared"
 msgstr "无法查询实例是否共享"
-
-#, python-format
-msgid ""
-"Failed to clean up the parameters on node %(node)s when unprovisioning the "
-"instance %(instance)s"
-msgstr "在注销 %(instance)s 实例时未能清除节点 %(node)s 上的参数"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
@@ -523,12 +492,12 @@ msgstr ""
 "%(requester)s。错误：%(error)s"
 
 #, python-format
-msgid "Failed to get metadata for instance id: %s"
-msgstr "未能针对实例标识获取元数据：%s"
+msgid "Failed to get metadata for IP: %s"
+msgstr "获取IP： %s元数据失败"
 
 #, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "为ip： %s获取元数据失败"
+msgid "Failed to get metadata for instance id: %s"
+msgstr "未能针对实例标识获取元数据：%s"
 
 msgid "Failed to get nw_info"
 msgstr "未能获取 nw_info"
@@ -578,6 +547,10 @@ msgstr "未能通知单元有关实例信息高速缓存更新的事项"
 #, python-format
 msgid "Failed to remove %(base_file)s, error was %(error)s"
 msgstr "删除 %(base_file)s 失败，错误是 %(error)s"
+
+#, python-format
+msgid "Failed to remove snapshot for VM %s"
+msgstr "移除 VM %s 快照失败"
 
 #, python-format
 msgid "Failed to request Ironic to provision instance %(inst)s: %(reason)s"
@@ -634,10 +607,6 @@ msgstr "未能卸载容器文件系统"
 
 msgid "Failed to umount container filesystem"
 msgstr "未能取消挂载容器文件系统"
-
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "未能理解规则 %s"
 
 msgid "Failed to unpause instance"
 msgstr "无法取消暂停实例"
@@ -696,12 +665,6 @@ msgstr "清除已连接的 VDI 时，发生故障"
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "运行%(name)s %(type)s-hook: %(obj)s时发生致命错误"
 
-msgid "FaultWrapper error"
-msgstr "FaultWrapper错误"
-
-msgid "Get version 2 connection error"
-msgstr "获取版本2连接出错"
-
 msgid "Guest does not have a console available"
 msgstr "Guest 没有控制台可用"
 
@@ -744,10 +707,6 @@ msgstr "没有找到接口%s"
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "server_string 无效：%s"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Keystone 发生故障：%s"
 
 #, python-format
 msgid "Live Migration failure: %s"
@@ -842,19 +801,11 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "nova-network: %s中不允许访问数据库"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "对于类型为 %s 的匹配项，不存在任何处理程序"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "未保存对 %s 的处理"
 
 msgid "Not all properties needed are implemented in the compute driver"
 msgstr "在计算驱动程序中未实现所有必须的属性"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "未找到PCI设备 %s"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -924,11 +875,6 @@ msgstr "在%s 的Quobyte 卷仍然在用。"
 
 #, python-format
 msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr "代理调用%(method)s，返回一个错误：%(ret)r. args=%(args)r"
-
-#, python-format
-msgid ""
 "The agent call to %(method)s returned an invalid response: %(ret)r. args="
 "%(args)r"
 msgstr "代理调用%(method)s，返回一个无效响应：%(ret)r. args=%(args)r"
@@ -947,6 +893,10 @@ msgstr "传输数据失败"
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr "无法访问浮动IP %s"
+
+#, python-format
+msgid "Unable to access floating IP for %s"
+msgstr "无法访问 %s的浮动IP"
 
 msgid "Unable to access the rescue disk"
 msgstr "不能访问营救盘"
@@ -969,6 +919,9 @@ msgstr "无法创建停顿VM的快照，禁用停顿后再尝试一次。"
 
 msgid "Unable to destroy VBD"
 msgstr "不能销毁VBD"
+
+msgid "Unable to determine the glance API version"
+msgstr "无法判断Glance API版本。"
 
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
@@ -996,14 +949,6 @@ msgstr "不能为SR引入VDI"
 msgid "Unable to introduce VDI on SR"
 msgstr "不能在SR上引入VDI"
 
-msgid ""
-"Unable to join. It is possible that either another node exists with the same "
-"name, or this node just restarted. We will try again in a short while to "
-"make sure."
-msgstr ""
-"无法加入。可能存在另一具有相同名称的节点，或此节点刚才已重新启动。我们稍后将"
-"再次进行尝试以进行核实。"
-
 msgid "Unable to load the virtualization driver"
 msgstr "无法加载虚拟驱动"
 
@@ -1019,10 +964,6 @@ msgstr "无法为含服务器详细信息的虚拟机 %(vm_uuid)s 获取RRD XML�
 #, python-format
 msgid "Unable to parse rrd of %s"
 msgstr "不能解析 %s 的rrd"
-
-#, python-format
-msgid "Unable to preallocate image at path: %(path)s"
-msgstr "不能砸路径：%(path)s上面预分配镜像"
 
 #, python-format
 msgid "Unable to retrieve storage policy with name %s"
@@ -1043,16 +984,15 @@ msgstr "无法更新端口 %s 的主机"
 msgid "Unable to update instance VNIC index for port %s."
 msgstr "无法更新实例VNIC的索引的端口 %s"
 
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "发生意外错误 %(ex_name)s ：%(ex_str)s"
-
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "意外构筑失败，未重新安排构筑。"
 
 #, python-format
 msgid "Unexpected error while checking process %(pid)s."
 msgstr "检查进程 %(pid)s 时，发生未知错误。"
+
+msgid "Unexpected error while reporting service status"
+msgstr "当报告服务状态时发生未知错误"
 
 msgid "Unexpected exception in API method"
 msgstr "在API方法中发生未预料的异常"

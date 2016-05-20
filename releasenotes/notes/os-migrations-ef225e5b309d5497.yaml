@@ -1,0 +1,8 @@
+---
+deprecations:
+  -
+    The old top-level resource `/os-migrations` is deprecated, it won't be
+    extended anymore. And migration_type for /os-migrations, also add ref
+    link to the /servers/{uuid}/migrations/{id} for it when the migration
+    is an in-progress live-migration. This has been added in microversion
+    2.23.

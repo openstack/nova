@@ -13,6 +13,7 @@
 from oslo_log import log as logging
 
 from nova import objects
+from nova.objects import fields
 from nova.scheduler import filters
 from nova.virt import hardware
 
@@ -22,15 +23,57 @@ LOG = logging.getLogger(__name__)
 class NUMATopologyFilter(filters.BaseHostFilter):
     """Filter on requested NUMA topology."""
 
+    def _satisfies_cpu_policy(self, host_state, extra_specs, image_props):
+        """Check that the host_state provided satisfies any available
+        CPU policy requirements.
+        """
+        host_topology, _ = hardware.host_topology_and_format_from_host(
+            host_state)
+        # NOTE(stephenfin): There can be conflicts between the policy
+        # specified by the image and that specified by the instance, but this
+        # is not the place to resolve these. We do this during scheduling.
+        cpu_policy = [extra_specs.get('hw:cpu_policy'),
+                      image_props.get('hw_cpu_policy')]
+        cpu_thread_policy = [extra_specs.get('hw:cpu_thread_policy'),
+                             image_props.get('hw_cpu_thread_policy')]
+
+        if not host_topology:
+            return True
+
+        if fields.CPUAllocationPolicy.DEDICATED not in cpu_policy:
+            return True
+
+        if fields.CPUThreadAllocationPolicy.REQUIRE not in cpu_thread_policy:
+            return True
+
+        for cell in host_topology.cells:
+            # the presence of siblings indicates hyperthreading (HT)
+            if not cell.siblings:
+                LOG.debug("%(host_state)s fails CPU policy requirements. "
+                          "Host does not have hyperthreading or "
+                          "hyperthreading is disabled, but 'require' threads "
+                          "policy was requested.", {'host_state': host_state})
+                return False
+
+        return True
+
     def host_passes(self, host_state, spec_obj):
         ram_ratio = host_state.ram_allocation_ratio
         cpu_ratio = host_state.cpu_allocation_ratio
+        extra_specs = spec_obj.flavor.extra_specs
+        image_props = spec_obj.image.properties
         requested_topology = spec_obj.numa_topology
         host_topology, _fmt = hardware.host_topology_and_format_from_host(
                 host_state)
         pci_requests = spec_obj.pci_requests
+
         if pci_requests:
             pci_requests = pci_requests.requests
+
+        if not self._satisfies_cpu_policy(host_state, extra_specs,
+                                          image_props):
+            return False
+
         if requested_topology and host_topology:
             limits = objects.NUMATopologyLimits(
                 cpu_allocation_ratio=cpu_ratio,

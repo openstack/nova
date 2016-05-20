@@ -18,13 +18,14 @@ Tests For CellsScheduler
 import copy
 import time
 
-from oslo_config import cfg
+import mock
 from oslo_utils import uuidutils
 
 from nova import block_device
 from nova.cells import filters
 from nova.cells import weights
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -33,14 +34,10 @@ from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_block_device
+from nova.tests import uuidsentinel
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('scheduler_retries', 'nova.cells.scheduler', group='cells')
-CONF.import_opt('scheduler_filter_classes', 'nova.cells.scheduler',
-                group='cells')
-CONF.import_opt('scheduler_weight_classes', 'nova.cells.scheduler',
-                group='cells')
+CONF = nova.conf.CONF
 
 
 class FakeFilterClass1(filters.BaseCellFilter):
@@ -106,7 +103,7 @@ class CellsSchedulerTestCase(test.TestCase):
                           'name': 'instance-00000001',
                           'hostname': 'meow',
                           'display_name': 'moo',
-                          'image_ref': 'fake_image_ref',
+                          'image_ref': uuidsentinel.fake_image_ref,
                           'user_id': self.ctxt.user_id,
                           # Test these as lists
                           'metadata': {'moo': 'cow'},
@@ -118,8 +115,9 @@ class CellsSchedulerTestCase(test.TestCase):
         block_device_mapping = [
                 objects.BlockDeviceMapping(context=self.ctxt,
                     **fake_block_device.FakeDbBlockDeviceDict(
-                            block_device.create_image_bdm('fake_image_ref'),
-                            anon=True))
+                            block_device.create_image_bdm(
+                                uuidsentinel.fake_image_ref),
+                        anon=True))
                ]
 
         def _fake_instance_update_at_top(_ctxt, instance):
@@ -142,7 +140,39 @@ class CellsSchedulerTestCase(test.TestCase):
             self.assertEqual('meow', instance['hostname'])
             self.assertEqual('moo-%d' % (count + 1),
                              instance['display_name'])
-            self.assertEqual('fake_image_ref', instance['image_ref'])
+            self.assertEqual(uuidsentinel.fake_image_ref,
+                             instance['image_ref'])
+
+    @mock.patch('nova.objects.Instance.update')
+    def test_create_instances_here_pops_problematic_properties(self,
+                                                               mock_update):
+        values = {
+            'uuid': uuidsentinel.instance,
+            'metadata': [],
+            'id': 1,
+            'name': 'foo',
+            'info_cache': 'bar',
+            'security_groups': 'not secure',
+            'flavor': 'chocolate',
+            'pci_requests': 'no thanks',
+            'ec2_ids': 'prime',
+        }
+
+        @mock.patch.object(self.scheduler.compute_api,
+                           'create_db_entry_for_new_instance')
+        def test(mock_create_db):
+            self.scheduler._create_instances_here(
+                self.ctxt, [uuidsentinel.instance], values,
+                objects.Flavor(), 'foo', [], [])
+
+        test()
+
+        # NOTE(danms): Make sure that only the expected properties
+        # are applied to the instance object. The complex ones that
+        # would have been mangled over RPC should be removed.
+        mock_update.assert_called_once_with(
+            {'uuid': uuidsentinel.instance,
+             'metadata': {}})
 
     def test_build_instances_selects_child_cell(self):
         # Make sure there's no capacity info so we're sure to
@@ -325,20 +355,11 @@ class CellsSchedulerTestCase(test.TestCase):
 
     def test_filter_schedule_skipping(self):
         # if a filter handles scheduling, short circuit
-
-        def _grab(filter_properties):
-            return None
-
-        self.stubs.Set(self.scheduler, '_grab_target_cells', _grab)
-
-        def _test(self, *args):
-            raise test.TestingException("shouldn't be called")
-
-        try:
-            self.scheduler._schedule_build_to_cells(None, None, None, _test,
-                                                    None)
-        except test.TestingException:
-            self.fail("Scheduling did not properly short circuit")
+        mock_func = mock.Mock()
+        self.scheduler._grab_target_cells = mock.Mock(return_value=None)
+        self.scheduler._schedule_build_to_cells(None, None, None,
+                                                mock_func, None)
+        mock_func.assert_not_called()
 
     def test_cells_filter_args_correct(self):
         # Re-init our fakes with some filters.

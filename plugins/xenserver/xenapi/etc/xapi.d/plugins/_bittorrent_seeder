@@ -17,6 +17,8 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
 """Seed a bittorent image. This file should not be executed directly, rather it
 should be kicked off by the `bittorent` dom0 plugin."""
 
@@ -34,9 +36,10 @@ logging = pluginlib_nova.logging
 
 
 def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
-    """
-    do the UNIX double-fork magic, see Stevens' "Advanced
-    Programming in the UNIX Environment" for details (ISBN 0201563177)
+    """Daemonize the current process.
+
+    Do the UNIX double-fork magic, see Stevens' "Advanced Programming
+    in the UNIX Environment" for details (ISBN 0201563177).
 
     Source: http://www.jejik.com/articles/2007/02/
                 a_simple_unix_linux_daemon_in_python/
@@ -47,7 +50,7 @@ def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         if pid > 0:
             # first parent returns
             return False
-    except OSError, e:
+    except OSError, e:  # noqa
         logging.error("fork #1 failed: %d (%s)" % (
             e.errno, e.strerror))
         return
@@ -63,7 +66,7 @@ def _daemonize(stdin='/dev/null', stdout='/dev/null', stderr='/dev/null'):
         if pid > 0:
             # second parent exits
             sys.exit(0)
-    except OSError, e:
+    except OSError, e:  # noqa
         logging.error("fork #2 failed: %d (%s)" % (
             e.errno, e.strerror))
         return

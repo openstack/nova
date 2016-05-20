@@ -1,0 +1,20 @@
+---
+upgrade:
+
+  - A new ``use_neutron`` option is introduced for configuring Nova to
+    use Neutron for its network backend. This replaces the deprecated
+    ``network_api_class`` and ``security_group_api`` options, which are
+    confusing to use and error prone. The default for this new value
+    is ``False`` to match existing defaults, however if
+    ``network_api_class`` and/or ``security_group_api`` are set to
+    known Neutron values, Neutron networking will still be used as
+    before. Installations are encourged to set this config option soon
+    after upgrade as the legacy options will be removed by the Newton
+    release.
+
+deprecations:
+
+  - Deprecate ``volume_api_class`` and ``network_api_class`` config
+    options. We only have one sensible backend for either of
+    these. These options will be removed and turned into constants in
+    Newton.

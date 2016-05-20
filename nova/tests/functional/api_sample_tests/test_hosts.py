@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -35,31 +32,25 @@ class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_host_startup(self):
         response = self._do_get('os-hosts/%s/startup' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-startup', subs, response, 200)
+        self._verify_response('host-get-startup', {}, response, 200)
 
     def test_host_reboot(self):
         response = self._do_get('os-hosts/%s/reboot' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-reboot', subs, response, 200)
+        self._verify_response('host-get-reboot', {}, response, 200)
 
     def test_host_shutdown(self):
         response = self._do_get('os-hosts/%s/shutdown' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-shutdown', subs, response, 200)
+        self._verify_response('host-get-shutdown', {}, response, 200)
 
     def test_host_maintenance(self):
         response = self._do_put('os-hosts/%s' % self.compute.host,
                                 'host-put-maintenance-req', {})
-        subs = self._get_regexes()
-        self._verify_response('host-put-maintenance-resp', subs, response, 200)
+        self._verify_response('host-put-maintenance-resp', {}, response, 200)
 
     def test_host_get(self):
         response = self._do_get('os-hosts/%s' % self.compute.host)
-        subs = self._get_regexes()
-        self._verify_response('host-get-resp', subs, response, 200)
+        self._verify_response('host-get-resp', {}, response, 200)
 
     def test_hosts_list(self):
         response = self._do_get('os-hosts')
-        subs = self._get_regexes()
-        self._verify_response('hosts-list-resp', subs, response, 200)
+        self._verify_response('hosts-list-resp', {}, response, 200)

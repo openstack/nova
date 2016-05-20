@@ -33,78 +33,45 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography import x509
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import fileutils
 import paramiko
 import six
 
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _, _LE
-from nova import paths
 from nova import utils
 
 
 LOG = logging.getLogger(__name__)
 
-crypto_opts = [
-    cfg.StrOpt('ca_file',
-               default='cacert.pem',
-               help=_('Filename of root CA')),
-    cfg.StrOpt('key_file',
-               default=os.path.join('private', 'cakey.pem'),
-               help=_('Filename of private key')),
-    cfg.StrOpt('crl_file',
-               default='crl.pem',
-               help=_('Filename of root Certificate Revocation List')),
-    cfg.StrOpt('keys_path',
-               default=paths.state_path_def('keys'),
-               help=_('Where we keep our keys')),
-    cfg.StrOpt('ca_path',
-               default=paths.state_path_def('CA'),
-               help=_('Where we keep our root CA')),
-    cfg.BoolOpt('use_project_ca',
-                default=False,
-                help=_('Should we use a CA for each project?')),
-    cfg.StrOpt('user_cert_subject',
-               default='/C=US/ST=California/O=OpenStack/'
-                       'OU=NovaDev/CN=%.16s-%.16s-%s',
-               help=_('Subject for certificate for users, %s for '
-                      'project, user, timestamp')),
-    cfg.StrOpt('project_cert_subject',
-               default='/C=US/ST=California/O=OpenStack/'
-                       'OU=NovaDev/CN=project-ca-%.16s-%s',
-               help=_('Subject for certificate for projects, %s for '
-                      'project, timestamp')),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(crypto_opts)
+CONF = nova.conf.CONF
 
 
 def ca_folder(project_id=None):
-    if CONF.use_project_ca and project_id:
-        return os.path.join(CONF.ca_path, 'projects', project_id)
-    return CONF.ca_path
+    if CONF.crypto.use_project_ca and project_id:
+        return os.path.join(CONF.crypto.ca_path, 'projects', project_id)
+    return CONF.crypto.ca_path
 
 
 def ca_path(project_id=None):
-    return os.path.join(ca_folder(project_id), CONF.ca_file)
+    return os.path.join(ca_folder(project_id), CONF.crypto.ca_file)
 
 
 def key_path(project_id=None):
-    return os.path.join(ca_folder(project_id), CONF.key_file)
+    return os.path.join(ca_folder(project_id), CONF.crypto.key_file)
 
 
 def crl_path(project_id=None):
-    return os.path.join(ca_folder(project_id), CONF.crl_file)
+    return os.path.join(ca_folder(project_id), CONF.crypto.crl_file)
 
 
 def fetch_ca(project_id=None):
-    if not CONF.use_project_ca:
+    if not CONF.crypto.use_project_ca:
         project_id = None
     ca_file_path = ca_path(project_id)
     if not os.path.exists(ca_file_path):
@@ -173,7 +140,7 @@ def generate_key_pair(bits=2048):
 
 def fetch_crl(project_id):
     """Get crl file for project."""
-    if not CONF.use_project_ca:
+    if not CONF.crypto.use_project_ca:
         project_id = None
     crl_file_path = crl_path(project_id)
     if not os.path.exists(crl_file_path):
@@ -219,7 +186,7 @@ def revoke_cert(project_id, file_name):
         utils.execute('openssl', 'ca', '-config', './openssl.cnf', '-revoke',
                       file_name, cwd=ca_folder(project_id))
         utils.execute('openssl', 'ca', '-gencrl', '-config', './openssl.cnf',
-                      '-out', CONF.crl_file, cwd=ca_folder(project_id))
+                      '-out', CONF.crypto.crl_file, cwd=ca_folder(project_id))
     except OSError:
         raise exception.ProjectNotFound(project_id=project_id)
     except processutils.ProcessExecutionError:
@@ -252,12 +219,13 @@ def revoke_certs_by_user_and_project(user_id, project_id):
 
 def _project_cert_subject(project_id):
     """Helper to generate user cert subject."""
-    return CONF.project_cert_subject % (project_id, utils.isotime())
+    return CONF.crypto.project_cert_subject % (project_id, utils.isotime())
 
 
 def _user_cert_subject(user_id, project_id):
     """Helper to generate user cert subject."""
-    return CONF.user_cert_subject % (project_id, user_id, utils.isotime())
+    return CONF.crypto.user_cert_subject % (project_id, user_id,
+                                            utils.isotime())
 
 
 def generate_x509_cert(user_id, project_id, bits=2048):
@@ -355,7 +323,7 @@ def generate_vpn_files(project_id):
 
 
 def sign_csr(csr_text, project_id=None):
-    if not CONF.use_project_ca:
+    if not CONF.crypto.use_project_ca:
         project_id = None
     if not project_id:
         return _sign_csr(csr_text, ca_folder())

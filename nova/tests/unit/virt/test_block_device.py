@@ -19,8 +19,10 @@ import six
 from nova import block_device
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import fields
 from nova import test
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers
 from nova.virt import block_device as driver_block_device
@@ -39,7 +41,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'blank': driver_block_device.DriverBlankBlockDevice
     }
 
-    swap_bdm = block_device.BlockDeviceDict(
+    swap_bdm_dict = block_device.BlockDeviceDict(
         {'id': 1, 'instance_uuid': 'fake-instance',
          'device_name': '/dev/sdb1',
          'source_type': 'blank',
@@ -59,7 +61,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'device_name': '/dev/sdb1',
         'swap_size': 2}
 
-    ephemeral_bdm = block_device.BlockDeviceDict(
+    ephemeral_bdm_dict = block_device.BlockDeviceDict(
         {'id': 2, 'instance_uuid': 'fake-instance',
          'device_name': '/dev/sdc1',
          'source_type': 'blank',
@@ -84,7 +86,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'virtual_name': 'ephemeral0',
         'num': 0}
 
-    volume_bdm = block_device.BlockDeviceDict(
+    volume_bdm_dict = block_device.BlockDeviceDict(
         {'id': 3, 'instance_uuid': 'fake-instance',
          'device_name': '/dev/sda1',
          'source_type': 'volume',
@@ -112,7 +114,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': False}
 
-    snapshot_bdm = block_device.BlockDeviceDict(
+    snapshot_bdm_dict = block_device.BlockDeviceDict(
         {'id': 4, 'instance_uuid': 'fake-instance',
          'device_name': '/dev/sda2',
          'delete_on_termination': True,
@@ -140,7 +142,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True}
 
-    image_bdm = block_device.BlockDeviceDict(
+    image_bdm_dict = block_device.BlockDeviceDict(
         {'id': 5, 'instance_uuid': 'fake-instance',
          'device_name': '/dev/sda2',
          'delete_on_termination': True,
@@ -168,7 +170,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True}
 
-    blank_bdm = block_device.BlockDeviceDict(
+    blank_bdm_dict = block_device.BlockDeviceDict(
         {'id': 6, 'instance_uuid': 'fake-instance',
          'device_name': '/dev/sda2',
          'delete_on_termination': True,
@@ -202,11 +204,26 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.virt_driver = self.mox.CreateMock(driver.ComputeDriver)
         self.context = context.RequestContext('fake_user',
                                               'fake_project')
+        # create bdm objects for testing
+        self.swap_bdm = fake_block_device.fake_bdm_object(
+            self.context, self.swap_bdm_dict)
+        self.ephemeral_bdm = fake_block_device.fake_bdm_object(
+            self.context, self.ephemeral_bdm_dict)
+        self.volume_bdm = fake_block_device.fake_bdm_object(
+            self.context, self.volume_bdm_dict)
+        self.snapshot_bdm = fake_block_device.fake_bdm_object(
+            self.context, self.snapshot_bdm_dict)
+        self.image_bdm = fake_block_device.fake_bdm_object(
+            self.context, self.image_bdm_dict)
+        self.blank_bdm = fake_block_device.fake_bdm_object(
+            self.context, self.blank_bdm_dict)
 
     def test_no_device_raises(self):
         for name, cls in self.driver_classes.items():
+            bdm = fake_block_device.fake_bdm_object(
+                    self.context, {'no_device': True})
             self.assertRaises(driver_block_device._NotTransformable,
-                              cls, {'no_device': True})
+                              cls, bdm)
 
     def _test_driver_device(self, name):
         db_bdm = getattr(self, "%s_bdm" % name)
@@ -263,15 +280,17 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
     def _test_driver_default_size(self, name):
         size = 'swap_size' if name == 'swap' else 'size'
-        no_size_bdm = getattr(self, "%s_bdm" % name).copy()
+        no_size_bdm = getattr(self, "%s_bdm_dict" % name).copy()
         no_size_bdm['volume_size'] = None
 
-        driver_bdm = self.driver_classes[name](no_size_bdm)
+        driver_bdm = self.driver_classes[name](
+            fake_block_device.fake_bdm_object(self.context, no_size_bdm))
         self.assertEqual(driver_bdm[size], 0)
 
         del no_size_bdm['volume_size']
 
-        driver_bdm = self.driver_classes[name](no_size_bdm)
+        driver_bdm = self.driver_classes[name](
+            fake_block_device.fake_bdm_object(self.context, no_size_bdm))
         self.assertEqual(driver_bdm[size], 0)
 
     def test_driver_swap_block_device(self):
@@ -318,10 +337,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
     def test_driver_image_block_device_destination_local(self):
         self._test_driver_device('image')
-        bdm = self.image_bdm.copy()
+        bdm = self.image_bdm_dict.copy()
         bdm['destination_type'] = 'local'
         self.assertRaises(driver_block_device._InvalidType,
-                          self.driver_classes['image'], bdm)
+                          self.driver_classes['image'],
+                          fake_block_device.fake_bdm_object(self.context, bdm))
 
     def test_driver_blank_block_device(self):
         self._test_driver_device('blank')
@@ -615,9 +635,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         matchers.DictMatches(expected_conn_info))
 
     def test_snapshot_attach_no_volume(self):
-        no_volume_snapshot = self.snapshot_bdm.copy()
+        no_volume_snapshot = self.snapshot_bdm_dict.copy()
         no_volume_snapshot['volume_id'] = None
-        test_bdm = self.driver_classes['snapshot'](no_volume_snapshot)
+        test_bdm = self.driver_classes['snapshot'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_volume_snapshot))
 
         snapshot = {'id': 'fake-volume-id-1',
                     'attach_status': 'detached'}
@@ -643,9 +665,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         # Tests that the volume created from the snapshot has the same AZ as
         # the instance.
         self.flags(cross_az_attach=False, group='cinder')
-        no_volume_snapshot = self.snapshot_bdm.copy()
+        no_volume_snapshot = self.snapshot_bdm_dict.copy()
         no_volume_snapshot['volume_id'] = None
-        test_bdm = self.driver_classes['snapshot'](no_volume_snapshot)
+        test_bdm = self.driver_classes['snapshot'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_volume_snapshot))
 
         snapshot = {'id': 'fake-volume-id-1',
                     'attach_status': 'detached'}
@@ -669,9 +693,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
 
     def test_snapshot_attach_fail_volume(self):
-        fail_volume_snapshot = self.snapshot_bdm.copy()
+        fail_volume_snapshot = self.snapshot_bdm_dict.copy()
         fail_volume_snapshot['volume_id'] = None
-        test_bdm = self.driver_classes['snapshot'](fail_volume_snapshot)
+        test_bdm = self.driver_classes['snapshot'](
+                fake_block_device.fake_bdm_object(
+                        self.context, fail_volume_snapshot))
 
         snapshot = {'id': 'fake-volume-id-1',
                     'attach_status': 'detached'}
@@ -728,9 +754,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
     def test_image_attach_no_volume(self):
-        no_volume_image = self.image_bdm.copy()
+        no_volume_image = self.image_bdm_dict.copy()
         no_volume_image['volume_id'] = None
-        test_bdm = self.driver_classes['image'](no_volume_image)
+        test_bdm = self.driver_classes['image'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_volume_image))
 
         image = {'id': 'fake-image-id-1'}
         volume = {'id': 'fake-volume-id-2',
@@ -753,9 +781,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         # Tests that the volume created from the image has the same AZ as the
         # instance.
         self.flags(cross_az_attach=False, group='cinder')
-        no_volume_image = self.image_bdm.copy()
+        no_volume_image = self.image_bdm_dict.copy()
         no_volume_image['volume_id'] = None
-        test_bdm = self.driver_classes['image'](no_volume_image)
+        test_bdm = self.driver_classes['image'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_volume_image))
 
         image = {'id': 'fake-image-id-1'}
         volume = {'id': 'fake-volume-id-2',
@@ -776,9 +806,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
 
     def test_image_attach_fail_volume(self):
-        fail_volume_image = self.image_bdm.copy()
+        fail_volume_image = self.image_bdm_dict.copy()
         fail_volume_image['volume_id'] = None
-        test_bdm = self.driver_classes['image'](fail_volume_image)
+        test_bdm = self.driver_classes['image'](
+                fake_block_device.fake_bdm_object(
+                        self.context, fail_volume_image))
 
         image = {'id': 'fake-image-id-1'}
         volume = {'id': 'fake-volume-id-2',
@@ -831,9 +863,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
     def test_blank_attach_fail_volume(self):
-        no_blank_volume = self.blank_bdm.copy()
+        no_blank_volume = self.blank_bdm_dict.copy()
         no_blank_volume['volume_id'] = None
-        test_bdm = self.driver_classes['blank'](no_blank_volume)
+        test_bdm = self.driver_classes['blank'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_blank_volume))
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
                                                    **{'uuid': 'fake-uuid'})
         volume = {'id': 'fake-volume-id-2',
@@ -863,9 +897,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 self.context, volume['id'])
 
     def test_blank_attach_volume(self):
-        no_blank_volume = self.blank_bdm.copy()
+        no_blank_volume = self.blank_bdm_dict.copy()
         no_blank_volume['volume_id'] = None
-        test_bdm = self.driver_classes['blank'](no_blank_volume)
+        test_bdm = self.driver_classes['blank'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_blank_volume))
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
                                                    **{'uuid': 'fake-uuid'})
         volume_class = self.driver_classes['volume']
@@ -892,9 +928,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         # Tests that the blank volume created is in the same availability zone
         # as the instance.
         self.flags(cross_az_attach=False, group='cinder')
-        no_blank_volume = self.blank_bdm.copy()
+        no_blank_volume = self.blank_bdm_dict.copy()
         no_blank_volume['volume_id'] = None
-        test_bdm = self.driver_classes['blank'](no_blank_volume)
+        test_bdm = self.driver_classes['blank'](
+                fake_block_device.fake_bdm_object(
+                        self.context, no_blank_volume))
         updates = {'uuid': 'fake-uuid', 'availability_zone': 'test-az'}
         instance = fake_instance.fake_instance_obj(mock.sentinel.ctx,
                                                    **updates)
@@ -918,9 +956,10 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 self.assertEqual('fake-volume-id-2', test_bdm.volume_id)
 
     def test_convert_block_devices(self):
+        bdms = objects.BlockDeviceMappingList(
+                objects=[self.volume_bdm, self.ephemeral_bdm])
         converted = driver_block_device._convert_block_devices(
-            self.driver_classes['volume'],
-            [self.volume_bdm, self.ephemeral_bdm])
+            self.driver_classes['volume'], bdms)
         self.assertEqual(converted, [self.volume_driver_bdm])
 
     def test_convert_all_volumes(self):
@@ -980,9 +1019,10 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         for bdm in (self.image_bdm, self.volume_bdm, self.swap_bdm,
                     self.ephemeral_bdm, self.snapshot_bdm):
             self.assertTrue(driver_block_device.is_implemented(bdm))
-        local_image = self.image_bdm.copy()
+        local_image = self.image_bdm_dict.copy()
         local_image['destination_type'] = 'local'
-        self.assertFalse(driver_block_device.is_implemented(local_image))
+        self.assertFalse(driver_block_device.is_implemented(
+            fake_block_device.fake_bdm_object(self.context, local_image)))
 
     def test_is_block_device_mapping(self):
         test_swap = self.driver_classes['swap'](self.swap_bdm)

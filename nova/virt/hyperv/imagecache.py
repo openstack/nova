@@ -18,11 +18,11 @@ Image caching and management.
 import os
 
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
 
+import nova.conf
 from nova import exception
 from nova import utils
 from nova.virt.hyperv import pathutils
@@ -30,8 +30,7 @@ from nova.virt import images
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
+CONF = nova.conf.CONF
 
 
 class ImageCache(object):
@@ -105,9 +104,7 @@ class ImageCache(object):
 
             if not vhd_path:
                 try:
-                    images.fetch(context, image_id, base_vhd_path,
-                                 instance.user_id,
-                                 instance.project_id)
+                    images.fetch(context, image_id, base_vhd_path)
 
                     format_ext = self._vhdutils.get_vhd_format(base_vhd_path)
                     vhd_path = base_vhd_path + '.' + format_ext.lower()

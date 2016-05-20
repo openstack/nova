@@ -28,7 +28,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(IronicDriverFieldsTestCase, self).setUp()
-        self.image_meta = ironic_utils.get_test_image_meta_object()
+        self.image_meta = ironic_utils.get_test_image_meta()
         self.flavor = ironic_utils.get_test_flavor()
         self.ctx = nova_context.get_admin_context()
         self.instance = fake_instance.fake_instance_obj(self.ctx)
@@ -57,7 +57,6 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
              'value': str(self.node.properties.get('local_gb', 0)),
              'op': 'add'}
         ]
-        self._expected_cleanup_patch = []
 
     def test_create_generic(self):
         node = ironic_utils.get_test_node(driver='pxe_fake')
@@ -129,9 +128,3 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                          'value': str(preserve), 'op': 'add', }]
             expected += self._expected_deploy_patch
             self.assertEqual(sorted(expected), sorted(patch))
-
-    def test_generic_get_cleanup_patch(self):
-        node = ironic_utils.get_test_node(driver='fake')
-        patch = patcher.create(node).get_cleanup_patch(self.instance, None,
-                                                       self.flavor)
-        self.assertEqual(self._expected_cleanup_patch, patch)

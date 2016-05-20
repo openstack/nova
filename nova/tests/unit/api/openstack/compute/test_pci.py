@@ -18,7 +18,6 @@ from webob import exc
 from nova.api.openstack.compute import pci
 from nova.api.openstack import wsgi
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -26,6 +25,7 @@ from nova.objects import pci_device_pool
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.objects import test_pci_device
+from nova.tests import uuidsentinel as uuids
 
 
 pci_stats = [{"count": 3,
@@ -61,12 +61,12 @@ class PciServerControllerTestV21(test.NoDBTestCase):
                                        }]}
         self._create_fake_instance()
         self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
+        self.pci_device.claim(self.inst.uuid)
         self.pci_device.allocate(self.inst)
 
     def _create_fake_instance(self):
         self.inst = objects.Instance()
-        self.inst.uuid = 'fake-inst-uuid'
+        self.inst.uuid = uuids.instance
         self.inst.pci_devices = objects.PciDeviceList()
 
     def _create_fake_pci_device(self):
@@ -74,8 +74,8 @@ class PciServerControllerTestV21(test.NoDBTestCase):
             return test_pci_device.fake_db_dev
 
         ctxt = context.get_admin_context()
-        self.stubs.Set(db, 'pci_device_get_by_addr',
-                       fake_pci_device_get_by_addr)
+        self.stub_out('nova.db.pci_device_get_by_addr',
+                      fake_pci_device_get_by_addr)
         self.pci_device = objects.PciDevice.get_by_dev_addr(ctxt, 1, 'a')
 
     def test_show(self):
@@ -155,7 +155,8 @@ class PciControlletestV21(test.NoDBTestCase):
         def fake_pci_device_get_by_id(context, id):
             return test_pci_device.fake_db_dev
 
-        self.stubs.Set(db, 'pci_device_get_by_id', fake_pci_device_get_by_id)
+        self.stub_out('nova.db.pci_device_get_by_id',
+                      fake_pci_device_get_by_id)
         req = fakes.HTTPRequest.blank('/os-pci/1', use_admin_context=True)
         result = self.controller.show(req, '1')
         dist = {'pci_device': {'address': 'a',
@@ -175,7 +176,8 @@ class PciControlletestV21(test.NoDBTestCase):
         def fake_pci_device_get_by_id(context, id):
             raise exception.PciDeviceNotFoundById(id=id)
 
-        self.stubs.Set(db, 'pci_device_get_by_id', fake_pci_device_get_by_id)
+        self.stub_out('nova.db.pci_device_get_by_id',
+                      fake_pci_device_get_by_id)
         req = fakes.HTTPRequest.blank('/os-pci/0', use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req, '0')
 
@@ -192,8 +194,8 @@ class PciControlletestV21(test.NoDBTestCase):
     def test_index(self):
         self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
                        self._fake_compute_node_get_all)
-        self.stubs.Set(db, 'pci_device_get_all_by_node',
-                       self._fake_pci_device_get_all_by_node)
+        self.stub_out('nova.db.pci_device_get_all_by_node',
+                      self._fake_pci_device_get_all_by_node)
 
         req = fakes.HTTPRequest.blank('/os-pci', use_admin_context=True)
         result = self.controller.index(req)
@@ -212,8 +214,8 @@ class PciControlletestV21(test.NoDBTestCase):
     def test_detail(self):
         self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
                        self._fake_compute_node_get_all)
-        self.stubs.Set(db, 'pci_device_get_all_by_node',
-                       self._fake_pci_device_get_all_by_node)
+        self.stub_out('nova.db.pci_device_get_all_by_node',
+                      self._fake_pci_device_get_all_by_node)
         req = fakes.HTTPRequest.blank('/os-pci/detail',
                                         use_admin_context=True)
         result = self.controller.detail(req)

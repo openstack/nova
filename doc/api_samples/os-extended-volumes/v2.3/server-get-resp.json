@@ -34,11 +34,11 @@
         "key_name": null,
         "links": [
             {
-                "href": "http://openstack.example.com/v2/openstack/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/openstack/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
                 "rel": "bookmark"
             }
         ],
@@ -58,7 +58,7 @@
         ],
         "progress": 0,
         "status": "ACTIVE",
-        "tenant_id": "openstack",
+        "tenant_id": "6f70656e737461636b20342065766572",
         "updated": "2013-09-16T03:22:29Z",
         "user_id": "fake"
     }

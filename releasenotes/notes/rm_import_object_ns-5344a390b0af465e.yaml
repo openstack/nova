@@ -1,0 +1,14 @@
+---
+upgrade:
+  - Only virt drivers in the nova.virt namespace may be loaded.
+    This has been the case according to nova docs for several
+    releases, but a quirk in some library code meant that loading
+    things outside the namespace continued to work
+    unintentionally. That has been fixed, which means "compute_driver
+    = nova.virt.foo" is invalid (and now enforced as such), and should
+    be "compute_driver = foo" instead.
+other:
+
+  - Virt drivers are no longer loaded with the import_object_ns
+    function, which means that only virt drivers in the nova.virt
+    namespace can be loaded.

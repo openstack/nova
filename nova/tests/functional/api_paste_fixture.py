@@ -15,12 +15,12 @@
 import os
 
 import fixtures
-from oslo_config import cfg
 
-from nova import paths
+import nova.conf
+from nova.conf import paths
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 class ApiPasteV21Fixture(fixtures.Fixture):
@@ -34,23 +34,25 @@ class ApiPasteV21Fixture(fixtures.Fixture):
     def setUp(self):
         super(ApiPasteV21Fixture, self).setUp()
         CONF.set_default('api_paste_config',
-                         paths.state_path_def('etc/nova/api-paste.ini'))
+                         paths.state_path_def('etc/nova/api-paste.ini'),
+                         group='wsgi')
         tmp_api_paste_dir = self.useFixture(fixtures.TempDir())
         tmp_api_paste_file_name = os.path.join(tmp_api_paste_dir.path,
                                                'fake_api_paste.ini')
-        with open(CONF.api_paste_config, 'r') as orig_api_paste:
+        with open(CONF.wsgi.api_paste_config, 'r') as orig_api_paste:
             with open(tmp_api_paste_file_name, 'w') as tmp_file:
                 for line in orig_api_paste:
                     self._replace_line(tmp_file, line)
-        CONF.set_override('api_paste_config', tmp_api_paste_file_name)
+        CONF.set_override('api_paste_config', tmp_api_paste_file_name,
+                          group='wsgi')
 
 
-class ApiPasteLegacyV2Fixture(ApiPasteV21Fixture):
+class ApiPasteNoProjectId(ApiPasteV21Fixture):
 
     def _replace_line(self, target_file, line):
-        # NOTE(johnthetubaguy) this is hack so we test the legacy_v2 code
-        # even though its disable by default in api-paste.ini
         line = line.replace(
-            "/v2: openstack_compute_api_v21_legacy_v2_compatible",
-            "/v2: openstack_compute_api_legacy_v2")
+            "paste.filter_factory = nova.api.openstack.auth:"
+            "NoAuthMiddleware.factory",
+            "paste.filter_factory = nova.api.openstack.auth:"
+            "NoAuthMiddlewareV2_18.factory")
         target_file.write(line)

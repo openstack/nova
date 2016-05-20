@@ -13,30 +13,25 @@
 # under the License.
 
 import collections
+import fractions
 import itertools
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
 from oslo_utils import units
 import six
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import fields
 from nova.objects import instance as obj_instance
 
-virt_cpu_opts = [
-    cfg.StrOpt('vcpu_pin_set',
-                help='Defines which pcpus that instance vcpus can use. '
-               'For example, "4-12,^8,15"'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(virt_cpu_opts)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 MEMPAGES_SMALL = -1
@@ -637,6 +632,9 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
     :param host_cell: host cell to fit the instance cell onto
     :param inst_cell: instance cell we want to fit
 
+    :raises: exception.MemoryPageSizeNotSupported if custom page
+             size not supported in host cell.
+
     :returns: The page size able to be handled by host_cell
     """
     avail_pagesize = [page.size_kb for page in host_cell.mempages]
@@ -658,13 +656,17 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
         return verify_pagesizes(host_cell, inst_cell, [inst_cell.pagesize])
 
 
-def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
+def _pack_instance_onto_cores(available_siblings,
+                              instance_cell,
+                              host_cell_id,
+                              threads_per_core=1):
     """Pack an instance onto a set of siblings
 
     :param available_siblings: list of sets of CPU id's - available
                                siblings per core
     :param instance_cell: An instance of objects.InstanceNUMACell describing
                           the pinning requirements of the instance
+    :param threads_per_core: number of threads per core in host's cell
 
     :returns: An instance of objects.InstanceNUMACell containing the pinning
               information, and potentially a new topology to be exposed to the
@@ -674,48 +676,134 @@ def _pack_instance_onto_cores(available_siblings, instance_cell, host_cell_id):
     This method will calculate the pinning for the given instance and it's
     topology, making sure that hyperthreads of the instance match up with
     those of the host when the pinning takes effect.
+
+    Currently the strategy for packing is to prefer siblings and try use cores
+    evenly, by using emptier cores first. This is achieved by the way we order
+    cores in the sibling_sets structure, and the order in which we iterate
+    through it.
+
+    The main packing loop that iterates over the sibling_sets dictionary will
+    not currently try to look for a fit that maximizes number of siblings, but
+    will simply rely on the iteration ordering and picking the first viable
+    placement.
     """
 
-    # We build up a data structure 'can_pack' that answers the question:
-    # 'Given the number of threads I want to pack, give me a list of all
-    # the available sibling sets that can accommodate it'
-    can_pack = collections.defaultdict(list)
+    # We build up a data structure that answers the question: 'Given the
+    # number of threads I want to pack, give me a list of all the available
+    # sibling sets (or groups thereof) that can accommodate it'
+    sibling_sets = collections.defaultdict(list)
     for sib in available_siblings:
         for threads_no in range(1, len(sib) + 1):
-            can_pack[threads_no].append(sib)
+            sibling_sets[threads_no].append(sib)
 
-    def _can_pack_instance_cell(instance_cell, threads_per_core, cores_list):
-        """Determines if instance cell can fit an avail set of cores."""
+    pinning = None
+    threads_no = 1
 
-        if threads_per_core * len(cores_list) < len(instance_cell):
-            return False
-        if instance_cell.siblings:
-            return instance_cell.cpu_topology.threads <= threads_per_core
-        else:
-            return len(instance_cell) % threads_per_core == 0
+    def _orphans(instance_cell, threads_per_core):
+        """Number of instance CPUs which will not fill up a host core.
 
-    # We iterate over the can_pack dict in descending order of cores that
-    # can be packed - an attempt to get even distribution over time
-    for cores_per_sib, sib_list in sorted(
-            (t for t in can_pack.items()), reverse=True):
-        if _can_pack_instance_cell(instance_cell,
-                                   cores_per_sib, sib_list):
-            sliced_sibs = map(lambda s: list(s)[:cores_per_sib], sib_list)
-            if instance_cell.siblings:
-                pinning = zip(itertools.chain(*instance_cell.siblings),
-                              itertools.chain(*sliced_sibs))
-            else:
-                pinning = zip(sorted(instance_cell.cpuset),
-                              itertools.chain(*sliced_sibs))
+        Best explained by an example: consider set of free host cores as such:
+            [(0, 1), (3, 5), (6, 7, 8)]
+        This would be a case of 2 threads_per_core AKA an entry for 2 in the
+        sibling_sets structure.
 
-            topology = (instance_cell.cpu_topology or
-                        objects.VirtCPUTopology(sockets=1,
-                                                cores=len(sliced_sibs),
-                                                threads=cores_per_sib))
-            instance_cell.pin_vcpus(*pinning)
-            instance_cell.cpu_topology = topology
-            instance_cell.id = host_cell_id
-            return instance_cell
+        If we attempt to pack a 5 core instance on it - due to the fact that we
+        iterate the list in order, we will end up with a single core of the
+        instance pinned to a thread "alone" (with id 6), and we would have one
+        'orphan' vcpu.
+        """
+        return len(instance_cell) % threads_per_core
+
+    def _threads(instance_cell, threads_per_core):
+        """Threads to expose to the instance via the VirtCPUTopology.
+
+        This is calculated by taking the GCD of the number of threads we are
+        considering at the moment, and the number of orphans. An example for
+            instance_cell = 6
+            threads_per_core = 4
+
+        So we can fit the instance as such:
+            [(0, 1, 2, 3), (4, 5, 6, 7), (8, 9, 10, 11)]
+              x  x  x  x    x  x
+
+        We can't expose 4 threads, as that will not be a valid topology (all
+        cores exposed to the guest have to have an equal number of threads),
+        and 1 would be too restrictive, but we want all threads that guest sees
+        to be on the same physical core, so we take GCD of 4 (max number of
+        threads) and 2 (number of 'orphan' CPUs) and get 2 as the number of
+        threads.
+        """
+        return fractions.gcd(threads_per_core, _orphans(instance_cell,
+                                                        threads_per_core))
+
+    def _get_pinning(threads_no, sibling_set, instance_cores):
+        """Generate a CPU-vCPU pin mapping."""
+        if threads_no * len(sibling_set) < len(instance_cores):
+            return
+
+        usable_cores = map(lambda s: list(s)[:threads_no], sibling_set)
+
+        return zip(sorted(instance_cores),
+                   itertools.chain(*usable_cores))
+
+    if (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.REQUIRE):
+        LOG.debug("Requested 'require' thread policy for %d cores",
+                  len(instance_cell))
+    elif (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.PREFER):
+        LOG.debug("Request 'prefer' thread policy for %d cores",
+                  len(instance_cell))
+    elif (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.ISOLATE):
+        LOG.debug("Requested 'isolate' thread policy for %d cores",
+                  len(instance_cell))
+    else:
+        LOG.debug("User did not specify a thread policy. Using default "
+                  "for %d cores", len(instance_cell))
+
+    if (instance_cell.cpu_thread_policy ==
+            fields.CPUThreadAllocationPolicy.ISOLATE):
+        # make sure we have at least one fully free core
+        if threads_per_core not in sibling_sets:
+            return
+
+        pinning = _get_pinning(1,  # we only want to "use" one thread per core
+                               sibling_sets[threads_per_core],
+                               instance_cell.cpuset)
+    else:
+        # NOTE(ndipanov): We iterate over the sibling sets in descending order
+        # of cores that can be packed. This is an attempt to evenly distribute
+        # instances among physical cores
+        for threads_no, sibling_set in sorted(
+                (t for t in sibling_sets.items()), reverse=True):
+
+            # NOTE(sfinucan): The key difference between the require and
+            # prefer policies is that require will not settle for non-siblings
+            # if this is all that is available. Enforce this by ensuring we're
+            # using sibling sets that contain at least one sibling
+            if (instance_cell.cpu_thread_policy ==
+                    fields.CPUThreadAllocationPolicy.REQUIRE):
+                if threads_no <= 1:
+                    continue
+
+            pinning = _get_pinning(threads_no, sibling_set,
+                                   instance_cell.cpuset)
+            if pinning:
+                break
+
+        threads_no = _threads(instance_cell, threads_no)
+
+    if not pinning:
+        return
+
+    topology = objects.VirtCPUTopology(sockets=1,
+                                       cores=len(pinning) / threads_no,
+                                       threads=threads_no)
+    instance_cell.pin_vcpus(*pinning)
+    instance_cell.cpu_topology = topology
+    instance_cell.id = host_cell_id
+    return instance_cell
 
 
 def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
@@ -736,29 +824,16 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
         return
 
     if host_cell.siblings:
-        # Instance requires hyperthreading in it's topology
-        if instance_cell.cpu_topology and instance_cell.siblings:
-            return _pack_instance_onto_cores(host_cell.free_siblings,
-                                             instance_cell, host_cell.id)
-
-        else:
-            # Try to pack the instance cell in one core
-            largest_free_sibling_set = sorted(
-                host_cell.free_siblings, key=len)[-1]
-            if (len(instance_cell.cpuset) <=
-                    len(largest_free_sibling_set)):
-                return _pack_instance_onto_cores(
-                    [largest_free_sibling_set], instance_cell, host_cell.id)
-
-            # We can't to pack it onto one core so try with avail siblings
-            else:
-                return _pack_instance_onto_cores(
-                    host_cell.free_siblings, instance_cell, host_cell.id)
+        # Try to pack the instance cell onto cores
+        return _pack_instance_onto_cores(
+            host_cell.free_siblings, instance_cell, host_cell.id,
+            max(map(len, host_cell.siblings)))
     else:
         # Straightforward to pin to available cpus when there is no
         # hyperthreading on the host
+        free_cpus = [set([cpu]) for cpu in host_cell.free_cpus]
         return _pack_instance_onto_cores(
-            [host_cell.free_cpus], instance_cell, host_cell.id)
+            free_cpus, instance_cell, host_cell.id)
 
 
 def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
@@ -963,6 +1038,33 @@ def is_realtime_enabled(flavor):
     return strutils.bool_from_string(flavor_rt)
 
 
+def _get_realtime_mask(flavor, image):
+    """Returns realtime mask based on flavor/image meta"""
+    flavor_mask = flavor.get('extra_specs', {}).get("hw:cpu_realtime_mask")
+    image_mask = image.properties.get("hw_cpu_realtime_mask")
+    return image_mask or flavor_mask
+
+
+def vcpus_realtime_topology(vcpus_set, flavor, image):
+    """Partitions vcpus used for realtime and 'normal' vcpus.
+
+    According to a mask specified from flavor or image, returns set of
+    vcpus configured for realtime scheduler and set running as a
+    'normal' vcpus.
+    """
+    mask = _get_realtime_mask(flavor, image)
+    if not mask:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    vcpus_spec = format_cpu_spec(vcpus_set)
+    vcpus_rt = parse_cpu_spec(vcpus_spec + ", " + mask)
+    vcpus_em = vcpus_set - vcpus_rt
+    if len(vcpus_rt) < 1 or len(vcpus_em) < 1:
+        raise exception.RealtimeMaskNotFoundOrInvalid()
+
+    return vcpus_rt, vcpus_em
+
+
 def _numa_get_constraints_auto(nodes, flavor):
     if ((flavor.vcpus % nodes) > 0 or
         (flavor.memory_mb % nodes) > 0):
@@ -982,39 +1084,55 @@ def _numa_get_constraints_auto(nodes, flavor):
 
 
 def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
-    flavor_pinning = flavor.get('extra_specs', {}).get("hw:cpu_policy")
-    image_pinning = image_meta.properties.get("hw_cpu_policy")
-    if flavor_pinning == "dedicated":
-        requested = True
-    elif flavor_pinning == "shared":
-        if image_pinning == "dedicated":
+    flavor_policy = flavor.get('extra_specs', {}).get('hw:cpu_policy')
+    image_policy = image_meta.properties.get('hw_cpu_policy')
+    if flavor_policy == fields.CPUAllocationPolicy.DEDICATED:
+        cpu_policy = flavor_policy
+    elif flavor_policy == fields.CPUAllocationPolicy.SHARED:
+        if image_policy == fields.CPUAllocationPolicy.DEDICATED:
             raise exception.ImageCPUPinningForbidden()
-        requested = False
+        cpu_policy = flavor_policy
+    elif image_policy == fields.CPUAllocationPolicy.DEDICATED:
+        cpu_policy = image_policy
     else:
-        requested = image_pinning == "dedicated"
+        cpu_policy = fields.CPUAllocationPolicy.SHARED
 
     rt = is_realtime_enabled(flavor)
-    pi = image_pinning or flavor_pinning
-    if rt and pi != "dedicated":
+    if (rt and cpu_policy != fields.CPUAllocationPolicy.DEDICATED):
         raise exception.RealtimeConfigurationInvalid()
+    elif rt and not _get_realtime_mask(flavor, image_meta):
+        raise exception.RealtimeMaskNotFoundOrInvalid()
 
-    if not requested:
+    flavor_thread_policy = flavor.get('extra_specs', {}).get(
+        'hw:cpu_thread_policy')
+    image_thread_policy = image_meta.properties.get('hw_cpu_thread_policy')
+
+    if cpu_policy == fields.CPUAllocationPolicy.SHARED:
+        if flavor_thread_policy or image_thread_policy:
+            raise exception.CPUThreadPolicyConfigurationInvalid()
         return numa_topology
+
+    if flavor_thread_policy in [None, fields.CPUThreadAllocationPolicy.PREFER]:
+        cpu_thread_policy = flavor_thread_policy or image_thread_policy
+    elif image_thread_policy and image_thread_policy != flavor_thread_policy:
+        raise exception.ImageCPUThreadPolicyForbidden()
+    else:
+        cpu_thread_policy = flavor_thread_policy
 
     if numa_topology:
-        # NOTE(ndipanov) Setting the cpu_pinning attribute to a non-None value
-        # means CPU pinning was requested
         for cell in numa_topology.cells:
-            cell.cpu_pinning = {}
-        return numa_topology
+            cell.cpu_policy = cpu_policy
+            cell.cpu_thread_policy = cpu_thread_policy
     else:
         single_cell = objects.InstanceNUMACell(
                 id=0,
                 cpuset=set(range(flavor.vcpus)),
                 memory=flavor.memory_mb,
-                cpu_pinning={})
+                cpu_policy=cpu_policy,
+                cpu_thread_policy=cpu_thread_policy)
         numa_topology = objects.InstanceNUMATopology(cells=[single_cell])
-        return numa_topology
+
+    return numa_topology
 
 
 # TODO(sahid): Move numa related to hardward/numa.py
@@ -1092,8 +1210,16 @@ def numa_fit_instance_to_host(
     InstanceNUMATopology with it's cell ids set to host cell id's of
     the first successful permutation, or None.
     """
-    if (not (host_topology and instance_topology) or
-        len(host_topology) < len(instance_topology)):
+    if not (host_topology and instance_topology):
+        LOG.debug("Require both a host and instance NUMA topology to "
+                  "fit instance on host.")
+        return
+    elif len(host_topology) < len(instance_topology):
+        LOG.debug("There are not enough free cores on the system to schedule "
+                  "the instance correctly. Required: %(required)s, actual: "
+                  "%(actual)s",
+                  {'required': len(instance_topology),
+                   'actual': len(host_topology)})
         return
     else:
         # TODO(ndipanov): We may want to sort permutations differently
@@ -1103,8 +1229,14 @@ def numa_fit_instance_to_host(
             cells = []
             for host_cell, instance_cell in zip(
                     host_cell_perm, instance_topology.cells):
-                got_cell = _numa_fit_instance_cell(
-                    host_cell, instance_cell, limits)
+                try:
+                    got_cell = _numa_fit_instance_cell(
+                        host_cell, instance_cell, limits)
+                except exception.MemoryPageSizeNotSupported:
+                    # This exception will been raised if instance cell's
+                    # custom pagesize is not supported with host cell in
+                    # _numa_cell_supports_pagesize_request function.
+                    break
                 if got_cell is None:
                     break
                 cells.append(got_cell)
@@ -1117,6 +1249,36 @@ def numa_fit_instance_to_host(
                     return objects.InstanceNUMATopology(cells=cells)
 
 
+def numa_get_reserved_huge_pages():
+    """Returns reserved memory pages from host option
+
+    Based from the compute node option reserved_huge_pages, this
+    method will return a well formatted list of dict which can be used
+    to build NUMATopology.
+
+    :raises: exceptionInvalidReservedMemoryPagesOption is option is
+             not corretly set.
+
+    :returns: a list of dict ordered by NUMA node ids; keys of dict
+              are pages size where values are the number reserved.
+    """
+    bucket = {}
+    if CONF.reserved_huge_pages:
+        try:
+            bucket = collections.defaultdict(dict)
+            for cfg in CONF.reserved_huge_pages:
+                try:
+                    pagesize = int(cfg['size'])
+                except ValueError:
+                    pagesize = strutils.string_to_bytes(
+                        cfg['size'], return_int=True) / units.Ki
+                bucket[int(cfg['node'])][pagesize] = int(cfg['count'])
+        except (ValueError, TypeError, KeyError):
+            raise exception.InvalidReservedMemoryPagesOption(
+                conf=CONF.reserved_huge_pages)
+    return bucket
+
+
 def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
     topo = []
     for pages in hostcell.mempages:
@@ -1126,7 +1288,8 @@ def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
                 total=pages.total,
                 used=max(0, pages.used +
                          instancecell.memory * units.Ki /
-                         pages.size_kb * sign)))
+                         pages.size_kb * sign),
+                reserved=pages.reserved if 'reserved' in pages else 0))
         else:
             topo.append(pages)
     return topo
@@ -1165,16 +1328,30 @@ def numa_usage_from_instances(host, instances, free=False):
                 if instancecell.id == hostcell.id:
                     memory_usage = (
                             memory_usage + sign * instancecell.memory)
-                    cpu_usage = cpu_usage + sign * len(instancecell.cpuset)
+                    cpu_usage_diff = len(instancecell.cpuset)
+                    if (instancecell.cpu_thread_policy ==
+                            fields.CPUThreadAllocationPolicy.ISOLATE and
+                            hostcell.siblings):
+                        cpu_usage_diff *= max(map(len, hostcell.siblings))
+                    cpu_usage += sign * cpu_usage_diff
+
                     if instancecell.pagesize and instancecell.pagesize > 0:
                         newcell.mempages = _numa_pagesize_usage_from_cell(
                             hostcell, instancecell, sign)
                     if instance.cpu_pinning_requested:
                         pinned_cpus = set(instancecell.cpu_pinning.values())
                         if free:
-                            newcell.unpin_cpus(pinned_cpus)
+                            if (instancecell.cpu_thread_policy ==
+                                    fields.CPUThreadAllocationPolicy.ISOLATE):
+                                newcell.unpin_cpus_with_siblings(pinned_cpus)
+                            else:
+                                newcell.unpin_cpus(pinned_cpus)
                         else:
-                            newcell.pin_cpus(pinned_cpus)
+                            if (instancecell.cpu_thread_policy ==
+                                    fields.CPUThreadAllocationPolicy.ISOLATE):
+                                newcell.pin_cpus_with_siblings(pinned_cpus)
+                            else:
+                                newcell.pin_cpus(pinned_cpus)
 
             newcell.cpu_usage = max(0, cpu_usage)
             newcell.memory_usage = max(0, memory_usage)
@@ -1234,7 +1411,9 @@ def instance_topology_from_instance(instance):
                     cpuset=set(cell['cpuset']),
                     memory=cell['memory'],
                     pagesize=cell.get('pagesize'),
-                    cpu_pinning=cell.get('cpu_pinning_raw'))
+                    cpu_pinning=cell.get('cpu_pinning_raw'),
+                    cpu_policy=cell.get('cpu_policy'),
+                    cpu_thread_policy=cell.get('cpu_thread_policy'))
                          for cell in dict_cells]
                 instance_numa_topology = objects.InstanceNUMATopology(
                     cells=cells)
@@ -1283,7 +1462,7 @@ def get_host_numa_usage_from_instance(host, instance, free=False,
 
     :param host: nova.objects.ComputeNode instance, or a db object or dict
     :param instance: nova.objects.Instance instance, or a db object or dict
-    :param free: if True the the returned topology will have it's usage
+    :param free: if True the returned topology will have it's usage
                  decreased instead.
     :param never_serialize_result: if True result will always be an instance of
                                    objects.NUMATopology class.

@@ -14,6 +14,7 @@
 # under the License.
 
 import ast
+import os
 import re
 
 import pep8
@@ -101,6 +102,10 @@ http_not_implemented_re = re.compile(r"raise .*HTTPNotImplemented\(")
 spawn_re = re.compile(
     r".*(eventlet|greenthread)\.(?P<spawn_part>spawn(_n)?)\(.*\)")
 contextlib_nested = re.compile(r"^with (contextlib\.)?nested\(")
+doubled_words_re = re.compile(
+    r"\b(then?|[iao]n|i[fst]|but|f?or|at|and|[dt]o)\s+\1\b")
+
+opt_help_text_min_char_count = 10
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -465,6 +470,77 @@ class CheckForTransAdd(BaseASTChecker):
         super(CheckForTransAdd, self).generic_visit(node)
 
 
+class _FindVariableReferences(ast.NodeVisitor):
+    def __init__(self):
+        super(_FindVariableReferences, self).__init__()
+        self._references = []
+
+    def visit_Name(self, node):
+        if isinstance(node.ctx, ast.Load):
+            # This means the value of a variable was loaded. For example a
+            # variable 'foo' was used like:
+            # mocked_thing.bar = foo
+            # foo()
+            # self.assertRaises(excepion, foo)
+            self._references.append(node.id)
+        super(_FindVariableReferences, self).generic_visit(node)
+
+
+class CheckForUncalledTestClosure(BaseASTChecker):
+    """Look for closures that are never called in tests.
+
+    A recurring pattern when using multiple mocks is to create a closure
+    decorated with mocks like:
+
+    def test_thing(self):
+            @mock.patch.object(self.compute, 'foo')
+            @mock.patch.object(self.compute, 'bar')
+            def _do_test(mock_bar, mock_foo):
+                # Test things
+        _do_test()
+
+    However it is easy to leave off the _do_test() and have the test pass
+    because nothing runs. This check looks for methods defined within a test
+    method and ensures that there is a reference to them. Only methods defined
+    one level deep are checked. Something like:
+
+    def test_thing(self):
+        class FakeThing:
+            def foo(self):
+
+    would not ensure that foo is referenced.
+
+    N349
+    """
+
+    def __init__(self, tree, filename):
+        super(CheckForUncalledTestClosure, self).__init__(tree, filename)
+        self._filename = filename
+
+    def visit_FunctionDef(self, node):
+        # self._filename is 'stdin' in the unit test for this check.
+        if (not os.path.basename(self._filename).startswith('test_') and
+            not 'stdin'):
+            return
+
+        closures = []
+        references = []
+        # Walk just the direct nodes of the test method
+        for child_node in ast.iter_child_nodes(node):
+            if isinstance(child_node, ast.FunctionDef):
+                closures.append(child_node.name)
+
+        # Walk all nodes to find references
+        find_references = _FindVariableReferences()
+        find_references.generic_visit(node)
+        references = find_references._references
+
+        missed = set(closures) - set(references)
+        if missed:
+            self.add_error(node, 'N349: Test closures not called: %s'
+                    % ','.join(missed))
+
+
 def assert_true_or_false_with_in(logical_line):
     """Check for assertTrue/False(A in B), assertTrue/False(A not in B),
     assertTrue/False(A in B, message) or assertTrue/False(A not in B, message)
@@ -576,6 +652,123 @@ def check_config_option_in_central_place(logical_line, filename):
         yield(0, msg)
 
 
+def check_doubled_words(physical_line, filename):
+    """Check for the common doubled-word typos
+
+    N343
+    """
+    msg = ("N343: Doubled word '%(word)s' typo found")
+
+    match = re.search(doubled_words_re, physical_line)
+
+    if match:
+        return (0, msg % {'word': match.group(1)})
+
+
+def check_python3_no_iteritems(logical_line):
+    msg = ("N344: Use six.iteritems() instead of dict.iteritems().")
+
+    if re.search(r".*\.iteritems\(\)", logical_line):
+        yield(0, msg)
+
+
+def check_python3_no_iterkeys(logical_line):
+    msg = ("N345: Use six.iterkeys() instead of dict.iterkeys().")
+
+    if re.search(r".*\.iterkeys\(\)", logical_line):
+        yield(0, msg)
+
+
+def check_python3_no_itervalues(logical_line):
+    msg = ("N346: Use six.itervalues() instead of dict.itervalues().")
+
+    if re.search(r".*\.itervalues\(\)", logical_line):
+        yield(0, msg)
+
+
+def cfg_help_with_enough_text(logical_line, tokens):
+    # TODO(markus_z): The count of 10 chars is the *highest* number I could
+    # use to introduce this new check without breaking the gate. IOW, if I
+    # use a value of 15 for example, the gate checks will fail because we have
+    # a few config options which use fewer chars than 15 to explain their
+    # usage (for example the options "ca_file" and "cert").
+    # As soon as the implementation of bp centralize-config-options is
+    # finished, I wanted to increase that magic number to a higher (to be
+    # defined) value.
+    # This check is an attempt to programmatically check a part of the review
+    #  guidelines http://docs.openstack.org/developer/nova/code-review.html
+
+    msg = ("N347: A config option is a public interface to the cloud admins "
+           "and should be properly documented. A part of that is to provide "
+           "enough help text to describe this option. Use at least %s chars "
+           "for that description. Is is likely that this minimum will be "
+           "increased in the future." % opt_help_text_min_char_count)
+
+    if not cfg_opt_re.match(logical_line):
+        return
+
+    # ignore DeprecatedOpt objects. They get mentioned in the release notes
+    # and don't need a lengthy help text anymore
+    if "DeprecatedOpt" in logical_line:
+        return
+
+    def get_token_value(idx):
+        return tokens[idx][1]
+
+    def get_token_values(start_index, length):
+        values = ""
+        for offset in range(length):
+            values += get_token_value(start_index + offset)
+        return values
+
+    def get_help_token_index():
+        for idx in range(len(tokens)):
+            if get_token_value(idx) == "help":
+                return idx
+        return -1
+
+    def has_help():
+        return get_help_token_index() >= 0
+
+    def get_trimmed_help_text(t):
+        txt = ""
+        # len(["help", "=", "_", "("]) ==> 4
+        if get_token_values(t, 4) == "help=_(":
+            txt = get_token_value(t + 4)
+        # len(["help", "=", "("]) ==> 3
+        elif get_token_values(t, 3) == "help=(":
+            txt = get_token_value(t + 3)
+        # len(["help", "="]) ==> 2
+        else:
+            txt = get_token_value(t + 2)
+        return " ".join(txt.strip('\"\'').split())
+
+    def has_enough_help_text(txt):
+        return len(txt) >= opt_help_text_min_char_count
+
+    if has_help():
+        t = get_help_token_index()
+        txt = get_trimmed_help_text(t)
+        if not has_enough_help_text(txt):
+            yield(0, msg)
+    else:
+        yield(0, msg)
+
+
+def no_os_popen(logical_line):
+    """Disallow 'os.popen('
+
+    Deprecated library function os.popen() Replace it using subprocess
+    https://bugs.launchpad.net/tempest/+bug/1529836
+
+    N348
+    """
+
+    if 'os.popen(' in logical_line:
+        yield(0, 'N348 Deprecated library function os.popen(). '
+                 'Replace it using subprocess module. ')
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -605,3 +798,10 @@ def factory(register):
     register(check_no_contextlib_nested)
     register(check_greenthread_spawns)
     register(check_config_option_in_central_place)
+    register(check_doubled_words)
+    register(check_python3_no_iteritems)
+    register(check_python3_no_iterkeys)
+    register(check_python3_no_itervalues)
+    register(cfg_help_with_enough_text)
+    register(no_os_popen)
+    register(CheckForUncalledTestClosure)

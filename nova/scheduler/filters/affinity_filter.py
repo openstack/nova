@@ -49,10 +49,10 @@ class SameHostFilter(filters.BaseHostFilter):
 
     def host_passes(self, host_state, spec_obj):
         affinity_uuids = spec_obj.get_scheduler_hint('same_host')
-        if affinity_uuids and host_state.instances:
+        if affinity_uuids:
             overlap = utils.instance_uuids_overlap(host_state, affinity_uuids)
             return overlap
-        # With no same_host key or no instances
+        # With no same_host key
         return True
 
 
@@ -82,7 +82,7 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
     hosts.
     """
     def host_passes(self, host_state, spec_obj):
-        # Only invoke the filter is 'anti-affinity' is configured
+        # Only invoke the filter if 'anti-affinity' is configured
         policies = (spec_obj.instance_group.policies
                     if spec_obj.instance_group else [])
         if self.policy_name not in policies:
@@ -110,7 +110,7 @@ class _GroupAffinityFilter(filters.BaseHostFilter):
     """Schedule the instance on to host from a set of group hosts.
     """
     def host_passes(self, host_state, spec_obj):
-        # Only invoke the filter is 'affinity' is configured
+        # Only invoke the filter if 'affinity' is configured
         policies = (spec_obj.instance_group.policies
                     if spec_obj.instance_group else [])
         if self.policy_name not in policies:

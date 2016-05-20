@@ -13,7 +13,6 @@
 #    under the License.
 
 import netaddr
-from oslo_config import cfg
 import six
 import webob.exc
 
@@ -21,13 +20,12 @@ from nova.api.openstack.compute.schemas import floating_ips_bulk
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
 
-CONF = cfg.CONF
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('public_interface', 'nova.network.linux_net')
+CONF = nova.conf.CONF
 
 
 ALIAS = 'os-floating-ips-bulk'

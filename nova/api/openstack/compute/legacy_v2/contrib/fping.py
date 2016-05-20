@@ -17,27 +17,21 @@
 import itertools
 import os
 
-from oslo_config import cfg
 import six
 from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
+import nova.conf
 from nova.i18n import _
 from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'fping')
 authorize_all_tenants = extensions.extension_authorizer(
     'compute', 'fping:all_tenants')
-fping_opts = [
-    cfg.StrOpt("fping_path",
-               default="/usr/sbin/fping",
-               help="Full path to fping."),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(fping_opts)
+CONF = nova.conf.CONF
 
 
 class FpingController(object):

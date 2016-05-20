@@ -1,0 +1,7 @@
+---
+deprecations:
+
+  - Deprecate ``security_group_api`` configuration option. The current
+    values are ``nova`` and ``neutron``. In future the correct
+    security_group_api option will be chosen based on the value of
+    ``use_neutron`` which provides a more coherent user experience.

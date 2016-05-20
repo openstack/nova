@@ -115,9 +115,8 @@ class SupportMatrixTarget(object):
 
 class SupportMatrixDirective(rst.Directive):
 
-    option_spec = {
-        'support-matrix': six.text_type,
-    }
+    # The argument is the filename, e.g. support-matrix.ini
+    required_arguments = 1
 
     def run(self):
         matrix = self._load_support_matrix()
@@ -132,8 +131,7 @@ class SupportMatrixDirective(rst.Directive):
 
         cfg = configparser.SafeConfigParser()
         env = self.state.document.settings.env
-        fname = self.options.get("support-matrix",
-                                 "support-matrix.ini")
+        fname = self.arguments[0]
         rel_fpath, fpath = env.relfn2path(fname)
         with open(fpath) as fp:
             cfg.readfp(fp)
@@ -143,9 +141,17 @@ class SupportMatrixDirective(rst.Directive):
         env.note_dependency(rel_fpath)
 
         matrix = SupportMatrix()
+        matrix.targets = self._get_targets(cfg)
+        matrix.features = self._get_features(cfg, matrix.targets)
 
+        return matrix
+
+    def _get_targets(self, cfg):
         # The 'targets' section is special - it lists all the
         # hypervisors that this file records data for
+
+        targets = {}
+
         for item in cfg.options("targets"):
             if not item.startswith("driver-impl-"):
                 continue
@@ -176,10 +182,16 @@ class SupportMatrixDirective(rst.Directive):
                 raise Exception("'%s' field is malformed in '[%s]' section" %
                                 (item, "DEFAULT"))
 
-            matrix.targets[key] = target
+            targets[key] = target
 
+        return targets
+
+    def _get_features(self, cfg, targets):
         # All sections except 'targets' describe some feature of
         # the Nova hypervisor driver implementation
+
+        features = []
+
         for section in cfg.sections():
             if section == "targets":
                 continue
@@ -227,7 +239,7 @@ class SupportMatrixDirective(rst.Directive):
                     continue
 
                 key = item[12:]
-                if key not in matrix.targets:
+                if key not in targets:
                     raise Exception(
                         "Driver impl '%s' in '[%s]' not declared" %
                         (item, section))
@@ -244,19 +256,19 @@ class SupportMatrixDirective(rst.Directive):
                 if cfg.has_option(section, noteskey):
                     notes = cfg.get(section, noteskey)
 
-                target = matrix.targets[key]
+                target = targets[key]
                 impl = SupportMatrixImplementation(status,
                                                    notes)
                 feature.implementations[target.key] = impl
 
-            for key in matrix.targets:
+            for key in targets:
                 if key not in feature.implementations:
                     raise Exception("'%s' missing in '[%s]' section" %
                                     (target.key, section))
 
-            matrix.features.append(feature)
+            features.append(feature)
 
-        return matrix
+        return features
 
     def _build_markup(self, matrix):
         """Constructs the docutils content for the support matrix

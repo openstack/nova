@@ -31,33 +31,20 @@ from oslo_utils import units
 import six
 
 from nova.cells import rpc_driver
+import nova.conf
 from nova import context
 from nova.db import base
 from nova import exception
 from nova.i18n import _LE
 from nova import objects
 from nova import rpc
+from nova import servicegroup
 from nova import utils
-
-cell_state_manager_opts = [
-    cfg.IntOpt('db_check_interval',
-               default=60,
-               help='Interval, in seconds, for getting fresh cell '
-               'information from the database.'),
-    cfg.StrOpt('cells_config',
-               help='Configuration file from which to read cells '
-               'configuration.  If given, overrides reading cells '
-               'from the database.'),
-]
 
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
-CONF.import_opt('reserve_percent', 'nova.cells.opts', group='cells')
-CONF.import_opt('mute_child_interval', 'nova.cells.opts', group='cells')
-CONF.register_opts(cell_state_manager_opts, group='cells')
+CONF = nova.conf.CONF
 
 
 class CellState(object):
@@ -167,6 +154,7 @@ class CellStateManager(base.Base):
         self.parent_cells = {}
         self.child_cells = {}
         self.last_cell_db_check = datetime.datetime.min
+        self.servicegroup_api = servicegroup.API()
 
         attempts = 0
         while True:
@@ -277,13 +265,22 @@ class CellStateManager(base.Base):
                 if not service or service['disabled']:
                     continue
 
+                # NOTE: This works because it is only used for computes found
+                # in the cell this is run in. It can not be used to check on
+                # computes in a child cell from the api cell. If this is run
+                # in the api cell objects.ComputeNodeList.get_all() above will
+                # return an empty list.
+                alive = self.servicegroup_api.service_is_up(service)
+                if not alive:
+                    continue
+
                 chost = compute_hosts[host]
-                chost['free_ram_mb'] += compute['free_ram_mb']
-                free_disk = compute['free_disk_gb'] * 1024
-                chost['free_disk_mb'] += free_disk
-                chost['total_ram_mb'] += compute['memory_mb']
-                total_disk = compute['local_gb'] * 1024
-                chost['total_disk_mb'] += total_disk
+                chost['free_ram_mb'] += max(0, compute.free_ram_mb)
+                free_disk = compute.free_disk_gb * 1024
+                chost['free_disk_mb'] += max(0, free_disk)
+                chost['total_ram_mb'] += max(0, compute.memory_mb)
+                total_disk = compute.local_gb * 1024
+                chost['total_disk_mb'] += max(0, total_disk)
 
         _get_compute_hosts()
         if not compute_hosts:
@@ -347,12 +344,12 @@ class CellStateManager(base.Base):
     @sync_before
     def get_child_cells(self):
         """Return list of child cell_infos."""
-        return self.child_cells.values()
+        return list(self.child_cells.values())
 
     @sync_before
     def get_parent_cells(self):
         """Return list of parent cell_infos."""
-        return self.parent_cells.values()
+        return list(self.parent_cells.values())
 
     @sync_before
     def get_parent_cell(self, cell_name):

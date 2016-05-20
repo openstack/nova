@@ -26,11 +26,12 @@ CA/
 ChangeLog
 coverage.xml
 cover/*
-covhtml
+covhtml/*
 dist/*
 doc/source/api/*
 doc/build/*
 api-guide/build/*
+api-ref/build/*
 etc/nova/nova.conf.sample
 instances
 keeper

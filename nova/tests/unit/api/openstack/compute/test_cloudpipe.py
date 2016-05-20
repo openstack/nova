@@ -15,14 +15,12 @@
 
 import uuid as uuid_lib
 
-from oslo_config import cfg
 from oslo_utils import timeutils
 from webob import exc
 
 from nova.api.openstack.compute import cloudpipe as cloudpipe_v21
-from nova.api.openstack.compute.legacy_v2.contrib import cloudpipe \
-        as cloudpipe_v2
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import exception
 from nova import objects
 from nova import test
@@ -31,8 +29,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import matchers
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
+CONF = nova.conf.CONF
 
 
 project_id = str(uuid_lib.uuid4().hex)
@@ -93,7 +90,7 @@ class CloudpipeTestV21(test.NoDBTestCase):
                     'vpn_public_port': 22}
 
         def fake_get_nw_info_for_instance(instance):
-            return fake_network.fake_get_instance_nw_info(self.stubs)
+            return fake_network.fake_get_instance_nw_info(self)
 
         self.stubs.Set(compute_utils, "get_nw_info_for_instance",
                        fake_get_nw_info_for_instance)
@@ -153,13 +150,6 @@ class CloudpipeTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, req, body=body)
-
-
-class CloudpipeTestV2(CloudpipeTestV21):
-    cloudpipe = cloudpipe_v2
-
-    def test_cloudpipe_create_with_bad_project_id_failed(self):
-        pass
 
 
 class CloudpipePolicyEnforcementV21(test.NoDBTestCase):

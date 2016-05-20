@@ -1,0 +1,15 @@
+---
+deprecations:
+  - |
+    The Zookeeper Service Group driver has been removed.
+
+    The driver has no known users and is not actively maintained. A warning log
+    message about the driver's state was added for the Kilo release. Also,
+    evzookeeper library that the driver depends on is unmaintained and
+    `incompatible with recent eventlet releases`_.
+
+    A future release of Nova will `use the Tooz library to track
+    service liveliness`_, and Tooz supports Zookeeper.
+
+    .. _`incompatible with recent eventlet releases`: https://bugs.launchpad.net/nova/+bug/1443910
+    .. _`use the Tooz library to track service liveliness`: http://specs.openstack.org/openstack/nova-specs/specs/liberty/approved/service-group-using-tooz.html

@@ -1,0 +1,8 @@
+---
+deprecations:
+
+  - Deprecate the ``db_driver`` config option. Previously this let you
+    replace our SQLAlchemy database layer with your own. This approach
+    is deprecated. Deployments that felt the need to use the facility
+    are encourage to work with upstream Nova to address db driver
+    concerns in the main SQLAlchemy code paths.

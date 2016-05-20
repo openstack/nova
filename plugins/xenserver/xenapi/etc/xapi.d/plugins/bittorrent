@@ -17,6 +17,8 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
 """Download images via BitTorrent."""
 
 import errno
@@ -242,7 +244,7 @@ def _active_seeder_processes():
     for pid in pids:
         try:
             cmdline = open(os.path.join('/proc', pid, 'cmdline'), 'rb').read()
-        except IOError, e:
+        except IOError, e:  # noqa
             if e.errno != errno.ENOENT:
                 raise
 

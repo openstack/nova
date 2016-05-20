@@ -16,7 +16,6 @@
 #    under the License.
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import excutils
@@ -24,6 +23,7 @@ from oslo_utils import importutils
 from oslo_utils import uuidutils
 import six
 
+import nova.conf
 from nova import context
 from nova.db import base
 from nova import exception
@@ -39,28 +39,7 @@ LOG = logging.getLogger(__name__)
 
 QUOTAS = quota.QUOTAS
 
-floating_opts = [
-    cfg.StrOpt('default_floating_pool',
-               default='nova',
-               help='Default pool for floating IPs'),
-    cfg.BoolOpt('auto_assign_floating_ip',
-                default=False,
-                help='Autoassigning floating IP to VM'),
-    cfg.StrOpt('floating_ip_dns_manager',
-               default='nova.network.noop_dns_driver.NoopDNSDriver',
-               help='Full class name for the DNS Manager for floating IPs'),
-    cfg.StrOpt('instance_dns_manager',
-               default='nova.network.noop_dns_driver.NoopDNSDriver',
-               help='Full class name for the DNS Manager for instance IPs'),
-    cfg.StrOpt('instance_dns_domain',
-               default='',
-               help='Full class name for the DNS Zone for instance IPs'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(floating_opts)
-CONF.import_opt('public_interface', 'nova.network.linux_net')
-CONF.import_opt('network_topic', 'nova.network.rpcapi')
+CONF = nova.conf.CONF
 
 
 class FloatingIP(object):
@@ -312,7 +291,7 @@ class FloatingIP(object):
         rpc'ing to correct host if i'm not it.
 
         Access to the floating_address is verified but access to the
-        fixed_address is not verified. This assumes that that the calling
+        fixed_address is not verified. This assumes that the calling
         side has already verified that the fixed_address is legal by
         checking access to the instance.
         """

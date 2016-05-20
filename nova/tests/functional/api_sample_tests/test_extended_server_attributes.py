@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ExtendedServerAttributesJsonTest(test_servers.ServersSampleBase):
@@ -44,7 +41,7 @@ class ExtendedServerAttributesJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
 
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'
@@ -57,7 +54,38 @@ class ExtendedServerAttributesJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
 
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        self._verify_response('servers-detail-resp', subs, response, 200)
+
+
+class ExtendedServerAttributesJsonTestV216(ExtendedServerAttributesJsonTest):
+    microversion = '2.16'
+    scenarios = [('v2_16', {'api_major_version': 'v2.1'})]
+
+    def test_show(self):
+        uuid = self._post_server()
+
+        response = self._do_get('servers/%s' % uuid)
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        self._verify_response('server-get-resp', subs, response, 200)
+
+    def test_detail(self):
+        uuid = self._post_server()
+
+        response = self._do_get('servers/detail')
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['instance_name'] = 'instance-\d{8}'

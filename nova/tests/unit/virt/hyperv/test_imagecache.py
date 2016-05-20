@@ -21,16 +21,16 @@ from oslo_utils import units
 
 from nova import exception
 from nova import objects
-from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
+from nova.tests.unit.virt.hyperv import test_base
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 
 CONF = cfg.CONF
 
 
-class ImageCacheTestCase(test.NoDBTestCase):
+class ImageCacheTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V ImageCache class."""
 
     FAKE_BASE_DIR = 'fake/base/dir'
@@ -122,9 +122,7 @@ class ImageCacheTestCase(test.NoDBTestCase):
         self.assertEqual(expected_vhd_path, result)
 
         mock_fetch.assert_called_once_with(self.context, self.FAKE_IMAGE_REF,
-                                           expected_path,
-                                           self.instance['user_id'],
-                                           self.instance['project_id'])
+                                           expected_path)
         self.imagecache._vhdutils.get_vhd_format.assert_called_once_with(
             expected_path)
         self.imagecache._pathutils.rename.assert_called_once_with(

@@ -19,13 +19,17 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_utils import versionutils
+from sqlalchemy.orm import joinedload
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova import notifications
 from nova import objects
 from nova.objects import base
@@ -40,13 +44,14 @@ LOG = logging.getLogger(__name__)
 # List of fields that can be joined in DB layer.
 _INSTANCE_OPTIONAL_JOINED_FIELDS = ['metadata', 'system_metadata',
                                     'info_cache', 'security_groups',
-                                    'pci_devices', 'tags']
+                                    'pci_devices', 'tags', 'services']
 # These are fields that are optional but don't translate to db columns
 _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
                                         'new_flavor', 'ec2_ids']
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
-                          'flavor', 'vcpu_model', 'migration_context']
+                          'flavor', 'vcpu_model', 'migration_context',
+                          'keypairs']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -55,6 +60,9 @@ INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
 # These are fields that most query calls load by default
 INSTANCE_DEFAULT_FIELDS = ['metadata', 'system_metadata',
                            'info_cache', 'security_groups']
+
+# Maximum count of tags to one instance
+MAX_TAG_COUNT = 50
 
 
 def _expected_cols(expected_attrs):
@@ -86,7 +94,9 @@ _NO_DATA_SENTINEL = object()
 class Instance(base.NovaPersistentObject, base.NovaObject,
                base.NovaObjectDictCompat):
     # Version 2.0: Initial version
-    VERSION = '2.0'
+    # Version 2.1: Added services
+    # Version 2.2: Added keypairs
+    VERSION = '2.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -106,6 +116,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'power_state': fields.IntegerField(nullable=True),
         'vm_state': fields.StringField(nullable=True),
         'task_state': fields.StringField(nullable=True),
+
+        'services': fields.ObjectField('ServiceList'),
 
         'memory_mb': fields.IntegerField(nullable=True),
         'vcpus': fields.IntegerField(nullable=True),
@@ -182,14 +194,27 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'vcpu_model': fields.ObjectField('VirtCPUModel', nullable=True),
         'ec2_ids': fields.ObjectField('EC2Ids'),
         'migration_context': fields.ObjectField('MigrationContext',
-                                                nullable=True)
+                                                nullable=True),
+        'keypairs': fields.ObjectField('KeyPairList'),
         }
 
     obj_extra_fields = ['name']
 
+    def obj_make_compatible(self, primitive, target_version):
+        super(Instance, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 2) and 'keypairs' in primitive:
+            del primitive['keypairs']
+        if target_version < (2, 1) and 'services' in primitive:
+            del primitive['services']
+
     def __init__(self, *args, **kwargs):
         super(Instance, self).__init__(*args, **kwargs)
         self._reset_metadata_tracking()
+
+    @property
+    def image_meta(self):
+        return objects.ImageMeta.from_instance(self)
 
     def _reset_metadata_tracking(self, fields=None):
         if fields is None or 'system_metadata' in fields:
@@ -322,6 +347,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     db_inst['extra'].get('migration_context'))
             else:
                 instance.migration_context = None
+        if 'keypairs' in expected_attrs:
+            if have_extra:
+                instance._load_keypairs(db_inst['extra'].get('keypairs'))
         if 'info_cache' in expected_attrs:
             if db_inst.get('info_cache') is None:
                 instance.info_cache = None
@@ -360,17 +388,29 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 objects.Tag, db_inst['tags'])
             instance['tags'] = tags
 
+        if 'services' in expected_attrs:
+            services = base.obj_make_list(
+                    context, objects.ServiceList(context),
+                    objects.Service, db_inst['services'])
+            instance['services'] = services
+
         instance.obj_reset_changes()
         return instance
+
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_instance_get_by_uuid(context, uuid, columns_to_join,
+                                 use_slave=False):
+        return db.instance_get_by_uuid(context, uuid,
+                                       columns_to_join=columns_to_join)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid, expected_attrs=None, use_slave=False):
         if expected_attrs is None:
             expected_attrs = ['info_cache', 'security_groups']
         columns_to_join = _expected_cols(expected_attrs)
-        db_inst = db.instance_get_by_uuid(context, uuid,
-                                          columns_to_join=columns_to_join,
-                                          use_slave=use_slave)
+        db_inst = cls._db_instance_get_by_uuid(context, uuid, columns_to_join,
+                                               use_slave=use_slave)
         return cls._from_db_object(context, cls(), db_inst,
                                    expected_attrs)
 
@@ -401,14 +441,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 }
         updates['extra'] = {}
         numa_topology = updates.pop('numa_topology', None)
+        expected_attrs.append('numa_topology')
         if numa_topology:
-            expected_attrs.append('numa_topology')
             updates['extra']['numa_topology'] = numa_topology._to_json()
+        else:
+            updates['extra']['numa_topology'] = None
         pci_requests = updates.pop('pci_requests', None)
+        expected_attrs.append('pci_requests')
         if pci_requests:
-            expected_attrs.append('pci_requests')
             updates['extra']['pci_requests'] = (
                 pci_requests.to_json())
+        else:
+            updates['extra']['pci_requests'] = None
         flavor = updates.pop('flavor', None)
         if flavor:
             expected_attrs.append('flavor')
@@ -424,13 +468,27 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 'new': new,
             }
             updates['extra']['flavor'] = jsonutils.dumps(flavor_info)
+        keypairs = updates.pop('keypairs', None)
+        if keypairs is not None:
+            expected_attrs.append('keypairs')
+            updates['extra']['keypairs'] = jsonutils.dumps(
+                keypairs.obj_to_primitive())
         vcpu_model = updates.pop('vcpu_model', None)
+        expected_attrs.append('vcpu_model')
         if vcpu_model:
-            expected_attrs.append('vcpu_model')
             updates['extra']['vcpu_model'] = (
                 jsonutils.dumps(vcpu_model.obj_to_primitive()))
+        else:
+            updates['extra']['vcpu_model'] = None
         db_inst = db.instance_create(self._context, updates)
         self._from_db_object(self._context, self, db_inst, expected_attrs)
+
+        # NOTE(danms): The EC2 ids are created on their first load. In order
+        # to avoid them being missing and having to be loaded later, we
+        # load them once here on create now that the instance record is
+        # created.
+        self._load_ec2_ids()
+        self.obj_reset_changes(['ec2_ids'])
 
     @base.remotable
     def destroy(self):
@@ -546,6 +604,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 self.migration_context._save()
         else:
             objects.MigrationContext._destroy(context, self.uuid)
+
+    def _save_keypairs(self, context):
+        # NOTE(danms): Read-only so no need to save this.
+        pass
 
     @base.remotable
     def save(self, expected_vm_state=None,
@@ -778,6 +840,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _load_ec2_ids(self):
         self.ec2_ids = objects.EC2Ids.get_by_instance(self._context, self)
 
+    def _load_security_groups(self):
+        self.security_groups = objects.SecurityGroupList.get_by_instance(
+            self._context, self)
+
+    def _load_pci_devices(self):
+        self.pci_devices = objects.PciDeviceList.get_by_instance_uuid(
+            self._context, self.uuid)
+
     def _load_migration_context(self, db_context=_NO_DATA_SENTINEL):
         if db_context is _NO_DATA_SENTINEL:
             try:
@@ -791,6 +861,37 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         else:
             self.migration_context = objects.MigrationContext.obj_from_db_obj(
                 db_context)
+
+    def _load_keypairs(self, db_keypairs=_NO_DATA_SENTINEL):
+        if db_keypairs is _NO_DATA_SENTINEL:
+            inst = objects.Instance.get_by_uuid(self._context, self.uuid,
+                                                expected_attrs=['keypairs'])
+            if 'keypairs' in inst:
+                self.keypairs = inst.keypairs
+                self.keypairs.obj_reset_changes(recursive=True)
+                self.obj_reset_changes(['keypairs'])
+                return
+
+            # NOTE(danms): We need to load from the old location by name
+            # if we don't have them in extra. Only do this from the main
+            # database as instances were created with keypairs in extra
+            # before keypairs were moved to the api database.
+            self.keypairs = objects.KeyPairList(objects=[])
+            try:
+                key = objects.KeyPair.get_by_name(self._context,
+                                                  self.user_id,
+                                                  self.key_name,
+                                                  localonly=True)
+                self.keypairs.objects.append(key)
+            except exception.KeypairNotFound:
+                pass
+            # NOTE(danms): If we loaded from legacy, we leave the keypairs
+            # attribute dirty in hopes someone else will save it for us
+
+        elif db_keypairs:
+            self.keypairs = objects.KeyPairList.obj_from_primitive(
+                jsonutils.loads(db_keypairs))
+            self.obj_reset_changes(['keypairs'])
 
     def apply_migration_context(self):
         if self.migration_context:
@@ -827,6 +928,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             objects.MigrationContext._destroy(self._context, self.uuid)
             self.migration_context = None
 
+    def clear_numa_topology(self):
+        numa_topology = self.numa_topology
+        if numa_topology is not None:
+            self.numa_topology = numa_topology.clear_host_pinning()
+
     def obj_load_attr(self, attrname):
         if attrname not in INSTANCE_OPTIONAL_ATTRS:
             raise exception.ObjectActionError(
@@ -837,7 +943,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
 
-        LOG.debug("Lazy-loading `%(attr)s' on %(name)s uuid %(uuid)s",
+        LOG.debug("Lazy-loading '%(attr)s' on %(name)s uuid %(uuid)s",
                   {'attr': attrname,
                    'name': self.obj_name(),
                    'uuid': self.uuid,
@@ -857,8 +963,21 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_ec2_ids()
         elif attrname == 'migration_context':
             self._load_migration_context()
+        elif attrname == 'keypairs':
+            # NOTE(danms): Let keypairs control its own destiny for
+            # resetting changes.
+            return self._load_keypairs()
+        elif attrname == 'security_groups':
+            self._load_security_groups()
+        elif attrname == 'pci_devices':
+            self._load_pci_devices()
         elif 'flavor' in attrname:
             self._load_flavor()
+        elif attrname == 'services' and self.deleted:
+            # NOTE(mriedem): The join in the data model for instances.services
+            # filters on instances.deleted == 0, so if the instance is deleted
+            # don't attempt to even load services since we'll fail.
+            self.services = objects.ServiceList(self._context)
         else:
             # FIXME(comstud): This should be optimized to only load the attr.
             self._load_generic(attrname)
@@ -975,8 +1094,9 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Instance'),
     }
 
-    @base.remotable_classmethod
-    def get_by_filters(cls, context, filters,
+    @classmethod
+    @db.select_db_reader_mode
+    def _get_by_filters_impl(cls, context, filters,
                        sort_key='created_at', sort_dir='desc', limit=None,
                        marker=None, expected_attrs=None, use_slave=False,
                        sort_keys=None, sort_dirs=None):
@@ -984,18 +1104,34 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             db_inst_list = db.instance_get_all_by_filters_sort(
                 context, filters, limit=limit, marker=marker,
                 columns_to_join=_expected_cols(expected_attrs),
-                use_slave=use_slave, sort_keys=sort_keys, sort_dirs=sort_dirs)
+                sort_keys=sort_keys, sort_dirs=sort_dirs)
         else:
             db_inst_list = db.instance_get_all_by_filters(
                 context, filters, sort_key, sort_dir, limit=limit,
-                marker=marker, columns_to_join=_expected_cols(expected_attrs),
-                use_slave=use_slave)
+                marker=marker, columns_to_join=_expected_cols(expected_attrs))
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
     @base.remotable_classmethod
+    def get_by_filters(cls, context, filters,
+                       sort_key='created_at', sort_dir='desc', limit=None,
+                       marker=None, expected_attrs=None, use_slave=False,
+                       sort_keys=None, sort_dirs=None):
+        return cls._get_by_filters_impl(
+            context, filters, sort_key=sort_key, sort_dir=sort_dir,
+            limit=limit, marker=marker, expected_attrs=expected_attrs,
+            use_slave=use_slave, sort_keys=sort_keys, sort_dirs=sort_dirs)
+
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_instance_get_all_by_host(context, host, columns_to_join,
+                                     use_slave=False):
+        return db.instance_get_all_by_host(context, host,
+                                           columns_to_join=columns_to_join)
+
+    @base.remotable_classmethod
     def get_by_host(cls, context, host, expected_attrs=None, use_slave=False):
-        db_inst_list = db.instance_get_all_by_host(
+        db_inst_list = cls._db_instance_get_all_by_host(
             context, host, columns_to_join=_expected_cols(expected_attrs),
             use_slave=use_slave)
         return _make_instance_list(context, cls(), db_inst_list,
@@ -1033,6 +1169,15 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_instance_get_active_by_window_joined(
+            context, begin, end, project_id, host, columns_to_join,
+            use_slave=False):
+        return db.instance_get_active_by_window_joined(
+            context, begin, end, project_id, host,
+            columns_to_join=columns_to_join)
+
     @base.remotable_classmethod
     def _get_active_by_window_joined(cls, context, begin, end=None,
                                     project_id=None, host=None,
@@ -1042,9 +1187,10 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # to timezone-aware datetime objects for the DB API call.
         begin = timeutils.parse_isotime(begin)
         end = timeutils.parse_isotime(end) if end else None
-        db_inst_list = db.instance_get_active_by_window_joined(
+        db_inst_list = cls._db_instance_get_active_by_window_joined(
             context, begin, end, project_id, host,
-            columns_to_join=_expected_cols(expected_attrs))
+            columns_to_join=_expected_cols(expected_attrs),
+            use_slave=use_slave)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
@@ -1117,3 +1263,38 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             instance.obj_reset_changes(['fault'])
 
         return faults_by_uuid.keys()
+
+
+@db_api.main_context_manager.writer
+def _migrate_instance_keypairs(ctxt, count):
+    db_extras = ctxt.session.query(models.InstanceExtra).\
+        options(joinedload('instance')).\
+        filter_by(keypairs=None).\
+        filter_by(deleted=0).\
+        limit(count).\
+        all()
+
+    count_all = len(db_extras)
+    count_hit = 0
+    for db_extra in db_extras:
+        key_name = db_extra.instance.key_name
+        keypairs = objects.KeyPairList(objects=[])
+        if key_name:
+            try:
+                key = objects.KeyPair.get_by_name(ctxt,
+                                                  db_extra.instance.user_id,
+                                                  key_name)
+                keypairs.objects.append(key)
+            except exception.KeypairNotFound:
+                LOG.warning(
+                    _LW('Instance %(uuid)s keypair %(keyname)s not found'),
+                    {'uuid': db_extra.instance_uuid, 'keyname': key_name})
+        db_extra.keypairs = jsonutils.dumps(keypairs.obj_to_primitive())
+        db_extra.save(ctxt.session)
+        count_hit += 1
+
+    return count_all, count_hit
+
+
+def migrate_instance_keypairs(ctxt, count):
+    return _migrate_instance_keypairs(ctxt, count)

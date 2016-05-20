@@ -460,7 +460,26 @@ def extract_tarball(fileobj, path, callback=None):
                 callback(chunk)
 
             tar_proc.stdin.write(chunk)
+
+            # NOTE(tpownall): If we do not poll for the tar process exit
+            # code when tar has exited pre maturely there is the chance
+            # that tar will become a defunct zombie child under glance plugin
+            # and re parented under init forever waiting on the stdin pipe to
+            # close.  Polling for the exit code allows us to break the pipe.
+            returncode = tar_proc.poll()
+            tar_pid = tar_proc.pid
+            if returncode is not None:
+                LOG.error("tar extract with process id '%(pid)s' "
+                          "exited early with '%(rc)s'" %
+                          {'pid': tar_pid, 'rc': returncode})
+                raise SubprocessException(
+                    ' '.join(tar_cmd), returncode, "", "")
+
+    except SubprocessException:
+        # no need to kill already dead process
+        raise
     except Exception:
+        LOG.exception("Failed while sending data to tar pid: %s" % tar_pid)
         try_kill_process(tar_proc)
         raise
 

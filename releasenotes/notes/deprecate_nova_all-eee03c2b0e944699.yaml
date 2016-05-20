@@ -1,0 +1,6 @@
+---
+deprecations:
+
+  - The ``nova-all`` binary is deprecated. This was an all in one
+    binary for nova services used for testing in the early days of
+    OpenStack, but was never intended for real use.

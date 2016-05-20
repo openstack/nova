@@ -23,13 +23,12 @@ from nova import test
 
 class MemcachedServiceGroupTestCase(test.NoDBTestCase):
 
-    @mock.patch('nova.openstack.common.memorycache.get_client')
+    @mock.patch('nova.cache_utils.get_memcached_client')
     def setUp(self, mgc_mock):
         super(MemcachedServiceGroupTestCase, self).setUp()
         self.mc_client = mock.MagicMock()
         mgc_mock.return_value = self.mc_client
-        self.flags(memcached_servers='ignored',
-                   servicegroup_driver='mc')
+        self.flags(servicegroup_driver='mc')
         self.servicegroup_api = servicegroup.API()
 
     def test_is_up(self):
@@ -63,4 +62,4 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         fn = self.servicegroup_api._driver._report_state
         fn(service)
         self.mc_client.set.assert_called_once_with('compute:fake-host',
-                                                   mock.ANY, time=60)
+                                                   mock.ANY)

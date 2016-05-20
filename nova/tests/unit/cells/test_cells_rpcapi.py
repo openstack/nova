@@ -16,17 +16,17 @@
 Tests For Cells RPCAPI
 """
 
-from oslo_config import cfg
 import six
 
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
-CONF = cfg.CONF
-CONF.import_opt('topic', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 
 class CellsAPITestCase(test.NoDBTestCase):
@@ -152,7 +152,8 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual(capacity_info, result)
 
     def test_instance_update_at_top(self):
-        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_info_cache = objects.InstanceInfoCache(
+            instance_uuid=uuids.instance)
         fake_sys_metadata = {'key1': 'value1',
                              'key2': 'value2'}
         fake_attrs = {'id': 2,
@@ -172,7 +173,7 @@ class CellsAPITestCase(test.NoDBTestCase):
                 expected_args, version='1.35')
 
     def test_instance_destroy_at_top(self):
-        fake_instance = objects.Instance(uuid='fake-uuid')
+        fake_instance = objects.Instance(uuid=uuids.instance)
 
         call_info = self._stub_rpc_method('cast', None)
 
@@ -369,7 +370,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_actions_get(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': 'region!child'}
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.actions_get(self.fake_context,
                                                fake_instance)
@@ -380,13 +381,13 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_actions_get_no_cell(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': None}
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.actions_get, self.fake_context,
                           fake_instance)
 
     def test_action_get_by_request_id(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': 'region!child'}
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.action_get_by_request_id(self.fake_context,
                                                             fake_instance,
@@ -399,13 +400,13 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_action_get_by_request_id_no_cell(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': None}
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.action_get_by_request_id,
                           self.fake_context, fake_instance, 'req-fake')
 
     def test_action_events_get(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': 'region!child'}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': 'region!child'}
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.action_events_get(self.fake_context,
                                                      fake_instance,
@@ -417,7 +418,7 @@ class CellsAPITestCase(test.NoDBTestCase):
         self.assertEqual('fake_response', result)
 
     def test_action_events_get_no_cell(self):
-        fake_instance = {'uuid': 'fake-uuid', 'cell_name': None}
+        fake_instance = {'uuid': uuids.instance, 'cell_name': None}
         self.assertRaises(exception.InstanceUnknownCell,
                           self.cells_rpcapi.action_events_get,
                           self.fake_context, fake_instance, 'fake-action')
@@ -426,9 +427,9 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.consoleauth_delete_tokens(self.fake_context,
-                                                    'fake-uuid')
+                                                    uuids.instance)
 
-        expected_args = {'instance_uuid': 'fake-uuid'}
+        expected_args = {'instance_uuid': uuids.instance}
         self._check_result(call_info, 'consoleauth_delete_tokens',
                 expected_args, version='1.6')
 
@@ -436,9 +437,9 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('call', 'fake_response')
 
         result = self.cells_rpcapi.validate_console_port(self.fake_context,
-                'fake-uuid', 'fake-port', 'fake-type')
+                uuids.instance, 'fake-port', 'fake-type')
 
-        expected_args = {'instance_uuid': 'fake-uuid',
+        expected_args = {'instance_uuid': uuids.instance,
                          'console_port': 'fake-port',
                          'console_type': 'fake-type'}
         self._check_result(call_info, 'validate_console_port',
@@ -461,11 +462,11 @@ class CellsAPITestCase(test.NoDBTestCase):
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.bdm_destroy_at_top(self.fake_context,
-                                             'fake-uuid',
+                                             uuids.instance,
                                              device_name='fake-device',
                                              volume_id='fake-vol')
 
-        expected_args = {'instance_uuid': 'fake-uuid',
+        expected_args = {'instance_uuid': uuids.instance,
                          'device_name': 'fake-device',
                          'volume_id': 'fake-vol'}
         self._check_result(call_info, 'bdm_destroy_at_top',
@@ -667,6 +668,24 @@ class CellsAPITestCase(test.NoDBTestCase):
         self._check_result(call_info, 'resize_instance',
                            expected_args, version='1.33')
 
+    def test_resize_instance_not_passing_request_spec(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.resize_instance(self.fake_context,
+                                          'fake-instance',
+                                          dict(cow='moo'),
+                                          'fake-hint',
+                                          'fake-flavor',
+                                          'fake-reservations',
+                                          clean_shutdown=True,
+                                          request_spec='fake-spec')
+        expected_args = {'instance': 'fake-instance',
+                         'flavor': 'fake-flavor',
+                         'extra_instance_updates': dict(cow='moo'),
+                         'clean_shutdown': True}
+        self._check_result(call_info, 'resize_instance',
+                           expected_args, version='1.33')
+
     def test_live_migrate_instance(self):
         call_info = self._stub_rpc_method('cast', None)
 
@@ -681,6 +700,48 @@ class CellsAPITestCase(test.NoDBTestCase):
                          'host_name': 'fake-host'}
         self._check_result(call_info, 'live_migrate_instance',
                            expected_args, version='1.20')
+
+    def test_live_migrate_instance_not_passing_request_spec(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.live_migrate_instance(self.fake_context,
+                                                'fake-instance',
+                                                'fake-host',
+                                                'fake-block',
+                                                'fake-commit',
+                                                'fake-spec')
+        expected_args = {'instance': 'fake-instance',
+                         'block_migration': 'fake-block',
+                         'disk_over_commit': 'fake-commit',
+                         'host_name': 'fake-host'}
+        self._check_result(call_info, 'live_migrate_instance',
+                           expected_args, version='1.20')
+
+    def test_rebuild_instance_not_passing_request_spec(self):
+        call_info = self._stub_rpc_method('cast', None)
+
+        self.cells_rpcapi.rebuild_instance(self.fake_context,
+                                           'fake-instance',
+                                           'fake-pass',
+                                           'fake-files',
+                                           'fake-image_ref',
+                                           'fake-orig_image_ref',
+                                           'fake-orig_sys_metadata',
+                                           'fake-bdms',
+                                           recreate=False,
+                                           on_shared_storage=False,
+                                           host=None,
+                                           preserve_ephemeral=False,
+                                           request_spec='fake-spec',
+                                           kwargs=None)
+        expected_args = {'instance': 'fake-instance',
+                         'image_href': 'fake-image_ref',
+                         'admin_password': 'fake-pass',
+                         'files_to_inject': 'fake-files',
+                         'preserve_ephemeral': False,
+                         'kwargs': None}
+        self._check_result(call_info, 'rebuild_instance',
+                           expected_args, version='1.25')
 
     def test_revert_resize(self):
         call_info = self._stub_rpc_method('cast', None)

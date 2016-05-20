@@ -1,0 +1,4 @@
+---
+upgrade:
+  - All crypto configuration options have been added to the 'crypto'
+    group. They should no longer be included in the 'DEFAULT' group.

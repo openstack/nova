@@ -1,0 +1,9 @@
+---
+features:
+  - Added support for CPU thread policies, which can be used to control how
+    the libvirt virt driver places guests with respect to CPU SMT "threads".
+    These are provided as instance and image metadata options,
+    'hw:cpu_thread_policy' and 'hw_cpu_thread_policy' respectively, and
+    provide an additional level of control over CPU pinning policy, when
+    compared to the existing CPU policy feature.
+    These changes were introduced in commits '83cd67c' and 'aaaba4a'.

@@ -13,15 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
-from nova import crypto
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_crypto
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -36,21 +32,18 @@ class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def setUp(self):
         super(CertificatesSamplesJsonTest, self).setUp()
-        self.stubs.Set(crypto, 'ensure_ca_filesystem',
-                       fake_crypto.ensure_ca_filesystem)
-        self.stubs.Set(crypto, 'fetch_ca',
-                       fake_crypto.fetch_ca)
-        self.stubs.Set(crypto, 'generate_x509_cert',
-                       fake_crypto.generate_x509_cert)
+        self.stub_out('nova.crypto.ensure_ca_filesystem',
+                      fake_crypto.ensure_ca_filesystem)
+        self.stub_out('nova.crypto.fetch_ca', fake_crypto.fetch_ca)
+        self.stub_out('nova.crypto.generate_x509_cert',
+                      fake_crypto.generate_x509_cert)
         self.cert = self.start_service('cert')
 
     def test_create_certificates(self):
         response = self._do_post('os-certificates',
                                  'certificate-create-req', {})
-        subs = self._get_regexes()
-        self._verify_response('certificate-create-resp', subs, response, 200)
+        self._verify_response('certificate-create-resp', {}, response, 200)
 
     def test_get_root_certificate(self):
         response = self._do_get('os-certificates/root')
-        subs = self._get_regexes()
-        self._verify_response('certificate-get-root-resp', subs, response, 200)
+        self._verify_response('certificate-get-root-resp', {}, response, 200)

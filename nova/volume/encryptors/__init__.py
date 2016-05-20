@@ -67,8 +67,9 @@ def get_encryption_metadata(context, volume_api, volume_id, connection_info):
             metadata = volume_api.get_volume_encryption_metadata(context,
                                                                  volume_id)
             if not metadata:
-                LOG.warn(_LW('Volume %s should be encrypted but there is no '
-                             'encryption metadata.'), volume_id)
+                LOG.warning(_LW(
+                    'Volume %s should be encrypted but there is no '
+                    'encryption metadata.'), volume_id)
         except Exception as e:
             LOG.error(_LE("Failed to retrieve encryption metadata for "
                           "volume %(volume_id)s: %(exception)s"),

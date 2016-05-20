@@ -20,45 +20,49 @@ and storage repositories
 
 import re
 import string
+import uuid
 
 from eventlet import greenthread
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 from oslo_utils import versionutils
+import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
 
-xenapi_volume_utils_opts = [
-    cfg.IntOpt('introduce_vdi_retry_wait',
-               default=20,
-               help='Number of seconds to wait for an SR to settle '
-                    'if the VDI does not exist when first introduced'),
-    ]
 
-CONF = cfg.CONF
-CONF.register_opts(xenapi_volume_utils_opts, 'xenserver')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
+# Namespace for SRs so we can reliably generate a UUID
+# Generated from uuid.uuid5(uuid.UUID(int=0), 'volume_utils-SR_UUID')
+SR_NAMESPACE = uuid.UUID("3cca4135-a809-5bb3-af62-275fbfe87178")
+
 
 def parse_sr_info(connection_data, description=''):
-    label = connection_data.pop('name_label',
-                                'tempSR-%s' % connection_data.get('volume_id'))
     params = {}
     if 'sr_uuid' not in connection_data:
         params = _parse_volume_info(connection_data)
-        # This magic label sounds a lot like 'False Disc' in leet-speak
-        uuid = "FA15E-D15C-" + str(params['id'])
+        sr_identity = "%s/%s/%s" % (params['target'], params['port'],
+                                    params['targetIQN'])
+        # PY2 can only support taking an ascii string to uuid5
+        if six.PY2 and isinstance(sr_identity, unicode):
+            sr_identity = sr_identity.encode('utf-8')
+        sr_uuid = str(uuid.uuid5(SR_NAMESPACE, sr_identity))
     else:
-        uuid = connection_data['sr_uuid']
+        sr_uuid = connection_data['sr_uuid']
         for k in connection_data.get('introduce_sr_keys', {}):
             params[k] = connection_data[k]
+
+    label = connection_data.pop('name_label',
+                                'tempSR-%s' % sr_uuid)
     params['name_description'] = connection_data.get('name_description',
                                                      description)
 
-    return (uuid, label, params)
+    return (sr_uuid, label, params)
 
 
 def _parse_volume_info(connection_data):
@@ -215,7 +219,7 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
 
 def _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun):
     if vdi_uuid:
-        LOG.debug("vdi_uuid: %s" % vdi_uuid)
+        LOG.debug("vdi_uuid: %s", vdi_uuid)
         return session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
     elif target_lun:
         vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)

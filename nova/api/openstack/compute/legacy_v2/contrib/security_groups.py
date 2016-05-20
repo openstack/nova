@@ -78,7 +78,7 @@ class SecurityGroupControllerBase(object):
                                    security_group_api=self.security_group_api)
 
     def _format_security_group_rule(self, context, rule, group_rule_data=None):
-        """Return a secuity group rule in desired API response format.
+        """Return a security group rule in desired API response format.
 
         If group_rule_data is passed in that is used rather than querying
         for it.
@@ -327,7 +327,7 @@ class ServerSecurityGroupController(SecurityGroupControllerBase):
             instance = common.get_instance(self.compute_api, context,
                                            server_id)
             groups = self.security_group_api.get_instance_security_groups(
-                context, instance.uuid, True)
+                context, instance, True)
 
         result = [self._format_security_group(context, group)
                     for group in groups]

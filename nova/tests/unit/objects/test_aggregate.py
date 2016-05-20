@@ -20,6 +20,7 @@ from nova import exception
 from nova.objects import aggregate
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -29,6 +30,7 @@ fake_aggregate = {
     'deleted_at': None,
     'deleted': False,
     'id': 123,
+    'uuid': uuidsentinel.fake_aggregate,
     'name': 'fake-aggregate',
     'hosts': ['foo', 'bar'],
     'metadetails': {'this': 'that'},
@@ -45,25 +47,43 @@ class _TestAggregateObject(object):
         agg = aggregate.Aggregate.get_by_id(self.context, 123)
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
+    @mock.patch('nova.objects.Aggregate.save')
+    @mock.patch('nova.db.aggregate_get')
+    def test_load_allocates_uuid(self, mock_get, mock_save):
+        fake_agg = dict(fake_aggregate)
+        del fake_agg['uuid']
+        mock_get.return_value = fake_agg
+        uuid = uuidsentinel.aggregate
+        with mock.patch('oslo_utils.uuidutils.generate_uuid') as mock_g:
+            mock_g.return_value = uuid
+            obj = aggregate.Aggregate.get_by_id(self.context, 123)
+            mock_g.assert_called_once_with()
+            self.assertEqual(uuid, obj.uuid)
+            mock_save.assert_called_once_with()
+
     def test_create(self):
         self.mox.StubOutWithMock(db, 'aggregate_create')
-        db.aggregate_create(self.context, {'name': 'foo'},
+        db.aggregate_create(self.context, {'name': 'foo',
+                                           'uuid': uuidsentinel.fake_agg},
                             metadata={'one': 'two'}).AndReturn(fake_aggregate)
         self.mox.ReplayAll()
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
+        agg.uuid = uuidsentinel.fake_agg
         agg.create()
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_recreate_fails(self):
         self.mox.StubOutWithMock(db, 'aggregate_create')
-        db.aggregate_create(self.context, {'name': 'foo'},
+        db.aggregate_create(self.context, {'name': 'foo',
+                                           'uuid': uuidsentinel.fake_agg},
                             metadata={'one': 'two'}).AndReturn(fake_aggregate)
         self.mox.ReplayAll()
         agg = aggregate.Aggregate(context=self.context)
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
+        agg.uuid = uuidsentinel.fake_agg
         agg.create()
         self.assertRaises(exception.ObjectActionError, agg.create)
 

@@ -199,12 +199,27 @@ class AggregateController(wsgi.Controller):
 
     def _marshall_aggregate(self, aggregate):
         _aggregate = {}
-        for key, value in aggregate.items():
+        for key, value in self._build_aggregate_items(aggregate):
             # NOTE(danms): The original API specified non-TZ-aware timestamps
             if isinstance(value, datetime.datetime):
                 value = value.replace(tzinfo=None)
             _aggregate[key] = value
         return {"aggregate": _aggregate}
+
+    def _build_aggregate_items(self, aggregate):
+        keys = aggregate.obj_fields
+        # NOTE(rlrossit): Within the compute API, metadata will always be
+        # set on the aggregate object (at a minimum to {}). Because of this,
+        # we can freely use getattr() on keys in obj_extra_fields (in this
+        # case it is only ['availability_zone']) without worrying about
+        # lazy-loading an unset variable
+        for key in keys:
+            # NOTE(danms): Skip the uuid field because we have no microversion
+            # to expose it
+            if ((aggregate.obj_attr_is_set(key)
+                    or key in aggregate.obj_extra_fields) and
+                  key != 'uuid'):
+                yield key, getattr(aggregate, key)
 
 
 class Aggregates(extensions.V21APIExtensionBase):

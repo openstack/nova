@@ -183,9 +183,9 @@ class HostController(object):
         on the host
         """
         if enabled:
-            LOG.info(_LI("Enabling host %s.") % host_name)
+            LOG.info(_LI("Enabling host %s."), host_name)
         else:
-            LOG.info(_LI("Disabling host %s.") % host_name)
+            LOG.info(_LI("Disabling host %s."), host_name)
         try:
             result = self.api.set_host_enabled(context, host_name=host_name,
                     enabled=enabled)
@@ -234,17 +234,17 @@ class HostController(object):
     def _get_total_resources(host_name, compute_node):
         return {'resource': {'host': host_name,
                              'project': '(total)',
-                             'cpu': compute_node['vcpus'],
-                             'memory_mb': compute_node['memory_mb'],
-                             'disk_gb': compute_node['local_gb']}}
+                             'cpu': compute_node.vcpus,
+                             'memory_mb': compute_node.memory_mb,
+                             'disk_gb': compute_node.local_gb}}
 
     @staticmethod
     def _get_used_now_resources(host_name, compute_node):
         return {'resource': {'host': host_name,
                              'project': '(used_now)',
-                             'cpu': compute_node['vcpus_used'],
-                             'memory_mb': compute_node['memory_mb_used'],
-                             'disk_gb': compute_node['local_gb_used']}}
+                             'cpu': compute_node.vcpus_used,
+                             'memory_mb': compute_node.memory_mb_used,
+                             'disk_gb': compute_node.local_gb_used}}
 
     @staticmethod
     def _get_resource_totals_from_instances(host_name, instances):

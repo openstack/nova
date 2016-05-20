@@ -35,7 +35,7 @@ header and a URI, the URI takes precedence.
 Permanent Links
 ~~~~~~~~~~~~~~~
 
-The MIME type versioning approach allows for the creating of permanent
+The MIME type versioning approach allows for creating of permanent
 links, because the version scheme is not specified in the URI path:
 https://api.servers.openstack.org/224532/servers/123.
 
@@ -85,30 +85,23 @@ links and MIME types to available versions.
     ]
   }
 
-The API with ``CURRENT`` status is the newest API and continue improved by the
-Nova project. The API with ``SUPPORTED`` is the old API and new features is
-frozen. The API with ``DEPRECATED`` status is the API will be removed in the
+The API with ``CURRENT`` status is the newest API and continues to be improved by the
+Nova project. The API with ``SUPPORTED`` status is the old API, where new features are
+frozen. The API with ``DEPRECATED`` status is the API that will be removed in the
 foreseeable future. Providers should work with developers and partners to
 ensure there is adequate time to migrate to the new version before deprecated
-versions are discontinued. For any API which is under development and didn't
-release yet, the API status is ``EXPERIMENTAL``.
+versions are discontinued. For any API which is under development but isn't
+released as yet, the API status is ``EXPERIMENTAL``.
 
 Your application can programmatically determine available API versions
 by performing a **GET** on the root URL (i.e. with the version and
-everything to the right of it truncated) returned from the
-authentication system.
+everything following that truncated) returned from the authentication system.
 
 You can also obtain additional information about a specific version by
 performing a **GET** on the base version URL (such as,
 ``https://servers.api.openstack.org/v2.1/``). Version request URLs must
 always end with a trailing slash (``/``). If you omit the slash, the
-server might respond with a 302 redirection request. Format extensions
-can be placed after the slash (such as,
-``https://servers.api.openstack.org/v2.1/.json``).
-
-.. note:: This special case does not hold true for other API requests. In
-   general, requests such as ``/servers.json`` and ``/servers/.json`` are
-   handled equivalently.
+server might respond with a 302 redirection request.
 
 For examples of the list versions and get version details requests and
 responses, see `*API versions*

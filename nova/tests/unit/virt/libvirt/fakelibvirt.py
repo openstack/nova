@@ -91,6 +91,7 @@ VIR_CRED_EXTERNAL = 9
 VIR_MIGRATE_LIVE = 1
 VIR_MIGRATE_PEER2PEER = 2
 VIR_MIGRATE_TUNNELLED = 4
+VIR_MIGRATE_PERSIST_DEST = 8
 VIR_MIGRATE_UNDEFINE_SOURCE = 16
 VIR_MIGRATE_NON_SHARED_INC = 128
 
@@ -149,8 +150,10 @@ VIR_SECRET_USAGE_TYPE_VOLUME = 1
 VIR_SECRET_USAGE_TYPE_CEPH = 2
 VIR_SECRET_USAGE_TYPE_ISCSI = 3
 
-# Libvirt version
-FAKE_LIBVIRT_VERSION = 9011
+# Libvirt version to match MIN_LIBVIRT_VERSION in driver.py
+FAKE_LIBVIRT_VERSION = 1002001
+# Libvirt version to match MIN_QEMU_VERSION in driver.py
+FAKE_QEMU_VERSION = 1005003
 
 
 class HostInfo(object):
@@ -591,6 +594,13 @@ class Domain(object):
                 error_code=VIR_ERR_INTERNAL_ERROR,
                 error_domain=VIR_FROM_QEMU)
 
+    def migrateToURI3(self, dconnuri, params, logical_sum):
+        raise make_libvirtError(
+                libvirtError,
+                "Migration always fails for fake libvirt!",
+                error_code=VIR_ERR_INTERNAL_ERROR,
+                error_domain=VIR_FROM_QEMU)
+
     def migrateSetMaxDowntime(self, downtime):
         pass
 
@@ -790,8 +800,8 @@ class DomainSnapshot(object):
 
 
 class Connection(object):
-    def __init__(self, uri=None, readonly=False, version=9011,
-                 hv_version=1001000, host_info=None):
+    def __init__(self, uri=None, readonly=False, version=FAKE_LIBVIRT_VERSION,
+                 hv_version=FAKE_QEMU_VERSION, host_info=None):
         if not uri or uri == '':
             if allow_default_uri_connection:
                 uri = 'qemu:///session'

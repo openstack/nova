@@ -15,34 +15,19 @@
 
 """Console Proxy Service."""
 
-import socket
-
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova import exception
 from nova.i18n import _LI
 from nova import manager
 from nova import utils
 
 
-console_manager_opts = [
-    cfg.StrOpt('console_driver',
-               default='nova.console.xvp.XVPConsoleProxy',
-               help='Driver to use for the console proxy'),
-    cfg.BoolOpt('stub_compute',
-                default=False,
-                help='Stub calls to compute worker for tests'),
-    cfg.StrOpt('console_public_hostname',
-               default=socket.gethostname(),
-               help='Publicly visible name for this console host'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(console_manager_opts)
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -119,12 +104,7 @@ class ConsoleProxyManager(manager.Manager):
             # NOTE(mdragon): Right now, the only place this info exists is the
             #                compute worker's flagfile, at least for
             #                xenserver. Thus we ned to ask.
-            if CONF.stub_compute:
-                pool_info = {'address': '127.0.0.1',
-                             'username': 'test',
-                             'password': '1234pass'}
-            else:
-                pool_info = self.compute_rpcapi.get_console_pool_info(context,
+            pool_info = self.compute_rpcapi.get_console_pool_info(context,
                         console_type, instance_host)
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])

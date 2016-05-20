@@ -20,30 +20,17 @@
 #
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import units
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
 from nova.virt.libvirt import utils
 
-
-lvm_opts = [
-    cfg.StrOpt('volume_clear',
-               default='zero',
-               choices=('none', 'zero', 'shred'),
-               help='Method used to wipe old volumes.'),
-    cfg.IntOpt('volume_clear_size',
-               default=0,
-               help='Size in MiB to wipe at start of old volumes. 0 => all'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(lvm_opts, 'libvirt')
-CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -75,7 +62,7 @@ def create_volume(vg, lv, size, sparse=False):
         preallocated_space = 64 * units.Mi
         check_size(vg, lv, preallocated_space)
         if free_space < size:
-            LOG.warn(_LW('Volume group %(vg)s will not be able'
+            LOG.warning(_LW('Volume group %(vg)s will not be able'
                          ' to hold sparse volume %(lv)s.'
                          ' Virtual volume size is %(size)d bytes,'
                          ' but free space on volume group is'
@@ -223,7 +210,7 @@ def clear_volume(path):
     try:
         volume_size = get_volume_size(path)
     except exception.VolumeBDMPathNotFound:
-        LOG.warn(_LW('ignoring missing logical volume %(path)s'),
+        LOG.warning(_LW('ignoring missing logical volume %(path)s'),
                  {'path': path})
         return
 

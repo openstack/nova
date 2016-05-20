@@ -13,11 +13,12 @@
 # under the License.
 
 from eventlet import tpool
-from oslo_config import cfg
+import os
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
@@ -30,14 +31,7 @@ LOG = logging.getLogger(__name__)
 guestfs = None
 forceTCG = False
 
-guestfs_opts = [
-    cfg.BoolOpt('debug',
-                default=False,
-                help='Enable guestfs debug')
-]
-
-CONF = cfg.CONF
-CONF.register_opts(guestfs_opts, group='guestfs')
+CONF = nova.conf.CONF
 
 
 def force_tcg(force=True):
@@ -85,6 +79,8 @@ class VFSGuestFS(vfs.VFS):
             g.add_drive("/dev/null")  # sic
             g.launch()
         except Exception as e:
+            if os.access("/boot/vmlinuz-%s" % os.uname()[2], os.R_OK):
+                raise exception.LibguestfsCannotReadKernel()
             raise exception.NovaException(
                 _("libguestfs installed but not usable (%s)") % e)
 

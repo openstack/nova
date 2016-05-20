@@ -6,23 +6,22 @@
 # Shuwen SUN <chris-void@outlook.com>, 2014
 # Shuwen SUN <chris-void@outlook.com>, 2014
 # 颜海峰 <yanheven@gmail.com>, 2014
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-10-07 05:40+0000\n"
-"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
-"Language-Team: Chinese (China)\n"
-"Language: zh-CN\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:29+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-10-07 05:40+0000\n"
+"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
+"Language: zh-CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Chinese (China)\n"
 
 #, python-format
 msgid ""
@@ -70,26 +69,12 @@ msgid "%s swap image was used by instance but no back files existing!"
 msgstr "%s 交换镜像被实例使用，但是没有备份文件存在！"
 
 #, python-format
-msgid ""
-"Access key %(access_key)s has had %(failures)d failed authentications and "
-"will be locked out for %(lock_mins)d minutes."
-msgstr ""
-"访问密钥 %(access_key)s 有错误 %(failures)d，认证失败将被锁定 %(lock_mins)d "
-"分钟。"
-
-#, python-format
 msgid "Address |%(address)s| is not allocated"
 msgstr "地址 |%(address)s| 没有分配"
 
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "地址 |%(address)s| 没有分配给你的项目 |%(project)s|"
-
-#, python-format
-msgid ""
-"An error occurred trying to live migrate. Falling back to legacy live "
-"migrate flow. Error: %s"
-msgstr "尝试在线迁移时，发生错误。回归到遗留的在线迁移工作流。错误： %s"
 
 #, python-format
 msgid "Arguments dropped when creating context: %s"
@@ -136,10 +121,6 @@ msgstr "无法删除条目 |%s|"
 msgid "Cannot destroy instance, operation time out"
 msgstr "不能销毁实例，操作超时"
 
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "不能从%s获取计量。"
-
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
 "this platform. "
@@ -168,10 +149,6 @@ msgid ""
 msgstr ""
 "随着Juno的发布，Cinder V1 API已经被废弃，仍然配置Nova使用它。在Cinder中启用"
 "V2 API，并且在nova.conf中设置使用它。"
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "计算资源插件%s 没有加载"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -225,14 +202,6 @@ msgstr ""
 "Nova也支持v2.1的兼容遗产v2模式。如何配置v2.1API 和遗产v2 兼容模式的更多信息，"
 "请参看Nova api-paste.ini 样例文件。"
 
-msgid ""
-"Deprecated: The v3 API was deprecated. The v2.1 API replaces it as the Nova "
-"API, please refer Nova api-paste.ini sample file for how to configure v2.1 "
-"API."
-msgstr ""
-"废弃：v3 API 废弃。v2.1 替换它做为Nova API，请参考 Nova api-paste.ini 样例文"
-"件了解如何配置v2.1 API。"
-
 #, python-format
 msgid ""
 "Destination %s already exists! Concurrent moves can lead to unexpected "
@@ -270,12 +239,6 @@ msgid "Device allocation failed after repeated retries."
 msgstr "在反复重试之后，设备分配失败。"
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr "在地址为\"%(address)s\" 的控制器\"%(controller_path)s\" 上找不到磁盘"
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr "域 |%(domain)s| 已经存在，把项目改变为 |%(project)s|。"
 
@@ -292,9 +255,6 @@ msgstr "在 detach_interface 期间，实例消失。"
 
 msgid "During detach_volume, instance disappeared."
 msgstr "在 detach_volume 期间，实例消失。"
-
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
-msgstr "清除固定IP 分配失败。可能需要手动清除。"
 
 #, python-format
 msgid ""
@@ -418,20 +378,12 @@ msgstr "加载扩展%(ext_name)s:%(exc)s失败"
 msgid "Failed to power off instance"
 msgstr "关闭实例失败"
 
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "未能为 VM %s 除去快照"
-
 msgid "Failed to resume instance"
 msgstr "未能恢复实例"
 
 #, python-format
 msgid "Failed to revert task state for instance. Error: %s"
 msgstr "还原实例的任务状态失败。错误：%s"
-
-#, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "为取消分配的固定IP：%s 回归配额失败"
 
 #, python-format
 msgid "Failed to shutdown appliance %s"
@@ -455,24 +407,8 @@ msgstr "不支持向从卷启动的实例进行文件注入"
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr "标记sr_matching_filter '%s' 没有遵循格式要求"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "找不到云主机类型%d"
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "没有找到云主机类型，跳过迁移。"
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not migrate it "
-msgstr "浮动ip 地址 |%(address)s| 不再属于实例 %(instance_uuid)s。不迁移它"
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not setup it."
-msgstr "浮动ip 地址 |%(address)s| 不再属于实例 %(instance_uuid)s。不建立它"
 
 #, python-format
 msgid ""
@@ -524,14 +460,6 @@ msgid ""
 "Ignoring DiskNotFound exception while detaching volume %(volume_id)s from "
 "%(mp)s: %(err)s"
 msgstr "在从%(mp)s断开卷%(volume_id)s的过程中，忽略磁盘没有找到异常：%(err)s"
-
-#, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "忽略端点没有找到EndpointNotFound：%s"
-
-#, python-format
-msgid "Ignoring Unknown cinder exception: %s"
-msgstr "忽略未知的cinder异常：%s"
 
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
@@ -592,9 +520,6 @@ msgid ""
 msgstr ""
 "在M版本，您必须运行所有的API。API扩展的概念将从代码基线移除，保证这是一个单一"
 "的计算API。"
-
-msgid "In the M release you must run the v2.1 API."
-msgstr "在M版本，您必须运行v2.1 API。"
 
 msgid ""
 "In vmwareapi:vmops:_destroy_instance, exception while deleting the VM "
@@ -733,10 +658,6 @@ msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
 msgstr "为磁盘类型 %(disk_type)s 指定的高速缓存方式 %(cache_mode)s 无效。"
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "请求中有无效浮动ip id %s"
-
-#, python-format
 msgid "Invalid value '%d' for image_compression_level"
 msgstr "无效镜像压缩级别 image_compression_level的值'%d'"
 
@@ -802,11 +723,6 @@ msgid ""
 "Network %(id)s not matched with the tenants network! The ports tenant "
 "%(tenant_id)s will be used."
 msgstr "网络 %(id)s 与租户网络不匹配！将使用端口租户 %(tenant_id)s 。"
-
-#, python-format
-msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr "Neutron 错误：%(ip)s 不是网络%(network_id)s 中的一个有效ip地址。"
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -890,14 +806,6 @@ msgstr "直到已请求资源，才应该对实例设置主机字段.。"
 #, python-format
 msgid "Not deleting key %s"
 msgstr "不删除秘钥 %s"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "由于 %s 在黑名单中所以未能载入"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "由于 %s 不在白名单中所以未能载入"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -991,10 +899,6 @@ msgid ""
 msgstr "相对块重新基线blockrebase支持没有检测到。以老的方式继续。"
 
 #, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
-msgstr "已为浮动 IP %(float)s 除去 %(num)d 重复规则"
-
-#, python-format
 msgid ""
 "Report interval must be less than service down time. Current config: "
 "<service_down_time: %(service_down_time)s, report_interval: "
@@ -1026,15 +930,6 @@ msgid ""
 msgstr ""
 "Nova不再支持低于%(version)s 的VMware vCenter 。在13.0.0发布版本中，最小"
 "VCenter版本是%(version)s。"
-
-#, python-format
-msgid ""
-"Running Nova with a libvirt version less than %(version)s is deprecated. The "
-"required minimum version of libvirt will be raised to %(version)s in the "
-"13.0.0 release."
-msgstr ""
-"Nova不再支持低于%(version)s 的libvirt。在13.0.0发布版本中，最小VCenter版本"
-"是%(version)s。"
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -1077,16 +972,6 @@ msgstr "子网太大，缺省为 /%s。要进行覆盖，请指定 network_size 
 msgid ""
 "Tenant_id %(tenant_id)s does not match tenant_id of instance %(instance_id)s."
 msgstr "Tenant_id %(tenant_id)s 不匹配实例的 tenant_id %(instance_id)s."
-
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"Openstack项目没有测试Nova中的ZooKeeper服务组驱动，因此它的质量不能保证。这个"
-"状态将来会有所改变，但是当前部署者应该保持谨慎，现在把它用到生产环节是有风险"
-"的。"
 
 msgid ""
 "The cells feature of Nova is considered experimental by the OpenStack "
@@ -1375,10 +1260,6 @@ msgid ""
 msgstr "绑定接口失败，尝试取消分配端口%(port_id)s，原因是：%(msg)s"
 
 #, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "不能从域 %(uuid)s 获取XML，异常：%(ex)s"
-
-#, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr "不能从域：%(uuid)s 获取内存，异常： %(ex)s"
 
@@ -1445,10 +1326,6 @@ msgstr "isLuks 非正常退出(状态 %(exit_code)s): %(stderr)s"
 #, python-format
 msgid "multiple fixed_ips exist, using the first IPv4 fixed_ip: %s"
 msgstr "存在多个固定ips，使用第一个IPv4 固定ip：%s"
-
-#, python-format
-msgid "multiple fixed_ips exist, using the first: %s"
-msgstr "存在多个 fixed_ip，正在使用第一个：%s"
 
 #, python-format
 msgid ""

@@ -6,23 +6,22 @@
 # Adriana Chisco Landazábal <achisco94@gmail.com>, 2015
 # Jorge Guerrero <lavidadigital@gmail.com>, 2014
 # Pablo Sanchez <furybeat@gmail.com>, 2015
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-10-07 05:39+0000\n"
-"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
-"Language-Team: Spanish\n"
-"Language: es\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:29+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-10-07 05:39+0000\n"
+"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
+"Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Spanish\n"
 
 #, python-format
 msgid ""
@@ -72,28 +71,12 @@ msgstr ""
 "de respaldo!"
 
 #, python-format
-msgid ""
-"Access key %(access_key)s has had %(failures)d failed authentications and "
-"will be locked out for %(lock_mins)d minutes."
-msgstr ""
-"La clave de acceso %(access_key)s ha tenido %(failures)d autenticaciones "
-"anómalas y estará bloqueada durante %(lock_mins)d minutos."
-
-#, python-format
 msgid "Address |%(address)s| is not allocated"
 msgstr "La dirección |%(address)s| no está asignada"
 
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "La dirección |%(address)s| no está asignada al proyecto |%(project)s|"
-
-#, python-format
-msgid ""
-"An error occurred trying to live migrate. Falling back to legacy live "
-"migrate flow. Error: %s"
-msgstr ""
-"Ocurrió un problema al intentar migración en vivo. Retrocediendo al flujo de "
-"migración en vivo por herencia. Error: %s"
 
 #, python-format
 msgid "Arguments dropped when creating context: %s"
@@ -139,10 +122,6 @@ msgid "Cannot destroy instance, operation time out"
 msgstr ""
 "No se puede destruir intsancia, tiempo de espera agotado para la operación"
 
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "No se pueden obtener las métricas de %s."
-
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
 "this platform. "
@@ -178,10 +157,6 @@ msgstr ""
 "Se desaprueba el uso de Cinder V1 API como una versión de Juno y Nova aún "
 "está configurada para usarlo. Habilite el V2 API en Cinder y configure "
 "cinder.catalog_info en nova.conf para usarlo."
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "No se cargo el complemento de recurso de cómputo %s"
 
 #, python-format
 msgid "Could not decode cpu_allocation_ratio: '%s'"
@@ -272,14 +247,6 @@ msgstr ""
 "Ha fallado la asignación de dispositivo después de repetidos reintentos."
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr ""
-"No se encontró disco en controlador \"%(controller_path)s\" con dirección "
-"\"%(address)s\""
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr ""
 "El dominio |%(domain)s| ya existe, cambiando el proyecto a |%(project)s."
@@ -293,11 +260,6 @@ msgstr "Durante detach_interface, la instancia ha desaparecido."
 
 msgid "During detach_volume, instance disappeared."
 msgstr "Durante detach_volume, la instancia ha desaparecido."
-
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
-msgstr ""
-"Error al limpiar la asignación de IP fija. Es posible que se requiera una "
-"limpieza manual."
 
 #, python-format
 msgid ""
@@ -403,20 +365,12 @@ msgstr "Fallo al cargar extensión %(ext_name)s:%(exc)s"
 msgid "Failed to power off instance"
 msgstr "Fallo al apagar la instancia"
 
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "No se ha podido eliminar la instantánea para VM %s"
-
 msgid "Failed to resume instance"
 msgstr "No se ha podido reanudar la instancia"
 
 #, python-format
 msgid "Failed to revert task state for instance. Error: %s"
 msgstr "Error al volver al estado de tarea para instancia. Error: %s"
-
-#, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "No se pudo restaurar la capacidad para desasignar IP fija: %s"
 
 #, python-format
 msgid "Failed to shutdown appliance %s"
@@ -445,28 +399,8 @@ msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr ""
 "El distintivo sr_matching_filter '%s' no respeta el convenio de formato"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "El sabor %d no ha sido encontrado"
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "El sabor no puede ser encontrado, omitiendo migración."
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not migrate it "
-msgstr ""
-"La dirección IP flotante | %(address)s | ya no pertentece a la instancia "
-"%(instance_uuid)s. No será migrada"
-
-#, python-format
-msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
-"%(instance_uuid)s. Will not setup it."
-msgstr ""
-"La dirección IP flotante |%(address)s| ya no pertenece a la instancia "
-"%(instance_uuid)s. No se configurará."
 
 #, python-format
 msgid ""
@@ -520,10 +454,6 @@ msgid ""
 msgstr ""
 "Ignorando excepción DiskNotFound mientras se separa volumen %(volume_id)s de "
 "%(mp)s: %(err)s"
-
-#, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "Ignorando DiskNotFound: %s"
 
 #, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
@@ -718,10 +648,6 @@ msgstr ""
 "disco %(disk_type)s."
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "Identificador de dirección IP flotante inválida %s en solicitud"
-
-#, python-format
 msgid "Invalid value '%d' for image_compression_level"
 msgstr "Valor inválido '%d' para image_compression_level"
 
@@ -776,13 +702,6 @@ msgid ""
 msgstr ""
 "La red %(id)s no coincide con las redes de los inquilinos! El puerto del "
 "inquilino %(tenant_id)s será utilizado."
-
-#, python-format
-msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr ""
-"Error de Neutron: %(ip)s no es una direccion ip valida para la red "
-"%(network_id)s."
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -864,14 +783,6 @@ msgstr ""
 #, python-format
 msgid "Not deleting key %s"
 msgstr "Sin eliminar la clave %s"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "No se ha cargado %s porque está en la lista negra"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "No se ha cargado %s porque no está en la lista blanca"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -978,11 +889,6 @@ msgstr ""
 "antiguo comportamiento."
 
 #, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
-msgstr ""
-"Se han eliminado %(num)d reglas duplicadas para la IP flotante %(float)s"
-
-#, python-format
 msgid ""
 "Report interval must be less than service down time. Current config: "
 "<service_down_time: %(service_down_time)s, report_interval: "
@@ -1017,16 +923,6 @@ msgid ""
 msgstr ""
 "Se desaprueba la ejecución de Nova con una versión VMware vCenter inferior a "
 "%(version)s. La versión mínima requerida de vCenter será aumentada a "
-"%(version)s en el lanzamiento 13.0.0."
-
-#, python-format
-msgid ""
-"Running Nova with a libvirt version less than %(version)s is deprecated. The "
-"required minimum version of libvirt will be raised to %(version)s in the "
-"13.0.0 release."
-msgstr ""
-"Se desaprueba ejecutar Nova con una version de libvirt inferior a "
-"%(version)s. La version minima requerida de libvirt será aumentada a "
 "%(version)s en el lanzamiento 13.0.0."
 
 msgid ""
@@ -1071,17 +967,6 @@ msgid ""
 msgstr ""
 "Tenant_id %(tenant_id)s no coincide con tenant_id de la instancia "
 "%(instance_id)s."
-
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"El proyecto OpenStack no ha probado el controlador del grupo de servicio "
-"ZooKeeper en Nova por lo cual, no se puede asegurar su calidad. Esto puede "
-"cambiar en el futuro, pero los implementadores actuales deben estar "
-"conscientes que su uso en producción puede ser riesgoso en este momento."
 
 #, python-format
 msgid ""
@@ -1354,10 +1239,6 @@ msgstr ""
 "razón: %(msg)s"
 
 #, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "no se pudo obtener el XML del dominio: %(uuid)s, excepción: %(ex)s"
-
-#, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr "no se pudo obtener la memoria del dominio: %(uuid)s, excepción: %(ex)s"
 
@@ -1426,10 +1307,6 @@ msgstr "isLuks ha salido de manera anormal (estado%(exit_code)s): %(stderr)s"
 #, python-format
 msgid "multiple fixed_ips exist, using the first IPv4 fixed_ip: %s"
 msgstr "existen múltiples fixed_ips, utilizando la primer IPv4 fixed_ip: %s"
-
-#, python-format
-msgid "multiple fixed_ips exist, using the first: %s"
-msgstr "existen múltiples fixed_ips, utilizando la primera: %s"
 
 #, python-format
 msgid ""

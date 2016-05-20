@@ -72,26 +72,23 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
     def test_live_migration_exception(self):
         self._test_live_migration(side_effect=os_win_exc.HyperVException)
 
-    def test_live_migration_wrong_os_version(self):
-        self._livemigrops._livemigrutils = None
-        self.assertRaises(NotImplementedError,
-                          self._livemigrops.live_migration, self.context,
-                          instance_ref=mock.DEFAULT,
-                          dest=mock.sentinel.DESTINATION,
-                          post_method=mock.DEFAULT,
-                          recover_method=mock.DEFAULT)
-
+    @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.get_disk_path_mapping')
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.ebs_root_in_block_devices')
     @mock.patch('nova.virt.hyperv.imagecache.ImageCache.get_cached_image')
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.initialize_volumes_connection')
-    def test_pre_live_migration(self, mock_initialize_connection,
-                                mock_get_cached_image,
-                                mock_ebs_root_in_block_devices):
+    def _test_pre_live_migration(self, mock_initialize_connection,
+                                 mock_get_cached_image,
+                                 mock_ebs_root_in_block_devices,
+                                 mock_get_disk_path_mapping,
+                                 phys_disks_attached=True):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         mock_instance.image_ref = "fake_image_ref"
         mock_ebs_root_in_block_devices.return_value = None
+        mock_get_disk_path_mapping.return_value = (
+            mock.sentinel.disk_path_mapping if phys_disks_attached
+            else None)
         CONF.set_override('use_cow_images', True)
         self._livemigrops.pre_live_migration(
             self.context, mock_instance,
@@ -107,6 +104,20 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
                                                       mock_instance)
         mock_initialize_connection.assert_called_once_with(
             mock.sentinel.BLOCK_INFO)
+        mock_get_disk_path_mapping.assert_called_once_with(
+            mock.sentinel.BLOCK_INFO)
+        if phys_disks_attached:
+            livemigrutils = self._livemigrops._livemigrutils
+            livemigrutils.create_planned_vm.assert_called_once_with(
+                mock_instance.name,
+                mock_instance.host,
+                mock.sentinel.disk_path_mapping)
+
+    def test_pre_live_migration(self):
+        self._test_pre_live_migration()
+
+    def test_pre_live_migration_invalid_disk_mapping(self):
+        self._test_pre_live_migration(phys_disks_attached=False)
 
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.disconnect_volumes')
     def test_post_live_migration(self, mock_disconnect_volumes):

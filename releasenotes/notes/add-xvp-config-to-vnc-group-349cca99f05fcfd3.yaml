@@ -1,0 +1,5 @@
+---
+upgrade:
+  - All VNC XVP configuration options have been added to the
+    'vnc' group. They should no longer be included in the
+    'DEFAULT' group.

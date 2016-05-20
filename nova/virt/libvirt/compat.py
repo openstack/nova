@@ -32,7 +32,7 @@ def get_domain_info(libvirt, host, virt_dom):
         return virt_dom.info()
     except libvirt.libvirtError as e:
         if not host.has_min_version((1, 2, 11)) and is_race(e):
-            LOG.warn(_LW('Race detected in libvirt.virDomain.info, '
+            LOG.warning(_LW('Race detected in libvirt.virDomain.info, '
                          'trying one more time'))
             return virt_dom.info()
         raise

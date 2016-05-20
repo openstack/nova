@@ -16,51 +16,50 @@
 import calendar
 import datetime
 import os
+import re
 import time
 
 import mock
 from mox3 import mox
 import netifaces
 from oslo_concurrency import processutils
-from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import fileutils
 from oslo_utils import timeutils
 
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
 from nova.network import driver
 from nova.network import linux_net
+from nova.network import model as network_model
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
-LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.import_opt('share_dhcp_address', 'nova.objects.network')
-CONF.import_opt('network_device_mtu', 'nova.objects.network')
+CONF = nova.conf.CONF
 
 HOST = "testhost"
 
-instances = {'00000000-0000-0000-0000-0000000000000000':
+instances = {uuids.instance_1:
                  {'id': 0,
-                  'uuid': '00000000-0000-0000-0000-0000000000000000',
+                  'uuid': uuids.instance_1,
                   'host': 'fake_instance00',
                   'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
                   'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
                   'hostname': 'fake_instance00'},
-             '00000000-0000-0000-0000-0000000000000001':
+             uuids.instance_2:
                  {'id': 1,
-                  'uuid': '00000000-0000-0000-0000-0000000000000001',
+                  'uuid': uuids.instance_2,
                   'host': 'fake_instance01',
                   'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
                   'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
                   'hostname': 'fake_instance01'},
-             '00000000-0000-0000-0000-0000000000000002':
+             uuids.instance_3:
                  {'id': 2,
-                  'uuid': '00000000-0000-0000-0000-0000000000000002',
+                  'uuid': uuids.instance_3,
                   'host': 'fake_instance02',
                   'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
                   'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
@@ -161,7 +160,7 @@ fixed_ips = [{'id': 0,
               'leased': True,
               'virtual_interface_id': 0,
               'default_route': True,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
+              'instance_uuid': uuids.instance_1,
               'floating_ips': []},
              {'id': 1,
               'network_id': 1,
@@ -171,7 +170,7 @@ fixed_ips = [{'id': 0,
               'leased': True,
               'virtual_interface_id': 1,
               'default_route': False,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
+              'instance_uuid': uuids.instance_1,
               'floating_ips': []},
              {'id': 2,
               'network_id': 1,
@@ -181,7 +180,7 @@ fixed_ips = [{'id': 0,
               'leased': True,
               'virtual_interface_id': 2,
               'default_route': True,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
+              'instance_uuid': uuids.instance_2,
               'floating_ips': []},
              {'id': 3,
               'network_id': 0,
@@ -191,7 +190,7 @@ fixed_ips = [{'id': 0,
               'leased': True,
               'virtual_interface_id': 3,
               'default_route': False,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
+              'instance_uuid': uuids.instance_2,
               'floating_ips': []},
              {'id': 4,
               'network_id': 0,
@@ -201,7 +200,7 @@ fixed_ips = [{'id': 0,
               'leased': False,
               'virtual_interface_id': 4,
               'default_route': False,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000000',
+              'instance_uuid': uuids.instance_1,
               'floating_ips': []},
              {'id': 5,
               'network_id': 1,
@@ -211,7 +210,7 @@ fixed_ips = [{'id': 0,
               'leased': False,
               'virtual_interface_id': 5,
               'default_route': False,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
+              'instance_uuid': uuids.instance_2,
               'floating_ips': []},
              {'id': 6,
               'network_id': 1,
@@ -221,7 +220,7 @@ fixed_ips = [{'id': 0,
               'leased': True,
               'virtual_interface_id': 6,
               'default_route': False,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000001',
+              'instance_uuid': uuids.instance_2,
               'floating_ips': []},
              {'id': 7,
               'network_id': 2,
@@ -231,7 +230,7 @@ fixed_ips = [{'id': 0,
               'leased': False,
               'virtual_interface_id': 7,
               'default_route': False,
-              'instance_uuid': '00000000-0000-0000-0000-0000000000000002',
+              'instance_uuid': uuids.instance_3,
               'floating_ips': []}]
 
 
@@ -396,9 +395,10 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         def get_instance(_context, instance_id):
             return instances[instance_id]
 
-        self.stubs.Set(db, 'virtual_interface_get_by_instance', get_vifs)
-        self.stubs.Set(db, 'instance_get', get_instance)
-        self.stubs.Set(db, 'network_get_associated_fixed_ips', get_associated)
+        self.stub_out('nova.db.virtual_interface_get_by_instance', get_vifs)
+        self.stub_out('nova.db.instance_get', get_instance)
+        self.stub_out('nova.db.network_get_associated_fixed_ips',
+                      get_associated)
 
     def _test_add_snat_rule(self, expected, is_external):
 
@@ -577,7 +577,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             data = get_associated(self.context, 0, address=lease[2])[0]
             self.assertTrue(data['allocated'])
             self.assertTrue(data['leased'])
-            self.assertTrue(lease[0] > seconds_since_epoch)
+            self.assertTrue(int(lease[0]) > seconds_since_epoch)
             self.assertEqual(data['vif_address'], lease[1])
             self.assertEqual(data['address'], lease[2])
             self.assertEqual(data['instance_hostname'], lease[3])
@@ -594,7 +594,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             lease = lease.split(' ')
             data = get_associated(self.context, 1, address=lease[2])[0]
             self.assertTrue(data['leased'])
-            self.assertTrue(lease[0] > seconds_since_epoch)
+            self.assertTrue(int(lease[0]) > seconds_since_epoch)
             self.assertEqual(data['vif_address'], lease[1])
             self.assertEqual(data['address'], lease[2])
             self.assertEqual(data['instance_hostname'], lease[3])
@@ -656,7 +656,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.flags(fake_network=False)
 
         def fake_execute(*args, **kwargs):
-            raise processutils.ProcessExecutionError('error')
+            raise processutils.ProcessExecutionError('specific_error')
 
         def fake_device_exists(*args, **kwargs):
             return False
@@ -664,9 +664,16 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(linux_net, 'device_exists', fake_device_exists)
         driver = linux_net.LinuxOVSInterfaceDriver()
-        self.assertRaises(exception.AgentError,
-                          driver.plug, {'uuid': 'fake_network_uuid'},
-                          'fake_mac')
+
+        exc = self.assertRaises(exception.OvsConfigurationFailure,
+                                driver.plug,
+                                {'uuid': 'fake_network_uuid'}, 'fake_mac')
+        self.assertRegex(
+            str(exc),
+            re.compile("OVS configuration failed with: .*specific_error.*",
+                       re.DOTALL))
+        self.assertIsInstance(exc.kwargs['inner_exception'],
+                              processutils.ProcessExecutionError)
 
     def test_vlan_override(self):
         """Makes sure vlan_interface flag overrides network bridge_interface.
@@ -750,7 +757,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.stubs.Set(linux_net, '_add_dhcp_mangle_rule',
                        fake_add_dhcp_mangle_rule)
 
-        self.stubs.Set(os, 'chmod', lambda *a, **kw: None)
+        self.stub_out('os.chmod', lambda *a, **kw: None)
         self.stubs.Set(linux_net, 'write_to_file', lambda *a, **kw: None)
         self.stubs.Set(linux_net, '_dnsmasq_pid_for', lambda *a, **kw: None)
         dev = 'br100'
@@ -1209,12 +1216,36 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             linux_net._set_device_mtu('fake-dev')
             ex.assert_has_calls(calls)
 
-    def _ovs_vif_port(self, calls):
+    def _ovs_vif_port(self, calls, interface_type=None):
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
             linux_net.create_ovs_vif_port('fake-bridge', 'fake-dev',
                                           'fake-iface-id', 'fake-mac',
-                                          'fake-instance-uuid')
+                                          'fake-instance-uuid',
+                                          interface_type=interface_type)
             ex.assert_has_calls(calls)
+
+    def test_ovs_vif_port_cmd(self):
+        expected = ['--', '--if-exists',
+                    'del-port', 'fake-dev', '--', 'add-port',
+                    'fake-bridge', 'fake-dev',
+                    '--', 'set', 'Interface', 'fake-dev',
+                    'external-ids:iface-id=fake-iface-id',
+                    'external-ids:iface-status=active',
+                    'external-ids:attached-mac=fake-mac',
+                    'external-ids:vm-uuid=fake-instance-uuid'
+                ]
+        cmd = linux_net._create_ovs_vif_cmd('fake-bridge', 'fake-dev',
+                                            'fake-iface-id', 'fake-mac',
+                                            'fake-instance-uuid')
+
+        self.assertEqual(expected, cmd)
+
+        expected += ['type=fake-type']
+        cmd = linux_net._create_ovs_vif_cmd('fake-bridge', 'fake-dev',
+                                            'fake-iface-id', 'fake-mac',
+                                            'fake-instance-uuid',
+                                            'fake-type')
+        self.assertEqual(expected, cmd)
 
     def test_ovs_vif_port(self):
         calls = [
@@ -1229,6 +1260,22 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                           run_as_root=True)
                 ]
         self._ovs_vif_port(calls)
+
+    @mock.patch.object(linux_net, '_ovs_vsctl')
+    @mock.patch.object(linux_net, '_create_ovs_vif_cmd')
+    @mock.patch.object(linux_net, '_set_device_mtu')
+    def test_ovs_vif_port_with_type_vhostuser(self, mock_set_device_mtu,
+                                              mock_create_cmd, mock_vsctl):
+        linux_net.create_ovs_vif_port(
+            'fake-bridge',
+            'fake-dev', 'fake-iface-id', 'fake-mac',
+            "fake-instance-uuid", mtu=1500,
+            interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
+        mock_create_cmd.assert_called_once_with('fake-bridge',
+            'fake-dev', 'fake-iface-id', 'fake-mac',
+            "fake-instance-uuid", network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
+        self.assertFalse(mock_set_device_mtu.called)
+        self.assertTrue(mock_vsctl.called)
 
     def test_ovs_vif_port_with_mtu(self):
         self.flags(network_device_mtu=10000)
@@ -1369,16 +1416,6 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.driver._exec_ebtables('fake')
         self.assertEqual(2, len(executes))
         self.mox.UnsetStubs()
-
-    def test_ovs_set_vhostuser_type(self):
-        calls = [
-                 mock.call('ovs-vsctl', '--timeout=120', '--', 'set',
-                           'Interface', 'fake-dev', 'type=dpdkvhostuser',
-                           run_as_root=True)
-                 ]
-        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
-            linux_net.ovs_set_vhostuser_port_type('fake-dev')
-            ex.assert_has_calls(calls)
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')

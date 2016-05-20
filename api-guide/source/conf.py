@@ -19,7 +19,7 @@
 # serve to show the default.
 
 # import sys
-import os
+import subprocess
 
 import openstackdocstheme
 
@@ -81,10 +81,15 @@ release = '2.1.0'
 #   bug_project: Launchpad project to file bugs against.
 # These variables are passed to the logabug code via html_context.
 giturl = u'http://git.openstack.org/cgit/openstack/nova/tree/api-guide/source'
-git_cmd = "/usr/bin/git log | head -n1 | cut -f2 -d' '"
-gitsha = os.popen(git_cmd).read().strip('\n')
+git_cmd = ["/usr/bin/git", "rev-parse", "HEAD"]
+gitsha = subprocess.Popen(
+    git_cmd, stdout=subprocess.PIPE).communicate()[0]
+
+
 # source tree
-pwd = os.popen("pwd").read().strip('\n')
+pwd = subprocess.Popen(
+    "pwd", stdout=subprocess.PIPE).communicate()[0].strip('\n')
+
 # html_context allows us to pass arbitrary values into the html template
 html_context = {"pwd": pwd,
                 "gitsha": gitsha,

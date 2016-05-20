@@ -21,8 +21,12 @@ from nova import exception
 from nova import objects
 from nova.objects import base
 from nova.objects import request_spec
+from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_flavor
+from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_request_spec
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 class _TestRequestSpecObject(object):
@@ -72,7 +76,7 @@ class _TestRequestSpecObject(object):
         instance.uuid = uuidutils.generate_uuid()
         instance.numa_topology = None
         instance.pci_requests = None
-        instance.project_id = '1'
+        instance.project_id = fakes.FAKE_PROJECT_ID
         instance.availability_zone = 'nova'
 
         spec = objects.RequestSpec()
@@ -91,7 +95,7 @@ class _TestRequestSpecObject(object):
         instance = dict(uuid=uuidutils.generate_uuid(),
                         numa_topology=None,
                         pci_requests=None,
-                        project_id='1',
+                        project_id=fakes.FAKE_PROJECT_ID,
                         availability_zone='nova')
 
         spec = objects.RequestSpec()
@@ -118,7 +122,7 @@ class _TestRequestSpecObject(object):
             memory_mb=10,
             vcpus=1,
             numa_topology=None,
-            project_id='1',
+            project_id=fakes.FAKE_PROJECT_ID,
             availability_zone='nova',
             pci_requests={
                 'instance_uuid': 'fakeid',
@@ -136,7 +140,7 @@ class _TestRequestSpecObject(object):
             ephemeral_gb=0,
             memory_mb=10,
             vcpus=1,
-            project_id='1',
+            project_id=fakes.FAKE_PROJECT_ID,
             availability_zone='nova',
             pci_requests=None,
             numa_topology={'cells': [{'id': 1, 'cpuset': ['1'], 'memory': 8192,
@@ -174,7 +178,7 @@ class _TestRequestSpecObject(object):
                                      vcpus=1)
         spec.numa_topology = None
         spec.pci_requests = None
-        spec.project_id = '1'
+        spec.project_id = fakes.FAKE_PROJECT_ID
         spec.availability_zone = 'nova'
 
         instance = spec._to_legacy_instance()
@@ -184,7 +188,7 @@ class _TestRequestSpecObject(object):
                           'vcpus': 1,
                           'numa_topology': None,
                           'pci_requests': None,
-                          'project_id': '1',
+                          'project_id': fakes.FAKE_PROJECT_ID,
                           'availability_zone': 'nova'}, instance)
 
     def test_to_legacy_instance_with_unset_values(self):
@@ -216,12 +220,14 @@ class _TestRequestSpecObject(object):
         filt_props['group_updated'] = True
         filt_props['group_policies'] = set(['affinity'])
         filt_props['group_hosts'] = set(['fake1'])
+        filt_props['group_members'] = set(['fake-instance1'])
 
         spec = objects.RequestSpec()
         spec._populate_group_info(filt_props)
         self.assertIsInstance(spec.instance_group, objects.InstanceGroup)
         self.assertEqual(['affinity'], spec.instance_group.policies)
         self.assertEqual(['fake1'], spec.instance_group.hosts)
+        self.assertEqual(['fake-instance1'], spec.instance_group.members)
 
     def test_populate_group_info_missing_values(self):
         filt_props = {}
@@ -286,10 +292,65 @@ class _TestRequestSpecObject(object):
         mock_limits.assert_called_once_with({})
         # Make sure that all fields are set using that helper method
         for field in [f for f in spec.obj_fields if f != 'id']:
+            self.assertTrue(spec.obj_attr_is_set(field),
+                             'Field: %s is not set' % field)
+        # just making sure that the context is set by the method
+        self.assertEqual(ctxt, spec._context)
+
+    def test_from_components(self):
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {}
+        instance_group = None
+
+        spec = objects.RequestSpec.from_components(ctxt, instance.uuid, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, instance_group, instance.availability_zone)
+        # Make sure that all fields are set using that helper method
+        for field in [f for f in spec.obj_fields if f != 'id']:
             self.assertEqual(True, spec.obj_attr_is_set(field),
                              'Field: %s is not set' % field)
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)
+
+    @mock.patch('nova.objects.RequestSpec._populate_group_info')
+    def test_from_components_with_instance_group(self, mock_pgi):
+        # This test makes sure that we don't overwrite instance group passed
+        # to from_components
+        ctxt = context.RequestContext('fake-user', 'fake-project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {'fake': 'property'}
+        instance_group = objects.InstanceGroup()
+
+        objects.RequestSpec.from_components(ctxt, instance.uuid, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, instance_group, instance.availability_zone)
+
+        self.assertFalse(mock_pgi.called)
+
+    @mock.patch('nova.objects.RequestSpec._populate_group_info')
+    def test_from_components_without_instance_group(self, mock_pgi):
+        # This test makes sure that we populate instance group if not
+        # present
+        ctxt = context.RequestContext(fakes.FAKE_USER_ID,
+                                      fakes.FAKE_PROJECT_ID)
+        instance = fake_instance.fake_instance_obj(ctxt)
+        image = {'id': uuids.image_id, 'properties': {'mappings': []},
+                 'status': 'fake-status', 'location': 'far-away'}
+        flavor = fake_flavor.fake_flavor_obj(ctxt)
+        filter_properties = {'fake': 'property'}
+
+        objects.RequestSpec.from_components(ctxt, instance.uuid, image,
+                flavor, instance.numa_topology, instance.pci_requests,
+                filter_properties, None, instance.availability_zone)
+
+        mock_pgi.assert_called_once_with(filter_properties)
 
     def test_get_scheduler_hint(self):
         spec_obj = objects.RequestSpec(scheduler_hints={'foo_single': ['1'],
@@ -317,7 +378,7 @@ class _TestRequestSpecObject(object):
                          'vcpus': 1,
                          'numa_topology': None,
                          'pci_requests': None,
-                         'project_id': '1',
+                         'project_id': fakes.FAKE_PROJECT_ID,
                          'availability_zone': 'nova',
                          'uuid': '1'}
         spec_to_legacy_instance.return_value = fake_instance
@@ -333,7 +394,7 @@ class _TestRequestSpecObject(object):
                                    pci_requests=None,
                                    project_id=1,
                                    availability_zone='nova',
-                                   instance_uuid='1',
+                                   instance_uuid=uuids.instance,
                                    flavor=fake_flavor)
         spec_dict = spec.to_legacy_request_spec_dict()
         expected = {'num_instances': 1,
@@ -472,6 +533,18 @@ class _TestRequestSpecObject(object):
         with mock.patch.object(request_spec.RequestSpec, '_save_in_db',
                 _test_save_args):
             req_obj.save()
+
+    def test_reset_forced_destinations(self):
+        req_obj = fake_request_spec.fake_spec_obj()
+        # Making sure the fake object has forced hosts and nodes
+        self.assertIsNotNone(req_obj.force_hosts)
+        self.assertIsNotNone(req_obj.force_nodes)
+
+        with mock.patch.object(req_obj, 'obj_reset_changes') as mock_reset:
+            req_obj.reset_forced_destinations()
+        self.assertIsNone(req_obj.force_hosts)
+        self.assertIsNone(req_obj.force_nodes)
+        mock_reset.assert_called_once_with(['force_hosts', 'force_nodes'])
 
 
 class TestRequestSpecObject(test_objects._LocalTest,

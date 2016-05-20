@@ -17,6 +17,8 @@
 import webob
 import webob.dec
 
+import testscenarios
+
 from nova.api import openstack as openstack_api
 from nova.api.openstack import auth
 from nova.api.openstack import compute
@@ -25,15 +27,29 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-class TestNoAuthMiddlewareV21(test.NoDBTestCase):
+class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
+
+    scenarios = [
+        ('project_id', {
+            'expected_url': 'http://localhost/v2.1/user1_project',
+            'auth_middleware': auth.NoAuthMiddleware}),
+        ('no_project_id', {
+            'expected_url': 'http://localhost/v2.1',
+            'auth_middleware': auth.NoAuthMiddlewareV2_18}),
+    ]
 
     def setUp(self):
-        super(TestNoAuthMiddlewareV21, self).setUp()
+        super(TestNoAuthMiddleware, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)
-        fakes.stub_out_networking(self.stubs)
-        self.wsgi_app = fakes.wsgi_app_v21(use_no_auth=True)
-        self.req_url = '/v2'
-        self.expected_url = "http://localhost/v2/user1_project"
+        fakes.stub_out_networking(self)
+        api_v21 = openstack_api.FaultWrapper(
+            self.auth_middleware(
+                compute.APIRouterV21()
+            )
+        )
+        self.wsgi_app = urlmap.URLMap()
+        self.wsgi_app['/v2.1'] = api_v21
+        self.req_url = '/v2.1'
 
     def test_authorize_user(self):
         req = webob.Request.blank(self.req_url)
@@ -66,16 +82,3 @@ class TestNoAuthMiddlewareV21(test.NoDBTestCase):
         self.assertEqual(result.status, '204 No Content')
         self.assertNotIn('X-CDN-Management-Url', result.headers)
         self.assertNotIn('X-Storage-Url', result.headers)
-
-
-class TestNoAuthMiddlewareV3(TestNoAuthMiddlewareV21):
-
-    def setUp(self):
-        super(TestNoAuthMiddlewareV3, self).setUp()
-        api_router = compute.APIRouterV3()
-        api_v3 = openstack_api.FaultWrapper(auth.NoAuthMiddlewareV3(
-            api_router))
-        self.wsgi_app = urlmap.URLMap()
-        self.wsgi_app['/v3'] = api_v3
-        self.req_url = '/v3'
-        self.expected_url = "http://localhost/v3"

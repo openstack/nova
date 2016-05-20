@@ -15,34 +15,20 @@
 
 """VIF drivers for VMware."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import versionutils
 from oslo_vmware import vim_util
 
+import nova.conf
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _, _LI, _LW
 from nova.network import model
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vm_util
 
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-
-vmwareapi_vif_opts = [
-    cfg.StrOpt('vlan_interface',
-               default='vmnic0',
-               help='Physical ethernet adapter name for vlan networking'),
-    cfg.StrOpt('integration_bridge',
-               help='This option should be configured only when using the '
-                    'NSX-MH Neutron plugin. This is the name of the '
-                    'integration bridge on the ESXi. This should not be set '
-                    'for any other Neutron plugin. Hence the default value '
-                    'is not set.'),
-]
-
-CONF.register_opts(vmwareapi_vif_opts, 'vmware')
+CONF = nova.conf.CONF
 
 
 def _get_associated_vswitch_for_interface(session, interface, cluster=None):
@@ -124,7 +110,18 @@ def _get_neutron_network(session, cluster, vif):
             use_external_id = False
             network_type = 'opaque'
         else:
-            net_id = vif['network']['id']
+            # The NSX|V3 plugin will pass the nsx-logical-switch-id as part
+            # of the port details. This will enable the VC to connect to
+            # that specific opaque network
+            net_id = (vif.get('details') and
+                      vif['details'].get('nsx-logical-switch-id'))
+            if not net_id:
+                # Make use of the original one, in the event that the
+                # plugin does not pass the aforementioned id
+                LOG.info(_LI('NSX Logical switch ID is not present. '
+                             'Using network ID to attach to the '
+                             'opaque network.'))
+                net_id = vif['network']['id']
             use_external_id = True
             network_type = 'nsx.LogicalSwitch'
         network_ref = {'type': 'OpaqueNetwork',
@@ -132,11 +129,19 @@ def _get_neutron_network(session, cluster, vif):
                        'network-type': network_type,
                        'use-external-id': use_external_id}
     elif vif['type'] == model.VIF_TYPE_DVS:
-        network_id = vif['network']['bridge']
+        # Port binding for DVS VIF types may pass the name
+        # of the port group, so use it if present
+        network_id = vif.get('details', {}).get('dvs_port_group_name')
+        if network_id is None:
+            # Make use of the original one, in the event that the
+            # port binding does not provide this key in VIF details
+            network_id = vif['network']['bridge']
         network_ref = network_util.get_network_with_the_name(
                 session, network_id, cluster)
         if not network_ref:
             raise exception.NetworkNotFoundForBridge(bridge=network_id)
+        if vif.get('details') and vif['details'].get('dvs_port_key'):
+            network_ref['dvs_port_key'] = vif['details']['dvs_port_key']
     else:
         reason = _('vif type %s not supported') % vif['type']
         raise exception.InvalidInput(reason=reason)

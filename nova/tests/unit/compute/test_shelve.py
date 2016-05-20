@@ -12,20 +12,20 @@
 
 import mock
 from mox3 import mox
-from oslo_config import cfg
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
 from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import db
 from nova import objects
 from nova.tests.unit.compute import test_compute
 from nova.tests.unit.image import fake as fake_image
+from nova.tests import uuidsentinel as uuids
 
-CONF = cfg.CONF
-CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
+CONF = nova.conf.CONF
 
 
 def _fake_resources():
@@ -39,7 +39,7 @@ def _fake_resources():
         'vcpus': 2,
         'vcpus_used': 0
     }
-    return resources
+    return objects.ComputeNode(**resources)
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
@@ -148,6 +148,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'cleanup_instance_network_on_host')
+        self.mox.StubOutWithMock(self.compute, '_update_resource_tracker')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
@@ -161,6 +162,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, instance.host)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
+        self.compute._update_resource_tracker(self.context, instance)
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.end')
         self.mox.ReplayAll()
@@ -181,7 +183,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._create_fake_instance_obj()
         instance.task_state = task_states.UNSHELVING
         instance.save()
-        image = {'id': 'fake_id'}
+        image = {'id': uuids.image_id}
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
@@ -210,8 +212,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         def fake_claim(context, instance, limits):
             instance.host = self.compute.host
+            requests = objects.InstancePCIRequests(requests=[])
             return claims.Claim(context, instance,
-                                self.rt, _fake_resources())
+                                self.rt, _fake_resources(),
+                                requests)
 
         tracking = {
             'last_state': instance.task_state,
@@ -232,7 +236,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             else:
                 self.fail('Unexpected save!')
 
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
         self.compute._notify_about_instance_usage(self.context, instance,
@@ -241,7 +245,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
         self.compute.network_api.setup_instance_network_on_host(
                 self.context, instance, self.compute.host)
-        self.compute.driver.spawn(self.context, instance, image,
+        self.compute.driver.spawn(self.context, instance,
+                mox.IsA(objects.ImageMeta),
                 injected_files=[], admin_password=None,
                 network_info=[],
                 block_device_info='fake_bdm')
@@ -279,7 +284,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         filter_properties = {'limits': limits}
         instance.task_state = task_states.UNSHELVING
         instance.save()
-        image_meta = {'properties': {'base_image_ref': 'fake_id'}}
+        image_meta = {'properties': {'base_image_ref': uuids.image_id}}
         mock_image_meta.return_value = image_meta
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
@@ -316,8 +321,10 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.context, instance, self.compute.host)
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
                 claims.Claim(self.context, instance, self.rt,
-                             _fake_resources()))
-        self.compute.driver.spawn(self.context, instance, image_meta,
+                             _fake_resources(),
+                             objects.InstancePCIRequests(requests=[])))
+        self.compute.driver.spawn(self.context, instance,
+                mox.IsA(objects.ImageMeta),
                 injected_files=[], admin_password=None,
                 network_info=[],
                 block_device_info='fake_bdm')
@@ -464,7 +471,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
             metadata['id'] = '8b24ed3f-ee57-43bc-bc2e-fb2e9482bc42'
             return metadata
 
-        fake_image.stub_out_image_service(self.stubs)
+        fake_image.stub_out_image_service(self)
         self.stubs.Set(fake_image._FakeImageService, '__init__', fake_init)
         self.stubs.Set(fake_image._FakeImageService, 'create', fake_create)
 
@@ -474,7 +481,8 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
 
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_unshelve(self):
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    def test_unshelve(self, get_by_instance_uuid):
         # Ensure instance can be unshelved.
         instance = self._create_fake_instance_obj()
 
@@ -486,7 +494,14 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         instance.vm_state = vm_states.SHELVED
         instance.save()
 
-        self.compute_api.unshelve(self.context, instance)
+        fake_spec = objects.RequestSpec()
+        get_by_instance_uuid.return_value = fake_spec
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'unshelve_instance') as unshelve:
+            self.compute_api.unshelve(self.context, instance)
+            get_by_instance_uuid.assert_called_once_with(self.context,
+                                                         instance.uuid)
+            unshelve.assert_called_once_with(self.context, instance, fake_spec)
 
         self.assertEqual(instance.task_state, task_states.UNSHELVING)
 

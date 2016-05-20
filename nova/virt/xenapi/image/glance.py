@@ -14,20 +14,19 @@
 #    under the License.
 
 import functools
-import six
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from nova.compute import utils as compute_utils
+import nova.conf
 from nova import exception
 from nova.image import glance
 from nova import utils
 from nova.virt.xenapi import vm_utils
 
-CONF = cfg.CONF
-CONF.import_opt('num_retries', 'nova.image.glance', group='glance')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -37,9 +36,9 @@ class GlanceStore(object):
 
         def pick_glance(kwargs):
             server = next(glance_api_servers)
-            kwargs['endpoint'] = server.url
+            kwargs['endpoint'] = server
             # NOTE(sdague): is the return significant here at all?
-            return server.host
+            return server
 
         def retry_cb(context, instance, exc=None):
             if exc:

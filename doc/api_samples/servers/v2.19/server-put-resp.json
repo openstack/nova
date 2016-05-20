@@ -1,0 +1,56 @@
+{
+    "server": {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2015-12-07T19:19:36Z",
+        "description": "updated-server-description",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "4e17a358ca9bbc8ac6e215837b6410c0baa21b2463fefe3e8f712b31",
+        "id": "c509708e-f0c6-461f-b2b3-507547959eb2",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/c509708e-f0c6-461f-b2b3-507547959eb2",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/c509708e-f0c6-461f-b2b3-507547959eb2",
+                "rel": "bookmark"
+            }
+        ],
+        "locked": false,
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "updated-server-test",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "updated": "2015-12-07T19:19:36Z",
+        "user_id": "fake"
+    }
+}

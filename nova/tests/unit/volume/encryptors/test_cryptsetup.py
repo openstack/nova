@@ -14,21 +14,21 @@
 #    under the License.
 
 
-import array
+import binascii
 
+from castellan.common.objects import symmetric_key as key
 import mock
 import six
 
 from nova import exception
-from nova.keymgr import key
 from nova.tests.unit.volume.encryptors import test_base
 from nova.volume.encryptors import cryptsetup
 
 
 def fake__get_key(context):
-    raw = array.array('B', ('0' * 64).decode('hex')).tolist()
+    raw = bytes(binascii.unhexlify('0' * 32))
 
-    symmetric_key = key.SymmetricKey('AES', raw)
+    symmetric_key = key.SymmetricKey('AES', len(raw) * 8, raw)
     return symmetric_key
 
 

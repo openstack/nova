@@ -55,7 +55,8 @@ class ServiceGroupApiTestCase(test.NoDBTestCase):
             driver.is_up.assert_called_with(member)
 
         member["forced_down"] = True
-        for retval in (True, False):
-            driver = self.servicegroup_api._driver
-            result = self.servicegroup_api.service_is_up(member)
-            self.assertIs(result, False)
+        driver = self.servicegroup_api._driver
+        driver.is_up = mock.MagicMock()
+        result = self.servicegroup_api.service_is_up(member)
+        self.assertIs(result, False)
+        driver.is_up.assert_not_called()

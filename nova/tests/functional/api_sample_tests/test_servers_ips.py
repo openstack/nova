@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ServersIpsJsonTest(test_servers.ServersSampleBase):
@@ -29,12 +26,10 @@ class ServersIpsJsonTest(test_servers.ServersSampleBase):
         # Test getting a server's IP information.
         uuid = self._post_server()
         response = self._do_get('servers/%s/ips' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('server-ips-resp', subs, response, 200)
+        self._verify_response('server-ips-resp', {}, response, 200)
 
     def test_get_by_network(self):
         # Test getting a server's IP information by network id.
         uuid = self._post_server()
         response = self._do_get('servers/%s/ips/private' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('server-ips-network-resp', subs, response, 200)
+        self._verify_response('server-ips-network-resp', {}, response, 200)

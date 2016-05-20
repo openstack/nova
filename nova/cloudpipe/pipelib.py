@@ -24,44 +24,19 @@ import os
 import string
 import zipfile
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
 
 from nova import compute
 from nova.compute import flavors
+import nova.conf
 from nova import crypto
 from nova import db
 from nova import exception
-from nova.i18n import _
-from nova import paths
 from nova import utils
 
 
-cloudpipe_opts = [
-    cfg.StrOpt('vpn_image_id',
-               default='0',
-               help='Image ID used when starting up a cloudpipe vpn server'),
-    cfg.StrOpt('vpn_flavor',
-               default='m1.tiny',
-               help=_('Flavor for vpn instances')),
-    cfg.StrOpt('boot_script_template',
-               default=paths.basedir_def('nova/cloudpipe/bootscript.template'),
-               help=_('Template for cloudpipe instance boot script')),
-    cfg.StrOpt('dmz_net',
-               default='10.0.0.0',
-               help=_('Network to push into openvpn config')),
-    cfg.StrOpt('dmz_mask',
-               default='255.255.255.0',
-               help=_('Netmask to push into openvpn config')),
-    cfg.StrOpt('vpn_key_suffix',
-               default='-vpn',
-               help='Suffix to add to project name for vpn key and secgroups'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(cloudpipe_opts)
-CONF.import_opt('keys_path', 'nova.crypto')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -73,14 +48,7 @@ def is_vpn_image(image_id):
 def _load_boot_script():
     with open(CONF.boot_script_template, "r") as shellfile:
         s = string.Template(shellfile.read())
-
-    CONF.import_opt('ec2_dmz_host', 'nova.api.ec2.cloud')
-    CONF.import_opt('ec2_port', 'nova.api.ec2.cloud')
-    CONF.import_opt('cnt_vpn_clients', 'nova.network.manager')
-
-    return s.substitute(cc_dmz=CONF.ec2_dmz_host,
-                        cc_port=CONF.ec2_port,
-                        dmz_net=CONF.dmz_net,
+    return s.substitute(dmz_net=CONF.dmz_net,
                         dmz_mask=CONF.dmz_mask,
                         num_vpn=CONF.cnt_vpn_clients)
 
@@ -167,7 +135,7 @@ class CloudPipe(object):
             result, private_key = keypair_api.create_key_pair(context,
                                                               context.user_id,
                                                               key_name)
-            key_dir = os.path.join(CONF.keys_path, context.user_id)
+            key_dir = os.path.join(CONF.crypto.keys_path, context.user_id)
             fileutils.ensure_tree(key_dir)
             key_path = os.path.join(key_dir, '%s.pem' % key_name)
             with open(key_path, 'w') as f:

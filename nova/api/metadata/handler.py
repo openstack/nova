@@ -19,52 +19,24 @@ import hashlib
 import hmac
 import os
 
-from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_utils import secretutils as secutils
 import six
 import webob.dec
 import webob.exc
 
 from nova.api.metadata import base
+from nova import cache_utils
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
 from nova.network.neutronv2 import api as neutronapi
-from nova.openstack.common import memorycache
-from nova import utils
 from nova import wsgi
 
-CONF = cfg.CONF
-CONF.import_opt('use_forwarded_for', 'nova.api.auth')
-
-metadata_proxy_opts = [
-    cfg.BoolOpt(
-        'service_metadata_proxy',
-        default=False,
-        help='Set flag to indicate Neutron will proxy metadata requests and '
-             'resolve instance ids.'),
-     cfg.StrOpt(
-         'metadata_proxy_shared_secret',
-         default='', secret=True,
-         help='Shared secret to validate proxies Neutron metadata requests'),
-]
-
-metadata_opts = [
-    cfg.IntOpt('metadata_cache_expiration',
-               default=15,
-               help='Time in seconds to cache metadata; 0 to disable '
-                    'metadata caching entirely (not recommended). Increasing'
-                    'this should improve response times of the metadata API '
-                    'when under heavy load. Higher values may increase memory'
-                    'usage and result in longer times for host metadata '
-                    'changes to take effect.')
-]
-
-CONF.register_opts(metadata_proxy_opts, 'neutron')
-CONF.register_opts(metadata_opts)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -72,7 +44,8 @@ class MetadataRequestHandler(wsgi.Application):
     """Serve metadata."""
 
     def __init__(self):
-        self._cache = memorycache.get_client()
+        self._cache = cache_utils.get_client(
+                expiration_time=CONF.metadata_cache_expiration)
 
     def get_metadata_by_remote_address(self, address):
         if not address:
@@ -90,7 +63,7 @@ class MetadataRequestHandler(wsgi.Application):
             return None
 
         if CONF.metadata_cache_expiration > 0:
-            self._cache.set(cache_key, data, CONF.metadata_cache_expiration)
+            self._cache.set(cache_key, data)
 
         return data
 
@@ -107,7 +80,7 @@ class MetadataRequestHandler(wsgi.Application):
             return None
 
         if CONF.metadata_cache_expiration > 0:
-            self._cache.set(cache_key, data, CONF.metadata_cache_expiration)
+            self._cache.set(cache_key, data)
 
         return data
 
@@ -254,7 +227,7 @@ class MetadataRequestHandler(wsgi.Application):
         instance_id = instance_data['device_id']
         tenant_id = instance_data['tenant_id']
 
-        # instance_data is unicode-encoded, while memorycache doesn't like
+        # instance_data is unicode-encoded, while cache_utils doesn't like
         # that. Therefore we convert to str
         if isinstance(instance_id, six.text_type):
             instance_id = instance_id.encode('utf-8')
@@ -289,7 +262,7 @@ class MetadataRequestHandler(wsgi.Application):
             CONF.neutron.metadata_proxy_shared_secret,
             requestor_id, hashlib.sha256).hexdigest()
 
-        if not utils.constant_time_compare(expected_signature, signature):
+        if not secutils.constant_time_compare(expected_signature, signature):
             if requestor_id:
                 LOG.warning(_LW('X-Instance-ID-Signature: %(signature)s does '
                                 'not match the expected value: '

@@ -16,6 +16,7 @@ import copy
 
 from nova.api.openstack.compute.schemas import block_device_mapping_v1
 from nova.api.validation import parameter_types
+from nova.objects import fields
 
 
 block_device_mapping_new_item = {
@@ -35,7 +36,8 @@ block_device_mapping_new_item = {
     # Defined as varchar(255) in column "destination_type" in table
     # "block_device_mapping"
     'destination_type': {
-        'type': 'string', 'maxLength': 255,
+        'type': 'string',
+        'enum': fields.BlockDeviceDestinationType.ALL,
     },
     # Defined as varchar(255) in column "guest_format" in table
     # "block_device_mapping"

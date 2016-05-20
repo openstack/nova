@@ -1,0 +1,10 @@
+---
+deprecations:
+
+  - Deprecate the ``vendordata_driver`` config option. This allowed
+    creating a different class loader for defining vendordata
+    metadata. The default driver loads from a json file that can be
+    arbitrarily specified, so is still quite flexible. Deployments that
+    felt the need to use this facility are encouraged to propose
+    additions upstream so we can create a stable and supported
+    interface here.

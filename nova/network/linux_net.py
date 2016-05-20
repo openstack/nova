@@ -26,7 +26,6 @@ import time
 import netaddr
 import netifaces
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -35,116 +34,18 @@ from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LW
+from nova.network import model as network_model
 from nova import objects
-from nova import paths
 from nova.pci import utils as pci_utils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
 
 
-linux_net_opts = [
-    cfg.MultiStrOpt('dhcpbridge_flagfile',
-                    default=['/etc/nova/nova-dhcpbridge.conf'],
-                    help='Location of flagfiles for dhcpbridge'),
-    cfg.StrOpt('networks_path',
-               default=paths.state_path_def('networks'),
-               help='Location to keep network config files'),
-    cfg.StrOpt('public_interface',
-               default='eth0',
-               help='Interface for public IP addresses'),
-    cfg.StrOpt('dhcpbridge',
-               default=paths.bindir_def('nova-dhcpbridge'),
-               help='Location of nova-dhcpbridge'),
-    cfg.StrOpt('routing_source_ip',
-               default='$my_ip',
-               help='Public IP of network host'),
-    cfg.IntOpt('dhcp_lease_time',
-               default=86400,
-               help='Lifetime of a DHCP lease in seconds'),
-    cfg.MultiStrOpt('dns_server',
-                    default=[],
-                    help='If set, uses specific DNS server for dnsmasq. Can'
-                         ' be specified multiple times.'),
-    cfg.BoolOpt('use_network_dns_servers',
-                default=False,
-                help='If set, uses the dns1 and dns2 from the network ref.'
-                     ' as dns servers.'),
-    cfg.ListOpt('dmz_cidr',
-               default=[],
-               help='A list of dmz ranges that should be accepted'),
-    cfg.MultiStrOpt('force_snat_range',
-               default=[],
-               help='Traffic to this range will always be snatted to the '
-                    'fallback IP, even if it would normally be bridged out '
-                    'of the node. Can be specified multiple times.'),
-    cfg.StrOpt('dnsmasq_config_file',
-               default='',
-               help='Override the default dnsmasq settings with this file'),
-    cfg.StrOpt('linuxnet_interface_driver',
-               default='nova.network.linux_net.LinuxBridgeInterfaceDriver',
-               help='Driver used to create ethernet devices.'),
-    cfg.StrOpt('linuxnet_ovs_integration_bridge',
-               default='br-int',
-               help='Name of Open vSwitch bridge used with linuxnet'),
-    cfg.BoolOpt('send_arp_for_ha',
-                default=False,
-                help='Send gratuitous ARPs for HA setup'),
-    cfg.IntOpt('send_arp_for_ha_count',
-               default=3,
-               help='Send this many gratuitous ARPs for HA setup'),
-    cfg.BoolOpt('use_single_default_gateway',
-                default=False,
-                help='Use single default gateway. Only first nic of vm will '
-                     'get default gateway from dhcp server'),
-    cfg.MultiStrOpt('forward_bridge_interface',
-                    default=['all'],
-                    help='An interface that bridges can forward to. If this '
-                         'is set to all then all traffic will be forwarded. '
-                         'Can be specified multiple times.'),
-    cfg.StrOpt('metadata_host',
-               default='$my_ip',
-               help='The IP address for the metadata API server'),
-    cfg.IntOpt('metadata_port',
-               default=8775,
-               min=1,
-               max=65535,
-               help='The port for the metadata API port'),
-    cfg.StrOpt('iptables_top_regex',
-               default='',
-               help='Regular expression to match the iptables rule that '
-                    'should always be on the top.'),
-    cfg.StrOpt('iptables_bottom_regex',
-               default='',
-               help='Regular expression to match the iptables rule that '
-                    'should always be on the bottom.'),
-    cfg.StrOpt('iptables_drop_action',
-               default='DROP',
-               help='The table that iptables to jump to when a packet is '
-                    'to be dropped.'),
-    cfg.IntOpt('ovs_vsctl_timeout',
-               default=120,
-               help='Amount of time, in seconds, that ovs_vsctl should wait '
-                    'for a response from the database. 0 is to wait forever.'),
-    cfg.BoolOpt('fake_network',
-                default=False,
-                help='If passed, use fake network devices and addresses'),
-    cfg.IntOpt('ebtables_exec_attempts',
-               default=3,
-               help='Number of times to retry ebtables commands on failure.'),
-    cfg.FloatOpt('ebtables_retry_interval',
-                 default=1.0,
-                 help='Number of seconds to wait between ebtables retries.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(linux_net_opts)
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('network_device_mtu', 'nova.objects.network')
+CONF = nova.conf.CONF
 
 
 # NOTE(vish): Iptables supports chain names of up to 28 characters,  and we
@@ -814,7 +715,7 @@ def ensure_floating_forward(floating_ip, fixed_ip, device, network):
     num_rules = iptables_manager.ipv4['nat'].remove_rules_regex(regex)
     if num_rules:
         msg = _LW('Removed %(num)d duplicate rules for floating IP %(float)s')
-        LOG.warn(msg, {'num': num_rules, 'float': floating_ip})
+        LOG.warning(msg, {'num': num_rules, 'float': floating_ip})
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
@@ -1067,11 +968,6 @@ def update_dns(context, dev, network_ref):
     restart_dhcp(context, dev, network_ref, fixedips)
 
 
-def update_dhcp_hostfile_with_text(dev, hosts_text):
-    conffile = _dhcp_file(dev, 'conf')
-    write_to_file(conffile, hosts_text)
-
-
 def kill_dhcp(dev):
     pid = _dnsmasq_pid_for(dev)
     if pid:
@@ -1227,7 +1123,7 @@ def _host_dhcp(fixedip):
     #            to truncate the hostname to only 63 characters.
     hostname = fixedip.instance.hostname
     if len(hostname) > 63:
-        LOG.warning(_LW('hostname %s too long, truncating.') % (hostname))
+        LOG.warning(_LW('hostname %s too long, truncating.'), hostname)
         hostname = fixedip.instance.hostname[:2] + '-' +\
                    fixedip.instance.hostname[-60:]
     if CONF.use_single_default_gateway:
@@ -1344,7 +1240,7 @@ def _set_device_mtu(dev, mtu=None):
                       check_exit_code=[0, 2, 254])
 
 
-def _create_veth_pair(dev1_name, dev2_name):
+def _create_veth_pair(dev1_name, dev2_name, mtu=None):
     """Create a pair of veth devices with the specified names,
     deleting any previous devices with those names.
     """
@@ -1357,7 +1253,7 @@ def _create_veth_pair(dev1_name, dev2_name):
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
         utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
                       run_as_root=True)
-        _set_device_mtu(dev)
+        _set_device_mtu(dev, mtu)
 
 
 def _ovs_vsctl(args):
@@ -1367,27 +1263,43 @@ def _ovs_vsctl(args):
     except Exception as e:
         LOG.error(_LE("Unable to execute %(cmd)s. Exception: %(exception)s"),
                   {'cmd': full_args, 'exception': e})
-        raise exception.AgentError(method=full_args)
+        raise exception.OvsConfigurationFailure(inner_exception=e)
 
 
-def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
-    _ovs_vsctl(['--', '--if-exists', 'del-port', dev, '--',
-                'add-port', bridge, dev,
-                '--', 'set', 'Interface', dev,
-                'external-ids:iface-id=%s' % iface_id,
-                'external-ids:iface-status=active',
-                'external-ids:attached-mac=%s' % mac,
-                'external-ids:vm-uuid=%s' % instance_id])
-    _set_device_mtu(dev)
+def _create_ovs_vif_cmd(bridge, dev, iface_id, mac,
+                        instance_id, interface_type=None):
+    cmd = ['--', '--if-exists', 'del-port', dev, '--',
+            'add-port', bridge, dev,
+            '--', 'set', 'Interface', dev,
+            'external-ids:iface-id=%s' % iface_id,
+            'external-ids:iface-status=active',
+            'external-ids:attached-mac=%s' % mac,
+            'external-ids:vm-uuid=%s' % instance_id]
+    if interface_type:
+        cmd += ['type=%s' % interface_type]
+    return cmd
 
 
-def delete_ovs_vif_port(bridge, dev):
+def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id,
+                        mtu=None, interface_type=None):
+    _ovs_vsctl(_create_ovs_vif_cmd(bridge, dev, iface_id,
+                                   mac, instance_id,
+                                   interface_type))
+    # Note at present there is no support for setting the
+    # mtu for vhost-user type ports.
+    if interface_type != network_model.OVS_VHOSTUSER_INTERFACE_TYPE:
+        _set_device_mtu(dev, mtu)
+    else:
+        LOG.debug("MTU not set on %(interface_name)s interface "
+                  "of type %(interface_type)s.",
+                  {'interface_name': dev,
+                   'interface_type': interface_type})
+
+
+def delete_ovs_vif_port(bridge, dev, delete_dev=True):
     _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
-    delete_net_dev(dev)
-
-
-def ovs_set_vhostuser_port_type(dev):
-    _ovs_vsctl(['--', 'set', 'Interface', dev, 'type=dpdkvhostuser'])
+    if delete_dev:
+        delete_net_dev(dev)
 
 
 def create_ivs_vif_port(dev, iface_id, mac, instance_id):
@@ -1416,6 +1328,20 @@ def create_tap_dev(dev, mac_address=None):
                           run_as_root=True, check_exit_code=[0, 2, 254])
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
                       check_exit_code=[0, 2, 254])
+
+
+def create_fp_dev(dev, sockpath, sockmode):
+    if not device_exists(dev):
+        utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
+                      '--sockmode', sockmode, run_as_root=True)
+        _set_device_mtu(dev)
+        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
+                    check_exit_code=[0, 2, 254])
+
+
+def delete_fp_dev(dev):
+    if device_exists(dev):
+        utils.execute('fp-vdev', 'del', dev, run_as_root=True)
 
 
 def delete_net_dev(dev):
@@ -1953,8 +1879,6 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         bridge = self.BRIDGE_NAME_PREFIX + str(network['uuid'][0:11])
         return bridge
 
-# provide compatibility with existing configs
-QuantumLinuxBridgeInterfaceDriver = NeutronLinuxBridgeInterfaceDriver
 
 iptables_manager = IptablesManager()
 

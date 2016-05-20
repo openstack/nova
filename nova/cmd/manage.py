@@ -66,10 +66,13 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import importutils
+from oslo_utils import uuidutils
 import six
+import six.moves.urllib.parse as urlparse
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
+import nova.conf
 from nova import config
 from nova import context
 from nova import db
@@ -77,26 +80,21 @@ from nova.db import migration
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.openstack.common import cliutils
+from nova.objects import flavor as flavor_obj
+from nova.objects import instance as instance_obj
+from nova.objects import keypair as keypair_obj
+from nova.objects import request_spec
 from nova import quota
 from nova import rpc
-from nova import servicegroup
 from nova import utils
 from nova import version
 
-CONF = cfg.CONF
-CONF.import_opt('network_manager', 'nova.service')
-CONF.import_opt('service_down_time', 'nova.service')
-CONF.import_opt('flat_network_bridge', 'nova.network.manager')
-CONF.import_opt('num_networks', 'nova.network.manager')
-CONF.import_opt('multi_host', 'nova.network.manager')
-CONF.import_opt('network_size', 'nova.network.manager')
-CONF.import_opt('vlan_start', 'nova.network.manager')
-CONF.import_opt('vpn_start', 'nova.network.manager')
-CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
-CONF.import_opt('public_interface', 'nova.network.linux_net')
+CONF = nova.conf.CONF
+CONF.import_opt('connection', 'oslo_db.options', group='database')
 
 QUOTAS = quota.QUOTAS
+
+_EXTRA_DEFAULT_LOG_LEVELS = ['oslo_db=INFO']
 
 
 # Decorators for actions
@@ -105,17 +103,6 @@ def args(*args, **kwargs):
         func.__dict__.setdefault('args', []).insert(0, (args, kwargs))
         return func
     return _decorator
-
-
-def deprecate(msg):
-    """Decorator which print the deprecation message before the decorated
-    function is called
-    """
-    @decorator.decorator
-    def _deprecate(f, *args, **kwargs):
-        print(msg, file=sys.stderr)
-        return f(*args, **kwargs)
-    return _deprecate
 
 
 def param2id(object_id):
@@ -232,7 +219,7 @@ def _db_error(caught_exception):
     print(_("The above error may show that the database has not "
             "been created.\nPlease create a database using "
             "'nova-manage db sync' before running this command."))
-    exit(1)
+    sys.exit(1)
 
 
 class ProjectCommands(object):
@@ -709,192 +696,6 @@ class VmCommands(object):
                                                 instance.launch_index or 0)))
 
 
-class ServiceCommands(object):
-    """Enable and disable running services."""
-
-    description = ('DEPRECATED: Use the nova service-* commands from '
-                   'python-novaclient instead or the os-services REST '
-                   'resource. The service subcommand will be '
-                   'removed in the 14.0 release.')
-
-    @deprecate(description)
-    @args('--host', metavar='<host>', help='Host')
-    @args('--service', metavar='<service>', help='Nova service')
-    def list(self, host=None, service=None):
-        """Show a list of all running services. Filter by host & service
-        name
-        """
-        servicegroup_api = servicegroup.API()
-        ctxt = context.get_admin_context()
-        services = db.service_get_all(ctxt)
-        services = availability_zones.set_availability_zones(ctxt, services)
-        if host:
-            services = [s for s in services if s['host'] == host]
-        if service:
-            services = [s for s in services if s['binary'] == service]
-        print_format = "%-16s %-36s %-16s %-10s %-5s %-10s"
-        print(print_format % (
-                    _('Binary'),
-                    _('Host'),
-                    _('Zone'),
-                    _('Status'),
-                    _('State'),
-                    _('Updated_At')))
-        for svc in services:
-            alive = servicegroup_api.service_is_up(svc)
-            art = (alive and ":-)") or "XXX"
-            active = 'enabled'
-            if svc['disabled']:
-                active = 'disabled'
-            print(print_format % (svc['binary'], svc['host'],
-                                  svc['availability_zone'], active, art,
-                                  svc['updated_at']))
-
-    @deprecate(description)
-    @args('--host', metavar='<host>', help='Host')
-    @args('--service', metavar='<service>', help='Nova service')
-    def enable(self, host, service):
-        """Enable scheduling for a service."""
-        ctxt = context.get_admin_context()
-        try:
-            svc = db.service_get_by_host_and_binary(ctxt, host, service)
-            db.service_update(ctxt, svc['id'], {'disabled': False})
-        except exception.NotFound as ex:
-            print(_("error: %s") % ex)
-            return(2)
-        print((_("Service %(service)s on host %(host)s enabled.") %
-               {'service': service, 'host': host}))
-
-    @deprecate(description)
-    @args('--host', metavar='<host>', help='Host')
-    @args('--service', metavar='<service>', help='Nova service')
-    def disable(self, host, service):
-        """Disable scheduling for a service."""
-        ctxt = context.get_admin_context()
-        try:
-            svc = db.service_get_by_host_and_binary(ctxt, host, service)
-            db.service_update(ctxt, svc['id'], {'disabled': True})
-        except exception.NotFound as ex:
-            print(_("error: %s") % ex)
-            return(2)
-        print((_("Service %(service)s on host %(host)s disabled.") %
-               {'service': service, 'host': host}))
-
-    def _show_host_resources(self, context, host):
-        """Shows the physical/usage resource given by hosts.
-
-        :param context: security context
-        :param host: hostname
-        :returns:
-            example format is below::
-
-                {'resource':D, 'usage':{proj_id1:D, proj_id2:D}}
-                D: {'vcpus': 3, 'memory_mb': 2048, 'local_gb': 2048,
-                    'vcpus_used': 12, 'memory_mb_used': 10240,
-                    'local_gb_used': 64}
-
-        """
-        # Getting compute node info and related instances info
-        compute_ref = (
-            objects.ComputeNode.get_first_node_by_host_for_old_compat(context,
-                                                                      host))
-        instance_refs = db.instance_get_all_by_host(context, host)
-
-        # Getting total available/used resource
-        resource = {'vcpus': compute_ref.vcpus,
-                    'memory_mb': compute_ref.memory_mb,
-                    'local_gb': compute_ref.local_gb,
-                    'vcpus_used': compute_ref.vcpus_used,
-                    'memory_mb_used': compute_ref.memory_mb_used,
-                    'local_gb_used': compute_ref.local_gb_used}
-        usage = dict()
-        if not instance_refs:
-            return {'resource': resource, 'usage': usage}
-
-        # Getting usage resource per project
-        project_ids = [i['project_id'] for i in instance_refs]
-        project_ids = list(set(project_ids))
-        for project_id in project_ids:
-            vcpus = [i['vcpus'] for i in instance_refs
-                     if i['project_id'] == project_id]
-
-            mem = [i['memory_mb'] for i in instance_refs
-                   if i['project_id'] == project_id]
-
-            root = [i['root_gb'] for i in instance_refs
-                    if i['project_id'] == project_id]
-
-            ephemeral = [i['ephemeral_gb'] for i in instance_refs
-                         if i['project_id'] == project_id]
-
-            usage[project_id] = {'vcpus': sum(vcpus),
-                                 'memory_mb': sum(mem),
-                                 'root_gb': sum(root),
-                                 'ephemeral_gb': sum(ephemeral)}
-
-        return {'resource': resource, 'usage': usage}
-
-    @deprecate(description)
-    @args('--host', metavar='<host>', help='Host')
-    def describe_resource(self, host):
-        """Describes cpu/memory/hdd info for host.
-
-        :param host: hostname.
-
-        """
-        try:
-            result = self._show_host_resources(context.get_admin_context(),
-                                               host=host)
-        except exception.NovaException as ex:
-            print(_("error: %s") % ex)
-            return 2
-
-        if not isinstance(result, dict):
-            print(_('An unexpected error has occurred.'))
-            print(_('[Result]'), result)
-        else:
-            # Printing a total and used_now
-            # (NOTE)The host name width 16 characters
-            print('%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {"a": _('HOST'),
-                                                         "b": _('PROJECT'),
-                                                         "c": _('cpu'),
-                                                         "d": _('mem(mb)'),
-                                                         "e": _('hdd')})
-            print(('%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %
-                   {"a": host,
-                    "b": result['resource']['vcpus'],
-                    "c": result['resource']['memory_mb'],
-                    "d": result['resource']['local_gb']}))
-
-            print(('%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s' %
-                   {"a": host,
-                    "b": result['resource']['vcpus_used'],
-                    "c": result['resource']['memory_mb_used'],
-                    "d": result['resource']['local_gb_used']}))
-
-            # Printing a used_max
-            cpu_sum = 0
-            mem_sum = 0
-            hdd_sum = 0
-            for p_id, val in result['usage'].items():
-                cpu_sum += val['vcpus']
-                mem_sum += val['memory_mb']
-                hdd_sum += val['root_gb']
-                hdd_sum += val['ephemeral_gb']
-            print('%(a)-16s(used_max)%(b)23s%(c)8s%(d)8s' % {"a": host,
-                                                             "b": cpu_sum,
-                                                             "c": mem_sum,
-                                                             "d": hdd_sum})
-
-            for p_id, val in result['usage'].items():
-                print('%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {
-                        "a": host,
-                        "b": p_id,
-                        "c": val['vcpus'],
-                        "d": val['memory_mb'],
-                        "e": val['root_gb'] + val['ephemeral_gb']})
-
-
 class HostCommands(object):
     """List hosts."""
 
@@ -921,6 +722,16 @@ class HostCommands(object):
 class DbCommands(object):
     """Class for managing the main database."""
 
+    online_migrations = (
+        db.pcidevice_online_data_migration,
+        db.aggregate_uuids_online_data_migration,
+        flavor_obj.migrate_flavors,
+        flavor_obj.migrate_flavor_reset_autoincrement,
+        instance_obj.migrate_instance_keypairs,
+        request_spec.migrate_instances_add_request_spec,
+        keypair_obj.migrate_keypairs_to_api_db,
+    )
+
     def __init__(self):
         pass
 
@@ -946,11 +757,15 @@ class DbCommands(object):
             if max_rows < 0:
                 print(_("Must supply a positive value for max_rows"))
                 return(1)
+            if max_rows > db.MAX_INT:
+                print(_('max rows must be <= %(max_value)d') %
+                      {'max_value': db.MAX_INT})
+                return(1)
         table_to_rows_archived = db.archive_deleted_rows(max_rows)
         if verbose:
             if table_to_rows_archived:
-                cliutils.print_dict(table_to_rows_archived, _('Table'),
-                                    dict_value=_('Number of Rows Archived'))
+                utils.print_dict(table_to_rows_archived, _('Table'),
+                                 dict_value=_('Number of Rows Archived'))
             else:
                 print(_('Nothing was archived.'))
 
@@ -982,6 +797,54 @@ class DbCommands(object):
         if not records_found:
             print(_('There were no records found where '
                     'instance_uuid was NULL.'))
+
+    def _run_migration(self, ctxt, max_count):
+        ran = 0
+        for migration_meth in self.online_migrations:
+            count = max_count - ran
+            try:
+                found, done = migration_meth(ctxt, count)
+            except Exception:
+                print(_("Error attempting to run %(method)s") % dict(
+                      method=migration_meth))
+                found = done = 0
+
+            if found:
+                print(_('%(total)i rows matched query %(meth)s, %(done)i '
+                        'migrated') % {'total': found,
+                                       'meth': migration_meth.__name__,
+                                       'done': done})
+            if max_count is not None:
+                ran += done
+                if ran >= max_count:
+                    break
+        return ran
+
+    @args('--max-count', metavar='<number>', dest='max_count',
+          help='Maximum number of objects to consider')
+    def online_data_migrations(self, max_count=None):
+        ctxt = context.get_admin_context()
+        if max_count is not None:
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
+            unlimited = False
+            if max_count < 1:
+                print(_('Must supply a positive value for max_number'))
+                return 127
+        else:
+            unlimited = True
+            max_count = 50
+            print(_('Running batches of %i until complete') % max_count)
+
+        ran = None
+        while ran is None or ran != 0:
+            ran = self._run_migration(ctxt, max_count)
+            if not unlimited:
+                break
+
+        return ran and 1 or 0
 
 
 class ApiDbCommands(object):
@@ -1257,53 +1120,208 @@ class CellCommands(object):
 class CellV2Commands(object):
     """Commands for managing cells v2."""
 
-    @args('--cell_uuid', metavar='<cell_uuid>', help='The cell uuid')
-    @args('--limit', metavar='<limit>',
-          help='Maximum number of instances to map')
-    @args('--marker', metavar='<marker',
-          help='The last updated instance UUID')
-    @args('--verbose', metavar='<verbose>',
-          help='Provide output for the registration')
-    def map_instances(self, cell_uuid=None, limit=None,
-                      marker=None, verbose=0):
-        if limit is not None:
-            limit = int(limit)
-            if limit < 0:
-                print('Must supply a positive value for limit')
-                return(1)
-        ctxt = context.get_admin_context(read_deleted='yes')
-        if cell_uuid is None:
-            raise Exception(_("cell_uuid must be set"))
-        else:
-            # Validate the the cell exists
-            cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+    @args('--database_connection',
+          metavar='<database_connection>',
+          help='The database connection url for cell0. '
+               'This is optional. If not provided, a standard database '
+               'connection will be used based on the API database connection '
+               'from the Nova configuration.'
+         )
+    def map_cell0(self, database_connection=None):
+        """Create a cell mapping for cell0.
+
+        cell0 is used for instances that have not been scheduled to any cell.
+        This generally applies to instances that have encountered an error
+        before they have been scheduled.
+
+        This command creates a cell mapping for this special cell which
+        requires a database to store the instance data.
+        """
+        def cell0_default_connection():
+            # If no database connection is provided one is generated
+            # based on the API database connection url.
+            # The cell0 database will use the same database scheme and
+            # netloc as the API database, with a related path.
+            scheme, netloc, path, query, fragment = \
+                urlparse.urlsplit(CONF.api_database.connection)
+            root, ext = os.path.splitext(path)
+            path = root + "_cell0" + ext
+            return urlparse.urlunsplit((scheme, netloc, path, query,
+                                        fragment))
+
+        dbc = database_connection or cell0_default_connection()
+        ctxt = context.RequestContext()
+        # A transport url of 'none://' is provided for cell0. RPC should not
+        # be used to access cell0 objects. Cells transport switching will
+        # ignore any 'none' transport type.
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=objects.CellMapping.CELL0_UUID, name="cell0",
+                transport_url="none:///",
+                database_connection=dbc)
+        cell_mapping.create()
+
+    def _get_and_map_instances(self, ctxt, cell_mapping, limit, marker):
         filters = {}
         instances = objects.InstanceList.get_by_filters(
-                ctxt, filters, sort_key='created_at', sort_dir='asc',
-                limit=limit, marker=marker)
-        if verbose:
-            fmt = "%s instances retrieved to be mapped to cell %s"
-            print(fmt % (len(instances), cell_uuid))
+                ctxt.elevated(read_deleted='yes'), filters,
+                sort_key='created_at', sort_dir='asc', limit=limit,
+                marker=marker)
 
-        mapped = 0
         for instance in instances:
             try:
                 mapping = objects.InstanceMapping(ctxt)
                 mapping.instance_uuid = instance.uuid
-                mapping.cell_id = cell_mapping.id
+                mapping.cell_mapping = cell_mapping
                 mapping.project_id = instance.project_id
                 mapping.create()
             except db_exc.DBDuplicateEntry:
-                if verbose:
-                    print("%s already mapped to cell" % instance.uuid)
                 continue
-            mapped += 1
 
-        fmt = "%s instances registered to cell %s"
-        print(fmt % (mapped, cell_mapping.uuid))
-        if instances:
-            instance = instances[-1]
-            print('Next marker: - %s' % instance.uuid)
+        if len(instances) == 0 or len(instances) < limit:
+            # We've hit the end of the instances table
+            marker = None
+        else:
+            marker = instances[-1].uuid
+        return marker
+
+    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
+            help='Unmigrated instances will be mapped to the cell with the '
+                 'uuid provided.')
+    @args('--max-count', metavar='<max_count>',
+          help='Maximum number of instances to map')
+    def map_instances(self, cell_uuid, max_count=None):
+        """Map instances into the provided cell.
+
+        This assumes that Nova on this host is still configured to use the nova
+        database not just the nova-api database. Instances in the nova database
+        will be queried from oldest to newest and mapped to the provided cell.
+        A max-count can be set on the number of instance to map in a single
+        run. Repeated runs of the command will start from where the last run
+        finished so it is not necessary to increase max-count to finish. An
+        exit code of 0 indicates that all instances have been mapped.
+        """
+
+        if max_count is not None:
+            try:
+                max_count = int(max_count)
+            except ValueError:
+                max_count = -1
+            map_all = False
+            if max_count < 1:
+                print(_('Must supply a positive value for max-count'))
+                return 127
+        else:
+            map_all = True
+            max_count = 50
+
+        ctxt = context.RequestContext()
+        marker_project_id = 'INSTANCE_MIGRATION_MARKER'
+
+        # Validate the cell exists, this will raise if not
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+
+        # Check for a marker from a previous run
+        marker_mapping = objects.InstanceMappingList.get_by_project_id(ctxt,
+                marker_project_id)
+        if len(marker_mapping) == 0:
+            marker = None
+        else:
+            # There should be only one here
+            marker = marker_mapping[0].instance_uuid.replace(' ', '-')
+            marker_mapping[0].destroy()
+
+        next_marker = True
+        while next_marker is not None:
+            next_marker = self._get_and_map_instances(ctxt, cell_mapping,
+                    max_count, marker)
+            marker = next_marker
+            if not map_all:
+                break
+
+        if next_marker:
+            # Don't judge me. There's already an InstanceMapping with this UUID
+            # so the marker needs to be non destructively modified.
+            next_marker = next_marker.replace('-', ' ')
+            objects.InstanceMapping(ctxt, instance_uuid=next_marker,
+                    project_id=marker_project_id).create()
+            return 1
+        return 0
+
+    def _map_cell_and_hosts(self, transport_url, name=None, verbose=False):
+        ctxt = context.RequestContext()
+        cell_mapping_uuid = cell_mapping = None
+        # First, try to detect if a CellMapping has already been created
+        compute_nodes = objects.ComputeNodeList.get_all(ctxt)
+        if not compute_nodes:
+            print(_('No hosts found to map to cell, exiting.'))
+            return None
+        missing_nodes = []
+        for compute_node in compute_nodes:
+            try:
+                host_mapping = objects.HostMapping.get_by_host(
+                    ctxt, compute_node.host)
+            except exception.HostMappingNotFound:
+                missing_nodes.append(compute_node)
+            else:
+                if verbose:
+                    print(_(
+                        'Host %(host)s is already mapped to cell %(uuid)s'
+                        ) % {'host': host_mapping.host,
+                             'uuid': host_mapping.cell_mapping.uuid})
+                # Re-using the existing UUID in case there is already a mapping
+                # NOTE(sbauza): There could be possibly multiple CellMappings
+                # if the operator provides another configuration file and moves
+                # the hosts to another cell v2, but that's not really something
+                # we should support.
+                cell_mapping_uuid = host_mapping.cell_mapping.uuid
+        if not missing_nodes:
+            print(_('All hosts are already mapped to cell(s), exiting.'))
+            return cell_mapping_uuid
+        # Create the cell mapping in the API database
+        if cell_mapping_uuid is not None:
+            cell_mapping = objects.CellMapping.get_by_uuid(
+                ctxt, cell_mapping_uuid)
+        if cell_mapping is None:
+            cell_mapping_uuid = uuidutils.generate_uuid()
+            cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_mapping_uuid, name=name,
+                transport_url=transport_url,
+                database_connection=CONF.database.connection)
+            cell_mapping.create()
+        # Pull the hosts from the cell database and create the host mappings
+        for compute_node in missing_nodes:
+            host_mapping = objects.HostMapping(
+                ctxt, host=compute_node.host, cell_mapping=cell_mapping)
+            host_mapping.create()
+        if verbose:
+            print(cell_mapping_uuid)
+        return cell_mapping_uuid
+
+    # TODO(melwitt): Remove this when the oslo.messaging function
+    # for assembling a transport url from ConfigOpts is available
+    @args('--transport-url', metavar='<transport url>', required=True,
+          dest='transport_url',
+          help='The transport url for the cell message queue')
+    @args('--name', metavar='<name>', help='The name of the cell')
+    @args('--verbose', action='store_true',
+          help='Return and output the uuid of the created cell')
+    def map_cell_and_hosts(self, transport_url, name=None, verbose=False):
+        """EXPERIMENTAL. Create a cell mapping and host mappings for a cell.
+
+        Users not dividing their cloud into multiple cells will be a single
+        cell v2 deployment and should specify:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <nova.conf>
+
+        Users running multiple cells can add a cell v2 by specifying:
+
+          nova-manage cell_v2 map_cell_and_hosts --config-file <cell nova.conf>
+        """
+        self._map_cell_and_hosts(transport_url, name, verbose)
+        # online_data_migrations established a pattern of 0 meaning everything
+        # is done, 1 means run again to do more work. This command doesn't do
+        # partial work so 0 is appropriate.
+        return 0
 
 
 CATEGORIES = {
@@ -1319,7 +1337,6 @@ CATEGORIES = {
     'logs': GetLogCommands,
     'network': NetworkCommands,
     'project': ProjectCommands,
-    'service': ServiceCommands,
     'shell': ShellCommands,
     'vm': VmCommands,
     'vpn': VpnCommands,
@@ -1388,6 +1405,9 @@ def main():
     CONF.register_cli_opt(category_opt)
     try:
         config.parse_args(sys.argv)
+        logging.set_defaults(
+            default_log_levels=logging.get_default_log_levels() +
+            _EXTRA_DEFAULT_LOG_LEVELS)
         logging.setup(CONF, "nova")
     except cfg.ConfigFilesNotFoundError:
         cfgfile = CONF.config_file[-1] if CONF.config_file else None
@@ -1396,7 +1416,7 @@ def main():
             print(_("Could not read %s. Re-running with sudo") % cfgfile)
             try:
                 os.execvp('sudo', ['sudo', '-u', '#%s' % st.st_uid] + sys.argv)
-            except Exception:
+            except OSError:
                 print(_('sudo failed, continuing as if nothing happened'))
 
         print(_('Please re-run nova-manage as root.'))
@@ -1431,20 +1451,19 @@ def main():
 
     # call the action with the remaining arguments
     # check arguments
-    try:
-        cliutils.validate_args(fn, *fn_args, **fn_kwargs)
-    except cliutils.MissingArgs as e:
+    missing = utils.validate_args(fn, *fn_args, **fn_kwargs)
+    if missing:
         # NOTE(mikal): this isn't the most helpful error message ever. It is
         # long, and tells you a lot of things you probably don't want to know
         # if you just got a single arg wrong.
         print(fn.__doc__)
         CONF.print_help()
-        print(e)
+        print(_("Missing arguments: %s") % ", ".join(missing))
         return(1)
     try:
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         return(ret)
-    except Exception:
-        print(_("Command failed, please check log for more info"))
-        raise
+    except Exception as ex:
+        print(_("error: %s") % ex)
+        return(1)

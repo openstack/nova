@@ -14,19 +14,17 @@
 #    under the License.
 """Tests for compute service with multiple compute nodes."""
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
+import nova.conf
 from nova import context
-from nova import db
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel
 from nova.virt import fake
 
 
-CONF = cfg.CONF
-CONF.import_opt('compute_manager', 'nova.service')
-CONF.import_opt('compute_driver', 'nova.virt.driver')
+CONF = nova.conf.CONF
 
 
 class BaseTestCase(test.TestCase):
@@ -66,7 +64,7 @@ class FakeDriverMultiNodeTestCase(BaseTestCase):
 class MultiNodeComputeTestCase(BaseTestCase):
     def setUp(self):
         super(MultiNodeComputeTestCase, self).setUp()
-        self.flags(compute_driver='nova.virt.fake.FakeDriver')
+        self.flags(compute_driver='fake.FakeDriver')
         self.compute = importutils.import_object(CONF.compute_manager)
         self.flags(use_local=True, group='conductor')
         self.conductor = self.start_service('conductor',
@@ -74,6 +72,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         def fake_get_compute_nodes_in_db(context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,
+                                   'uuid': uuidsentinel.fake_compute,
                                    'vcpus_used': 0,
                                    'deleted': 0,
                                    'hypervisor_type': 'powervm',
@@ -100,6 +99,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
                                    'host': 'fake_phyp1',
                                    'cpu_allocation_ratio': None,
                                    'ram_allocation_ratio': None,
+                                   'disk_allocation_ratio': None,
                                    'host_ip': '127.0.0.1'}]
             return [objects.ComputeNode._from_db_object(
                         context, objects.ComputeNode(), cn)
@@ -110,7 +110,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
                 fake_get_compute_nodes_in_db)
-        self.stubs.Set(db, 'compute_node_delete',
+        self.stub_out('nova.db.compute_node_delete',
                 fake_compute_node_delete)
 
     def test_update_available_resource_add_remove_node(self):
@@ -152,7 +152,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
                 fake_get_compute_nodes_in_db)
-        self.stubs.Set(db, 'compute_node_delete',
+        self.stub_out('nova.db.compute_node_delete',
                 fake_compute_node_delete)
 
         self.compute.update_available_resource(ctx)
@@ -167,6 +167,6 @@ class MultiNodeComputeTestCase(BaseTestCase):
 
         # Verify B gets deleted since now only A is reported by driver
         self.assertEqual(len(fake_compute_nodes), 1)
-        self.assertEqual(fake_compute_nodes[0]['hypervisor_hostname'], 'A')
+        self.assertEqual(fake_compute_nodes[0].hypervisor_hostname, 'A')
         self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                         ['A'])

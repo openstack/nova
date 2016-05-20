@@ -90,17 +90,6 @@ class ServerDiagnosticsTestV21(test.NoDBTestCase):
         self.assertEqual(501, res.status_int)
 
 
-class ServerDiagnosticsTestV2(ServerDiagnosticsTestV21):
-
-    def _setup_router(self):
-        self.flags(verbose=True,
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_diagnostics'])
-
-        self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
-
-
 class ServerDiagnosticsEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):

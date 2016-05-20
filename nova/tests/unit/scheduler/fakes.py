@@ -23,14 +23,36 @@ from nova.scheduler import driver
 from nova.scheduler import host_manager
 
 NUMA_TOPOLOGY = objects.NUMATopology(
-                           cells=[objects.NUMACell(
-                                      id=0, cpuset=set([1, 2]), memory=512,
-                               cpu_usage=0, memory_usage=0, mempages=[],
+                           cells=[
+                             objects.NUMACell(
+                               id=0, cpuset=set([1, 2]), memory=512,
+                               cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(size_kb=16,
+                                                           total=387184,
+                                                           used=0),
+                                 objects.NUMAPagesTopology(size_kb=2048,
+                                                           total=512, used=0)],
                                siblings=[], pinned_cpus=set([])),
-                                  objects.NUMACell(
-                                      id=1, cpuset=set([3, 4]), memory=512,
-                                cpu_usage=0, memory_usage=0, mempages=[],
+                             objects.NUMACell(
+                               id=1, cpuset=set([3, 4]), memory=512,
+                               cpu_usage=0, memory_usage=0, mempages=[
+                                 objects.NUMAPagesTopology(size_kb=4,
+                                                           total=1548736,
+                                                           used=0),
+                                 objects.NUMAPagesTopology(size_kb=2048,
+                                                           total=512, used=0)],
                                siblings=[], pinned_cpus=set([]))])
+
+NUMA_TOPOLOGY_W_HT = objects.NUMATopology(cells=[
+    objects.NUMACell(
+        id=0, cpuset=set([1, 2, 5, 6]), memory=512,
+        cpu_usage=0, memory_usage=0, mempages=[],
+        siblings=[set([1, 5]), set([2, 6])], pinned_cpus=set([])),
+    objects.NUMACell(
+        id=1, cpuset=set([3, 4, 7, 8]), memory=512,
+        cpu_usage=0, memory_usage=0, mempages=[],
+        siblings=[set([3, 4]), set([7, 8])], pinned_cpus=set([]))
+])
 
 COMPUTE_NODES = [
         objects.ComputeNode(
@@ -41,7 +63,8 @@ COMPUTE_NODES = [
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
             pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
-            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
+            disk_allocation_ratio=1.0),
         objects.ComputeNode(
             id=2, local_gb=2048, memory_mb=2048, vcpus=2,
             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
@@ -50,7 +73,8 @@ COMPUTE_NODES = [
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
             pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
-            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
+            disk_allocation_ratio=1.0),
         objects.ComputeNode(
             id=3, local_gb=4096, memory_mb=4096, vcpus=4,
             disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
@@ -59,7 +83,8 @@ COMPUTE_NODES = [
             hypervisor_version=0, numa_topology=NUMA_TOPOLOGY._to_json(),
             hypervisor_type='foo', supported_hv_specs=[],
             pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
-            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
+            disk_allocation_ratio=1.0),
         objects.ComputeNode(
             id=4, local_gb=8192, memory_mb=8192, vcpus=8,
             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
@@ -68,7 +93,8 @@ COMPUTE_NODES = [
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
             pci_device_pools=None, cpu_info=None, stats=None, metrics=None,
-            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5),
+            cpu_allocation_ratio=16.0, ram_allocation_ratio=1.5,
+            disk_allocation_ratio=1.0),
         # Broken entry
         objects.ComputeNode(
             id=5, local_gb=1024, memory_mb=1024, vcpus=1,

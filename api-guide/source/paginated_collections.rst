@@ -13,16 +13,16 @@ by the compute provider. To navigate the collection, the *``limit``* and
 
 The *``marker``* parameter is the ID of the last item in the previous
 list. By default, the service sorts items by create time in descending order.
-When the service cannot identify a a create time, it sorts items by ID. The
+When the service cannot identify a create time, it sorts items by ID. The
 *``limit``* parameter sets the page size. Both parameters are optional. If the
-client requests a *``limit``* beyond that which is supported by the deployment
+client requests a *``limit``* beyond one that is supported by the deployment
 an overLimit (413) fault may be thrown. A marker with an invalid ID returns
 a badRequest (400) fault.
 
 For convenience, collections should contain atom ``next``
 links. They may optionally also contain ``previous`` links but the current
 implementation does not contain ``previous`` links. The last
-page in the list does not contain a "next" link. The following examples
+page in the list does not contain a link to "next" page. The following examples
 illustrate three pages in a collection of images. The first page was
 retrieved through a **GET** to
 ``http://servers.api.openstack.org/v2/1234/servers?limit=1``. In these
@@ -73,7 +73,7 @@ JSON. The approach allows for extensibility of paginated collections by
 allowing them to be associated with arbitrary properties. It also allows
 collections to be embedded in other objects as illustrated below. Here,
 a subset of metadata items are presented within the image. Clients must
-follow the "next" link to retrieve the full set of metadata.
+keep following the ``next`` link to retrieve the full set of metadata.
 
 
 **Example: Paginated metadata: JSON**
@@ -102,4 +102,3 @@ follow the "next" link to retrieve the full set of metadata.
             ]
         }
     }
-

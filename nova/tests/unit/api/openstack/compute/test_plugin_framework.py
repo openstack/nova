@@ -13,13 +13,10 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-CONF = cfg.CONF
 
 
 class PluginTest(test.NoDBTestCase):

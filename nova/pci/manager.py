@@ -55,8 +55,9 @@ class PciDevTracker(object):
         super(PciDevTracker, self).__init__()
         self.stale = {}
         self.node_id = node_id
-        self.stats = stats.PciDeviceStats()
         self.dev_filter = whitelist.Whitelist(CONF.pci_passthrough_whitelist)
+        self.stats = stats.PciDeviceStats(dev_filter=self.dev_filter)
+        self._context = context
         if node_id:
             self.pci_devs = objects.PciDeviceList.get_by_compute_node(
                     context, node_id)
@@ -112,9 +113,6 @@ class PciDevTracker(object):
 
         devices = []
         for dev in jsonutils.loads(devices_json):
-            if dev.get('dev_type') == fields.PciDeviceType.SRIOV_PF:
-                continue
-
             if self.dev_filter.device_assignable(dev):
                 devices.append(dev)
         self._set_hvdevs(devices)
@@ -167,18 +165,11 @@ class PciDevTracker(object):
         for dev in [dev for dev in devices if
                     dev['address'] in new_addrs - exist_addrs]:
             dev['compute_node_id'] = self.node_id
-            # NOTE(danms): These devices are created with no context
-            dev_obj = objects.PciDevice.create(dev)
+            dev_obj = objects.PciDevice.create(self._context, dev)
             self.pci_devs.objects.append(dev_obj)
             self.stats.add_device(dev_obj)
 
-    def _claim_instance(self, context, instance, prefix=''):
-        pci_requests = objects.InstancePCIRequests.get_by_instance(
-            context, instance)
-        if not pci_requests.requests:
-            return None
-        instance_numa_topology = hardware.instance_topology_from_instance(
-            instance)
+    def _claim_instance(self, context, pci_requests, instance_numa_topology):
         instance_cells = None
         if instance_numa_topology:
             instance_cells = instance_numa_topology.cells
@@ -188,13 +179,14 @@ class PciDevTracker(object):
         if not devs:
             return None
 
+        instance_uuid = pci_requests.instance_uuid
         for dev in devs:
-            dev.claim(instance)
+            dev.claim(instance_uuid)
         if instance_numa_topology and any(
                                         dev.numa_node is None for dev in devs):
             LOG.warning(_LW("Assigning a pci device without numa affinity to"
             "instance %(instance)s which has numa topology"),
-                        {'instance': instance['uuid']})
+                        {'instance': instance_uuid})
         return devs
 
     def _allocate_instance(self, instance, devs):
@@ -207,22 +199,25 @@ class PciDevTracker(object):
         if devs:
             self.allocations[instance['uuid']] += devs
 
-    def claim_instance(self, context, instance):
-        if not self.pci_devs:
+    def claim_instance(self, context, pci_requests, instance_numa_topology):
+        if not self.pci_devs or not pci_requests.requests:
             return
 
-        devs = self._claim_instance(context, instance)
+        instance_uuid = pci_requests.instance_uuid
+        devs = self._claim_instance(context, pci_requests,
+                                    instance_numa_topology)
         if devs:
-            self.claims[instance['uuid']] = devs
+            self.claims[instance_uuid] = devs
             return devs
         return None
 
     def _free_device(self, dev, instance=None):
-        dev.free(instance)
+        freed_devs = dev.free(instance)
         stale = self.stale.pop(dev.address, None)
         if stale:
             dev.update_device(stale)
-        self.stats.add_device(dev)
+        for dev in freed_devs:
+            self.stats.add_device(dev)
 
     def _free_instance(self, instance):
         # Note(yjiang5): When an instance is resized, the devices in the
@@ -262,8 +257,13 @@ class PciDevTracker(object):
                      the claims when sign is -1
         """
         uuid = instance['uuid']
+        pci_requests = objects.InstancePCIRequests.get_by_instance(
+                context, instance)
+        instance_numa_topology = hardware.instance_topology_from_instance(
+                instance)
         if sign == 1 and uuid not in self.claims:
-            devs = self._claim_instance(context, instance, 'new_')
+            devs = self._claim_instance(context, pci_requests,
+                                        instance_numa_topology)
             if devs:
                 self.claims[uuid] = devs
         if sign == -1 and uuid in self.claims:

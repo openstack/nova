@@ -18,7 +18,6 @@ import mock
 import webob
 
 from nova.api.openstack.compute import fping as fping_v21
-from nova.api.openstack.compute.legacy_v2.contrib import fping
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -40,10 +39,10 @@ class FpingTestV21(test.TestCase):
         self.flags(verbose=True, use_ipv6=False)
         return_server = fakes.fake_instance_get()
         return_servers = fakes.fake_instance_get_all_by_filters()
-        self.stubs.Set(nova.db, "instance_get_all_by_filters",
-                       return_servers)
-        self.stubs.Set(nova.db, "instance_get_by_uuid",
-                       return_server)
+        self.stub_out("nova.db.instance_get_all_by_filters",
+                      return_servers)
+        self.stub_out("nova.db.instance_get_by_uuid",
+                      return_server)
         self.stubs.Set(nova.utils, "execute",
                        execute)
         self.stubs.Set(self.controller_cls, "check_fping",
@@ -109,10 +108,6 @@ class FpingTestV21(test.TestCase):
                                       "os-fping/%s" % FAKE_UUID)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, FAKE_UUID)
-
-
-class FpingTestV2(FpingTestV21):
-    controller_cls = fping.FpingController
 
 
 class FpingPolicyEnforcementV21(test.NoDBTestCase):

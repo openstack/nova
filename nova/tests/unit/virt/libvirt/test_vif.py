@@ -12,6 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
+
+import fixtures
 from lxml import etree
 import mock
 from oslo_concurrency import processutils
@@ -24,6 +27,7 @@ from nova.network import model as network_model
 from nova import objects
 from nova.pci import utils as pci_utils
 from nova import test
+from nova.tests.unit.virt import fakelibosinfo
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import host
@@ -56,7 +60,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                            subnets=[subnet_bridge_4,
                                                     subnet_bridge_6],
                                            bridge_interface='eth0',
-                                           vlan=99)
+                                           vlan=99, mtu=9000)
 
     vif_bridge = network_model.VIF(id='vif-xxx-yyy-zzz',
                                    address='ca:fe:de:ad:be:ef',
@@ -86,7 +90,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                         subnets=[subnet_bridge_4,
                                                  subnet_bridge_6],
                                         bridge_interface=None,
-                                        vlan=99)
+                                        vlan=99, mtu=1000)
 
     network_ivs = network_model.Network(id='network-id-xxx-yyy-zzz',
                                         bridge='br0',
@@ -199,6 +203,17 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                             'pci_slot': '0000:0a:00.1',
                                             'physical_network': 'phynet1'})
 
+    vif_hostdev_physical = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                   address='ca:fe:de:ad:be:ef',
+                                   network=network_8021,
+                                   type=network_model.VIF_TYPE_HOSTDEV,
+                                   vnic_type=
+                                       network_model.VNIC_TYPE_DIRECT_PHYSICAL,
+                                   ovs_interfaceid=None,
+                                   profile={'pci_vendor_info': '1137:0043',
+                                            'pci_slot': '0000:0a:00.1',
+                                            'physical_network': 'phynet1'})
+
     vif_hw_veb_macvtap = network_model.VIF(id='vif-xxx-yyy-zzz',
                                     address='ca:fe:de:ad:be:ef',
                                     network=network_8021,
@@ -280,6 +295,16 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                                     '/tmp/vif-xxx-yyy-zzz'}
               )
 
+    vif_vhostuser_fp = network_model.VIF(id='vif-xxx-yyy-zzz',
+              address='ca:fe:de:ad:be:ef',
+              network=network_bridge,
+              type=network_model.VIF_TYPE_VHOSTUSER,
+              devname='tap-xxx-yyy-zzz',
+              details = {network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
+                                                     '/tmp/usv-xxx-yyy-zzz',
+                         network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True},
+              )
+
     vif_vhostuser_ovs = network_model.VIF(id='vif-xxx-yyy-zzz',
               address='ca:fe:de:ad:be:ef',
               network=network_bridge,
@@ -288,6 +313,33 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                          network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
                                                      '/tmp/usv-xxx-yyy-zzz',
                          network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True},
+              ovs_interfaceid='aaa-bbb-ccc', mtu=1500
+              )
+
+    vif_vhostuser_ovs_fp = network_model.VIF(id='vif-xxx-yyy-zzz',
+              address='ca:fe:de:ad:be:ef',
+              network=network_bridge,
+              type=network_model.VIF_TYPE_VHOSTUSER,
+              details = {network_model.VIF_DETAILS_VHOSTUSER_MODE: 'server',
+                         network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
+                                                     '/tmp/usv-xxx-yyy-zzz',
+                         network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                         network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True},
+              devname='tap-xxx-yyy-zzz',
+              ovs_interfaceid='aaa-bbb-ccc'
+              )
+
+    vif_vhostuser_ovs_fp_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
+              address='ca:fe:de:ad:be:ef',
+              network=network_bridge,
+              type=network_model.VIF_TYPE_VHOSTUSER,
+              details = {'ovs_hybrid_plug': True,
+                         network_model.VIF_DETAILS_VHOSTUSER_MODE: 'server',
+                         network_model.VIF_DETAILS_VHOSTUSER_SOCKET:
+                                                     '/tmp/usv-xxx-yyy-zzz',
+                         network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: True,
+                         network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True},
+              devname='tap-xxx-yyy-zzz',
               ovs_interfaceid='aaa-bbb-ccc'
               )
 
@@ -320,7 +372,8 @@ class LibvirtVifTestCase(test.NoDBTestCase):
           type=network_model.VIF_TYPE_MACVTAP)
 
     instance = objects.Instance(id=1,
-                                uuid='f0000000-0000-0000-0000-000000000001')
+                                uuid='f0000000-0000-0000-0000-000000000001',
+                                project_id=723)
 
     bandwidth = {
         'quota:vif_inbound_peak': '200',
@@ -537,6 +590,22 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                              image_meta)
                 self._assertModel(xml, model)
 
+    @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config')
+    def test_model_with_osinfo(self, mock_set):
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.osinfo.libosinfo',
+            fakelibosinfo))
+        d = vif.LibvirtGenericVIFDriver()
+        image_meta = {'properties': {'os_name': 'fedora22'}}
+        image_meta = objects.ImageMeta.from_dict(image_meta)
+        d.get_base_config(None, self.vif_bridge, image_meta,
+                          None, 'kvm')
+        mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
+                                         'virtio', None, None)
+
     def _test_model_qemu(self, *vif_objs, **kw):
         libvirt_version = kw.get('libvirt_version')
         self.flags(use_virtio_for_bridges=True,
@@ -633,14 +702,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(linux_net, 'delete_ivs_vif_port') as delete:
             delete.side_effect = processutils.ProcessExecutionError
-            d.unplug_ivs_ethernet(None, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ivs)
 
-    def test_plug_ovs_hybrid(self):
+    def _test_plug_ovs_hybrid(self, ipv6_exists):
         calls = {
             'device_exists': [mock.call('qbrvif-xxx-yyy'),
                               mock.call('qvovif-xxx-yyy')],
             '_create_veth_pair': [mock.call('qvbvif-xxx-yyy',
-                                            'qvovif-xxx-yyy')],
+                                            'qvovif-xxx-yyy', 1000)],
             'execute': [mock.call('brctl', 'addbr', 'qbrvif-xxx-yyy',
                                   run_as_root=True),
                         mock.call('brctl', 'setfd', 'qbrvif-xxx-yyy', 0,
@@ -650,29 +719,46 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                         mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
                                           '/bridge/multicast_snooping'),
                                   process_input='0', run_as_root=True,
-                                  check_exit_code=[0, 1]),
-                        mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
-                                  run_as_root=True),
-                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
-                                  'qvbvif-xxx-yyy', run_as_root=True)],
+                                  check_exit_code=[0, 1])],
             'create_ovs_vif_port': [mock.call(
                                     'br0', 'qvovif-xxx-yyy', 'aaa-bbb-ccc',
                                     'ca:fe:de:ad:be:ef',
-                                    'f0000000-0000-0000-0000-000000000001')]
+                                    'f0000000-0000-0000-0000-000000000001',
+                                    1000)]
         }
+        # The disable_ipv6 call needs to be added in the middle, if required
+        if ipv6_exists:
+            calls['execute'].extend([
+                mock.call('tee', ('/proc/sys/net/ipv6/conf'
+                                  '/qbrvif-xxx-yyy/disable_ipv6'),
+                          process_input='1', run_as_root=True,
+                          check_exit_code=[0, 1])])
+        calls['execute'].extend([
+            mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
+                      run_as_root=True),
+            mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
+                      'qvbvif-xxx-yyy', run_as_root=True)])
         with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, '_create_veth_pair'),
-                mock.patch.object(linux_net, 'create_ovs_vif_port')
-        ) as (device_exists, execute, _create_veth_pair, create_ovs_vif_port):
+                mock.patch.object(linux_net, 'create_ovs_vif_port'),
+                mock.patch.object(os.path, 'exists', return_value=ipv6_exists)
+        ) as (device_exists, execute, _create_veth_pair, create_ovs_vif_port,
+              path_exists):
             d = vif.LibvirtGenericVIFDriver()
-            d.plug_ovs_hybrid(self.instance, self.vif_ovs)
+            d.plug(self.instance, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
             execute.assert_has_calls(calls['execute'])
             create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
+
+    def test_plug_ovs_hybrid_ipv6(self):
+        self._test_plug_ovs_hybrid(ipv6_exists=True)
+
+    def test_plug_ovs_hybrid_no_ipv6(self):
+        self._test_plug_ovs_hybrid(ipv6_exists=False)
 
     def test_unplug_ovs_hybrid(self):
         calls = {
@@ -692,7 +778,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(linux_net, 'delete_ovs_vif_port')
         ) as (device_exists, execute, delete_ovs_vif_port):
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug_ovs_hybrid(None, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             execute.assert_has_calls(calls['execute'])
             delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
@@ -723,7 +809,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   run_as_root=True,
                                   check_exit_code=exit_code)]
         }
-        op(None, self.vif_hw_veb_macvtap)
+        op(self.instance, self.vif_hw_veb_macvtap)
         mock_get_ifname.assert_has_calls(calls['get_ifname'])
         mock_get_vf_num.assert_has_calls(calls['get_vf_num'])
         mock_execute.assert_has_calls(calls['execute'])
@@ -731,12 +817,12 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_plug_hw_veb(self):
         d = vif.LibvirtGenericVIFDriver()
         self._test_hw_veb_op(
-            d.plug_hw_veb,
+            d.plug,
             self.vif_hw_veb_macvtap['details'][network_model.VIF_DETAILS_VLAN])
 
     def test_unplug_hw_veb(self):
         d = vif.LibvirtGenericVIFDriver()
-        self._test_hw_veb_op(d.unplug_hw_veb, 0)
+        self._test_hw_veb_op(d.unplug, 0)
 
     def test_unplug_ovs_hybrid_bridge_does_not_exist(self):
         calls = {
@@ -749,7 +835,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(linux_net, 'delete_ovs_vif_port')
         ) as (device_exists, delete_ovs_vif_port):
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug_ovs_hybrid(None, self.vif_ovs)
+            d.unplug(self.instance, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
 
@@ -758,7 +844,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             'device_exists': [mock.call('qbrvif-xxx-yyy'),
                               mock.call('qvovif-xxx-yyy')],
             '_create_veth_pair': [mock.call('qvbvif-xxx-yyy',
-                                            'qvovif-xxx-yyy')],
+                                            'qvovif-xxx-yyy', None)],
             'execute': [mock.call('brctl', 'addbr', 'qbrvif-xxx-yyy',
                                   run_as_root=True),
                         mock.call('brctl', 'setfd', 'qbrvif-xxx-yyy', 0,
@@ -768,6 +854,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                         mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
                                           '/bridge/multicast_snooping'),
                                   process_input='0', run_as_root=True,
+                                  check_exit_code=[0, 1]),
+                        mock.call('tee', ('/proc/sys/net/ipv6/conf'
+                                          '/qbrvif-xxx-yyy/disable_ipv6'),
+                                  process_input='1', run_as_root=True,
                                   check_exit_code=[0, 1]),
                         mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
                                   run_as_root=True),
@@ -782,10 +872,12 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, '_create_veth_pair'),
-                mock.patch.object(linux_net, 'create_ivs_vif_port')
-        ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port):
+                mock.patch.object(linux_net, 'create_ivs_vif_port'),
+                mock.patch.object(os.path, 'exists', return_value=True)
+        ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port,
+              path_exists):
             d = vif.LibvirtGenericVIFDriver()
-            d.plug_ivs_hybrid(self.instance, self.vif_ivs)
+            d.plug(self.instance, self.vif_ivs)
             device_exists.assert_has_calls(calls['device_exists'])
             _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
             execute.assert_has_calls(calls['execute'])
@@ -806,7 +898,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(linux_net, 'delete_ivs_vif_port')
         ) as (execute, delete_ivs_vif_port):
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug_ivs_hybrid(None, self.vif_ivs)
+            d.unplug(self.instance, self.vif_ivs)
             execute.assert_has_calls(calls['execute'])
             delete_ivs_vif_port.assert_has_calls(calls['delete_ivs_vif_port'])
 
@@ -814,18 +906,13 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            d.unplug_ivs_hybrid(None, self.vif_ivs)
+            d.unplug(self.instance, self.vif_ivs)
 
     def test_unplug_iovisor(self):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            mynetwork = network_model.Network(id='network-id-xxx-yyy-zzz',
-                                              label='mylabel')
-            myvif = network_model.VIF(id='vif-xxx-yyy-zzz',
-                                      address='ca:fe:de:ad:be:ef',
-                                      network=mynetwork)
-            d.unplug_iovisor(None, myvif)
+            d.unplug(self.instance, self.vif_ivs)
 
     @mock.patch('nova.network.linux_net.device_exists')
     def test_plug_iovisor(self, device_exists):
@@ -833,15 +920,12 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
-            instance = objects.Instance(id=1,
-                           uuid='f0000000-0000-0000-0000-000000000001',
-                           project_id='myproject')
-            d.plug_iovisor(instance, self.vif_ivs)
+            d.plug(self.instance, self.vif_ivs)
 
     def test_unplug_vrouter_with_details(self):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(utils, 'execute') as execute:
-            d.unplug_vrouter(None, self.vif_vrouter)
+            d.unplug(self.instance, self.vif_vrouter)
             execute.assert_called_once_with(
                 'vrouter-port-control',
                 '--oper=delete --uuid=vif-xxx-yyy-zzz',
@@ -855,7 +939,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         instance.project_id = 'b168ea26fa0c49c1a84e1566d9565fa5'
         instance.display_name = 'instance1'
         with mock.patch.object(utils, 'execute') as execute:
-            d.plug_vrouter(instance, self.vif_vrouter)
+            d.plug(instance, self.vif_vrouter)
             execute.assert_has_calls([
                 mock.call('ip', 'tuntap', 'add', 'tap-xxx-yyy-zzz', 'mode',
                     'tap', run_as_root=True, check_exit_code=[0, 2, 254]),
@@ -1017,11 +1101,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_plug_tap(self, device_exists):
         device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver()
-        d.plug_tap(None, self.vif_tap)
+        d.plug(self.instance, self.vif_tap)
 
     def test_unplug_tap(self):
         d = vif.LibvirtGenericVIFDriver()
-        d.unplug_tap(None, self.vif_tap)
+        d.unplug(self.instance, self.vif_tap)
 
     def test_generic_8021qbh_driver(self):
         d = vif.LibvirtGenericVIFDriver()
@@ -1051,6 +1135,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         vlan = node.find("vlan").find("tag").get("id")
         vlan_want = self.vif_hw_veb["details"]["vlan"]
         self.assertEqual(vlan, vlan_want)
+
+    def test_hostdev_physical_driver(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_hostdev_physical)
+        doc = etree.fromstring(xml)
+        node = doc.findall('./devices/hostdev')[0]
+        self.assertEqual(1, len(node))
+        self._assertPciEqual(node, self.vif_hostdev_physical)
 
     @mock.patch.object(pci_utils, 'get_ifname_by_pci_address',
                        return_value='eth1')
@@ -1102,14 +1194,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
     def test_macvtap_plug_vlan(self, ensure_vlan_mock):
         d = vif.LibvirtGenericVIFDriver()
-        d.plug_macvtap(self.instance, self.vif_macvtap_vlan)
+        d.plug(self.instance, self.vif_macvtap_vlan)
         ensure_vlan_mock.assert_called_once_with('1', 'eth0',
                                                  interface='eth0.1')
 
     @mock.patch.object(linux_net.LinuxBridgeInterfaceDriver, 'ensure_vlan')
     def test_macvtap_plug_flat(self, ensure_vlan_mock):
         d = vif.LibvirtGenericVIFDriver()
-        d.plug_macvtap(self.instance, self.vif_macvtap_flat)
+        d.plug(self.instance, self.vif_macvtap_flat)
         self.assertFalse(ensure_vlan_mock.called)
 
     def test_generic_iovisor_driver(self):
@@ -1217,24 +1309,35 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self._assertMacEquals(node, self.vif_vhostuser_ovs)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
+    @mock.patch.object(linux_net, 'create_fp_dev')
+    def test_vhostuser_fp_plug(self, mock_create_fp_dev):
+        d = vif.LibvirtGenericVIFDriver()
+        d.plug(self.instance, self.vif_vhostuser_fp)
+        mock_create_fp_dev.assert_has_calls(
+            [mock.call('tap-xxx-yyy-zzz', '/tmp/usv-xxx-yyy-zzz', 'client')])
+
+    @mock.patch.object(linux_net, 'delete_fp_dev')
+    def test_vhostuser_fp_unplug(self, mock_delete_fp_dev):
+        d = vif.LibvirtGenericVIFDriver()
+        d.unplug(self.instance, self.vif_vhostuser_fp)
+        mock_delete_fp_dev.assert_has_calls([mock.call('tap-xxx-yyy-zzz')])
+
     def test_vhostuser_ovs_plug(self):
 
         calls = {
-                'create_ovs_vif_port': [mock.call(
-                                      'br0', 'usv-xxx-yyy-zzz',
-                                      'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
-                                      'f0000000-0000-0000-0000-000000000001')],
-                 'ovs_set_vhostuser_port_type': [mock.call('usv-xxx-yyy-zzz')]
+            'create_ovs_vif_port': [
+                 mock.call(
+                     'br0', 'usv-xxx-yyy-zzz',
+                     'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
+                     'f0000000-0000-0000-0000-000000000001', 9000,
+                     interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE
+                 )]
         }
-        with test.nested(
-                mock.patch.object(linux_net, 'create_ovs_vif_port'),
-                mock.patch.object(linux_net, 'ovs_set_vhostuser_port_type')
-        ) as (create_ovs_vif_port, ovs_set_vhostuser_port_type):
+        with mock.patch.object(linux_net,
+                               'create_ovs_vif_port') as create_ovs_vif_port:
             d = vif.LibvirtGenericVIFDriver()
-            d.plug_vhostuser(self.instance, self.vif_vhostuser_ovs)
+            d.plug(self.instance, self.vif_vhostuser_ovs)
             create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
-            ovs_set_vhostuser_port_type.assert_has_calls(
-                                        calls['ovs_set_vhostuser_port_type'])
 
     def test_vhostuser_ovs_unplug(self):
         calls = {
@@ -1243,5 +1346,115 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         with mock.patch.object(linux_net,
                                'delete_ovs_vif_port') as delete_port:
             d = vif.LibvirtGenericVIFDriver()
-            d.unplug_vhostuser(None, self.vif_vhostuser_ovs)
+            d.unplug(self.instance, self.vif_vhostuser_ovs)
             delete_port.assert_has_calls(calls['delete_ovs_vif_port'])
+
+    def test_vhostuser_ovs_fp_plug(self):
+        calls = {
+            'create_fp_dev': [mock.call('tap-xxx-yyy-zzz',
+                                        '/tmp/usv-xxx-yyy-zzz',
+                                        'client')],
+            'create_ovs_vif_port': [mock.call(
+                                   'br0', 'tap-xxx-yyy-zzz',
+                                   'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
+                                   'f0000000-0000-0000-0000-000000000001',
+                                   9000)]
+        }
+        with test.nested(
+                mock.patch.object(linux_net, 'create_fp_dev'),
+                mock.patch.object(linux_net, 'create_ovs_vif_port'),
+        ) as (create_fp_dev, create_ovs_vif_port):
+            d = vif.LibvirtGenericVIFDriver()
+            d.plug_vhostuser(self.instance, self.vif_vhostuser_ovs_fp)
+            create_fp_dev.assert_has_calls(calls['create_fp_dev'])
+            create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
+
+    def test_vhostuser_ovs_fp_unplug(self):
+        calls = {
+            'delete_ovs_vif_port': [mock.call('br0', 'tap-xxx-yyy-zzz',
+                                              False)],
+            'delete_fp_dev': [mock.call('tap-xxx-yyy-zzz')],
+        }
+        with test.nested(
+                mock.patch.object(linux_net, 'delete_ovs_vif_port'),
+                mock.patch.object(linux_net, 'delete_fp_dev')
+        ) as (delete_ovs_port, delete_fp_dev):
+            d = vif.LibvirtGenericVIFDriver()
+            d.unplug_vhostuser(None, self.vif_vhostuser_ovs_fp)
+            delete_ovs_port.assert_has_calls(calls['delete_ovs_vif_port'])
+            delete_fp_dev.assert_has_calls(calls['delete_fp_dev'])
+
+    def test_vhostuser_ovs_fp_hybrid_plug(self):
+        calls = {
+            'create_fp_dev': [mock.call('tap-xxx-yyy-zzz',
+                                        '/tmp/usv-xxx-yyy-zzz',
+                                        'client')],
+            'device_exists': [mock.call('tap-xxx-yyy-zzz'),
+                              mock.call('qbrvif-xxx-yyy'),
+                              mock.call('qvovif-xxx-yyy')],
+            '_create_veth_pair': [mock.call('qvbvif-xxx-yyy',
+                                            'qvovif-xxx-yyy', 9000)],
+            'execute': [mock.call('brctl', 'addbr', 'qbrvif-xxx-yyy',
+                                  run_as_root=True),
+                        mock.call('brctl', 'setfd', 'qbrvif-xxx-yyy', 0,
+                                  run_as_root=True),
+                        mock.call('brctl', 'stp', 'qbrvif-xxx-yyy', 'off',
+                                  run_as_root=True),
+                        mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
+                                          '/bridge/multicast_snooping'),
+                                  process_input='0', run_as_root=True,
+                                  check_exit_code=[0, 1]),
+                        mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
+                                  run_as_root=True),
+                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
+                                  'qvbvif-xxx-yyy', run_as_root=True),
+                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
+                                  'tap-xxx-yyy-zzz', run_as_root=True)],
+            'create_ovs_vif_port': [mock.call(
+                                   'br0', 'qvovif-xxx-yyy',
+                                   'aaa-bbb-ccc', 'ca:fe:de:ad:be:ef',
+                                   'f0000000-0000-0000-0000-000000000001',
+                                   9000)]
+        }
+        with test.nested(
+                mock.patch.object(linux_net, 'create_fp_dev'),
+                mock.patch.object(linux_net, 'device_exists',
+                                  return_value=False),
+                mock.patch.object(utils, 'execute'),
+                mock.patch.object(linux_net, '_create_veth_pair'),
+                mock.patch.object(linux_net, 'create_ovs_vif_port')
+        ) as (create_fp_dev, device_exists, execute, _create_veth_pair,
+              create_ovs_vif_port):
+            d = vif.LibvirtGenericVIFDriver()
+            d.plug_vhostuser(self.instance, self.vif_vhostuser_ovs_fp_hybrid)
+            create_fp_dev.assert_has_calls(calls['create_fp_dev'])
+            device_exists.assert_has_calls(calls['device_exists'])
+            _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
+            execute.assert_has_calls(calls['execute'])
+            create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
+
+    def test_vhostuser_ovs_fp_hybrid_unplug(self):
+        calls = {
+            'device_exists': [mock.call('qbrvif-xxx-yyy')],
+            'execute': [mock.call('brctl', 'delif', 'qbrvif-xxx-yyy',
+                                  'qvbvif-xxx-yyy', run_as_root=True),
+                        mock.call('ip', 'link', 'set',
+                                  'qbrvif-xxx-yyy', 'down', run_as_root=True),
+                        mock.call('brctl', 'delbr',
+                                  'qbrvif-xxx-yyy', run_as_root=True)],
+            'delete_ovs_vif_port': [mock.call('br0', 'qvovif-xxx-yyy')],
+            'delete_fp_dev': [mock.call('tap-xxx-yyy-zzz')]
+        }
+        with test.nested(
+                mock.patch.object(linux_net, 'device_exists',
+                                  return_value=True),
+                mock.patch.object(utils, 'execute'),
+                mock.patch.object(linux_net, 'delete_ovs_vif_port'),
+                mock.patch.object(linux_net, 'delete_fp_dev')
+        ) as (device_exists, execute, delete_ovs_vif_port, delete_fp_dev):
+            d = vif.LibvirtGenericVIFDriver()
+            d.unplug_vhostuser(None, self.vif_vhostuser_ovs_fp_hybrid)
+            device_exists.assert_has_calls(calls['device_exists'])
+            execute.assert_has_calls(calls['execute'])
+            delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
+            delete_fp_dev.assert_has_calls(calls['delete_fp_dev'])

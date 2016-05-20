@@ -14,17 +14,13 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
 from nova.cells import utils as cells_utils
-from nova.compute import api as compute_api
-from nova.compute import cells_api as cells_api
+import nova.conf
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -77,21 +73,19 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                               response, 200)
 
     def test_hypervisors_detail(self):
-        hypervisor_id = 1
+        hypervisor_id = '1'
         subs = {
             'hypervisor_id': hypervisor_id
         }
         response = self._do_get('os-hypervisors/detail')
-        subs.update(self._get_regexes())
         self._verify_response('hypervisors-detail-resp', subs, response, 200)
 
     def test_hypervisors_show(self):
-        hypervisor_id = 1
+        hypervisor_id = '1'
         subs = {
             'hypervisor_id': hypervisor_id
         }
         response = self._do_get('os-hypervisors/%s' % hypervisor_id)
-        subs.update(self._get_regexes())
         self._verify_response('hypervisors-show-resp', subs, response, 200)
 
     def test_hypervisors_statistics(self):
@@ -103,9 +97,9 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
             return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
                     " 0.20, 0.12, 0.14")
 
-        self.stubs.Set(compute_api.HostAPI,
-                       'get_host_uptime', fake_get_host_uptime)
-        hypervisor_id = 1
+        self.stub_out('nova.compute.api.HostAPI.get_host_uptime',
+                      fake_get_host_uptime)
+        hypervisor_id = '1'
         response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
         subs = {
             'hypervisor_id': hypervisor_id,
@@ -149,14 +143,17 @@ class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                 disabled_reason=None),
                 'cell1')
 
-        self.stubs.Set(cells_api.HostAPI, 'compute_node_get',
-                       fake_compute_node_get)
-        self.stubs.Set(cells_api.HostAPI, 'service_get_by_compute_host',
-                       fake_service_get_by_compute_host)
+        self.stub_out(
+            'nova.compute.cells_api.HostAPI.compute_node_get',
+            fake_compute_node_get)
+        self.stub_out(
+            'nova.compute.cells_api.HostAPI.service_get_by_compute_host',
+            fake_service_get_by_compute_host)
+        self.stub_out(
+            'nova.compute.cells_api.HostAPI.get_host_uptime',
+            fake_get_host_uptime)
 
-        self.stubs.Set(cells_api.HostAPI,
-                       'get_host_uptime', fake_get_host_uptime)
-        hypervisor_id = fake_hypervisor['id']
+        hypervisor_id = fake_hypervisor.id
         response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
-        subs = {'hypervisor_id': hypervisor_id}
+        subs = {'hypervisor_id': str(hypervisor_id)}
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)

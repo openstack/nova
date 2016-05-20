@@ -127,6 +127,14 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         hostname = "a" * 64
         self.assertEqual(63, len(utils.sanitize_hostname(hostname)))
 
+    def test_hostname_truncated_no_hyphen(self):
+        hostname = "a" * 62
+        hostname = hostname + '-' + 'a'
+        res = utils.sanitize_hostname(hostname)
+        # we trim to 63 and then trim the trailing dash
+        self.assertEqual(62, len(res))
+        self.assertFalse(res.endswith('-'), 'The hostname ends with a -')
+
     def test_generate_password(self):
         password = utils.generate_password()
         self.assertTrue([c for c in password if c in '0123456789'])
@@ -141,7 +149,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
                 raise processutils.ProcessExecutionError()
             return 'fakecontents', None
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
         contents = utils.read_file_as_root('good')
         self.assertEqual(contents, 'fakecontents')
         self.assertRaises(exception.FileNotFound,
@@ -151,7 +159,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         def fake_execute(*args, **kwargs):
             if args[0] == 'chown':
                 fake_execute.uid = args[1]
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
 
         with tempfile.NamedTemporaryFile() as f:
             with utils.temporary_chown(f.name, owner_uid=2):
@@ -743,34 +751,41 @@ class AuditPeriodTest(test.NoDBTestCase):
 
 class MkfsTestCase(test.NoDBTestCase):
 
-    def test_mkfs(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F', '/my/block/dev',
-                      run_as_root=False)
-        utils.execute('mkfs', '-t', 'msdos', '/my/msdos/block/dev',
-                      run_as_root=False)
-        utils.execute('mkswap', '/my/swap/block/dev',
-                      run_as_root=False)
-        self.mox.ReplayAll()
-
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_ext4(self, mock_execute):
         utils.mkfs('ext4', '/my/block/dev')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
+            '/my/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_msdos(self, mock_execute):
         utils.mkfs('msdos', '/my/msdos/block/dev')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
+            '/my/msdos/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_swap(self, mock_execute):
         utils.mkfs('swap', '/my/swap/block/dev')
+        mock_execute.assert_called_once_with('mkswap', '/my/swap/block/dev',
+            run_as_root=False)
 
-    def test_mkfs_with_label(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F',
-                      '-L', 'ext4-vol', '/my/block/dev', run_as_root=False)
-        utils.execute('mkfs', '-t', 'msdos',
-                      '-n', 'msdos-vol', '/my/msdos/block/dev',
-                      run_as_root=False)
-        utils.execute('mkswap', '-L', 'swap-vol', '/my/swap/block/dev',
-                      run_as_root=False)
-        self.mox.ReplayAll()
-
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_ext4_withlabel(self, mock_execute):
         utils.mkfs('ext4', '/my/block/dev', 'ext4-vol')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
+            '-L', 'ext4-vol', '/my/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_msdos_withlabel(self, mock_execute):
         utils.mkfs('msdos', '/my/msdos/block/dev', 'msdos-vol')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
+            '-n', 'msdos-vol', '/my/msdos/block/dev', run_as_root=False)
+
+    @mock.patch('nova.utils.execute')
+    def test_mkfs_swap_withlabel(self, mock_execute):
         utils.mkfs('swap', '/my/swap/block/dev', 'swap-vol')
+        mock_execute.assert_called_once_with('mkswap', '-L', 'swap-vol',
+            '/my/swap/block/dev', run_as_root=False)
 
 
 class LastBytesTestCase(test.NoDBTestCase):
@@ -852,6 +867,9 @@ class ExpectedArgsTestCase(test.NoDBTestCase):
         def func(foo, bar, baz="lol"):
             pass
 
+        # Call to ensure nothing errors
+        func(None, None)
+
     def test_raises(self):
         @utils.expects_func_args('foo', 'baz')
         def dec(f):
@@ -870,6 +888,9 @@ class ExpectedArgsTestCase(test.NoDBTestCase):
         @dec
         def func(bar, *args, **kwargs):
             pass
+
+        # Call to ensure nothing errors
+        func(None)
 
     def test_more_layers(self):
         @utils.expects_func_args('foo', 'baz')
@@ -961,11 +982,7 @@ class ValidateNeutronConfiguration(test.NoDBTestCase):
         self.assertFalse(utils.is_neutron())
 
     def test_neutron(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
-        self.assertTrue(utils.is_neutron())
-
-    def test_quantum(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
+        self.flags(use_neutron=True)
         self.assertTrue(utils.is_neutron())
 
 
@@ -1152,13 +1169,6 @@ class GetImageMetadataFromVolumeTestCase(test.NoDBTestCase):
         self.assertEqual(0, image_meta["size"])
         # volume's properties should not be touched
         self.assertNotEqual({}, properties)
-
-
-class ConstantTimeCompareTestCase(test.NoDBTestCase):
-    def test_constant_time_compare(self):
-        self.assertTrue(utils.constant_time_compare("abcd1234", "abcd1234"))
-        self.assertFalse(utils.constant_time_compare("abcd1234", "a"))
-        self.assertFalse(utils.constant_time_compare("abcd1234", "ABCD234"))
 
 
 class ResourceFilterTestCase(test.NoDBTestCase):

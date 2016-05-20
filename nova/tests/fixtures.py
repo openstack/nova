@@ -22,14 +22,20 @@ import os
 import warnings
 
 import fixtures
+import mock
 from oslo_config import cfg
+from oslo_db.sqlalchemy import enginefacade
 from oslo_messaging import conffixture as messaging_conffixture
 import six
 
+from nova.compute import rpcapi as compute_rpcapi
+from nova import context
 from nova.db import migration
 from nova.db.sqlalchemy import api as session
 from nova import exception
+from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import service as service_obj
 from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
@@ -195,8 +201,29 @@ class Timeout(fixtures.Fixture):
             self.useFixture(fixtures.Timeout(self.test_timeout, gentle=True))
 
 
+class DatabasePoisonFixture(fixtures.Fixture):
+    def setUp(self):
+        super(DatabasePoisonFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'oslo_db.sqlalchemy.enginefacade._TransactionFactory.'
+            '_create_session',
+            self._poison_configure))
+
+    def _poison_configure(self, *a, **k):
+        warnings.warn('This test uses methods that set internal oslo_db '
+                      'state, but it does not claim to use the database. '
+                      'This will conflict with the setup of tests that '
+                      'do use the database and cause failures later.')
+        return mock.MagicMock()
+
+
 class Database(fixtures.Fixture):
-    def __init__(self, database='main'):
+    def __init__(self, database='main', connection=None):
+        """Create a database fixture.
+
+        :param database: The type of database, 'main' or 'api'
+        :param connection: The connection string to use
+        """
         super(Database, self).__init__()
         # NOTE(pkholkin): oslo_db.enginefacade is configured in tests the same
         # way as it is done for any other service that uses db
@@ -206,7 +233,13 @@ class Database(fixtures.Fixture):
             SESSION_CONFIGURED = True
         self.database = database
         if database == 'main':
-            self.get_engine = session.get_engine
+            if connection is not None:
+                ctxt_mgr = session.create_context_manager(
+                        connection=connection)
+                facade = ctxt_mgr.get_legacy_facade()
+                self.get_engine = facade.get_engine
+            else:
+                self.get_engine = session.get_engine
         elif database == 'api':
             self.get_engine = session.get_api_engine
 
@@ -235,6 +268,64 @@ class Database(fixtures.Fixture):
         super(Database, self).setUp()
         self.reset()
         self.addCleanup(self.cleanup)
+
+
+class DatabaseAtVersion(fixtures.Fixture):
+    def __init__(self, version, database='main'):
+        """Create a database fixture.
+
+        :param version: Max version to sync to (or None for current)
+        :param database: The type of database, 'main' or 'api'
+        """
+        super(DatabaseAtVersion, self).__init__()
+        self.database = database
+        self.version = version
+        if database == 'main':
+            self.get_engine = session.get_engine
+        elif database == 'api':
+            self.get_engine = session.get_api_engine
+
+    def cleanup(self):
+        engine = self.get_engine()
+        engine.dispose()
+
+    def reset(self):
+        engine = self.get_engine()
+        engine.dispose()
+        engine.connect()
+        migration.db_sync(version=self.version, database=self.database)
+
+    def setUp(self):
+        super(DatabaseAtVersion, self).setUp()
+        self.reset()
+        self.addCleanup(self.cleanup)
+
+
+class DefaultFlavorsFixture(fixtures.Fixture):
+    def setUp(self):
+        super(DefaultFlavorsFixture, self).setUp()
+        ctxt = context.get_admin_context()
+        defaults = {'rxtx_factor': 1.0, 'disabled': False, 'is_public': True,
+                    'ephemeral_gb': 0, 'swap': 0}
+        default_flavors = [
+            objects.Flavor(context=ctxt, memory_mb=512, vcpus=1,
+                           root_gb=1, flavorid='1', name='m1.tiny',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=2048, vcpus=1,
+                           root_gb=20, flavorid='2', name='m1.small',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=4096, vcpus=2,
+                           root_gb=40, flavorid='3', name='m1.medium',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=8192, vcpus=4,
+                           root_gb=80, flavorid='4', name='m1.large',
+                           **defaults),
+            objects.Flavor(context=ctxt, memory_mb=16384, vcpus=8,
+                           root_gb=160, flavorid='5', name='m1.xlarge',
+                           **defaults),
+            ]
+        for flavor in default_flavors:
+            flavor.create()
 
 
 class RPCFixture(fixtures.Fixture):
@@ -324,7 +415,8 @@ class OSAPIFixture(fixtures.Fixture):
 
     """
 
-    def __init__(self, api_version='v2', project_id='openstack'):
+    def __init__(self, api_version='v2',
+                 project_id='6f70656e737461636b20342065766572'):
         """Constructor
 
         :param api_version: the API version that we're interested in
@@ -342,10 +434,8 @@ class OSAPIFixture(fixtures.Fixture):
         # in order to run these in tests we need to bind only to local
         # host, and dynamically allocate ports
         conf_overrides = {
-            'ec2_listen': '127.0.0.1',
             'osapi_compute_listen': '127.0.0.1',
             'metadata_listen': '127.0.0.1',
-            'ec2_listen_port': 0,
             'osapi_compute_listen_port': 0,
             'metadata_listen_port': 0,
             'verbose': True,
@@ -418,13 +508,41 @@ class IndirectionAPIFixture(fixtures.Fixture):
         self.addCleanup(self.cleanup)
 
 
+class _FakeGreenThread(object):
+    def __init__(self, func, *args, **kwargs):
+        self._result = func(*args, **kwargs)
+
+    def cancel(self, *args, **kwargs):
+        # This method doesn't make sense for a synchronous call, it's just
+        # defined to satisfy the interface.
+        pass
+
+    def kill(self, *args, **kwargs):
+        # This method doesn't make sense for a synchronous call, it's just
+        # defined to satisfy the interface.
+        pass
+
+    def link(self, func, *args, **kwargs):
+        func(self, *args, **kwargs)
+
+    def unlink(self, func, *args, **kwargs):
+        # This method doesn't make sense for a synchronous call, it's just
+        # defined to satisfy the interface.
+        pass
+
+    def wait(self):
+        return self._result
+
+
 class SpawnIsSynchronousFixture(fixtures.Fixture):
     """Patch and restore the spawn_n utility method to be synchronous"""
 
     def setUp(self):
         super(SpawnIsSynchronousFixture, self).setUp()
         self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.spawn_n', lambda f, *a, **k: f(*a, **k)))
+            'nova.utils.spawn_n', _FakeGreenThread))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.spawn', _FakeGreenThread))
 
 
 class BannedDBSchemaOperations(fixtures.Fixture):
@@ -448,3 +566,102 @@ class BannedDBSchemaOperations(fixtures.Fixture):
             self.useFixture(fixtures.MonkeyPatch(
                 'sqlalchemy.%s.alter' % thing,
                 lambda *a, **k: self._explode(thing, 'alter')))
+
+
+class StableObjectJsonFixture(fixtures.Fixture):
+    """Fixture that makes sure we get stable JSON object representations.
+
+    Since objects contain things like set(), which can't be converted to
+    JSON, we have some situations where the representation isn't fully
+    deterministic. This doesn't matter at all at runtime, but does to
+    unit tests that try to assert things at a low level.
+
+    This fixture mocks the obj_to_primitive() call and makes sure to
+    sort the list of changed fields (which came from a set) before
+    returning it to the caller.
+    """
+    def __init__(self):
+        self._original_otp = obj_base.NovaObject.obj_to_primitive
+
+    def setUp(self):
+        super(StableObjectJsonFixture, self).setUp()
+
+        def _doit(obj, *args, **kwargs):
+            result = self._original_otp(obj, *args, **kwargs)
+            if 'nova_object.changes' in result:
+                result['nova_object.changes'].sort()
+            return result
+
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.base.NovaObject.obj_to_primitive', _doit))
+
+
+class EngineFacadeFixture(fixtures.Fixture):
+    """Fixture to isolation EngineFacade during tests.
+
+    Because many elements of EngineFacade are based on globals, once
+    an engine facade has been initialized, all future code goes
+    through it. This means that the initialization of sqlite in
+    databases in our Database fixture will drive all connections to
+    sqlite. While that's fine in a production environment, during
+    testing this means we can't test againts multiple backends in the
+    same test run.
+
+    oslo.db does not yet support a reset mechanism here. This builds a
+    custom in tree engine facade fixture to handle this. Eventually
+    this will be added to oslo.db and this can be removed. Tracked by
+    https://bugs.launchpad.net/oslo.db/+bug/1548960
+
+    """
+    def __init__(self, ctx_manager, engine, sessionmaker):
+        super(EngineFacadeFixture, self).__init__()
+        self._ctx_manager = ctx_manager
+        self._engine = engine
+        self._sessionmaker = sessionmaker
+
+    def setUp(self):
+        super(EngineFacadeFixture, self).setUp()
+
+        self._existing_factory = self._ctx_manager._root_factory
+        self._ctx_manager._root_factory = enginefacade._TestTransactionFactory(
+            self._engine, self._sessionmaker, apply_global=False,
+            synchronous_reader=True)
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        self._ctx_manager._root_factory = self._existing_factory
+
+
+class ForbidNewLegacyNotificationFixture(fixtures.Fixture):
+    """Make sure the test fails if new legacy notification is added"""
+    def __init__(self):
+        super(ForbidNewLegacyNotificationFixture, self).__init__()
+        self.notifier = rpc.LegacyValidatingNotifier
+
+    def setUp(self):
+        super(ForbidNewLegacyNotificationFixture, self).setUp()
+        self.notifier.fatal = True
+
+        # allow the special test value used in
+        # nova.tests.unit.test_notifications.NotificationsTestCase
+        self.notifier.allowed_legacy_notification_event_types.append(
+                '_decorated_function')
+
+        self.addCleanup(self.cleanup)
+
+    def cleanup(self):
+        self.notifier.fatal = False
+        self.notifier.allowed_legacy_notification_event_types.remove(
+                '_decorated_function')
+
+
+class AllServicesCurrent(fixtures.Fixture):
+    def setUp(self):
+        super(AllServicesCurrent, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.Service.get_minimum_version_multi',
+            self._fake_minimum))
+        compute_rpcapi.LAST_VERSION = None
+
+    def _fake_minimum(self, *args, **kwargs):
+        return service_obj.SERVICE_VERSION

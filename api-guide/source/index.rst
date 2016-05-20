@@ -17,7 +17,7 @@
 Compute API
 ===========
 
-The nova project has a ReSTful HTTP service called the OpenStack Compute API.
+The nova project has a RESTful HTTP service called the OpenStack Compute API.
 Through this API, the service provides massively scalable, on demand,
 self-service access to compute resources. Depending on the deployment those
 compute resources might be Virtual Machines, Physical Machines or Containers.
@@ -39,7 +39,7 @@ access to your own deployment, and you should also be familiar with the
 following concepts:
 
 *  OpenStack Compute service
-*  ReSTful HTTP services
+*  RESTful HTTP services
 *  HTTP/1.1
 *  JSON data serialization formats
 
@@ -50,23 +50,22 @@ The Compute API includes all end user and operator API calls.
 The API works with keystone and oslo.policy to deliver RBAC (Role-based access
 control).
 The default policy file gives suggestions on what APIs should not
-be made available to most end users, but this is fully configurable.
+be made available to most end users but this is fully configurable.
 
 API Versions
 ============
 
-Following the Liberty release, every Nova deployment should have
+Following the Mitaka release, every Nova deployment should have
 the following endpoints:
 
 * / - list of available versions
 * /v2 - the first version of the Compute API, uses extensions
         (we call this Compute API v2.0)
-* /v1.1 - an alias for v2.0 for backwards compatibility
 * /v2.1 - same API, except uses microversions
 
 While this guide concentrates on documenting the v2.1 API,
-please note that the v2.0 and v1.1 API are (almost) identical to first
-microversion of the v2.1 API and are also covered by this guide.
+please note that the v2.0 is (almost) identical to first microversion of
+the v2.1 API and are also covered by this guide.
 
 Contents
 ========
@@ -74,6 +73,7 @@ Contents
 .. toctree::
     :maxdepth: 2
 
+    users
     versions
     extensions
     microversions
@@ -86,3 +86,8 @@ Contents
     paginated_collections
     polling_changes-since_parameter
     request_and_response_formats
+
+.. toctree::
+    :hidden:
+
+    extra_specs_and_properties

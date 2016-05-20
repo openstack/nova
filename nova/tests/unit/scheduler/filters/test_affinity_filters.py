@@ -11,16 +11,15 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
+import nova.conf
 from nova import objects
 from nova.scheduler.filters import affinity_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
+from nova.tests import uuidsentinel as uuids
 
-CONF = cfg.CONF
-
-CONF.import_opt('my_ip', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 class TestDifferentHostFilter(test.NoDBTestCase):
@@ -31,7 +30,7 @@ class TestDifferentHostFilter(test.NoDBTestCase):
 
     def test_affinity_different_filter_passes(self):
         host = fakes.FakeHostState('host1', 'node1', {})
-        inst1 = objects.Instance(uuid='different')
+        inst1 = objects.Instance(uuid=uuids.instance)
         host.instances = {inst1.uuid: inst1}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
@@ -39,16 +38,16 @@ class TestDifferentHostFilter(test.NoDBTestCase):
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_different_filter_fails(self):
-        inst1 = objects.Instance(uuid='same')
+        inst1 = objects.Instance(uuid=uuids.instance)
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
-            scheduler_hints=dict(different_host=['same']))
+            scheduler_hints=dict(different_host=[uuids.instance]))
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_different_filter_handles_none(self):
-        inst1 = objects.Instance(uuid='same')
+        inst1 = objects.Instance(uuid=uuids.instance)
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
         spec_obj = objects.RequestSpec(
@@ -64,16 +63,24 @@ class TestSameHostFilter(test.NoDBTestCase):
         self.filt_cls = affinity_filter.SameHostFilter()
 
     def test_affinity_same_filter_passes(self):
-        inst1 = objects.Instance(uuid='same')
+        inst1 = objects.Instance(uuid=uuids.instance)
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,
-            scheduler_hints=dict(same_host=['same']))
+            scheduler_hints=dict(same_host=[uuids.instance]))
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
 
+    def test_affinity_same_filter_no_list_passes(self):
+        host = fakes.FakeHostState('host1', 'node1', {})
+        host.instances = {}
+        spec_obj = objects.RequestSpec(
+            context=mock.sentinel.ctx,
+            scheduler_hints=dict(same_host=['same']))
+        self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
+
     def test_affinity_same_filter_fails(self):
-        inst1 = objects.Instance(uuid='different')
+        inst1 = objects.Instance(uuid=uuids.instance)
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
         spec_obj = objects.RequestSpec(
@@ -82,7 +89,7 @@ class TestSameHostFilter(test.NoDBTestCase):
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))
 
     def test_affinity_same_filter_handles_none(self):
-        inst1 = objects.Instance(uuid='different')
+        inst1 = objects.Instance(uuid=uuids.instance)
         host = fakes.FakeHostState('host1', 'node1', {})
         host.instances = {inst1.uuid: inst1}
         spec_obj = objects.RequestSpec(
@@ -127,10 +134,6 @@ class TestSimpleCIDRAffinityFilter(test.NoDBTestCase):
 
     def test_affinity_simple_cidr_filter_handles_none(self):
         host = fakes.FakeHostState('host1', 'node1', {})
-
-        affinity_ip = CONF.my_ip.split('.')[0:3]
-        affinity_ip.append('100')
-        affinity_ip = str.join('.', affinity_ip)
 
         spec_obj = objects.RequestSpec(
             context=mock.sentinel.ctx,

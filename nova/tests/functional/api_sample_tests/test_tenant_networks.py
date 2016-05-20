@@ -14,18 +14,12 @@
 #    under the License.
 
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
-import nova.quota
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('enable_network_quota',
-                'nova.api.openstack.compute.legacy_v2.contrib.'
-                'os_tenant_networks')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -46,22 +40,20 @@ class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         def fake(*args, **kwargs):
             pass
 
-        self.stubs.Set(nova.quota.QUOTAS, "reserve", fake)
-        self.stubs.Set(nova.quota.QUOTAS, "commit", fake)
-        self.stubs.Set(nova.quota.QUOTAS, "rollback", fake)
-        self.stubs.Set(nova.quota.QuotaEngine, "reserve", fake)
-        self.stubs.Set(nova.quota.QuotaEngine, "commit", fake)
-        self.stubs.Set(nova.quota.QuotaEngine, "rollback", fake)
+        self.stub_out("nova.quota.QUOTAS.reserve", fake)
+        self.stub_out("nova.quota.QUOTAS.commit", fake)
+        self.stub_out("nova.quota.QUOTAS.rollback", fake)
+        self.stub_out("nova.quota.QuotaEngine.reserve", fake)
+        self.stub_out("nova.quota.QuotaEngine.commit", fake)
+        self.stub_out("nova.quota.QuotaEngine.rollback", fake)
 
     def test_list_networks(self):
         response = self._do_get('os-tenant-networks')
-        subs = self._get_regexes()
-        self._verify_response('networks-list-res', subs, response, 200)
+        self._verify_response('networks-list-res', {}, response, 200)
 
     def test_create_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})
-        subs = self._get_regexes()
-        self._verify_response('networks-post-res', subs, response, 200)
+        self._verify_response('networks-post-res', {}, response, 200)
 
     def test_delete_network(self):
         response = self._do_post('os-tenant-networks', "networks-post-req", {})

@@ -16,28 +16,13 @@
 import os
 
 from os_win.utils import pathutils
-from oslo_config import cfg
-from oslo_log import log as logging
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.virt.hyperv import constants
 
-LOG = logging.getLogger(__name__)
-
-hyperv_opts = [
-    cfg.StrOpt('instances_path_share',
-               default="",
-               help='The name of a Windows share name mapped to the '
-                    '"instances_path" dir and used by the resize feature '
-                    'to copy files to the target host. If left blank, an '
-                    'administrative share will be used, looking for the same '
-                    '"instances_path" used locally'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(hyperv_opts, 'hyperv')
-CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF = nova.conf.CONF
 
 ERROR_INVALID_NAME = 123
 

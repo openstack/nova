@@ -1,0 +1,4 @@
+---
+deprecations:
+  - The conductor.manager configuration option is now deprecated and
+    will be removed.

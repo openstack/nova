@@ -34,27 +34,12 @@ TEST_RSA_PRIVATE_KEY = rsa.generate_private_key(public_exponent=3,
                                                 key_size=1024,
                                                 backend=default_backend())
 
+# secp521r1 is assumed to be available on all supported platforms
 TEST_ECC_PRIVATE_KEY = ec.generate_private_key(ec.SECP521R1(),
                                                default_backend())
 
 TEST_DSA_PRIVATE_KEY = dsa.generate_private_key(key_size=3072,
                                                 backend=default_backend())
-
-# ECC curves, for generating private keys
-ECC_CURVE_METHODS = {
-    signature_utils.ECC_SECT571K1: ec.SECT571K1(),
-    signature_utils.ECC_SECT409K1: ec.SECT409K1(),
-    signature_utils.ECC_SECT571R1: ec.SECT571R1(),
-    signature_utils.ECC_SECT409R1: ec.SECT409R1(),
-    signature_utils.ECC_SECP521R1: ec.SECP521R1(),
-    signature_utils.ECC_SECP384R1: ec.SECP384R1(),
-}
-
-# Required image property names
-SIGNATURE = signature_utils.SIGNATURE
-HASH_METHOD = signature_utils.HASH_METHOD
-KEY_TYPE = signature_utils.KEY_TYPE
-CERT_UUID = signature_utils.CERT_UUID
 
 
 class FakeKeyManager(object):
@@ -94,7 +79,7 @@ class FakeCryptoCertificate(object):
                  not_valid_before=(timeutils.utcnow() -
                                    datetime.timedelta(hours=1)),
                  not_valid_after=(timeutils.utcnow() +
-                                  datetime.timedelta(hours=1))):
+                                  datetime.timedelta(hours=2))):
         self.pub_key = pub_key
         self.cert_not_valid_before = not_valid_before
         self.cert_not_valid_after = not_valid_after
@@ -120,31 +105,6 @@ class BadPublicKey(object):
 class TestSignatureUtils(test.NoDBTestCase):
     """Test methods of signature_utils"""
 
-    def test_should_verify_signature(self):
-        image_props = {CERT_UUID: 'CERT_UUID',
-                       HASH_METHOD: 'HASH_METHOD',
-                       SIGNATURE: 'SIGNATURE',
-                       KEY_TYPE: 'SIG_KEY_TYPE'}
-        self.assertTrue(signature_utils.should_verify_signature(image_props))
-
-    def test_should_verify_signature_fail(self):
-        bad_image_properties = [{CERT_UUID: 'CERT_UUID',
-                                 HASH_METHOD: 'HASH_METHOD',
-                                 SIGNATURE: 'SIGNATURE'},
-                                {CERT_UUID: 'CERT_UUID',
-                                 HASH_METHOD: 'HASH_METHOD',
-                                 KEY_TYPE: 'SIG_KEY_TYPE'},
-                                {CERT_UUID: 'CERT_UUID',
-                                 SIGNATURE: 'SIGNATURE',
-                                 KEY_TYPE: 'SIG_KEY_TYPE'},
-                                {HASH_METHOD: 'HASH_METHOD',
-                                 SIGNATURE: 'SIGNATURE',
-                                 KEY_TYPE: 'SIG_KEY_TYPE'}]
-
-        for bad_props in bad_image_properties:
-            result = signature_utils.should_verify_signature(bad_props)
-            self.assertFalse(result)
-
     @mock.patch('nova.signature_utils.get_public_key')
     def test_verify_signature_PSS(self, mock_get_pub_key):
         data = b'224626ae19824466f2a7f39ab7b80f7f'
@@ -159,12 +119,10 @@ class TestSignatureUtils(test.NoDBTestCase):
             )
             signer.update(data)
             signature = base64.b64encode(signer.finalize())
-            image_props = {CERT_UUID:
-                           'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
-                           HASH_METHOD: hash_name,
-                           KEY_TYPE: 'RSA-PSS',
-                           SIGNATURE: signature}
-            verifier = signature_utils.get_verifier(None, image_props)
+            img_sig_cert_uuid = 'fea14bc2-d75f-4ba5-bccc-b5c924ad0693'
+            verifier = signature_utils.get_verifier(None, img_sig_cert_uuid,
+                                                    hash_name, signature,
+                                                    signature_utils.RSA_PSS)
             verifier.update(data)
             verifier.verify()
 
@@ -172,9 +130,17 @@ class TestSignatureUtils(test.NoDBTestCase):
     def test_verify_signature_ECC(self, mock_get_pub_key):
         data = b'224626ae19824466f2a7f39ab7b80f7f'
         # test every ECC curve
-        for curve_name, curve_method in ECC_CURVE_METHODS.items():
+        for curve in signature_utils.ECC_CURVES:
+            key_type_name = 'ECC_' + curve.name.upper()
+            try:
+                signature_utils.SignatureKeyType.lookup(key_type_name)
+            except exception.SignatureVerificationError:
+                import warnings
+                warnings.warn("ECC curve '%s' not supported" % curve.name)
+                continue
+
             # Create a private key to use
-            private_key = ec.generate_private_key(curve_method,
+            private_key = ec.generate_private_key(curve,
                                                   default_backend())
             mock_get_pub_key.return_value = private_key.public_key()
             for hash_name, hash_alg in signature_utils.HASH_METHODS.items():
@@ -183,12 +149,11 @@ class TestSignatureUtils(test.NoDBTestCase):
                 )
                 signer.update(data)
                 signature = base64.b64encode(signer.finalize())
-                image_props = {CERT_UUID:
-                               'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
-                               HASH_METHOD: hash_name,
-                               KEY_TYPE: curve_name,
-                               SIGNATURE: signature}
-                verifier = signature_utils.get_verifier(None, image_props)
+                img_sig_cert_uuid = 'fea14bc2-d75f-4ba5-bccc-b5c924ad0693'
+                verifier = signature_utils.get_verifier(None,
+                                                        img_sig_cert_uuid,
+                                                        hash_name, signature,
+                                                        key_type_name)
                 verifier.update(data)
                 verifier.verify()
 
@@ -202,12 +167,10 @@ class TestSignatureUtils(test.NoDBTestCase):
             )
             signer.update(data)
             signature = base64.b64encode(signer.finalize())
-            image_props = {CERT_UUID:
-                           'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
-                           HASH_METHOD: hash_name,
-                           KEY_TYPE: 'DSA',
-                           SIGNATURE: signature}
-            verifier = signature_utils.get_verifier(None, image_props)
+            img_sig_cert_uuid = 'fea14bc2-d75f-4ba5-bccc-b5c924ad0693'
+            verifier = signature_utils.get_verifier(None, img_sig_cert_uuid,
+                                                    hash_name, signature,
+                                                    signature_utils.DSA)
             verifier.update(data)
             verifier.verify()
 
@@ -215,52 +178,43 @@ class TestSignatureUtils(test.NoDBTestCase):
     def test_verify_signature_bad_signature(self, mock_get_pub_key):
         data = b'224626ae19824466f2a7f39ab7b80f7f'
         mock_get_pub_key.return_value = TEST_RSA_PRIVATE_KEY.public_key()
-        image_properties = {CERT_UUID:
-                            'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
-                            HASH_METHOD: 'SHA-256',
-                            KEY_TYPE: 'RSA-PSS',
-                            SIGNATURE: 'BLAH'}
-        verifier = signature_utils.get_verifier(None, image_properties)
+        img_sig_cert_uuid = 'fea14bc2-d75f-4ba5-bccc-b5c924ad0693'
+        verifier = signature_utils.get_verifier(None, img_sig_cert_uuid,
+                                                'SHA-256', 'BLAH',
+                                                signature_utils.RSA_PSS)
         verifier.update(data)
         self.assertRaises(crypto_exceptions.InvalidSignature,
                           verifier.verify)
 
-    @mock.patch('nova.signature_utils.should_verify_signature')
-    def test_get_verifier_invalid_image_props(self, mock_should):
-        mock_should.return_value = False
+    def test_get_verifier_invalid_image_props(self):
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Required image properties for signature'
                                ' verification do not exist. Cannot verify'
-                               ' signature.',
+                               ' signature. Missing property: .*',
                                signature_utils.get_verifier,
-                               None, None)
+                               None, None, 'SHA-256', 'BLAH',
+                               signature_utils.RSA_PSS)
 
     @mock.patch('nova.signature_utils.get_public_key')
     def test_verify_signature_bad_sig_key_type(self, mock_get_pub_key):
         mock_get_pub_key.return_value = TEST_RSA_PRIVATE_KEY.public_key()
-        image_properties = {CERT_UUID:
-                            'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
-                            HASH_METHOD: 'SHA-256',
-                            KEY_TYPE: 'BLAH',
-                            SIGNATURE: 'BLAH'}
+        img_sig_cert_uuid = 'fea14bc2-d75f-4ba5-bccc-b5c924ad0693'
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Invalid signature key type: .*',
                                signature_utils.get_verifier,
-                               None, image_properties)
+                               None, img_sig_cert_uuid, 'SHA-256',
+                               'BLAH', 'BLAH')
 
     @mock.patch('nova.signature_utils.get_public_key')
     def test_get_verifier_none(self, mock_get_pub_key):
         mock_get_pub_key.return_value = BadPublicKey()
-        image_properties = {CERT_UUID:
-                            'fea14bc2-d75f-4ba5-bccc-b5c924ad0693',
-                            HASH_METHOD: 'SHA-256',
-                            KEY_TYPE: 'RSA-PSS',
-                            SIGNATURE: 'BLAH'}
+        img_sig_cert_uuid = 'fea14bc2-d75f-4ba5-bccc-b5c924ad0693'
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Error occurred while creating'
                                ' the verifier',
                                signature_utils.get_verifier,
-                               None, image_properties)
+                               None, img_sig_cert_uuid, 'SHA-256',
+                               'BLAH', signature_utils.RSA_PSS)
 
     def test_get_signature(self):
         signature = b'A' * 256
@@ -285,48 +239,62 @@ class TestSignatureUtils(test.NoDBTestCase):
                                'Invalid signature hash method: .*',
                                signature_utils.get_hash_method, 'SHA-2')
 
-    def test_get_signature_key_type(self):
-        for sig_format in signature_utils.SIGNATURE_KEY_TYPES:
-            result = signature_utils.get_signature_key_type(sig_format)
-            self.assertEqual(sig_format, result)
+    def test_signature_key_type_lookup(self):
+        for sig_format in [signature_utils.RSA_PSS, signature_utils.DSA]:
+            sig_key_type = signature_utils.SignatureKeyType.lookup(sig_format)
+            self.assertIsInstance(sig_key_type,
+                                  signature_utils.SignatureKeyType)
+            self.assertEqual(sig_format, sig_key_type.name)
 
-    def test_get_signature_key_type_fail(self):
+    def test_signature_key_type_lookup_fail(self):
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Invalid signature key type: .*',
-                               signature_utils.get_signature_key_type,
+                               signature_utils.SignatureKeyType.lookup,
                                'RSB-PSS')
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_rsa(self, mock_get_cert):
         fake_cert = FakeCryptoCertificate()
         mock_get_cert.return_value = fake_cert
-        result_pub_key = signature_utils.get_public_key(None, None, 'RSA-PSS')
+        sig_key_type = signature_utils.SignatureKeyType.lookup(
+                           signature_utils.RSA_PSS
+                       )
+        result_pub_key = signature_utils.get_public_key(None, None,
+                                                        sig_key_type)
         self.assertEqual(fake_cert.public_key(), result_pub_key)
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_ecc(self, mock_get_cert):
         fake_cert = FakeCryptoCertificate(TEST_ECC_PRIVATE_KEY.public_key())
         mock_get_cert.return_value = fake_cert
+        sig_key_type = signature_utils.SignatureKeyType.lookup('ECC_SECP521R1')
         result_pub_key = signature_utils.get_public_key(None, None,
-                                                        'ECC_SECP521R1')
+                                                        sig_key_type)
         self.assertEqual(fake_cert.public_key(), result_pub_key)
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_dsa(self, mock_get_cert):
         fake_cert = FakeCryptoCertificate(TEST_DSA_PRIVATE_KEY.public_key())
         mock_get_cert.return_value = fake_cert
-        result_pub_key = signature_utils.get_public_key(None, None, 'DSA')
+        sig_key_type = signature_utils.SignatureKeyType.lookup(
+                           signature_utils.DSA
+                       )
+        result_pub_key = signature_utils.get_public_key(None, None,
+                                                        sig_key_type)
         self.assertEqual(fake_cert.public_key(), result_pub_key)
 
     @mock.patch('nova.signature_utils.get_certificate')
     def test_get_public_key_invalid_key(self, mock_get_certificate):
         bad_pub_key = 'A' * 256
         mock_get_certificate.return_value = FakeCryptoCertificate(bad_pub_key)
+        sig_key_type = signature_utils.SignatureKeyType.lookup(
+                           signature_utils.RSA_PSS
+                       )
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Invalid public key type for '
                                'signature key type: .*',
                                signature_utils.get_public_key, None,
-                               None, 'RSA-PSS')
+                               None, sig_key_type)
 
     @mock.patch('cryptography.x509.load_der_x509_certificate')
     @mock.patch('castellan.key_manager.API', return_value=FakeKeyManager())

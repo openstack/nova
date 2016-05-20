@@ -53,7 +53,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         """
         # TODO(mriedem): We should pull this up into the parent class so we
         # don't have so much copy/paste in these functional tests.
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create a server
         server = self._build_minimal_create_server_request()
@@ -96,9 +96,9 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         self.assertIn('instance_system_metadata', results)
         self.assertEqual(len(instance.system_metadata),
                          results['instance_system_metadata'])
-        # FIXME(mriedem): we fail to archive instances because of a fkey
-        # referential constraint error with instance_actions not being deleted
-        self.assertNotIn('instances', results)
-        # FIXME(mriedem): instance_actions aren't soft deleted so they aren't
-        # archived, which we need to fix.
-        self.assertNotIn('instance_actions', results)
+        # Verify that instances rows are dropped
+        self.assertIn('instances', results)
+        # Verify that instance_actions and actions_event are dropped
+        # by the archive
+        self.assertIn('instance_actions', results)
+        self.assertIn('instance_actions_events', results)

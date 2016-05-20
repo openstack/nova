@@ -21,8 +21,9 @@ Scheduler base class that all Schedulers should inherit from
 
 import abc
 
-from oslo_utils import importutils
+from oslo_log import log as logging
 import six
+from stevedore import driver
 
 import nova.conf
 from nova import objects
@@ -30,14 +31,18 @@ from nova import servicegroup
 
 CONF = nova.conf.CONF
 
+LOG = logging.getLogger(__name__)
+
 
 @six.add_metaclass(abc.ABCMeta)
 class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
     def __init__(self):
-        self.host_manager = importutils.import_object(
-                CONF.scheduler_host_manager)
+        self.host_manager = driver.DriverManager(
+                "nova.scheduler.host_manager",
+                CONF.scheduler_host_manager,
+                invoke_on_load=True).driver
         self.servicegroup_api = servicegroup.API()
 
     def run_periodic_tasks(self, context):
@@ -53,7 +58,7 @@ class Scheduler(object):
                 if self.servicegroup_api.service_is_up(service)]
 
     @abc.abstractmethod
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj):
         """Must override select_destinations method.
 
         :return: A list of dicts with 'host', 'nodename' and 'limits' as keys

@@ -1,0 +1,7 @@
+---
+upgrade:
+
+  - Delete the deprecated ``glance.host``, ``glance.port``,
+    ``glance.protocol`` configuration options. ``glance.api_servers``
+    must be set to have a working config. There is currently no
+    default for this config option, so a value must be set.

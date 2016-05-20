@@ -16,19 +16,18 @@
 
 """Tests for the testing base code."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 import six
 
+import nova.conf
 from nova import rpc
 from nova import test
 from nova.tests import fixtures
 
 LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
+CONF = nova.conf.CONF
 
 
 class IsolationTestCase(test.TestCase):

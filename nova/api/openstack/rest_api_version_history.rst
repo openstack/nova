@@ -37,8 +37,8 @@ user documentation.
 
   Fixes status code for ``os-keypairs`` delete method from 202 to 204
 
-2.3
----
+2.3 (Maximum in Kilo)
+---------------------
 
   Exposed additional attributes in ``os-extended-server-attributes``:
   ``reservation_id``, ``launch_index``, ``ramdisk_id``, ``kernel_id``, ``hostname``,
@@ -124,11 +124,11 @@ user documentation.
   Exposed attribute ``forced_down`` for ``os-services``.
   Added ability to change the ``forced_down`` attribute by calling an update.
 
-2.12
-----
+2.12 (Maximum in Liberty)
+-------------------------
 
-  Exposes VIF ``net-id`` attribute in ``os-virtual-interfaces``.
-  User will be able to get Virtual Interfaces ``net-id`` in Virtual Interfaces
+  Exposes VIF ``net_id`` attribute in ``os-virtual-interfaces``.
+  User will be able to get Virtual Interfaces ``net_id`` in Virtual Interfaces
   list and can determine in which network a Virtual Interface is plugged into.
 
 2.13
@@ -144,3 +144,142 @@ user documentation.
   automatically detect if the instance is on shared storage.
   Also adminPass is removed from the response body. The user can get the
   password with the server's os-server-password action.
+
+2.15
+----
+
+  From this version of the API users can choose 'soft-affinity' and
+  'soft-anti-affinity' rules too for server-groups.
+
+2.16
+----
+
+  Exposes new host_status attribute for servers/detail and servers/{server_id}.
+  Ability to get nova-compute status when querying servers. By default, this is
+  only exposed to cloud administrators.
+
+2.17
+----
+
+  Add a new API for triggering crash dump in an instance. Different operation
+  systems in instance may need different configurations to trigger crash dump.
+
+2.18
+----
+  Establishes a set of routes that makes project_id an optional construct in v2.1.
+
+2.19
+----
+  Allow the user to set and get the server description.
+  The user will be able to set the description when creating, rebuilding,
+  or updating a server, and get the description as part of the server details.
+
+2.20
+----
+  From this version of the API user can call detach and attach volumes for
+  instances which are in shelved and shelved_offloaded state.
+
+2.21
+----
+
+  The ``os-instance-actions`` API now returns information from deleted
+  instances.
+
+2.22
+----
+
+  A new resource servers:migrations added. A new API to force live migration
+  to complete added::
+
+    POST /servers/<uuid>/migrations/<id>/action
+    {
+      "force_complete": null
+    }
+
+2.23
+----
+
+  From this version of the API users can get the migration summary list by
+  index API or the information of a specific migration by get API.
+  And the old top-level resource `/os-migrations` won't be extended anymore.
+  Add migration_type for old /os-migrations API, also add ref link to the
+  /servers/{uuid}/migrations/{id} for it when the migration is an in-progress
+  live-migration.
+
+2.24
+----
+
+  A new API call to cancel a running live migration::
+
+    DELETE /servers/<uuid>/migrations/<id>
+
+2.25 (Maximum in Mitaka)
+------------------------
+
+  Modify input parameter for ``os-migrateLive``. The block_migration will
+  support 'auto' value, and disk_over_commit flag will be removed.
+
+2.26
+----
+
+  Added support of server tags.
+
+  A user can create, update, delete or check existence of simple string tags
+  for servers by the os-server-tags plugin.
+
+  The resource point for these operations is /servers/<server_id>/tags
+
+  A user can add a single tag to the server by sending PUT request to the
+  /servers/<server_id>/tags/<tag>
+
+  where <tag> is any valid tag name.
+
+  A user can replace **all** current server tags to the new set of tags
+  by sending PUT request to the /servers/<server_id>/tags. New set of tags
+  must be specified in request body. This set must be in list 'tags'.
+
+  A user can remove specified tag from the server by sending DELETE request
+  to the /servers/<server_id>/tags/<tag>
+
+  where <tag> is tag name which user wants to remove.
+
+  A user can remove **all** tags from the server by sending DELETE request
+  to the /servers/<server_id>/tags
+
+  A user can get a set of server tags with information about server by sending
+  GET request to the /servers/<server_id>
+
+  Request returns dictionary with information about specified server, including
+  list 'tags' ::
+
+      {
+          'id': {server_id},
+          ...
+          'tags': ['foo', 'bar', 'baz']
+      }
+
+  A user can get **only** a set of server tags by sending GET request to the
+  /servers/<server_id>/tags
+
+  Response ::
+
+      {
+         'tags': ['foo', 'bar', 'baz']
+      }
+
+  A user can check if a tag exists or not on a server by sending
+  GET /servers/{server_id}/tags/{tag}
+
+  Request returns `204 No Content` if tag exist on a server or `404 Not Found`
+  if tag doesn't exist on a server.
+
+  A user can filter servers in GET /servers request by new filters:
+
+  * tags
+  * tags-any
+  * not-tags
+  * not-tags-any
+
+  These filters can be combined. Also user can use more than one string tags
+  for each filter. In this case string tags for each filter must be separated
+  by comma: GET /servers?tags=red&tags-any=green,orange

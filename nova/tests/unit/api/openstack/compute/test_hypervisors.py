@@ -20,17 +20,13 @@ from webob import exc
 
 from nova.api.openstack.compute import hypervisors \
         as hypervisors_v21
-from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
-        as hypervisors_v2
-from nova.api.openstack import extensions
 from nova.cells import utils as cells_utils
-from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 TEST_HYPERS = [
@@ -99,10 +95,10 @@ TEST_HYPERS_OBJ = [objects.ComputeNode(**hyper_dct)
 TEST_HYPERS[0].update({'service': TEST_SERVICES[0]})
 TEST_HYPERS[1].update({'service': TEST_SERVICES[1]})
 
-TEST_SERVERS = [dict(name="inst1", uuid="uuid1", host="compute1"),
-                dict(name="inst2", uuid="uuid2", host="compute2"),
-                dict(name="inst3", uuid="uuid3", host="compute1"),
-                dict(name="inst4", uuid="uuid4", host="compute2")]
+TEST_SERVERS = [dict(name="inst1", uuid=uuids.instance_1, host="compute1"),
+                dict(name="inst2", uuid=uuids.instance_2, host="compute2"),
+                dict(name="inst3", uuid=uuids.instance_3, host="compute1"),
+                dict(name="inst4", uuid=uuids.instance_4, host="compute2")]
 
 
 def fake_compute_node_get_all(context):
@@ -147,7 +143,7 @@ def fake_compute_node_statistics(context):
             if key == 'count':
                 result[key] += 1
             else:
-                result[key] += hyper[key]
+                result[key] += getattr(hyper, key)
 
     return result
 
@@ -208,8 +204,8 @@ class HypervisorsTestV21(test.NoDBTestCase):
                        fake_compute_node_search_by_hypervisor)
         self.stubs.Set(self.controller.host_api, 'compute_node_get',
                        fake_compute_node_get)
-        self.stubs.Set(db, 'compute_node_statistics',
-                       fake_compute_node_statistics)
+        self.stub_out('nova.db.compute_node_statistics',
+                      fake_compute_node_statistics)
 
     def test_view_hypervisor_nodetail_noservers(self):
         result = self.controller._view_hypervisor(
@@ -229,10 +225,10 @@ class HypervisorsTestV21(test.NoDBTestCase):
                                                   False, self.TEST_SERVERS)
         expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
         expected_dict.update({'servers': [
-                                  dict(name="inst1", uuid="uuid1"),
-                                  dict(name="inst2", uuid="uuid2"),
-                                  dict(name="inst3", uuid="uuid3"),
-                                  dict(name="inst4", uuid="uuid4")]})
+                                  dict(name="inst1", uuid=uuids.instance_1),
+                                  dict(name="inst2", uuid=uuids.instance_2),
+                                  dict(name="inst3", uuid=uuids.instance_3),
+                                  dict(name="inst4", uuid=uuids.instance_4)]})
 
         self.assertEqual(result, expected_dict)
 
@@ -318,6 +314,18 @@ class HypervisorsTestV21(test.NoDBTestCase):
                           self.controller.uptime, req,
                           self.TEST_HYPERS_OBJ[0].id)
 
+    def test_uptime_hypervisor_down(self):
+        def fake_get_host_uptime(context, hyp):
+            raise exception.ComputeServiceUnavailable(host='dummy')
+
+        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
+                       fake_get_host_uptime)
+
+        req = self._get_request(True)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.uptime, req,
+                          self.TEST_HYPERS_OBJ[0].id)
+
     def test_search(self):
         req = self._get_request(True)
         result = self.controller.search(req, 'hyper')
@@ -348,11 +356,11 @@ class HypervisorsTestV21(test.NoDBTestCase):
 
         expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS)
         expected_dict[0].update({'servers': [
-                                     dict(uuid="uuid1"),
-                                     dict(uuid="uuid3")]})
+                                     dict(uuid=uuids.instance_1),
+                                     dict(uuid=uuids.instance_3)]})
         expected_dict[1].update({'servers': [
-                                     dict(uuid="uuid2"),
-                                     dict(uuid="uuid4")]})
+                                     dict(uuid=uuids.instance_2),
+                                     dict(uuid=uuids.instance_4)]})
 
         for output in result['hypervisors']:
             servers = output['servers']
@@ -422,62 +430,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(False)
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.statistics, req)
-
-
-class HypervisorsTestV2(HypervisorsTestV21):
-    DETAIL_HYPERS_DICTS = copy.deepcopy(
-                              HypervisorsTestV21.DETAIL_HYPERS_DICTS)
-    del DETAIL_HYPERS_DICTS[0]['state']
-    del DETAIL_HYPERS_DICTS[1]['state']
-    del DETAIL_HYPERS_DICTS[0]['status']
-    del DETAIL_HYPERS_DICTS[1]['status']
-    del DETAIL_HYPERS_DICTS[0]['service']['disabled_reason']
-    del DETAIL_HYPERS_DICTS[1]['service']['disabled_reason']
-    del DETAIL_HYPERS_DICTS[0]['host_ip']
-    del DETAIL_HYPERS_DICTS[1]['host_ip']
-
-    INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV21.INDEX_HYPER_DICTS)
-    del INDEX_HYPER_DICTS[0]['state']
-    del INDEX_HYPER_DICTS[1]['state']
-    del INDEX_HYPER_DICTS[0]['status']
-    del INDEX_HYPER_DICTS[1]['status']
-
-    def setUp(self):
-        super(HypervisorsTestV2, self).setUp()
-        self.rule_hyp_show = "compute_extension:hypervisors"
-        self.rule = {self.rule_hyp_show: ""}
-
-    def _set_up_controller(self):
-        self.context = context.get_admin_context()
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = hypervisors_v2.HypervisorsController(self.ext_mgr)
-
-    def test_index_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.index, req)
-
-    def test_detail_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.detail, req)
-
-    def test_search_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.search, req,
-                          self.TEST_HYPERS_OBJ[0].id)
-
-    def test_servers_non_admin_back_compatible_db(self):
-        self.policy.set_rules(self.rule)
-        req = self._get_request(False)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.servers, req,
-                          self.TEST_HYPERS_OBJ[0].id)
 
 
 _CELL_PATH = 'cell1'
@@ -559,25 +511,3 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
                        fake_compute_node_statistics)
         self.stubs.Set(self.controller.host_api, 'instance_get_all_by_host',
                        self.fake_instance_get_all_by_host)
-
-
-class CellHypervisorsTestV2(HypervisorsTestV2, CellHypervisorsTestV21):
-    DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV2.DETAIL_HYPERS_DICTS)
-    DETAIL_HYPERS_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
-                                                                   hyp['id']),
-                                service=dict(hyp['service'],
-                                             id=cells_utils.cell_with_item(
-                                                 _CELL_PATH,
-                                                 hyp['service']['id']),
-                                             host=cells_utils.cell_with_item(
-                                                 _CELL_PATH,
-                                                 hyp['service']['host'])))
-                           for hyp in DETAIL_HYPERS_DICTS]
-
-    INDEX_HYPER_DICTS = copy.deepcopy(HypervisorsTestV2.INDEX_HYPER_DICTS)
-    INDEX_HYPER_DICTS = [dict(hyp, id=cells_utils.cell_with_item(_CELL_PATH,
-                                                                 hyp['id']))
-                         for hyp in INDEX_HYPER_DICTS]
-
-    def setUp(self):
-        super(CellHypervisorsTestV2, self).setUp()

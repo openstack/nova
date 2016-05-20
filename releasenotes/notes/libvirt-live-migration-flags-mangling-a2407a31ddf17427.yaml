@@ -1,0 +1,12 @@
+---
+upgrade:
+  - The libvirt driver will now correct unsafe and invalid
+    values for the live_migration_flag and block_migration_flag
+    configuration options. The live_migration_flag must not
+    contain VIR_MIGRATE_SHARED_INC but block_migration_flag
+    must contain it. Both options must contain the
+    VIR_MIGRATE_PEER2PEER, except when using the 'xen' virt
+    type this flag is not supported. Both flags must contain
+    the VIR_MIGRATE_UNDEFINE_SOURCE flag and not contain the
+    VIR_MIGRATE_PERSIST_DEST flag.
+

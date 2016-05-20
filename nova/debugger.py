@@ -26,34 +26,9 @@ def enabled():
             '--remote_debug-port' in sys.argv)
 
 
-def register_cli_opts():
-    from oslo_config import cfg
-
-    cli_opts = [
-        cfg.StrOpt('host',
-                    help='Debug host (IP or name) to connect. Note '
-                        'that using the remote debug option changes how '
-                        'Nova uses the eventlet library to support async IO. '
-                        'This could result in failures that do not occur '
-                        'under normal operation. Use at your own risk.'),
-
-        cfg.IntOpt('port',
-                    min=1,
-                    max=65535,
-                    help='Debug port to connect. Note '
-                        'that using the remote debug option changes how '
-                        'Nova uses the eventlet library to support async IO. '
-                        'This could result in failures that do not occur '
-                        'under normal operation. Use at your own risk.')
-
-    ]
-
-    cfg.CONF.register_cli_opts(cli_opts, 'remote_debug')
-
-
 def init():
-    from oslo_config import cfg
-    CONF = cfg.CONF
+    import nova.conf
+    CONF = nova.conf.CONF
 
     # NOTE(markmc): gracefully handle the CLI options not being registered
     if 'remote_debug' not in CONF:

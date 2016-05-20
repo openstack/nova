@@ -37,7 +37,8 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
-GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies'])
+GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies',
+                                                       'members'])
 
 
 def build_request_spec(ctxt, image, instances, instance_type=None):
@@ -82,7 +83,7 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
 
 
 def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
-                            ex, request_spec, db):
+                            ex, request_spec):
     """changes VM state and notifies."""
     LOG.warning(_LW("Failed to %(service)s_%(method)s: %(ex)s"),
                 {'service': service, 'method': method, 'ex': ex})
@@ -114,6 +115,20 @@ def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
     notifier.error(context, event_type, payload)
 
 
+def build_filter_properties(scheduler_hints, forced_host,
+        forced_node, instance_type):
+    """Build the filter_properties dict from data in the boot request."""
+    filter_properties = dict(scheduler_hints=scheduler_hints)
+    filter_properties['instance_type'] = instance_type
+    # TODO(alaski): It doesn't seem necessary that these are conditionally
+    # added.  Let's just add empty lists if not forced_host/node.
+    if forced_host:
+        filter_properties['force_hosts'] = [forced_host]
+    if forced_node:
+        filter_properties['force_nodes'] = [forced_node]
+    return filter_properties
+
+
 def populate_filter_properties(filter_properties, host_state):
     """Add additional information to the filter properties after a node has
     been selected by the scheduling process.
@@ -136,7 +151,7 @@ def populate_filter_properties(filter_properties, host_state):
 
 
 def populate_retry(filter_properties, instance_uuid):
-    max_attempts = _max_attempts()
+    max_attempts = CONF.scheduler_max_attempts
     force_hosts = filter_properties.get('force_hosts', [])
     force_nodes = filter_properties.get('force_nodes', [])
 
@@ -190,14 +205,6 @@ def _log_compute_error(instance_uuid, retry):
               instance_uuid=instance_uuid)
 
 
-def _max_attempts():
-    max_attempts = CONF.scheduler_max_attempts
-    if max_attempts < 1:
-        raise exception.NovaException(_("Invalid value for "
-            "'scheduler_max_attempts', must be >= 1"))
-    return max_attempts
-
-
 def _add_retry_host(filter_properties, host, node):
     """Add a retry entry for the selected compute node. In the event that
     the request gets re-scheduled, this entry will signal that the given
@@ -248,8 +255,17 @@ def validate_filter(filter):
     return filter in CONF.scheduler_default_filters
 
 
+def validate_weigher(weigher):
+    """Validates that the weigher is configured in the default weighers."""
+    if 'nova.scheduler.weights.all_weighers' in CONF.scheduler_weight_classes:
+        return True
+    return weigher in CONF.scheduler_weight_classes
+
+
 _SUPPORTS_AFFINITY = None
 _SUPPORTS_ANTI_AFFINITY = None
+_SUPPORTS_SOFT_AFFINITY = None
+_SUPPORTS_SOFT_ANTI_AFFINITY = None
 
 
 def _get_group_details(context, instance_uuid, user_group_hosts=None):
@@ -270,9 +286,17 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
     if _SUPPORTS_ANTI_AFFINITY is None:
         _SUPPORTS_ANTI_AFFINITY = validate_filter(
             'ServerGroupAntiAffinityFilter')
-    _supports_server_groups = any((_SUPPORTS_AFFINITY,
-                                   _SUPPORTS_ANTI_AFFINITY))
-    if not _supports_server_groups or not instance_uuid:
+    global _SUPPORTS_SOFT_AFFINITY
+    if _SUPPORTS_SOFT_AFFINITY is None:
+        _SUPPORTS_SOFT_AFFINITY = validate_weigher(
+            'nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher')
+    global _SUPPORTS_SOFT_ANTI_AFFINITY
+    if _SUPPORTS_SOFT_ANTI_AFFINITY is None:
+        _SUPPORTS_SOFT_ANTI_AFFINITY = validate_weigher(
+            'nova.scheduler.weights.affinity.'
+            'ServerGroupSoftAntiAffinityWeigher')
+
+    if not instance_uuid:
         return
 
     try:
@@ -281,20 +305,31 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
     except exception.InstanceGroupNotFound:
         return
 
-    policies = set(('anti-affinity', 'affinity'))
+    policies = set(('anti-affinity', 'affinity', 'soft-affinity',
+                    'soft-anti-affinity'))
     if any((policy in policies) for policy in group.policies):
-        if (not _SUPPORTS_AFFINITY and 'affinity' in group.policies):
+        if not _SUPPORTS_AFFINITY and 'affinity' in group.policies:
             msg = _("ServerGroupAffinityFilter not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        if (not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' in group.policies):
+        if not _SUPPORTS_ANTI_AFFINITY and 'anti-affinity' in group.policies:
             msg = _("ServerGroupAntiAffinityFilter not configured")
+            LOG.error(msg)
+            raise exception.UnsupportedPolicyException(reason=msg)
+        if (not _SUPPORTS_SOFT_AFFINITY
+                and 'soft-affinity' in group.policies):
+            msg = _("ServerGroupSoftAffinityWeigher not configured")
+            LOG.error(msg)
+            raise exception.UnsupportedPolicyException(reason=msg)
+        if (not _SUPPORTS_SOFT_ANTI_AFFINITY
+                and 'soft-anti-affinity' in group.policies):
+            msg = _("ServerGroupSoftAntiAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
         group_hosts = set(group.get_hosts())
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
-                            policies=group.policies)
+                            policies=group.policies, members=group.members)
 
 
 def setup_instance_group(context, request_spec, filter_properties):
@@ -315,6 +350,7 @@ def setup_instance_group(context, request_spec, filter_properties):
         filter_properties['group_updated'] = True
         filter_properties['group_hosts'] = group_info.hosts
         filter_properties['group_policies'] = group_info.policies
+        filter_properties['group_members'] = group_info.members
 
 
 def retry_on_timeout(retries=1):
@@ -345,4 +381,4 @@ def retry_on_timeout(retries=1):
         return wrapped
     return outer
 
-retry_select_destinations = retry_on_timeout(_max_attempts() - 1)
+retry_select_destinations = retry_on_timeout(CONF.scheduler_max_attempts - 1)

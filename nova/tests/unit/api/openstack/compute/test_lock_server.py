@@ -13,13 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
-
 import mock
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.legacy_v2.contrib import admin_actions \
-        as lock_server_v2
 from nova.api.openstack.compute import lock_server as lock_server_v21
 from nova import context
 from nova import exception
@@ -66,13 +62,6 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
         self.assertRaises(self.authorization_error,
                           self.controller._unlock,
                           self.req, instance.uuid, body)
-
-
-class LockServerTestsV2(LockServerTestsV21):
-    lock_server = lock_server_v2
-    controller_name = 'AdminActionsController'
-    authorization_error = webob.exc.HTTPForbidden
-    _api_version = '2'
 
 
 class LockServerPolicyEnforcementV21(test.NoDBTestCase):

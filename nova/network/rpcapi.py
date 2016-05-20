@@ -16,29 +16,15 @@
 Client side of the network RPC API.
 """
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+import nova.conf
 from nova.objects import base as objects_base
 from nova import rpc
 
-rpcapi_opts = [
-    cfg.StrOpt('network_topic',
-               default='network',
-               help='The topic network nodes listen on'),
-    cfg.BoolOpt('multi_host',
-                default=False,
-                help='Default value for multi_host in networks. Also, if set, '
-                     'some rpc network calls will be sent directly to host.'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(rpcapi_opts)
-
-rpcapi_cap_opt = cfg.StrOpt('network',
-        help='Set a version cap for messages sent to network services')
-CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
+CONF = nova.conf.CONF
 
 
 class NetworkAPI(object):
@@ -110,6 +96,13 @@ class NetworkAPI(object):
         ... Liberty supports message version 1.15.  So, any changes to
         existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.15.
+
+        * 1.16 - Transfer instance in addition to instance_id in
+                 setup_networks_on_host
+
+        ... Liberty supports message version 1.16.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.16.
     '''
 
     VERSION_ALIASES = {
@@ -119,6 +112,7 @@ class NetworkAPI(object):
         'juno': '1.13',
         'kilo': '1.13',
         'liberty': '1.15',
+        'mitaka': '1.16',
     }
 
     def __init__(self, topic=None):
@@ -243,11 +237,19 @@ class NetworkAPI(object):
         return self.client.call(ctxt, 'create_public_dns_domain',
                                 domain=domain, project=project)
 
-    def setup_networks_on_host(self, ctxt, instance_id, host, teardown):
+    def setup_networks_on_host(self, ctxt, instance_id, host, teardown,
+                               instance):
         # NOTE(tr3buchet): the call is just to wait for completion
-        return self.client.call(ctxt, 'setup_networks_on_host',
-                                instance_id=instance_id, host=host,
-                                teardown=teardown)
+        version = '1.16'
+        kwargs = {}
+        if not self.client.can_send_version(version):
+            version = '1.0'
+        else:
+            kwargs['instance'] = instance
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt, 'setup_networks_on_host',
+                          instance_id=instance_id, host=host,
+                          teardown=teardown, **kwargs)
 
     def set_network_host(self, ctxt, network_ref):
         version = '1.15'

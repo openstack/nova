@@ -77,10 +77,9 @@ class NUMAServersTest(ServersTestBase):
         pass
 
     def _setup_scheduler_service(self):
-        self.flags(compute_driver='nova.virt.libvirt.LibvirtDriver')
+        self.flags(compute_driver='libvirt.LibvirtDriver')
 
-        self.flags(scheduler_driver='nova.scheduler.'
-                    'filter_scheduler.FilterScheduler')
+        self.flags(scheduler_driver='filter_scheduler')
         self.flags(scheduler_default_filters=CONF.scheduler_default_filters
                    + ['NUMATopologyFilter'])
         return self.start_service('scheduler')
@@ -88,7 +87,7 @@ class NUMAServersTest(ServersTestBase):
     def _run_build_test(self, flavor_id, filter_mock, end_status='ACTIVE'):
 
         self.compute = self.start_service('compute', host='test_compute0')
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         # Create server
         good_server = self._build_server(flavor_id)

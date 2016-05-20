@@ -113,7 +113,7 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual('windows', virtprops.os_type)
         self.assertEqual('vga', virtprops.hw_video_model)
         self.assertEqual(512, virtprops.hw_video_ram)
-        self.assertEqual(True, virtprops.hw_qemu_guest_agent)
+        self.assertTrue(virtprops.hw_qemu_guest_agent)
 
     def test_default_props(self):
         props = {}
@@ -282,6 +282,9 @@ class TestImageMetaProps(test.NoDBTestCase):
 
     def test_obj_make_compatible(self):
         props = {
+            'hw_firmware_type': 'uefi',
+            'hw_cpu_realtime_mask': '^0-1',
+            'hw_cpu_thread_policy': 'prefer',
             'img_config_drive': 'mandatory',
             'os_admin_user': 'root',
             'hw_vif_multiqueue_enabled': True,

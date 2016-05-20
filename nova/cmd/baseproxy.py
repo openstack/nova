@@ -20,22 +20,17 @@ for OpenStack Nova."""
 import os
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
+import nova.conf
+from nova.conf import novnc
 from nova.console import websocketproxy
 from nova import version
 
 
-CONF = cfg.CONF
-CONF.import_opt('record', 'nova.cmd.novnc')
-CONF.import_opt('daemon', 'nova.cmd.novnc')
-CONF.import_opt('ssl_only', 'nova.cmd.novnc')
-CONF.import_opt('source_is_ipv6', 'nova.cmd.novnc')
-CONF.import_opt('cert', 'nova.cmd.novnc')
-CONF.import_opt('key', 'nova.cmd.novnc')
-CONF.import_opt('web', 'nova.cmd.novnc')
+CONF = nova.conf.CONF
+novnc.register_cli_opts(CONF)
 
 
 def exit_with_error(msg, errno=-1):
@@ -61,13 +56,12 @@ def proxy(host, port):
         listen_host=host,
         listen_port=port,
         source_is_ipv6=CONF.source_is_ipv6,
-        verbose=CONF.verbose,
         cert=CONF.cert,
         key=CONF.key,
         ssl_only=CONF.ssl_only,
         daemon=CONF.daemon,
         record=CONF.record,
-        traffic=CONF.verbose and not CONF.daemon,
+        traffic=not CONF.daemon,
         web=CONF.web,
         file_only=True,
         RequestHandlerClass=websocketproxy.NovaProxyRequestHandler

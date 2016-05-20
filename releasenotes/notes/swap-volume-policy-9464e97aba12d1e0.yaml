@@ -1,0 +1,8 @@
+---
+upgrade:
+  - The default policy for updating volume attachments, commonly referred to as
+    swap volume, has been changed from ``rule:admin_or_owner`` to
+    ``rule:admin_api``. This is because it is called from the volume service
+    when migrating volumes, which is an admin-only operation by default, and
+    requires calling an admin-only API in the volume service upon completion.
+    So by default it would not work for non-admins.

@@ -104,6 +104,7 @@ actually does, and why.
    :maxdepth: 1
 
    how_to_get_involved
+   process
    architecture
    project_scope
    development.environment
@@ -152,10 +153,10 @@ Open Development.
    i18n
    filter_scheduler
    rpc
-   hooks
    block_device_mapping
    addmethod.openstackapi
    conductor
+   notifications
 
 Architecture Evolution Plans
 -----------------------------
@@ -221,12 +222,7 @@ Module Reference
 .. toctree::
    :hidden:
 
-   api/autoindex
-
 Indices and tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
 * :ref:`search`
-

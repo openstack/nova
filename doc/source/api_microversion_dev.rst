@@ -82,16 +82,17 @@ changed. The user contract covers many kinds of information such as:
     Example: an API previously could return 200, 400, 403, 404 and the
     change would make the API now also be allowed to return 409.
 
-    See [#f2]_ for the 400, 403 and 404 cases.
+    See [#f2]_ for the 400, 403, 404 and 415 cases.
 
   - changing a status code on a particular response
 
     Example: changing the return code of an API from 501 to 400.
 
-    .. note:: Fixing a bug so that a 400+ code is returned rather than a 500
-      does not require a microversion change. It's assumed that clients are not
-      expected to handle a 500 response and therefore should not need to opt-in
-      to microversion changes that fixes a 500 response from happening.
+    .. note:: Fixing a bug so that a 400+ code is returned rather than a 500 or
+      503 does not require a microversion change. It's assumed that clients are
+      not expected to handle a 500 or 503 response and therefore should not
+      need to opt-in to microversion changes that fixes a 500 or 503 response
+      from happening.
       According to the OpenStack API Working Group, a
       **500 Internal Server Error** should **not** be returned to the user for
       failures due to user error that can be fixed by changing the request on
@@ -171,11 +172,18 @@ we need a microversion".
   microversion is probably needed.
 
 .. [#f2] The exception to not needing a microversion when returning a
-  previously unspecified error code is the 400, 403 and 404 cases. This is
+  previously unspecified error code is the 400, 403, 404 and 415 cases. This is
   considered OK to return even if previously unspecified in the code since
   it's implied given keystone authentication can fail with a 403 and API
   validation can fail with a 400 for invalid json request body. Request to
-  url/resource that does not exist always fails with 404.
+  url/resource that does not exist always fails with 404. Invalid content types
+  are handled before API methods are called which results in a 415.
+
+    .. note:: When in doubt about whether or not a microversion is required
+        for changing an error response code, consult the `Nova API subteam`_.
+
+.. _Nova API subteam: https://wiki.openstack.org/wiki/Meetings/NovaAPI
+
 
 When a microversion is not needed
 ---------------------------------
@@ -186,6 +194,11 @@ A microversion is not needed in the following situation:
 
   - Changing the error message without changing the response code
     does not require a new microversion.
+
+  - Removing an inapplicable HTTP header, for example, suppose the Retry-After
+    HTTP header is being returned with a 4xx code. This header should only be
+    returned with a 503 or 3xx response, so it may be removed without bumping
+    the microversion.
 
 In Code
 -------
@@ -276,9 +289,14 @@ used to modify behavior based on its value::
         <common code>
 
         req_version = req.api_version_request
-        if req_version.matches("2.1", "2.5"):
+        req1_min = api_version_request.APIVersionRequest("2.1")
+        req1_max = api_version_request.APIVersionRequest("2.5")
+        req2_min = api_version_request.APIVersionRequest("2.6")
+        req2_max = api_version_request.APIVersionRequest("2.10")
+
+        if req_version.matches(req1_min, req1_max):
             ....stuff....
-        elif req_version.matches("2.6", "2.10"):
+        elif req_version.matches(req2min, req2_max):
             ....other stuff....
         elif req_version > api_version_request.APIVersionRequest("2.10"):
             ....more stuff.....

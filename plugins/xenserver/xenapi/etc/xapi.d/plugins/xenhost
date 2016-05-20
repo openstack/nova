@@ -20,6 +20,8 @@
 # NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
 # which means the Nova xenapi plugins must use only Python 2.4 features
 
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
 #
 # XenAPI plugin for host operations
 #
@@ -70,24 +72,27 @@ def _run_command(cmd, cmd_input=None):
     """
     try:
         return utils.run_command(cmd, cmd_input=cmd_input)
-    except utils.SubprocessException, e:
+    except utils.SubprocessException, e:  # noqa
         raise pluginlib.PluginError(e.err)
 
 
 def _resume_compute(session, compute_ref, compute_uuid):
-    """Resume compute node on slave host after pool join. This has to
-    happen regardless of the success or failure of the join operation."""
+    """Resume compute node on slave host after pool join.
+
+    This has to happen regardless of the success or failure of the join
+    operation.
+    """
     try:
         # session is valid if the join operation has failed
         session.xenapi.VM.start(compute_ref, False, True)
-    except XenAPI.Failure, e:
+    except XenAPI.Failure:
         # if session is invalid, e.g. xapi has restarted, then the pool
         # join has been successful, wait for xapi to become alive again
-        for c in xrange(0, DEFAULT_TRIES):
+        for c in range(0, DEFAULT_TRIES):
             try:
                 _run_command(["xe", "vm-start", "uuid=%s" % compute_uuid])
                 return
-            except pluginlib.PluginError, e:
+            except pluginlib.PluginError:
                 logging.exception('Waited %d seconds for the slave to '
                                   'become available.' % (c * DEFAULT_SLEEP))
                 time.sleep(DEFAULT_SLEEP)
@@ -156,7 +161,7 @@ def get_config(self, arg_dict):
     params = arg_dict["params"]
     try:
         dct = json.loads(params)
-    except Exception, e:
+    except Exception:
         dct = params
     key = dct["key"]
     ret = conf.get(key)
@@ -173,7 +178,7 @@ def set_config(self, arg_dict):
     params = arg_dict["params"]
     try:
         dct = json.loads(params)
-    except Exception, e:
+    except Exception:
         dct = params
     key = dct["key"]
     val = dct["value"]
@@ -204,12 +209,11 @@ def iptables_config(session, args):
                                    'ip6tables-save',
                                    'ip6tables-restore'):
         result = _run_command(cmd, process_input)
-        ret_str = json.dumps(dict(out=result,
-                                  err=''))
+        ret_str = json.dumps(dict(out=result, err=''))
         logging.debug("iptables_config:exit")
         return ret_str
-    else:
     # else don't do anything and return an error
+    else:
         raise pluginlib.PluginError(_("Invalid iptables command"))
 
 
@@ -224,9 +228,9 @@ def _power_action(action, arg_dict):
                           "resident-on=%s" % host_uuid])
     if result:
         raise pluginlib.PluginError(result)
-    cmds = {"reboot":   "host-reboot",
-            "startup":  "host-power-on",
-            "shutdown": "host-shutdown",}
+    cmds = {"reboot": "host-reboot",
+            "startup": "host-power-on",
+            "shutdown": "host-shutdown"}
     result = _run_command(["xe", cmds[action], "uuid=%s" % host_uuid])
     # Should be empty string
     if result:
@@ -248,22 +252,27 @@ def host_shutdown(self, arg_dict):
 
 @jsonify
 def host_start(self, arg_dict):
-    """Starts the host. Currently not feasible, since the host
-    runs on the same machine as Xen.
+    """Starts the host.
+
+    Currently not feasible, since the host runs on the same machine as
+    Xen.
     """
     return _power_action("startup", arg_dict)
 
 
 @jsonify
 def host_join(self, arg_dict):
-    """Join a remote host into a pool whose master is the host
-    where the plugin is called from. The following constraints apply:
+    """Join a remote host into a pool.
 
-    - The host must have no VMs running, except nova-compute, which will be
-      shut down (and restarted upon pool-join) automatically,
+    The pool's master is the host where the plugin is called from. The
+    following constraints apply:
+
+    - The host must have no VMs running, except nova-compute, which
+      will be shut down (and restarted upon pool-join) automatically,
     - The host must have no shared storage currently set up,
     - The host must have the same license of the master,
-    - The host must have the same supplemental packs as the master."""
+    - The host must have the same supplemental packs as the master.
+    """
     session = XenAPI.Session(arg_dict.get("url"))
     session.login_with_password(arg_dict.get("user"),
                                 arg_dict.get("password"))
@@ -404,11 +413,13 @@ def cleanup(dct):
 #            "external-auth-service-name", "")
     return out
 
+
 def query_gc(session, sr_uuid, vdi_uuid):
     result = _run_command(["/opt/xensource/sm/cleanup.py",
                            "-q", "-u", sr_uuid])
     # Example output: "Currently running: True"
     return result[19:].strip() == "True"
+
 
 def get_pci_device_details(session):
     """Returns a string that is a list of pci devices with details.

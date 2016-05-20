@@ -42,3 +42,18 @@ class LibvirtFibreChannelVolumeDriverTestCase(
     @mock.patch.object(platform, 'machine', return_value=arch.S390X)
     def test_libvirt_fibrechan_driver_s390x(self, mock_machine):
         self._test_libvirt_fibrechan_driver_s390()
+
+    def test_libvirt_fibrechan_driver_get_config(self):
+        libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
+                                                                self.fake_conn)
+
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+
+        self.assertEqual('block', tree.get('type'))
+        self.assertEqual(device_path, tree.find('./source').get('dev'))
+        self.assertEqual('raw', tree.find('./driver').get('type'))
+        self.assertEqual('native', tree.find('./driver').get('io'))

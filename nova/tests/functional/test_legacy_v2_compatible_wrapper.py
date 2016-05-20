@@ -30,23 +30,23 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
                                          openstack.LegacyV2CompatibleWrapper])
 
     def test_request_with_microversion_headers(self):
+        self.api.microversion = '2.100'
         response = self.api.api_post('os-keypairs',
-            {"keypair": {"name": "test"}},
-            headers={wsgi.API_VERSION_REQUEST_HEADER: '2.100'})
+            {"keypair": {"name": "test"}})
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
         self.assertNotIn('Vary', response.headers)
         self.assertNotIn('type', response.body["keypair"])
 
     def test_request_without_addtional_properties_check(self):
+        self.api.microversion = '2.100'
         response = self.api.api_post('os-keypairs',
-            {"keypair": {"name": "test", "foooooo": "barrrrrr"}},
-            headers={wsgi.API_VERSION_REQUEST_HEADER: '2.100'})
+            {"keypair": {"name": "test", "foooooo": "barrrrrr"}})
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
         self.assertNotIn('Vary', response.headers)
         self.assertNotIn('type', response.body["keypair"])
 
     def test_request_with_pattern_properties_check(self):
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
         server = self._build_minimal_create_server_request()
         post = {'server': server}
         created_server = self.api.post_server(post)
@@ -56,7 +56,7 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
         self.assertEqual(response, {'a': 'b'})
 
     def test_request_with_pattern_properties_with_avoid_metadata(self):
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
         server = self._build_minimal_create_server_request()
         post = {'server': server}
         created_server = self.api.post_server(post)

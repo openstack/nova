@@ -50,7 +50,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         mocked.get.return_value = {}
 
         image = self._get_image()
-        self.assertEqual(False, image.is_raw_tgz())
+        self.assertFalse(image.is_raw_tgz())
 
     def test_is_raw_tgz_for_raw_tgz(self, mocked):
         mocked.get.return_value = {
@@ -59,7 +59,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         }
 
         image = self._get_image()
-        self.assertEqual(True, image.is_raw_tgz())
+        self.assertTrue(image.is_raw_tgz())
 
     def test_data(self, mocked):
         mocked.download.return_value = mock.sentinel.image
@@ -208,8 +208,8 @@ class RawTGZTestCase(test.NoDBTestCase):
     def test_stream_to_without_size_retrieved(self):
         source_tar = self.mox.CreateMock(tarfile.TarFile)
         first_tarinfo = self.mox.CreateMock(tarfile.TarInfo)
-        target_file = self.mox.CreateMock(file)
-        source_file = self.mox.CreateMock(file)
+        target_file = self.mox.CreateMock(open)
+        source_file = self.mox.CreateMock(open)
 
         image = utils.RawTGZImage(None)
         image._image_service_and_image_id = ('service', 'id')
@@ -230,8 +230,8 @@ class RawTGZTestCase(test.NoDBTestCase):
     def test_stream_to_with_size_retrieved(self):
         source_tar = self.mox.CreateMock(tarfile.TarFile)
         first_tarinfo = self.mox.CreateMock(tarfile.TarInfo)
-        target_file = self.mox.CreateMock(file)
-        source_file = self.mox.CreateMock(file)
+        target_file = self.mox.CreateMock(open)
+        source_file = self.mox.CreateMock(open)
         first_tarinfo.size = 124
 
         image = utils.RawTGZImage(None)

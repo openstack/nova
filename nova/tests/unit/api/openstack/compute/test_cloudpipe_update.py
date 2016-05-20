@@ -15,9 +15,6 @@
 import webob
 
 from nova.api.openstack.compute import cloudpipe as clup_v21
-from nova.api.openstack.compute.legacy_v2.contrib import cloudpipe_update \
-        as clup_v2
-from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -44,8 +41,9 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(CloudpipeUpdateTestV21, self).setUp()
-        self.stubs.Set(db, "project_get_networks", fake_project_get_networks)
-        self.stubs.Set(db, "network_update", fake_network_update)
+        self.stub_out("nova.db.project_get_networks",
+                      fake_project_get_networks)
+        self.stub_out("nova.db.network_update", fake_network_update)
         self._setup()
         self.req = fakes.HTTPRequest.blank('')
 
@@ -88,13 +86,3 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
         self.assertRaises(self.bad_request,
                           self.controller.update, self.req,
                           'configure-project', body=body)
-
-
-class CloudpipeUpdateTestV2(CloudpipeUpdateTestV21):
-    bad_request = webob.exc.HTTPBadRequest
-
-    def _setup(self):
-        self.controller = clup_v2.CloudpipeUpdateController()
-
-    def _check_status(self, expected_status, res, controller_methord):
-        self.assertEqual(expected_status, res.status_int)

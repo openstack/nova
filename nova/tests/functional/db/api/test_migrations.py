@@ -33,7 +33,6 @@ import os
 
 from migrate.versioning import repository
 import mock
-from oslo_config import cfg
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
@@ -45,10 +44,6 @@ from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
-
-
-CONF = cfg.CONF
-LOG = logging.getLogger(__name__)
 
 
 class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
@@ -77,6 +72,33 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
                 return False
 
         return True
+
+    def filter_metadata_diff(self, diff):
+        # Filter out diffs that shouldn't cause a sync failure.
+
+        new_diff = []
+
+        # Define a whitelist of ForeignKeys that exist on the model but not in
+        # the database. They will be removed from the model at a later time.
+        fkey_whitelist = {'build_requests': ['request_spec_id']}
+
+        for element in diff:
+            if isinstance(element, list):
+                # modify_nullable is a list
+                new_diff.append(element)
+            else:
+                # tuple with action as first element. Different actions have
+                # different tuple structures.
+                if element[0] == 'add_fk':
+                    fkey = element[1]
+                    tablename = fkey.table.name
+                    column_keys = fkey.column_keys
+                    if (tablename in fkey_whitelist and
+                            column_keys == fkey_whitelist[tablename]):
+                        continue
+
+                new_diff.append(element)
+        return new_diff
 
 
 class TestNovaAPIMigrationsSQLite(NovaAPIModelsSync,
@@ -122,6 +144,19 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     @property
     def migrate_engine(self):
         return self.engine
+
+    def _skippable_migrations(self):
+        mitaka_placeholders = range(8, 13)
+        return mitaka_placeholders
+
+    def migrate_up(self, version, with_data=False):
+        if with_data:
+            check = getattr(self, '_check_%03d' % version, None)
+            if version not in self._skippable_migrations():
+                self.assertIsNotNone(check,
+                                     ('API DB Migration %i does not have a '
+                                      'test. Please add one!') % version)
+        super(NovaAPIMigrationsWalk, self).migrate_up(version, with_data)
 
     def test_walk_versions(self):
         self.walk_versions(snake_walk=False, downgrade=False)
@@ -198,6 +233,105 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         if engine.name != 'ibm_db_sa':
             self.assertIndexExists(engine, 'request_specs',
                     'request_spec_instance_uuid_idx')
+
+    def _check_005(self, engine, data):
+        # flavors
+        for column in ['created_at', 'updated_at', 'name', 'id', 'memory_mb',
+            'vcpus', 'swap', 'vcpu_weight', 'flavorid', 'rxtx_factor',
+            'root_gb', 'ephemeral_gb', 'disabled', 'is_public']:
+            self.assertColumnExists(engine, 'flavors', column)
+        self.assertUniqueConstraintExists(engine, 'flavors',
+                ['flavorid'])
+        self.assertUniqueConstraintExists(engine, 'flavors',
+                ['name'])
+
+        # flavor_extra_specs
+        for column in ['created_at', 'updated_at', 'id', 'flavor_id', 'key',
+            'value']:
+            self.assertColumnExists(engine, 'flavor_extra_specs', column)
+
+        if engine.name != 'ibm_db_sa':
+            self.assertIndexExists(engine, 'flavor_extra_specs',
+                'flavor_extra_specs_flavor_id_key_idx')
+        self.assertUniqueConstraintExists(engine, 'flavor_extra_specs',
+            ['flavor_id', 'key'])
+
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('flavor_extra_specs')[0]
+        self.assertEqual('flavors', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['flavor_id'], fk['constrained_columns'])
+
+        # flavor_projects
+        for column in ['created_at', 'updated_at', 'id', 'flavor_id',
+            'project_id']:
+            self.assertColumnExists(engine, 'flavor_projects', column)
+
+        self.assertUniqueConstraintExists(engine, 'flavor_projects',
+            ['flavor_id', 'project_id'])
+
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('flavor_projects')[0]
+        self.assertEqual('flavors', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['flavor_id'], fk['constrained_columns'])
+
+    def _check_006(self, engine, data):
+        for column in ['id', 'request_spec_id', 'project_id', 'user_id',
+                'display_name', 'instance_metadata', 'progress', 'vm_state',
+                'image_ref', 'access_ip_v4', 'access_ip_v6', 'info_cache',
+                'security_groups', 'config_drive', 'key_name', 'locked_by']:
+            self.assertColumnExists(engine, 'build_requests', column)
+
+        self.assertIndexExists(engine, 'build_requests',
+            'build_requests_project_id_idx')
+        self.assertUniqueConstraintExists(engine, 'build_requests',
+                ['request_spec_id'])
+
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('build_requests')[0]
+        self.assertEqual('request_specs', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['request_spec_id'], fk['constrained_columns'])
+
+    def _check_007(self, engine, data):
+        map_table = db_utils.get_table(engine, 'instance_mappings')
+        self.assertTrue(map_table.columns['cell_id'].nullable)
+
+        # Ensure the foreign key still exists
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('instance_mappings')[0]
+        self.assertEqual('cell_mappings', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+        self.assertEqual(['cell_id'], fk['constrained_columns'])
+
+    def _check_013(self, engine, data):
+        for column in ['instance_uuid', 'instance']:
+            self.assertColumnExists(engine, 'build_requests', column)
+        self.assertIndexExists(engine, 'build_requests',
+            'build_requests_instance_uuid_idx')
+        self.assertUniqueConstraintExists(engine, 'build_requests',
+                ['instance_uuid'])
+
+    def _check_014(self, engine, data):
+        for column in ['name', 'public_key']:
+            self.assertColumnExists(engine, 'key_pairs', column)
+        self.assertUniqueConstraintExists(engine, 'key_pairs',
+                                          ['user_id', 'name'])
+
+    def _check_015(self, engine, data):
+        build_requests_table = db_utils.get_table(engine, 'build_requests')
+        for column in ['request_spec_id', 'user_id', 'security_groups',
+                'config_drive']:
+            self.assertTrue(build_requests_table.columns[column].nullable)
+        inspector = reflection.Inspector.from_engine(engine)
+        constrs = inspector.get_unique_constraints('build_requests')
+        constr_columns = [constr['column_names'] for constr in constrs]
+        self.assertNotIn(['request_spec_id'], constr_columns)
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,

@@ -23,7 +23,7 @@ from nova import test
 dev = {"vendor_id": "8086",
        "product_id": "5057",
        "address": "1234:5678:8988.5",
-       "phys_function": "0000:0a:00.0"}
+       "parent_addr": "0000:0a:00.0"}
 
 
 class PciAddressTestCase(test.NoDBTestCase):
@@ -92,7 +92,7 @@ class PciAddressTestCase(test.NoDBTestCase):
         dev = {"vendor_id": "1137",
                "product_id": "0071",
                "address": "0000:0a:00.5",
-               "phys_function": "0000:0a:00.0"}
+               "parent_addr": "0000:0a:00.0"}
         self.assertTrue(pci.match(dev))
 
     @mock.patch('nova.pci.utils.is_physical_function', return_value = True)
@@ -169,8 +169,9 @@ class PciDevSpecTestCase(test.NoDBTestCase):
             'product_id': '5057',
             'vendor_id': '8086',
             'status': 'available',
+            'parent_addr': None,
             'extra_k1': 'v1',
         }
 
-        pci_obj = objects.PciDevice.create(pci_dev)
+        pci_obj = objects.PciDevice.create(None, pci_dev)
         self.assertTrue(pci.match_pci_obj(pci_obj))

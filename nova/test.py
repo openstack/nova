@@ -32,6 +32,7 @@ import mock
 import os
 
 import fixtures
+from oslo_cache import core as cache
 from oslo_concurrency import lockutils
 from oslo_config import cfg
 from oslo_config import fixture as config_fixture
@@ -55,21 +56,21 @@ from nova import utils
 
 
 CONF = cfg.CONF
-CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v21')
 
 logging.register_options(CONF)
 CONF.set_override('use_stderr', False)
 logging.setup(CONF, 'nova')
+cache.configure(CONF)
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
-if six.PY3:
+if six.PY2:
+    nested = contextlib.nested
+else:
     @contextlib.contextmanager
     def nested(*contexts):
         with contextlib.ExitStack() as stack:
             yield [stack.enter_context(c) for c in contexts]
-else:
-    nested = contextlib.nested
 
 
 class SampleNetworks(fixtures.Fixture):
@@ -168,6 +169,7 @@ class TestCase(testtools.TestCase):
     `NoDBTestCase` first.
     """
     USES_DB = True
+    USES_DB_SELF = False
     REQUIRES_LOCKING = False
 
     TIMEOUT_SCALING_FACTOR = 1
@@ -210,6 +212,10 @@ class TestCase(testtools.TestCase):
 
         if self.USES_DB:
             self.useFixture(nova_fixtures.Database())
+            self.useFixture(nova_fixtures.Database(database='api'))
+            self.useFixture(nova_fixtures.DefaultFlavorsFixture())
+        elif not self.USES_DB_SELF:
+            self.useFixture(nova_fixtures.DatabasePoisonFixture())
 
         # NOTE(blk-u): WarningsFixture must be after the Database fixture
         # because sqlalchemy-migrate messes with the warnings filters.
@@ -222,6 +228,8 @@ class TestCase(testtools.TestCase):
         self._base_test_obj_backup = copy.copy(
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
+
+        self.useFixture(nova_fixtures.StableObjectJsonFixture())
 
         # NOTE(mnaser): All calls to utils.is_neutron() are cached in
         # nova.utils._IS_NEUTRON.  We set it to None to avoid any
@@ -239,6 +247,8 @@ class TestCase(testtools.TestCase):
 
         openstack_driver.DRIVER_CACHE = {}
 
+        self.useFixture(nova_fixtures.ForbidNewLegacyNotificationFixture())
+
     def _restore_obj_registry(self):
         objects_base.NovaObjectRegistry._registry._obj_classes = \
                 self._base_test_obj_backup
@@ -255,6 +265,18 @@ class TestCase(testtools.TestCase):
             # newly generated tests by testscenarios.
             if key != 'id':
                 del self.__dict__[key]
+
+    def stub_out(self, old, new):
+        """Replace a function for the duration of the test.
+
+        Use the monkey patch fixture to replace a function for the
+        duration of a test. Useful when you want to provide fake
+        methods instead of mocks during testing.
+
+        This should be used instead of self.stubs.Set (which is based
+        on mox) going forward.
+        """
+        self.useFixture(fixtures.MonkeyPatch(old, new))
 
     def flags(self, **kw):
         """Override flag variables for a test."""

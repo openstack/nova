@@ -14,7 +14,6 @@
 
 """The rescue mode extension."""
 
-from oslo_config import cfg
 import webob
 from webob import exc
 
@@ -26,7 +25,6 @@ from nova import exception
 from nova import utils
 
 
-CONF = cfg.CONF
 authorize = exts.extension_authorizer('compute', 'rescue')
 
 
@@ -52,7 +50,8 @@ class RescueController(wsgi.Controller):
             rescue_image_ref = None
             if self.ext_mgr.is_loaded("os-extended-rescue-with-image"):
                 if body['rescue'] and 'rescue_image_ref' in body['rescue']:
-                    rescue_image_ref = body['rescue']['rescue_image_ref']
+                    rescue_image_ref = common.image_uuid_from_href(
+                       body['rescue']['rescue_image_ref'], 'rescue_image_ref')
             self.compute_api.rescue(context, instance,
                 rescue_password=password, rescue_image_ref=rescue_image_ref)
         except exception.InstanceIsLocked as e:

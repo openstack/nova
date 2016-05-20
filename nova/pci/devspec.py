@@ -15,6 +15,7 @@ import ast
 import re
 
 from nova import exception
+from nova.i18n import _
 from nova.pci import utils
 
 MAX_VENDOR_ID = 0xFFFF
@@ -38,7 +39,8 @@ def get_pci_dev_info(pci_obj, property, max, hex_value):
     v = get_value(a)
     if v > max:
         raise exception.PciConfigInvalidWhitelist(
-            reason = "invalid %s %s" % (property, a))
+            reason=_("invalid %(property)s %(attr)s") %
+                     {'property': property, 'attr': a})
     setattr(pci_obj, property, hex_value % v)
 
 
@@ -67,7 +69,8 @@ class PciAddress(object):
     def _check_physical_function(self):
         if ANY in (self.domain, self.bus, self.slot, self.func):
             return
-        self.is_physical_function = utils.is_physical_function(self)
+        self.is_physical_function = utils.is_physical_function(
+            self.domain, self.bus, self.slot, self.func)
 
     def _init_address_fields(self, pci_addr):
         if self.is_physical_function:
@@ -91,7 +94,7 @@ class PciAddress(object):
             dbs_fields = dbs.split(':')
             if len(dbs_fields) > 3:
                 raise exception.PciDeviceWrongAddressFormat(address=pci_addr)
-            # If we got a partial address like ":00.", we need to to turn this
+            # If we got a partial address like ":00.", we need to turn this
             # into a domain of ANY, a bus of ANY, and a slot of 00. This code
             # allows the address bus and/or domain to be left off
             dbs_all = [ANY for x in range(3 - len(dbs_fields))]
@@ -160,19 +163,15 @@ class PciDeviceSpec(object):
             self.vendor_id in (ANY, dev_dict['vendor_id']),
             self.product_id in (ANY, dev_dict['product_id']),
             self.address.match(dev_dict['address'],
-                dev_dict.get('phys_function'))
+                dev_dict.get('parent_addr'))
             ]
         return all(conditions)
 
     def match_pci_obj(self, pci_obj):
-        if pci_obj.extra_info:
-            phy_func = pci_obj.extra_info.get('phys_function')
-        else:
-            phy_func = None
         return self.match({'vendor_id': pci_obj.vendor_id,
                             'product_id': pci_obj.product_id,
                             'address': pci_obj.address,
-                            'phys_function': phy_func})
+                            'parent_addr': pci_obj.parent_addr})
 
     def get_tags(self):
         return self.tags

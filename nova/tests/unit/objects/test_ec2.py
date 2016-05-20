@@ -18,6 +18,7 @@ from nova import db
 from nova import objects
 from nova.objects import ec2 as ec2_obj
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 fake_map = {
@@ -26,7 +27,7 @@ fake_map = {
     'deleted_at': None,
     'deleted': 0,
     'id': 1,
-    'uuid': 'fake-uuid-2',
+    'uuid': uuids.ec2_map_uuid,
 }
 
 
@@ -34,11 +35,11 @@ class _TestEC2InstanceMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         imap = ec2_obj.EC2InstanceMapping(context=self.context)
-        imap.uuid = 'fake-uuid-2'
+        imap.uuid = uuids.ec2_map_uuid
 
         with mock.patch.object(db, 'ec2_instance_create') as create:
             create.return_value = fake_map
@@ -52,7 +53,7 @@ class _TestEC2InstanceMapping(object):
         with mock.patch.object(db, 'ec2_instance_get_by_uuid') as get:
             get.return_value = fake_map
             imap = ec2_obj.EC2InstanceMapping.get_by_uuid(self.context,
-                                                     'fake-uuid-2')
+                                                     uuids.ec2_map_uuid)
             self._compare(self, fake_map, imap)
 
     def test_get_by_ec2_id(self):
@@ -75,11 +76,11 @@ class _TestEC2VolumeMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         vmap = ec2_obj.EC2VolumeMapping(context=self.context)
-        vmap.uuid = 'fake-uuid-2'
+        vmap.uuid = uuids.ec2_map_uuid
 
         with mock.patch.object(db, 'ec2_volume_create') as create:
             create.return_value = fake_map
@@ -93,7 +94,7 @@ class _TestEC2VolumeMapping(object):
         with mock.patch.object(db, 'ec2_volume_get_by_uuid') as get:
             get.return_value = fake_map
             vmap = ec2_obj.EC2VolumeMapping.get_by_uuid(self.context,
-                                                     'fake-uuid-2')
+                                                     uuids.ec2_map_uuid)
             self._compare(self, fake_map, vmap)
 
     def test_get_by_ec2_id(self):
@@ -116,11 +117,11 @@ class _TestEC2SnapshotMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         smap = ec2_obj.EC2SnapshotMapping(context=self.context)
-        smap.uuid = 'fake-uuid-2'
+        smap.uuid = uuids.ec2_map_uuid
 
         with mock.patch.object(db, 'ec2_snapshot_create') as create:
             create.return_value = fake_map
@@ -134,7 +135,7 @@ class _TestEC2SnapshotMapping(object):
         with mock.patch.object(db, 'ec2_snapshot_get_by_uuid') as get:
             get.return_value = fake_map
             smap = ec2_obj.EC2SnapshotMapping.get_by_uuid(self.context,
-                                                          'fake-uuid-2')
+                                                          uuids.ec2_map_uuid)
             self._compare(self, fake_map, smap)
 
     def test_get_by_ec2_id(self):
@@ -157,11 +158,11 @@ class _TestS3ImageMapping(object):
     @staticmethod
     def _compare(test, db, obj):
         for field, value in db.items():
-            test.assertEqual(db[field], obj[field])
+            test.assertEqual(db[field], getattr(obj, field))
 
     def test_create(self):
         s3imap = ec2_obj.S3ImageMapping(context=self.context)
-        s3imap.uuid = 'fake-uuid-2'
+        s3imap.uuid = uuids.ec2_map_uuid
 
         with mock.patch.object(db, 's3_image_create') as create:
             create.return_value = fake_map
@@ -175,7 +176,7 @@ class _TestS3ImageMapping(object):
         with mock.patch.object(db, 's3_image_get_by_uuid') as get:
             get.return_value = fake_map
             s3imap = ec2_obj.S3ImageMapping.get_by_uuid(self.context,
-                                                        'fake-uuid-2')
+                                                        uuids.ec2_map_uuid)
             self._compare(self, fake_map, s3imap)
 
     def test_get_by_s3_id(self):
@@ -204,7 +205,8 @@ class _TestEC2Ids(object):
                                    'fake-ec2-ramdisk-id']
         mock_type.side_effect = [mock.sentinel.ec2_kernel_type,
                                  mock.sentinel.ec2_ramdisk_type]
-        inst = objects.Instance(uuid='fake-uuid', image_ref='fake-image-id',
+        inst = objects.Instance(uuid=uuids.instance,
+                                image_ref='fake-image-id',
                                 kernel_id='fake-kernel-id',
                                 ramdisk_id='fake-ramdisk-id')
 
@@ -220,7 +222,7 @@ class _TestEC2Ids(object):
     def test_get_by_instance_no_image_ref(self, mock_inst, mock_glance):
         mock_inst.return_value = 'fake-ec2-inst-id'
         mock_glance.return_value = None
-        inst = objects.Instance(uuid='fake-uuid', image_ref=None,
+        inst = objects.Instance(uuid=uuids.instance, image_ref=None,
                                 kernel_id=None, ramdisk_id=None)
 
         result = ec2_obj.EC2Ids.get_by_instance(self.context, inst)
@@ -239,7 +241,8 @@ class _TestEC2Ids(object):
         mock_glance.side_effect = ['fake-ec2-ami-id',
                                    'fake-ec2-ramdisk-id']
         mock_type.return_value = mock.sentinel.ec2_ramdisk_type
-        inst = objects.Instance(uuid='fake-uuid', image_ref='fake-image-id',
+        inst = objects.Instance(uuid=uuids.instance,
+                                image_ref='fake-image-id',
                                 kernel_id=None, ramdisk_id='fake-ramdisk-id')
 
         result = ec2_obj.EC2Ids.get_by_instance(self.context, inst)
@@ -258,7 +261,8 @@ class _TestEC2Ids(object):
         mock_glance.side_effect = ['fake-ec2-ami-id',
                                    'fake-ec2-kernel-id']
         mock_type.return_value = mock.sentinel.ec2_kernel_type
-        inst = objects.Instance(uuid='fake-uuid', image_ref='fake-image-id',
+        inst = objects.Instance(uuid=uuids.instance,
+                                image_ref='fake-image-id',
                                 kernel_id='fake-kernel-id', ramdisk_id=None)
 
         result = ec2_obj.EC2Ids.get_by_instance(self.context, inst)

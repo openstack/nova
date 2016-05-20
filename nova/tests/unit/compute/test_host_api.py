@@ -46,125 +46,121 @@ class ComputeHostAPITestCase(test.TestCase):
         for index, obj in enumerate(obj_list):
             self._compare_obj(obj, db_obj_list[index])
 
-    def _mock_rpc_call(self, method, **kwargs):
-        self.mox.StubOutWithMock(self.host_api.rpcapi, method)
-        getattr(self.host_api.rpcapi, method)(
-            self.ctxt, **kwargs).AndReturn('fake-result')
-
-    def _mock_assert_host_exists(self):
-        """Sets it so that the host API always thinks that 'fake_host'
-        exists.
-        """
-        def fake_assert_host_exists(context, host_name, must_be_up=False):
-            return 'fake_host'
-        self.stubs.Set(self.host_api, '_assert_host_exists',
-                                    fake_assert_host_exists)
-
     def test_set_host_enabled(self):
-        self._mock_assert_host_exists()
-        self._mock_rpc_call('set_host_enabled',
-                            host='fake_host',
-                            enabled='fake_enabled')
-        self.mox.ReplayAll()
         fake_notifier.NOTIFICATIONS = []
-        result = self.host_api.set_host_enabled(self.ctxt, 'fake_host',
-                                                'fake_enabled')
-        self.assertEqual('fake-result', result)
-        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('HostAPI.set_enabled.start', msg.event_type)
-        self.assertEqual('api.fake_host', msg.publisher_id)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake_enabled', msg.payload['enabled'])
-        self.assertEqual('fake_host', msg.payload['host_name'])
-        msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEqual('HostAPI.set_enabled.end', msg.event_type)
-        self.assertEqual('api.fake_host', msg.publisher_id)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake_enabled', msg.payload['enabled'])
-        self.assertEqual('fake_host', msg.payload['host_name'])
+
+        @mock.patch.object(self.host_api.rpcapi, 'set_host_enabled',
+                           return_value='fake-result')
+        @mock.patch.object(self.host_api, '_assert_host_exists',
+                           return_value='fake_host')
+        def _do_test(mock_assert_host_exists, mock_set_host_enabled):
+            result = self.host_api.set_host_enabled(self.ctxt, 'fake_host',
+                                                    'fake_enabled')
+            self.assertEqual('fake-result', result)
+            self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+            msg = fake_notifier.NOTIFICATIONS[0]
+            self.assertEqual('HostAPI.set_enabled.start', msg.event_type)
+            self.assertEqual('api.fake_host', msg.publisher_id)
+            self.assertEqual('INFO', msg.priority)
+            self.assertEqual('fake_enabled', msg.payload['enabled'])
+            self.assertEqual('fake_host', msg.payload['host_name'])
+            msg = fake_notifier.NOTIFICATIONS[1]
+            self.assertEqual('HostAPI.set_enabled.end', msg.event_type)
+            self.assertEqual('api.fake_host', msg.publisher_id)
+            self.assertEqual('INFO', msg.priority)
+            self.assertEqual('fake_enabled', msg.payload['enabled'])
+            self.assertEqual('fake_host', msg.payload['host_name'])
+
+        _do_test()
 
     def test_host_name_from_assert_hosts_exists(self):
-        self._mock_assert_host_exists()
-        self._mock_rpc_call('set_host_enabled',
-                            host='fake_host',
-                            enabled='fake_enabled')
-        self.mox.ReplayAll()
-        result = self.host_api.set_host_enabled(self.ctxt, 'fake_hosT',
-                                                'fake_enabled')
-        self.assertEqual('fake-result', result)
+        @mock.patch.object(self.host_api.rpcapi, 'set_host_enabled',
+                           return_value='fake-result')
+        @mock.patch.object(self.host_api, '_assert_host_exists',
+                           return_value='fake_host')
+        def _do_test(mock_assert_host_exists, mock_set_host_enabled):
+            result = self.host_api.set_host_enabled(self.ctxt, 'fake_host',
+                                                    'fake_enabled')
+            self.assertEqual('fake-result', result)
+
+        _do_test()
 
     def test_get_host_uptime(self):
-        self._mock_assert_host_exists()
-        self._mock_rpc_call('get_host_uptime',
-                            host='fake_host')
-        self.mox.ReplayAll()
-        result = self.host_api.get_host_uptime(self.ctxt, 'fake_host')
-        self.assertEqual('fake-result', result)
+        @mock.patch.object(self.host_api.rpcapi, 'get_host_uptime',
+                           return_value='fake-result')
+        @mock.patch.object(self.host_api, '_assert_host_exists',
+                           return_value='fake_host')
+        def _do_test(mock_assert_host_exists, mock_get_host_uptime):
+            result = self.host_api.get_host_uptime(self.ctxt, 'fake_host')
+            self.assertEqual('fake-result', result)
+
+        _do_test()
 
     def test_get_host_uptime_service_down(self):
-        def fake_service_get_by_compute_host(context, host_name):
-            return dict(test_service.fake_service, id=1)
-        self.stubs.Set(self.host_api.db, 'service_get_by_compute_host',
-                                    fake_service_get_by_compute_host)
+        @mock.patch.object(self.host_api.db, 'service_get_by_compute_host',
+                           return_value=dict(test_service.fake_service, id=1))
+        @mock.patch.object(self.host_api.servicegroup_api, 'service_is_up',
+                           return_value=False)
+        def _do_test(mock_service_is_up, mock_service_get_by_compute_host):
+            self.assertRaises(exception.ComputeServiceUnavailable,
+                              self.host_api.get_host_uptime, self.ctxt,
+                              'fake_host')
 
-        def fake_service_is_up(service):
-            return False
-        self.stubs.Set(self.host_api.servicegroup_api,
-                       'service_is_up', fake_service_is_up)
-
-        self.assertRaises(exception.ComputeServiceUnavailable,
-                          self.host_api.get_host_uptime, self.ctxt,
-                          'fake_host')
+        _do_test()
 
     def test_host_power_action(self):
-        self._mock_assert_host_exists()
-        self._mock_rpc_call('host_power_action',
-                            host='fake_host',
-                            action='fake_action')
-        self.mox.ReplayAll()
         fake_notifier.NOTIFICATIONS = []
-        result = self.host_api.host_power_action(self.ctxt, 'fake_host',
-                                                 'fake_action')
-        self.assertEqual('fake-result', result)
-        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('HostAPI.power_action.start', msg.event_type)
-        self.assertEqual('api.fake_host', msg.publisher_id)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake_action', msg.payload['action'])
-        self.assertEqual('fake_host', msg.payload['host_name'])
-        msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEqual('HostAPI.power_action.end', msg.event_type)
-        self.assertEqual('api.fake_host', msg.publisher_id)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake_action', msg.payload['action'])
-        self.assertEqual('fake_host', msg.payload['host_name'])
+
+        @mock.patch.object(self.host_api.rpcapi, 'host_power_action',
+                           return_value='fake-result')
+        @mock.patch.object(self.host_api, '_assert_host_exists',
+                           return_value='fake_host')
+        def _do_test(mock_assert_host_exists, mock_host_power_action):
+            result = self.host_api.host_power_action(self.ctxt, 'fake_host',
+                                                     'fake_action')
+            self.assertEqual('fake-result', result)
+            self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+            msg = fake_notifier.NOTIFICATIONS[0]
+            self.assertEqual('HostAPI.power_action.start', msg.event_type)
+            self.assertEqual('api.fake_host', msg.publisher_id)
+            self.assertEqual('INFO', msg.priority)
+            self.assertEqual('fake_action', msg.payload['action'])
+            self.assertEqual('fake_host', msg.payload['host_name'])
+            msg = fake_notifier.NOTIFICATIONS[1]
+            self.assertEqual('HostAPI.power_action.end', msg.event_type)
+            self.assertEqual('api.fake_host', msg.publisher_id)
+            self.assertEqual('INFO', msg.priority)
+            self.assertEqual('fake_action', msg.payload['action'])
+            self.assertEqual('fake_host', msg.payload['host_name'])
+
+        _do_test()
 
     def test_set_host_maintenance(self):
-        self._mock_assert_host_exists()
-        self._mock_rpc_call('host_maintenance_mode',
-                            host='fake_host',
-                            host_param='fake_host',
-                            mode='fake_mode')
-        self.mox.ReplayAll()
         fake_notifier.NOTIFICATIONS = []
-        result = self.host_api.set_host_maintenance(self.ctxt, 'fake_host',
-                                                    'fake_mode')
-        self.assertEqual('fake-result', result)
-        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual('HostAPI.set_maintenance.start', msg.event_type)
-        self.assertEqual('api.fake_host', msg.publisher_id)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake_host', msg.payload['host_name'])
-        self.assertEqual('fake_mode', msg.payload['mode'])
-        msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEqual('HostAPI.set_maintenance.end', msg.event_type)
-        self.assertEqual('api.fake_host', msg.publisher_id)
-        self.assertEqual('INFO', msg.priority)
-        self.assertEqual('fake_host', msg.payload['host_name'])
-        self.assertEqual('fake_mode', msg.payload['mode'])
+
+        @mock.patch.object(self.host_api.rpcapi, 'host_maintenance_mode',
+                           return_value='fake-result')
+        @mock.patch.object(self.host_api, '_assert_host_exists',
+                           return_value='fake_host')
+        def _do_test(mock_assert_host_exists, mock_host_maintenance_mode):
+            result = self.host_api.set_host_maintenance(self.ctxt, 'fake_host',
+                                                        'fake_mode')
+            self.assertEqual('fake-result', result)
+            self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+            msg = fake_notifier.NOTIFICATIONS[0]
+            self.assertEqual('HostAPI.set_maintenance.start', msg.event_type)
+            self.assertEqual('api.fake_host', msg.publisher_id)
+            self.assertEqual('INFO', msg.priority)
+            self.assertEqual('fake_host', msg.payload['host_name'])
+            self.assertEqual('fake_mode', msg.payload['mode'])
+            msg = fake_notifier.NOTIFICATIONS[1]
+            self.assertEqual('HostAPI.set_maintenance.end', msg.event_type)
+            self.assertEqual('api.fake_host', msg.publisher_id)
+            self.assertEqual('INFO', msg.priority)
+            self.assertEqual('fake_host', msg.payload['host_name'])
+            self.assertEqual('fake_mode', msg.payload['mode'])
+
+        _do_test()
 
     def test_service_get_all_no_zones(self):
         services = [dict(test_service.fake_service,
@@ -172,35 +168,31 @@ class ComputeHostAPITestCase(test.TestCase):
                     dict(test_service.fake_service,
                          topic='compute', host='host2')]
 
-        self.mox.StubOutWithMock(self.host_api.db,
-                                 'service_get_all')
+        @mock.patch.object(self.host_api.db, 'service_get_all')
+        def _do_test(mock_service_get_all):
+            mock_service_get_all.return_value = services
+            # Test no filters
+            result = self.host_api.service_get_all(self.ctxt)
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, services)
 
-        # Test no filters
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt)
-        self.mox.VerifyAll()
-        self._compare_objs(result, services)
+            # Test no filters #2
+            mock_service_get_all.reset_mock()
+            result = self.host_api.service_get_all(self.ctxt, filters={})
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, services)
 
-        # Test no filters #2
-        self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt, filters={})
-        self.mox.VerifyAll()
-        self._compare_objs(result, services)
+            # Test w/ filter
+            mock_service_get_all.reset_mock()
+            result = self.host_api.service_get_all(self.ctxt,
+                                                   filters=dict(host='host2'))
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, [services[1]])
 
-        # Test w/ filter
-        self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt,
-                                               filters=dict(host='host2'))
-        self.mox.VerifyAll()
-        self._compare_objs(result, [services[1]])
+        _do_test()
 
     def test_service_get_all(self):
         services = [dict(test_service.fake_service,
@@ -213,59 +205,53 @@ class ComputeHostAPITestCase(test.TestCase):
             exp_service.update(availability_zone='nova', **service)
             exp_services.append(exp_service)
 
-        self.mox.StubOutWithMock(self.host_api.db,
-                                 'service_get_all')
+        @mock.patch.object(self.host_api.db, 'service_get_all')
+        def _do_test(mock_service_get_all):
+            mock_service_get_all.return_value = services
 
-        # Test no filters
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt, set_zones=True)
-        self.mox.VerifyAll()
-        self._compare_objs(result, exp_services)
+            # Test no filters
+            result = self.host_api.service_get_all(self.ctxt, set_zones=True)
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, exp_services)
 
-        # Test no filters #2
-        self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt, filters={},
-                                               set_zones=True)
-        self.mox.VerifyAll()
-        self._compare_objs(result, exp_services)
+            # Test no filters #2
+            mock_service_get_all.reset_mock()
+            result = self.host_api.service_get_all(self.ctxt, filters={},
+                                                   set_zones=True)
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, exp_services)
 
-        # Test w/ filter
-        self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt,
-                                               filters=dict(host='host2'),
-                                               set_zones=True)
-        self.mox.VerifyAll()
-        self._compare_objs(result, [exp_services[1]])
+            # Test w/ filter
+            mock_service_get_all.reset_mock()
+            result = self.host_api.service_get_all(self.ctxt,
+                                                   filters=dict(host='host2'),
+                                                   set_zones=True)
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, [exp_services[1]])
 
-        # Test w/ zone filter but no set_zones arg.
-        self.mox.ResetAll()
-        self.host_api.db.service_get_all(self.ctxt,
-                                         disabled=None).AndReturn(services)
-        self.mox.ReplayAll()
-        filters = {'availability_zone': 'nova'}
-        result = self.host_api.service_get_all(self.ctxt,
-                                               filters=filters)
-        self.mox.VerifyAll()
-        self._compare_objs(result, exp_services)
+            # Test w/ zone filter but no set_zones arg.
+            mock_service_get_all.reset_mock()
+            filters = {'availability_zone': 'nova'}
+            result = self.host_api.service_get_all(self.ctxt,
+                                                   filters=filters)
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         disabled=None)
+            self._compare_objs(result, exp_services)
+
+        _do_test()
 
     def test_service_get_by_compute_host(self):
-        self.mox.StubOutWithMock(self.host_api.db,
-                                 'service_get_by_compute_host')
+        @mock.patch.object(self.host_api.db, 'service_get_by_compute_host',
+                           return_value=test_service.fake_service)
+        def _do_test(mock_service_get_by_compute_host):
+            result = self.host_api.service_get_by_compute_host(self.ctxt,
+                                                               'fake-host')
+            self.assertEqual(test_service.fake_service['id'], result.id)
 
-        self.host_api.db.service_get_by_compute_host(self.ctxt,
-                'fake-host').AndReturn(test_service.fake_service)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_by_compute_host(self.ctxt,
-                                                           'fake-host')
-        self.assertEqual(test_service.fake_service['id'], result.id)
+        _do_test()
 
     def test_service_update(self):
         host_name = 'fake-host'
@@ -274,20 +260,17 @@ class ComputeHostAPITestCase(test.TestCase):
         service_id = 42
         expected_result = dict(test_service.fake_service, id=service_id)
 
-        self.mox.StubOutWithMock(self.host_api.db,
-                                 'service_get_by_host_and_binary')
-        self.host_api.db.service_get_by_host_and_binary(self.ctxt,
-            host_name, binary).AndReturn(expected_result)
+        @mock.patch.object(self.host_api.db, 'service_get_by_host_and_binary')
+        @mock.patch.object(self.host_api.db, 'service_update')
+        def _do_test(mock_service_update, mock_service_get_by_host_and_binary):
+            mock_service_get_by_host_and_binary.return_value = expected_result
+            mock_service_update.return_value = expected_result
 
-        self.mox.StubOutWithMock(self.host_api.db, 'service_update')
-        self.host_api.db.service_update(
-            self.ctxt, service_id, params_to_update).AndReturn(expected_result)
+            result = self.host_api.service_update(
+                self.ctxt, host_name, binary, params_to_update)
+            self._compare_obj(result, expected_result)
 
-        self.mox.ReplayAll()
-
-        result = self.host_api.service_update(
-            self.ctxt, host_name, binary, params_to_update)
-        self._compare_obj(result, expected_result)
+        _do_test()
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        return_value = ['fake-responses'])
@@ -297,16 +280,16 @@ class ComputeHostAPITestCase(test.TestCase):
         self.assertEqual(['fake-responses'], result)
 
     def test_task_log_get_all(self):
-        self.mox.StubOutWithMock(self.host_api.db, 'task_log_get_all')
+        @mock.patch.object(self.host_api.db, 'task_log_get_all',
+                           return_value='fake-response')
+        def _do_test(mock_task_log_get_all):
+            result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
+                                                    'fake-begin', 'fake-end',
+                                                    host='fake-host',
+                                                    state='fake-state')
+            self.assertEqual('fake-response', result)
 
-        self.host_api.db.task_log_get_all(self.ctxt,
-                'fake-name', 'fake-begin', 'fake-end', host='fake-host',
-                state='fake-state').AndReturn('fake-response')
-        self.mox.ReplayAll()
-        result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
-                'fake-begin', 'fake-end', host='fake-host',
-                state='fake-state')
-        self.assertEqual('fake-response', result)
+        _do_test()
 
     def test_service_delete(self):
         with test.nested(
@@ -327,24 +310,6 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.flags(cell_type='api', group='cells')
         super(ComputeHostAPICellsTestCase, self).setUp()
 
-    def _mock_rpc_call(self, method, **kwargs):
-        if 'host_param' in kwargs:
-            kwargs.pop('host_param')
-        else:
-            kwargs.pop('host')
-        rpc_message = {
-            'method': method,
-            'namespace': None,
-            'args': kwargs,
-            'version': self.host_api.rpcapi.client.target.version,
-        }
-        cells_rpcapi = self.host_api.rpcapi.client.cells_rpcapi
-        self.mox.StubOutWithMock(cells_rpcapi, 'proxy_rpc_to_manager')
-        cells_rpcapi.proxy_rpc_to_manager(self.ctxt,
-                                          rpc_message,
-                                          'compute.fake_host',
-                                          call=True).AndReturn('fake-result')
-
     def test_service_get_all_no_zones(self):
         services = [
             cells_utils.ServiceProxy(
@@ -355,14 +320,15 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
                 'cell1')]
 
         fake_filters = {'host': 'host1'}
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
-                                 'service_get_all')
-        self.host_api.cells_rpcapi.service_get_all(self.ctxt,
-                filters=fake_filters).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt,
-                                               filters=fake_filters)
-        self.assertEqual(services, result)
+
+        @mock.patch.object(self.host_api.cells_rpcapi, 'service_get_all')
+        def _do_test(mock_service_get_all):
+            mock_service_get_all.return_value = services
+            result = self.host_api.service_get_all(self.ctxt,
+                                                   filters=fake_filters)
+            self.assertEqual(services, result)
+
+        _do_test()
 
     def _test_service_get_all(self, fake_filters, **kwargs):
         service_attrs = dict(test_service.fake_service)
@@ -382,17 +348,18 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
             exp_service.update({'availability_zone': 'nova'})
             exp_services.append(exp_service)
 
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
-                                 'service_get_all')
-        self.host_api.cells_rpcapi.service_get_all(self.ctxt,
-                filters=fake_filters).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt,
-                                               filters=fake_filters,
-                                               **kwargs)
-        self.mox.VerifyAll()
-        self.assertEqual(jsonutils.to_primitive(exp_services),
-                         jsonutils.to_primitive(result))
+        @mock.patch.object(self.host_api.cells_rpcapi, 'service_get_all')
+        def _do_test(mock_service_get_all):
+            mock_service_get_all.return_value = services
+            result = self.host_api.service_get_all(self.ctxt,
+                                                   filters=fake_filters,
+                                                   **kwargs)
+            mock_service_get_all.assert_called_once_with(self.ctxt,
+                                                         filters=fake_filters)
+            self.assertEqual(jsonutils.to_primitive(exp_services),
+                             jsonutils.to_primitive(result))
+
+        _do_test()
 
     def test_service_get_all(self):
         fake_filters = {'availability_zone': 'nova'}
@@ -403,18 +370,18 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self._test_service_get_all(fake_filters, set_zones=True)
 
     def test_service_get_by_compute_host(self):
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
-                                 'service_get_by_compute_host')
-
         obj = objects.Service(id=1, host='fake')
         fake_service = cells_utils.ServiceProxy(obj, 'cell1')
 
-        self.host_api.cells_rpcapi.service_get_by_compute_host(self.ctxt,
-                'fake-host').AndReturn(fake_service)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_by_compute_host(self.ctxt,
-                                                           'fake-host')
-        self.assertEqual(fake_service, result)
+        @mock.patch.object(self.host_api.cells_rpcapi,
+                           'service_get_by_compute_host')
+        def _do_test(mock_service_get_by_compute_host):
+            mock_service_get_by_compute_host.return_value = fake_service
+            result = self.host_api.service_get_by_compute_host(self.ctxt,
+                                                               'fake-host')
+            self.assertEqual(fake_service, result)
+
+        _do_test()
 
     def test_service_update(self):
         host_name = 'fake-host'
@@ -424,16 +391,15 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         obj = objects.Service(id=42, host='fake')
         fake_service = cells_utils.ServiceProxy(obj, 'cell1')
 
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi, 'service_update')
-        self.host_api.cells_rpcapi.service_update(
-            self.ctxt, host_name,
-            binary, params_to_update).AndReturn(fake_service)
+        @mock.patch.object(self.host_api.cells_rpcapi, 'service_update')
+        def _do_test(mock_service_update):
+            mock_service_update.return_value = fake_service
 
-        self.mox.ReplayAll()
+            result = self.host_api.service_update(
+                self.ctxt, host_name, binary, params_to_update)
+            self.assertEqual(fake_service, result)
 
-        result = self.host_api.service_update(
-            self.ctxt, host_name, binary, params_to_update)
-        self.assertEqual(fake_service, result)
+        _do_test()
 
     def test_service_delete(self):
         cell_service_id = cells_utils.cell_with_item('cell1', 1)
@@ -457,17 +423,16 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.assertEqual(expected_result, result)
 
     def test_task_log_get_all(self):
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
-                                 'task_log_get_all')
+        @mock.patch.object(self.host_api.cells_rpcapi, 'task_log_get_all',
+                           return_value='fake-response')
+        def _do_test(mock_task_log_get_all):
+            result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
+                                                    'fake-begin', 'fake-end',
+                                                    host='fake-host',
+                                                    state='fake-state')
+            self.assertEqual('fake-response', result)
 
-        self.host_api.cells_rpcapi.task_log_get_all(self.ctxt,
-                'fake-name', 'fake-begin', 'fake-end', host='fake-host',
-                state='fake-state').AndReturn('fake-response')
-        self.mox.ReplayAll()
-        result = self.host_api.task_log_get_all(self.ctxt, 'fake-name',
-                'fake-begin', 'fake-end', host='fake-host',
-                state='fake-state')
-        self.assertEqual('fake-response', result)
+        _do_test()
 
     def test_get_host_uptime_service_down(self):
         # The corresponding Compute test case depends on the
@@ -475,12 +440,10 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         pass
 
     def test_get_host_uptime(self):
-        self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
-                                 'get_host_uptime')
+        @mock.patch.object(self.host_api.cells_rpcapi, 'get_host_uptime',
+                           return_value='fake-response')
+        def _do_test(mock_get_host_uptime):
+            result = self.host_api.get_host_uptime(self.ctxt, 'fake-host')
+            self.assertEqual('fake-response', result)
 
-        self.host_api.cells_rpcapi.get_host_uptime(self.ctxt,
-                                                   'fake-host'). \
-            AndReturn('fake-response')
-        self.mox.ReplayAll()
-        result = self.host_api.get_host_uptime(self.ctxt, 'fake-host')
-        self.assertEqual('fake-response', result)
+        _do_test()

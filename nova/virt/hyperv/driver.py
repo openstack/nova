@@ -19,6 +19,7 @@ A Hyper-V Nova Compute driver.
 
 import functools
 import platform
+import sys
 
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
@@ -27,7 +28,6 @@ import six
 
 from nova import exception
 from nova.i18n import _, _LE
-from nova import objects
 from nova.virt import driver
 from nova.virt.hyperv import eventhandler
 from nova.virt.hyperv import hostops
@@ -57,7 +57,13 @@ def convert_exceptions(function, exception_map):
                         raised_exception = exception_map[expected]
                         break
 
-            raise raised_exception(six.text_type(ex))
+            exc_info = sys.exc_info()
+            # NOTE(claudiub): Python 3 raises the exception object given as
+            # the second argument in six.reraise.
+            # The original message will be maintained by passing the original
+            # exception.
+            exc = raised_exception(six.text_type(exc_info[1]))
+            six.reraise(raised_exception, exc, exc_info[2])
     return wrapper
 
 
@@ -88,7 +94,8 @@ class HyperVDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": False,
         "supports_recreate": False,
-        "supports_migrate_to_same_host": True
+        "supports_migrate_to_same_host": True,
+        "supports_attach_interface": True
     }
 
     def __init__(self, virtapi):
@@ -109,7 +116,7 @@ class HyperVDriver(driver.ComputeDriver):
     def _check_minimum_windows_version(self):
         if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
             # the version is of Windows is older than Windows Server 2012 R2.
-            # Log an error, lettingusers know that this version is not
+            # Log an error, letting users know that this version is not
             # supported any longer.
             LOG.error(_LE('You are running nova-compute on an unsupported '
                           'version of Windows (older than Windows / Hyper-V '
@@ -132,7 +139,6 @@ class HyperVDriver(driver.ComputeDriver):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.spawn(context, instance, image_meta, injected_files,
                           admin_password, network_info, block_device_info)
 
@@ -301,7 +307,6 @@ class HyperVDriver(driver.ComputeDriver):
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._migrationops.finish_migration(context, migration, instance,
                                             disk_info, network_info,
                                             image_meta, resize_instance,

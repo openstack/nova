@@ -1,0 +1,5 @@
+---
+features:
+  - A new REST API to cancel an ongoing live migration has been added
+    in microversion 2.24. Initially this operation will only work with
+    the libvirt virt driver.

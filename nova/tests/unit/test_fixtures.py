@@ -24,9 +24,11 @@ from oslo_log import log as logging
 from oslo_utils import uuidutils
 import testtools
 
+from nova.compute import rpcapi as compute_rpcapi
 from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova.objects import base as obj_base
+from nova.objects import service as service_obj
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
 from nova import utils
@@ -63,11 +65,11 @@ class TestConfFixture(testtools.TestCase):
 
     """
     def _test_override(self):
-        self.assertEqual('api-paste.ini', CONF.api_paste_config)
-        self.assertEqual(False, CONF.fake_network)
+        self.assertEqual('api-paste.ini', CONF.wsgi.api_paste_config)
+        self.assertFalse(CONF.fake_network)
         self.useFixture(conf_fixture.ConfFixture())
-        CONF.set_default('api_paste_config', 'foo')
-        self.assertEqual(True, CONF.fake_network)
+        CONF.set_default('api_paste_config', 'foo', group='wsgi')
+        self.assertTrue(CONF.fake_network)
 
     def test_override1(self):
         self._test_override()
@@ -162,6 +164,7 @@ class TestOSAPIFixture(testtools.TestCase):
         self.useFixture(fixtures.OutputStreamCapture())
         self.useFixture(fixtures.StandardLogging())
         self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
         # request the API root, which provides us the versions of the API
@@ -191,7 +194,7 @@ class TestDatabaseFixture(testtools.TestCase):
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
-        self.assertEqual(5, len(rows), "Rows %s" % rows)
+        self.assertEqual(0, len(rows), "Rows %s" % rows)
 
         # insert a 6th instance type, column 5 below is an int id
         # which has a constraint on it, so if new standard instance
@@ -201,7 +204,7 @@ class TestDatabaseFixture(testtools.TestCase):
                      ", 1.0, 40, 0, 0, 1, 0)")
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
-        self.assertEqual(6, len(rows), "Rows %s" % rows)
+        self.assertEqual(1, len(rows), "Rows %s" % rows)
 
         # reset by invoking the fixture again
         #
@@ -212,7 +215,7 @@ class TestDatabaseFixture(testtools.TestCase):
         conn = engine.connect()
         result = conn.execute("select * from instance_types")
         rows = result.fetchall()
-        self.assertEqual(5, len(rows), "Rows %s" % rows)
+        self.assertEqual(0, len(rows), "Rows %s" % rows)
 
     def test_api_fixture_reset(self):
         # This sets up reasonable db connection strings
@@ -283,6 +286,52 @@ class TestDatabaseFixture(testtools.TestCase):
         self.assertEqual("BEGIN TRANSACTION;COMMIT;", schema)
 
 
+class TestDatabaseAtVersionFixture(testtools.TestCase):
+    def test_fixture_schema_version(self):
+        self.useFixture(conf_fixture.ConfFixture())
+
+        # In/after 317 aggregates did have uuid
+        self.useFixture(fixtures.DatabaseAtVersion(318))
+        engine = session.get_engine()
+        engine.connect()
+        meta = sqlalchemy.MetaData(engine)
+        aggregate = sqlalchemy.Table('aggregates', meta, autoload=True)
+        self.assertTrue(hasattr(aggregate.c, 'uuid'))
+
+        # Before 317, aggregates had no uuid
+        self.useFixture(fixtures.DatabaseAtVersion(316))
+        engine = session.get_engine()
+        engine.connect()
+        meta = sqlalchemy.MetaData(engine)
+        aggregate = sqlalchemy.Table('aggregates', meta, autoload=True)
+        self.assertFalse(hasattr(aggregate.c, 'uuid'))
+        engine.dispose()
+
+    def test_fixture_after_database_fixture(self):
+        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.DatabaseAtVersion(318))
+
+
+class TestDefaultFlavorsFixture(testtools.TestCase):
+    def test_flavors(self):
+        self.useFixture(conf_fixture.ConfFixture())
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.Database(database='api'))
+
+        engine = session.get_api_engine()
+        conn = engine.connect()
+        result = conn.execute("select * from flavors")
+        rows = result.fetchall()
+        self.assertEqual(0, len(rows), "Rows %s" % rows)
+
+        self.useFixture(fixtures.DefaultFlavorsFixture())
+
+        result = conn.execute("select * from flavors")
+        rows = result.fetchall()
+        self.assertEqual(5, len(rows), "Rows %s" % rows)
+
+
 class TestIndirectionAPIFixture(testtools.TestCase):
     def test_indirection_api(self):
         # Should initially be None
@@ -314,6 +363,46 @@ class TestSpawnIsSynchronousFixture(testtools.TestCase):
         utils.spawn_n(tester.function, 'foo', bar='bar')
         tester.function.assert_called_once_with('foo', bar='bar')
 
+    def test_spawn_return_has_wait(self):
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        gt = utils.spawn(lambda x: '%s' % x, 'foo')
+        foo = gt.wait()
+        self.assertEqual('foo', foo)
+
+    def test_spawn_n_return_has_wait(self):
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        gt = utils.spawn_n(lambda x: '%s' % x, 'foo')
+        foo = gt.wait()
+        self.assertEqual('foo', foo)
+
+    def test_spawn_has_link(self):
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        gt = utils.spawn(mock.MagicMock)
+        passed_arg = 'test'
+        call_count = []
+
+        def fake(thread, param):
+            self.assertEqual(gt, thread)
+            self.assertEqual(passed_arg, param)
+            call_count.append(1)
+
+        gt.link(fake, passed_arg)
+        self.assertEqual(1, len(call_count))
+
+    def test_spawn_n_has_link(self):
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+        gt = utils.spawn_n(mock.MagicMock)
+        passed_arg = 'test'
+        call_count = []
+
+        def fake(thread, param):
+            self.assertEqual(gt, thread)
+            self.assertEqual(passed_arg, param)
+            call_count.append(1)
+
+        gt.link(fake, passed_arg)
+        self.assertEqual(1, len(call_count))
+
 
 class TestBannedDBSchemaOperations(testtools.TestCase):
     def test_column(self):
@@ -331,3 +420,35 @@ class TestBannedDBSchemaOperations(testtools.TestCase):
                               table.drop)
             self.assertRaises(exception.DBNotAllowed,
                               table.alter)
+
+
+class TestStableObjectJsonFixture(testtools.TestCase):
+    def test_changes_sort(self):
+        class TestObject(obj_base.NovaObject):
+            def obj_what_changed(self):
+                return ['z', 'a']
+
+        obj = TestObject()
+        self.assertEqual(['z', 'a'],
+                         obj.obj_to_primitive()['nova_object.changes'])
+        with fixtures.StableObjectJsonFixture():
+            self.assertEqual(['a', 'z'],
+                             obj.obj_to_primitive()['nova_object.changes'])
+
+
+class TestAllServicesCurrentFixture(testtools.TestCase):
+    @mock.patch('nova.objects.Service._db_service_get_minimum_version')
+    def test_services_current(self, mock_db):
+        mock_db.return_value = {'nova-compute': 123}
+        self.assertEqual(123, service_obj.Service.get_minimum_version(
+            None, 'nova-compute'))
+        mock_db.assert_called_once_with(None, ['nova-compute'],
+                                        use_slave=False)
+        mock_db.reset_mock()
+        compute_rpcapi.LAST_VERSION = 123
+        self.useFixture(fixtures.AllServicesCurrent())
+        self.assertIsNone(compute_rpcapi.LAST_VERSION)
+        self.assertEqual(service_obj.SERVICE_VERSION,
+                         service_obj.Service.get_minimum_version(
+                             None, 'nova-compute'))
+        self.assertFalse(mock_db.called)

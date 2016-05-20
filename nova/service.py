@@ -22,7 +22,6 @@ import random
 import sys
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_service import service
@@ -30,6 +29,7 @@ from oslo_utils import importutils
 
 from nova import baserpc
 from nova import conductor
+import nova.conf
 from nova import context
 from nova import debugger
 from nova import exception
@@ -45,86 +45,7 @@ from nova import wsgi
 
 LOG = logging.getLogger(__name__)
 
-service_opts = [
-    cfg.IntOpt('report_interval',
-               default=10,
-               help='Seconds between nodes reporting state to datastore'),
-    cfg.BoolOpt('periodic_enable',
-               default=True,
-               help='Enable periodic tasks'),
-    cfg.IntOpt('periodic_fuzzy_delay',
-               default=60,
-               help='Range of seconds to randomly delay when starting the'
-                    ' periodic task scheduler to reduce stampeding.'
-                    ' (Disable by setting to 0)'),
-    cfg.ListOpt('enabled_apis',
-                default=['osapi_compute', 'metadata'],
-                help='A list of APIs to enable by default'),
-    cfg.ListOpt('enabled_ssl_apis',
-                default=[],
-                help='A list of APIs with enabled SSL'),
-    cfg.StrOpt('ec2_listen',
-               default="0.0.0.0",
-               help='The IP address on which the EC2 API will listen.'),
-    cfg.IntOpt('ec2_listen_port',
-               default=8773,
-               min=1,
-               max=65535,
-               help='The port on which the EC2 API will listen.'),
-    cfg.IntOpt('ec2_workers',
-               help='Number of workers for EC2 API service. The default will '
-                    'be equal to the number of CPUs available.'),
-    cfg.StrOpt('osapi_compute_listen',
-               default="0.0.0.0",
-               help='The IP address on which the OpenStack API will listen.'),
-    cfg.IntOpt('osapi_compute_listen_port',
-               default=8774,
-               min=1,
-               max=65535,
-               help='The port on which the OpenStack API will listen.'),
-    cfg.IntOpt('osapi_compute_workers',
-               help='Number of workers for OpenStack API service. The default '
-                    'will be the number of CPUs available.'),
-    cfg.StrOpt('metadata_manager',
-               default='nova.api.manager.MetadataManager',
-               help='OpenStack metadata service manager'),
-    cfg.StrOpt('metadata_listen',
-               default="0.0.0.0",
-               help='The IP address on which the metadata API will listen.'),
-    cfg.IntOpt('metadata_listen_port',
-               default=8775,
-               min=1,
-               max=65535,
-               help='The port on which the metadata API will listen.'),
-    cfg.IntOpt('metadata_workers',
-               help='Number of workers for metadata service. The default will '
-                    'be the number of CPUs available.'),
-    cfg.StrOpt('compute_manager',
-               default='nova.compute.manager.ComputeManager',
-               help='Full class name for the Manager for compute'),
-    cfg.StrOpt('console_manager',
-               default='nova.console.manager.ConsoleProxyManager',
-               help='Full class name for the Manager for console proxy'),
-    cfg.StrOpt('consoleauth_manager',
-               default='nova.consoleauth.manager.ConsoleAuthManager',
-               help='Manager for console auth'),
-    cfg.StrOpt('cert_manager',
-               default='nova.cert.manager.CertManager',
-               help='Full class name for the Manager for cert'),
-    cfg.StrOpt('network_manager',
-               default='nova.network.manager.VlanManager',
-               help='Full class name for the Manager for network'),
-    cfg.StrOpt('scheduler_manager',
-               default='nova.scheduler.manager.SchedulerManager',
-               help='Full class name for the Manager for scheduler'),
-    cfg.IntOpt('service_down_time',
-               default=60,
-               help='Maximum time since last check-in for up service'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(service_opts)
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 def _create_service_ref(this_service, context):
@@ -137,21 +58,14 @@ def _create_service_ref(this_service, context):
     return service
 
 
-def _update_service_ref(this_service, context):
-    service = objects.Service.get_by_host_and_binary(context,
-                                                     this_service.host,
-                                                     this_service.binary)
-    if not service:
-        LOG.error(_LE('Unable to find a service record to update for '
-                      '%(binary)s on %(host)s') % {
-                          'binary': this_service.binary,
-                          'host': this_service.host})
-        return
+def _update_service_ref(service):
     if service.version != service_obj.SERVICE_VERSION:
         LOG.info(_LI('Updating service version for %(binary)s on '
-                     '%(host)s from %(old)i to %(new)i') % dict(
-                         binary=this_service.binary, host=this_service.host,
-                         old=service.version, new=service_obj.SERVICE_VERSION))
+                     '%(host)s from %(old)i to %(new)i'),
+                 {'binary': service.binary,
+                  'host': service.host,
+                  'old': service.version,
+                  'new': service_obj.SERVICE_VERSION})
         service.version = service_obj.SERVICE_VERSION
         service.save()
 
@@ -186,6 +100,15 @@ class Service(service.Service):
         self.conductor_api = conductor.API(use_local=db_allowed)
         self.conductor_api.wait_until_ready(context.get_admin_context())
 
+    def __repr__(self):
+        return "<%(cls_name)s: host=%(host)s, binary=%(binary)s, " \
+               "manager_class_name=%(manager)s>" % {
+                 'cls_name': self.__class__.__name__,
+                 'host': self.host,
+                 'binary': self.binary,
+                 'manager': self.manager_class_name
+                }
+
     def start(self):
         verstr = version.version_string_with_package()
         LOG.info(_LI('Starting %(topic)s node (version %(version)s)'),
@@ -196,7 +119,10 @@ class Service(service.Service):
         ctxt = context.get_admin_context()
         self.service_ref = objects.Service.get_by_host_and_binary(
             ctxt, self.host, self.binary)
-        if not self.service_ref:
+        if self.service_ref:
+            _update_service_ref(self.service_ref)
+
+        else:
             try:
                 self.service_ref = _create_service_ref(self, ctxt)
             except (exception.ServiceTopicExists,
@@ -294,7 +220,13 @@ class Service(service.Service):
         return service_obj
 
     def kill(self):
-        """Destroy the service object in the datastore."""
+        """Destroy the service object in the datastore.
+
+        NOTE: Although this method is not used anywhere else than tests, it is
+        convenient to have it here, so the tests might easily and in clean way
+        stop and remove the service_ref.
+
+        """
         self.stop()
         try:
             self.service_ref.destroy()
@@ -422,7 +354,9 @@ class WSGIService(service.Service):
         ctxt = context.get_admin_context()
         service_ref = objects.Service.get_by_host_and_binary(ctxt, self.host,
                                                              self.binary)
-        if not service_ref:
+        if service_ref:
+            _update_service_ref(service_ref)
+        else:
             try:
                 service_ref = _create_service_ref(self, ctxt)
             except (exception.ServiceTopicExists,
@@ -431,7 +365,6 @@ class WSGIService(service.Service):
                 # don't fail here.
                 service_ref = objects.Service.get_by_host_and_binary(
                     ctxt, self.host, self.binary)
-        _update_service_ref(service_ref, ctxt)
 
         if self.manager:
             self.manager.init_host()

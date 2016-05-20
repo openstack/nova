@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_versionedobjects import base as ovo
-
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
@@ -19,12 +17,12 @@ from nova.objects import base
 from nova.objects import fields
 
 
-# NOTE(danms): Maintain Dict compatibility because of ovo bug 1474952
 @base.NovaObjectRegistry.register
-class CellMapping(base.NovaTimestampObject, base.NovaObject,
-                  ovo.VersionedObjectDictCompat):
+class CellMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
+
+    CELL0_UUID = '00000000-0000-0000-0000-000000000000'
 
     fields = {
         'id': fields.IntegerField(read_only=True),

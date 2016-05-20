@@ -19,6 +19,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import flavors
 from nova import exception
+from nova.i18n import _
 
 ALIAS = "os-flavor-manage"
 
@@ -53,7 +54,7 @@ class FlavorManageController(wsgi.Controller):
     # NOTE(oomichi): Return 200 for backwards compatibility but should be 201
     # as this operation complete the creation of flavor resource.
     @wsgi.action("create")
-    @extensions.expected_errors((400, 409, 500))
+    @extensions.expected_errors((400, 409))
     @validation.schema(flavor_manage.create_v20, '2.0', '2.0')
     @validation.schema(flavor_manage.create, '2.1')
     def _create(self, req, body):
@@ -84,9 +85,9 @@ class FlavorManageController(wsgi.Controller):
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
-        except exception.FlavorCreateFailed as err:
-            raise webob.exc.HTTPInternalServerError(explanation=
-                err.format_message())
+        except exception.ObjectActionError:
+            raise webob.exc.HTTPConflict(explanation=_(
+                'Not all flavors have been migrated to the API database'))
 
         return self._view_builder.show(req, flavor)
 

@@ -21,9 +21,7 @@ A connection to the VMware vCenter platform.
 
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
-from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import versionutils as v_utils
 from oslo_vmware import api
@@ -33,10 +31,9 @@ from oslo_vmware import vim
 from oslo_vmware import vim_util
 
 from nova.compute import task_states
-from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
-from nova import objects
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import error_util
@@ -48,72 +45,7 @@ from nova.virt.vmwareapi import volumeops
 
 LOG = logging.getLogger(__name__)
 
-vmwareapi_opts = [
-    cfg.StrOpt('host_ip',
-               help='Hostname or IP address for connection to VMware '
-                    'vCenter host.'),
-    cfg.PortOpt('host_port',
-                default=443,
-                help='Port for connection to VMware vCenter host.'),
-    cfg.StrOpt('host_username',
-               help='Username for connection to VMware vCenter host.'),
-    cfg.StrOpt('host_password',
-               help='Password for connection to VMware vCenter host.',
-               secret=True),
-    cfg.StrOpt('ca_file',
-               help='Specify a CA bundle file to use in verifying the '
-                    'vCenter server certificate.'),
-    cfg.BoolOpt('insecure',
-                default=False,
-                help='If true, the vCenter server certificate is not '
-                     'verified. If false, then the default CA truststore is '
-                     'used for verification. This option is ignored if '
-                     '"ca_file" is set.'),
-    cfg.StrOpt('cluster_name',
-               help='Name of a VMware Cluster ComputeResource.'),
-    cfg.StrOpt('datastore_regex',
-               help='Regex to match the name of a datastore.'),
-    cfg.FloatOpt('task_poll_interval',
-                 default=0.5,
-                 help='The interval used for polling of remote tasks.'),
-    cfg.IntOpt('api_retry_count',
-               default=10,
-               help='The number of times we retry on failures, e.g., '
-                    'socket error, etc.'),
-    cfg.PortOpt('vnc_port',
-                default=5900,
-                help='VNC starting port'),
-    cfg.IntOpt('vnc_port_total',
-               default=10000,
-               help='Total number of VNC ports'),
-    cfg.BoolOpt('use_linked_clone',
-                default=True,
-                help='Whether to use linked clone'),
-    cfg.StrOpt('wsdl_location',
-               help='Optional VIM Service WSDL Location '
-                    'e.g http://<server>/vimService.wsdl. '
-                    'Optional over-ride to default location for bug '
-                    'work-arounds')
-    ]
-
-spbm_opts = [
-    cfg.BoolOpt('pbm_enabled',
-                default=False,
-                help='The PBM status.'),
-    cfg.StrOpt('pbm_wsdl_location',
-               help='PBM service WSDL file location URL. '
-                    'e.g. file:///opt/SDK/spbm/wsdl/pbmService.wsdl '
-                    'Not setting this will disable storage policy based '
-                    'placement of instances.'),
-    cfg.StrOpt('pbm_default_policy',
-               help='The PBM default policy. If pbm_wsdl_location is set and '
-                    'there is no defined storage policy for the specific '
-                    'request then this policy will be used.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(vmwareapi_opts, 'vmware')
-CONF.register_opts(spbm_opts, 'vmware')
+CONF = nova.conf.CONF
 
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 
@@ -124,7 +56,8 @@ class VMwareVCDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
         "supports_recreate": False,
-        "supports_migrate_to_same_host": True
+        "supports_migrate_to_same_host": True,
+        "supports_attach_interface": True
     }
 
     # Legacy nodename is of the form: <mo id>(<cluster name>)
@@ -303,7 +236,6 @@ class VMwareVCDriver(driver.ComputeDriver):
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
@@ -353,8 +285,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 # impossible to provide any meaningful info on the CPU
                 # model of the "host"
                'cpu_info': None,
-               'supported_instances': jsonutils.dumps(
-                   host_stats['supported_instances']),
+               'supported_instances': host_stats['supported_instances'],
                'numa_topology': None,
                }
 
@@ -381,7 +312,6 @@ class VMwareVCDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.spawn(context, instance, image_meta, injected_files,
                           admin_password, network_info, block_device_info)
 
@@ -421,9 +351,6 @@ class VMwareVCDriver(driver.ComputeDriver):
             # plugging. Hence we need to power off the instance and update
             # the instance state.
             self._vmops.power_off(instance)
-            # TODO(garyk): update the volumeops to read the state from the
-            # VM instead of relying on an instance flag
-            instance.vm_state = vm_states.STOPPED
             for disk in block_device_mapping:
                 connection_info = disk['connection_info']
                 try:
@@ -485,7 +412,6 @@ class VMwareVCDriver(driver.ComputeDriver):
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Rescue the specified instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.rescue(context, instance, network_info, image_meta)
 
     def unrescue(self, instance, network_info):
@@ -561,7 +487,6 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.attach_interface(instance, image_meta, vif)
 
     def detach_interface(self, instance, vif):

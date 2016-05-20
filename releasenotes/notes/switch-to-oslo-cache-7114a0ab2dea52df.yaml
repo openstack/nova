@@ -1,0 +1,9 @@
+---
+prelude: >
+
+deprecations:
+
+  - Option ``memcached_servers`` is deprecated in Mitaka. Operators should
+    use oslo.cache configuration instead. Specifically ``enabled`` option
+    under [cache] section should be set to True and the url(s) for the
+    memcached servers should be in [cache]/memcache_servers option.

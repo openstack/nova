@@ -26,7 +26,6 @@ semantics of real hypervisor connections.
 import collections
 import contextlib
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
@@ -36,8 +35,8 @@ from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+import nova.conf
 from nova.console import type as ctype
-from nova import db
 from nova import exception
 from nova.i18n import _LW
 from nova.virt import diagnostics
@@ -45,8 +44,7 @@ from nova.virt import driver
 from nova.virt import hardware
 from nova.virt import virtapi
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -149,13 +147,12 @@ class FakeDriver(driver.ComputeDriver):
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
           'disk_available_least': 0,
-          'supported_instances': jsonutils.dumps([(arch.X86_64,
-                                                   hv_type.FAKE,
-                                                   vm_mode.HVM)]),
+          'supported_instances': [(arch.X86_64, hv_type.FAKE, vm_mode.HVM)],
           'numa_topology': None,
           }
         self._mounts = {}
         self._interfaces = {}
+        self.active_migrations = {}
         if not _FAKE_NODES:
             set_nodes([CONF.host])
 
@@ -243,7 +240,7 @@ class FakeDriver(driver.ComputeDriver):
                  block_device_info=None):
         pass
 
-    def inject_nmi(self, instance):
+    def trigger_crash_dump(self, instance):
         pass
 
     def soft_delete(self, instance):
@@ -430,9 +427,6 @@ class FakeDriver(driver.ComputeDriver):
     def refresh_instance_security_rules(self, instance):
         return True
 
-    def refresh_provider_fw_rules(self):
-        pass
-
     def get_available_resource(self, nodename):
         """Updates compute manager resource info on ComputeNode table.
 
@@ -472,6 +466,12 @@ class FakeDriver(driver.ComputeDriver):
                        migrate_data=None):
         post_method(context, instance, dest, block_migration,
                             migrate_data)
+        return
+
+    def live_migration_force_complete(self, instance):
+        return
+
+    def live_migration_abort(self, instance):
         return
 
     def check_can_live_migrate_destination_cleanup(self, context,
@@ -544,9 +544,6 @@ class FakeDriver(driver.ComputeDriver):
 
 
 class FakeVirtAPI(virtapi.VirtAPI):
-    def provider_fw_rule_get_all(self, context):
-        return db.provider_fw_rule_get_all(context)
-
     @contextlib.contextmanager
     def wait_for_instance_event(self, instance, event_names, deadline=300,
                                 error_callback=None):

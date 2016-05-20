@@ -4,25 +4,22 @@
 #
 # Translators:
 # Ettore Atalan <atalanttore@googlemail.com>, 2014
-# Carsten Duch <carsten.duch@posteo.de>, 2015. #zanata
-# Frank Kloeker <eumel@arcor.de>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Reik Keutterling <spielkind@gmail.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-10-01 06:49+0000\n"
-"Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
-"Language-Team: German\n"
-"Language: de\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:29+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-10-01 06:49+0000\n"
+"Last-Translator: Frank Kloeker <eumel@arcor.de>\n"
+"Language: de\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: German\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "\"Nachschau der VDIs fehlgeschlagen"
@@ -63,18 +60,8 @@ msgstr ""
 "Ein Fehler ist während des Aktualisierens des Netzwerk Caches aufgetreten."
 
 #, python-format
-msgid "Attach volume failed: %s"
-msgstr "Anhängen Datenträger fehlgeschlagen: %s"
-
-#, python-format
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "Anhängen PCI Gerät %(dev)s an %(dom)s fehlgeschlagen."
-
-#, python-format
-msgid "Cannot block migrate instance %s with mapped volumes"
-msgstr ""
-"Kann keine Bliock-Migration durchführen an Instanz %s mit abgebildeten "
-"Datenträger"
 
 msgid "Cannot cleanup migration files"
 msgstr "Konnte Migrationsdateien nicht aufräumen"
@@ -214,18 +201,6 @@ msgstr ""
 
 msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Umgebungsvariable 'NETWORK_ID' muss gesetzt sein."
-
-#, python-format
-msgid "Environment: %s"
-msgstr "Umgebung: %s"
-
-#, python-format
-msgid ""
-"Error contacting glance server '%(host)s:%(port)s' for '%(method)s', "
-"%(extra)s."
-msgstr ""
-"Fehler beim Verbinden zum Glance Server '%(host)s:%(port)s' für "
-"'%(method)s', %(extra)s."
 
 #, python-format
 msgid "Error copying key: %s"
@@ -370,10 +345,6 @@ msgstr "Fehler beim Versuch des Wiederherstellens der Instanz"
 msgid "Error trying to reschedule"
 msgstr "Fehler beim Versuch der Neuplanung"
 
-#, python-format
-msgid "Error updating resources for node %(node)s: %(e)s"
-msgstr "Fehler bei der Aktualisierung der Resourcen für Knoten %(node)s: %(e)s"
-
 msgid "Error waiting for responses from neighbor cells"
 msgstr "Fehler beim Warten auf Antwort von den Nachbarzellen"
 
@@ -384,12 +355,6 @@ msgstr "Fehler beim Versuch das Abbild %s zu löschen"
 #, python-format
 msgid "Error writing to %(path)s: %(exception)s"
 msgstr "Fehler beim Schreiben zu %(path)s: %(exception)s"
-
-#, python-format
-msgid "Error writing vm console log file from serial console pipe. Error: %s"
-msgstr ""
-"Fehler beim Schreiben VM Konsole-Log von der seriellen Konsole-Leitung. "
-"Fehler: %s"
 
 #, python-format
 msgid "Error: %s"
@@ -415,9 +380,6 @@ msgstr "Ausnahme beim Lauf %(name)s %(type)s-hook: %(obj)s"
 
 msgid "Exception while creating table."
 msgstr "Ausnahme beim Anlegen einer Tabelle."
-
-msgid "Exception while seeding instance_types table"
-msgstr "Ausnahme beim Setzen der instance_types Tabelle"
 
 #, python-format
 msgid "Exception while waiting completion of volume snapshots: %s"
@@ -467,14 +429,6 @@ msgstr ""
 
 msgid "Failed to check if instance shared"
 msgstr "Fehler bei der Überprüfung, ob die Instanz freigegeben ist"
-
-#, python-format
-msgid ""
-"Failed to clean up the parameters on node %(node)s when unprovisioning the "
-"instance %(instance)s"
-msgstr ""
-"Fehler beim Aufräumen der Parameter an Knoten %(node)s beim Löschen der "
-"Instanz %(instance)s"
 
 #, python-format
 msgid "Failed to cleanup directory %(target)s: %(e)s"
@@ -563,10 +517,6 @@ msgstr ""
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
 msgstr "Fehler beim Abruf der Metadaten für Instanz-ID: %s"
-
-#, python-format
-msgid "Failed to get metadata for ip: %s"
-msgstr "Fehler beim Auslesen der Metatdaten für IP: %s"
 
 msgid "Failed to get nw_info"
 msgstr "Fehler beim Abruf von nw_info"
@@ -690,10 +640,6 @@ msgstr "Fehler beim Einreissen des Container-Dateisystems"
 msgid "Failed to umount container filesystem"
 msgstr "Fehler beim Aushängen des Container-Dateisystems"
 
-#, python-format
-msgid "Failed to understand rule %s"
-msgstr "Regel %s konnte nicht verstanden werden"
-
 msgid "Failed to unpause instance"
 msgstr "Aufheben des Pausierens fehlgeschlagen."
 
@@ -756,12 +702,6 @@ msgstr "Fehler beim Aufräumen der angehangenen VDIs"
 msgid "Fatal Exception running %(name)s %(type)s-hook: %(obj)s"
 msgstr "Schwere Ausnahme beim Lauf %(name)s %(type)s-hook: %(obj)s"
 
-msgid "FaultWrapper error"
-msgstr "Fehler FaultWrapper"
-
-msgid "Get version 2 connection error"
-msgstr "Bekomme Version-2-Verbindungsfehler"
-
 msgid "Guest does not have a console available"
 msgstr "Gast hat keine Konsole verfügbar"
 
@@ -810,10 +750,6 @@ msgstr "Schnittstelle %s nicht gefunden"
 #, python-format
 msgid "Invalid server_string: %s"
 msgstr "Ungültiger server_string: %s"
-
-#, python-format
-msgid "Keystone failure: %s"
-msgstr "Fehler Keystone: %s"
 
 #, python-format
 msgid "Live Migration failure: %s"
@@ -913,20 +849,12 @@ msgid "No db access allowed in nova-network: %s"
 msgstr "Kein Datenbankzugriff erlaubt  in nova-network: %s"
 
 #, python-format
-msgid "No handler for matches of kind %s"
-msgstr "Kein Handler für Übereinstimmungen des Typs %s"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "Keine sichere Steuerung für %s"
 
 msgid "Not all properties needed are implemented in the compute driver"
 msgstr ""
 "Nicht alle Eigenschaften brauchen in den Compute Treiber implementiert werden"
-
-#, python-format
-msgid "PCI device %s not found"
-msgstr "PCI-Gerät %s nicht gefunden"
 
 msgid ""
 "Periodic sync_power_state task had an error while processing an instance."
@@ -999,12 +927,6 @@ msgstr "Temporäres Verzeichnis ist ungültig: %s"
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
 msgstr "Das Quobyte Abbild auf %s ist weiter in Benutzung."
-
-#, python-format
-msgid ""
-"The agent call to %(method)s returned an an error: %(ret)r. args=%(args)r"
-msgstr ""
-"Der Agentenaufruf %(method)s gab einen Fehler zurück: %(ret)r. args=%(args)r"
 
 #, python-format
 msgid ""
@@ -1081,15 +1003,6 @@ msgstr "Bekanntmachung VDI an SR nicht möglich"
 msgid "Unable to introduce VDI on SR"
 msgstr "Bekanntmachung VDI an SR nicht möglich"
 
-msgid ""
-"Unable to join. It is possible that either another node exists with the same "
-"name, or this node just restarted. We will try again in a short while to "
-"make sure."
-msgstr ""
-"Beitritt nicht möglich. Wahrscheinlich existiert ein Knoten mit gleichem "
-"Namen, oder der Knoten wurde gerade neu gestartet. Um sicher zu gehen, "
-"versuchen wir es gleich nochmal."
-
 msgid "Unable to load the virtualization driver"
 msgstr "Virtualisierungstreiber konnte nicht geladen werden"
 
@@ -1109,10 +1022,6 @@ msgid "Unable to parse rrd of %s"
 msgstr "Zerlegen des RRD von %s fehlgeschlagen"
 
 #, python-format
-msgid "Unable to preallocate image at path: %(path)s"
-msgstr "Vorbelegen eines Abbildes auf Pfad: %(path)s nicht möglich"
-
-#, python-format
 msgid "Unable to retrieve storage policy with name %s"
 msgstr "Konnte Speicherregeln mit Namen %s nicht beziehen"
 
@@ -1130,10 +1039,6 @@ msgstr "Hostaktualisierung nicht möglich für Port %s"
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
 msgstr "Instanzaktualisierung VNIC Index nicht möglich für Port %s."
-
-#, python-format
-msgid "Unexpected %(ex_name)s raised: %(ex_str)s"
-msgstr "Unerwarteter %(ex_name)s hat %(ex_str)s ausgelöst"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr "Unerwarteter Fehler beim Aufbau, wird nicht neu geplant."

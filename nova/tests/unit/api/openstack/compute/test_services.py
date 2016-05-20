@@ -13,17 +13,15 @@
 #    under the License.
 
 
-import calendar
+import copy
 import datetime
 
 import iso8601
 import mock
-from oslo_utils import timeutils
+from oslo_utils import fixture as utils_fixture
 import webob.exc
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack.compute.legacy_v2.contrib import services \
-        as services_v2
 from nova.api.openstack.compute import services as services_v21
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi
@@ -31,7 +29,6 @@ from nova import availability_zones
 from nova.cells import utils as cells_utils
 from nova.compute import cells_api
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova.servicegroup.drivers import db as db_driver
@@ -49,6 +46,7 @@ fake_services_list = [
          topic='scheduler',
          updated_at=datetime.datetime(2012, 10, 29, 13, 42, 2),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+         last_seen_up=datetime.datetime(2012, 10, 29, 13, 42, 2),
          forced_down=False,
          disabled_reason='test1'),
     dict(test_service.fake_service,
@@ -59,6 +57,7 @@ fake_services_list = [
          topic='compute',
          updated_at=datetime.datetime(2012, 10, 29, 13, 42, 5),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 27),
+         last_seen_up=datetime.datetime(2012, 10, 29, 13, 42, 5),
          forced_down=False,
          disabled_reason='test2'),
     dict(test_service.fake_service,
@@ -69,6 +68,7 @@ fake_services_list = [
          topic='scheduler',
          updated_at=datetime.datetime(2012, 9, 19, 6, 55, 34),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         last_seen_up=datetime.datetime(2012, 9, 19, 6, 55, 34),
          forced_down=False,
          disabled_reason=None),
     dict(test_service.fake_service,
@@ -79,8 +79,32 @@ fake_services_list = [
          topic='compute',
          updated_at=datetime.datetime(2012, 9, 18, 8, 3, 38),
          created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         last_seen_up=datetime.datetime(2012, 9, 18, 8, 3, 38),
          forced_down=False,
          disabled_reason='test4'),
+    # NOTE(rpodolyaka): API services are special case and must be filtered out
+    dict(test_service.fake_service,
+         binary='nova-osapi_compute',
+         host='host2',
+         id=5,
+         disabled=False,
+         topic=None,
+         updated_at=None,
+         created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         last_seen_up=None,
+         forced_down=False,
+         disabled_reason=None),
+    dict(test_service.fake_service,
+         binary='nova-metadata',
+         host='host2',
+         id=6,
+         disabled=False,
+         topic=None,
+         updated_at=None,
+         created_at=datetime.datetime(2012, 9, 18, 2, 46, 28),
+         last_seen_up=None,
+         forced_down=False,
+         disabled_reason=None),
     ]
 
 
@@ -144,6 +168,8 @@ def fake_db_service_update(services):
         service = _service_get_by_id(services, service_id)
         if service is None:
             raise exception.ServiceNotFound(service_id=service_id)
+        service = copy.deepcopy(service)
+        service.update(values)
         return service
     return service_update
 
@@ -155,14 +181,6 @@ def fake_service_update(context, service_id, values):
 
 def fake_utcnow():
     return datetime.datetime(2012, 10, 29, 13, 42, 11)
-
-
-fake_utcnow.override_time = None
-
-
-def fake_utcnow_ts():
-    d = fake_utcnow()
-    return calendar.timegm(d.utctimetuple())
 
 
 class ServicesTestV21(test.TestCase):
@@ -180,16 +198,14 @@ class ServicesTestV21(test.TestCase):
         self.ext_mgr.extensions = {}
 
         self._set_up_controller()
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_service_get_all(fake_services_list))
+        self.controller.host_api.service_get_all = (
+            mock.Mock(side_effect=fake_service_get_all(fake_services_list)))
 
-        self.stubs.Set(timeutils, "utcnow", fake_utcnow)
-        self.stubs.Set(timeutils, "utcnow_ts", fake_utcnow_ts)
-
-        self.stubs.Set(db, "service_get_by_host_and_binary",
-                       fake_db_service_get_by_host_binary(fake_services_list))
-        self.stubs.Set(db, "service_update",
-                       fake_db_service_update(fake_services_list))
+        self.useFixture(utils_fixture.TimeFixture(fake_utcnow()))
+        self.stub_out('nova.db.service_get_by_host_and_binary',
+                      fake_db_service_get_by_host_binary(fake_services_list))
+        self.stub_out('nova.db.service_update',
+                      fake_db_service_update(fake_services_list))
 
         self.req = fakes.HTTPRequest.blank('')
 
@@ -454,7 +470,7 @@ class ServicesTestV21(test.TestCase):
             self.assertIsNone(values['disabled_reason'])
             return dict(test_service.fake_service, id=service_id, **values)
 
-        self.stubs.Set(db, "service_update", _service_update)
+        self.stub_out('nova.db.service_update', _service_update)
 
         body = {'host': 'host1', 'binary': 'nova-compute'}
         res_dict = self.controller.update(self.req, "enable", body=body)
@@ -557,11 +573,8 @@ class ServicesTestV21(test.TestCase):
 
     # This test is just to verify that the servicegroup API gets used when
     # calling the API
-    def test_services_with_exception(self):
-        def dummy_is_up(self, dummy):
-            raise KeyError()
-
-        self.stubs.Set(db_driver.DbDriver, 'is_up', dummy_is_up)
+    @mock.patch.object(db_driver.DbDriver, 'is_up', side_effect=KeyError)
+    def test_services_with_exception(self, mock_is_up):
         req = FakeRequestWithHostService()
         self.assertRaises(self.service_is_up_exc, self.controller.index, req)
 
@@ -845,44 +858,6 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
 
-class ServicesTestV20(ServicesTestV21):
-    service_is_up_exc = KeyError
-    bad_request = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(ServicesTestV20, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-
-    def _set_up_controller(self):
-        self.controller = services_v2.ServiceController(self.ext_mgr)
-
-    def test_services_delete_not_enabled(self):
-        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
-                          self.controller.delete, self.req, '300')
-
-    def _process_output(self, services, has_disabled=False, has_id=False):
-        for service in services['services']:
-            if not has_disabled:
-                service.pop('disabled_reason')
-            if not has_id:
-                service.pop('id')
-        return services
-
-    def test_update_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.update,
-                          self.non_admin_req, fakes.FAKE_UUID, body={})
-
-    def test_delete_with_non_admin(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
-        self.assertRaises(exception.AdminRequired, self.controller.delete,
-                          self.non_admin_req, fakes.FAKE_UUID)
-
-    def test_index_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.index,
-                          self.non_admin_req)
-
-
 class ServicesCellsTestV21(test.TestCase):
 
     def setUp(self):
@@ -895,8 +870,7 @@ class ServicesCellsTestV21(test.TestCase):
         self._set_up_controller()
         self.controller.host_api = host_api
 
-        self.stubs.Set(timeutils, "utcnow", fake_utcnow)
-        self.stubs.Set(timeutils, "utcnow_ts", fake_utcnow_ts)
+        self.useFixture(utils_fixture.TimeFixture(fake_utcnow()))
 
         services_list = []
         for service in fake_services_list:
@@ -906,8 +880,8 @@ class ServicesCellsTestV21(test.TestCase):
             service_proxy = cells_utils.ServiceProxy(service_obj, 'cell1')
             services_list.append(service_proxy)
 
-        self.stubs.Set(host_api.cells_rpcapi, "service_get_all",
-                       fake_service_get_all(services_list))
+        host_api.cells_rpcapi.service_get_all = (
+            mock.Mock(side_effect=fake_service_get_all(services_list)))
 
     def _set_up_controller(self):
         self.controller = services_v21.ServiceController()
@@ -956,15 +930,6 @@ class ServicesCellsTestV21(test.TestCase):
                                                      tzinfo=utc)}]}
         self._process_out(res_dict)
         self.assertEqual(response, res_dict)
-
-
-class ServicesCellsTestV20(ServicesCellsTestV21):
-
-    def _set_up_controller(self):
-        self.controller = services_v2.ServiceController(self.ext_mgr)
-
-    def _process_out(self, res_dict):
-        pass
 
 
 class ServicesPolicyEnforcementV21(test.NoDBTestCase):

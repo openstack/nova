@@ -18,7 +18,6 @@
 WSGI middleware for OpenStack Compute API.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 import nova.api.openstack
@@ -36,15 +35,11 @@ from nova.api.openstack.compute.legacy_v2 import server_metadata \
 from nova.api.openstack.compute.legacy_v2 import servers as v2_servers
 from nova.api.openstack.compute.legacy_v2 import versions \
         as legacy_v2_versions
+import nova.conf
 from nova.i18n import _LW
 
-allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
-        default=True,
-        help='Permit instance snapshot operations.')
 
-CONF = cfg.CONF
-CONF.register_opt(allow_instance_snapshots_opt)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -154,28 +149,6 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
     def __init__(self, init_only=None):
         self._loaded_extension_info = extension_info.LoadedExtensionInfo()
         super(APIRouterV21, self).__init__(init_only)
-
-    def _register_extension(self, ext):
-        return self.loaded_extension_info.register_extension(ext.obj)
-
-    @property
-    def loaded_extension_info(self):
-        return self._loaded_extension_info
-
-
-# NOTE(oomichi): Now v3 API tests use APIRouterV3. After moving all v3
-# API extensions to v2.1 API, we can remove this class.
-class APIRouterV3(nova.api.openstack.APIRouterV21):
-    """Routes requests on the OpenStack API to the appropriate controller
-    and method.
-    """
-    def __init__(self, init_only=None):
-        LOG.warning(_LW(
-            "Deprecated: The v3 API was deprecated. The v2.1 API replaces it "
-            "as the Nova API, please refer Nova api-paste.ini sample file for "
-            "how to configure v2.1 API."))
-        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
-        super(APIRouterV3, self).__init__(init_only, v3mode=True)
 
     def _register_extension(self, ext):
         return self.loaded_extension_info.register_extension(ext.obj)

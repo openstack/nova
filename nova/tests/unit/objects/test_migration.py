@@ -22,6 +22,7 @@ from nova import objects
 from nova.objects import migration
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel
 
 
 NOW = timeutils.utcnow().replace(microsecond=0)
@@ -45,6 +46,12 @@ def fake_db_migration(**updates):
         'status': 'migrating',
         'migration_type': 'resize',
         'hidden': False,
+        'memory_total': 123456,
+        'memory_processed': 12345,
+        'memory_remaining': 120000,
+        'disk_total': 234567,
+        'disk_processed': 23456,
+        'disk_remaining': 230000,
     }
 
     if updates:
@@ -74,6 +81,20 @@ class _TestMigrationObject(object):
         mig = migration.Migration.get_by_instance_and_status(
             ctxt, fake_migration['id'], 'migrating')
         self.compare_obj(mig, fake_migration)
+
+    @mock.patch('nova.db.migration_get_in_progress_by_instance')
+    def test_get_in_progress_by_instance(self, m_get_mig):
+        ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
+        db_migrations = [fake_migration, dict(fake_migration, id=456)]
+
+        m_get_mig.return_value = db_migrations
+        migrations = migration.MigrationList.get_in_progress_by_instance(
+            ctxt, fake_migration['instance_uuid'])
+
+        self.assertEqual(2, len(migrations))
+        for index, db_migration in enumerate(db_migrations):
+            self.compare_obj(migrations[index], db_migration)
 
     def test_create(self):
         ctxt = context.get_admin_context()
@@ -133,8 +154,7 @@ class _TestMigrationObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         db.instance_get_by_uuid(ctxt, fake_migration['instance_uuid'],
                                 columns_to_join=['info_cache',
-                                                 'security_groups'],
-                                use_slave=False
+                                                 'security_groups']
                                 ).AndReturn(fake_inst)
         mig = migration.Migration._from_db_object(ctxt,
                                                   migration.Migration(),
@@ -142,6 +162,16 @@ class _TestMigrationObject(object):
         mig._context = ctxt
         self.mox.ReplayAll()
         self.assertEqual(mig.instance.host, fake_inst['host'])
+
+    def test_instance_setter(self):
+        migration = objects.Migration(instance_uuid=uuidsentinel.instance)
+        inst = objects.Instance(uuid=uuidsentinel.instance)
+        with mock.patch('nova.objects.Instance.get_by_uuid') as mock_get:
+            migration.instance = inst
+            migration.instance
+            self.assertFalse(mock_get.called)
+        self.assertEqual(inst, migration._cached_instance)
+        self.assertEqual(inst, migration.instance)
 
     def test_get_unconfirmed_by_dest_compute(self):
         ctxt = context.get_admin_context()
@@ -218,6 +248,14 @@ class _TestMigrationObject(object):
                                 new_instance_type_id=1)
         self.assertEqual('migration', mig.migration_type)
         self.assertTrue(mig.obj_attr_is_set('migration_type'))
+
+    @mock.patch('nova.db.migration_get_by_id_and_instance')
+    def test_get_by_id_and_instance(self, fake_get):
+        ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
+        fake_get.return_value = fake_migration
+        migration = objects.Migration.get_by_id_and_instance(ctxt, '1', '1')
+        self.compare_obj(migration, fake_migration)
 
 
 class TestMigrationObject(test_objects._LocalTest,

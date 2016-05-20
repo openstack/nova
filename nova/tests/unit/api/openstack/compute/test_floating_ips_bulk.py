@@ -19,13 +19,12 @@ import webob
 
 from nova.api.openstack.compute import floating_ips_bulk \
         as fipbulk_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ips_bulk \
-        as fipbulk_v2
 from nova import context
 from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -92,7 +91,7 @@ class FloatingIPBulkV21(test.TestCase):
 
     @mock.patch('nova.objects.FloatingIPList.get_all')
     def _test_list_ips_associated(self, req, mock_get):
-        instance_uuid = "fake-uuid"
+        instance_uuid = uuids.instance
         fixed_address = "10.0.0.1"
         floating_address = "192.168.0.1"
         fixed_ip = objects.FixedIP(instance_uuid=instance_uuid,
@@ -164,40 +163,6 @@ class FloatingIPBulkV21(test.TestCase):
         body = {'floating_ips_bulk_create': {'ip_range': ip_range}}
         self.assertRaises(self.bad_request, self.controller.create,
                           self.req, body=body)
-
-
-class FloatingIPBulkV2(FloatingIPBulkV21):
-    floating_ips_bulk = fipbulk_v2
-    bad_request = webob.exc.HTTPBadRequest
-
-    def setUp(self):
-        super(FloatingIPBulkV2, self).setUp()
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-        self.admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
-
-    def test_list_ips_with_non_admin(self):
-        ip_range = '192.168.1.1/28'
-        self._setup_floating_ips(ip_range)
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.index, self.non_admin_req)
-
-    def test_list_ip_with_non_admin(self):
-        ip_range = '192.168.1.1/28'
-        self._setup_floating_ips(ip_range)
-        self.assertRaises(exception.AdminRequired, self.controller.show,
-                          self.non_admin_req, "host")
-
-    def test_delete_ips(self):
-        self._test_delete_ips(self.admin_req)
-
-    def test_list_ip_by_host(self):
-        self._test_list_ip_by_host(self.admin_req)
-
-    def test_list_ips_associated(self):
-        self._test_list_ips_associated(self.admin_req)
-
-    def test_list_ips(self):
-        self._test_list_ips(self.admin_req)
 
 
 class FloatingIPBulkPolicyEnforcementV21(test.NoDBTestCase):

@@ -10,7 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_versionedobjects import base as ovo
+from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
@@ -26,10 +26,8 @@ def _cell_id_in_updates(updates):
         updates["cell_id"] = cell_mapping_obj.id
 
 
-# NOTE(danms): Maintain Dict compatibility because of ovo bug 1474952
 @base.NovaObjectRegistry.register
-class HostMapping(base.NovaTimestampObject, base.NovaObject,
-                  ovo.VersionedObjectDictCompat):
+class HostMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -40,8 +38,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         }
 
     def _get_cell_mapping(self):
-        session = db_api.get_api_session()
-        with session.begin():
+        with db_api.api_context_manager.reader.using(self._context) as session:
             cell_map = (session.query(api_models.CellMapping)
                         .join(api_models.HostMapping)
                         .filter(api_models.HostMapping.host == self.host)
@@ -76,20 +73,14 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         return host_mapping
 
     @staticmethod
+    @db_api.api_context_manager.reader
     def _get_by_host_from_db(context, host):
-        session = db_api.get_api_session()
-
-        with session.begin():
-            db_mapping = (session.query(api_models.HostMapping)
-                          .join(api_models.CellMapping)
-                          .with_entities(api_models.HostMapping,
-                                         api_models.CellMapping)
-                          .filter(api_models.HostMapping.host == host)).first()
-            if not db_mapping:
-                raise exception.HostMappingNotFound(name=host)
-            host_mapping = db_mapping[0]
-            host_mapping["cell_mapping"] = db_mapping[1]
-        return host_mapping
+        db_mapping = (context.session.query(api_models.HostMapping)
+                      .options(joinedload('cell_mapping'))
+                      .filter(api_models.HostMapping.host == host)).first()
+        if not db_mapping:
+            raise exception.HostMappingNotFound(name=host)
+        return db_mapping
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host):
@@ -97,11 +88,16 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_mapping)
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
-        session = db_api.get_api_session()
         db_mapping = api_models.HostMapping()
         db_mapping.update(updates)
-        db_mapping.save(session)
+        db_mapping.save(context.session)
+        # NOTE: This is done because a later access will trigger a lazy load
+        # outside of the db session so it will fail. We don't lazy load
+        # cell_mapping on the object later because we never need a HostMapping
+        # without the CellMapping.
+        db_mapping.cell_mapping
         return db_mapping
 
     @base.remotable
@@ -113,16 +109,14 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         self._from_db_object(self._context, self, db_mapping)
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _save_in_db(context, obj, updates):
-        session = db_api.get_api_session()
-        with session.begin():
-            db_mapping = session.query(
-                    api_models.HostMapping).filter_by(
-                            id=obj.id).first()
-            if not db_mapping:
-                raise exception.HostMappingNotFound(name=obj.host)
+        db_mapping = context.session.query(api_models.HostMapping).filter_by(
+            id=obj.id).first()
+        if not db_mapping:
+            raise exception.HostMappingNotFound(name=obj.host)
 
-            db_mapping.update(updates)
+        db_mapping.update(updates)
         return db_mapping
 
     @base.remotable
@@ -135,14 +129,12 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject,
         self.obj_reset_changes()
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _destroy_in_db(context, host):
-        session = db_api.get_api_session()
-
-        with session.begin():
-            result = session.query(api_models.HostMapping).filter_by(
-                    host=host).delete()
-            if not result:
-                raise exception.HostMappingNotFound(name=host)
+        result = context.session.query(api_models.HostMapping).filter_by(
+                host=host).delete()
+        if not result:
+            raise exception.HostMappingNotFound(name=host)
 
     @base.remotable
     def destroy(self):

@@ -37,6 +37,7 @@ VIF_TYPE_BRIDGE = 'bridge'
 VIF_TYPE_802_QBG = '802.1qbg'
 VIF_TYPE_802_QBH = '802.1qbh'
 VIF_TYPE_HW_VEB = 'hw_veb'
+VIF_TYPE_HOSTDEV = 'hostdev_physical'
 VIF_TYPE_IB_HOSTDEV = 'ib_hostdev'
 VIF_TYPE_MIDONET = 'midonet'
 VIF_TYPE_VHOSTUSER = 'vhostuser'
@@ -51,6 +52,7 @@ VIF_TYPE_BINDING_FAILED = 'binding_failed'
 VIF_DETAILS_PORT_FILTER = 'port_filter'
 VIF_DETAILS_OVS_HYBRID_PLUG = 'ovs_hybrid_plug'
 VIF_DETAILS_PHYSICAL_NETWORK = 'physical_network'
+VIF_DETAILS_BRIDGE_NAME = 'bridge_name'
 
 # The following constant defines an SR-IOV related parameter in the
 # 'vif_details'. 'profileid' should be used for VIF_TYPE_802_QBH
@@ -76,6 +78,11 @@ VIF_DETAILS_VHOSTUSER_SOCKET = 'vhostuser_socket'
 # Specifies whether vhost-user socket should be plugged
 # into ovs bridge. Valid values are True and False
 VIF_DETAILS_VHOSTUSER_OVS_PLUG = 'vhostuser_ovs_plug'
+# Specifies whether vhost-user socket should be used to
+# create a fp netdevice interface.
+VIF_DETAILS_VHOSTUSER_FP_PLUG = 'vhostuser_fp_plug'
+# ovs vhost user interface type name
+OVS_VHOSTUSER_INTERFACE_TYPE = 'dpdkvhostuser'
 
 # Constants for dictionary keys in the 'vif_details' field that are
 # valid for VIF_TYPE_TAP.
@@ -86,9 +93,11 @@ VIF_DETAILS_TAP_MAC_ADDRESS = 'mac_address'
 VNIC_TYPE_NORMAL = 'normal'
 VNIC_TYPE_DIRECT = 'direct'
 VNIC_TYPE_MACVTAP = 'macvtap'
+VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
 VNIC_TYPE_BAREMETAL = 'baremetal'
 
-VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP)
+VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP,
+                    VNIC_TYPE_DIRECT_PHYSICAL)
 
 # Constants for the 'vif_model' values
 VIF_MODEL_VIRTIO = 'virtio'
@@ -317,6 +326,8 @@ class VIF8021QbgParams(Model):
     """Represents the parameters for a 802.1qbg VIF."""
 
     def __init__(self, managerid, typeid, typeidversion, instanceid):
+        super(VIF8021QbgParams, self).__init__()
+
         self['managerid'] = managerid
         self['typeid'] = typeid
         self['typeidversion'] = typeidversion
@@ -327,6 +338,8 @@ class VIF8021QbhParams(Model):
     """Represents the parameters for a 802.1qbh VIF."""
 
     def __init__(self, profileid):
+        super(VIF8021QbhParams, self).__init__()
+
         self['profileid'] = profileid
 
 
@@ -456,14 +469,6 @@ class NetworkInfo(list):
     def json(self):
         return jsonutils.dumps(self)
 
-    def wait(self, do_raise=True):
-        """A no-op method.
-
-        This is useful to avoid type checking when NetworkInfo might be
-        subclassed with NetworkInfoAsyncWrapper.
-        """
-        pass
-
 
 class NetworkInfoAsyncWrapper(NetworkInfo):
     """Wrapper around NetworkInfo that allows retrieving NetworkInfo
@@ -487,6 +492,8 @@ class NetworkInfoAsyncWrapper(NetworkInfo):
     """
 
     def __init__(self, async_method, *args, **kwargs):
+        super(NetworkInfoAsyncWrapper, self).__init__()
+
         self._gt = utils.spawn(async_method, *args, **kwargs)
         methods = ['json', 'fixed_ips', 'floating_ips']
         for method in methods:

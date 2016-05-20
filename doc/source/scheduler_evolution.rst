@@ -11,42 +11,43 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-====================
+===================
 Scheduler Evolution
-====================
+===================
 
-The scheduler evolution has been a priority item for both the kilo and liberty
+Evolving the scheduler has been a priority item over several
 releases: http://specs.openstack.org/openstack/nova-specs/#priorities
 
-Over time the scheduler and the rest of nova have become very tightly
-coupled. This effort is focusing on a better separation of concerns between
-the nova-scheduler and the rest of Nova.
+The scheduler has become tightly coupled with the rest of nova,
+limiting its capabilities, accuracy, flexibility and maintainability.
+The goal of scheduler evolution is to bring about a better separation of
+concerns between scheduling functionality and the rest of nova.
 
 Once this effort has completed, its conceivable that the nova-scheduler could
-become a separate git repo, outside of Nova but within the compute project.
-But this is not the current focus of this effort.
+become a separate git repo, outside of nova but within the compute project.
+This is not the current focus.
 
 Problem Use Cases
 ==================
 
 Many users are wanting to do more advanced things with the scheduler, but the
-current architecture is just not ready to support those in a maintainable way.
-Lets look at a few key use cases that need to be easier to support once this
-initial work is complete.
+current architecture is not ready to support those use cases in a maintainable way.
+A few examples will help to illustrate where the scheduler falls
+short:
 
 Cross Project Affinity
 -----------------------
 
-It is possible that when you boot from a volume, you want it to pick a compute
-node that is close to that volume, automatically.
-There are similar use cases around a pre-created port and needing to be in a
-particular location for the best performance of that port.
+It can be desirable, when booting from a volume, to use a compute node
+that is close to the shared storage where that volume is. Similarly, for
+the sake of performance, it can be desirable to use a compute node that
+is in a particular location in relation to a pre-created port.
 
 Accessing Aggregates in Filters and Weights
 --------------------------------------------
 
-Any DB access in a filter or weight seriously slows down the scheduler.
-Until the end of kilo, there was no way to deal with the scheduler access
+Any DB access in a filter or weight slows down the scheduler. Until the
+end of kilo, there was no way to deal with the scheduler accessing
 information about aggregates without querying the DB in every call to
 host_passes() in a filter.
 
@@ -57,22 +58,21 @@ For certain use cases, radically different schedulers may perform much better
 than the filter scheduler. We should not block this innovation. It is
 unreasonable to assume a single scheduler will work for all use cases.
 
-However, we really need a single strong scheduler interface, to enable these
-sorts of innovation in a maintainable way.
+However, to enable this kind of innovation in a maintainable way, a
+single strong scheduler interface is required.
 
 Project Scale issues
 ---------------------
 
-There are interesting ideas for new schedulers, like the solver scheduler.
-There are frequently requests to add new scheduler filters and weights for
-to look at various different aspects of the compute host.
-Currently the Nova team just doesn't have the bandwidth to deal with all these
+There are many interesting ideas for new schedulers, like the solver scheduler,
+and frequent requests to add new filters and weights to the scheduling system.
+The current nova team does not have the bandwidth to deal with all these
 requests. A dedicated scheduler team could work on these items independently
-from the rest of Nova.
+of the rest of nova.
 
-The problem we currently have, is that the nova-scheduler code is not separate
-from the rest of Nova, so its not currently possible to work on the scheduler
-in isolation. We need a stable interface before we can make the split.
+The tight coupling that currently exists makes it impossible to work
+on the scheduler in isolation. A stable interface is required before
+the code can be split out.
 
 Key areas we are evolving
 ==========================
@@ -83,17 +83,17 @@ the scheduler evolution work.
 Fixing the Scheduler DB model
 ------------------------------
 
-We need the Nova and scheduler data models to be independent of each other.
+We need the nova and scheduler data models to be independent of each other.
 
 The first step is breaking the link between the ComputeNode and Service
 DB tables. In theory where the Service information is stored should be
 pluggable through the service group API, and should be independent of the
 scheduler service. For example, it could be managed via zookeeper rather
-than polling the Nova DB.
+than polling the nova DB.
 
-There are also places where filters and weights call into the Nova DB to
+There are also places where filters and weights call into the nova DB to
 find out information about aggregates. This needs to be sent to the
-scheduler, rather than reading directly form the nova database.
+scheduler, rather than reading directly from the nova database.
 
 Versioning Scheduler Placement Interfaces
 ------------------------------------------
@@ -105,7 +105,9 @@ backwards compatibility needed for live-upgrades.
 Luckily we already have the oslo.versionedobjects infrastructure we can use
 to model this data in a way that can be versioned across releases.
 
-This effort is mostly focusing around the request_spec.
+This effort is mostly focusing around the request_spec. See, for
+example, `this spec`_.
+
 
 Sending host and node stats to the scheduler
 ---------------------------------------------
@@ -133,30 +135,33 @@ Resource Tracker
 
 The recent work to add support for NUMA and PCI pass through have shown we
 have no good pattern to extend the resource tracker. Ideally we want to keep
-the innovation inside the Nova tree, but we also need it to be easier.
+the innovation inside the nova tree, but we also need it to be easier.
 
 This is very related to the effort to re-think how we model resources, as
-covered by the discussion.
+covered by discussion about `resource providers`_.
 
 Parallelism and Concurrency
 ----------------------------
 
 The current design of the nova-scheduler is very racy, and can lead to
-excessive numbers of build retries before the correct host is found.
-The recent NUMA features are particularly impacted by how the scheduler
-currently works.
-All this has lead to many people only running a single nova-scheduler
-process configured to use a very small greenthread pool.
+excessive numbers of build retries before the correct host is found. The
+recent NUMA features are particularly impacted by how the scheduler
+works. All this has lead to many people running only a single
+nova-scheduler process configured to use a very small greenthread pool.
 
 The work on cells v2 will mean that we soon need the scheduler to scale for
 much larger problems. The current scheduler works best with less than 1k nodes
 but we will need the scheduler to work with at least 10k nodes.
 
 Various ideas have been discussed to reduce races when running multiple
-nova-scheduler processes.
-One idea is to use two-phase commit "style" resource tracker claims.
-Another idea involves using incremental updates so it is more efficient to
-keep the scheduler's state up to date, potentially using Kafka.
+nova-scheduler processes. One idea is to use two-phase commit "style"
+resource tracker claims. Another idea involves using incremental updates
+so it is more efficient to keep the scheduler's state up to date,
+potentially using Kafka.
 
-For more details, see the backlog spec that describes more of the details
+For more details, see the `backlog spec`_ that describes more of the details
 around this problem.
+
+.. _this spec: http://specs.openstack.org/openstack/nova-specs/specs/kilo/approved/sched-select-destinations-use-request-spec-object.html
+.. _resource providers: https://blueprints.launchpad.net/nova/+spec/resource-providers
+.. _backlog spec: http://specs.openstack.org/openstack/nova-specs/specs/backlog/approved/parallel-scheduler.html

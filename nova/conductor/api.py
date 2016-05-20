@@ -14,7 +14,6 @@
 
 """Handles all requests to the conductor service."""
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_versionedobjects import base as ovo_base
@@ -22,33 +21,11 @@ from oslo_versionedobjects import base as ovo_base
 from nova import baserpc
 from nova.conductor import manager
 from nova.conductor import rpcapi
+import nova.conf
 from nova.i18n import _LI, _LW
 from nova import utils
 
-conductor_opts = [
-    cfg.BoolOpt('use_local',
-                default=False,
-                help='DEPRECATED: Perform nova-conductor operations locally. '
-                     'This legacy mode was introduced to bridge a gap during '
-                     'the transition to the conductor service. It no longer '
-                     'represents a reasonable alternative for deployers. '
-                     'Removal may be as early as 14.0',
-                deprecated_for_removal=True),
-    cfg.StrOpt('topic',
-               default='conductor',
-               help='The topic on which conductor nodes listen'),
-    cfg.StrOpt('manager',
-               default='nova.conductor.manager.ConductorManager',
-               help='Full class name for the Manager for conductor'),
-    cfg.IntOpt('workers',
-               help='Number of workers for OpenStack Conductor service. '
-                    'The default will be the number of CPUs available.')
-]
-conductor_group = cfg.OptGroup(name='conductor',
-                               title='Conductor Options')
-CONF = cfg.CONF
-CONF.register_group(conductor_group)
-CONF.register_opts(conductor_opts, conductor_group)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -66,9 +43,6 @@ class LocalAPI(object):
     def wait_until_ready(self, context, *args, **kwargs):
         # nothing to wait for in the local case.
         pass
-
-    def provider_fw_rule_get_all(self, context):
-        return self._manager.provider_fw_rule_get_all(context)
 
     def object_backport(self, context, objinst, target_version):
         # NOTE(hanlind): This shouldn't be called anymore but leaving it for
@@ -91,21 +65,23 @@ class LocalComputeTaskAPI(object):
 
     def resize_instance(self, context, instance, extra_instance_updates,
                         scheduler_hint, flavor, reservations,
-                        clean_shutdown=True):
+                        clean_shutdown=True, request_spec=None):
         # NOTE(comstud): 'extra_instance_updates' is not used here but is
         # needed for compatibility with the cells_rpcapi version of this
         # method.
         self._manager.migrate_server(
             context, instance, scheduler_hint, live=False, rebuild=False,
             flavor=flavor, block_migration=None, disk_over_commit=None,
-            reservations=reservations, clean_shutdown=clean_shutdown)
+            reservations=reservations, clean_shutdown=clean_shutdown,
+            request_spec=request_spec)
 
     def live_migrate_instance(self, context, instance, host_name,
-                              block_migration, disk_over_commit):
+                              block_migration, disk_over_commit,
+                              request_spec=None):
         scheduler_hint = {'host': host_name}
         self._manager.migrate_server(
             context, instance, scheduler_hint, True, False, None,
-            block_migration, disk_over_commit, None)
+            block_migration, disk_over_commit, None, request_spec=request_spec)
 
     def build_instances(self, context, instances, image,
             filter_properties, admin_password, injected_files,
@@ -120,14 +96,15 @@ class LocalComputeTaskAPI(object):
                 block_device_mapping=block_device_mapping,
                 legacy_bdm=legacy_bdm)
 
-    def unshelve_instance(self, context, instance):
+    def unshelve_instance(self, context, instance, request_spec=None):
         utils.spawn_n(self._manager.unshelve_instance, context,
-                instance=instance)
+                instance=instance, request_spec=request_spec)
 
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate=False, on_shared_storage=False,
-                         preserve_ephemeral=False, host=None, kwargs=None):
+                         preserve_ephemeral=False, host=None,
+                         request_spec=None, kwargs=None):
         # kwargs unused but required for cell compatibility.
         utils.spawn_n(self._manager.rebuild_instance, context,
                 instance=instance,
@@ -140,7 +117,8 @@ class LocalComputeTaskAPI(object):
                 recreate=recreate,
                 on_shared_storage=on_shared_storage,
                 host=host,
-                preserve_ephemeral=preserve_ephemeral)
+                preserve_ephemeral=preserve_ephemeral,
+                request_spec=request_spec)
 
 
 class API(LocalAPI):
@@ -199,21 +177,23 @@ class ComputeTaskAPI(object):
 
     def resize_instance(self, context, instance, extra_instance_updates,
                         scheduler_hint, flavor, reservations,
-                        clean_shutdown=True):
+                        clean_shutdown=True, request_spec=None):
         # NOTE(comstud): 'extra_instance_updates' is not used here but is
         # needed for compatibility with the cells_rpcapi version of this
         # method.
         self.conductor_compute_rpcapi.migrate_server(
             context, instance, scheduler_hint, live=False, rebuild=False,
             flavor=flavor, block_migration=None, disk_over_commit=None,
-            reservations=reservations, clean_shutdown=clean_shutdown)
+            reservations=reservations, clean_shutdown=clean_shutdown,
+            request_spec=request_spec)
 
     def live_migrate_instance(self, context, instance, host_name,
-                              block_migration, disk_over_commit):
+                              block_migration, disk_over_commit,
+                              request_spec=None):
         scheduler_hint = {'host': host_name}
         self.conductor_compute_rpcapi.migrate_server(
             context, instance, scheduler_hint, True, False, None,
-            block_migration, disk_over_commit, None)
+            block_migration, disk_over_commit, None, request_spec=request_spec)
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
@@ -227,14 +207,15 @@ class ComputeTaskAPI(object):
                 block_device_mapping=block_device_mapping,
                 legacy_bdm=legacy_bdm)
 
-    def unshelve_instance(self, context, instance):
+    def unshelve_instance(self, context, instance, request_spec=None):
         self.conductor_compute_rpcapi.unshelve_instance(context,
-                instance=instance)
+                instance=instance, request_spec=request_spec)
 
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate=False, on_shared_storage=False,
-                         preserve_ephemeral=False, host=None, kwargs=None):
+                         preserve_ephemeral=False, host=None,
+                         request_spec=None, kwargs=None):
         # kwargs unused but required for cell compatibility
         self.conductor_compute_rpcapi.rebuild_instance(context,
                 instance=instance,
@@ -247,4 +228,5 @@ class ComputeTaskAPI(object):
                 recreate=recreate,
                 on_shared_storage=on_shared_storage,
                 preserve_ephemeral=preserve_ephemeral,
-                host=host)
+                host=host,
+                request_spec=request_spec)

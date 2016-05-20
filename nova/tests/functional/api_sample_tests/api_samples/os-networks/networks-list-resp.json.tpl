@@ -22,7 +22,7 @@
             "netmask": "%(ip)s",
             "netmask_v6": null,
             "priority": null,
-            "project_id": "1234",
+            "project_id": "6133f8b603924f45bc0c9e21f6df12fa",
             "rxtx_base": null,
             "updated_at": "%(strtime)s",
             "vlan": 100,

@@ -17,18 +17,17 @@
 Management class for Storage-related functions (attach, detach, etc).
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
-from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LW
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import vm_util
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -331,10 +330,11 @@ class VMwareVolumeOps(object):
         adapter_type = adapter_type or vmdk.adapter_type
 
         # IDE does not support disk hotplug
-        if (instance.vm_state == vm_states.ACTIVE and
-            adapter_type == constants.ADAPTER_TYPE_IDE):
-            msg = _('%s does not support disk hotplug.') % adapter_type
-            raise exception.Invalid(msg)
+        if adapter_type == constants.ADAPTER_TYPE_IDE:
+            state = vm_util.get_vm_state(self._session, instance)
+            if state.lower() != 'poweredoff':
+                raise exception.Invalid(_('%s does not support disk '
+                                          'hotplug.') % adapter_type)
 
         # Attach the disk to virtual machine instance
         self.attach_disk_to_vm(vm_ref, instance, adapter_type, vmdk.disk_type,
@@ -479,7 +479,7 @@ class VMwareVolumeOps(object):
         except oslo_vmw_exceptions.FileNotFoundException:
             # Volume's vmdk was moved; remove the device so that we can
             # relocate the volume.
-            LOG.warn(_LW("Virtual disk: %s of volume's backing not found."),
+            LOG.warning(_LW("Virtual disk: %s of volume's backing not found."),
                      original_device_path, exc_info=True)
             LOG.debug("Removing disk device of volume's backing and "
                       "reattempting relocate.")
@@ -530,10 +530,11 @@ class VMwareVolumeOps(object):
         vmdk = vm_util.get_vmdk_info(self._session, volume_ref)
 
         # IDE does not support disk hotplug
-        if (instance.vm_state == vm_states.ACTIVE and
-            vmdk.adapter_type == constants.ADAPTER_TYPE_IDE):
-            msg = _('%s does not support disk hotplug.') % vmdk.adapter_type
-            raise exception.Invalid(msg)
+        if vmdk.adapter_type == constants.ADAPTER_TYPE_IDE:
+            state = vm_util.get_vm_state(self._session, instance)
+            if state.lower() != 'poweredoff':
+                raise exception.Invalid(_('%s does not support disk '
+                                          'hotplug.') % vmdk.adapter_type)
 
         self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref,
                                       adapter_type=vmdk.adapter_type,

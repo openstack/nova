@@ -12,16 +12,14 @@
 
 
 import mock
-from oslo_log import log as logging
 
+from nova.compute import task_states
 from nova import exception
 from nova import objects
 from nova import test
 from nova import utils
 from nova.virt.libvirt.storage import rbd_utils
-
-
-LOG = logging.getLogger(__name__)
+from nova.virt.libvirt import utils as libvirt_utils
 
 
 CEPH_MON_DUMP = """dumped monmap epoch 1
@@ -79,6 +77,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.driver = rbd_utils.RBDDriver(self.rbd_pool, None, None)
 
         self.volume_name = u'volume-00000001'
+        self.snap_name = u'test-snap'
 
     def tearDown(self):
         super(RbdTestCase, self).tearDown()
@@ -104,7 +103,7 @@ class RbdTestCase(test.NoDBTestCase):
             self.assertFalse(self.driver.is_cloneable({'url': loc},
                                                       image_meta))
 
-    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_fsid')
     @mock.patch.object(rbd_utils, 'rbd')
     @mock.patch.object(rbd_utils, 'rados')
     def test_cloneable(self, mock_rados, mock_rbd, mock_get_fsid):
@@ -114,7 +113,7 @@ class RbdTestCase(test.NoDBTestCase):
         self.assertTrue(self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_fsid')
     def test_uncloneable_different_fsid(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://def/pool/image/snap'}
@@ -123,7 +122,7 @@ class RbdTestCase(test.NoDBTestCase):
             self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_fsid')
     @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
     @mock.patch.object(rbd_utils, 'rbd')
     @mock.patch.object(rbd_utils, 'rados')
@@ -141,7 +140,7 @@ class RbdTestCase(test.NoDBTestCase):
                                            snapshot='snap', read_only=True)
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_fsid')
     def test_uncloneable_bad_format(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://abc/pool/image/snap'}
@@ -152,7 +151,7 @@ class RbdTestCase(test.NoDBTestCase):
                 self.driver.is_cloneable(location, image_meta))
         self.assertTrue(mock_get_fsid.called)
 
-    @mock.patch.object(rbd_utils.RBDDriver, '_get_fsid')
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_fsid')
     def test_uncloneable_missing_format(self, mock_get_fsid):
         mock_get_fsid.return_value = 'abc'
         location = {'url': 'rbd://abc/pool/image/snap'}
@@ -212,6 +211,33 @@ class RbdTestCase(test.NoDBTestCase):
         kwargs = {'features': client.features}
         rbd.clone.assert_called_once_with(*args, **kwargs)
         self.assertEqual(2, client.__enter__.call_count)
+
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    def test_clone_eperm(self, mock_rados, mock_rbd, mock_client):
+        pool = u'images'
+        image = u'image-name'
+        snap = u'snapshot-name'
+        location = {'url': u'rbd://fsid/%s/%s/%s' % (pool, image, snap)}
+
+        client_stack = []
+
+        def mock__enter__(inst):
+            def _inner():
+                client_stack.append(inst)
+                return inst
+            return _inner
+
+        client = mock_client.return_value
+        # capture both rados client used to perform the clone
+        client.__enter__.side_effect = mock__enter__(client)
+
+        setattr(mock_rbd, 'PermissionError', test.TestingException)
+        rbd = mock_rbd.RBD.return_value
+        rbd.clone.side_effect = test.TestingException
+        self.assertRaises(exception.Forbidden,
+                          self.driver.clone, location, self.volume_name)
 
     @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
     def test_resize(self, mock_proxy):
@@ -300,7 +326,7 @@ class RbdTestCase(test.NoDBTestCase):
     @mock.patch.object(rbd_utils, 'rados')
     @mock.patch.object(rbd_utils, 'RADOSClient')
     def test_cleanup_volumes(self, mock_client, mock_rados, mock_rbd):
-        instance = objects.Instance(id=1, uuid='12345')
+        instance = objects.Instance(id=1, uuid='12345', task_state=None)
 
         rbd = mock_rbd.RBD.return_value
         rbd.list.return_value = ['12345_test', '111_test']
@@ -316,7 +342,7 @@ class RbdTestCase(test.NoDBTestCase):
     @mock.patch.object(rbd_utils, 'RADOSClient')
     def _test_cleanup_exception(self, exception_name,
                                 mock_client, mock_rados, mock_rbd):
-        instance = objects.Instance(id=1, uuid='12345')
+        instance = objects.Instance(id=1, uuid='12345', task_state=None)
 
         setattr(mock_rbd, exception_name, test.TestingException)
         rbd = mock_rbd.RBD.return_value
@@ -343,6 +369,63 @@ class RbdTestCase(test.NoDBTestCase):
     @mock.patch.object(rbd_utils, 'rbd')
     @mock.patch.object(rbd_utils, 'rados')
     @mock.patch.object(rbd_utils, 'RADOSClient')
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_cleanup_volumes_pending_resize(self, mock_proxy, mock_client,
+                                            mock_rados, mock_rbd):
+        instance = objects.Instance(id=1, uuid='12345', task_state=None)
+
+        setattr(mock_rbd, 'ImageHasSnapshots', test.TestingException)
+        rbd = mock_rbd.RBD.return_value
+        rbd.remove.side_effect = [test.TestingException, None]
+        rbd.list.return_value = ['12345_test', '111_test']
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.list_snaps.return_value = [
+            {'name': libvirt_utils.RESIZE_SNAPSHOT_NAME}]
+        client = mock_client.return_value
+        self.driver.cleanup_volumes(instance)
+
+        remove_call = mock.call(client.ioctx, '12345_test')
+        rbd.remove.assert_has_calls([remove_call, remove_call])
+        proxy.remove_snap.assert_called_once_with(
+                libvirt_utils.RESIZE_SNAPSHOT_NAME)
+        client.__enter__.assert_called_once_with()
+        client.__exit__.assert_called_once_with(None, None, None)
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    def test_cleanup_volumes_reverting_resize(self, mock_client, mock_rados,
+                                       mock_rbd):
+        instance = objects.Instance(id=1, uuid='12345',
+                                    task_state=task_states.RESIZE_REVERTING)
+
+        rbd = mock_rbd.RBD.return_value
+        rbd.list.return_value = ['12345_test', '111_test',
+                                 '12345_test_disk.local']
+
+        client = mock_client.return_value
+        self.driver.cleanup_volumes(instance)
+        rbd.remove.assert_called_once_with(client.ioctx,
+                                           '12345_test_disk.local')
+        client.__enter__.assert_called_once_with()
+        client.__exit__.assert_called_once_with(None, None, None)
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    @mock.patch.object(rbd_utils, 'RADOSClient')
+    def test_destroy_volume(self, mock_client, mock_rados, mock_rbd):
+        rbd = mock_rbd.RBD.return_value
+        vol = '12345_test'
+        client = mock_client.return_value
+        self.driver.destroy_volume(vol)
+        rbd.remove.assert_called_once_with(client.ioctx, vol)
+        client.__enter__.assert_called_once_with()
+        client.__exit__.assert_called_once_with(None, None, None)
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    @mock.patch.object(rbd_utils, 'RADOSClient')
     def test_remove_image(self, mock_client, mock_rados, mock_rbd):
         name = '12345_disk.config.rescue'
 
@@ -354,3 +437,103 @@ class RbdTestCase(test.NoDBTestCase):
         # Make sure that we entered and exited the RADOSClient
         client.__enter__.assert_called_once_with()
         client.__exit__.assert_called_once_with(None, None, None)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_create_snap(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        self.driver.create_snap(self.volume_name, self.snap_name)
+        proxy.create_snap.assert_called_once_with(self.snap_name)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_create_protected_snap(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.is_protected_snap.return_value = False
+        self.driver.create_snap(self.volume_name, self.snap_name, protect=True)
+        proxy.create_snap.assert_called_once_with(self.snap_name)
+        proxy.is_protected_snap.assert_called_once_with(self.snap_name)
+        proxy.protect_snap.assert_called_once_with(self.snap_name)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_remove_snap(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.list_snaps.return_value = [{'name': self.snap_name}]
+        proxy.is_protected_snap.return_value = False
+        self.driver.remove_snap(self.volume_name, self.snap_name)
+        proxy.remove_snap.assert_called_once_with(self.snap_name)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_remove_snap_force(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.is_protected_snap.return_value = True
+        proxy.list_snaps.return_value = [{'name': self.snap_name}]
+        self.driver.remove_snap(self.volume_name, self.snap_name, force=True)
+        proxy.is_protected_snap.assert_called_once_with(self.snap_name)
+        proxy.unprotect_snap.assert_called_once_with(self.snap_name)
+        proxy.remove_snap.assert_called_once_with(self.snap_name)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_remove_snap_does_nothing_when_no_snapshot(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.list_snaps.return_value = [{'name': 'some-other-snaphot'}]
+        self.driver.remove_snap(self.volume_name, self.snap_name)
+        self.assertFalse(proxy.remove_snap.called)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_remove_snap_does_nothing_when_protected(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.is_protected_snap.return_value = True
+        proxy.list_snaps.return_value = [{'name': self.snap_name}]
+        self.driver.remove_snap(self.volume_name, self.snap_name)
+        self.assertFalse(proxy.remove_snap.called)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_remove_snap_protected_ignore_errors(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.is_protected_snap.return_value = True
+        proxy.list_snaps.return_value = [{'name': self.snap_name}]
+        self.driver.remove_snap(self.volume_name, self.snap_name,
+                                ignore_errors=True)
+        proxy.remove_snap.assert_called_once_with(self.snap_name)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_parent_info(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        self.driver.parent_info(self.volume_name)
+        proxy.parent_info.assert_called_once_with()
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_parent_info_throws_exception_on_error(self, mock_proxy, mock_rbd):
+        setattr(mock_rbd, 'ImageNotFound', test.TestingException)
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        proxy.parent_info.side_effect = test.TestingException
+        self.assertRaises(exception.ImageUnacceptable,
+                          self.driver.parent_info, self.volume_name)
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_flatten(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        self.driver.flatten(self.volume_name)
+        proxy.flatten.assert_called_once_with()
+
+    @mock.patch.object(rbd_utils, 'RBDVolumeProxy')
+    def test_rollback_to_snap(self, mock_proxy):
+        proxy = mock_proxy.return_value
+        proxy.__enter__.return_value = proxy
+        self.assertRaises(exception.SnapshotNotFound,
+                          self.driver.rollback_to_snap,
+                          self.volume_name, self.snap_name)
+
+        proxy.list_snaps.return_value = [{'name': self.snap_name}, ]
+        self.driver.rollback_to_snap(self.volume_name, self.snap_name)
+        proxy.rollback_to_snap.assert_called_once_with(self.snap_name)

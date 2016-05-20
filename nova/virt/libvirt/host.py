@@ -37,7 +37,6 @@ from eventlet import greenio
 from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -45,6 +44,7 @@ from oslo_utils import units
 from oslo_utils import versionutils
 import six
 
+import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
@@ -63,11 +63,9 @@ LOG = logging.getLogger(__name__)
 
 native_socket = patcher.original('socket')
 native_threading = patcher.original("threading")
-native_Queue = patcher.original("queue" if six.PY3 else "Queue")
+native_Queue = patcher.original("Queue" if six.PY2 else "queue")
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 # This list is for libvirt hypervisor drivers that need special handling.
@@ -385,7 +383,7 @@ class Host(object):
         """Emit events - possibly delayed."""
         def event_cleanup(gt, *args, **kwargs):
             """Callback function for greenthread. Called
-            to cleanup the _events_delayed dictionary when a event
+            to cleanup the _events_delayed dictionary when an event
             was called.
             """
             event = args[0]
@@ -485,7 +483,7 @@ class Host(object):
                 self._event_lifecycle_callback,
                 self)
         except Exception as e:
-            LOG.warn(_LW("URI %(uri)s does not support events: %(error)s"),
+            LOG.warning(_LW("URI %(uri)s does not support events: %(error)s"),
                      {'uri': self._uri, 'error': e})
 
         try:
@@ -501,7 +499,7 @@ class Host(object):
             LOG.debug("The version of python-libvirt does not support "
                       "registerCloseCallback or is too old: %s", e)
         except libvirt.libvirtError as e:
-            LOG.warn(_LW("URI %(uri)s does not support connection"
+            LOG.warning(_LW("URI %(uri)s does not support connection"
                          " events: %(error)s"),
                      {'uri': self._uri, 'error': e})
 
@@ -599,7 +597,7 @@ class Host(object):
         corresponding to the Nova instance, based on
         its name. If not found it will raise an
         exception.InstanceNotFound exception. On other
-        errors, it will raise a exception.NovaException
+        errors, it will raise an exception.NovaException
         exception.
 
         :returns: a libvirt.Domain object
@@ -700,7 +698,7 @@ class Host(object):
         :param only_running: True to only return running instances
         :param only_guests: True to filter out any host domain (eg Dom-0)
 
-        See method "list_instance_domains" for more informations.
+        See method "list_instance_domains" for more information.
 
         :returns: list of Guest objects
         """
@@ -780,7 +778,10 @@ class Host(object):
             LOG.info(_LI("Libvirt host capabilities %s"), xmlstr)
             self._caps = vconfig.LibvirtConfigCaps()
             self._caps.parse_str(xmlstr)
-            if hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'):
+            # NOTE(mriedem): Don't attempt to get baseline CPU features
+            # if libvirt can't determine the host cpu model.
+            if (hasattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
+                and self._caps.host.cpu.model is not None):
                 try:
                     features = self.get_connection().baselineCPU(
                         [self._caps.host.cpu.to_xml()],
@@ -796,7 +797,7 @@ class Host(object):
                 except libvirt.libvirtError as ex:
                     error_code = ex.get_error_code()
                     if error_code == libvirt.VIR_ERR_NO_SUPPORT:
-                        LOG.warn(_LW("URI %(uri)s does not support full set"
+                        LOG.warning(_LW("URI %(uri)s does not support full set"
                                      " of host capabilities: %(error)s"),
                                      {'uri': self._uri, 'error': ex})
                     else:
@@ -888,7 +889,7 @@ class Host(object):
             return secret
         except libvirt.libvirtError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a secret with XML: %s') % xml)
+                LOG.error(_LE('Error defining a secret with XML: %s'), xml)
 
     def delete_secret(self, usage_type, usage_id):
         """Delete a secret.
@@ -938,9 +939,9 @@ class Host(object):
                     # TODO(sahid): Use get_info...
                     dom_mem = int(guest._get_domain_info(self)[2])
                 except libvirt.libvirtError as e:
-                    LOG.warn(_LW("couldn't obtain the memory from domain:"
-                                 " %(uuid)s, exception: %(ex)s") %
-                             {"uuid": guest.uuid, "ex": e})
+                    LOG.warning(_LW("couldn't obtain the memory from domain:"
+                                    " %(uuid)s, exception: %(ex)s"),
+                                {"uuid": guest.uuid, "ex": e})
                     continue
                 # skip dom0
                 if guest.id != 0:
@@ -995,3 +996,27 @@ class Host(object):
     def compare_cpu(self, xmlDesc, flags=0):
         """Compares the given CPU description with the host CPU."""
         return self.get_connection().compareCPU(xmlDesc, flags)
+
+    def is_cpu_control_policy_capable(self):
+        """Returns whether kernel configuration CGROUP_SCHED is enabled
+
+        CONFIG_CGROUP_SCHED may be disabled in some kernel configs to
+        improve scheduler latency.
+        """
+        try:
+            with open("/proc/self/mounts", "r") as fd:
+                for line in fd.readlines():
+                    # mount options and split options
+                    bits = line.split()[3].split(",")
+                    if "cpu" in bits:
+                        return True
+                return False
+        except IOError:
+            return False
+
+    def is_migratable_xml_flag(self):
+        """Determines whether libvirt is supporting dump XML suitable for
+        migration.
+        """
+        return getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
+                       None) is not None

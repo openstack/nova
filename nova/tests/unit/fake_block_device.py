@@ -18,6 +18,20 @@ import uuid
 from oslo_utils import timeutils
 
 from nova import block_device
+from nova import objects
+
+
+def fake_bdm_object(context, bdm_dict):
+    """Creates a BlockDeviceMapping object from the given bdm_dict
+
+    :param context: nova request context
+    :param bdm_dict: dict of block device mapping info
+    :returns: nova.objects.block_device.BlockDeviceMapping
+    """
+    # FakeDbBlockDeviceDict mutates the bdm_dict so make a copy of it.
+    return objects.BlockDeviceMapping._from_db_object(
+        context, objects.BlockDeviceMapping(),
+        FakeDbBlockDeviceDict(bdm_dict.copy()))
 
 
 class FakeDbBlockDeviceDict(block_device.BlockDeviceDict):

@@ -25,7 +25,6 @@ A driver for XenServer or Xen Cloud Platform.
 
 import math
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -33,8 +32,8 @@ from oslo_utils import versionutils
 import six
 import six.moves.urllib.parse as urlparse
 
+import nova.conf
 from nova.i18n import _, _LE, _LW
-from nova import objects
 from nova.virt import driver
 from nova.virt.xenapi.client import session
 from nova.virt.xenapi import host
@@ -45,58 +44,7 @@ from nova.virt.xenapi import volumeops
 
 LOG = logging.getLogger(__name__)
 
-xenapi_opts = [
-    cfg.StrOpt('connection_url',
-               help='URL for connection to XenServer/Xen Cloud Platform. '
-                    'A special value of unix://local can be used to connect '
-                    'to the local unix socket.  '
-                    'Required if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('connection_username',
-               default='root',
-               help='Username for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('connection_password',
-               help='Password for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver',
-               secret=True),
-    cfg.FloatOpt('vhd_coalesce_poll_interval',
-                 default=5.0,
-                 help='The interval used for polling of coalescing vhds. '
-                      'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.BoolOpt('check_host',
-                default=True,
-                help='Ensure compute service is running on host XenAPI '
-                     'connects to.'),
-    cfg.IntOpt('vhd_coalesce_max_attempts',
-               default=20,
-               help='Max number of times to poll for VHD to coalesce. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('sr_base_path',
-               default='/var/run/sr-mount',
-               help='Base path to the storage repository'),
-    cfg.StrOpt('target_host',
-               help='The iSCSI Target Host'),
-    cfg.StrOpt('target_port',
-               default='3260',
-               help='The iSCSI Target Port, default is port 3260'),
-    cfg.StrOpt('iqn_prefix',
-               default='iqn.2010-10.org.openstack',
-               help='IQN Prefix'),
-    # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
-    # when we pull support for it, we should remove this
-    cfg.BoolOpt('remap_vbd_dev',
-                default=False,
-                help='Used to enable the remapping of VBD dev '
-                     '(Works around an issue in Ubuntu Maverick)'),
-    cfg.StrOpt('remap_vbd_dev_prefix',
-               default='sd',
-               help='Specify prefix to remap VBD dev to '
-                    '(ex. /dev/xvdb -> /dev/sdb)'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(xenapi_opts, 'xenserver')
-CONF.import_opt('host', 'nova.netconf')
+CONF = nova.conf.CONF
 
 OVERHEAD_BASE = 3
 OVERHEAD_PER_MB = 0.00781
@@ -190,7 +138,6 @@ class XenAPIDriver(driver.ComputeDriver):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """Create VM instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.spawn(context, instance, image_meta, injected_files,
                           admin_password, network_info, block_device_info)
 
@@ -211,7 +158,6 @@ class XenAPIDriver(driver.ComputeDriver):
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.finish_migration(context, migration, instance, disk_info,
                                      network_info, image_meta, resize_instance,
                                      block_device_info, power_on)
@@ -286,7 +232,6 @@ class XenAPIDriver(driver.ComputeDriver):
     def rescue(self, context, instance, network_info, image_meta,
                rescue_password):
         """Rescue the specified instance."""
-        image_meta = objects.ImageMeta.from_dict(image_meta)
         self._vmops.rescue(context, instance, network_info, image_meta,
                            rescue_password)
 
@@ -454,13 +399,12 @@ class XenAPIDriver(driver.ComputeDriver):
                'vcpus_used': host_stats['vcpus_used'],
                'memory_mb_used': total_ram_mb - free_ram_mb,
                'local_gb_used': used_disk_gb,
-               'hypervisor_type': 'xen',
+               'hypervisor_type': 'XenServer',
                'hypervisor_version': hyper_ver,
                'hypervisor_hostname': host_stats['host_hostname'],
                'cpu_info': jsonutils.dumps(host_stats['cpu_model']),
                'disk_available_least': total_disk_gb - allocated_disk_gb,
-               'supported_instances': jsonutils.dumps(
-                   host_stats['supported_instances']),
+               'supported_instances': host_stats['supported_instances'],
                'pci_passthrough_devices': jsonutils.dumps(
                    host_stats['pci_passthrough_devices']),
                'numa_topology': None}
@@ -482,7 +426,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param instance: nova.db.sqlalchemy.models.Instance object
         :param block_migration: if true, prepare for block migration
         :param disk_over_commit: if true, allow disk over commit
-
+        :returns: a XenapiLiveMigrateData object
         """
         return self._vmops.check_can_live_migrate_destination(context,
                                                               instance,
@@ -510,6 +454,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param dest_check_data: result of check_can_live_migrate_destination
                                 includes the block_migration flag
         :param block_device_info: result of _get_instance_block_device_info
+        :returns: a XenapiLiveMigrateData object
         """
         return self._vmops.check_can_live_migrate_source(context, instance,
                                                          dest_check_data)
@@ -538,7 +483,7 @@ class XenAPIDriver(driver.ComputeDriver):
             recovery method when any exception occurs.
             expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, migrate VM disk.
-        :param migrate_data: implementation specific params
+        :param migrate_data: a XenapiLiveMigrateData object
         """
         self._vmops.live_migrate(context, instance, dest, post_method,
                                  recover_method, block_migration, migrate_data)
@@ -548,6 +493,17 @@ class XenAPIDriver(driver.ComputeDriver):
                                                block_device_info,
                                                destroy_disks=True,
                                                migrate_data=None):
+        """Performs a live migration rollback.
+
+        :param context: security context
+        :param instance: instance object that was being migrated
+        :param network_info: instance network information
+        :param block_device_info: instance block device information
+        :param destroy_disks:
+            if true, destroy disks at destination during cleanup
+        :param migrate_data: A XenapiLiveMigrateData object
+        """
+
         # NOTE(johngarbutt) Destroying the VM is not appropriate here
         # and in the cases where it might make sense,
         # XenServer has already done it.
@@ -564,12 +520,10 @@ class XenAPIDriver(driver.ComputeDriver):
         :param block_device_info:
             It must be the result of _get_instance_volume_bdms()
             at compute manager.
+        :returns: a XenapiLiveMigrateData object
         """
-        # TODO(JohnGarbutt) look again when boot-from-volume hits trunk
-        pre_live_migration_result = {}
-        pre_live_migration_result['sr_uuid_map'] = \
-                 self._vmops.connect_block_device_volumes(block_device_info)
-        return pre_live_migration_result
+        return self._vmops.pre_live_migration(context, instance,
+                block_device_info, network_info, disk_info, migrate_data)
 
     def post_live_migration(self, context, instance, block_device_info,
                             migrate_data=None):
@@ -578,7 +532,7 @@ class XenAPIDriver(driver.ComputeDriver):
         :param context: security context
         :instance: instance object that was migrated
         :block_device_info: instance block device information
-        :param migrate_data: if not None, it is a dict which has data
+        :param migrate_data: a XenapiLiveMigrateData object
         """
         self._vmops.post_live_migration(context, instance, migrate_data)
 
@@ -618,9 +572,6 @@ class XenAPIDriver(driver.ComputeDriver):
         or when a rule is added/removed to a security group.
         """
         return self._vmops.refresh_instance_security_rules(instance)
-
-    def refresh_provider_fw_rules(self):
-        return self._vmops.refresh_provider_fw_rules()
 
     def get_available_nodes(self, refresh=False):
         stats = self.host_state.get_host_stats(refresh=refresh)

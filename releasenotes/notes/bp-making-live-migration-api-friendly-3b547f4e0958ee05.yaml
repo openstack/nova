@@ -1,0 +1,9 @@
+---
+feature:
+  - Make block_migration to support 'auto' value, which means nova will decide
+    the value of block_migration during live-migration, and remove
+    disk_over_commit flag for os-migrateLive action in microversion 2.23.
+upgrade:
+  - We can not use microversion 2.25 to do live-migration during upgrade,
+    nova-api will raise bad request if there is still old compute node in the
+    cluster.

@@ -16,16 +16,20 @@
 
 import copy
 
+from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
 from nova import exception
 from nova.i18n import _LE
+from nova import objects
+from nova.objects import fields
 from nova.objects import pci_device_pool
 from nova.pci import utils
 from nova.pci import whitelist
 
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -53,14 +57,16 @@ class PciDeviceStats(object):
     This summary information will be helpful for cloud management also.
     """
 
-    pool_keys = ['product_id', 'vendor_id', 'numa_node']
+    pool_keys = ['product_id', 'vendor_id', 'numa_node', 'dev_type']
 
-    def __init__(self, stats=None):
+    def __init__(self, stats=None, dev_filter=None):
         super(PciDeviceStats, self).__init__()
         # NOTE(sbauza): Stats are a PCIDevicePoolList object
         self.pools = [pci_pool.to_dict()
                       for pci_pool in stats] if stats else []
         self.pools.sort(key=lambda item: len(item))
+        self.dev_filter = dev_filter or whitelist.Whitelist(
+            CONF.pci_passthrough_whitelist)
 
     def _equal_properties(self, dev, entry, matching_keys):
         return all(dev.get(prop) == entry.get(prop)
@@ -84,7 +90,7 @@ class PciDeviceStats(object):
         """
         # Don't add a device that doesn't have a matching device spec.
         # This can happen during initial sync up with the controller
-        devspec = whitelist.get_pci_device_devspec(dev)
+        devspec = self.dev_filter.get_devspec(dev)
         if not devspec:
             return
         tags = devspec.get_tags()
@@ -148,6 +154,7 @@ class PciDeviceStats(object):
             pools = self._filter_pools_for_spec(self.pools, spec)
             if numa_cells:
                 pools = self._filter_pools_for_numa_cells(pools, numa_cells)
+            pools = self._filter_non_requested_pfs(request, pools)
             # Failed to allocate the required number of devices
             # Return the devices already allocated back to their pools
             if sum([pool['count'] for pool in pools]) < count:
@@ -169,11 +176,40 @@ class PciDeviceStats(object):
                 pool['count'] -= num_alloc
                 for d in range(num_alloc):
                     pci_dev = pool['devices'].pop()
+                    self._handle_device_dependents(pci_dev)
                     pci_dev.request_id = request.request_id
                     alloc_devices.append(pci_dev)
                 if count == 0:
                     break
         return alloc_devices
+
+    def _handle_device_dependents(self, pci_dev):
+        """Remove device dependents or a parent from pools.
+
+        In case the device is a PF, all of it's dependent VFs should
+        be removed from pools count, if these are present.
+        When the device is a VF, it's parent PF pool count should be
+        decreased, unless it is no longer in a pool.
+        """
+        if pci_dev.dev_type == fields.PciDeviceType.SRIOV_PF:
+            vfs_list = objects.PciDeviceList.get_by_parent_address(
+                                       pci_dev._context,
+                                       pci_dev.compute_node_id,
+                                       pci_dev.address)
+            if vfs_list:
+                for vf in vfs_list:
+                    self.remove_device(vf)
+        elif pci_dev.dev_type == fields.PciDeviceType.SRIOV_VF:
+            try:
+                parent = pci_dev.get_by_dev_addr(pci_dev._context,
+                                                 pci_dev.compute_node_id,
+                                                 pci_dev.parent_addr)
+                # Make sure not to decrease PF pool count if this parent has
+                # been already removed from pools
+                if parent in self.get_free_devs():
+                    self.remove_device(parent)
+            except exception.PciDeviceNotFound:
+                return
 
     @staticmethod
     def _filter_pools_for_spec(pools, request_specs):
@@ -192,12 +228,31 @@ class PciDeviceStats(object):
                                 pool, [{'numa_node': cell}])
                                               for cell in numa_cells)]
 
+    def _filter_non_requested_pfs(self, request, matching_pools):
+        # Remove SRIOV_PFs from pools, unless it has been explicitly requested
+        # This is especially needed in cases where PFs and VFs has the same
+        # product_id.
+        if all(spec.get('dev_type') != fields.PciDeviceType.SRIOV_PF for
+               spec in request.spec):
+            matching_pools = self._filter_pools_for_pfs(matching_pools)
+        return matching_pools
+
+    @staticmethod
+    def _filter_pools_for_pfs(pools):
+        return [pool for pool in pools
+                if not pool.get('dev_type') == fields.PciDeviceType.SRIOV_PF]
+
     def _apply_request(self, pools, request, numa_cells=None):
+        # NOTE(vladikr): This code maybe open to race conditions.
+        # Two concurrent requests may succeed when called support_requests
+        # because this method does not remove related devices from the pools
         count = request.count
         matching_pools = self._filter_pools_for_spec(pools, request.spec)
         if numa_cells:
             matching_pools = self._filter_pools_for_numa_cells(matching_pools,
                                                           numa_cells)
+        matching_pools = self._filter_non_requested_pfs(request,
+                                                        matching_pools)
         if sum([pool['count'] for pool in matching_pools]) < count:
             return False
         else:

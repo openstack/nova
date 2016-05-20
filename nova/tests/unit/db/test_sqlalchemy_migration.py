@@ -28,6 +28,7 @@ from nova.db.sqlalchemy import migration
 from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 
 class TestNullInstanceUuidScanDB(test.TestCase):
@@ -224,3 +225,57 @@ class TestFlavorCheck(test.TestCase):
         inst.create()
         inst.destroy()
         self.migration.upgrade(self.engine)
+
+
+class TestNewtonCheck(test.TestCase):
+    def setUp(self):
+        super(TestNewtonCheck, self).setUp()
+        self.useFixture(nova_fixtures.DatabaseAtVersion(329))
+        self.context = context.get_admin_context()
+        self.migration = importlib.import_module(
+            'nova.db.sqlalchemy.migrate_repo.versions.'
+            '330_enforce_mitaka_online_migrations')
+        self.engine = db_api.get_engine()
+
+    def test_all_migrated(self):
+        cn = objects.ComputeNode(context=self.context,
+                                 vcpus=1, memory_mb=512, local_gb=10,
+                                 vcpus_used=0, memory_mb_used=256,
+                                 local_gb_used=5, hypervisor_type='HyperDanVM',
+                                 hypervisor_version='34', cpu_info='foo')
+        cn.create()
+        objects.Aggregate(context=self.context,
+                          name='foo').create()
+        objects.PciDevice.create(self.context, {})
+        self.migration.upgrade(self.engine)
+
+    def test_cn_not_migrated(self):
+        cn = objects.ComputeNode(context=self.context,
+                                 vcpus=1, memory_mb=512, local_gb=10,
+                                 vcpus_used=0, memory_mb_used=256,
+                                 local_gb_used=5, hypervisor_type='HyperDanVM',
+                                 hypervisor_version='34', cpu_info='foo')
+        cn.create()
+        db_api.compute_node_update(self.context, cn.id, {'uuid': None})
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_aggregate_not_migrated(self):
+        agg = objects.Aggregate(context=self.context, name='foo')
+        agg.create()
+        db_api.aggregate_update(self.context, agg.id, {'uuid': None})
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_pci_device_not_migrated(self):
+        db_api.pci_device_update(self.context, 1, 'foo:bar',
+                                 {'parent_addr': None,
+                                  'compute_node_id': 1,
+                                  'address': 'foo:bar',
+                                  'vendor_id': '123',
+                                  'product_id': '456',
+                                  'dev_type': 'foo',
+                                  'label': 'foobar',
+                                  'status': 'whatisthis?'})
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)

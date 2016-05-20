@@ -26,23 +26,18 @@ continue attempting to launch the rest of the services.
 
 import sys
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import config
-from nova.i18n import _LE
+from nova.i18n import _LE, _LW
 from nova import objects
-from nova.objectstore import s3server
 from nova import service
 from nova import utils
 from nova.vnc import xvp_proxy
 
 
-CONF = cfg.CONF
-CONF.import_opt('manager', 'nova.conductor.api', group='conductor')
-CONF.import_opt('topic', 'nova.conductor.api', group='conductor')
-CONF.import_opt('enabled_apis', 'nova.service')
-CONF.import_opt('enabled_ssl_apis', 'nova.service')
+CONF = nova.conf.CONF
 
 
 def main():
@@ -53,6 +48,9 @@ def main():
     objects.register_all()
     launcher = service.process_launcher()
 
+    # TODO(sdague): Remove in O
+    LOG.warning(_LW('The nova-all entrypoint is deprecated and will '
+                    'be removed in a future release'))
     # nova-api
     for api in CONF.enabled_apis:
         try:
@@ -62,7 +60,7 @@ def main():
         except (Exception, SystemExit):
             LOG.exception(_LE('Failed to load %s-api'), api)
 
-    for mod in [s3server, xvp_proxy]:
+    for mod in [xvp_proxy]:
         try:
             launcher.launch_service(mod.get_wsgi_server())
         except (Exception, SystemExit):

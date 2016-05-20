@@ -21,12 +21,12 @@
 import re
 import uuid
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
 
 from nova.api.validation import parameter_types
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -35,15 +35,7 @@ from nova.i18n import _LE
 from nova import objects
 from nova import utils
 
-flavor_opts = [
-    cfg.StrOpt('default_flavor',
-               default='m1.small',
-               help='Default flavor to use for the EC2 API only. The Nova API '
-               'does not support a default flavor.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(flavor_opts)
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 

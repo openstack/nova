@@ -340,6 +340,16 @@ driver.  The standard nova filters and MyFilter are available to the
 FilterScheduler.  The RamFilter, ComputeFilter, and MyFilter are used by
 default when no filters are specified in the request.
 
+Each filter selects hosts in a different way and has different costs. The order of
+``scheduler_default_filters`` affects scheduling performance. The general suggestion
+is to filter out invalid hosts as soon as possible to avoid unnecessary costs.
+We can sort ``scheduler_default_filters`` items by their costs in reverse order.
+For example, ComputeFilter is better before any resource calculating filters
+like RamFilter, CoreFilter.
+
+In medium/large environments having AvailabilityZoneFilter before any capability or
+resource calculating filters can be useful.
+
 Weights
 -------
 
@@ -354,11 +364,12 @@ easily. Therefore the final weight for the object will be::
 
     weight = w1_multiplier * norm(w1) + w2_multiplier * norm(w2) + ...
 
-A weigher should be a subclass of ``weights.BaseHostWeigher`` and they must
-implement the ``weight_multiplier`` and ``weight_objects`` methods. If the
-``weight_objects`` method is overridden it just return a list of weights, and not
-modify the weight of the object directly, since final weights are normalized and
-computed by ``weight.BaseWeightHandler``.
+A weigher should be a subclass of ``weights.BaseHostWeigher`` and they can implement
+both the ``weight_multiplier`` and ``_weight_object`` methods or just implement the
+``weight_objects`` method. ``weight_objects`` method is overridden only if you need
+access to all objects in order to calculate weights, and it just return a list of weights,
+and not modify the weight of the object directly, since final weights are normalized
+and computed by ``weight.BaseWeightHandler``.
 
 The Filter Scheduler weighs hosts based on the config option
 `scheduler_weight_classes`, this defaults to
@@ -368,6 +379,9 @@ The Filter Scheduler weighs hosts based on the config option
   Sort with the largest weight winning. If the multiplier is negative, the
   host with least RAM available will win (useful for stacking hosts, instead
   of spreading).
+* |DiskWeigher| Hosts are weighted and sorted by free disk space with the largest
+  weight winning.  If the multiplier is negative, the host with less disk space available
+  will win (useful for stacking hosts, instead of spreading).
 * |MetricsWeigher| This weigher can compute the weight based on the compute node
   host's various metrics. The to-be weighed metrics and their weighing ratio
   are specified in the configuration file as the followings::
@@ -378,6 +392,19 @@ The Filter Scheduler weighs hosts based on the config option
   host's workload. The default is to preferably choose light workload compute
   hosts. If the multiplier is positive, the weigher prefer choosing heavy
   workload compute hosts, the weighing has the opposite effect of the default.
+
+* |ServerGroupSoftAffinityWeigher| The weigher can compute the weight based
+  on the number of instances that run on the same server group. The largest
+  weight defines the preferred host for the new instance. For the multiplier
+  only a positive value is meaningful for the calculation as a negative value
+  would mean that the affinity weigher would prefer non collocating placement.
+
+* |ServerGroupSoftAntiAffinityWeigher| The weigher can compute the weight based
+  on the number of instances that run on the same server group as a negative
+  value. The largest weight defines the preferred host for the new instance.
+  For the multiplier only a positive value is meaningful for the calculation as
+  a negative value would mean that the anti-affinity weigher would prefer
+  collocating placement.
 
 Filter Scheduler makes a local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,
@@ -429,3 +456,6 @@ in :mod:`nova.tests.scheduler`.
 .. |MetricsFilter| replace:: :class:`MetricsFilter <nova.scheduler.filters.metrics_filter.MetricsFilter>`
 .. |MetricsWeigher| replace:: :class:`MetricsWeigher <nova.scheduler.weights.metrics.MetricsWeigher>`
 .. |IoOpsWeigher| replace:: :class:`IoOpsWeigher <nova.scheduler.weights.io_ops.IoOpsWeigher>`
+.. |ServerGroupSoftAffinityWeigher| replace:: :class:`ServerGroupSoftAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAffinityWeigher>`
+.. |ServerGroupSoftAntiAffinityWeigher| replace:: :class:`ServerGroupSoftAntiAffinityWeigher <nova.scheduler.weights.affinity.ServerGroupSoftAntiAffinityWeigher>`
+.. |DiskWeigher| replace:: :class:`DiskWeigher <nova.scheduler.weights.disk.DiskWeigher>`

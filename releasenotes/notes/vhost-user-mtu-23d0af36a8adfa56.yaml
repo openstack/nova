@@ -1,0 +1,7 @@
+---
+fixes:
+  - When plugging virtual interfaces of type vhost-user the MTU value will
+    not be applied to the interface by nova. vhost-user ports exist only in
+    userspace and are not backed by kernel netdevs, for this reason it is
+    not possible to set the mtu on a vhost-user interface using standard
+    tools such as ifconfig or ip link.

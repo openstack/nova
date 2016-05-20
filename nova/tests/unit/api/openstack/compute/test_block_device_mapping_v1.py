@@ -22,14 +22,14 @@ from webob import exc
 from nova.api.openstack.compute import block_device_mapping_v1 \
         as block_device_mapping
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import extensions
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v2
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
+from nova import db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -54,7 +54,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
     def setUp(self):
         super(BlockDeviceMappingTestV21, self).setUp()
         self._setup_controller()
-        fake.stub_out_image_service(self.stubs)
+        fake.stub_out_image_service(self)
         self.volume_id = fakes.FAKE_UUID
         self.bdm = [{
             'no_device': None,
@@ -88,7 +88,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         req.method = 'POST'
         req.headers['content-type'] = 'application/json'
 
-        req.body = jsonutils.dumps(body)
+        req.body = jsonutils.dump_as_bytes(body)
 
         if override_controller:
             override_controller.create(req, body=body).obj['server']
@@ -117,7 +117,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.mox.StubOutWithMock(compute_api.API, '_validate_bdm')
         self.mox.StubOutWithMock(compute_api.API, '_get_bdm_image_metadata')
         volume = {
-            'id': 1,
+            'id': uuids.volume_id,
             'status': 'active',
             'volume_image_metadata':
                 {'test_key': 'test_value'}
@@ -242,10 +242,10 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(self.validation_error,
                           self._test_create, params)
 
-    def test_create_instance_with_invalid_size(self):
+    def _test_create_instance_with_size_error(self, size):
         bdm = [{'delete_on_termination': True,
                 'device_name': 'vda',
-                'volume_size': "hello world",
+                'volume_size': size,
                 'volume_id': '11111111-1111-1111-1111-111111111111'}]
         params = {'block_device_mapping': bdm}
         old_create = compute_api.API.create
@@ -257,6 +257,18 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self.assertRaises(self.validation_error,
                           self._test_create, params)
+
+    def test_create_instance_with_invalid_size(self):
+        self._test_create_instance_with_size_error("hello world")
+
+    def test_create_instance_with_size_empty_string(self):
+        self._test_create_instance_with_size_error('')
+
+    def test_create_instance_with_size_zero(self):
+        self._test_create_instance_with_size_error("0")
+
+    def test_create_instance_with_size_greater_than_limit(self):
+        self._test_create_instance_with_size_error(db.MAX_INT + 1)
 
     def test_create_instance_with_bdm_delete_on_termination(self):
         bdm = [{'device_name': 'foo1', 'volume_id': fakes.FAKE_UUID,
@@ -338,59 +350,3 @@ class BlockDeviceMappingTestV21(test.TestCase):
                   'block_device_mapping_v2': bdm_v2}
         self.assertRaises(exc.HTTPBadRequest, self._test_create, params,
                           override_controller=both_controllers)
-
-
-class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
-    validation_error = exc.HTTPBadRequest
-
-    def _setup_controller(self):
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {'os-volumes': 'fake'}
-        self.controller = servers_v2.Controller(self.ext_mgr)
-        self.ext_mgr_no_vols = extensions.ExtensionManager()
-        self.ext_mgr_no_vols.extensions = {}
-        self.no_volumes_controller = servers_v2.Controller(
-            self.ext_mgr_no_vols)
-
-    def test_create_instance_with_volumes_disabled(self):
-        bdm = [{'device_name': 'foo'}]
-        params = {'block_device_mapping': bdm}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertIsNone(kwargs['block_device_mapping'])
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create(params,
-                          override_controller=self.no_volumes_controller)
-
-    def test_create_instance_decide_format_legacy(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-volumes': 'fake',
-                              'os-block-device-mapping-v2-boot': 'fake'}
-        controller = servers_v2.Controller(self.ext_mgr)
-        bdm = [{'device_name': 'foo1',
-                'volume_id': fakes.FAKE_UUID,
-                'delete_on_termination': 1}]
-
-        expected_legacy_flag = True
-
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            legacy_bdm = kwargs.get('legacy_bdm', True)
-            self.assertEqual(legacy_bdm, expected_legacy_flag)
-            return old_create(*args, **kwargs)
-
-        def _validate_bdm(*args, **kwargs):
-            pass
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self.stubs.Set(compute_api.API, '_validate_bdm',
-                       _validate_bdm)
-
-        self._test_create({}, override_controller=controller)
-
-        params = {'block_device_mapping': bdm}
-        self._test_create(params, override_controller=controller)

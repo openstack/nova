@@ -706,6 +706,42 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
 
         self.assertEqual('unmap', obj.driver_discard)
 
+    def test_config_file_io(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.driver_name = "qemu"
+        obj.driver_format = "qcow2"
+        obj.driver_cache = "none"
+        obj.driver_io = "native"
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello.qcow2"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "ide"
+        obj.serial = "7a97c4a3-6f59-41d4-bf47-191d7f97f8e9"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+            <disk type="file" device="disk">
+              <driver name="qemu" type="qcow2" cache="none" io="native"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+            </disk>""", xml)
+
+    def test_config_file_io_parse(self):
+        xml = """
+            <disk type="file" device="disk">
+              <driver name="qemu" type="qcow2" cache="none" io="native"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+            </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual('native', obj.driver_io)
+
     def test_config_block(self):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "block"
@@ -1266,6 +1302,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </bandwidth>
             </interface>""")
 
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_driver_options(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "ethernet"
@@ -1283,6 +1325,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <driver name="vhost" queues="4"/>
               <target dev="vnet0"/>
             </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
 
     def test_config_bridge(self):
         obj = config.LibvirtConfigGuestInterface()
@@ -1316,6 +1364,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </bandwidth>
             </interface>""")
 
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_bridge_ovs(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "bridge"
@@ -1338,6 +1392,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </virtualport>
             </interface>""")
 
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_bridge_xen(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "bridge"
@@ -1352,6 +1412,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <source bridge="br0"/>
               <script path="/path/to/test-vif-openstack"/>
             </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
 
     def test_config_8021Qbh(self):
         obj = config.LibvirtConfigGuestInterface()
@@ -1372,6 +1438,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <virtualport type="802.1Qbh"/>
             </interface>""")
 
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_direct(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "direct"
@@ -1387,6 +1459,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <model type="virtio"/>
               <source dev="eth0" mode="passthrough"/>
             </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
 
     def test_config_8021Qbh_hostdev(self):
         obj = config.LibvirtConfigGuestInterface()
@@ -1409,6 +1487,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </virtualport>
             </interface>""")
 
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_hw_veb_hostdev(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "hostdev"
@@ -1429,6 +1513,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               </vlan>
             </interface>""")
 
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_vhostuser(self):
         obj = config.LibvirtConfigGuestInterface()
         obj.net_type = "vhostuser"
@@ -1444,6 +1534,12 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
               <model type="virtio"/>
               <source type="unix" mode="server" path="/vhost-user/test.sock"/>
             </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
 
 
 class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):
@@ -1790,6 +1886,30 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                   <target bus="virtio" dev="/dev/vda"/>
                 </disk>
               </devices>
+            </domain>""")
+
+    def test_config_uefi(self):
+        obj = config.LibvirtConfigGuest()
+        obj.virt_type = "kvm"
+        obj.memory = 100 * units.Mi
+        obj.vcpus = 1
+        obj.name = "uefi"
+        obj.uuid = "f01cf68d-515c-4daf-b85f-ef1424d93bfc"
+        obj.os_type = "x86_64"
+        obj.os_loader = '/tmp/OVMF_CODE.fd'
+        obj.os_loader_type = 'pflash'
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(xml, """
+            <domain type="kvm">
+              <uuid>f01cf68d-515c-4daf-b85f-ef1424d93bfc</uuid>
+              <name>uefi</name>
+              <memory>104857600</memory>
+              <vcpu>1</vcpu>
+              <os>
+                <type>x86_64</type>
+                <loader readonly='yes' type='pflash'>/tmp/OVMF_CODE.fd</loader>
+              </os>
             </domain>""")
 
     def test_config_boot_menu(self):

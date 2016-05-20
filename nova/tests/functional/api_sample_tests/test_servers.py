@@ -13,18 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
     extra_extensions_to_load = ["os-access-ips"]
+    microversion = None
 
     def _post_server(self, use_common_server_api_samples=True):
         # param use_common_server_api_samples: Boolean to set whether tests use
@@ -42,19 +40,31 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             'access_ip_v4': '1.2.3.4',
             'access_ip_v6': '80fe::'
         }
+        # TODO(gmann): Remove this hack once all tests using this common
+        # _post_server method are enabled with all extension.
+        # This is added to avoid all tests updates together.
+        post_req_template = 'server-post-req'
+        post_resp_template = 'server-post-resp'
+        if self.all_extensions and use_common_server_api_samples:
+            post_req_template = 'server-create-req'
+            post_resp_template = 'server-create-resp'
+
         orig_value = self.__class__._use_common_server_api_samples
         orig_sample_dir = self.__class__.sample_dir
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
-            response = self._do_post('servers', 'server-post-req', subs)
-            subs = self._get_regexes()
-            status = self._verify_response('server-post-resp', subs,
+            response = self._do_post('servers', post_req_template, subs)
+            status = self._verify_response(post_resp_template, subs,
                                            response, 202)
             return status
         finally:
             self.__class__._use_common_server_api_samples = orig_value
             self.__class__.sample_dir = orig_sample_dir
+
+    def setUp(self):
+        super(ServersSampleBase, self).setUp()
+        self.api.microversion = self.microversion
 
 
 class ServersSampleJsonTest(ServersSampleBase):
@@ -78,9 +88,8 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_get(self):
         uuid = self.test_servers_post()
-        response = self._do_get('servers/%s' % uuid,
-                                api_version=self.microversion)
-        subs = self._get_regexes()
+        response = self._do_get('servers/%s' % uuid)
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
@@ -91,17 +100,14 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_list(self):
         uuid = self._post_server()
-        response = self._do_get('servers',
-                                api_version=self.microversion)
-        subs = self._get_regexes()
-        subs['id'] = uuid
+        response = self._do_get('servers')
+        subs = {'id': uuid}
         self._verify_response('servers-list-resp', subs, response, 200)
 
     def test_servers_details(self):
-        uuid = self._post_server()
-        response = self._do_get('servers/detail',
-                                api_version=self.microversion)
-        subs = self._get_regexes()
+        uuid = self.test_servers_post()
+        response = self._do_get('servers/detail')
+        subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
@@ -119,6 +125,45 @@ class ServersSampleJson29Test(ServersSampleJsonTest):
     scenarios = [('v2_9', {'api_major_version': 'v2.1'})]
 
 
+class ServersSampleJson219Test(ServersSampleJsonTest):
+    microversion = '2.19'
+    sample_dir = 'servers'
+    scenarios = [('v2_19', {'api_major_version': 'v2.1'})]
+
+    def test_servers_post(self):
+        return self._post_server(False)
+
+    def test_servers_put(self):
+        uuid = self.test_servers_post()
+        response = self._do_put('servers/%s' % uuid, 'server-put-req', {})
+        subs = {
+            'image_id': fake.get_valid_image_id(),
+            'hostid': '[a-f0-9]+',
+            'glance_host': self._get_glance_host(),
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::'
+        }
+        self._verify_response('server-put-resp', subs, response, 200)
+
+
+class ServersUpdateSampleJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
+
+    def test_update_server(self):
+        uuid = self._post_server()
+        subs = {}
+        subs['hostid'] = '[a-f0-9]+'
+        subs['access_ip_v4'] = '1.2.3.4'
+        subs['access_ip_v6'] = '80fe::'
+        response = self._do_put('servers/%s' % uuid,
+                                'server-update-req', subs)
+        self._verify_response('server-update-resp', subs, response, 200)
+
+
 class ServerSortKeysJsonTests(ServersSampleBase):
     sample_dir = 'servers-sort'
 
@@ -133,8 +178,7 @@ class ServerSortKeysJsonTests(ServersSampleBase):
     def test_servers_list(self):
         self._post_server()
         response = self._do_get('servers?sort_key=display_name&sort_dir=asc')
-        subs = self._get_regexes()
-        self._verify_response('server-sort-keys-list-resp', subs, response,
+        self._verify_response('server-sort-keys-list-resp', {}, response,
                               200)
 
 
@@ -155,7 +199,6 @@ class ServersActionsJsonTest(ServersSampleBase):
                                  req_tpl,
                                  subs)
         if resp_tpl:
-            subs.update(self._get_regexes())
             self._verify_response(resp_tpl, subs, response, code)
         else:
             self.assertEqual(code, response.status_code)
@@ -176,10 +219,7 @@ class ServersActionsJsonTest(ServersSampleBase):
     def test_server_rebuild(self):
         uuid = self._post_server()
         image = fake.get_valid_image_id()
-        subs = {
-            'host': self._get_host(),
-            'compute_endpoint': self._get_compute_endpoint(),
-            'versioned_compute_endpoint': self._get_vers_compute_endpoint(),
+        params = {
             'uuid': image,
             'name': 'foobar',
             'pass': 'seekr3t',
@@ -188,17 +228,18 @@ class ServersActionsJsonTest(ServersSampleBase):
             'access_ip_v6': '80fe::',
         }
 
-        self._test_server_action(uuid, 'rebuild',
-                                 'server-action-rebuild',
-                                  subs,
-                                 'server-action-rebuild-resp')
+        resp = self._do_post('servers/%s/action' % uuid,
+                             'server-action-rebuild', params)
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
     def test_server_resize(self):
         self.flags(allow_resize_to_same_host=True)
         uuid = self._post_server()
         self._test_server_action(uuid, "resize",
                                  'server-action-resize',
-                                 {"id": 2,
+                                 {"id": '2',
                                   "host": self._get_host()})
         return uuid
 
@@ -218,6 +259,31 @@ class ServersActionsJsonTest(ServersSampleBase):
         self._test_server_action(uuid, 'createImage',
                                  'server-action-create-image',
                                  {'name': 'foo-image'})
+
+
+class ServersActionsJson219Test(ServersSampleBase):
+    microversion = '2.19'
+    sample_dir = 'servers'
+    scenarios = [('v2_19', {'api_major_version': 'v2.1'})]
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        image = fake.get_valid_image_id()
+        params = {
+            'uuid': image,
+            'name': 'foobar',
+            'description': 'description of foobar',
+            'pass': 'seekr3t',
+            'hostid': '[a-f0-9]+',
+            'access_ip_v4': '1.2.3.4',
+            'access_ip_v6': '80fe::',
+        }
+
+        resp = self._do_post('servers/%s/action' % uuid,
+                             'server-action-rebuild', params)
+        subs = params.copy()
+        del subs['uuid']
+        self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
 
 class ServersActionsAllJsonTest(ServersActionsJsonTest):
@@ -256,7 +322,6 @@ class ServerStartStopJsonTest(ServersSampleBase):
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     extra_extensions_to_load = ["os-access-ips"]
-    api_major_version = 'v2'
 
     def _get_flags(self):
         f = super(ServersSampleMultiStatusJsonTest, self)._get_flags()
@@ -269,6 +334,20 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
     def test_servers_list(self):
         uuid = self._post_server()
         response = self._do_get('servers?status=active&status=error')
-        subs = self._get_regexes()
-        subs['id'] = uuid
+        subs = {'id': uuid}
         self._verify_response('servers-list-resp', subs, response, 200)
+
+
+class ServerTriggerCrashDumpJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+    microversion = '2.17'
+    scenarios = [('v2_17', {'api_major_version': 'v2.1'})]
+
+    def test_trigger_crash_dump(self):
+        uuid = self._post_server()
+
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-trigger-crash-dump',
+                                 {})
+        self.assertEqual(response.status_code, 202)
+        self.assertEqual(response.content, "")

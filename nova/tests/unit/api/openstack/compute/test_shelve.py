@@ -14,24 +14,18 @@
 
 import uuid
 
+import mock
 from oslo_policy import policy as oslo_policy
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import shelve as shelve_v2
 from nova.api.openstack.compute import shelve as shelve_v21
 from nova.compute import api as compute_api
-from nova import db
 from nova import exception
+from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_instance
-
-
-def fake_instance_get_by_uuid(context, instance_id,
-                              columns_to_join=None, use_slave=False):
-    return fake_instance.fake_db_instance(
-        **{'name': 'fake', 'project_id': '%s_unequal' % context.project_id})
+from nova.tests import uuidsentinel
 
 
 class ShelvePolicyTestV21(test.NoDBTestCase):
@@ -51,8 +45,10 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.assertRaises(exception.Forbidden, self.controller._shelve,
                 self.req, str(uuid.uuid4()), {})
 
-    def test_shelve_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_shelve_locked_server(self, mock_instance_get):
+        instance = objects.Instance(uuid=uuidsentinel.instance1)
+        mock_instance_get.return_value = instance
         self.stubs.Set(compute_api.API, 'shelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
@@ -65,8 +61,10 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 self.req, str(uuid.uuid4()), {})
 
-    def test_unshelve_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_unshelve_locked_server(self, mock_instance_get):
+        instance = objects.Instance(uuid=uuidsentinel.instance1)
+        mock_instance_get.return_value = instance
         self.stubs.Set(compute_api.API, 'unshelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
@@ -81,48 +79,15 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
                 self.controller._shelve_offload, self.req,
                 str(uuid.uuid4()), {})
 
-    def test_shelve_offload_locked_server(self):
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_shelve_offload_locked_server(self, mock_instance_get):
+        instance = objects.Instance(uuid=uuidsentinel.instance1)
+        mock_instance_get.return_value = instance
         self.stubs.Set(compute_api.API, 'shelve_offload',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
                           self.req, str(uuid.uuid4()), {})
-
-
-class ShelvePolicyTestV2(ShelvePolicyTestV21):
-    plugin = shelve_v2
-    prefix = ''
-    offload = 'shelveOffload'
-
-    # These 3 cases are covered in ShelvePolicyEnforcementV21
-    def test_shelve_allowed(self):
-        rules = {'compute:get': '',
-                 'compute_extension:%sshelve' % self.prefix: ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.assertRaises(exception.Forbidden, self.controller._shelve,
-                self.req, str(uuid.uuid4()), {})
-
-    def test_unshelve_allowed(self):
-        rules = {'compute:get': '',
-                 'compute_extension:%sunshelve' % self.prefix: ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.assertRaises(exception.Forbidden, self.controller._unshelve,
-                self.req, str(uuid.uuid4()), {})
-
-    def test_shelve_offload_allowed(self):
-        rules = {'compute:get': '',
-                 'compute_extension:%s%s' % (self.prefix, self.offload): ''}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.assertRaises(exception.Forbidden,
-                self.controller._shelve_offload,
-                self.req,
-                str(uuid.uuid4()), {})
 
 
 class ShelvePolicyEnforcementV21(test.NoDBTestCase):

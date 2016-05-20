@@ -1,0 +1,55 @@
+# Copyright 2016 IBM Corp.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+#
+# This script is executed in the OpenStack CI *tempest-dsvm-lvm job.
+# It's used to configure which tempest tests actually get run.  You can find
+# the CI job configuration here:
+#
+# http://git.openstack.org/cgit/openstack-infra/project-config/tree/jenkins/jobs/lvm.yaml
+#
+
+# Construct a regex to use when limiting scope of tempest
+# to avoid features unsupported by Nova's LVM support.
+
+# Note that several tests are disabled by the use of tempest
+# feature toggles in devstack/lib/tempest for an lvm config,
+# so this regex is not entirely representative of what's excluded.
+
+# When adding entries to the regex, add a comment explaining why
+# since this list should not grow.
+
+r="^(?!.*"
+r="$r(?:.*\[.*\bslow\b.*\])"
+
+# NOTE(mriedem): resize of non-volume-backed lvm instances does not yet work
+# tempest.api.compute.admin.test_migrations.MigrationsAdminTest.test_list_migrations_in_flavor_resize_situation
+r="$r|(?:.*id\-1b512062\-8093\-438e\-b47a\-37d2f597cd64.*)"
+# tempest.api.compute.admin.test_migrations.MigrationsAdminTest.test_resize_server_revert_deleted_flavor
+r="$r|(?:.*id\-33f1fec3\-ba18\-4470\-8e4e\-1d888e7c3593.*)"
+# tempest.api.compute.servers.test_delete_server.DeleteServersTestJSON.test_delete_server_while_in_verify_resize_state
+r="$r|(?:.*id\-ab0c38b4\-cdd8\-49d3\-9b92\-0cb898723c01.*)"
+# tempest.api.compute.servers.test_disk_config.ServerDiskConfigTestJSON.test_resize_server_from_auto_to_manual
+r="$r|(?:.*id\-693d16f3\-556c\-489a\-8bac\-3d0ca2490bad.*)"
+# tempest.api.compute.servers.test_disk_config.ServerDiskConfigTestJSON.test_resize_server_from_manual_to_auto
+r="$r|(?:.*id\-414e7e93\-45b5\-44bc\-8e03\-55159c6bfc97.*)"
+# tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_resize_server_confirm
+r="$r|(?:.*id\-1499262a\-9328\-4eda\-9068\-db1ac57498d2.*)"
+# tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_resize_server_confirm_from_stopped
+r="$r|(?:.*id\-138b131d\-66df\-48c9\-a171\-64f45eb92962.*)"
+# tempest.api.compute.servers.test_server_actions.ServerActionsTestJSON.test_resize_server_revert
+r="$r|(?:.*id\-c03aab19\-adb1\-44f5\-917d\-c419577e9e68.*)"
+r="$r).*$"
+
+export DEVSTACK_GATE_TEMPEST_REGEX="$r"

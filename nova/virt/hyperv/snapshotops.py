@@ -20,17 +20,15 @@ import os
 
 from os_win import exceptions as os_win_exc
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import task_states
 from nova import exception
-from nova.i18n import _LW
+from nova.i18n import _LE
 from nova.image import glance
 from nova import utils
 from nova.virt.hyperv import pathutils
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -60,7 +58,7 @@ class SnapshotOps(object):
         try:
             instance_synchronized_snapshot()
         except os_win_exc.HyperVVMNotFoundException:
-            # the instance might dissapear before starting the operation.
+            # the instance might disappear before starting the operation.
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def _snapshot(self, context, instance, image_id, update_task_state):
@@ -129,10 +127,9 @@ class SnapshotOps(object):
             try:
                 LOG.debug("Removing snapshot %s", image_id)
                 self._vmutils.remove_vm_snapshot(snapshot_path)
-            except Exception as ex:
-                LOG.exception(ex)
-                LOG.warning(_LW('Failed to remove snapshot for VM %s'),
-                            instance_name)
+            except Exception:
+                LOG.exception(_LE('Failed to remove snapshot for VM %s'),
+                              instance_name, instance=instance)
             if export_dir:
                 LOG.debug('Removing directory: %s', export_dir)
                 self._pathutils.rmtree(export_dir)

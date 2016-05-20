@@ -21,15 +21,12 @@ Chance (Random) Scheduler implementation
 
 import random
 
-from oslo_config import cfg
-
+import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.scheduler import driver
 
-CONF = cfg.CONF
-CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
+CONF = nova.conf.CONF
 
 
 class ChanceScheduler(driver.Scheduler):
@@ -58,14 +55,8 @@ class ChanceScheduler(driver.Scheduler):
 
         return random.choice(hosts)
 
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj):
         """Selects random destinations."""
-        # TODO(sbauza): Change the select_destinations method to accept a
-        # RequestSpec object directly (and add a new RPC API method for passing
-        # a RequestSpec object over the wire)
-        spec_obj = objects.RequestSpec.from_primitives(context,
-                                                       request_spec,
-                                                       filter_properties)
         num_instances = spec_obj.num_instances
         # NOTE(timello): Returns a list of dicts with 'host', 'nodename' and
         # 'limits' as keys for compatibility with filter_scheduler.

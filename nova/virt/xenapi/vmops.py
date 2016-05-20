@@ -22,9 +22,9 @@ import functools
 import time
 import zlib
 
+import eventlet
 from eventlet import greenthread
 import netaddr
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -41,11 +41,13 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
+import nova.conf
 from nova.console import type as ctype
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
+from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
@@ -60,23 +62,8 @@ from nova.virt.xenapi import volumeops
 
 LOG = logging.getLogger(__name__)
 
-xenapi_vmops_opts = [
-    cfg.IntOpt('running_timeout',
-               default=60,
-               help='Number of seconds to wait for instance '
-                    'to go to running state'),
-    cfg.StrOpt('vif_driver',
-               default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-               help='The XenAPI VIF driver using XenServer Network APIs.'),
-    cfg.StrOpt('image_upload_handler',
-                default='nova.virt.xenapi.image.glance.GlanceStore',
-               help='Dom0 plugin driver used to handle image uploads.'),
-    ]
 
-CONF = cfg.CONF
-CONF.register_opts(xenapi_vmops_opts, 'xenserver')
-CONF.import_opt('host', 'nova.netconf')
-CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc', group='vnc')
+CONF = nova.conf.CONF
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     firewall.__name__,
@@ -156,7 +143,6 @@ class VMOps(object):
         self._volumeops = volumeops.VolumeOps(self._session)
         self.firewall_driver = firewall.load_driver(
             DEFAULT_FIREWALL_DRIVER,
-            self._virtapi,
             xenapi_session=self._session)
         vif_impl = importutils.import_class(CONF.xenserver.vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
@@ -321,7 +307,8 @@ class VMOps(object):
                     rescue=False, power_on=power_on, resize=resize_instance,
                     completed_callback=completed_callback)
 
-    def _start(self, instance, vm_ref=None, bad_volumes_callback=None):
+    def _start(self, instance, vm_ref=None, bad_volumes_callback=None,
+               start_pause=False):
         """Power on a VM instance."""
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
         LOG.debug("Starting instance", instance=instance)
@@ -339,7 +326,7 @@ class VMOps(object):
 
         self._session.call_xenapi('VM.start_on', vm_ref,
                                   self._session.host_ref,
-                                  False, False)
+                                  start_pause, False)
 
         # Allow higher-layers a chance to detach bad-volumes as well (in order
         # to cleanup BDM entries and detach in Cinder)
@@ -548,14 +535,13 @@ class VMOps(object):
             self._prepare_instance_filter(instance, network_info)
 
         @step
-        def boot_instance_step(undo_mgr, vm_ref):
+        def start_paused_step(undo_mgr, vm_ref):
             if power_on:
-                self._start(instance, vm_ref)
-                self._wait_for_instance_to_start(instance, vm_ref)
-                self._update_last_dom_id(vm_ref)
+                self._start(instance, vm_ref, start_pause=True)
 
         @step
-        def configure_booted_instance_step(undo_mgr, vm_ref):
+        def boot_and_configure_instance_step(undo_mgr, vm_ref):
+            self._unpause_and_wait(vm_ref, instance, power_on)
             if first_boot:
                 self._configure_new_instance_with_agent(instance, vm_ref,
                         injected_files, admin_password)
@@ -583,21 +569,66 @@ class VMOps(object):
             attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type)
 
             inject_instance_data_step(undo_mgr, vm_ref, vdis)
-            setup_network_step(undo_mgr, vm_ref)
 
-            if rescue:
-                attach_orig_disks_step(undo_mgr, vm_ref)
+            # if use neutron, prepare waiting event from neutron
+            # first_boot is True in new booted instance
+            # first_boot is False in migration and we don't waiting
+            # for neutron event regardless of whether or not it is
+            # migrated to another host, if unplug VIFs locally, the
+            # port status may not changed in neutron side and we
+            # cannot get the vif plug event from neturon
+            timeout = CONF.vif_plugging_timeout
+            events = self._get_neutron_events(network_info,
+                                              power_on, first_boot)
+            try:
+                with self._virtapi.wait_for_instance_event(
+                    instance, events, deadline=timeout,
+                    error_callback=self._neutron_failed_callback):
+                    LOG.debug("wait for instance event:%s", events)
+                    setup_network_step(undo_mgr, vm_ref)
+                    if rescue:
+                        attach_orig_disks_step(undo_mgr, vm_ref)
+                    start_paused_step(undo_mgr, vm_ref)
+            except eventlet.timeout.Timeout:
+                self._handle_neutron_event_timeout(instance, undo_mgr)
 
-            boot_instance_step(undo_mgr, vm_ref)
-
-            configure_booted_instance_step(undo_mgr, vm_ref)
             apply_security_group_filters_step(undo_mgr)
-
+            boot_and_configure_instance_step(undo_mgr, vm_ref)
             if completed_callback:
                 completed_callback()
         except Exception:
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
+
+    def _handle_neutron_event_timeout(self, instance, undo_mgr):
+        # We didn't get callback from Neutron within given time
+        LOG.warn(_LW('Timeout waiting for vif plugging callback'),
+                 instance=instance)
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfaceCreateException()
+
+    def _unpause_and_wait(self, vm_ref, instance, power_on):
+        if power_on:
+            LOG.debug("Update instance when power on", instance=instance)
+            self._session.VM.unpause(vm_ref)
+            self._wait_for_instance_to_start(instance, vm_ref)
+            self._update_last_dom_id(vm_ref)
+
+    def _neutron_failed_callback(self, event_name, instance):
+        LOG.warn(_LW('Neutron Reported failure on event %(event)s'),
+                {'event': event_name}, instance=instance)
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfaceCreateException()
+
+    def _get_neutron_events(self, network_info, power_on, first_boot):
+        # Only get network-vif-plugged events with VIF's status is not active.
+        # With VIF whose status is active, neutron may not notify such event.
+        timeout = CONF.vif_plugging_timeout
+        if (utils.is_neutron() and power_on and timeout and first_boot):
+            return [('network-vif-plugged', vif['id'])
+                for vif in network_info if vif.get('active', True) is False]
+        else:
+            return []
 
     def _attach_orig_disks(self, instance, vm_ref):
         orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
@@ -1531,14 +1562,23 @@ class VMOps(object):
                 return
             for bdm in bdms:
                 volume_id = bdm['connection_info']['data']['volume_id']
+                # Note(bobba): Check for the old-style SR first; if this
+                # doesn't find the SR, also look for the new-style from
+                # parse_sr_info
                 sr_uuid = 'FA15E-D15C-%s' % volume_id
                 sr_ref = None
                 try:
                     sr_ref = volume_utils.find_sr_by_uuid(self._session,
-                            sr_uuid)
+                                                          sr_uuid)
+                    if not sr_ref:
+                        connection_data = bdm['connection_info']['data']
+                        (sr_uuid, _, _) = volume_utils.parse_sr_info(
+                            connection_data)
+                        sr_ref = volume_utils.find_sr_by_uuid(self._session,
+                                                              sr_uuid)
                 except Exception:
                     LOG.exception(_LE('Failed to find an SR for volume %s'),
-                            volume_id, instance=instance)
+                                  volume_id, instance=instance)
 
                 try:
                     if sr_ref:
@@ -1567,11 +1607,10 @@ class VMOps(object):
             self._destroy_vdis(instance, vm_ref)
             self._destroy_kernel_ramdisk(instance, vm_ref)
 
-        vm_utils.destroy_vm(self._session, instance, vm_ref)
-
-        self.unplug_vifs(instance, network_info)
+        self.unplug_vifs(instance, network_info, vm_ref)
         self.firewall_driver.unfilter_instance(
                 instance, network_info=network_info)
+        vm_utils.destroy_vm(self._session, instance, vm_ref)
 
     def pause(self, instance):
         """Pause VM instance."""
@@ -1699,7 +1738,7 @@ class VMOps(object):
 
         if instances_info["instance_count"] > 0:
             LOG.info(_LI("Found %(instance_count)d hung reboots "
-                         "older than %(timeout)d seconds") % instances_info)
+                         "older than %(timeout)d seconds"), instances_info)
 
         for instance in instances:
             LOG.info(_LI("Automatically hard rebooting"), instance=instance)
@@ -1759,8 +1798,7 @@ class VMOps(object):
                     'get_console_log', {'dom_id': dom_id})
         except self._session.XenAPI.Failure:
             LOG.exception(_LE("Guest does not have a console available"))
-            msg = _("Guest does not have a console available")
-            raise exception.NovaException(msg)
+            raise exception.ConsoleNotAvailable()
 
         return zlib.decompress(base64.b64decode(raw_console_data))
 
@@ -1887,25 +1925,18 @@ class VMOps(object):
         self._session.call_xenapi("VM.get_domid", vm_ref)
 
         for device, vif in enumerate(network_info):
-            vif_rec = self.vif_driver.plug(instance, vif,
-                                           vm_ref=vm_ref, device=device)
-            network_ref = vif_rec['network']
-            LOG.debug('Creating VIF for network %s',
-                      network_ref, instance=instance)
-            vif_ref = self._session.call_xenapi('VIF.create', vif_rec)
-            LOG.debug('Created VIF %(vif_ref)s, network %(network_ref)s',
-                      {'vif_ref': vif_ref, 'network_ref': network_ref},
-                      instance=instance)
+            LOG.debug('Create VIF %s', vif, instance=instance)
+            self.vif_driver.plug(instance, vif, vm_ref=vm_ref, device=device)
 
     def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
         for device, vif in enumerate(network_info):
             self.vif_driver.plug(instance, vif, device=device)
 
-    def unplug_vifs(self, instance, network_info):
+    def unplug_vifs(self, instance, network_info, vm_ref):
         if network_info:
             for vif in network_info:
-                self.vif_driver.unplug(instance, vif)
+                self.vif_driver.unplug(instance, vif, vm_ref)
 
     def reset_network(self, instance, rescue=False):
         """Calls resetnetwork method in agent."""
@@ -2048,25 +2079,23 @@ class VMOps(object):
         """recreates security group rules for specified instance."""
         self.firewall_driver.refresh_instance_security_rules(instance)
 
-    def refresh_provider_fw_rules(self):
-        self.firewall_driver.refresh_provider_fw_rules()
-
     def unfilter_instance(self, instance_ref, network_info):
         """Removes filters for each VIF of the specified instance."""
         self.firewall_driver.unfilter_instance(instance_ref,
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = objects.AggregateList.get_by_host(
-            context, CONF.host, key=pool_states.POOL_FLAG)[0]
-        if not current_aggregate:
-            raise exception.AggregateHostNotFound(host=CONF.host)
-        try:
-            return current_aggregate.metadata[hostname]
-        except KeyError:
-            reason = _('Destination host:%s must be in the same '
-                       'aggregate as the source server') % hostname
+        aggregate_list = objects.AggregateList.get_by_host(
+            context, CONF.host, key=pool_states.POOL_FLAG)
+
+        reason = _('Destination host:%s must be in the same '
+                   'aggregate as the source server') % hostname
+        if len(aggregate_list) == 0:
             raise exception.MigrationPreCheckError(reason=reason)
+        if hostname not in aggregate_list[0].metadata:
+            raise exception.MigrationPreCheckError(reason=reason)
+
+        return aggregate_list[0].metadata[hostname]
 
     def _ensure_host_in_aggregate(self, context, hostname):
         self._get_host_uuid_from_aggregate(context, hostname)
@@ -2131,19 +2160,36 @@ class VMOps(object):
         :param ctxt: security context
         :param instance_ref: nova.db.sqlalchemy.models.Instance object
         :param block_migration: if true, prepare for block migration
+                                if None, calculate it from driver
         :param disk_over_commit: if true, allow disk over commit
 
         """
-        dest_check_data = {}
-        if block_migration:
-            migrate_send_data = self._migrate_receive(ctxt)
-            destination_sr_ref = vm_utils.safe_find_sr(self._session)
-            dest_check_data.update(
-                {"block_migration": block_migration,
-                 "migrate_data": {"migrate_send_data": migrate_send_data,
-                                  "destination_sr_ref": destination_sr_ref}})
-        else:
+        dest_check_data = objects.XenapiLiveMigrateData()
+
+        # Notes(eliqiao): if block_migration is None, we calculate it
+        # by checking if src and dest node are in same aggregate
+        if block_migration is None:
             src = instance_ref['host']
+            try:
+                self._ensure_host_in_aggregate(ctxt, src)
+            except exception.MigrationPreCheckError:
+                block_migration = True
+            else:
+                sr_ref = vm_utils.safe_find_sr(self._session)
+                sr_rec = self._session.get_rec('SR', sr_ref)
+                block_migration = not sr_rec["shared"]
+
+        if block_migration:
+            dest_check_data.block_migration = True
+            dest_check_data.migrate_send_data = self._migrate_receive(ctxt)
+            dest_check_data.destination_sr_ref = vm_utils.safe_find_sr(
+                self._session)
+        else:
+            dest_check_data.block_migration = False
+            src = instance_ref['host']
+            # TODO(eilqiao): There is still one case that block_migration is
+            # passed from admin user, so we need this check until
+            # block_migration flag is removed from API
             self._ensure_host_in_aggregate(ctxt, src)
             # TODO(johngarbutt) we currently assume
             # instance is on a SR shared with other destination
@@ -2181,12 +2227,17 @@ class VMOps(object):
                 raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
 
-        if 'migrate_data' in dest_check_data:
+        if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
+            obj = objects.XenapiLiveMigrateData()
+            obj.from_legacy_dict(dest_check_data)
+            dest_check_data = obj
+
+        if ('block_migration' in dest_check_data and
+                dest_check_data.block_migration):
             vm_ref = self._get_vm_opaque_ref(instance_ref)
-            migrate_data = dest_check_data['migrate_data']
             try:
                 self._call_live_migrate_command(
-                    "VM.assert_can_migrate", vm_ref, migrate_data)
+                    "VM.assert_can_migrate", vm_ref, dest_check_data)
             except self._session.XenAPI.Failure as exc:
                 reason = exc.details[0]
                 msg = _('assert_can_migrate failed because: %s') % reason
@@ -2270,16 +2321,26 @@ class VMOps(object):
 
     def _call_live_migrate_command(self, command_name, vm_ref, migrate_data):
         """unpack xapi specific parameters, and call a live migrate command."""
-        destination_sr_ref = migrate_data['destination_sr_ref']
-        migrate_send_data = migrate_data['migrate_send_data']
+        # NOTE(coreywright): though a nullable object field, migrate_send_data
+        # is required for XenAPI live migration commands
+        migrate_send_data = None
+        if 'migrate_send_data' in migrate_data:
+            migrate_send_data = migrate_data.migrate_send_data
+        if not migrate_send_data:
+            raise exception.InvalidParameterValue(
+                'XenAPI requires destination migration data')
+        # NOTE(coreywright): convert to xmlrpc marshallable type
+        migrate_send_data = dict(migrate_send_data)
 
+        destination_sr_ref = migrate_data.destination_sr_ref
         vdi_map = self._generate_vdi_map(destination_sr_ref, vm_ref)
 
         # Add destination SR refs for all of the VDIs that we created
         # as part of the pre migration callback
-        if 'pre_live_migration_result' in migrate_data:
-            pre_migrate_data = migrate_data['pre_live_migration_result']
-            sr_uuid_map = pre_migrate_data.get('sr_uuid_map', [])
+        sr_uuid_map = None
+        if "sr_uuid_map" in migrate_data:
+            sr_uuid_map = migrate_data.sr_uuid_map
+        if sr_uuid_map:
             for sr_uuid in sr_uuid_map:
                 # Source and destination SRs have the same UUID, so get the
                 # reference for the local SR
@@ -2292,6 +2353,16 @@ class VMOps(object):
         self._session.call_xenapi(command_name, vm_ref,
                                   migrate_send_data, True,
                                   vdi_map, vif_map, options)
+
+    def pre_live_migration(self, context, instance, block_device_info,
+                           network_info, disk_info, migrate_data):
+        if migrate_data is None:
+            raise exception.InvalidParameterValue(
+                    'XenAPI requires migrate data')
+
+        migrate_data.sr_uuid_map = self.connect_block_device_volumes(
+                block_device_info)
+        return migrate_data
 
     def live_migrate(self, context, instance, destination_hostname,
                      post_method, recover_method, block_migration,
@@ -2313,14 +2384,10 @@ class VMOps(object):
             if migrate_data is not None:
                 (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(
                     self._session, vm_ref)
-                migrate_data['kernel-file'] = kernel
-                migrate_data['ramdisk-file'] = ramdisk
+                migrate_data.kernel_file = kernel
+                migrate_data.ramdisk_file = ramdisk
 
-            if block_migration:
-                if not migrate_data:
-                    raise exception.InvalidParameterValue('Block Migration '
-                                    'requires migrate data from destination')
-
+            if migrate_data is not None and migrate_data.block_migration:
                 iscsi_srs = self._get_iscsi_srs(context, instance)
                 try:
                     self._call_live_migrate_command(
@@ -2348,8 +2415,8 @@ class VMOps(object):
     def post_live_migration(self, context, instance, migrate_data=None):
         if migrate_data is not None:
             vm_utils.destroy_kernel_ramdisk(self._session, instance,
-                                            migrate_data.get('kernel-file'),
-                                            migrate_data.get('ramdisk-file'))
+                                            migrate_data.kernel_file,
+                                            migrate_data.ramdisk_file)
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info, block_migration,
@@ -2417,7 +2484,7 @@ class VMOps(object):
         except Exception:
             with excutils.save_and_reraise_exception():
                 # Disconnect the volumes we just connected
-                for sr in sr_uuid_map:
-                    volume_utils.forget_sr(self._session, sr_uuid_map[sr_ref])
+                for sr_ref in six.itervalues(sr_uuid_map):
+                    volume_utils.forget_sr(self._session, sr_ref)
 
         return sr_uuid_map

@@ -47,9 +47,8 @@ class SchedulerClient(object):
             'nova.scheduler.client.report.SchedulerReportClient'))
 
     @utils.retry_select_destinations
-    def select_destinations(self, context, request_spec, filter_properties):
-        return self.queryclient.select_destinations(
-            context, request_spec, filter_properties)
+    def select_destinations(self, context, spec_obj):
+        return self.queryclient.select_destinations(context, spec_obj)
 
     def update_aggregates(self, context, aggregates):
         self.queryclient.update_aggregates(context, aggregates)

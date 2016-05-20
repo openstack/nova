@@ -92,6 +92,9 @@ vrouter-port-control: CommandFilter, vrouter-port-control, root
 # nova/virt/libvirt/vif.py: 'ebrctl', ...
 ebrctl: CommandFilter, ebrctl, root
 
+# nova/virt/libvirt/vif.py: 'mm-ctl', ...
+mm-ctl: CommandFilter, mm-ctl, root
+
 # nova/network/linux_net.py: 'ovs-ofctl', ....
 ovs-ofctl: CommandFilter, ovs-ofctl, root
 
@@ -203,7 +206,6 @@ multipath: CommandFilter, multipath, root
 # multipathd show status
 multipathd: CommandFilter, multipathd, root
 systool: CommandFilter, systool, root
-sginfo: CommandFilter, sginfo, root
 vgc-cluster: CommandFilter, vgc-cluster, root
 # os_brick/initiator/connector.py
 drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, root, /opt/emc/scaleio/sdc/bin/drv_cfg, --query_guid
@@ -212,6 +214,10 @@ drv_cfg: CommandFilter, /opt/emc/scaleio/sdc/bin/drv_cfg, root, /opt/emc/scaleio
 # Need to pull in os-brick os-brick.filters file instead and clean
 # out stale brick values from this file.
 scsi_id: CommandFilter, /lib/udev/scsi_id, root
+# os_brick.privileged.default oslo.privsep context
+# This line ties the superuser privs with the config files, context name,
+# and (implicitly) the actual python code invoked.
+privsep-rootwrap: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, os_brick.privileged.default, --privsep_sock_path, /tmp/.*
 
 # nova/storage/linuxscsi.py: sg_scan device
 sg_scan: CommandFilter, sg_scan, root
@@ -244,3 +250,6 @@ ploop: CommandFilter, ploop, root
 
 # nova/virt/libvirt/utils.py: 'xend', 'status'
 xend: CommandFilter, xend, root
+
+# nova/virt/libvirt/utils.py:
+touch: CommandFilter, touch, root

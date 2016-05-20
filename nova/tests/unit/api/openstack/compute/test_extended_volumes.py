@@ -21,7 +21,6 @@ from nova.api.openstack.compute import (extended_volumes
                                                    as extended_volumes_v21)
 from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
-from nova import db
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
@@ -96,15 +95,15 @@ class ExtendedVolumesTestV21(test.TestCase):
 
     def setUp(self):
         super(ExtendedVolumesTestV21, self).setUp()
-        fakes.stub_out_nw_api(self.stubs)
+        fakes.stub_out_nw_api(self)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance_uuids',
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
                        fake_bdms_get_all_by_instance_uuids)
         self._setUp()
         self.app = self._setup_app()
         return_server = fakes.fake_instance_get()
-        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.instance_get_by_uuid', return_server)
 
     def _setup_app(self):
         return fakes.wsgi_app_v21(init_only=('os-extended-volumes',
@@ -120,7 +119,7 @@ class ExtendedVolumesTestV21(test.TestCase):
         req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
                        self.wsgi_api_version}
         if body:
-            req.body = jsonutils.dumps(body)
+            req.body = jsonutils.dump_as_bytes(body)
             req.method = 'POST'
         req.content_type = self.content_type
         res = req.get_response(self.app)

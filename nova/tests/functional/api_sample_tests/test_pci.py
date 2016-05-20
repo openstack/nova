@@ -18,7 +18,6 @@ import mock
 from oslo_serialization import jsonutils
 import testtools
 
-from nova import db
 from nova import objects
 from nova.objects import fields
 from nova.objects import pci_device_pool
@@ -77,15 +76,13 @@ class ExtendedServerPciSampleJsonTest(test_servers.ServersSampleBase):
     def test_show(self):
         uuid = self._post_server()
         response = self._do_get('servers/%s' % uuid)
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
+        subs = {'hostid': '[a-f0-9]+'}
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_detail(self):
         self._post_server()
         response = self._do_get('servers/detail')
-        subs = self._get_regexes()
-        subs['hostid'] = '[a-f0-9]+'
+        subs = {'hostid': '[a-f0-9]+'}
         self._verify_response('servers-detail-resp', subs, response, 200)
 
 
@@ -154,7 +151,6 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs = {
             'hypervisor_id': hypervisor_id,
         }
-        subs.update(self._get_regexes())
         self._verify_response('hypervisors-pci-show-resp',
                               subs, response, 200)
 
@@ -170,7 +166,6 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         }
         response = self._do_get('os-hypervisors/detail')
 
-        subs.update(self._get_regexes())
         self._verify_response('hypervisors-pci-detail-resp',
                               subs, response, 200)
 
@@ -189,22 +184,19 @@ class PciSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         return [fake_db_dev_1, fake_db_dev_2]
 
     def test_pci_show(self):
-        self.stubs.Set(db, 'pci_device_get_by_id',
-                       self._fake_pci_device_get_by_id)
+        self.stub_out('nova.db.pci_device_get_by_id',
+                      self._fake_pci_device_get_by_id)
         response = self._do_get('os-pci/1')
-        subs = self._get_regexes()
-        self._verify_response('pci-show-resp', subs, response, 200)
+        self._verify_response('pci-show-resp', {}, response, 200)
 
     def test_pci_index(self):
-        self.stubs.Set(db, 'pci_device_get_all_by_node',
-                       self._fake_pci_device_get_all_by_node)
+        self.stub_out('nova.db.pci_device_get_all_by_node',
+                      self._fake_pci_device_get_all_by_node)
         response = self._do_get('os-pci')
-        subs = self._get_regexes()
-        self._verify_response('pci-index-resp', subs, response, 200)
+        self._verify_response('pci-index-resp', {}, response, 200)
 
     def test_pci_detail(self):
-        self.stubs.Set(db, 'pci_device_get_all_by_node',
-                       self._fake_pci_device_get_all_by_node)
+        self.stub_out('nova.db.pci_device_get_all_by_node',
+                      self._fake_pci_device_get_all_by_node)
         response = self._do_get('os-pci/detail')
-        subs = self._get_regexes()
-        self._verify_response('pci-detail-resp', subs, response, 200)
+        self._verify_response('pci-detail-resp', {}, response, 200)

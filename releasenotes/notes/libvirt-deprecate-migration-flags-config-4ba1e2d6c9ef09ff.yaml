@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    The libvirt live_migration_flag and block_migration_flag
+    config options are deprecated. These options gave too
+    fine grained control over the flags used and, in some
+    cases, misconfigurations could have dangerous side
+    effects. Please note the availability of a new
+    live_migration_tunnelled configuration option.

@@ -1,0 +1,14 @@
+---
+upgrade:
+  - Flavors are being moved to the API database for CellsV2. In this
+    release, the online data migrations will move any flavors you have
+    in your main database to the API database, retaining all
+    attributes. Until this is complete, new attempts to create flavors
+    will return an HTTP 409 to avoid creating flavors in one place that
+    may conflict with flavors you already have and are yet to be
+    migrated.
+  - Note that flavors can no longer be soft-deleted as the API
+    database does not replicate the legacy soft-delete functionality
+    from the main database. As such, deleted flavors are not migrated
+    and the behavior users will experience will be the same as if a
+    purge of deleted records was performed.

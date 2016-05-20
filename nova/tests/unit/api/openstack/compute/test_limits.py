@@ -22,6 +22,7 @@ from six.moves import StringIO
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import six
 from six.moves import range
 import webob
@@ -677,7 +678,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
             request = webob.Request.blank("/")
 
         request.method = "POST"
-        request.body = self._request_data(verb, url)
+        request.body = encodeutils.safe_encode(self._request_data(verb, url))
         response = request.get_response(self.app)
 
         if "X-Wait-Seconds" in response.headers:
@@ -754,7 +755,7 @@ class FakeHttplibConnection(object):
         req.method = method
         req.headers = headers
         req.host = self.host
-        req.body = body
+        req.body = encodeutils.safe_encode(body)
 
         resp = str(req.get_response(self.app))
         resp = "HTTP/1.0 %s" % resp

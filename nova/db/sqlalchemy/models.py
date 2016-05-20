@@ -72,14 +72,6 @@ class NovaBase(models.TimestampMixin,
         session.expunge(copy)
         return copy
 
-    def save(self, session=None):
-        from nova.db.sqlalchemy import api
-
-        if session is None:
-            session = api.get_session()
-
-        super(NovaBase, self).save(session=session)
-
 
 class Service(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a running service on a host."""
@@ -103,6 +95,15 @@ class Service(BASE, NovaBase, models.SoftDeleteMixin):
     forced_down = Column(Boolean, default=False)
     version = Column(Integer, default=0)
 
+    instance = orm.relationship(
+        "Instance",
+        backref='services',
+        primaryjoin='and_(Service.host == Instance.host,'
+                    'Service.binary == "nova-compute",'
+                    'Instance.deleted == 0)',
+        foreign_keys=host,
+    )
+
 
 class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a running compute service on a host."""
@@ -122,6 +123,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     # This field has to be set non-nullable in a later cycle (probably Lxxx)
     # once we are sure that all compute nodes in production report it.
     host = Column(String(255), nullable=True)
+    uuid = Column(String(36), nullable=True)
     vcpus = Column(Integer, nullable=False)
     memory_mb = Column(Integer, nullable=False)
     local_gb = Column(Integer, nullable=False)
@@ -157,7 +159,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     metrics = Column(Text)
 
     # Note(yongli): json string PCI Stats
-    # '{"vendor_id":"8086", "product_id":"1234", "count":3 }'
+    # '[{"vendor_id":"8086", "product_id":"1234", "count":3 }, ...]'
     pci_stats = Column(Text)
 
     # extra_resources is a json string containing arbitrary
@@ -174,6 +176,7 @@ class ComputeNode(BASE, NovaBase, models.SoftDeleteMixin):
     # allocation ratios provided by the RT
     ram_allocation_ratio = Column(Float, nullable=True)
     cpu_allocation_ratio = Column(Float, nullable=True)
+    disk_allocation_ratio = Column(Float, nullable=True)
 
 
 class Certificate(BASE, NovaBase, models.SoftDeleteMixin):
@@ -209,6 +212,8 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
               'host', 'node', 'deleted'),
         Index('instances_host_deleted_cleaned_idx',
               'host', 'deleted', 'cleaned'),
+        Index('instances_deleted_created_at_idx',
+              'deleted', 'created_at'),
         schema.UniqueConstraint('uuid', name='uniq_instances0uuid'),
     )
     injected_files = []
@@ -371,6 +376,7 @@ class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
     flavor = orm.deferred(Column(Text))
     vcpu_model = orm.deferred(Column(Text))
     migration_context = orm.deferred(Column(Text))
+    keypairs = orm.deferred(Column(Text))
     instance = orm.relationship(Instance,
                             backref=orm.backref('extra',
                                                 uselist=False),
@@ -609,6 +615,8 @@ class BlockDeviceMapping(BASE, NovaBase, models.SoftDeleteMixin):
 
     connection_info = Column(MediumText())
 
+    tag = Column(String(255))
+
 
 class SecurityGroupInstanceAssociation(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'security_group_instance_association'
@@ -749,6 +757,12 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
                                  'evacuation'),
                             nullable=True)
     hidden = Column(Boolean, default=False)
+    memory_total = Column(BigInteger, nullable=True)
+    memory_processed = Column(BigInteger, nullable=True)
+    memory_remaining = Column(BigInteger, nullable=True)
+    disk_total = Column(BigInteger, nullable=True)
+    disk_processed = Column(BigInteger, nullable=True)
+    disk_remaining = Column(BigInteger, nullable=True)
 
     instance = orm.relationship("Instance", foreign_keys=instance_uuid,
                             primaryjoin='and_(Migration.instance_uuid == '
@@ -823,6 +837,7 @@ class VirtualInterface(BASE, NovaBase, models.SoftDeleteMixin):
     network_id = Column(Integer)
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
     uuid = Column(String(36))
+    tag = Column(String(255))
 
 
 # TODO(vish): can these both come from the same baseclass?
@@ -1094,8 +1109,9 @@ class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
 class Aggregate(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
-    __table_args__ = ()
+    __table_args__ = (Index('aggregate_uuid_idx', 'uuid'),)
     id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36))
     name = Column(String(255))
     _hosts = orm.relationship(AggregateHost,
                           primaryjoin='and_('
@@ -1371,6 +1387,8 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
               'compute_node_id', 'deleted'),
         Index('ix_pci_devices_instance_uuid_deleted',
               'instance_uuid', 'deleted'),
+        Index('ix_pci_devices_compute_node_id_parent_addr_deleted',
+              'compute_node_id', 'parent_addr', 'deleted'),
         schema.UniqueConstraint(
             "compute_node_id", "address", "deleted",
             name="uniq_pci_devices0compute_node_id0address0deleted")
@@ -1403,6 +1421,7 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
 
     numa_node = Column(Integer, nullable=True)
 
+    parent_addr = Column(String(12), nullable=True)
     instance = orm.relationship(Instance, backref="pci_devices",
                             foreign_keys=instance_uuid,
                             primaryjoin='and_('
@@ -1427,3 +1446,87 @@ class Tag(BASE, models.ModelBase):
                     'Instance.deleted == 0)',
         foreign_keys=resource_id
     )
+
+
+class ResourceProvider(BASE, models.ModelBase):
+    """Represents a mapping to a providers of resources."""
+
+    __tablename__ = "resource_providers"
+    __table_args__ = (
+        Index('resource_providers_uuid_idx', 'uuid'),
+        schema.UniqueConstraint('uuid',
+            name='uniq_resource_providers0uuid'),
+        Index('resource_providers_name_idx', 'name'),
+        schema.UniqueConstraint('name',
+            name='uniq_resource_providers0name')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    uuid = Column(String(36), nullable=False)
+    name = Column(Unicode(200), nullable=True)
+    generation = Column(Integer, default=0)
+    can_host = Column(Integer, default=0)
+
+
+class Inventory(BASE, models.ModelBase):
+    """Represents a quantity of available resource."""
+
+    __tablename__ = "inventories"
+    __table_args__ = (
+        Index('inventories_resource_provider_id_idx',
+              'resource_provider_id'),
+        Index('inventories_resource_class_id_idx',
+              'resource_class_id'),
+        Index('inventories_resource_provider_resource_class_idx',
+              'resource_provider_id', 'resource_class_id'),
+        schema.UniqueConstraint('resource_provider_id', 'resource_class_id',
+            name='uniq_inventories0resource_provider_resource_class')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = Column(Integer, nullable=False)
+    resource_class_id = Column(Integer, nullable=False)
+    total = Column(Integer, nullable=False)
+    reserved = Column(Integer, nullable=False)
+    min_unit = Column(Integer, nullable=False)
+    max_unit = Column(Integer, nullable=False)
+    step_size = Column(Integer, nullable=False)
+    allocation_ratio = Column(Float, nullable=False)
+    resource_provider = orm.relationship(
+        "ResourceProvider",
+        primaryjoin=('and_(Inventory.resource_provider_id == '
+                     'ResourceProvider.id)'),
+        foreign_keys=resource_provider_id)
+
+
+class Allocation(BASE, models.ModelBase):
+    """A use of inventory."""
+
+    __tablename__ = "allocations"
+    __table_args__ = (
+        Index('allocations_resource_provider_class_used_idx',
+              'resource_provider_id', 'resource_class_id',
+              'used'),
+        Index('allocations_resource_class_id_idx',
+              'resource_class_id'),
+        Index('allocations_consumer_id_idx', 'consumer_id')
+    )
+
+    id = Column(Integer, primary_key=True, nullable=False)
+    resource_provider_id = Column(Integer, nullable=False)
+    consumer_id = Column(String(36), nullable=False)
+    resource_class_id = Column(Integer, nullable=False)
+    used = Column(Integer, nullable=False)
+
+
+class ResourceProviderAggregate(BASE, models.ModelBase):
+    """Assocate a resource provider with an aggregate."""
+
+    __tablename__ = 'resource_provider_aggregates'
+    __table_args__ = (
+        Index('resource_provider_aggregates_aggregate_id_idx',
+              'aggregate_id'),
+    )
+
+    resource_provider_id = Column(Integer, primary_key=True, nullable=False)
+    aggregate_id = Column(Integer, primary_key=True, nullable=False)

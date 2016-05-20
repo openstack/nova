@@ -21,9 +21,9 @@ import copy
 
 import os
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
@@ -33,18 +33,11 @@ from nova import objects
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
+from nova.virt import osinfo
 
 LOG = logging.getLogger(__name__)
 
-libvirt_vif_opts = [
-    cfg.BoolOpt('use_virtio_for_bridges',
-                default=True,
-                help='Use virtio for bridge interfaces with KVM/QEMU'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(libvirt_vif_opts, 'libvirt')
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 # vhostuser queues support
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
@@ -108,9 +101,7 @@ class LibvirtGenericVIFDriver(object):
         # If the user has specified a 'vif_model' against the
         # image then honour that model
         if image_meta:
-            vif_model = image_meta.properties.get('hw_vif_model')
-            if vif_model is not None:
-                model = vif_model
+            model = osinfo.HardwareProperties(image_meta).network_model
 
         # Else if the virt type is KVM/QEMU, use virtio according
         # to the global config parameter
@@ -138,6 +129,12 @@ class LibvirtGenericVIFDriver(object):
         designer.set_vif_guest_frontend_config(
             conf, vif['address'], model, driver, vhost_queues)
 
+        return conf
+
+    def get_base_hostdev_pci_config(self, vif):
+        conf = vconfig.LibvirtConfigGuestHostdevPCI()
+        pci_slot = vif['profile']['pci_slot']
+        designer.set_vif_host_backend_hostdev_pci_config(conf, pci_slot)
         return conf
 
     def _get_virtio_mq_settings(self, image_meta, flavor):
@@ -323,6 +320,10 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
+    def get_config_hostdev_physical(self, instance, vif, image_meta,
+                                    inst_type, virt_type, host):
+        return self.get_base_hostdev_pci_config(vif)
+
     def get_config_macvtap(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif, image_meta,
@@ -386,10 +387,7 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
-    def get_config_vhostuser(self, instance, vif, image_meta,
-                              inst_type, virt_type, host):
-        conf = self.get_base_config(instance, vif, image_meta,
-                                    inst_type, virt_type)
+    def _get_vhostuser_settings(self, vif):
         vif_details = vif['details']
         mode = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_MODE,
                                'server')
@@ -397,6 +395,13 @@ class LibvirtGenericVIFDriver(object):
         if sock_path is None:
             raise exception.VifDetailsMissingVhostuserSockPath(
                                                         vif_id=vif['id'])
+        return mode, sock_path
+
+    def get_config_vhostuser(self, instance, vif, image_meta,
+                            inst_type, virt_type, host):
+        conf = self.get_base_config(instance, vif, image_meta,
+                                    inst_type, virt_type)
+        mode, sock_path = self._get_vhostuser_settings(vif)
         designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
         # (vladikr) Not setting up driver and queues for vhostuser
         # as queues are not supported in Libvirt until version 1.2.17
@@ -409,10 +414,7 @@ class LibvirtGenericVIFDriver(object):
 
     def get_config_ib_hostdev(self, instance, vif, image_meta,
                               inst_type, virt_type, host):
-        conf = vconfig.LibvirtConfigGuestHostdevPCI()
-        pci_slot = vif['profile']['pci_slot']
-        designer.set_vif_host_backend_ib_hostdev_config(conf, pci_slot)
-        return conf
+        return self.get_base_hostdev_pci_config(vif)
 
     def get_config_vrouter(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
@@ -429,7 +431,7 @@ class LibvirtGenericVIFDriver(object):
         vif_type = vif['type']
 
         LOG.debug('vif_type=%(vif_type)s instance=%(instance)s '
-                  'vif=%(vif)s virt_type%(virt_type)s',
+                  'vif=%(vif)s virt_type=%(virt_type)s',
                   {'vif_type': vif_type, 'instance': instance,
                    'vif': vif, 'virt_type': virt_type})
 
@@ -489,15 +491,24 @@ class LibvirtGenericVIFDriver(object):
                           process_input='0',
                           run_as_root=True,
                           check_exit_code=[0, 1])
+            disv6 = '/proc/sys/net/ipv6/conf/%s/disable_ipv6' % br_name
+            if os.path.exists(disv6):
+                utils.execute('tee',
+                              disv6,
+                              process_input='1',
+                              run_as_root=True,
+                              check_exit_code=[0, 1])
 
         if not linux_net.device_exists(v2_name):
-            linux_net._create_veth_pair(v1_name, v2_name)
+            mtu = vif['network'].get_meta('mtu')
+            linux_net._create_veth_pair(v1_name, v2_name, mtu)
             utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
             utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
             if port == 'ovs':
                 linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
                                               v2_name, iface_id,
-                                              vif['address'], instance.uuid)
+                                              vif['address'], instance.uuid,
+                                              mtu)
             elif port == 'ivs':
                 linux_net.create_ivs_vif_port(v2_name, iface_id,
                                               vif['address'], instance.uuid)
@@ -573,6 +584,9 @@ class LibvirtGenericVIFDriver(object):
                 mac_addr=vif['address'],
                 vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
 
+    def plug_hostdev_physical(self, instance, vif):
+        pass
+
     def plug_macvtap(self, instance, vif):
         vif_details = vif['details']
         vlan = vif_details.get(network_model.VIF_DETAILS_VLAN)
@@ -624,20 +638,64 @@ class LibvirtGenericVIFDriver(object):
         dev = self.get_vif_devname(vif)
         mac = vif['details'].get(network_model.VIF_DETAILS_TAP_MAC_ADDRESS)
         linux_net.create_tap_dev(dev, mac)
-        linux_net._set_device_mtu(dev)
+        network = vif.get('network')
+        mtu = network.get_meta('mtu') if network else None
+        linux_net._set_device_mtu(dev, mtu)
 
-    def plug_vhostuser(self, instance, vif):
+    def plug_vhostuser_fp(self, instance, vif):
+        """Create a fp netdevice interface with a vhostuser socket"""
+        dev = self.get_vif_devname(vif)
+        if linux_net.device_exists(dev):
+            return
+
         ovs_plug = vif['details'].get(
                                 network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
                                 False)
-        if ovs_plug:
-            iface_id = self.get_ovs_interfaceid(vif)
-            port_name = os.path.basename(
-                    vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
-            linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
-                                          port_name, iface_id, vif['address'],
-                                          instance.uuid)
-            linux_net.ovs_set_vhostuser_port_type(port_name)
+        sockmode_qemu, sockpath = self._get_vhostuser_settings(vif)
+        sockmode_port = 'client' if sockmode_qemu == 'server' else 'server'
+
+        try:
+            linux_net.create_fp_dev(dev, sockpath, sockmode_port)
+
+            if ovs_plug:
+                if vif.is_hybrid_plug_enabled():
+                    self.plug_ovs_hybrid(instance, vif)
+                    utils.execute('brctl', 'addif',
+                                  self.get_br_name(vif['id']),
+                                  dev, run_as_root=True)
+                else:
+                    iface_id = self.get_ovs_interfaceid(vif)
+                    mtu = vif['network'].get_meta('mtu')
+                    linux_net.create_ovs_vif_port(self.get_bridge_name(vif),
+                                                  dev, iface_id,
+                                                  vif['address'],
+                                                  instance.uuid, mtu)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_LE("Failed while plugging vif"), instance=instance)
+
+    def plug_vhostuser_ovs(self, instance, vif):
+        """Plug a VIF_TYPE_VHOSTUSER into an ovs bridge"""
+        iface_id = self.get_ovs_interfaceid(vif)
+        port_name = os.path.basename(
+            vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
+        mtu = vif['network'].get_meta('mtu')
+        linux_net.create_ovs_vif_port(
+            self.get_bridge_name(vif),
+            port_name, iface_id, vif['address'],
+            instance.uuid, mtu,
+            interface_type=network_model.OVS_VHOSTUSER_INTERFACE_TYPE)
+
+    def plug_vhostuser(self, instance, vif):
+        fp_plug = vif['details'].get(
+                                network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG,
+                                False)
+        ovs_plug = vif['details'].get(
+                                network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
+                                False)
+        if fp_plug:
+            self.plug_vhostuser_fp(instance, vif)
+        elif ovs_plug:
+            self.plug_vhostuser_ovs(instance, vif)
 
     def plug_vrouter(self, instance, vif):
         """Plug into Contrail's network port
@@ -662,7 +720,7 @@ class LibvirtGenericVIFDriver(object):
                     ip6_addr = ips['address']
 
         ptype = 'NovaVMPort'
-        if (cfg.CONF.libvirt.virt_type == 'lxc'):
+        if (CONF.libvirt.virt_type == 'lxc'):
             ptype = 'NameSpacePort'
 
         cmd_args = ("--oper=add --uuid=%s --instance_uuid=%s --vn_uuid=%s "
@@ -797,6 +855,9 @@ class LibvirtGenericVIFDriver(object):
             linux_net.set_vf_interface_vlan(vif['profile']['pci_slot'],
                                             mac_addr=vif['address'])
 
+    def unplug_hostdev_physical(self, instance, vif):
+        pass
+
     def unplug_macvtap(self, instance, vif):
         pass
 
@@ -844,15 +905,43 @@ class LibvirtGenericVIFDriver(object):
             LOG.exception(_LE("Failed while unplugging vif"),
                           instance=instance)
 
-    def unplug_vhostuser(self, instance, vif):
+    def unplug_vhostuser_fp(self, instance, vif):
+        """Delete a fp netdevice interface with a vhostuser socket"""
+        dev = self.get_vif_devname(vif)
         ovs_plug = vif['details'].get(
                         network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
                         False)
-        if ovs_plug:
-            port_name = os.path.basename(
-                    vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
-            linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
-                                          port_name)
+
+        try:
+            if ovs_plug:
+                if vif.is_hybrid_plug_enabled():
+                    self.unplug_ovs_hybrid(instance, vif)
+                else:
+                    linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
+                                                  dev, False)
+            linux_net.delete_fp_dev(dev)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_LE("Failed while unplugging vif"),
+                          instance=instance)
+
+    def unplug_vhostuser_ovs(self, instance, vif):
+        """Unplug a VIF_TYPE_VHOSTUSER into an ovs bridge"""
+        port_name = os.path.basename(
+            vif['details'][network_model.VIF_DETAILS_VHOSTUSER_SOCKET])
+        linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
+                                      port_name)
+
+    def unplug_vhostuser(self, instance, vif):
+        fp_plug = vif['details'].get(
+                        network_model.VIF_DETAILS_VHOSTUSER_FP_PLUG,
+                        False)
+        ovs_plug = vif['details'].get(
+                        network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
+                        False)
+        if fp_plug:
+            self.unplug_vhostuser_fp(instance, vif)
+        elif ovs_plug:
+            self.unplug_vhostuser_ovs(instance, vif)
 
     def unplug_vrouter(self, instance, vif):
         """Unplug Contrail's network port

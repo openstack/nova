@@ -13,15 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
-from nova.network import api as network_api
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_networks
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -40,23 +36,18 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def setUp(self):
         super(NetworksJsonTests, self).setUp()
         fake_network_api = test_networks.FakeNetworkAPI()
-        self.stubs.Set(network_api.API, "get_all",
-                       fake_network_api.get_all)
-        self.stubs.Set(network_api.API, "get",
-                       fake_network_api.get)
-        self.stubs.Set(network_api.API, "associate",
-                       fake_network_api.associate)
-        self.stubs.Set(network_api.API, "delete",
-                       fake_network_api.delete)
-        self.stubs.Set(network_api.API, "create",
-                       fake_network_api.create)
-        self.stubs.Set(network_api.API, "add_network_to_project",
-                       fake_network_api.add_network_to_project)
+        self.stub_out("nova.network.api.API.get_all", fake_network_api.get_all)
+        self.stub_out("nova.network.api.API.get", fake_network_api.get)
+        self.stub_out("nova.network.api.API.associate",
+                      fake_network_api.associate)
+        self.stub_out("nova.network.api.API.delete", fake_network_api.delete)
+        self.stub_out("nova.network.api.API.create", fake_network_api.create)
+        self.stub_out("nova.network.api.API.add_network_to_project",
+                      fake_network_api.add_network_to_project)
 
     def test_network_list(self):
         response = self._do_get('os-networks')
-        subs = self._get_regexes()
-        self._verify_response('networks-list-resp', subs, response, 200)
+        self._verify_response('networks-list-resp', {}, response, 200)
 
     def test_network_disassociate(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
@@ -68,14 +59,12 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']
         response = self._do_get('os-networks/%s' % uuid)
-        subs = self._get_regexes()
-        self._verify_response('network-show-resp', subs, response, 200)
+        self._verify_response('network-show-resp', {}, response, 200)
 
     def test_network_create(self):
         response = self._do_post("os-networks",
                                  'network-create-req', {})
-        subs = self._get_regexes()
-        self._verify_response('network-create-resp', subs, response, 200)
+        self._verify_response('network-create-resp', {}, response, 200)
 
     def test_network_add(self):
         response = self._do_post("os-networks/add",

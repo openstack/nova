@@ -24,6 +24,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.vmwareapi import fake
+from nova.tests import uuidsentinel
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import imagecache
 
@@ -231,8 +232,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertEqual(3, self._get_timestamp_called)
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
-    def test_update(self, mock_get_by_inst):
+                       'bdms_by_instance_uuid', return_value={})
+    def test_update(self, mock_bdms_by_inst):
         def fake_list_datastore_images(ds_path, datastore):
             return {'unexplained_images': [],
                     'originals': self.images}
@@ -255,13 +256,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             instances = [{'image_ref': '1',
                           'host': CONF.host,
                           'name': 'inst-1',
-                          'uuid': '123',
+                          'uuid': uuidsentinel.foo,
                           'vm_state': '',
                           'task_state': ''},
                          {'image_ref': '2',
                           'host': CONF.host,
                           'name': 'inst-2',
-                          'uuid': '456',
+                          'uuid': uuidsentinel.bar,
                           'vm_state': '',
                           'task_state': ''}]
             all_instances = [fake_instance.fake_instance_obj(None, **instance)

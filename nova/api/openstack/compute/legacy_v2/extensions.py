@@ -13,27 +13,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.api.openstack import extensions as base_extensions
+import nova.conf
 from nova.i18n import _LW
 
 STANDARD_EXTENSIONS = ('nova.api.openstack.compute.legacy_v2.contrib.' +
                        'standard_extensions')
 
-ext_opts = [
-    cfg.MultiStrOpt(
-        'osapi_compute_extension',
-        default=[STANDARD_EXTENSIONS],
-        help='osapi compute extension to load. '
-        'This option will be removed in the near future. '
-        'After that point you have to run all of the API.',
-        deprecated_for_removal=True),
-]
-CONF = cfg.CONF
-CONF.register_opts(ext_opts)
-
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 

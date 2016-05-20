@@ -1,0 +1,22 @@
+---
+features:
+  - When booting an instance, its sanitized 'hostname' attribute is now used to
+    populate the 'dns_name' attribute of the Neutron ports the instance is
+    attached to.
+    This functionality enables the Neutron internal DNS service to know the
+    ports by the instance's hostname. As a consequence, commands like
+    'hostname -f' will work as expected when executed in the instance.
+    When a port's network has a non-blank 'dns_domain' attribute, the port's
+    'dns_name' combined with the network's 'dns_domain' will be published by
+    Neutron in an external DNS as a service like Designate. As a consequence,
+    the instance's hostname is published in the external DNS as a service.
+    This functionality is added to Nova when the 'DNS Integration' extension
+    is enabled in Neutron.
+    The publication of 'dns_name' and 'dns_domain' combinations to an external
+    DNS as a service additionaly requires the configuration of the appropriate
+    driver in Neutron.
+    When the 'Port Binding' extension is also enabled in Neutron, the
+    publication of a 'dns_name' and 'dns_domain' combination to the external
+    DNS as a service will require one additional update operation when Nova
+    allocates the port during the instance boot. This may have a noticeable
+    impact on the performance of the boot process.

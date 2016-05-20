@@ -63,6 +63,18 @@ class NetworkRequestList(obj_base.ObjectListBase, obj_base.NovaObject):
     def as_tuples(self):
         return [x.to_tuple() for x in self.objects]
 
+    @classmethod
+    def from_tuples(cls, net_tuples):
+        """Convenience method for converting a list of network request tuples
+        into a NetworkRequestList object.
+
+        :param net_tuples: list of network request tuples
+        :returns: NetworkRequestList object
+        """
+        requested_networks = cls(objects=[NetworkRequest.from_tuple(t)
+                                          for t in net_tuples])
+        return requested_networks
+
     @property
     def is_single_unspecified(self):
         return ((len(self.objects) == 1) and

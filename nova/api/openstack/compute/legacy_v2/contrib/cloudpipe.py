@@ -14,7 +14,6 @@
 
 """Connect your vlan to the world."""
 
-from oslo_config import cfg
 from oslo_utils import fileutils
 from webob import exc
 
@@ -23,13 +22,13 @@ from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import network
 from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('keys_path', 'nova.crypto')
+CONF = nova.conf.CONF
 
 authorize = extensions.extension_authorizer('compute', 'cloudpipe')
 
@@ -48,7 +47,7 @@ class CloudpipeController(object):
         # NOTE(vish): One of the drawbacks of doing this in the api is
         #             the keys will only be on the api node that launched
         #             the cloudpipe.
-        fileutils.ensure_tree(CONF.keys_path)
+        fileutils.ensure_tree(CONF.crypto.keys_path)
 
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes."""

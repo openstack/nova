@@ -17,7 +17,7 @@ import mock
 from nova import db
 from nova.objects import virtual_interface as vif_obj
 from nova.tests.unit.objects import test_objects
-
+from nova.tests import uuidsentinel as uuids
 
 fake_vif = {
     'created_at': None,
@@ -27,8 +27,9 @@ fake_vif = {
     'id': 1,
     'address': '00:00:00:00:00:00',
     'network_id': 123,
-    'instance_uuid': 'fake-uuid',
-    'uuid': 'fake-uuid-2',
+    'instance_uuid': uuids.instance,
+    'uuid': uuids.uuid,
+    'tag': 'fake-tag',
 }
 
 
@@ -70,8 +71,9 @@ class _TestVirtualInterface(object):
         vif = vif_obj.VirtualInterface(context=self.context)
         vif.address = '00:00:00:00:00:00'
         vif.network_id = 123
-        vif.instance_uuid = 'fake-uuid'
-        vif.uuid = 'fake-uuid-2'
+        vif.instance_uuid = uuids.instance
+        vif.uuid = uuids.uuid
+        vif.tag = 'fake-tag'
 
         with mock.patch.object(db, 'virtual_interface_create') as create:
             create.return_value = fake_vif
@@ -87,6 +89,17 @@ class _TestVirtualInterface(object):
             vif_obj.VirtualInterface.delete_by_instance_uuid(self.context,
                                                              'fake-uuid')
             delete.assert_called_with(self.context, 'fake-uuid')
+
+    def test_obj_make_compatible_pre_1_1(self):
+        vif = vif_obj.VirtualInterface(context=self.context)
+        vif.address = '00:00:00:00:00:00'
+        vif.network_id = 123
+        vif.instance_uuid = uuids.instance
+        vif.uuid = uuids.uuid
+        vif.tag = 'fake-tag'
+
+        primitive = vif.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('tag', primitive)
 
 
 class TestVirtualInterfaceObject(test_objects._LocalTest,

@@ -21,43 +21,40 @@ Handling of VM disk images.
 
 import os
 
-from oslo_config import cfg
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import fileutils
+from oslo_utils import imageutils
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE
 from nova import image
-from nova.openstack.common import imageutils
 from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-image_opts = [
-    cfg.BoolOpt('force_raw_images',
-                default=True,
-                help='Force backing images to raw format'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(image_opts)
+CONF = nova.conf.CONF
 IMAGE_API = image.API()
 
 
-def qemu_img_info(path):
+def qemu_img_info(path, format=None):
     """Return an object containing the parsed output from qemu-img info."""
     # TODO(mikal): this code should not be referring to a libvirt specific
     # flag.
-    # NOTE(sirp): The config option import must go here to avoid an import
-    # cycle
-    CONF.import_opt('images_type', 'nova.virt.libvirt.imagebackend',
-                    group='libvirt')
     if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
-        msg = (_("Path does not exist %(path)s") % {'path': path})
+        raise exception.DiskNotFound(location=path)
+
+    try:
+        cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
+        if format is not None:
+            cmd = cmd + ('-f', format)
+        out, err = utils.execute(*cmd)
+    except processutils.ProcessExecutionError as exp:
+        msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
+                {'path': path, 'exp': exp})
         raise exception.InvalidDiskInfo(reason=msg)
 
-    out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',
-                             'qemu-img', 'info', path)
     if not out:
         msg = (_("Failed to run qemu-img info on %(path)s : %(error)s") %
                {'path': path, 'error': err})
@@ -66,13 +63,40 @@ def qemu_img_info(path):
     return imageutils.QemuImgInfo(out)
 
 
-def convert_image(source, dest, out_format, run_as_root=False):
+def convert_image(source, dest, in_format, out_format, run_as_root=False):
     """Convert image to other format."""
+    if in_format is None:
+        raise RuntimeError("convert_image without input format is a security"
+                           "risk")
+    _convert_image(source, dest, in_format, out_format, run_as_root)
+
+
+def convert_image_unsafe(source, dest, out_format, run_as_root=False):
+    """Convert image to other format, doing unsafe automatic input format
+    detection. Do not call this function.
+    """
+
+    # NOTE: there is only 1 caller of this function:
+    # imagebackend.Lvm.create_image. It is not easy to fix that without a
+    # larger refactor, so for the moment it has been manually audited and
+    # allowed to continue. Remove this function when Lvm.create_image has
+    # been fixed.
+    _convert_image(source, dest, None, out_format, run_as_root)
+
+
+def _convert_image(source, dest, in_format, out_format, run_as_root):
     cmd = ('qemu-img', 'convert', '-O', out_format, source, dest)
-    utils.execute(*cmd, run_as_root=run_as_root)
+    if in_format is not None:
+        cmd = cmd + ('-f', in_format)
+    try:
+        utils.execute(*cmd, run_as_root=run_as_root)
+    except processutils.ProcessExecutionError as exp:
+        msg = (_("Unable to convert image to %(format)s: %(exp)s") %
+               {'format': out_format, 'exp': exp})
+        raise exception.ImageUnacceptable(image_id=source, reason=msg)
 
 
-def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
+def fetch(context, image_href, path, max_size=0):
     with fileutils.remove_path_on_error(path):
         IMAGE_API.download(context, image_href, dest_path=path)
 
@@ -81,10 +105,9 @@ def get_info(context, image_href):
     return IMAGE_API.get(context, image_href)
 
 
-def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
+def fetch_to_raw(context, image_href, path, max_size=0):
     path_tmp = "%s.part" % path
-    fetch(context, image_href, path_tmp, user_id, project_id,
-          max_size=max_size)
+    fetch(context, image_href, path_tmp, max_size=max_size)
 
     with fileutils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)
@@ -121,9 +144,16 @@ def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path
-            LOG.debug("%s was %s, converting to raw" % (image_href, fmt))
+            LOG.debug("%s was %s, converting to raw", image_href, fmt)
             with fileutils.remove_path_on_error(staged):
-                convert_image(path_tmp, staged, 'raw')
+                try:
+                    convert_image(path_tmp, staged, fmt, 'raw')
+                except exception.ImageUnacceptable as exp:
+                    # re-raise to include image_href
+                    raise exception.ImageUnacceptable(image_id=image_href,
+                        reason=_("Unable to convert image to raw: %(exp)s")
+                        % {'exp': exp})
+
                 os.unlink(path_tmp)
 
                 data = qemu_img_info(staged)

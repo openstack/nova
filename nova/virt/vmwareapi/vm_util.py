@@ -22,7 +22,6 @@ import collections
 import copy
 import functools
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import units
@@ -32,6 +31,7 @@ from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
@@ -40,27 +40,15 @@ from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
 
-vmware_utils_opts = [
-    cfg.IntOpt('console_delay_seconds',
-               help='Set this value if affected by an increased network '
-                    'latency causing repeated characters when typing in '
-                    'a remote console.'),
-    cfg.StrOpt('serial_port_service_uri',
-               help='Identifies the remote system that serial port traffic '
-                    'will be sent to. If this is not set, no serial ports '
-                    'will be added to the created VMs.'),
-    cfg.StrOpt('serial_port_proxy_uri',
-               help='Identifies a proxy service that provides network access '
-                    'to the serial_port_service_uri. This option is ignored '
-                    'if serial_port_service_uri is not specified.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(vmware_utils_opts, 'vmware')
+CONF = nova.conf.CONF
 
 ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
                                  'VirtualPCNet32', 'VirtualSriovEthernetCard',
                                  'VirtualVmxnet', 'VirtualVmxnet3']
+
+# A simple cache for storing inventory folder references.
+# Format: {inventory_path: folder_ref}
+_FOLDER_PATH_REF_MAPPING = {}
 
 # A cache for VM references. The key will be the VM name
 # and the value is the VM reference. The VM name is unique. This
@@ -357,7 +345,8 @@ def get_vm_resize_spec(client_factory, vcpus, memory_mb, extra_specs,
 
 
 def create_controller_spec(client_factory, key,
-                           adapter_type=constants.DEFAULT_ADAPTER_TYPE):
+                           adapter_type=constants.DEFAULT_ADAPTER_TYPE,
+                           bus_number=0):
     """Builds a Config Spec for the LSI or Bus Logic Controller's addition
     which acts as the controller for the virtual hard disk to be attached
     to the VM.
@@ -379,7 +368,7 @@ def create_controller_spec(client_factory, key,
         virtual_controller = client_factory.create(
                                 'ns0:VirtualLsiLogicController')
     virtual_controller.key = key
-    virtual_controller.busNumber = 0
+    virtual_controller.busNumber = bus_number
     virtual_controller.sharedBus = "noSharing"
     virtual_device_config.device = virtual_controller
     return virtual_device_config
@@ -448,6 +437,8 @@ def _create_vif_spec(client_factory, vif_info, vif_limits=None):
                     'ns0:DistributedVirtualSwitchPortConnection')
         portgroup.switchUuid = network_ref['dvsw']
         portgroup.portgroupKey = network_ref['dvpg']
+        if 'dvs_port_key' in network_ref:
+            portgroup.portKey = network_ref['dvs_port_key']
         backing.port = portgroup
     else:
         backing = client_factory.create(
@@ -735,6 +726,19 @@ def _find_allocated_slots(devices):
     return taken
 
 
+def _get_bus_number_for_scsi_controller(devices):
+    """Return usable bus number when create new SCSI controller."""
+    # Every SCSI controller will take a unique bus number
+    taken = [dev.busNumber for dev in devices if _is_scsi_controller(dev)]
+    # The max bus number for SCSI controllers is 3
+    for i in range(constants.SCSI_MAX_CONTROLLER_NUMBER):
+        if i not in taken:
+            return i
+    msg = _('Only %d SCSI controllers are allowed to be '
+            'created on this instance.') % constants.SCSI_MAX_CONTROLLER_NUMBER
+    raise vexc.VMwareDriverException(msg)
+
+
 def allocate_controller_key_and_unit_number(client_factory, devices,
                                             adapter_type):
     """This function inspects the current set of hardware devices and returns
@@ -750,10 +754,7 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
     if adapter_type == constants.ADAPTER_TYPE_IDE:
         ide_keys = [dev.key for dev in devices if _is_ide_controller(dev)]
         ret = _find_controller_slot(ide_keys, taken, 2)
-    elif adapter_type in [constants.DEFAULT_ADAPTER_TYPE,
-                          constants.ADAPTER_TYPE_LSILOGICSAS,
-                          constants.ADAPTER_TYPE_BUSLOGIC,
-                          constants.ADAPTER_TYPE_PARAVIRTUAL]:
+    elif adapter_type in constants.SCSI_ADAPTER_TYPES:
         scsi_keys = [dev.key for dev in devices if _is_scsi_controller(dev)]
         ret = _find_controller_slot(scsi_keys, taken, 16)
     if ret:
@@ -761,8 +762,14 @@ def allocate_controller_key_and_unit_number(client_factory, devices,
 
     # create new controller with the specified type and return its spec
     controller_key = -101
+
+    # Get free bus number for new SCSI controller.
+    bus_number = 0
+    if adapter_type in constants.SCSI_ADAPTER_TYPES:
+        bus_number = _get_bus_number_for_scsi_controller(devices)
+
     controller_spec = create_controller_spec(client_factory, controller_key,
-                                             adapter_type)
+                                             adapter_type, bus_number)
     return controller_key, 0, controller_spec
 
 
@@ -1554,3 +1561,67 @@ def get_swap(session, vm_ref):
                     "VirtualDiskFlatVer2BackingInfo" and
                 'swap' in device.backing.fileName):
             return device
+
+
+def _get_folder(session, parent_folder_ref, name):
+    # Get list of child entities for the parent folder
+    prop_val = session._call_method(vutil, 'get_object_property',
+                                    parent_folder_ref,
+                                    'childEntity')
+    if prop_val:
+        child_entities = prop_val.ManagedObjectReference
+
+        # Return if the child folder with input name is already present
+        for child_entity in child_entities:
+            if child_entity._type != 'Folder':
+                continue
+            child_entity_name = vim_util.get_entity_name(session, child_entity)
+            if child_entity_name == name:
+                return child_entity
+
+
+def create_folder(session, parent_folder_ref, name):
+    """Creates a folder in vCenter
+
+    A folder of 'name' will be created under the parent folder.
+    The moref of the folder is returned.
+    """
+
+    folder = _get_folder(session, parent_folder_ref, name)
+    if folder:
+        return folder
+    LOG.debug("Creating folder: %(name)s. Parent ref: %(parent)s.",
+              {'name': name, 'parent': parent_folder_ref.value})
+    try:
+        folder = session._call_method(session.vim, "CreateFolder",
+                                      parent_folder_ref, name=name)
+        LOG.info(_LI("Created folder: %(name)s in parent %(parent)s."),
+                 {'name': name, 'parent': parent_folder_ref.value})
+    except vexc.DuplicateName as e:
+        LOG.debug("Folder already exists: %(name)s. Parent ref: %(parent)s.",
+                  {'name': name, 'parent': parent_folder_ref.value})
+        val = e.details['object']
+        folder = vutil.get_moref(val, 'Folder')
+    return folder
+
+
+def folder_ref_cache_update(path, folder_ref):
+    _FOLDER_PATH_REF_MAPPING[path] = folder_ref
+
+
+def folder_ref_cache_get(path):
+    return _FOLDER_PATH_REF_MAPPING.get(path)
+
+
+def _get_vm_name(display_name, id):
+    if display_name:
+        return '%s (%s)' % (display_name[:41], id[:36])
+    else:
+        return id[:36]
+
+
+def rename_vm(session, vm_ref, instance):
+    vm_name = _get_vm_name(instance.display_name, instance.uuid)
+    rename_task = session._call_method(session.vim, "Rename_Task", vm_ref,
+                                       newName=vm_name)
+    session._wait_for_task(rename_task)

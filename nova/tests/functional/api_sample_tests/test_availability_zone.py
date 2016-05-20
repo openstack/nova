@@ -12,14 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('manager', 'nova.cells.opts', group='cells')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
@@ -40,8 +36,7 @@ class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
 
     def test_availability_zone_detail(self):
         response = self._do_get('os-availability-zone/detail')
-        subs = self._get_regexes()
-        self._verify_response('availability-zone-detail-resp', subs, response,
+        self._verify_response('availability-zone-detail-resp', {}, response,
                               200)
 
     def test_availability_zone_post(self):

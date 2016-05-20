@@ -4,23 +4,22 @@
 #
 # Translators:
 # Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Zbyněk Schwarz <zbynek.schwarz@gmail.com>, 2015. #zanata
+# Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.0.dev385\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2015-12-01 06:32+0000\n"
-"PO-Revision-Date: 2015-11-24 04:00+0000\n"
-"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
-"Language-Team: Czech\n"
-"Language: cs\n"
+"Project-Id-Version: nova 13.0.1.dev400\n"
+"Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
+"POT-Creation-Date: 2016-04-21 04:29+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"PO-Revision-Date: 2015-12-18 02:33+0000\n"
+"Last-Translator: Zbyněk Schwarz <zbynek.schwarz@gmail.com>\n"
+"Language: cs\n"
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
+"Language-Team: Czech\n"
 
 #, python-format
 msgid ""
@@ -70,28 +69,12 @@ msgstr ""
 "%s odkládací obraz byl použit instanci ale žáfné záložní soubory neexistují!"
 
 #, python-format
-msgid ""
-"Access key %(access_key)s has had %(failures)d failed authentications and "
-"will be locked out for %(lock_mins)d minutes."
-msgstr ""
-"Přístupový klíč %(access_key)s %(failures)d krát selhal při ověření a bude "
-"zablokován na %(lock_mins)d minut."
-
-#, python-format
 msgid "Address |%(address)s| is not allocated"
 msgstr "Adresa |%(address)s| není přidělena"
 
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "Adresa |%(address)s| není přidělena pro Váš projekt |%(project)s|"
-
-#, python-format
-msgid ""
-"An error occurred trying to live migrate. Falling back to legacy live "
-"migrate flow. Error: %s"
-msgstr ""
-"Při pokusu o přesun za provozu nastala chyba. Přesun bude proveden podle "
-"staršího postupu. Chyba: %s"
 
 #, python-format
 msgid "Arguments dropped when creating context: %s"
@@ -140,10 +123,6 @@ msgstr "Nelze smazat položku |%s|"
 msgid "Cannot destroy instance, operation time out"
 msgstr "Nelze zničit instanci, operaci vypršel časový limit"
 
-#, python-format
-msgid "Cannot get the metrics from %s."
-msgstr "Nelze získat metriky pro %s."
-
 msgid ""
 "Cannot get the number of cpu, because this function is not implemented for "
 "this platform. "
@@ -177,10 +156,6 @@ msgstr ""
 "API V1 Cinder je zastaralá od verze Juno a Nova je stále nastavena pro její "
 "použití. Povolte API V2 v Cinder a nastavte cinder.catalog_info v nova.conf, "
 "abyste ji mohli používat."
-
-#, python-format
-msgid "Compute resource plugin %s was not loaded"
-msgstr "Zásuvný modul zdroje výpočtu %s nebyl načten"
 
 msgid ""
 "Conductor local mode is deprecated and will be removed in a subsequent "
@@ -247,15 +222,6 @@ msgstr ""
 "nastavení tohoto režimu si prosím prohlédněte vzorový soubor api-paste.ini v "
 "Nova."
 
-msgid ""
-"Deprecated: The v3 API was deprecated. The v2.1 API replaces it as the Nova "
-"API, please refer Nova api-paste.ini sample file for how to configure v2.1 "
-"API."
-msgstr ""
-"Zastaralé. API v3 je zastaralé. API v2.1 ji nahrazuje jako výchozí Nova API, "
-"prosím prohlédněte si soubor api-paste.ini v Nova pro informace jak toto API "
-"nastavit."
-
 #, python-format
 msgid ""
 "Destination %s already exists! Concurrent moves can lead to unexpected "
@@ -298,14 +264,6 @@ msgid "Device allocation failed after repeated retries."
 msgstr "Přidělení zařízení selhalo po několika pokusech."
 
 #, python-format
-msgid ""
-"Disk not found on controller \"%(controller_path)s\" with address "
-"\"%(address)s\""
-msgstr ""
-"Disk nebyl nalezen na kontroléru \"%(controller_path)s\" s adresou "
-"\"%(address)s\""
-
-#, python-format
 msgid "Domain |%(domain)s| already exists, changing project to |%(project)s|."
 msgstr "Doména |%(domain)s| již existuje, změna projektu na |%(project)s|."
 
@@ -323,9 +281,9 @@ msgstr "Instance zmizela během odpojování rozhraní."
 msgid "During detach_volume, instance disappeared."
 msgstr "Instance zmizela během odpojování svazku."
 
-msgid "Error cleaning up fixed ip allocation. Manual cleanup may be required."
+msgid "Error cleaning up fixed IP allocation. Manual cleanup may be required."
 msgstr ""
-"Chyba při čistění přidělení pevných ip adres. Bude zapotřebí je vyčistit "
+"Chyba při čistění přidělení pevných IP adres. Bude zapotřebí je vyčistit "
 "ručně."
 
 #, python-format
@@ -378,6 +336,14 @@ msgid ""
 "resource"
 msgstr ""
 "Rozšíření %(ext_name)s: nelze rozšířit %(collection)s: Žádný takový zdroj"
+
+#, python-format
+msgid ""
+"Extension %s is both in whitelist and blacklist, blacklisting takes "
+"precedence"
+msgstr ""
+"Rozšíření %s je jak v seznamu povolených tak i zakázaných, zakázání má "
+"přednost"
 
 #, python-format
 msgid "Extensions in both blacklist and whitelist: %s"
@@ -457,10 +423,6 @@ msgstr "Nelze načíst rozšíření %(ext_name)s:%(exc)s"
 msgid "Failed to power off instance"
 msgstr "Nelze vypnout instanci"
 
-#, python-format
-msgid "Failed to remove snapshot for VM %s"
-msgstr "Nelze odstranit snímek pro VM %s"
-
 msgid "Failed to resume instance"
 msgstr "Nelze obnovit instanci"
 
@@ -469,8 +431,8 @@ msgid "Failed to revert task state for instance. Error: %s"
 msgstr "Nelze vrátit stav úkolu instance. Chyba: %s"
 
 #, python-format
-msgid "Failed to rollback quota for deallocate fixed ip: %s"
-msgstr "Nelze vrátit zpět kvótu pro zrušení přidělení pevných ip adres: %s"
+msgid "Failed to rollback quota for deallocate fixed IP: %s"
+msgstr "Nelze vrátit zpět kvótu pro zrušení přidělení pevných IP adres: %s"
 
 #, python-format
 msgid "Failed to shutdown appliance %s"
@@ -494,16 +456,12 @@ msgstr "Vkládání souboru do zavedení z instance svazku není podporováno"
 msgid "Flag sr_matching_filter '%s' does not respect formatting convention"
 msgstr "Příznak sr_matching_filter '%s' se neřídí pravidly formátování"
 
-#, python-format
-msgid "Flavor %d not found"
-msgstr "Konfigurace %d nenalezena."
-
 msgid "Flavor could not be found, skipping migration."
 msgstr "Konfigurace nenalezena, přesunutí přeskočeno."
 
 #, python-format
 msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
+"Floating IP address |%(address)s| no longer belongs to instance "
 "%(instance_uuid)s. Will not migrate it "
 msgstr ""
 "Plovoucí IP adresa |%(address)s| již nepatří instanci %(instance_uuid)s. "
@@ -511,7 +469,7 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Floating ip address |%(address)s| no longer belongs to instance "
+"Floating IP address |%(address)s| no longer belongs to instance "
 "%(instance_uuid)s. Will not setup it."
 msgstr ""
 "Plovoucí IP adresa |%(address)s| již nepatří instanci %(instance_uuid)s. "
@@ -583,14 +541,6 @@ msgstr ""
 "%(mp)s: %(err)s"
 
 #, python-format
-msgid "Ignoring EndpointNotFound: %s"
-msgstr "Ignorování Nenalezení koncového bodu: %s"
-
-#, python-format
-msgid "Ignoring Unknown cinder exception: %s"
-msgstr "Ignorování neznámé výjimky Cinder: %s"
-
-#, python-format
 msgid "Ignoring Volume Error on vol %(vol_id)s during delete %(exc)s"
 msgstr "Ignorování chyby svazku %(vol_id)s během mazání %(exc)s"
 
@@ -652,9 +602,6 @@ msgid ""
 msgstr ""
 "Ve verzi M budete muset spouštět celou API. Koncept rozšíření API bude ze "
 "zdrojového kódu odstraněn, aby došlo k zajištění jediné API Compute."
-
-msgid "In the M release you must run the v2.1 API."
-msgstr "Ve verzi M musíte spouštět API V2.1"
 
 msgid ""
 "In vmwareapi:vmops:_destroy_instance, exception while deleting the VM "
@@ -812,8 +759,8 @@ msgstr ""
 "%(disk_type)s."
 
 #, python-format
-msgid "Invalid floating ip id %s in request"
-msgstr "Neplatné id plovoucí ip adresy %s v žádosti"
+msgid "Invalid floating IP ID %s in request"
+msgstr "Neplatné ID plovoucí IP adresy %s v žádosti"
 
 #, python-format
 msgid "Invalid value '%d' for image_compression_level"
@@ -892,8 +839,8 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Neutron error: %(ip)s is not a valid ip address for network %(network_id)s."
-msgstr "Chyba Neutron: %(ip)s není platnou ip adresou pro síť %(network_id)s."
+"Neutron error: %(ip)s is not a valid IP address for network %(network_id)s."
+msgstr "Chyba Neutron: %(ip)s není platnou IP adresou pro síť %(network_id)s."
 
 #, python-format
 msgid "Neutron error: Fixed IP %s is already in use."
@@ -951,6 +898,14 @@ msgstr "Žádná shoda při pokusu o aktualizaci BDM: %(bdm)s"
 msgid "No more network or fixed IP to be allocated"
 msgstr "Žádné další sítě nebo pevné IP adresy k přidělení"
 
+#, python-format
+msgid ""
+"No protocol specified in for api_server '%s', please update [glance] "
+"api_servers with fully qualified url including scheme (http / https)"
+msgstr ""
+"U api serveru '%s' nebyl zadán žádný protokol, prosím změňte URL u [glance] "
+"api serverů na úplnou URL včetně schématu (http / https)"
+
 msgid "No valid host found for rebuild"
 msgstr "Nenalezen žádný platný hostitel pro znovu sestavení"
 
@@ -978,14 +933,6 @@ msgstr ""
 #, python-format
 msgid "Not deleting key %s"
 msgstr "Klíč %s nebude smazán"
-
-#, python-format
-msgid "Not loading %s because it is in the blacklist"
-msgstr "%s se nebude načítat, protože je na seznamu zakázaných"
-
-#, python-format
-msgid "Not loading %s because it is not in the whitelist"
-msgstr "%s se nebude načítat, protože není na seznamu povolených"
 
 msgid ""
 "Old property name \"hw_watchdog_action\" is now deprecated and will be "
@@ -1053,14 +1000,6 @@ msgid "Power state %s not found."
 msgstr "Stav napájení %s nebyl nalezen."
 
 #, python-format
-msgid ""
-"Problem with acquiring the list of children of %(path)r within a given "
-"timeout=%(timeout)d seconds"
-msgstr ""
-"Problém při získávání seznamu potomků %(path)r v rámci daného časového "
-"limitu=%(timeout)d vteřin"
-
-#, python-format
 msgid "Quota exceeded for %s, tried to allocate floating IP"
 msgstr "Překročena kvóta pro %s, pokus o přidělení plovoucí IP adresy"
 
@@ -1096,9 +1035,9 @@ msgstr ""
 "použití starého chování."
 
 #, python-format
-msgid "Removed %(num)d duplicate rules for floating ip %(float)s"
+msgid "Removed %(num)d duplicate rules for floating IP %(float)s"
 msgstr ""
-"Odstraněno %(num)d duplicitních pravidel pro plovoucí ip adresy %(float)s"
+"Odstraněno %(num)d duplicitních pravidel pro plovoucí IP adresy %(float)s"
 
 #, python-format
 msgid ""
@@ -1136,36 +1075,6 @@ msgstr ""
 "Spouštět Nova pomocí VMware vCenter s verzí starší než %(version)s je "
 "zastaralé. Požadovaná minimální verze vCenter bude ve verzi 13.0.0 zvýšena "
 "na %(version)s."
-
-#, python-format
-msgid ""
-"Running Nova with a block_migration_flag config option which does not "
-"contain %(flag)s will cause all block-migrations to be live-migrations "
-"instead. This setting should be on the block_migration_flag."
-msgstr ""
-"Spuštění Nova s volbou nastavení block_migration_flag neobsahující %(flag)s "
-"způsobí, že všechny přenosy bloku budou přenosy za provozu. Toto nastavení "
-"by se mělo používat pouze u block_migration_flag."
-
-#, python-format
-msgid ""
-"Running Nova with a libvirt version less than %(version)s is deprecated. The "
-"required minimum version of libvirt will be raised to %(version)s in the "
-"13.0.0 release."
-msgstr ""
-"Spouštět Nova pomocí libvirt s verzí starší než %(version)s je zastaralé. "
-"Požadovaná minimální verze libvirt bude ve verzi 13.0.0 zvýšena na "
-"%(version)s."
-
-#, python-format
-msgid ""
-"Running Nova with a live_migration_flag config option which contains "
-"%(flag)s will cause all live-migrations to be block-migrations instead. This "
-"setting should only be on the block_migration_flag instead."
-msgstr ""
-"Spuštění Nova s volbou nastavení live_migration_flag obsahující %(flag)s "
-"způsobí, že všechny přenosy za provozu budou přenosy bloku. Toto nastavení "
-"by se mělo používat u block_migration_flag."
 
 msgid ""
 "Running libvirt-lxc without user namespaces is dangerous. Containers spawned "
@@ -1217,19 +1126,6 @@ msgstr ""
 "%(instance_id)s."
 
 msgid ""
-"The Extensible Resource Tracker is deprecated and will be removed in the "
-"14.0.0 release. If you use this functionality and have custom resources that "
-"are managed by the Extensible Resource Tracker, please contact the Nova "
-"development team by posting to the openstack-dev mailing list. There is no "
-"future planned support for the tracking of custom resources."
-msgstr ""
-"Sledovač rozšířitelných zdrojů je zastaralý a bude odstraněn ve verzi "
-"14.0.0. Pokud tuto funkci využíváte a máte vlastní zdroje které jsou tímto "
-"systémem spravované, prosím kontaktujte tým vývojářů Nova zasláním příspěvku "
-"na poštovní konferenci openstack-dev. Podpora sledování vlastních zdrojů "
-"není do budoucna plánována."
-
-msgid ""
 "The TrustedFilter is considered experimental by the OpenStack project "
 "because it receives much less testing than the rest of Nova. This may change "
 "in the future, but current deployers should be aware that the use of it in "
@@ -1240,17 +1136,6 @@ msgstr ""
 "mi části Nova. Toto se v budoucnu může změnit, ale v současnosti by si "
 "správci měli být vědomi, že použití této funkce v ostrých provozech může být "
 "riskantní."
-
-msgid ""
-"The ZooKeeper service group driver in Nova is not tested by the OpenStack "
-"project and thus its quality can not be ensured. This may change in the "
-"future, but current deployers should be aware that the use of it in "
-"production right now may be risky."
-msgstr ""
-"Ovladač skupiny služeb ZooKeeper v Nova nebyl testován projektem Openstack a "
-"proto nemůže být jeho kvalita zajištěna. Toto se v budoucnu může změnit, ale "
-"v současnosti by si správci měli být vědomi, že použití této funkce v "
-"ostrých provozech může být riskantní. "
 
 msgid ""
 "The cells feature of Nova is considered experimental by the OpenStack "
@@ -1274,15 +1159,6 @@ msgid ""
 msgstr ""
 "Volby nastavení rozšíření jsou zastaralé. V blízké budoucnosti budete muset "
 "spouštět celé API."
-
-msgid ""
-"The in tree EC2 API is deprecated as of Kilo release and may be removed in a "
-"future release. The openstack ec2-api project http://git.openstack.org/cgit/"
-"openstack/ec2-api/ is the target replacement for this functionality."
-msgstr ""
-"EC2 API ve stromě je od verze Kilo označeno jako zastaralé a v budoucích "
-"verzích mlže být odstraněno. Projekt openstack ec2-api na adrese http://git."
-"openstack.org/cgit/openstack/ec2-api/ má za cíl nahradit tuto funkcionalitu."
 
 #, python-format
 msgid ""
@@ -1621,10 +1497,6 @@ msgstr ""
 "%(msg)s"
 
 #, python-format
-msgid "couldn't obtain the XML from domain: %(uuid)s, exception: %(ex)s"
-msgstr "Nelze získat XML z domény: %(uuid)s, výjimka: %(ex)s"
-
-#, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
 msgstr "nelze získat paměť z domény: %(uuid)s, výjimka: %(ex)s"
 
@@ -1643,12 +1515,6 @@ msgstr "regulární výraz datového úložiště je ignorován když je PBM zap
 #, python-format
 msgid "deallocate port %(port_id)s failed"
 msgstr "zrušení přidělení portu %(port_id)s selhalo"
-
-#, python-format
-msgid "get_minimum_version called with likely-incorrect binary `%s'"
-msgstr ""
-"Získání minimální verze zavoláno pomocí pravděpodobně nesprávného binárního "
-"souboru: `%s'"
 
 #, python-format
 msgid "hostname %s too long, truncating."
@@ -1705,10 +1571,6 @@ msgstr "isLuks byl mimořádně ukončen (stav %(exit_code)s): %(stderr)s"
 msgid "multiple fixed_ips exist, using the first IPv4 fixed_ip: %s"
 msgstr ""
 "Existuje mnoho pevných ip adres, bude použita první pevná ip adresa IPv4: %s"
-
-#, python-format
-msgid "multiple fixed_ips exist, using the first: %s"
-msgstr "existuje mnoho pevných ip adres, bude použita první: %s"
 
 #, python-format
 msgid ""

@@ -15,22 +15,19 @@
 
 import copy
 
-from oslo_config import cfg
 import six
 
-from nova.compute import api as compute_api
-from nova import db
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    microversion = None
     ADMIN_API = True
     extension_name = 'os-instance-actions'
 
@@ -41,8 +38,14 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                       'contrib.instance_actions.Instance_actions')
         return f
 
+    def _fake_get(self, context, instance_uuid, expected_attrs=None,
+                 want_objects=True):
+        return fake_instance.fake_instance_obj(
+            None, **{'uuid': instance_uuid})
+
     def setUp(self):
         super(ServerActionsSampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion
         self.actions = fake_server_actions.FAKE_ACTIONS
         self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance(obj=True)
@@ -60,18 +63,14 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         def fake_instance_get_by_uuid(context, instance_id):
             return self.instance
 
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=True):
-            return fake_instance.fake_instance_obj(
-                None, **{'uuid': instance_uuid})
-
-        self.stubs.Set(db, 'action_get_by_request_id',
-                       fake_instance_action_get_by_request_id)
-        self.stubs.Set(db, 'actions_get', fake_server_actions_get)
-        self.stubs.Set(db, 'action_events_get',
-                       fake_instance_action_events_get)
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.stub_out('nova.db.action_get_by_request_id',
+                      fake_instance_action_get_by_request_id)
+        self.stub_out('nova.db.actions_get', fake_server_actions_get)
+        self.stub_out('nova.db.action_events_get',
+                      fake_instance_action_events_get)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fake_instance_get_by_uuid)
+        self.stub_out('nova.compute.api.API.get', self._fake_get)
 
     def test_instance_action_get(self):
         fake_uuid = fake_server_actions.FAKE_UUID
@@ -80,12 +79,12 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
         response = self._do_get('servers/%s/os-instance-actions/%s' %
                                 (fake_uuid, fake_request_id))
-        subs = self._get_regexes()
+        subs = {}
         subs['action'] = '(reboot)|(resize)'
-        subs['instance_uuid'] = fake_uuid
+        subs['instance_uuid'] = str(fake_uuid)
         subs['integer_id'] = '[0-9]+'
-        subs['request_id'] = fake_action['request_id']
-        subs['start_time'] = fake_action['start_time']
+        subs['request_id'] = str(fake_action['request_id'])
+        subs['start_time'] = str(fake_action['start_time'])
         subs['result'] = '(Success)|(Error)'
         subs['event'] = '(schedule)|(compute_create)'
         self._verify_response('instance-action-get-resp', subs, response, 200)
@@ -93,10 +92,21 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_instance_actions_list(self):
         fake_uuid = fake_server_actions.FAKE_UUID
         response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
-        subs = self._get_regexes()
+        subs = {}
         subs['action'] = '(reboot)|(resize)'
         subs['integer_id'] = '[0-9]+'
         subs['request_id'] = ('req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                               '-[0-9a-f]{4}-[0-9a-f]{12}')
         self._verify_response('instance-actions-list-resp', subs,
                               response, 200)
+
+
+class ServerActionsV221SampleJsonTest(ServerActionsSampleJsonTest):
+    microversion = '2.21'
+    scenarios = [('v2_21', {'api_major_version': 'v2.1'})]
+
+    def _fake_get(self, context, instance_uuid, expected_attrs=None,
+                 want_objects=True):
+        self.assertEqual('yes', context.read_deleted)
+        return fake_instance.fake_instance_obj(
+            None, **{'uuid': instance_uuid})

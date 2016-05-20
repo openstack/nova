@@ -20,7 +20,6 @@ import functools
 import traceback
 
 import netaddr
-from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovoo_base
@@ -31,9 +30,6 @@ from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import utils
-
-
-LOG = logging.getLogger('object')
 
 
 def get_attrname(name):
@@ -74,6 +70,16 @@ class NovaObject(ovoo_base.VersionedObject):
 
     OBJ_SERIAL_NAMESPACE = 'nova_object'
     OBJ_PROJECT_NAMESPACE = 'nova'
+
+    # NOTE(ndipanov): This is nova-specific
+    @staticmethod
+    def should_migrate_data():
+        """A check that can be used to inhibit online migration behavior
+
+        This is usually used to check if all services that will be accessing
+        the db directly are ready for the new format.
+        """
+        raise NotImplementedError()
 
     # NOTE(danms): This has some minor change between the nova and o.vo
     # version, so avoid inheriting it for the moment so we can make that

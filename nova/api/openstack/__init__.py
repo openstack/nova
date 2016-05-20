@@ -18,7 +18,6 @@
 WSGI middleware for OpenStack API controllers.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import routes
 import six
@@ -28,6 +27,7 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LC
@@ -40,34 +40,8 @@ from nova import utils
 from nova import wsgi as base_wsgi
 
 
-api_opts = [
-        cfg.BoolOpt('enabled',
-                    default=True,
-                    help='DEPRECATED: Whether the V2.1 API is enabled or not. '
-                    'This option will be removed in the near future.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
-        cfg.ListOpt('extensions_blacklist',
-                    default=[],
-                    help='DEPRECATED: A list of v2.1 API extensions to never '
-                    'load. Specify the extension aliases here. '
-                    'This option will be removed in the near future. '
-                    'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21'),
-        cfg.ListOpt('extensions_whitelist',
-                    default=[],
-                    help='DEPRECATED: If the list is not empty then a v2.1 '
-                    'API extension will only be loaded if it exists in this '
-                    'list. Specify the extension aliases here. '
-                    'This option will be removed in the near future. '
-                    'After that point you have to run all of the API.',
-                    deprecated_for_removal=True, deprecated_group='osapi_v21')
-]
-api_opts_group = cfg.OptGroup(name='osapi_v21', title='API v2.1 Options')
-
 LOG = logging.getLogger(__name__)
-CONF = cfg.CONF
-CONF.register_group(api_opts_group)
-CONF.register_opts(api_opts, api_opts_group)
+CONF = nova.conf.CONF
 
 # List of v21 API extensions which are considered to form
 # the core API and so must be present
@@ -196,14 +170,40 @@ class APIMapper(routes.Mapper):
 
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
+        # NOTE(sdague): project_id parameter is only valid if its hex
+        # or hex + dashes (note, integers are a subset of this). This
+        # is required to hand our overlaping routes issues.
+        project_id_regex = '[0-9a-f\-]+'
+        if CONF.osapi_v21.project_id_regex:
+            project_id_regex = CONF.osapi_v21.project_id_regex
+
+        project_id_token = '{project_id:%s}' % project_id_regex
         if 'parent_resource' not in kwargs:
-            kwargs['path_prefix'] = '{project_id}/'
+            kwargs['path_prefix'] = '%s/' % project_id_token
         else:
             parent_resource = kwargs['parent_resource']
             p_collection = parent_resource['collection_name']
             p_member = parent_resource['member_name']
-            kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
-                                                                p_member)
+            kwargs['path_prefix'] = '%s/%s/:%s_id' % (
+                project_id_token,
+                p_collection,
+                p_member)
+        routes.Mapper.resource(
+            self,
+            member_name,
+            collection_name,
+            **kwargs)
+
+        # while we are in transition mode, create additional routes
+        # for the resource that do not include project_id.
+        if 'parent_resource' not in kwargs:
+            del kwargs['path_prefix']
+        else:
+            parent_resource = kwargs['parent_resource']
+            p_collection = parent_resource['collection_name']
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = '%s/:%s_id' % (p_collection,
+                                                   p_member)
         routes.Mapper.resource(self, member_name,
                                      collection_name,
                                      **kwargs)
@@ -314,12 +314,10 @@ class APIRouterV21(base_wsgi.Router):
     def api_extension_namespace():
         return 'nova.api.v21.extensions'
 
-    def __init__(self, init_only=None, v3mode=False):
+    def __init__(self, init_only=None):
         # TODO(cyeoh): bp v3-api-extension-framework. Currently load
         # all extensions but eventually should be able to exclude
         # based on a config file
-        # TODO(oomichi): We can remove v3mode argument after moving all v3 APIs
-        # to v2.1.
         def _check_load_extension(ext):
             if (self.init_only is None or ext.obj.alias in
                 self.init_only) and isinstance(ext.obj,
@@ -335,11 +333,6 @@ class APIRouterV21(base_wsgi.Router):
                     if ext.obj.alias not in blacklist:
                         return self._register_extension(ext)
             return False
-
-        if not CONF.osapi_v21.enabled:
-            LOG.info(_LI("V2.1 API has been disabled by configuration"))
-            LOG.warning(_LW("In the M release you must run the v2.1 API."))
-            return
 
         if (CONF.osapi_v21.extensions_blacklist or
                 CONF.osapi_v21.extensions_whitelist):
@@ -367,10 +360,7 @@ class APIRouterV21(base_wsgi.Router):
             invoke_on_load=True,
             invoke_kwds={"extension_info": self.loaded_extension_info})
 
-        if v3mode:
-            mapper = PlainMapper()
-        else:
-            mapper = ProjectMapper()
+        mapper = ProjectMapper()
 
         self.resources = {}
 

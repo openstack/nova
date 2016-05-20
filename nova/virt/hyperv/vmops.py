@@ -22,11 +22,11 @@ import os
 import time
 
 from eventlet import timeout as etimeout
+from os_win import constants as os_win_const
 from os_win import exceptions as os_win_exc
 from os_win.utils.io import ioutils
 from os_win import utilsfactory
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
 from oslo_utils import excutils
@@ -37,6 +37,7 @@ from oslo_utils import uuidutils
 import six
 
 from nova.api.metadata import base as instance_metadata
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
 from nova import utils
@@ -49,47 +50,8 @@ from nova.virt.hyperv import volumeops
 
 LOG = logging.getLogger(__name__)
 
-hyperv_opts = [
-    cfg.BoolOpt('limit_cpu_features',
-                default=False,
-                help='Required for live migration among '
-                     'hosts with different CPU features'),
-    cfg.BoolOpt('config_drive_inject_password',
-                default=False,
-                help='Sets the admin password in the config drive image'),
-    cfg.StrOpt('qemu_img_cmd',
-               default="qemu-img.exe",
-               help='Path of qemu-img command which is used to convert '
-                    'between different image types'),
-    cfg.BoolOpt('config_drive_cdrom',
-                default=False,
-                help='Attaches the Config Drive image as a cdrom drive '
-                     'instead of a disk drive'),
-    cfg.BoolOpt('enable_instance_metrics_collection',
-                default=False,
-                help='Enables metrics collections for an instance by using '
-                     'Hyper-V\'s metric APIs. Collected data can by retrieved '
-                     'by other apps and services, e.g.: Ceilometer. '
-                     'Requires Hyper-V / Windows Server 2012 and above'),
-    cfg.FloatOpt('dynamic_memory_ratio',
-                 default=1.0,
-                 help='Enables dynamic memory allocation (ballooning) when '
-                      'set to a value greater than 1. The value expresses '
-                      'the ratio between the total RAM assigned to an '
-                      'instance and its startup RAM amount. For example a '
-                      'ratio of 2.0 for an instance with 1024MB of RAM '
-                      'implies 512MB of RAM allocated at startup'),
-    cfg.IntOpt('wait_soft_reboot_seconds',
-               default=60,
-               help='Number of seconds to wait for instance to shut down after'
-                    ' soft reboot request is made. We fall back to hard reboot'
-                    ' if instance does not shutdown within this window.'),
-]
 
-CONF = cfg.CONF
-CONF.register_opts(hyperv_opts, 'hyperv')
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
-CONF.import_opt('network_api_class', 'nova.network')
+CONF = nova.conf.CONF
 
 SHUTDOWN_TIME_INCREMENT = 5
 REBOOT_TYPE_SOFT = 'SOFT'
@@ -115,21 +77,29 @@ def check_admin_permissions(function):
         return function(self, *args, **kwds)
     return wrapper
 
+NEUTRON_VIF_DRIVER = 'nova.virt.hyperv.vif.HyperVNeutronVIFDriver'
+NOVA_VIF_DRIVER = 'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver'
+
+
+def get_network_driver():
+    """"Return the correct network module"""
+    if nova.network.is_neutron() is None:
+        # this is an unknown network type, not neutron or nova
+        raise KeyError()
+    elif nova.network.is_neutron():
+        return NEUTRON_VIF_DRIVER
+    else:
+        return NOVA_VIF_DRIVER
+
 
 class VMOps(object):
-    _vif_driver_class_map = {
-        'nova.network.neutronv2.api.API':
-        'nova.virt.hyperv.vif.HyperVNeutronVIFDriver',
-        'nova.network.api.API':
-        'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver',
-    }
-
     # The console log is stored in two files, each should have at most half of
     # the maximum console log size.
     _MAX_CONSOLE_LOG_FILE_SIZE = units.Mi / 2
 
     def __init__(self):
         self._vmutils = utilsfactory.get_vmutils()
+        self._metricsutils = utilsfactory.get_metricsutils()
         self._vhdutils = utilsfactory.get_vhdutils()
         self._hostutils = utilsfactory.get_hostutils()
         self._pathutils = pathutils.PathUtils()
@@ -141,7 +111,7 @@ class VMOps(object):
 
     def _load_vif_driver_class(self):
         try:
-            class_name = self._vif_driver_class_map[CONF.network_api_class]
+            class_name = get_network_driver()
             self._vif_driver = importutils.import_object(class_name)
         except KeyError:
             raise TypeError(_("VIF driver not found for "
@@ -155,7 +125,7 @@ class VMOps(object):
                 instance_uuids.append(str(notes[0]))
             else:
                 LOG.debug("Notes not found or not resembling a GUID for "
-                          "instance: %s" % instance_name)
+                          "instance: %s", instance_name)
         return instance_uuids
 
     def list_instances(self):
@@ -233,7 +203,7 @@ class VMOps(object):
                 flavor_size=new_size, image_size=old_size)
         elif new_size > old_size:
             LOG.debug("Resizing VHD %(vhd_path)s to new "
-                      "size %(new_size)s" %
+                      "size %(new_size)s",
                       {'new_size': new_size,
                        'vhd_path': vhd_path},
                       instance=instance)
@@ -331,7 +301,7 @@ class VMOps(object):
             self._vif_driver.plug(instance, vif)
 
         if CONF.hyperv.enable_instance_metrics_collection:
-            self._vmutils.enable_vm_metrics_collection(instance_name)
+            self._metricsutils.enable_vm_metrics_collection(instance_name)
 
         self._create_vm_com_port_pipe(instance)
 
@@ -469,7 +439,7 @@ class VMOps(object):
                 return
 
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_REBOOT)
+                           os_win_const.HYPERV_VM_STATE_REBOOT)
 
     def _soft_shutdown(self, instance,
                        timeout=CONF.hyperv.wait_soft_reboot_seconds,
@@ -511,25 +481,25 @@ class VMOps(object):
         """Pause VM instance."""
         LOG.debug("Pause instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_PAUSED)
+                           os_win_const.HYPERV_VM_STATE_PAUSED)
 
     def unpause(self, instance):
         """Unpause paused VM instance."""
         LOG.debug("Unpause instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_ENABLED)
+                           os_win_const.HYPERV_VM_STATE_ENABLED)
 
     def suspend(self, instance):
         """Suspend the specified instance."""
         LOG.debug("Suspend instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_SUSPENDED)
+                           os_win_const.HYPERV_VM_STATE_SUSPENDED)
 
     def resume(self, instance):
         """Resume the suspended VM instance."""
         LOG.debug("Resume instance", instance=instance)
         self._set_vm_state(instance,
-                           constants.HYPERV_VM_STATE_ENABLED)
+                           os_win_const.HYPERV_VM_STATE_ENABLED)
 
     def power_off(self, instance, timeout=0, retry_interval=0):
         """Power off the specified instance."""
@@ -544,7 +514,7 @@ class VMOps(object):
                 return
 
             self._set_vm_state(instance,
-                               constants.HYPERV_VM_STATE_DISABLED)
+                               os_win_const.HYPERV_VM_STATE_DISABLED)
         except os_win_exc.HyperVVMNotFoundException:
             # The manager can call the stop API after receiving instance
             # power off events. If this is triggered when the instance
@@ -561,7 +531,7 @@ class VMOps(object):
             self._volumeops.fix_instance_volume_disk_paths(instance.name,
                                                            block_device_info)
 
-        self._set_vm_state(instance, constants.HYPERV_VM_STATE_ENABLED)
+        self._set_vm_state(instance, os_win_const.HYPERV_VM_STATE_ENABLED)
 
     def _set_vm_state(self, instance, req_state):
         instance_name = instance.name
@@ -570,11 +540,11 @@ class VMOps(object):
         try:
             self._vmutils.set_vm_state(instance_name, req_state)
 
-            if req_state in (constants.HYPERV_VM_STATE_DISABLED,
-                             constants.HYPERV_VM_STATE_REBOOT):
+            if req_state in (os_win_const.HYPERV_VM_STATE_DISABLED,
+                             os_win_const.HYPERV_VM_STATE_REBOOT):
                 self._delete_vm_console_log(instance)
-            if req_state in (constants.HYPERV_VM_STATE_ENABLED,
-                             constants.HYPERV_VM_STATE_REBOOT):
+            if req_state in (os_win_const.HYPERV_VM_STATE_ENABLED,
+                             os_win_const.HYPERV_VM_STATE_REBOOT):
                 self.log_vm_serial_output(instance_name,
                                           instance_uuid)
 
@@ -599,7 +569,7 @@ class VMOps(object):
                     False otherwise.
         """
 
-        desired_vm_states = [constants.HYPERV_VM_STATE_DISABLED]
+        desired_vm_states = [os_win_const.HYPERV_VM_STATE_DISABLED]
 
         def _check_vm_status(instance_name):
             if self._get_vm_state(instance_name) in desired_vm_states:
@@ -725,7 +695,7 @@ class VMOps(object):
                   given instance.
         """
         vm_state = self._get_vm_state(instance.name)
-        if vm_state == constants.HYPERV_VM_STATE_DISABLED:
+        if vm_state == os_win_const.HYPERV_VM_STATE_DISABLED:
             # can attach / detach interface to stopped VMs.
             return True
 

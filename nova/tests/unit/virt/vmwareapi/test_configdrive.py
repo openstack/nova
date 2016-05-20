@@ -26,9 +26,9 @@ import nova.tests.unit.image.fake
 from nova.tests.unit import utils
 from nova.tests.unit.virt.vmwareapi import fake as vmwareapi_fake
 from nova.tests.unit.virt.vmwareapi import stubs
+from nova.tests import uuidsentinel
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import images
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
@@ -49,8 +49,8 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                    use_linked_clone=False, group='vmware')
         self.flags(enabled=False, group='vnc')
         vmwareapi_fake.reset()
-        stubs.set_stubs(self.stubs)
-        nova.tests.unit.image.fake.stub_out_image_service(self.stubs)
+        stubs.set_stubs(self)
+        nova.tests.unit.image.fake.stub_out_image_service(self)
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         self.network_info = utils.get_test_network_info()
         self.node_name = self.conn._nodename
@@ -73,7 +73,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'task_state': 'scheduling',
             'reservation_id': 'r-3t8muvr0',
             'id': 1,
-            'uuid': 'fake-uuid',
+            'uuid': uuidsentinel.foo,
             'node': self.node_name,
             'metadata': [],
             'expected_attrs': ['system_metadata'],
@@ -87,11 +87,11 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         (image_service, image_id) = glance.get_remote_image_service(context,
                                     image_ref)
         metadata = image_service.show(context, image_id)
-        self.image = {
+        self.image = objects.ImageMeta.from_dict({
             'id': image_ref,
             'disk_format': 'vmdk',
             'size': int(metadata['size']),
-        }
+        })
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None,
@@ -109,13 +109,12 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             pass
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
-        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
-                       'make_drive', fake_make_drive)
+        self.stub_out('nova.virt.configdrive.ConfigDriveBuilder.make_drive',
+                      fake_make_drive)
 
         def fake_upload_iso_to_datastore(iso_path, instance, **kwargs):
             pass
-        self.stubs.Set(images,
-                       'upload_iso_to_datastore',
+        self.stub_out('nova.virt.vmwareapi.images.upload_iso_to_datastore',
                        fake_upload_iso_to_datastore)
 
     def tearDown(self):

@@ -73,7 +73,8 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'os_endpoint_type': 'public',
                     'ironic_url': CONF.ironic.api_endpoint,
                     'max_retries': CONF.ironic.api_max_retries,
-                    'retry_interval': CONF.ironic.api_retry_interval}
+                    'retry_interval': CONF.ironic.api_retry_interval,
+                    'os_ironic_api_version': '1.8'}
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
@@ -86,39 +87,31 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         expected = {'os_auth_token': 'fake-token',
                     'ironic_url': CONF.ironic.api_endpoint,
                     'max_retries': CONF.ironic.api_max_retries,
-                    'retry_interval': CONF.ironic.api_retry_interval}
+                    'retry_interval': CONF.ironic.api_retry_interval,
+                    'os_ironic_api_version': '1.8'}
+        mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
+                                            **expected)
+
+    @mock.patch.object(ironic_client, 'get_client')
+    def test__get_client_cafile(self, mock_ir_cli):
+        self.flags(admin_auth_token='fake-token', group='ironic')
+        self.flags(cafile='fake-cafile', group='ironic')
+        ironicclient = client_wrapper.IronicClientWrapper()
+        # dummy call to have _get_client() called
+        ironicclient.call("node.list")
+        expected = {'os_auth_token': 'fake-token',
+                    'ironic_url': CONF.ironic.api_endpoint,
+                    'max_retries': CONF.ironic.api_max_retries,
+                    'retry_interval': CONF.ironic.api_retry_interval,
+                    'os_ironic_api_version': '1.8',
+                    'os_cacert': 'fake-cafile',
+                    'ca_file': 'fake-cafile'}
         mock_ir_cli.assert_called_once_with(CONF.ironic.api_version,
                                             **expected)
 
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
     @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
-    def test_call_fail(self, mock_get_client, mock_multi_getattr):
-        cfg.CONF.set_override('api_max_retries', 2, 'ironic')
-        test_obj = mock.Mock()
-        test_obj.side_effect = ironic_exception.HTTPServiceUnavailable
-        mock_multi_getattr.return_value = test_obj
-        mock_get_client.return_value = FAKE_CLIENT
-        self.assertRaises(exception.NovaException, self.ironicclient.call,
-                          "node.list")
-        self.assertEqual(3, test_obj.call_count)
-
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
-    def test_call_with_api_max_retries_neg_conf_val(self, mock_get_client,
-                                                    mock_multi_getattr):
-        cfg.CONF.set_default('api_max_retries', -1, 'ironic')
-        test_obj = mock.Mock()
-        test_obj.side_effect = ironic_exception.HTTPServiceUnavailable
-        mock_multi_getattr.return_value = test_obj
-        mock_get_client.return_value = FAKE_CLIENT
-        self.assertRaises(exception.NovaException, self.ironicclient.call,
-                          "node.list")
-        self.assertEqual(1, test_obj.call_count)
-
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_multi_getattr')
-    @mock.patch.object(client_wrapper.IronicClientWrapper, '_get_client')
-    def test_call_fail_unexpected_exception(self, mock_get_client,
-                                            mock_multi_getattr):
+    def test_call_fail_exception(self, mock_get_client, mock_multi_getattr):
         test_obj = mock.Mock()
         test_obj.side_effect = ironic_exception.HTTPNotFound
         mock_multi_getattr.return_value = test_obj

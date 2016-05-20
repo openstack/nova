@@ -56,7 +56,7 @@ class HypervisorsController(wsgi.Controller):
                           'free_ram_mb', 'free_disk_gb', 'current_workload',
                           'running_vms', 'cpu_info', 'disk_available_least',
                           'host_ip'):
-                hyp_dict[field] = hypervisor[field]
+                hyp_dict[field] = getattr(hypervisor, field)
 
             hyp_dict['service'] = {
                 'id': service.id,
@@ -114,7 +114,7 @@ class HypervisorsController(wsgi.Controller):
             context, hyp.host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, True))
 
-    @extensions.expected_errors((404, 501))
+    @extensions.expected_errors((400, 404, 501))
     def uptime(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
@@ -131,6 +131,8 @@ class HypervisorsController(wsgi.Controller):
             uptime = self.host_api.get_host_uptime(context, host)
         except NotImplementedError:
             common.raise_feature_not_supported()
+        except exception.ComputeServiceUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         service = self.host_api.service_get_by_compute_host(context, host)
         return dict(hypervisor=self._view_hypervisor(hyp, service, False,

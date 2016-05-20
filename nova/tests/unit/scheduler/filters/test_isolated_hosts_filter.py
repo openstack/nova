@@ -14,6 +14,7 @@ from nova import objects
 from nova.scheduler.filters import isolated_hosts_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
+from nova.tests import uuidsentinel as uuids
 
 
 class TestIsolatedHostsFilter(test.NoDBTestCase):
@@ -26,12 +27,12 @@ class TestIsolatedHostsFilter(test.NoDBTestCase):
                             set_flags=True,
                             restrict_isolated_hosts_to_isolated_images=True):
         if set_flags:
-            self.flags(isolated_images=['isolated_image'],
+            self.flags(isolated_images=[uuids.image_ref],
                        isolated_hosts=['isolated_host'],
                        restrict_isolated_hosts_to_isolated_images=
                        restrict_isolated_hosts_to_isolated_images)
         host_name = 'isolated_host' if host_in_list else 'free_host'
-        image_ref = 'isolated_image' if image_in_list else 'free_image'
+        image_ref = uuids.image_ref if image_in_list else uuids.fake_image_ref
         spec_obj = objects.RequestSpec(image=objects.ImageMeta(id=image_ref))
         host = fakes.FakeHostState(host_name, 'node', {})
         return self.filt_cls.host_passes(host, spec_obj)
@@ -57,7 +58,7 @@ class TestIsolatedHostsFilter(test.NoDBTestCase):
         self.assertTrue(self._do_test_isolated_hosts(False, False, False))
 
     def test_isolated_hosts_no_hosts_config(self):
-        self.flags(isolated_images=['isolated_image'])
+        self.flags(isolated_images=[uuids.image_ref])
         # If there are no hosts in the config, it should only filter out
         # images that are listed
         self.assertFalse(self._do_test_isolated_hosts(False, True, False))

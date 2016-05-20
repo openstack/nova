@@ -13,9 +13,9 @@
 #    under the License.
 
 import netaddr
-from oslo_config import cfg
 from oslo_utils import versionutils
 
+import nova.conf
 from nova import db
 from nova import exception
 from nova.i18n import _
@@ -23,21 +23,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
 
-network_opts = [
-    cfg.BoolOpt('share_dhcp_address',
-                default=False,
-                help='DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE '
-                     'NETWORK. If True in multi_host mode, all compute hosts '
-                     'share the same dhcp address. The same IP address used '
-                     'for DHCP will be added on each nova-network node which '
-                     'is only visible to the vms on the same host.'),
-    cfg.IntOpt('network_device_mtu',
-               help='DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE '
-                    'NETWORK. MTU setting for network interface.'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(network_opts)
+CONF = nova.conf.CONF
 
 
 # TODO(berrange): Remove NovaObjectDictCompat

@@ -24,11 +24,11 @@ import re
 
 from lxml import etree
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova.compute import arch
 from nova.compute import vm_mode
+import nova.conf
 from nova.i18n import _
 from nova.i18n import _LI
 from nova import utils
@@ -37,17 +37,10 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import volumeutils
 
-libvirt_opts = [
-    cfg.BoolOpt('snapshot_compression',
-                default=False,
-                help='Compress snapshot images when possible. This '
-                     'currently applies exclusively to qcow2 images'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(libvirt_opts, 'libvirt')
-CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
+
+RESIZE_SNAPSHOT_NAME = 'nova-resize'
 
 
 def execute(*args, **kwargs):
@@ -161,24 +154,25 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
         return None
 
 
-def get_disk_size(path):
+def get_disk_size(path, format=None):
     """Get the (virtual) size of a disk image
 
     :param path: Path to the disk image
+    :param format: the on-disk format of path
     :returns: Size (in bytes) of the given disk image as it would be seen
               by a virtual machine.
     """
-    size = images.qemu_img_info(path).virtual_size
+    size = images.qemu_img_info(path, format).virtual_size
     return int(size)
 
 
-def get_disk_backing_file(path, basename=True):
+def get_disk_backing_file(path, basename=True, format=None):
     """Get the backing file of a disk image
 
     :param path: Path to the disk image
     :returns: a path to the image's backing store
     """
-    backing_file = images.qemu_img_info(path).backing_file
+    backing_file = images.qemu_img_info(path, format).backing_file
     if backing_file and basename:
         backing_file = os.path.basename(backing_file)
 
@@ -245,6 +239,14 @@ def chown(path, owner):
     execute('chown', owner, path, run_as_root=True)
 
 
+def update_mtime(path):
+    """Touch a file without being the owner.
+
+    :param path: File bump the mtime on
+    """
+    execute('touch', '-c', path, run_as_root=True)
+
+
 def _id_map_to_config(id_map):
     return "%s:%s:%s" % (id_map.start, id_map.target, id_map.count)
 
@@ -301,13 +303,13 @@ def load_file(path):
 def file_open(*args, **kwargs):
     """Open file
 
-    see built-in file() documentation for more details
+    see built-in open() documentation for more details
 
     Note: The reason this is kept in a separate module is to easily
           be able to provide a stub module that doesn't alter system
           state at all (for unit tests)
     """
-    return file(*args, **kwargs)
+    return open(*args, **kwargs)
 
 
 def file_delete(path):
@@ -338,16 +340,26 @@ def find_disk(virt_dom):
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
     os_type = domain.find('os/type').text
+    driver = None
     if CONF.libvirt.virt_type == 'lxc':
-        source = domain.find('devices/filesystem/source')
+        filesystem = domain.find('devices/filesystem')
+        driver = filesystem.find('driver')
+
+        source = filesystem.find('source')
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
         disk_path = os.path.join(disk_path, 'disk')
     elif CONF.libvirt.virt_type == 'parallels' and os_type == vm_mode.EXE:
-        source = domain.find('devices/filesystem/source')
+        filesystem = domain.find('devices/filesystem')
+        driver = filesystem.find('driver')
+
+        source = filesystem.find('source')
         disk_path = source.get('file')
     else:
-        source = domain.find('devices/disk/source')
+        disk = domain.find('devices/disk')
+        driver = disk.find('driver')
+
+        source = disk.find('source')
         disk_path = source.get('file') or source.get('dev')
         if not disk_path and CONF.libvirt.images_type == 'rbd':
             disk_path = source.get('name')
@@ -358,10 +370,18 @@ def find_disk(virt_dom):
         raise RuntimeError(_("Can't retrieve root device path "
                              "from instance libvirt configuration"))
 
-    return disk_path
+    if driver is not None:
+        format = driver.get('type')
+        # This is a legacy quirk of libvirt/xen. Everything else should
+        # report the on-disk format in type.
+        if format == 'aio':
+            format = 'raw'
+    else:
+        format = None
+    return (disk_path, format)
 
 
-def get_disk_type(path):
+def get_disk_type_from_path(path):
     """Retrieve disk type (raw, qcow2, lvm, ploop) for given file."""
     if path.startswith('/dev'):
         return 'lvm'
@@ -371,7 +391,8 @@ def get_disk_type(path):
           os.path.exists(os.path.join(path, "DiskDescriptor.xml"))):
         return 'ploop'
 
-    return images.qemu_img_info(path).file_format
+    # We can't reliably determine the type from this path
+    return None
 
 
 def get_fs_info(path):
@@ -393,21 +414,18 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
+def fetch_image(context, target, image_id, max_size=0):
     """Grab image."""
-    images.fetch_to_raw(context, image_id, target, user_id, project_id,
-                        max_size=max_size)
+    images.fetch_to_raw(context, image_id, target, max_size=max_size)
 
 
-def fetch_raw_image(context, target, image_id, user_id, project_id,
-                    max_size=0):
+def fetch_raw_image(context, target, image_id, max_size=0):
     """Grab initrd or kernel image.
 
     This function does not attempt raw conversion, as these images will
     already be in raw format.
     """
-    images.fetch(context, image_id, target, user_id, project_id,
-                 max_size=max_size)
+    images.fetch(context, image_id, target, max_size=max_size)
 
 
 def get_instance_path(instance, forceold=False, relative=False):
@@ -435,7 +453,7 @@ def get_instance_path(instance, forceold=False, relative=False):
 
 
 def get_instance_path_at_destination(instance, migrate_data=None):
-    """Get the the instance path on destination node while live migration.
+    """Get the instance path on destination node while live migration.
 
     This method determines the directory name for instance storage on
     destination node, while live migration.

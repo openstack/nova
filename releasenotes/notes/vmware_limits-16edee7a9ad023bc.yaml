@@ -1,0 +1,44 @@
+---
+features:
+  - |
+    For the VMware driver, the flavor extra specs for quotas has been extended
+    to support:
+
+    - quota:cpu_limit - The cpu of a virtual machine will not
+      exceed this limit, even if there are available resources. This is
+      typically used to ensure a consistent performance of virtual machines
+      independent of available resources. Units are MHz.
+    - quota:cpu_reservation - guaranteed minimum reservation (MHz)
+    - quota:cpu_shares_level - the allocation level. This can be
+      'custom', 'high', 'normal' or 'low'.
+    - quota:cpu_shares_share - in the event that 'custom' is used,
+      this is the number of shares.
+    - quota:memory_limit - The memory utilization of a virtual
+      machine will not exceed this limit, even if there are available
+      resources. This is typically used to ensure a consistent performance of
+      virtual machines independent of available resources. Units are MB.
+    - quota:memory_reservation - guaranteed minimum reservation (MB)
+    - quota:memory_shares_level - the allocation level. This can be
+      'custom', 'high', 'normal' or 'low'.
+    - quota:memory_shares_share - in the event that 'custom' is used,
+      this is the number of shares.
+    - quota:disk_io_limit - The I/O utilization of a virtual machine
+      will not exceed this limit. The unit is number of I/O per second.
+    - quota:disk_io_reservation - Reservation control is used to
+      provide guaranteed allocation in terms of IOPS
+    - quota:disk_io_shares_level - the allocation level. This can be
+      'custom', 'high', 'normal' or 'low'.
+    - quota:disk_io_shares_share - in the event that 'custom' is used,
+      this is the number of shares.
+    - quota:vif_limit - The bandwidth limit for the virtual network
+      adapter. The utilization of the virtual network adapter will not exceed
+      this limit, even if there are available resources. Units in Mbits/sec.
+    - quota:vif_reservation - Amount of network bandwidth that is
+      guaranteed to the virtual network adapter. If utilization is less than
+      reservation, the resource can be used by other virtual network adapters.
+      Reservation is not allowed to exceed the value of limit if limit is set.
+      Units in Mbits/sec.
+    - quota:vif_shares_level - the allocation level. This can be
+      'custom', 'high', 'normal' or 'low'.
+    - quota:vif_shares_share - in the event that 'custom' is used,
+      this is the number of shares.

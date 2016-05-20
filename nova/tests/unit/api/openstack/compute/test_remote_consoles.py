@@ -17,8 +17,6 @@ import mock
 import webob
 
 from nova.api.openstack import api_version_request
-from nova.api.openstack.compute.legacy_v2.contrib import consoles \
-    as console_v2
 from nova.api.openstack.compute import remote_consoles \
     as console_v21
 from nova.compute import api as compute_api
@@ -572,6 +570,16 @@ class ConsolesExtensionTestV26(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, fakes.FAKE_UUID, body=body)
 
+    @mock.patch.object(compute_api.API, 'get', return_value='fake_instance')
+    def test_create_console_invalid_type(self, mock_get):
+        mock_handler = mock.MagicMock()
+        mock_handler.side_effect = (
+            exception.ConsoleTypeInvalid(console_type='invalid_type'))
+        self.controller.handlers['serial'] = mock_handler
+        body = {'remote_console': {'protocol': 'serial', 'type': 'xvpvnc'}}
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          self.req, fakes.FAKE_UUID, body=body)
+
 
 class ConsolesExtensionTestV28(ConsolesExtensionTestV26):
     def setUp(self):
@@ -595,20 +603,6 @@ class ConsolesExtensionTestV28(ConsolesExtensionTestV26):
                                              'url': 'http://fake'}}, output)
         mock_handler.assert_called_once_with(self.context, 'fake_instance',
                                              'webmks')
-
-
-class ConsolesExtensionTestV2(ConsolesExtensionTestV21):
-    controller_class = console_v2.ConsolesController
-    validation_error = webob.exc.HTTPBadRequest
-
-    def test_get_vnc_console_with_undefined_param(self):
-        pass
-
-    def test_get_spice_console_with_undefined_param(self):
-        pass
-
-    def test_get_rdp_console_with_undefined_param(self):
-        pass
 
 
 class TestRemoteConsolePolicyEnforcementV21(test.NoDBTestCase):

@@ -18,32 +18,41 @@ from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 
 from nova.compute import manager as compute_manager
+from nova import context
 from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import aggregate
+from nova.objects import fields
 from nova.objects import service
 from nova import test
 from nova.tests.unit.objects import test_compute_node
 from nova.tests.unit.objects import test_objects
 
 NOW = timeutils.utcnow().replace(microsecond=0)
-fake_service = {
-    'created_at': NOW,
-    'updated_at': None,
-    'deleted_at': None,
-    'deleted': False,
-    'id': 123,
-    'host': 'fake-host',
-    'binary': 'nova-fake',
-    'topic': 'fake-service-topic',
-    'report_count': 1,
-    'forced_down': False,
-    'disabled': False,
-    'disabled_reason': None,
-    'last_seen_up': None,
-    'version': service.SERVICE_VERSION,
-    }
+
+
+def _fake_service(**kwargs):
+    fake_service = {
+        'created_at': NOW,
+        'updated_at': None,
+        'deleted_at': None,
+        'deleted': False,
+        'id': 123,
+        'host': 'fake-host',
+        'binary': 'nova-fake',
+        'topic': 'fake-service-topic',
+        'report_count': 1,
+        'forced_down': False,
+        'disabled': False,
+        'disabled_reason': None,
+        'last_seen_up': None,
+        'version': service.SERVICE_VERSION,
+        }
+    fake_service.update(kwargs)
+    return fake_service
+
+fake_service = _fake_service()
 
 OPTIONAL = ['availability_zone', 'compute_node']
 
@@ -186,7 +195,32 @@ class _TestServiceObject(object):
         services = service.ServiceList.get_by_binary(self.context,
                                                      'fake-binary')
         self.assertEqual(1, len(services))
-        mock_get.assert_called_once_with(self.context, 'fake-binary')
+        mock_get.assert_called_once_with(self.context,
+                                         'fake-binary',
+                                         include_disabled=False)
+
+    @mock.patch('nova.db.service_get_all_by_binary')
+    def test_get_by_binary_disabled(self, mock_get):
+        mock_get.return_value = [_fake_service(disabled=True)]
+        services = service.ServiceList.get_by_binary(self.context,
+                                                     'fake-binary',
+                                                     include_disabled=True)
+        self.assertEqual(1, len(services))
+        mock_get.assert_called_once_with(self.context,
+                                         'fake-binary',
+                                         include_disabled=True)
+
+    @mock.patch('nova.db.service_get_all_by_binary')
+    def test_get_by_binary_both(self, mock_get):
+        mock_get.return_value = [_fake_service(),
+                                 _fake_service(disabled=True)]
+        services = service.ServiceList.get_by_binary(self.context,
+                                                     'fake-binary',
+                                                     include_disabled=True)
+        self.assertEqual(2, len(services))
+        mock_get.assert_called_once_with(self.context,
+                                         'fake-binary',
+                                         include_disabled=True)
 
     def test_get_by_host(self):
         self.mox.StubOutWithMock(db, 'service_get_all_by_host')
@@ -270,17 +304,15 @@ class _TestServiceObject(object):
         self.assertEqual(0,
                          objects.Service.get_minimum_version(self.context,
                                                              'nova-compute'))
-        mock_get.assert_called_once_with(self.context, 'nova-compute',
-                                         use_slave=False)
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
 
     @mock.patch('nova.db.service_get_minimum_version')
     def test_get_minimum_version(self, mock_get):
-        mock_get.return_value = 123
+        mock_get.return_value = {'nova-compute': 123}
         self.assertEqual(123,
                          objects.Service.get_minimum_version(self.context,
                                                              'nova-compute'))
-        mock_get.assert_called_once_with(self.context, 'nova-compute',
-                                         use_slave=False)
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
 
     @mock.patch('nova.db.service_get_minimum_version')
     @mock.patch('nova.objects.service.LOG')
@@ -296,21 +328,64 @@ class _TestServiceObject(object):
                           'compute')
         self.assertTrue(mock_log.warning.called)
 
-    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    @mock.patch('nova.db.service_get_minimum_version')
+    def test_get_minimum_version_with_caching(self, mock_get):
+        objects.Service.enable_min_version_cache()
+        mock_get.return_value = {'nova-compute': 123}
+        self.assertEqual(123,
+                         objects.Service.get_minimum_version(self.context,
+                                                             'nova-compute'))
+        self.assertEqual({"nova-compute": 123},
+                         objects.Service._MIN_VERSION_CACHE)
+        self.assertEqual(123,
+                         objects.Service.get_minimum_version(self.context,
+                                                             'nova-compute'))
+        mock_get.assert_called_once_with(self.context, ['nova-compute'])
+        objects.Service._SERVICE_VERSION_CACHING = False
+        objects.Service.clear_min_version_cache()
+
+    @mock.patch('nova.db.service_get_minimum_version')
+    def test_get_min_version_multiple_with_old(self, mock_gmv):
+        mock_gmv.return_value = {'nova-api': None,
+                                 'nova-scheduler': 2,
+                                 'nova-conductor': 3}
+
+        binaries = ['nova-api', 'nova-api', 'nova-conductor',
+                    'nova-conductor', 'nova-api']
+        minimum = objects.Service.get_minimum_version_multi(self.context,
+                                                            binaries)
+        self.assertEqual(0, minimum)
+
+    @mock.patch('nova.db.service_get_minimum_version')
+    def test_get_min_version_multiple(self, mock_gmv):
+        mock_gmv.return_value = {'nova-api': 1,
+                                 'nova-scheduler': 2,
+                                 'nova-conductor': 3}
+
+        binaries = ['nova-api', 'nova-api', 'nova-conductor',
+                    'nova-conductor', 'nova-api']
+        minimum = objects.Service.get_minimum_version_multi(self.context,
+                                                            binaries)
+        self.assertEqual(1, minimum)
+
+    @mock.patch('nova.db.service_get_minimum_version',
+                return_value={'nova-compute': 2})
     def test_create_above_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=3):
             objects.Service(context=self.context,
                             binary='nova-compute').create()
 
-    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    @mock.patch('nova.db.service_get_minimum_version',
+                return_value={'nova-compute': 2})
     def test_create_equal_to_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=2):
             objects.Service(context=self.context,
                             binary='nova-compute').create()
 
-    @mock.patch('nova.db.service_get_minimum_version', return_value=2)
+    @mock.patch('nova.db.service_get_minimum_version',
+                return_value={'nova-compute': 2})
     def test_create_below_minimum(self, mock_get):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=1):
@@ -331,6 +406,10 @@ class TestRemoteServiceObject(test_objects._RemoteTest,
 
 
 class TestServiceVersion(test.TestCase):
+    def setUp(self):
+        self.ctxt = context.get_admin_context()
+        super(TestServiceVersion, self).setUp()
+
     def _collect_things(self):
         data = {
             'compute_rpc': compute_manager.ComputeManager.target.version,
@@ -348,7 +427,8 @@ class TestServiceVersion(test.TestCase):
         self.assertEqual(
             current, calculated,
             'Changes detected that require a SERVICE_VERSION change. Please '
-            'increment nova.objects.service.SERVICE_VERSION')
+            'increment nova.objects.service.SERVICE_VERSION, and make sure it'
+            'is equal to nova.compute.manager.ComputeManager.target.version.')
 
     def test_version_in_init(self):
         self.assertRaises(exception.ObjectActionError,
@@ -364,22 +444,58 @@ class TestServiceVersion(test.TestCase):
         fake_different_service = dict(fake_service)
         fake_different_service['version'] = fake_version
         obj = objects.Service()
-        obj._from_db_object(mock.sentinel.context, obj, fake_different_service)
+        obj._from_db_object(self.ctxt, obj, fake_different_service)
         self.assertEqual(fake_version, obj.version)
 
-    def test_save_noop_with_only_version(self):
-        o = objects.Service(context=mock.sentinel.context,
-                            id=fake_service['id'])
-        o.obj_reset_changes(['id'])
-        self.assertEqual(set(['version']), o.obj_what_changed())
-        with mock.patch('nova.db.service_update') as mock_update:
-            o.save()
-            self.assertFalse(mock_update.called)
-        o.host = 'foo'
-        with mock.patch('nova.db.service_update') as mock_update:
-            mock_update.return_value = fake_service
-            o.save()
-            mock_update.assert_called_once_with(
-                mock.sentinel.context, fake_service['id'],
-                {'version': service.SERVICE_VERSION,
-                 'host': 'foo'})
+
+class TestServiceStatusNotification(test.TestCase):
+    def setUp(self):
+        self.ctxt = context.get_admin_context()
+        super(TestServiceStatusNotification, self).setUp()
+
+    @mock.patch('nova.objects.service.ServiceStatusNotification')
+    def _verify_notification(self, service_obj, mock_notification):
+        service_obj.save()
+
+        self.assertTrue(mock_notification.called)
+
+        event_type = mock_notification.call_args[1]['event_type']
+        priority = mock_notification.call_args[1]['priority']
+        publisher = mock_notification.call_args[1]['publisher']
+        payload = mock_notification.call_args[1]['payload']
+
+        self.assertEqual(service_obj.host, publisher.host)
+        self.assertEqual(service_obj.binary, publisher.binary)
+        self.assertEqual(fields.NotificationPriority.INFO, priority)
+        self.assertEqual('service', event_type.object)
+        self.assertEqual(fields.NotificationAction.UPDATE,
+                         event_type.action)
+        for field in service.ServiceStatusPayload.SCHEMA:
+            if field in fake_service:
+                self.assertEqual(fake_service[field], getattr(payload, field))
+
+        mock_notification.return_value.emit.assert_called_once_with(self.ctxt)
+
+    @mock.patch('nova.db.service_update')
+    def test_service_update_with_notification(self, mock_db_service_update):
+        service_obj = objects.Service(context=self.ctxt, id=fake_service['id'])
+        mock_db_service_update.return_value = fake_service
+        for key, value in {'disabled': True,
+                           'disabled_reason': 'my reason',
+                           'forced_down': True}.items():
+            setattr(service_obj, key, value)
+            self._verify_notification(service_obj)
+
+    @mock.patch('nova.objects.service.ServiceStatusNotification')
+    @mock.patch('nova.db.service_update')
+    def test_service_update_without_notification(self,
+                                                 mock_db_service_update,
+                                                 mock_notification):
+        service_obj = objects.Service(context=self.ctxt, id=fake_service['id'])
+        mock_db_service_update.return_value = fake_service
+
+        for key, value in {'report_count': 13,
+                           'last_seen_up': timeutils.utcnow()}.items():
+            setattr(service_obj, key, value)
+            service_obj.save()
+            self.assertFalse(mock_notification.called)

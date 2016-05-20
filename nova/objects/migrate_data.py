@@ -14,6 +14,7 @@
 
 from oslo_log import log
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 
 from nova import objects
 from nova.objects import base as obj_base
@@ -46,6 +47,19 @@ class LiveMigrateData(obj_base.NovaObject):
             self.is_volume_backed = legacy['is_volume_backed']
         if 'migration' in legacy:
             self.migration = legacy['migration']
+
+    @classmethod
+    def detect_implementation(cls, legacy_dict):
+        if 'instance_relative_path' in legacy_dict:
+            obj = LibvirtLiveMigrateData()
+        elif 'image_type' in legacy_dict:
+            obj = LibvirtLiveMigrateData()
+        elif 'migrate_data' in legacy_dict:
+            obj = XenapiLiveMigrateData()
+        else:
+            obj = LiveMigrateData()
+        obj.from_legacy_dict(legacy_dict)
+        return obj
 
 
 @obj_base.NovaObjectRegistry.register
@@ -91,7 +105,9 @@ class LibvirtLiveMigrateBDMInfo(obj_base.NovaObject):
 
 @obj_base.NovaObjectRegistry.register
 class LibvirtLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Added target_connect_addr
+    VERSION = '1.1'
 
     fields = {
         'filename': fields.StringField(),
@@ -105,9 +121,17 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'instance_relative_path': fields.StringField(),
         'graphics_listen_addr_vnc': fields.IPAddressField(nullable=True),
         'graphics_listen_addr_spice': fields.IPAddressField(nullable=True),
-        'serial_listen_addr': fields.StringField(),
+        'serial_listen_addr': fields.StringField(nullable=True),
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
+        'target_connect_addr': fields.StringField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(LibvirtLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'target_connect_addr' in primitive:
+            del primitive['target_connect_addr']
 
     def _bdms_to_legacy(self, legacy):
         if not self.obj_attr_is_set('bdms'):
@@ -144,12 +168,14 @@ class LibvirtLiveMigrateData(LiveMigrateData):
 
         graphics_vnc = legacy.pop('graphics_listen_addr_vnc', None)
         graphics_spice = legacy.pop('graphics_listen_addr_spice', None)
+        transport_target = legacy.pop('target_connect_addr', None)
         live_result = {
             'graphics_listen_addrs': {
                 'vnc': graphics_vnc and str(graphics_vnc),
                 'spice': graphics_spice and str(graphics_spice),
                 },
             'serial_listen_addr': legacy.pop('serial_listen_addr', None),
+            'target_connect_addr': transport_target,
         }
 
         if pre_migration_result:
@@ -172,7 +198,62 @@ class LibvirtLiveMigrateData(LiveMigrateData):
                 pre_result['graphics_listen_addrs'].get('vnc')
             self.graphics_listen_addr_spice = \
                 pre_result['graphics_listen_addrs'].get('spice')
+            self.target_connect_addr = pre_result.get('target_connect_addr')
             if 'serial_listen_addr' in pre_result:
                 self.serial_listen_addr = pre_result['serial_listen_addr']
             self._bdms_from_legacy(pre_result)
         LOG.debug('Converted object: %s' % self)
+
+    def is_on_shared_storage(self):
+        return self.is_shared_block_storage or self.is_shared_instance_path
+
+
+@obj_base.NovaObjectRegistry.register
+class XenapiLiveMigrateData(LiveMigrateData):
+    VERSION = '1.0'
+
+    fields = {
+        'block_migration': fields.BooleanField(nullable=True),
+        'destination_sr_ref': fields.StringField(nullable=True),
+        'migrate_send_data': fields.DictOfStringsField(nullable=True),
+        'sr_uuid_map': fields.DictOfStringsField(),
+        'kernel_file': fields.StringField(),
+        'ramdisk_file': fields.StringField(),
+    }
+
+    def to_legacy_dict(self, pre_migration_result=False):
+        legacy = super(XenapiLiveMigrateData, self).to_legacy_dict()
+        if self.obj_attr_is_set('block_migration'):
+            legacy['block_migration'] = self.block_migration
+        if self.obj_attr_is_set('migrate_send_data'):
+            legacy['migrate_data'] = {
+                'migrate_send_data': self.migrate_send_data,
+                'destination_sr_ref': self.destination_sr_ref,
+            }
+        live_result = {
+            'sr_uuid_map': ('sr_uuid_map' in self and self.sr_uuid_map
+                            or {}),
+        }
+        if pre_migration_result:
+            legacy['pre_live_migration_result'] = live_result
+        return legacy
+
+    def from_legacy_dict(self, legacy):
+        super(XenapiLiveMigrateData, self).from_legacy_dict(legacy)
+        if 'block_migration' in legacy:
+            self.block_migration = legacy['block_migration']
+        else:
+            self.block_migration = False
+        if 'migrate_data' in legacy:
+            self.migrate_send_data = \
+                legacy['migrate_data']['migrate_send_data']
+            self.destination_sr_ref = \
+                legacy['migrate_data']['destination_sr_ref']
+        if 'pre_live_migration_result' in legacy:
+            self.sr_uuid_map = \
+                legacy['pre_live_migration_result']['sr_uuid_map']
+
+
+@obj_base.NovaObjectRegistry.register
+class HyperVLiveMigrateData(LiveMigrateData):
+    VERSION = '1.0'

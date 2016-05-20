@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The minimum required version of libvirt has been
+    increased to 1.2.1

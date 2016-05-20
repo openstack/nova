@@ -82,7 +82,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         self.assertEqual(10, resources['vcpus_used'])
         self.assertEqual(3 - 2, resources['memory_mb_used'])
         self.assertEqual(2, resources['local_gb_used'])
-        self.assertEqual('xen', resources['hypervisor_type'])
+        self.assertEqual('XenServer', resources['hypervisor_type'])
         self.assertEqual('somename', resources['hypervisor_hostname'])
         self.assertEqual(1, resources['disk_available_least'])
 

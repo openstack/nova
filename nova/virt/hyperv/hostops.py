@@ -21,8 +21,8 @@ import os
 import platform
 import time
 
+from os_win import constants as os_win_const
 from os_win import utilsfactory
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -30,12 +30,12 @@ from oslo_utils import units
 from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import vm_mode
+import nova.conf
 from nova.i18n import _
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import pathutils
 
-CONF = cfg.CONF
-CONF.import_opt('my_ip', 'nova.netconf')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -67,7 +67,7 @@ class HostOps(object):
         cpu_info['topology'] = topology
 
         features = list()
-        for fkey, fname in constants.PROCESSOR_FEATURE.items():
+        for fkey, fname in os_win_const.PROCESSOR_FEATURE.items():
             if self._hostutils.is_cpu_feature_present(fkey):
                 features.append(fname)
         cpu_info['features'] = features

@@ -15,18 +15,17 @@
 
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import strutils
 import six
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import utils
 from nova.virt import driver
 
-CONF = cfg.CONF
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 DEFAULT_ROOT_DEV_NAME = '/dev/sda1'
@@ -46,7 +45,7 @@ bdm_new_fields = set(['source_type', 'destination_type',
                      'guest_format', 'device_type', 'disk_bus', 'boot_index',
                      'device_name', 'delete_on_termination', 'snapshot_id',
                      'volume_id', 'volume_size', 'image_id', 'no_device',
-                     'connection_info'])
+                     'connection_info', 'tag'])
 
 
 bdm_db_only_fields = set(['id', 'instance_uuid'])
@@ -494,7 +493,7 @@ _pref = re.compile('^((x?v|s|h)d)')
 def strip_prefix(device_name):
     """remove both leading /dev/ and xvd or sd or vd or hd."""
     device_name = strip_dev(device_name)
-    return _pref.sub('', device_name)
+    return _pref.sub('', device_name) if device_name else device_name
 
 
 _nums = re.compile('\d+')
@@ -504,14 +503,14 @@ def get_device_letter(device_name):
     letter = strip_prefix(device_name)
     # NOTE(vish): delete numbers in case we have something like
     #             /dev/sda1
-    return _nums.sub('', letter)
+    return _nums.sub('', letter) if device_name else device_name
 
 
 def instance_block_mapping(instance, bdms):
     root_device_name = instance['root_device_name']
     # NOTE(clayg): remove this when xenapi is setting default_root_device
     if root_device_name is None:
-        if driver.compute_driver_matches('xenapi.XenAPIDriver'):
+        if driver.is_xenapi():
             root_device_name = '/dev/xvda'
         else:
             return _DEFAULT_MAPPINGS
@@ -581,7 +580,7 @@ def volume_in_mapping(mount_device, block_device_info):
                           driver.block_device_info_get_ephemerals(
                           block_device_info)]
 
-    LOG.debug("block_device_list %s", block_device_list)
+    LOG.debug("block_device_list %s", sorted(filter(None, block_device_list)))
     return strip_dev(mount_device) in block_device_list
 
 

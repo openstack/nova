@@ -4,11 +4,11 @@
         "id": "3e45fa2a-5204-466f-a684-c2a8e1c82d7f",
         "links": [
             {
-                "href": "http://openstack.example.com/v2/openstack/servers/3e45fa2a-5204-466f-a684-c2a8e1c82d7f",
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/3e45fa2a-5204-466f-a684-c2a8e1c82d7f",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/openstack/servers/3e45fa2a-5204-466f-a684-c2a8e1c82d7f",
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/3e45fa2a-5204-466f-a684-c2a8e1c82d7f",
                 "rel": "bookmark"
             }
         ]

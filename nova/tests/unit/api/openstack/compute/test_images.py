@@ -25,7 +25,6 @@ import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute import images as images_v21
-from nova.api.openstack.compute.legacy_v2 import images
 from nova.api.openstack.compute.views import images as images_view
 from nova import exception
 from nova.image import glance
@@ -51,7 +50,8 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     def setUp(self):
         """Run before each test."""
         super(ImagesControllerTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        self.flags(api_servers=['http://localhost:9292'], group='glance')
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
@@ -406,11 +406,3 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['1'], 'marker': [IMAGE_FIXTURES[0]['id']]},
                         matchers.DictMatches(params))
-
-
-class ImagesControllerTestV2(ImagesControllerTestV21):
-    image_controller_class = images.Controller
-    http_request = fakes.HTTPRequest
-
-    def _check_response(self, controller_method, response, expected_code):
-        self.assertEqual(expected_code, response.status_int)

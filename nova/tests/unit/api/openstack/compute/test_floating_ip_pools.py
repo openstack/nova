@@ -15,8 +15,6 @@
 
 from nova.api.openstack.compute import floating_ip_pools \
         as fipp_v21
-from nova.api.openstack.compute.legacy_v2.contrib import floating_ip_pools \
-        as fipp_v2
 from nova import context
 from nova import exception
 from nova import network
@@ -55,10 +53,6 @@ class FloatingIpPoolTestV21(test.NoDBTestCase):
         pools = fake_get_floating_ip_pools(None, self.context)
         response = {'floating_ip_pools': [{'name': name} for name in pools]}
         self.assertEqual(res_dict, response)
-
-
-class FloatingIpPoolTestV2(FloatingIpPoolTestV21):
-    floating_ip_pools = fipp_v2
 
 
 class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):

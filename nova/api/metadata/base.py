@@ -20,7 +20,6 @@ import base64
 import os
 import posixpath
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
@@ -33,29 +32,16 @@ from nova import availability_zones as az
 from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova import context
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
-from nova.objects import keypair as keypair_obj
 from nova import utils
 from nova.virt import netutils
 
 
-metadata_opts = [
-    cfg.StrOpt('config_drive_skip_versions',
-               default=('1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 '
-                        '2007-12-15 2008-02-01 2008-09-01'),
-               help='List of metadata versions to skip placing into the '
-                    'config drive'),
-    cfg.StrOpt('vendordata_driver',
-               default='nova.api.metadata.vendordata_json.JsonFileVendorData',
-               help='Driver to use for vendor data'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(metadata_opts)
-CONF.import_opt('dhcp_domain', 'nova.network.manager')
+CONF = nova.conf.CONF
 
 VERSIONS = [
     '1.0',
@@ -130,7 +116,7 @@ class InstanceMetadata(object):
 
         secgroup_api = openstack_driver.get_openstack_security_group_driver()
         self.security_groups = secgroup_api.get_instance_security_groups(
-            ctxt, instance.uuid)
+            ctxt, instance)
 
         self.mappings = _format_instance_mapping(ctxt, instance)
 
@@ -312,20 +298,20 @@ class InstanceMetadata(object):
             metadata.update(self.extra_md)
         if self.network_config:
             metadata['network_config'] = self.network_config
-        if self.instance.key_name:
-            metadata['public_keys'] = {
-                self.instance.key_name: self.instance.key_data
-            }
 
+        if self.instance.key_name:
             if cells_opts.get_cell_type() == 'compute':
                 cells_api = cells_rpcapi.CellsAPI()
                 keypair = cells_api.get_keypair_at_top(
                   context.get_admin_context(), self.instance.user_id,
                   self.instance.key_name)
             else:
-                keypair = keypair_obj.KeyPair.get_by_name(
-                    context.get_admin_context(), self.instance.user_id,
-                    self.instance.key_name)
+                keypair = self.instance.keypairs[0]
+
+            metadata['public_keys'] = {
+                keypair.name: keypair.public_key,
+            }
+
             metadata['keys'] = [
                 {'name': keypair.name,
                  'type': keypair.type,
@@ -479,11 +465,11 @@ class InstanceMetadata(object):
                 path = 'openstack/%s/%s' % (version, VD_JSON_NAME)
                 yield (path, self.lookup(path))
 
-        for (cid, content) in six.iteritems(self.content):
             if self._check_version(LIBERTY, version, ALL_OPENSTACK_VERSIONS):
                 path = 'openstack/%s/%s' % (version, NW_JSON_NAME)
                 yield (path, self.lookup(path))
 
+        for (cid, content) in six.iteritems(self.content):
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
 
 
@@ -544,7 +530,9 @@ def get_metadata_by_address(address):
 def get_metadata_by_instance_id(instance_id, address, ctxt=None):
     ctxt = ctxt or context.get_admin_context()
     instance = objects.Instance.get_by_uuid(
-        ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache'])
+        ctxt, instance_id, expected_attrs=['ec2_ids', 'flavor', 'info_cache',
+                                           'metadata', 'system_metadata',
+                                           'security_groups', 'keypairs'])
     return InstanceMetadata(instance, address)
 
 

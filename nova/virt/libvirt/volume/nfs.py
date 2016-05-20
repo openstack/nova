@@ -10,32 +10,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
+import nova.conf
 from nova.i18n import _LE, _LW
-from nova import paths
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.StrOpt('nfs_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help='Directory where the NFS volume is mounted on the'
-               ' compute node'),
-    cfg.StrOpt('nfs_mount_options',
-               help='Mount options passed to the NFS client. See section '
-                    'of the nfs man page for details'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
@@ -52,10 +40,11 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         conf.source_type = 'file'
         conf.source_path = connection_info['data']['device_path']
         conf.driver_format = connection_info['data'].get('format', 'raw')
+        conf.driver_io = "native"
         return conf
 
     def connect_volume(self, connection_info, disk_info):
-        """Connect the volume. Returns xml for libvirt."""
+        """Connect the volume."""
         self._ensure_mounted(connection_info)
 
         connection_info['data']['device_path'] = \
@@ -73,6 +62,9 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             if ('device is busy' in six.text_type(exc) or
                 'target is busy' in six.text_type(exc)):
                 LOG.debug("The NFS share %s is still in use.", export)
+            elif ('not mounted' in six.text_type(exc)):
+                LOG.debug("The NFS share %s has already been unmounted.",
+                          export)
             else:
                 LOG.exception(_LE("Couldn't unmount the NFS share %s"), export)
 
@@ -102,6 +94,6 @@ class LibvirtNFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             utils.execute(*nfs_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in six.text_type(exc):
-                LOG.warn(_LW("%s is already mounted"), nfs_share)
+                LOG.warning(_LW("%s is already mounted"), nfs_share)
             else:
                 raise

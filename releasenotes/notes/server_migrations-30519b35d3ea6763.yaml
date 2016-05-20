@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Add two new list/show API for server-migration.
+    The list API will return the in progress live migratons
+    information of a server. The show API will return
+    a specified in progress live migration of a server.
+    This has been added in microversion 2.23.

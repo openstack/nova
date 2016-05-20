@@ -13,14 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class MultipleCreateJsonTest(test_servers.ServersSampleBase):
@@ -42,7 +39,6 @@ class MultipleCreateJsonTest(test_servers.ServersSampleBase):
             'max_count': "3"
         }
         response = self._do_post('servers', 'multiple-create-post-req', subs)
-        subs.update(self._get_regexes())
         self._verify_response('multiple-create-post-resp', subs, response, 202)
 
     def test_multiple_create_without_reservation_id(self):
@@ -54,6 +50,5 @@ class MultipleCreateJsonTest(test_servers.ServersSampleBase):
         }
         response = self._do_post('servers', 'multiple-create-no-resv-post-req',
                                   subs)
-        subs.update(self._get_regexes())
         self._verify_response('multiple-create-no-resv-post-resp', subs,
                               response, 202)

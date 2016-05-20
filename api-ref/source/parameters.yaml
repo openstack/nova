@@ -1,0 +1,2696 @@
+# variables in header
+x-openstack-request-id:
+  description: >
+    A unique ID for tracking the request. The request ID associated with the request
+    appears in the log lines for that request. By default, the middleware configuration
+    ensures that the request ID appears in the log files.
+  in: header
+  required: true
+  type: string
+x-openstack-request-id_1:
+  description: |
+    A unique request ID that provides tracking for the request. Provider must configure
+    middleware to return a request ID header in a response.
+  in: header
+  required: false
+  type: string
+
+# variables in path
+admin_tenant_id:
+  description: |
+    The UUID of the administrative tenant.
+  in: path
+  required: true
+  type: string
+agent_build_id:
+  description: |
+    The id of the agent build.
+  in: path
+  required: true
+  type: string
+aggregate_id:
+  description: |
+    The aggregate ID.
+  in: path
+  required: true
+  type: string
+api_version:
+  in: path
+  required: true
+  type: string
+  description: >
+    The API version as returned in the links from the ``GET /`` call.
+attachment_id:
+  description: |
+    The UUID of the attachment.
+  in: path
+  required: true
+  type: string
+cell_id:
+  description: |
+    The UUID of the cell.
+  in: path
+  required: true
+  type: string
+certificate_id:
+  description: |
+    The certificate ID, as a string. The only valid value is ``root``.
+  in: path
+  required: true
+  type: string
+class_id:
+  description: |
+    The UUID of the quota class.
+  in: path
+  required: true
+  type: string
+console_id:
+  description: |
+    The UUID of the console.
+  in: path
+  required: true
+  type: string
+disabled_reason:
+  description: |
+    The reason for disable a service.
+  in: path
+  required: false
+  type: string
+domain:
+  description: |
+    The registered DNS domain that the DNS drivers publish.
+  in: path
+  required: true
+  type: string
+fixed_ip_1:
+  description: |
+    The fixed IP of interest to you.
+  in: path
+  required: true
+  type: string
+flavor_extra_spec_key:
+  description: |
+    The extra spec key for the flavor.
+  in: path
+  required: true
+  type: string
+flavor_id:
+  description: |
+    The ID of the flavor.
+  in: path
+  required: true
+  type: string
+floating_ip_id:
+  description: |
+    The ID of the floating IP address.
+  in: path
+  required: true
+  type: string
+host_maintenance_mode_in:
+  description: |
+    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+  in: path
+  required: false
+  type: string
+host_name:
+  description: |
+    The name of the host.
+  in: path
+  required: true
+  type: string
+host_status_body_in:
+  description: |
+    The status of the current host, either 'enabled' or 'disabled'.
+  in: path
+  required: false
+  type: string
+hypervisor_id:
+  description: |
+    The UUID of the hypervisor.
+  in: path
+  required: true
+  type: string
+image_id:
+  description: |
+    The UUID of the image.
+  in: path
+  required: true
+  type: string
+instance_id:
+  description: |
+    The UUID of the instance.
+  in: path
+  required: true
+  type: string
+ip:
+  description: |
+    The IP address.
+  in: path
+  required: true
+  type: string
+key:
+  description: |
+    The metadata item key, as a string. Maximum length is 255 characters.
+  in: path
+  required: true
+  type: string
+keypair_name:
+  description: |
+    The keypair name.
+  in: path
+  required: true
+  type: string
+name_1:
+  description: |
+    The name of the DNS entry.
+  in: path
+  required: true
+  type: string
+network_id:
+  description: |
+    The UUID of the network.
+  in: path
+  required: true
+  type: string
+network_label:
+  description: |
+    The network label, such as ``public`` or ``private``.
+  in: path
+  required: true
+  type: string
+node_id:
+  description: |
+    The node ID.
+  in: path
+  required: true
+  type: string
+port_id_1:
+  description: |
+    The UUID of the port.
+  in: path
+  required: true
+  type: string
+request_id:
+  description: |
+    The ID of the request.
+  in: path
+  required: true
+  type: string
+security_group_default_rule_id:
+  description: |
+    The UUID of the security group rule.
+  in: path
+  required: true
+  type: string
+security_group_id:
+  description: |
+    The ID of the security group.
+  in: path
+  required: true
+  type: string
+security_group_rule_id:
+  description: |
+    The ID of the security group rule.
+  in: path
+  required: true
+  type: string
+server_group_id:
+  description: |
+    The UUID of the server group.
+  in: path
+  required: true
+  type: string
+server_id_path:
+  description: |
+    The UUID of the server.
+  in: path
+  required: true
+  type: string
+service_id_path:
+  in: path
+  required: true
+  type: int
+  description: |
+    The id of the service
+snapshot_id_2:
+  description: |
+    The UUID of the snapshot.
+  in: path
+  required: true
+  type: string
+tenant_id:
+  description: |
+    The UUID of the tenant in a multi-tenancy cloud.
+  in: path
+  required: true
+  type: string
+volume_id_1:
+  description: |
+    The unique ID for a volume.
+  in: path
+  required: true
+  type: string
+volume_type_id:
+  description: |
+    The unique ID for a volume type.
+  in: path
+  required: true
+  type: string
+
+# variables in query
+all_projects:
+  description: |
+    Administrator only. Lists server groups for all projects. For example:
+
+      ``GET /v2.1/{admin_tenant_id}/os-server-groups?all_projects=True``
+
+    If you specify a tenant ID for a non-administrative user with this query parameter,
+    the call lists all server groups for the tenant, or project, rather than for
+    all projects.
+  in: query
+  required: false
+  type: boolean
+all_tenants:
+  description: |
+    Specify the ``all_tenants=1`` query parameter to ping instances
+    for all tenants. By default this is only allowed by admin users.
+  in: query
+  required: false
+  type: integer
+all_tenants_query:
+  description: |
+    Specify the ``all_tenants=1`` query parameter to list all instances
+    for all projects. By default this is only allowed by admin users.
+  in: query
+  required: false
+  type: integer
+before_timestamp:
+  description: |
+    Filters the response by the date and time before which to list usage
+    audits.
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: true
+  type: string
+changes-since:
+  description: |
+    Filters the response by a date and time when the image last changed status.
+    Use this query parameter to check for changes since a previous request rather
+    than re-downloading and re-parsing the full status at each polling interval.
+    If data has changed, the call returns only the items changed since the ``changes-since``
+    time. If data has not changed since the ``changes-since`` time, the call returns an
+    empty list.\nTo enable you to keep track of changes, this filter also displays images
+    that were deleted if the ``changes-since`` value specifies a date in the last 30 days.
+    Items deleted more than 30 days ago might be returned, but it is not guaranteed.
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+changes_since_server:
+  description: |
+    Filters the response by a date and time stamp when the server last
+    changed status. To help keep track of changes this may also return
+    recently deleted servers.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+delete_info:
+  description: |
+    Information for snapshot deletion. Include the ID of the associated volume. For
+    example:
+
+    .. code-block:: json
+
+       DELETE /os-assisted-volume-snapshots?delete_info='{"volume_id": "521752a6-acf6-4b2d-bc7a-119f9148cd8c"}'
+  in: query
+  required: true
+  type: string
+deleted_query:
+  in: query
+  required: false
+  type: boolean
+  description: |
+    Show deleted items. In some circumstances deleted items will still
+    be accessible via the backend database, however there is no
+    contract on how long, so this parameter should be used with
+    caution. It is typically only available to administrators.
+exclude:
+  description: |
+    Specify ``exclude=uuid[,uuid...]`` to exclude the instances from the results.
+  in: query
+  required: false
+  type: string
+flavor_query:
+  description: |
+    Filters the response by a flavor, as a UUID. A flavor is a combination of memory,
+    disk size, and CPUs.
+  in: query
+  required: false
+  type: string
+host_query:
+  description: |
+    Filters the response by a host name, as a string. This query parameter is typically
+    available to only administrative users. If you are a non-administrative user,
+    the API ignores this parameter.
+  in: query
+  required: false
+  type: string
+image_query:
+  description: |
+    Filters the response by an image, as a UUID.
+  in: query
+  required: false
+  type: string
+include:
+  description: |
+    Specify ``include=uuid[,uuid...]`` to include the instances in the results.
+  in: query
+  required: false
+  type: string
+ip6_query:
+  description: |
+    An IPv6 address to filter results by.
+  in: query
+  required: false
+  type: string
+  min_version: 2.5
+ip_query:
+  description: |
+    An IPv4 address to filter results by.
+  in: query
+  required: false
+  type: string
+limit:
+  description: |
+    Requests a page size of items. Returns a number of items up to a limit value.
+    Use the ``limit`` parameter to make an initial limited request and use the ID
+    of the last-seen item from the response as the ``marker`` parameter value in a
+    subsequent limited request.
+  in: query
+  required: false
+  type: integer
+marker:
+  description: |
+    The ID of the last-seen item. Use the ``limit`` parameter to make an initial limited
+    request and use the ID of the last-seen item from the response as the ``marker``
+    parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: string
+minDisk:
+  description: |
+    Filters the response by a minimum disk space, in GiB.
+  in: query
+  required: false
+  type: integer
+minDisk_1:
+  description: |
+    Filters the response by a minimum disk size. For example, ``100``.
+  in: query
+  required: false
+  type: integer
+minRam:
+  description: |
+    Filters the response by a minimum RAM, in MB.
+  in: query
+  required: false
+  type: integer
+minRam_1:
+  description: |
+    Filters the response by a minimum RAM size. For example, ``512``.
+  in: query
+  required: false
+  type: integer
+name_7:
+  description: |
+    Filters the response by an image name, as a string.
+  in: query
+  required: false
+  type: string
+not_tags_any_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that don't
+    match any tags in this list will be returned.
+  min_version: 2.26
+not_tags_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that don't
+    match all tags in this list will be returned.
+  min_version: 2.26
+reservation_id_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A reservation id as returned by a servers multiple create call.
+server_1:
+  description: |
+    Filters the response by a server, as a URL.
+  format: uri
+  in: query
+  required: false
+  type: string
+server_name_query:
+  description: |
+    Filters the response by a server name, as a string.  You can use regular expressions
+    in the query. For example, the ``?name=bob`` regular expression returns both bob
+    and bobb. If you must match on only bob, you can use a regular expression that
+    matches the syntax of the underlying database server that is implemented for Compute,
+    such as MySQL or PostgreSQL.
+  format: regexp
+  in: query
+  required: false
+  type: string
+server_status_query:
+  description: |
+    Filters the response by a server status, as a string. For example, ``ACTIVE``.
+  in: query
+  required: false
+  type: string
+sort_dir:
+  description: |
+    Sort direction. A valid value is ``asc`` (ascending) or ``desc`` (descending).
+    Default is ``desc``. You can specify multiple pairs of sort key and sort direction
+    query parameters. If you omit the sort direction in a pair, the API uses the natural
+    sorting direction of the direction of the server ``sort_key`` attribute.
+  in: query
+  required: false
+  type: string
+sort_key:
+  description: |
+    Sorts by a server attribute. Default attribute is ``created``. You can specify
+    multiple pairs of sort key and sort direction query parameters. If you omit the
+    sort direction in a pair, the API uses the natural sorting direction of the server
+    ``sort_key`` attribute.
+  in: query
+  required: false
+  type: string
+status_1:
+  description: |
+    Filters the response by an image status, as a string. For example, ``ACTIVE``.
+  in: query
+  required: false
+  type: string
+# TODO(sdague): when server-tags actually get documented, these should
+# be updated.
+tags_any_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that match
+    any tag in this list will be returned.
+  min_version: 2.26
+tags_query:
+  in: query
+  required: false
+  type: string
+  description: |
+    A list of tags to filter the server list by. Servers that match
+    all tags in this list will be returned.
+  min_version: 2.26
+type_1:
+  description: |
+    Filters the response by an image type. For example, ``snapshot`` or ``backup``.
+  in: query
+  required: false
+  type: string
+user_id_1:
+  description: |
+    Filters the response by a user, by ID.
+  in: query
+  required: false
+  type: string
+user_id_query_quota:
+  description: |
+    ID of user to list the quotas for.
+  in: query
+  required: false
+  type: string
+user_id_query_quota_delete:
+  description: |
+    ID of user to delete quotas for.
+  in: query
+  required: false
+  type: string
+user_id_query_set_quota:
+  description: |
+    ID of user to set the quotas for.
+  in: query
+  required: false
+  type: string
+
+# variables in body
+accessIPv4:
+  in: body
+  required: true
+  type: string
+  description: |
+    IPv4 address that should be used to access this server. May be
+    automatically set by the provider.
+accessIPv4_in:
+  in: body
+  required: false
+  type: string
+  description: |
+    IPv4 address that should be used to access this server.
+accessIPv6:
+  in: body
+  required: true
+  type: string
+  description: |
+    IPv6 address that should be used to access this server. May be
+    automatically set by the provider.
+accessIPv6_in:
+  in: body
+  required: false
+  type: string
+  description: |
+    IPv6 address that should be used to access this server.
+addFixedIp:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+addFloatingIp:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+address:
+  description: |
+    The floating IP address.
+  in: body
+  required: true
+  type: string
+addresses:
+  description: |
+    The addresses for the server.  Addresses information is hidden for any server
+    in a state set in the ``osapi_hide_server_address_states`` configuration option.
+    By default, servers in ``building`` state hide their addresses information.
+    See ``nova.conf`` configuration options
+    <http://docs.openstack.org/liberty/config-reference/content/list-of-compute-config-options.html>`_.
+  in: body
+  required: true
+  type: object
+addSecurityGroup:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+addTenantAccess:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+adminPass:
+  description: |
+    The administrative password of the server.
+  in: body
+  required: true
+  type: string
+adminPass_evacuate_rebuild:
+  description: |
+    An administrative password to access the evacuated or rebuilt instance. To set the administrative
+    password, set the ``enable_instance_password`` configuration option to ``True``.
+    If you set this option to ``False`` and you try to set the administrative password,
+    the API does not set the password and the response shows a ``null`` value for
+    the ``adminPass`` parameter.
+  in: body
+  required: false
+  type: string
+  max_version: 2.14
+adminPass_evacuate_rebuild_request:
+  description: |
+    An administrative password to access the evacuated or rebuilt instance. To set the administrative
+    password, set the ``enable_instance_password`` configuration option to ``True``.
+    If you set this option to ``False`` and you try to set the administrative password,
+    the API does not set the password and the response shows a ``null`` value for
+    the ``adminPass`` parameter.
+  in: body
+  required: false
+  type: string
+adminPass_rescue:
+  description: |
+    The password for the rescued instance. If you omit this parameter, the operation
+    generates a new password.
+  in: body
+  required: false
+  type: string
+agent_id:
+  description: |
+    The agent ID.
+  in: body
+  required: true
+  type: integer
+agent_id_str:
+  description: |
+    The agent ID. (This is a bug of API, this should be integer type which is consistent with
+    the responses of agent create and list. This will be fixed in later microversion.)
+  in: body
+  required: true
+  type: string
+aggregate_name:
+  description: |
+    The name of the aggregate.
+  in: body
+  required: true
+  type: string
+alias:
+  description: |
+    A short name by which this extension is also known.
+  in: body
+  required: true
+  type: string
+architecture:
+  description: |
+    The name of the cpu architecture.
+  in: body
+  required: true
+  type: string
+associate_host:
+  description: |
+    The name of the host to associate.
+  in: body
+  required: true
+  type: string
+attachment_id_resp:
+  description: |
+    The UUID of the attachment.
+  in: body
+  required: true
+  type: string
+availability_zone:
+  description: |
+    The availability zone.
+  in: body
+  required: false
+  type: string
+baremetal_cpus:
+  in: body
+  required: true
+  type: string
+  description: |
+    Number of cpus the node has. Note: this is json string, even
+    though it will look like an int value.
+baremetal_disk:
+  in: body
+  required: true
+  type: string
+  description: |
+    Amount of disk in GiB the node has. Note: this is json string,
+    even though it will look like an int value.
+baremetal_host:
+  in: body
+  required: true
+  type: string
+  description: |
+    This will always have the value "IRONIC MANAGED".
+baremetal_id:
+  in: body
+  required: true
+  type: string
+  description: |
+    UUID of baremetal node
+baremetal_instance_uuid:
+  in: body
+  required: true
+  type: string
+  description: |
+    UUID of server instance on this node
+baremetal_interfaces:
+  in: body
+  required: true
+  type: array
+  description: |
+    A list of interface objects for active interfaces on the baremetal
+    node. Each will have an ``address`` field with the address.
+baremetal_mem:
+  in: body
+  required: true
+  type: string
+  description: |
+    Amount of memory in MiB the node has. Note: this is json string,
+    even though it will look like an int value.
+baremetal_node:
+  in: body
+  required: true
+  type: object
+  description: |
+    A baremetal node object
+baremetal_nodes:
+  in: body
+  required: true
+  type: array
+  description: |
+    An array of baremetal node objects
+baremetal_taskstate:
+  in: body
+  required: true
+  type: string
+  description: |
+    The Ironic task state for the node. See Ironic project for more
+    details.
+binary:
+  description: |
+    The binary name of the service.
+  in: body
+  required: true
+  type: string
+block_device_mapping_v2:
+  description: |
+    Enables fine grained control of the block device mapping for an instance. This
+    is typically used for booting servers from volumes.  An example format would look
+    as follows:
+
+      .. code-block:: javascript
+
+        "block_device_mapping_v2": {
+            "boot_index": "0",
+            "uuid": "ac408821-c95a-448f-9292-73986c790911",
+            "source_type": "image",
+            "volume_size": "25",
+            "destination_type": "volume",
+            "delete_on_termination": true }
+  in: body
+  required: false
+  type: object
+block_migration:
+  description: |
+    Set to ``True`` to migrate local disks by using block migration. If the source
+    or destination host uses shared storage and you set this value to ``True``, the
+    live migration fails.
+  in: body
+  required: true
+  type: boolean
+boot_index:
+  description: |
+    Defines the order in which a hypervisor tries devices when it attempts to boot
+    the guest from storage.  Give each device a unique boot index starting from ``0``.
+    To disable a device from booting, set the boot index to a negative value or use
+    the default boot index value, which is ``None``.  The simplest usage is, set the
+    boot index of the boot device to ``0`` and use the default boot index value, ``None``,
+    for any other devices. Some hypervisors might not support booting from multiple
+    devices; these hypervisors consider only the device with a boot index of ``0``.  Some
+    hypervisors support booting from multiple devices but only if the devices are
+    of different types. For example, a disk and CD-ROM.
+  in: body
+  required: true
+  type: string
+changePassword:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+cidr:
+  description: |
+    The CIDR for address range.
+  in: body
+  required: true
+  type: string
+code:
+  description: |
+    The HTTP response code for the event. The following codes are currently used:
+
+      * 200 - successfully submitted event
+      * 404 - the instance specified by ``server_uuid`` was not found
+      * 422 - no host was found for the server specified by ``server_uuid``,
+         so there is no route to this server.
+  in: body
+  required: true
+  type: string
+config_drive:
+  description: |
+    Indicates whether a configuration drive enables metadata injection. The config_drive
+    setting provides information about a drive that the instance can mount at boot
+    time. The instance reads files from the drive to get information that is normally
+    available through the metadata service. This metadata is different from the user
+    data. Not all cloud providers enable the ``config_drive``. Read more in the OpenStack
+    End User Guide.
+  in: body
+  required: false
+  type: boolean
+config_drive_resp:
+  description: |
+    Indicates whether or not a config drive was used for this server.
+  in: body
+  required: true
+  type: boolean
+confirmResize:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+console_output:
+  in: body
+  required: true
+  type: string
+  description: |
+    The console output as a string. Control characters will be escaped
+    to create a valid json string.
+cores:
+  description: |
+    The number of allowed instance cores for each tenant.
+  in: body
+  required: true
+  type: integer
+cores_quota_details:
+  description: |
+    The object of detailed cores quota, including in_use, limit and
+    reserved number of cores.
+  in: body
+  required: true
+  type: object
+cores_quota_optional:
+  description: |
+    The number of allowed instance cores for each tenant.
+  in: body
+  required: false
+  type: integer
+create_info:
+  description: |
+    Information for snapshot creation.
+  in: body
+  required: true
+  type: object
+createBackup:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+created:
+  description: |
+    The date and time when the resource was created. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+createImage:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+delete_on_termination:
+  description: |
+    To delete the boot volume when the server is destroyed, specify ``true``.
+    Otherwise, specify ``false``.
+  in: body
+  required: true
+  type: string
+description:
+  description: |
+    Security group description.
+  in: body
+  required: true
+  type: string
+description_2:
+  description: |
+    The security group description.
+  in: body
+  required: true
+  type: string
+destination_type:
+  description: |
+    Defines where the volume comes from. A valid value is ``local`` or ``volume``.
+  in: body
+  required: false
+  type: string
+device:
+  description: |
+    Name of the device such as, ``/dev/vdb``. Omit or set this parameter to null for
+    auto-assignment, if supported. If you specify this parameter, the device must
+    not exist in the guest operating system. Note that as of the 12.0.0 Liberty release,
+    the Nova libvirt driver no longer honors a user-supplied device name. This is
+    the same behavior as if the device name parameter is not supplied on the request.
+  in: body
+  required: false
+  type: string
+device_name:
+  description: |
+    A path to the device for the volume that you want to use to boot the server.
+  in: body
+  required: true
+  type: string
+device_resp:
+  description: |
+    Name of the device such as, ``/dev/vdb``.
+  in: body
+  required: true
+  type: string
+disk_config:
+  description: |
+    Disk configuration. The value is either:
+
+    - ``AUTO``. The API builds the server with a single partition the size of
+      the target flavor disk. The API automatically adjusts the file system to
+      fit the entire partition.
+
+    - ``MANUAL``. The API builds the server by using the partition scheme and
+      file system that is in the source image. If the target flavor disk is
+      larger, The API does not partition the remaining disk space.
+  in: body
+  required: true
+  type: string
+disk_over_commit:
+  description: |
+    Set to ``True`` to enable over commit when the destination host is checked for
+    available disk space.  Set to ``False`` to disable over commit. This setting affects
+    only the libvirt virt driver.
+  in: body
+  required: true
+  type: boolean
+display_description:
+  description: |
+    The volume description.
+  in: body
+  required: false
+  type: string
+display_name:
+  description: |
+    The volume name.
+  in: body
+  required: false
+  type: string
+evacuate:
+  description: |
+    Specify the ``evacuate`` action in the request body.
+  in: body
+  required: true
+  type: string
+event_name:
+  description: |
+    The event name. A valid value is ``network-changed``, ``network-vif-plugged``,
+    ``network-vif-unplugged``, or ``network-vif-deleted``.
+  in: body
+  required: true
+  type: string
+event_status:
+  description: |
+    The event status. A valid value is ``failed``, ``completed``, or ``in-progress``.
+    Default is ``completed``.
+  in: body
+  required: false
+  type: string
+event_tag:
+  description: |
+    A string value that identifies the event.
+  in: body
+  required: false
+  type: string
+events:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: array
+extension:
+  description: |
+    An ``extension`` object.
+  in: body
+  required: true
+  type: object
+extension_description:
+  description: |
+    Text describing this extension's purpose.
+  in: body
+  required: true
+  type: string
+extension_links:
+  description: |
+    Links pertaining to this extension. This is a list of dictionaries, each including
+    keys ``href`` and ``rel``.
+  in: body
+  required: true
+  type: array
+extension_name:
+  description: |
+    Name of the extension.
+  in: body
+  required: true
+  type: string
+extensions:
+  description: |
+    List of ``extension`` objects.
+  in: body
+  required: true
+  type: array
+fault:
+  description: |
+    A fault object. Only displayed in the failed response.
+  in: body
+  required: false
+  type: object
+fixed_address:
+  description: |
+    The fixed IP address with which you want to associate the floating IP address.
+  in: body
+  required: false
+  type: string
+fixed_ip:
+  description: |
+    A fixed IPv4 address for the NIC. Valid with a ``neutron`` or ``nova-networks``
+    network.
+  in: body
+  required: false
+  type: string
+fixed_ips:
+  description: |
+    Fixed IP addresses with subnet IDs.  If you request a specific fixed IP address
+    without a ``net_id``, the request returns a ``Bad Request (400)`` response code.
+  in: body
+  required: false
+  type: array
+fixed_ips_1:
+  description: |
+    Fixed IP addresses with subnet IDs.
+  in: body
+  required: true
+  type: array
+fixed_ips_quota:
+  description: |
+    The number of allowed fixed IP addresses for each tenant. Must be equal to or
+    greater than the number of allowed instances.
+  in: body
+  required: true
+  type: integer
+fixed_ips_quota_details:
+  description: |
+    The object of detailed fixed ips quota, including in_use, limit and
+    reserved number of fixed ips.
+  in: body
+  required: true
+  type: object
+fixed_ips_quota_optional:
+  description: |
+    The number of allowed fixed IP addresses for each tenant. Must be equal to or
+    greater than the number of allowed instances.
+  in: body
+  required: false
+  type: integer
+flavor:
+  description: |
+    The ID and links for the flavor for your server instance. A flavor is a combination
+    of memory, disk size, and CPUs.
+  in: body
+  required: true
+  type: object
+flavor_access:
+  description: |
+    A list of dictionaries, each with the keys ``flavor_id`` and ``tenant_id``.
+  in: body
+  required: true
+  type: array
+flavor_id_body:
+  description: |
+    The ID of the flavor.
+  in: body
+  required: true
+  type: string
+flavorRef:
+  description: |
+    The flavor reference, as a UUID or full URL, for the flavor for your server instance.
+  in: body
+  required: true
+  type: string
+floating_ip_pool_name:
+  description: |
+    The name of the floating ip pool.
+  in: body
+  required: true
+  type: string
+floating_ip_pools:
+  description: |
+    The ``floating_ip_pools`` object.
+  in: body
+  required: true
+  type: array
+floating_ips:
+  description: |
+    The number of allowed floating IP addresses for each tenant.
+  in: body
+  required: true
+  type: integer
+floating_ips_quota_details:
+  description: |
+    The object of detailed floating ips quota, including in_use, limit and
+    reserved number of floating ips.
+  in: body
+  required: true
+  type: object
+floating_ips_quota_optional:
+  description: |
+    The number of allowed floating IP addresses for each tenant.
+  in: body
+  required: false
+  type: integer
+force:
+  description: |
+    You can force the update even if the quota has already been used and the reserved
+    quota exceeds the new quota. To force the update, specify the ``"force": "True"``.
+    Default is ``False``.
+  in: body
+  required: false
+  type: boolean
+forced_down:
+  in: body
+  required: true
+  type: boolean
+  description: |
+    Whether or not this service was forced down manually by an
+    administrator. This value is useful to know that some 3rd party has
+    verified the service should be marked down.
+forceDelete:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+from_port:
+  description: |
+    The port at start of range.
+  in: body
+  required: true
+  type: integer
+group:
+  description: |
+    A ``group`` object. Includes the ``tenant_id`` and the source security
+    group ``name``.
+  in: body
+  required: true
+  type: object
+group_id:
+  description: |
+    The source security group ID.
+  in: body
+  required: false
+  type: string
+guest_format:
+  description: |
+    Specifies the guest server disk file system format, such as ``ephemeral`` or ``swap``.
+  in: body
+  required: true
+  type: string
+host:
+  description: |
+    The name or ID of the host to which the server is evacuated.
+  in: body
+  required: false
+  type: string
+host_cpu:
+  description: |
+    The cpu info on the host.
+  in: body
+  required: true
+  type: string
+host_disk_gb:
+  description: |
+    The disk info on the host (in GB).
+  in: body
+  required: true
+  type: string
+host_maintenance_mode:
+  description: |
+    Mode of maintenance state, either 'on_maintenance' or 'off_maintenance'
+  in: body
+  required: true
+  type: string
+host_memory_mb:
+  description: |
+    The memory info on the host (in MB).
+  in: body
+  required: true
+  type: string
+host_migration:
+  description: |
+    The host to which to migrate the server. If you omit this parameter, the scheduler
+    chooses a host.
+  in: body
+  required: true
+  type: string
+host_name_body:
+  description: |
+    The name of the host.
+  in: body
+  required: true
+  type: string
+host_power_action:
+  description: |
+    The power action on the host.
+  in: body
+  required: true
+  type: string
+host_project:
+  description: |
+    The project id (or special name like total, used_now, used_max).
+  in: body
+  required: true
+  type: string
+host_resource:
+  description: |
+    The resource info of the host.
+  in: body
+  required: true
+  type: object
+host_resource_array:
+  description: |
+    The array that includes resource info of the host.
+  in: body
+  required: true
+  type: array
+host_service:
+  description: |
+    The service name which is running on the host.
+  in: body
+  required: true
+  type: string
+host_status:
+  description: |
+    The host status. Values where next value in list can override the previous:
+
+    - ``UP`` if nova-compute up.
+
+    - ``UNKNOWN`` if nova-compute not reported by servicegroup driver.
+
+    - ``DOWN`` if nova-compute forced down.
+
+    - ``MAINTENANCE`` if nova-compute is disabled.
+
+    - Empty string indicates there is no host for server.  This attribute
+      appears in the response only if the policy permits.
+  in: body
+  required: true
+  type: string
+host_status_body:
+  description: |
+    The status of the current host, either 'enabled' or 'disabled'.
+  in: body
+  required: true
+  type: string
+host_zone:
+  description: |
+    The available zone of the host.
+  in: body
+  required: true
+  type: string
+hostId:
+  description: |
+    The ID of the host.
+  in: body
+  required: true
+  type: string
+hosts:
+  description: |
+    An array of host information
+  in: body
+  required: true
+  type: array
+hypervisor_type:
+  in: body
+  required: true
+  type: string
+  description: |
+    The hypervisor type for the agent. Currently only ``xen`` is supported.
+id:
+  description: |
+    The security group name or UUID.
+  in: body
+  required: true
+  type: string
+id_1:
+  description: |
+    The security group ID.
+  in: body
+  required: true
+  type: string
+id_2:
+  description: |
+    The ID of the security group.
+  in: body
+  required: true
+  type: integer
+id_4:
+  description: |
+    The snapshot ID.
+  in: body
+  required: true
+  type: string
+id_5:
+  description: |
+    The ID of the quota set.
+  in: body
+  required: true
+  type: string
+id_6:
+  description: |
+    The UUID of the security group.
+  in: body
+  required: true
+  type: string
+id_9:
+  description: |
+    The ID of the quota set.
+  in: body
+  required: false
+  type: string
+image:
+  description: |
+    The UUID and links for the image for your server instance. The ``image`` object
+    might be an empty string when you boot the server from a volume.
+  in: body
+  required: true
+  type: object
+imageRef:
+  description: |
+    The image reference, as a UUID or full URL, for the image to use for your server
+    instance.
+  in: body
+  required: true
+  type: string
+imageRef_1:
+  description: |
+    The image reference, as an ID or full URL, for the image for your server instance.
+    Required if you define a block device mapping.
+  in: body
+  required: false
+  type: string
+images:
+  description: |
+    Image information.
+  in: body
+  required: true
+  type: string
+in_use:
+  description: |
+    The in-use quota value.
+  in: body
+  required: true
+  type: integer
+injected_file_content_bytes:
+  description: |
+    The number of allowed bytes of content for each injected file.
+  in: body
+  required: true
+  type: integer
+injected_file_content_bytes_quota_details:
+  description: |
+    The object of detailed injected file content bytes quota,
+    including in_use, limit and reserved number of injected
+    file content bytes.
+  in: body
+  required: true
+  type: object
+injected_file_content_bytes_quota_optional:
+  description: |
+    The number of allowed bytes of content for each injected file.
+  in: body
+  required: false
+  type: integer
+injected_file_path_bytes:
+  description: |
+    The number of allowed bytes for each injected file path.
+  in: body
+  required: true
+  type: integer
+injected_file_path_bytes_quota_details:
+  description: |
+    The object of detailed injected file path bytes quota,
+    including in_use, limit and reserved number of injected
+    file path bytes.
+  in: body
+  required: true
+  type: object
+injected_file_path_bytes_quota_optional:
+  description: |
+    The number of allowed bytes for each injected file path.
+  in: body
+  required: false
+  type: integer
+injected_files:
+  description: |
+    The number of allowed injected files for each tenant.
+  in: body
+  required: true
+  type: integer
+injected_files_quota_details:
+  description: |
+    The object of detailed injected files quota, including in_use, limit and
+    reserved number of injected files.
+  in: body
+  required: true
+  type: object
+injected_files_quota_optional:
+  description: |
+    The number of allowed injected files for each tenant.
+  in: body
+  required: false
+  type: integer
+injectNetworkInfo:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+instances:
+  description: |
+    The number of allowed instances for each tenant.
+  in: body
+  required: true
+  type: integer
+instances_quota_details:
+  description: |
+    The object of detailed instances quota, including in_use, limit and
+    reserved number of instances.
+  in: body
+  required: true
+  type: object
+instances_quota_optional:
+  description: |
+    The number of allowed instances for each tenant.
+  in: body
+  required: false
+  type: integer
+interfaceAttachment:
+  description: |
+    Specify the ``interfaceAttachment`` action in the request body.
+  in: body
+  required: true
+  type: string
+ip_address:
+  description: |
+    The IP address.
+  in: body
+  required: true
+  type: string
+ip_protocol:
+  description: |
+    The IP protocol. A valid value is ICMP, TCP, or UDP.
+  in: body
+  required: true
+  type: string
+ip_range:
+  description: |
+    The range of IP addresses to use for creating floating IPs.
+  in: body
+  required: true
+  type: string
+# TODO(mriedem): this needs to be renamed and used in os-floating-ips-bulk.inc
+ip_range_3:
+  description: |
+    The range of IP addresses from which to bulk-delete floating IPs.
+  in: body
+  required: true
+  type: string
+key_name:
+  description: |
+    Key pair name.
+  in: body
+  required: false
+  type: string
+key_name_resp:
+  description: |
+    The name of associated key pair, if any.
+  in: body
+  required: true
+  type: string
+key_pairs:
+  description: |
+    The number of allowed key pairs for each user.
+  in: body
+  required: true
+  type: integer
+key_pairs_quota_details:
+  description: |
+    The object of detailed key pairs quota, including in_use, limit and
+    reserved number of key pairs.
+  in: body
+  required: true
+  type: object
+key_pairs_quota_optional:
+  description: |
+    The number of allowed key pairs for each user.
+  in: body
+  required: false
+  type: integer
+length:
+  description: |
+    The number of lines to fetch from the end of console log. All
+    lines will be returned if this is not specified.
+  in: body
+  required: false
+  type: string
+limit_1:
+  description: |
+    The maximum limit for the quota.
+  in: body
+  required: true
+  type: integer
+links:
+  description: |
+    Links to the resources in question. See `API Guide / Links and
+    References
+    <http://docs.openstack.org/developer/nova/v2/links_and_references.html>`_
+    for more info.
+  in: body
+  required: true
+  type: array
+lock:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+mac_addr:
+  description: |
+    The MAC address.
+  in: body
+  required: true
+  type: string
+mac_address:
+  description: |
+    The MAC address.
+  in: body
+  required: true
+  type: string
+md5hash:
+  description: |
+    The MD5 hash.
+  in: body
+  required: true
+  type: string
+members:
+  description: |
+    A list of members in the server group.
+  in: body
+  required: true
+  type: array
+metadata:
+  description: |
+    Metadata key and value pairs. The maximum size of the metadata key and value is
+    255 bytes each.
+  in: body
+  required: false
+  type: object
+metadata_1:
+  description: |
+    One or more metadata key and value pairs to associate with the volume.
+  in: body
+  required: false
+  type: object
+metadata_3:
+  description: |
+    The associated metadata key and value pairs.
+  in: body
+  required: true
+  type: object
+metadata_4:
+  description: |
+    Metadata key and value pairs. The maximum size for each metadata key and value
+    pair is 255 bytes.
+  in: body
+  required: false
+  type: string
+metadata_compat:
+  description: |
+    A dictionary of metadata key-and-value pairs, which is maintained for backward
+    compatibility.
+  in: body
+  required: true
+  type: object
+metadata_items:
+  description: |
+    The number of allowed metadata items for each instance.
+  in: body
+  required: true
+  type: integer
+metadata_items_quota_details:
+  description: |
+    The object of detailed key metadata items quota, including in_use,
+    limit and reserved number of metadata items.
+  in: body
+  required: true
+  type: object
+metadata_items_quota_optional:
+  description: |
+    The number of allowed metadata items for each instance.
+  in: body
+  required: false
+  type: integer
+migrate:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+name:
+  description: |
+    The security group name.
+  in: body
+  required: true
+  type: string
+name_10:
+  description: |
+    The name of the server group.
+  in: body
+  required: true
+  type: string
+name_3:
+  description: |
+    The name to associate with the keypair.
+  in: body
+  required: true
+  type: string
+name_4:
+  description: |
+    The source security group name.
+  in: body
+  required: true
+  type: string
+name_5:
+  description: |
+    The server group name. A non-empty string with no leading or trailing spaces.
+    Maximum length is 255 characters.
+  in: body
+  required: true
+  type: string
+name_9:
+  description: |
+    The name of floating IP pools.
+  in: body
+  required: false
+  type: string
+namespace:
+  description: |
+    A URL pointing to the namespace for this extension.
+  in: body
+  required: true
+  type: string
+net_id:
+  description: |
+    The ID of the network for which you want to create a port interface.  The ``net_id``
+    and ``port_id`` parameters are mutually exclusive.  If you do not specify the
+    ``net_id`` parameter, the OpenStack Networking API v2.0 uses the network information
+    cache that is associated with the instance.
+  in: body
+  required: false
+  type: string
+net_id_1:
+  description: |
+    The network ID.
+  in: body
+  required: true
+  type: string
+network_label_body:
+  description: |
+    The network label, such as ``public`` or ``private``.
+  in: body
+  required: true
+  type: string
+network_uuid:
+  description: |
+    To provision the server instance with a NIC for a network, specify the UUID of
+    the network in the ``uuid`` attribute in a ``networks`` object. Required if you
+    omit the ``port`` attribute.
+  in: body
+  required: false
+  type: string
+networks:
+  description: |
+    A ``networks`` object. Required parameter when there are multiple networks defined
+    for the tenant. When you do not specify the networks parameter, the server attaches
+    to the only network created for the current tenant.  Optionally, you can create
+    one or more NICs on the server.  To provision the server instance with a NIC for
+    a network, specify the UUID of the network in the ``uuid`` attribute in a ``networks``
+    object.  To provision the server instance with a NIC for an already existing port,
+    specify the port-id in the ``port`` attribute in a ``networks`` object.
+  in: body
+  required: false
+  type: object
+new_file:
+  description: |
+    The name of the qcow2 file that Block Storage creates, which becomes the active
+    image for the VM.
+  in: body
+  required: true
+  type: string
+next:
+  description: |
+    Moves to the next metadata item.
+  format: uri
+  in: body
+  required: false
+  type: string
+on_shared_storage:
+  description: |
+    Server on shared storage.
+  in: body
+  required: true
+  type: boolean
+  max_version: 2.14
+os:
+  description: |
+    The name of the operating system.
+  in: body
+  required: true
+  type: string
+os-availability-zone:availability_zone:
+  description: |
+    The availability zone from which to launch the server. When you provision resources,
+    you specify from which availability zone you want your instance to be built.  Typically,
+    you use availability zones to arrange OpenStack compute hosts into logical groups.
+    An availability zone provides a form of physical isolation and redundancy from
+    other availability zones. For instance, if some racks in your data center are
+    on a separate power source, you can put servers in those racks in their own availability
+    zone. Availability zones can also help separate different classes of hardware.  By
+    segregating resources into availability zones, you can ensure that your application
+    resources are spread across disparate machines to achieve high availability in
+    the event of hardware or other failure.
+  in: body
+  required: false
+  type: string
+OS-DCF:diskConfig:
+  description: |
+    Controls how the API partitions the disk when you create, rebuild, or resize servers.
+    A server inherits the ``OS-DCF:diskConfig`` value from the image from which it
+    was created, and an image inherits the ``OS-DCF:diskConfig`` value from the server
+    from which it was created. To override the inherited setting, you can include
+    this attribute in the request body of a server create, rebuild, or resize request.  If
+    the ``OS-DCF:diskConfig`` value for an image is ``MANUAL``, you cannot create
+    a server from that image and set its ``OS-DCF:diskConfig`` value to ``AUTO``.
+    A valid value is:
+
+    - ``AUTO``. The API builds the server with a single partition the size of the
+      target flavor disk. The API automatically adjusts the file system to fit the
+      entire partition.
+
+    - ``MANUAL``. The API builds the server by using whatever partition scheme and
+      file system is in the source image. If the target flavor disk is larger, the API
+      does not partition the remaining disk space.
+  in: body
+  required: false
+  type: string
+OS-EXT-AZ:availability_zone:
+  description: |
+    The availability zone.
+  in: body
+  required: true
+  type: string
+OS-EXT-SRV-ATTR:host:
+  description: |
+    The host name. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+OS-EXT-SRV-ATTR:hypervisor_hostname:
+  description: |
+    The hypervisor host name. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+OS-EXT-SRV-ATTR:instance_name:
+  description: |
+    The instance name. The Compute API generates the instance name from the instance
+    name template. Appears in the response for administrative users only.
+  in: body
+  required: true
+  type: string
+OS-EXT-STS:power_state:
+  description: |
+    The power state of the instance.
+  in: body
+  required: true
+  type: integer
+OS-EXT-STS:task_state:
+  description: |
+    The task state of the instance.
+  in: body
+  required: true
+  type: string
+OS-EXT-STS:vm_state:
+  description: |
+    The VM state.
+  in: body
+  required: true
+  type: string
+os-extended-volumes:volumes_attached:
+  description: |
+    The attached volumes, if any.
+  in: body
+  required: true
+  type: array
+os-getConsoleOutput:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os-getRDPConsole:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os-getSerialConsole:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os-getSPICEConsole:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os-getVNCConsole:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os-resetState:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+OS-SRV-USG:launched_at:
+  description: |
+    The date and time when the server was launched.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+
+    The ``hh±:mm`` value, if included, is the time zone as an offset from UTC.
+    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
+  in: body
+  required: true
+  type: string
+OS-SRV-USG:terminated_at:
+  description: |
+    The date and time when the server was deleted.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``.
+
+    The ``±hh:mm`` value, if included, is the time zone as an offset from UTC.
+
+    If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
+  in: body
+  required: true
+  type: string
+os-start:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os-stop:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+os:scheduler_hints:
+  description: |
+    The dictionary of data to send to the scheduler. Alternatively, you can specify
+    ``OS-SCH-HNT:scheduler_hints`` as the string.
+  in: body
+  required: false
+  type: object
+parent_group_id:
+  description: |
+    Security group ID.
+  in: body
+  required: true
+  type: string
+pause:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+personality:
+  description: |
+    The file path and contents, text only, to inject into the server at launch. The
+    maximum size of the file path data is 255 bytes. The maximum limit is The number
+    of allowed bytes in the decoded, rather than encoded, data.
+  in: body
+  required: false
+  type: string
+personality_1:
+  description: |
+    The file path and contents, text only, to inject into the server at launch. The
+    maximum size of the file path data is 255 bytes. The maximum limit is the number
+    of allowed bytes in the decoded, rather than the encoded, data.
+  in: body
+  required: false
+  type: string
+policies:
+  description: |
+    A list of one or more policy names to associate with the server group. The list
+    must contain at least one policy name. The current valid policy names are ``anti-affinity``
+    and ``affinity``.  Each policy name must be a non-empty string with no leading
+    or trailing spaces. Maximum length is 255 characters.
+  in: body
+  required: true
+  type: array
+policies_1:
+  description: |
+    A list of policies for the server group.
+  in: body
+  required: true
+  type: array
+pool:
+  description: |
+    Pool from which to allocate the IP address. If you omit this parameter, the call
+    allocates the floating IP address from the public pool.  If no floating IP addresses
+    are available, the call returns the ``400`` response code with an informational
+    message.  Policy defaults enable only users with the administrative role or the
+    owner of the server to perform this operation. Cloud providers can change these
+    permissions through the ``policy.json`` file.
+  in: body
+  required: false
+  type: string
+port:
+  description: |
+    To provision the server instance with a NIC for an already existing port, specify
+    the port-id in the ``port`` attribute in a ``networks`` object. The port status
+    must be ``DOWN``. required if you omit the ``uuid`` attribute.
+  in: body
+  required: false
+  type: string
+port_id:
+  description: |
+    The ID of the port for which you want to create an interface.  The ``net_id``
+    and ``port_id`` parameters are mutually exclusive.  If you do not specify the
+    ``port_id`` parameter, the OpenStack Networking API v2.0 allocates a port and
+    creates an interface for it on the network.
+  in: body
+  required: false
+  type: string
+port_id_2:
+  description: |
+    The port ID.
+  in: body
+  required: true
+  type: string
+port_state:
+  description: |
+    The port state.
+  in: body
+  required: true
+  type: string
+preserve_ephemeral:
+  description: |
+    Indicates whether the server is rebuilt with the preservation of the ephemeral
+    partition (``true``).
+  in: body
+  required: false
+  type: boolean
+previous:
+  description: |
+    Moves to the previous metadata item.
+  format: uri
+  in: body
+  required: false
+  type: string
+progress:
+  description: |
+    A percentage value of the build progress.
+  in: body
+  required: true
+  type: integer
+project_id:
+  description: |
+    Creates the cloudpipe for a project. If omitted, the project ID defaults to the
+    calling tenant.
+  in: body
+  required: false
+  type: string
+public_key:
+  description: |
+    The public ssh key to import. If you omit this value, a key is generated.
+  in: body
+  required: false
+  type: string
+quota_set:
+  description: |
+    A ``quota_set`` object.
+  in: body
+  required: true
+  type: string
+quota_tenant_or_user_id_body:
+  description: |
+    The UUID of the tenant/user the quotas listed for.
+  in: body
+  required: true
+  type: string
+ram:
+  description: |
+    The amount of allowed instance RAM, in MB, for each tenant.
+  in: body
+  required: true
+  type: integer
+ram_quota_details:
+  description: |
+    The object of detailed key ram quota, including in_use,
+    limit and reserved number of ram.
+  in: body
+  required: true
+  type: object
+ram_quota_optional:
+  description: |
+    The amount of allowed instance RAM, in MB, for each tenant.
+  in: body
+  required: false
+  type: integer
+reboot:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+rebuild:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+removeFixedIp:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+removeFloatingIp:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+removeSecurityGroup:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+removeTenantAccess:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+rescue:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+rescue_image_ref:
+  description: |
+    The image reference to use to rescue your server instance. Specify the image reference
+    by ID or full URL.  If you omit an image reference, default is the base image
+    reference.
+  in: body
+  required: false
+  type: string
+reservation_id:
+  description: |
+    The reservation ID of the server.
+  in: body
+  required: false
+  type: string
+reserved:
+  description: |
+    The reserved quota value.
+  in: body
+  required: true
+  type: integer
+resetNetwork:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+resize:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+restore:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+resume:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+return_reservation_id:
+  description: |
+    Set to ``True`` to request that the response return a reservation ID instead of
+    instance information. Default is ``False``.
+  in: body
+  required: false
+  type: boolean
+revertResize:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+rules:
+  description: |
+    A security group rules object.
+  in: body
+  required: true
+  type: array
+rules_1:
+  description: |
+    A rules object.
+  in: body
+  required: true
+  type: string
+secgroup_rule_cidr:
+  description: |
+    The CIDR for address range.
+  in: body
+  required: false
+  type: string
+secgroup_rule_id:
+  description: |
+    The security group rule ID.
+  in: body
+  required: true
+  type: string
+secgroup_rule_ip_range:
+  description: |
+    An IP range object. Includes the security group rule ``cidr``.
+  in: body
+  required: true
+  type: object
+secgroup_tenant_id_body:
+  description: |
+    The UUID of the tenant that owns this security group.
+  in: body
+  required: true
+  type: string
+security_group:
+  description: |
+    Specify the ``security_group`` action in the request body.
+  in: body
+  required: true
+  type: string
+security_group_1:
+  description: |
+    Security group object.
+  in: body
+  required: true
+  type: string
+security_group_rule:
+  description: |
+    A ``security_group_rule`` object.
+  in: body
+  required: true
+  type: object
+security_group_rules:
+  description: |
+    The number of allowed rules for each security group.
+  in: body
+  required: false
+  type: integer
+security_group_rules_quota:
+  description: |
+    The number of allowed rules for each security group.
+  in: body
+  required: true
+  type: integer
+security_group_rules_quota_details:
+  description: |
+    The object of detailed security group rules quota, including in_use,
+    limit and reserved number of security group rules.
+  in: body
+  required: true
+  type: object
+security_groups:
+  description: |
+    One or more security groups. Specify the name of the security group in the ``name``
+    attribute. If you omit this attribute, the API creates the server in the ``default``
+    security group.
+  in: body
+  required: false
+  type: array
+security_groups_obj:
+  description: |
+    Security groups object.
+  in: body
+  required: true
+  type: array
+security_groups_quota:
+  description: |
+    The number of allowed security groups for each tenant.
+  in: body
+  required: true
+  type: integer
+security_groups_quota_details:
+  description: |
+    The object of detailed security groups, including in_use,
+    limit and reserved number of security groups.
+  in: body
+  required: true
+  type: object
+security_groups_quota_optional:
+  description: |
+    The number of allowed security groups for each tenant.
+  in: body
+  required: false
+  type: integer
+server:
+  description: |
+    server.
+  in: body
+  required: true
+  type: object
+server_2:
+  description: |
+    A ``server`` object.
+  in: body
+  required: true
+  type: object
+server_description:
+  type: string
+  in: body
+  required: false
+  min_version: 2.19
+  description: |
+    A free form description of the server. Limited to 255 characters
+    in length. Before microversion 2.19 this was set to the server
+    name.
+server_group_members:
+  description: |
+    The number of allowed members for each server group.
+  in: body
+  required: true
+  type: integer
+server_group_members_quota_details:
+  description: |
+    The object of detailed server group members, including in_use,
+    limit and reserved number of server group members.
+  in: body
+  required: true
+  type: object
+server_group_members_quota_optional:
+  description: |
+    The number of allowed members for each server group.
+  in: body
+  required: false
+  type: integer
+server_groups:
+  description: |
+    The number of allowed server groups for each tenant.
+  in: body
+  required: true
+  type: integer
+server_groups_1:
+  description: |
+    A ``server_groups`` object.
+  in: body
+  required: true
+  type: array
+server_groups_quota_details:
+  description: |
+    The object of detailed server groups, including in_use,
+    limit and reserved number of server groups.
+  in: body
+  required: true
+  type: object
+server_groups_quota_optional:
+  description: |
+    The number of allowed server groups for each tenant.
+  in: body
+  required: false
+  type: integer
+server_id:
+  description: |
+    The UUID of the server.
+  in: body
+  required: true
+  type: string
+server_name:
+  description: |
+    The server name.
+  in: body
+  required: true
+  type: string
+server_status:
+  description: |
+    The server status.
+  in: body
+  required: true
+  type: string
+server_uuid:
+  description: |
+    The UUID of the server instance to which the API dispatches the event.  You must
+    assign this instance to a host. Otherwise, this call does not dispatch the event
+    to the instance.
+  in: body
+  required: true
+  type: string
+servers:
+  description: |
+    List of ``server`` objects.
+  in: body
+  required: true
+  type: array
+service:
+  in: body
+  required: true
+  type: object
+  description: |
+    Object representing a compute service
+service_state:
+  in: body
+  required: true
+  type: string
+  description: |
+    The state of the service. One of ``up`` or ``down``.
+service_status:
+  in: body
+  required: true
+  type: string
+  description: |
+    The status of the service. One of ``enabled`` or ``disabled``.
+services:
+  in: body
+  required: true
+  type: array
+  description: |
+    An array of service objects
+shelve:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+shelveOffload:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+size:
+  description: |
+    The size of the volume, in gibibytes (GiB).
+  in: body
+  required: true
+  type: integer
+snapshot:
+  description: |
+    A partial representation of a snapshot that is used to create a snapshot.
+  in: body
+  required: true
+  type: string
+snapshot_id:
+  description: |
+    The snapshot ID.
+  in: body
+  required: true
+  type: string
+snapshot_id_1:
+  description: |
+    The unique identifier for a snapshot.
+  in: body
+  required: true
+  type: string
+source_type:
+  description: |
+    The source type of the volume. A valid value is ``blank``, ``snapshot``, ``volume``,
+    or ``image``.
+  in: body
+  required: true
+  type: string
+suspend:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+tenant_id_body:
+  description: |
+    The UUID of the tenant in a multi-tenancy cloud.
+  in: body
+  required: true
+  type: string
+to_port:
+  description: |
+    The port at end of range.
+  in: body
+  required: true
+  type: integer
+trigger_crash_dump:
+  in: body
+  required: true
+  type: none
+  description: |
+    Specifies the trigger crash dump action should be run
+type:
+  description: |
+    The snapshot type. A valid value is ``qcow2``.
+  in: body
+  required: true
+  type: string
+unlock:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+unpause:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+unrescue:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+unshelve:
+  description: |
+    The action.
+  in: body
+  required: true
+  type: string
+updated:
+  description: |
+    The date and time when the resource was updated. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+url:
+  description: |
+    The URL associated with the agent.
+  in: body
+  required: true
+  type: string
+user_data:
+  description: |
+    Configuration information or scripts to use upon launch. Must be Base64 encoded.
+  in: body
+  required: false
+  type: string
+user_id:
+  description: |
+    The user ID of the user who owns the server.
+  in: body
+  required: true
+  type: string
+version:
+  description: |
+    The version.
+  in: body
+  required: true
+  type: string
+version_id:
+  type: string
+  in: body
+  required: true
+  description: >
+    A common name for the version in question. Informative only, it
+    has no real semantic meaning.
+version_max:
+  type: string
+  in: body
+  required: true
+  description: >
+    If this version of the API supports microversions, the maximum
+    microversion that is supported. This will be the empty string if
+    microversions are not supported.
+version_min:
+  type: string
+  in: body
+  required: true
+  description: >
+    If this version of the API supports microversions, the minimum
+    microversion that is supported. This will be the empty string if
+    microversions are not supported.
+version_status:
+  type: string
+  in: body
+  required: true
+  description: |
+    The status of this API version. This can be one of:
+
+    - ``CURRENT``: this is the preferred version of the API to use
+    - ``SUPPORTED``: this is an older, but still supported version of the API
+    - ``DEPRECATED``: a deprecated version of the API that is slated for removal
+versions:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of version objects that describe the API versions available.
+virtual_interface_id:
+  description: |
+    The UUID of the virtual interface.
+  in: body
+  required: true
+  type: string
+virtual_interfaces:
+  description: |
+    A ``virtual_interfaces`` object.
+  in: body
+  required: true
+  type: array
+volume:
+  description: |
+    The ``volume`` object.
+  in: body
+  required: false
+  type: object
+volume_id:
+  description: |
+    The source volume ID.
+  in: body
+  required: true
+  type: string
+volume_type:
+  description: |
+    The unique identifier for a volume type.
+  in: body
+  required: false
+  type: string
+volumeAttachment:
+  description: |
+    A dictionary representation of a volume attachment.
+  in: body
+  required: true
+  type: string
+volumeAttachments:
+  description: |
+    List of the volume attachments.
+  in: body
+  required: true
+  type: array
+volumeId:
+  description: |
+    The UUID of the volume to attach.
+  in: body
+  required: true
+  type: string
+volumeId_resp:
+  description: |
+    The UUID of the attached volume.
+  in: body
+  required: true
+  type: string
+volumeId_swap:
+  description: |
+    The UUID of the volume to attach instead of the attached volume.
+  in: body
+  required: true
+  type: string
+vpn_ip:
+  description: |
+    The VPN IP address.
+  in: body
+  required: true
+  type: string
+vpn_port:
+  description: |
+    The VPN port.
+  in: body
+  required: true
+  type: string

@@ -29,7 +29,6 @@ from xml.parsers import expat
 
 from eventlet import greenthread
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -45,6 +44,7 @@ from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
+import nova.conf
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network import model as network_model
@@ -61,68 +61,7 @@ from nova.virt.xenapi.image import utils as image_utils
 
 LOG = logging.getLogger(__name__)
 
-xenapi_vm_utils_opts = [
-    cfg.StrOpt('cache_images',
-               default='all',
-               choices=('all', 'some', 'none'),
-               help='Cache glance images locally. `all` will cache all'
-                    ' images, `some` will only cache images that have the'
-                    ' image_property `cache_in_nova=True`, and `none` turns'
-                    ' off caching entirely'),
-    cfg.IntOpt('image_compression_level',
-               min=1,
-               max=9,
-               help='Compression level for images, e.g., 9 for gzip -9.'
-                    ' Range is 1-9, 9 being most compressed but most CPU'
-                    ' intensive on dom0.'),
-    cfg.StrOpt('default_os_type',
-               default='linux',
-               help='Default OS type'),
-    cfg.IntOpt('block_device_creation_timeout',
-               default=10,
-               help='Time to wait for a block device to be created'),
-    cfg.IntOpt('max_kernel_ramdisk_size',
-               default=16 * units.Mi,
-               help='Maximum size in bytes of kernel or ramdisk images'),
-    cfg.StrOpt('sr_matching_filter',
-               default='default-sr:true',
-               help='Filter for finding the SR to be used to install guest '
-                    'instances on. To use the Local Storage in default '
-                    'XenServer/XCP installations set this flag to '
-                    'other-config:i18n-key=local-storage. To select an SR '
-                    'with a different matching criteria, you could set it to '
-                    'other-config:my_favorite_sr=true. On the other hand, to '
-                    'fall back on the Default SR, as displayed by XenCenter, '
-                    'set this flag to: default-sr:true'),
-    cfg.BoolOpt('sparse_copy',
-                default=True,
-                help='Whether to use sparse_copy for copying data on a '
-                     'resize down (False will use standard dd). This speeds '
-                     'up resizes down considerably since large runs of zeros '
-                     'won\'t have to be rsynced'),
-    cfg.IntOpt('num_vbd_unplug_retries',
-               default=10,
-               help='Maximum number of retries to unplug VBD. if <=0, '
-                    'should try once and no retry'),
-    cfg.StrOpt('torrent_images',
-               default='none',
-               choices=('all', 'some', 'none'),
-               help='Whether or not to download images via Bit Torrent.'),
-    cfg.StrOpt('ipxe_network_name',
-               help='Name of network to use for booting iPXE ISOs'),
-    cfg.StrOpt('ipxe_boot_menu_url',
-               help='URL to the iPXE boot menu'),
-    cfg.StrOpt('ipxe_mkisofs_cmd',
-               default='mkisofs',
-               help='Name and optionally path of the tool used for '
-                    'ISO image creation'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(xenapi_vm_utils_opts, 'xenserver')
-CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
-CONF.import_opt('use_cow_images', 'nova.virt.driver')
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 XENAPI_POWER_STATE = {
     'Halted': power_state.SHUTDOWN,
@@ -138,6 +77,7 @@ MBR_SIZE_BYTES = MBR_SIZE_SECTORS * SECTOR_SIZE
 KERNEL_DIR = '/boot/guest'
 MAX_VDI_CHAIN_SIZE = 16
 PROGRESS_INTERVAL_SECONDS = 300
+DD_BLOCKSIZE = 65536
 
 # Fudge factor to allow for the VHD chain to be slightly larger than
 # the partitioned space. Otherwise, legitimate images near their
@@ -470,8 +410,7 @@ def destroy_vdi(session, vdi_ref):
     try:
         session.call_xenapi('VDI.destroy', vdi_ref)
     except session.XenAPI.Failure:
-        msg = "Unable to destroy VDI %s" % vdi_ref
-        LOG.debug(msg, exc_info=True)
+        LOG.debug("Unable to destroy VDI %s", vdi_ref, exc_info=True)
         msg = _("Unable to destroy VDI %s") % vdi_ref
         LOG.error(msg)
         raise exception.StorageError(reason=msg)
@@ -483,8 +422,7 @@ def safe_destroy_vdis(session, vdi_refs):
         try:
             destroy_vdi(session, vdi_ref)
         except exception.StorageError:
-            msg = "Ignoring error while destroying VDI: %s" % vdi_ref
-            LOG.debug(msg)
+            LOG.debug("Ignoring error while destroying VDI: %s", vdi_ref)
 
 
 def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
@@ -684,7 +622,7 @@ def _delete_snapshots_in_vdi_chain(session, instance, vdi_uuid_chain, sr_ref):
     # ensure garbage collector has been run
     _scan_sr(session, sr_ref)
 
-    LOG.info(_LI("Deleted %s snapshots.") % number_of_snapshots,
+    LOG.info(_LI("Deleted %s snapshots."), number_of_snapshots,
              instance=instance)
 
 
@@ -986,7 +924,7 @@ def try_auto_configure_disk(session, vdi_ref, new_gb):
         _auto_configure_disk(session, vdi_ref, new_gb)
     except exception.CannotResizeDisk as e:
         msg = _LW('Attempted auto_configure_disk failed because: %s')
-        LOG.warn(msg % e)
+        LOG.warning(msg % e)
 
 
 def _make_partition(session, dev, partition_start, partition_end):
@@ -1022,7 +960,7 @@ def _make_partition(session, dev, partition_start, partition_end):
 
 
 def _generate_disk(session, instance, vm_ref, userdevice, name_label,
-                   disk_type, size_mb, fs_type):
+                   disk_type, size_mb, fs_type, fs_label=None):
     """Steps to programmatically generate a disk:
 
         1. Create VDI of desired size
@@ -1050,11 +988,9 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
             partition_path = _make_partition(session, dev,
                                              partition_start, partition_end)
 
-            if fs_type == 'linux-swap':
-                utils.execute('mkswap', partition_path, run_as_root=True)
-            elif fs_type is not None:
-                utils.execute('mkfs', '-t', fs_type, partition_path,
-                              run_as_root=True)
+            if fs_type is not None:
+                utils.mkfs(fs_type, partition_path, fs_label,
+                           run_as_root=True)
 
         # 4. Create VBD between instance VM and VDI
         if vm_ref:
@@ -1072,7 +1008,7 @@ def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
     # NOTE(jk0): We use a FAT32 filesystem for the Windows swap
     # partition because that is what parted supports.
     is_windows = instance['os_type'] == "windows"
-    fs_type = "vfat" if is_windows else "linux-swap"
+    fs_type = "vfat" if is_windows else "swap"
 
     _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    'swap', swap_mb, fs_type)
@@ -1099,14 +1035,16 @@ def generate_single_ephemeral(session, instance, vm_ref, userdevice,
         instance_name_label = instance["name"]
 
     name_label = "%s ephemeral" % instance_name_label
+    fs_label = "ephemeral"
     # TODO(johngarbutt) need to move DEVICE_EPHEMERAL from vmops to use it here
     label_number = int(userdevice) - 4
     if label_number > 0:
         name_label = "%s (%d)" % (name_label, label_number)
+        fs_label = "ephemeral%d" % label_number
 
     return _generate_disk(session, instance, vm_ref, str(userdevice),
                           name_label, 'ephemeral', size_gb * 1024,
-                          CONF.default_ephemeral_format)
+                          CONF.default_ephemeral_format, fs_label)
 
 
 def generate_ephemeral(session, instance, vm_ref, first_userdevice,
@@ -1162,6 +1100,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                     utils.execute('dd',
                                   'if=%s' % tmp_file,
                                   'of=%s' % dev_path,
+                                  'bs=%d' % DD_BLOCKSIZE,
                                   'oflag=direct,sync',
                                   run_as_root=True)
 
@@ -2109,7 +2048,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                        'good_parent_uuids': good_parent_uuids},
                       instance=instance)
         else:
-            LOG.debug("Coalesce detected, because parent is: %s" % parent_uuid,
+            LOG.debug("Coalesce detected, because parent is: %s", parent_uuid,
                       instance=instance)
             return
 
@@ -2211,7 +2150,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
 
 
 def _get_sys_hypervisor_uuid():
-    with file('/sys/hypervisor/uuid') as f:
+    with open('/sys/hypervisor/uuid') as f:
         return f.readline().strip()
 
 
@@ -2429,6 +2368,7 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
                 utils.execute('dd',
                               'if=%s' % src_path,
                               'of=%s' % dst_path,
+                              'bs=%d' % DD_BLOCKSIZE,
                               'count=%d' % num_blocks,
                               'iflag=direct,sync',
                               'oflag=direct,sync',

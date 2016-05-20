@@ -64,10 +64,10 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
                                         fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, 'get_all_flavors_sorted_list',
                        fake_get_all_flavors_sorted_list)
-        self._setup_app()
 
-    def _setup_app(self):
-        self.app = fakes.wsgi_app_v21(init_only=('flavors'))
+    @property
+    def app(self):
+        return fakes.wsgi_app_v21(init_only=('flavors'))
 
     def _verify_flavor_response(self, flavor, expected):
         for key in expected:
@@ -123,5 +123,6 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
 
 class FlavorExtraDataTestV2(FlavorExtraDataTestV21):
 
-    def _setup_app(self):
-        self.app = fakes.wsgi_app(init_only=('flavors',))
+    @property
+    def app(self):
+        return fakes.wsgi_app(init_only=('flavors',))

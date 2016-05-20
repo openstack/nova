@@ -13,17 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
-from nova.api.openstack.compute import fping
-from nova.api.openstack.compute.legacy_v2.contrib import fping as fping_v2
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack.compute import test_fping
-from nova import utils
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class FpingSampleJsonTests(test_servers.ServersSampleBase):
@@ -41,20 +35,20 @@ class FpingSampleJsonTests(test_servers.ServersSampleBase):
 
         def fake_check_fping(self):
             pass
-        self.stubs.Set(utils, "execute", test_fping.execute)
-        self.stubs.Set(fping.FpingController, "check_fping",
-                       fake_check_fping)
-        self.stubs.Set(fping_v2.FpingController, "check_fping",
-                       fake_check_fping)
+        self.stub_out("nova.utils.execute", test_fping.execute)
+        self.stub_out("nova.api.openstack.compute.fping."
+                      "FpingController.check_fping",
+                      fake_check_fping)
+        self.stub_out("nova.api.openstack.compute.legacy_v2.contrib.fping."
+                      "FpingController.check_fping",
+                      fake_check_fping)
 
     def test_get_fping(self):
         self._post_server()
         response = self._do_get('os-fping')
-        subs = self._get_regexes()
-        self._verify_response('fping-get-resp', subs, response, 200)
+        self._verify_response('fping-get-resp', {}, response, 200)
 
     def test_get_fping_details(self):
         uuid = self._post_server()
         response = self._do_get('os-fping/%s' % (uuid))
-        subs = self._get_regexes()
-        self._verify_response('fping-get-details-resp', subs, response, 200)
+        self._verify_response('fping-get-details-resp', {}, response, 200)

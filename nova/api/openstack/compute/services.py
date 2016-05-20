@@ -39,9 +39,16 @@ class ServiceController(wsgi.Controller):
                         "disable-log-reason": self._disable_log_reason}
 
     def _get_services(self, req):
+        api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
+
         context = req.environ['nova.context']
         authorize(context)
-        _services = self.host_api.service_get_all(context, set_zones=True)
+
+        _services = [
+           s
+           for s in self.host_api.service_get_all(context, set_zones=True)
+           if s['binary'] not in api_services
+        ]
 
         host = ''
         if 'host' in req.GET:

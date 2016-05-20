@@ -13,24 +13,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
-from nova.volume import cinder
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class BlockDeviceMappingV1BootJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-block-device-mapping-v1"
 
     def test_servers_post_with_bdm(self):
-        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
-        self.stubs.Set(cinder.API, 'check_attach',
-                       fakes.stub_volume_check_attach)
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        self.stub_out('nova.volume.cinder.API.check_attach',
+                      fakes.stub_volume_check_attach)
         return self._post_server()
 
 

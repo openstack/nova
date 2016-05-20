@@ -148,10 +148,9 @@ class DesignerTestCase(test.NoDBTestCase):
     @mock.patch.object(pci_utils, 'get_pci_address_fields',
                        return_value=('fake-domain', 'fake-bus',
                                      'fake-slot', 'fake-function'))
-    def test_set_vif_host_backend_ib_hostdev_config(self,
-                                                    mock_pci_fields):
+    def test_set_vif_host_backend_hostdev_pci_config(self, mock_pci_fields):
         conf = config.LibvirtConfigGuestInterface()
-        designer.set_vif_host_backend_ib_hostdev_config(conf,
+        designer.set_vif_host_backend_hostdev_pci_config(conf,
                                                         'fake-pci-slot')
         self.assertEqual('fake-domain', conf.domain)
         self.assertEqual('fake-bus', conf.bus)

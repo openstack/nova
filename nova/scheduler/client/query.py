@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from nova.scheduler import rpcapi as scheduler_rpcapi
 
 
@@ -23,15 +22,14 @@ class SchedulerQueryClient(object):
     def __init__(self):
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
 
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj):
         """Returns destinations(s) best suited for this request_spec and
         filter_properties.
 
         The result should be a list of dicts with 'host', 'nodename' and
         'limits' as keys.
         """
-        return self.scheduler_rpcapi.select_destinations(
-            context, request_spec, filter_properties)
+        return self.scheduler_rpcapi.select_destinations(context, spec_obj)
 
     def update_aggregates(self, context, aggregates):
         """Updates HostManager internal aggregates information.

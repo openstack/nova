@@ -17,23 +17,13 @@
 The VMware API utility module.
 """
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_vmware import vim_util as vutil
 import six
 
-vmware_opts = cfg.IntOpt('maximum_objects', default=100,
-                         help='The maximum number of ObjectContent data '
-                              'objects that should be returned in a single '
-                              'result. A positive value will cause the '
-                              'operation to suspend the retrieval when the '
-                              'count of objects reaches the specified '
-                              'maximum. The server may still limit the count '
-                              'to something less than the configured value. '
-                              'Any remaining objects may be retrieved with '
-                              'additional requests.')
-CONF = cfg.CONF
-CONF.register_opt(vmware_opts, 'vmware')
+import nova.conf
+
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -165,3 +155,8 @@ def get_properties_for_a_collection_of_objects(vim, type,
 def get_about_info(vim):
     """Get the About Info from the service content."""
     return vim.service_content.about
+
+
+def get_entity_name(session, entity):
+    return session._call_method(vutil, 'get_object_property',
+                                entity, 'name')

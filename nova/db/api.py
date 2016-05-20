@@ -27,28 +27,15 @@ these objects be simple dictionaries.
 
 """
 
-from oslo_config import cfg
 from oslo_db import concurrency
 from oslo_log import log as logging
 
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova.i18n import _LE
 
 
-db_opts = [
-    cfg.BoolOpt('enable_new_services',
-                default=True,
-                help='Services to be added to the available pool on create'),
-    cfg.StrOpt('instance_name_template',
-               default='instance-%08x',
-               help='Template string to be used to generate instance names'),
-    cfg.StrOpt('snapshot_name_template',
-               default='snapshot-%s',
-               help='Template string to be used to generate snapshot names'),
-]
-
-CONF = cfg.CONF
-CONF.register_opts(db_opts)
+CONF = nova.conf.CONF
 
 _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 
@@ -86,6 +73,11 @@ def not_equal(*values):
     return IMPL.not_equal(*values)
 
 
+def create_context_manager(connection):
+    """Return a context manager for a cell database connection."""
+    return IMPL.create_context_manager(connection=connection)
+
+
 ###################
 
 
@@ -106,16 +98,14 @@ def service_destroy(context, service_id):
     return IMPL.service_destroy(context, service_id)
 
 
-def service_get(context, service_id, use_slave=False):
+def service_get(context, service_id):
     """Get a service or raise if it does not exist."""
-    return IMPL.service_get(context, service_id,
-                            use_slave=use_slave)
+    return IMPL.service_get(context, service_id)
 
 
-def service_get_minimum_version(context, binary, use_slave=False):
+def service_get_minimum_version(context, binary):
     """Get the minimum service version in the database."""
-    return IMPL.service_get_minimum_version(context, binary,
-                                            use_slave=use_slave)
+    return IMPL.service_get_minimum_version(context, binary)
 
 
 def service_get_by_host_and_topic(context, host, topic):
@@ -138,9 +128,13 @@ def service_get_all_by_topic(context, topic):
     return IMPL.service_get_all_by_topic(context, topic)
 
 
-def service_get_all_by_binary(context, binary):
-    """Get all services for a given binary."""
-    return IMPL.service_get_all_by_binary(context, binary)
+def service_get_all_by_binary(context, binary, include_disabled=False):
+    """Get services for a given binary.
+
+    Includes disabled services if 'include_disabled' parameter is True
+    """
+    return IMPL.service_get_all_by_binary(context, binary,
+                                          include_disabled=include_disabled)
 
 
 def service_get_all_by_host(context, host):
@@ -148,13 +142,12 @@ def service_get_all_by_host(context, host):
     return IMPL.service_get_all_by_host(context, host)
 
 
-def service_get_by_compute_host(context, host, use_slave=False):
+def service_get_by_compute_host(context, host):
     """Get the service entry for a given compute host.
 
     Returns the service entry joined with the compute_node entry.
     """
-    return IMPL.service_get_by_compute_host(context, host,
-                                            use_slave=use_slave)
+    return IMPL.service_get_by_compute_host(context, host)
 
 
 def service_create(context, values):
@@ -185,6 +178,21 @@ def compute_node_get(context, compute_id):
     Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
     """
     return IMPL.compute_node_get(context, compute_id)
+
+
+# TODO(edleafe): remove once the compute node resource provider migration is
+# complete, and this distinction is no longer necessary.
+def compute_node_get_model(context, compute_id):
+    """Get a compute node sqlalchemy model object by its id.
+
+    :param context: The security context
+    :param compute_id: ID of the compute node
+
+    :returns: Sqlalchemy model object containing properties of the compute node
+
+    Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
+    """
+    return IMPL.compute_node_get_model(context, compute_id)
 
 
 def compute_nodes_get_by_service_id(context, service_id):
@@ -227,7 +235,7 @@ def compute_node_get_all(context):
     return IMPL.compute_node_get_all(context)
 
 
-def compute_node_get_all_by_host(context, host, use_slave=False):
+def compute_node_get_all_by_host(context, host):
     """Get compute nodes by host name
 
     :param context: The security context (admin)
@@ -235,7 +243,7 @@ def compute_node_get_all_by_host(context, host, use_slave=False):
 
     :returns: List of dictionaries each containing compute node properties
     """
-    return IMPL.compute_node_get_all_by_host(context, host, use_slave)
+    return IMPL.compute_node_get_all_by_host(context, host)
 
 
 def compute_node_search_by_hypervisor(context, hypervisor_match):
@@ -475,6 +483,13 @@ def migration_get(context, migration_id):
     return IMPL.migration_get(context, migration_id)
 
 
+def migration_get_by_id_and_instance(context, migration_id, instance_uuid):
+    """Finds a migration by the migration id and the instance uuid."""
+    return IMPL.migration_get_by_id_and_instance(context,
+                                                 migration_id,
+                                                 instance_uuid)
+
+
 def migration_get_by_instance_and_status(context, instance_uuid, status):
     """Finds a migration by the instance uuid its migrating."""
     return IMPL.migration_get_by_instance_and_status(context, instance_uuid,
@@ -500,6 +515,13 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
 def migration_get_all_by_filters(context, filters):
     """Finds all migrations in progress."""
     return IMPL.migration_get_all_by_filters(context, filters)
+
+
+def migration_get_in_progress_by_instance(context, instance_uuid,
+                                          migration_type=None):
+    """Finds all migrations of an instance in progress."""
+    return IMPL.migration_get_in_progress_by_instance(context, instance_uuid,
+                                                      migration_type)
 
 
 ####################
@@ -620,10 +642,9 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
     return IMPL.virtual_interface_get_by_uuid(context, vif_uuid)
 
 
-def virtual_interface_get_by_instance(context, instance_id, use_slave=False):
+def virtual_interface_get_by_instance(context, instance_id):
     """Gets all virtual_interfaces for instance."""
-    return IMPL.virtual_interface_get_by_instance(context, instance_id,
-                                                  use_slave=use_slave)
+    return IMPL.virtual_interface_get_by_instance(context, instance_id)
 
 
 def virtual_interface_get_by_instance_and_network(context, instance_id,
@@ -657,10 +678,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
     return IMPL.instance_destroy(context, instance_uuid, constraint)
 
 
-def instance_get_by_uuid(context, uuid, columns_to_join=None, use_slave=False):
+def instance_get_by_uuid(context, uuid, columns_to_join=None):
     """Get an instance or raise if it does not exist."""
-    return IMPL.instance_get_by_uuid(context, uuid,
-                                     columns_to_join, use_slave=use_slave)
+    return IMPL.instance_get_by_uuid(context, uuid, columns_to_join)
 
 
 def instance_get(context, instance_id, columns_to_join=None):
@@ -676,7 +696,7 @@ def instance_get_all(context, columns_to_join=None):
 
 def instance_get_all_by_filters(context, filters, sort_key='created_at',
                                 sort_dir='desc', limit=None, marker=None,
-                                columns_to_join=None, use_slave=False):
+                                columns_to_join=None):
     """Get all instances that match all filters."""
     # Note: This function exists for backwards compatibility since calls to
     # the instance layer coming in over RPC may specify the single sort
@@ -685,27 +705,24 @@ def instance_get_all_by_filters(context, filters, sort_key='created_at',
     return IMPL.instance_get_all_by_filters(context, filters, sort_key,
                                             sort_dir, limit=limit,
                                             marker=marker,
-                                            columns_to_join=columns_to_join,
-                                            use_slave=use_slave)
+                                            columns_to_join=columns_to_join)
 
 
 def instance_get_all_by_filters_sort(context, filters, limit=None,
                                      marker=None, columns_to_join=None,
-                                     use_slave=False, sort_keys=None,
-                                     sort_dirs=None):
+                                     sort_keys=None, sort_dirs=None):
     """Get all instances that match all filters sorted by multiple keys.
 
     sort_keys and sort_dirs must be a list of strings.
     """
     return IMPL.instance_get_all_by_filters_sort(
         context, filters, limit=limit, marker=marker,
-        columns_to_join=columns_to_join, use_slave=use_slave,
-        sort_keys=sort_keys, sort_dirs=sort_dirs)
+        columns_to_join=columns_to_join, sort_keys=sort_keys,
+        sort_dirs=sort_dirs)
 
 
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
-                                         use_slave=False,
                                          columns_to_join=None):
     """Get instances and joins active during a certain time window.
 
@@ -714,16 +731,12 @@ def instance_get_active_by_window_joined(context, begin, end=None,
     """
     return IMPL.instance_get_active_by_window_joined(context, begin, end,
                                               project_id, host,
-                                              use_slave=use_slave,
                                               columns_to_join=columns_to_join)
 
 
-def instance_get_all_by_host(context, host,
-                             columns_to_join=None, use_slave=False):
+def instance_get_all_by_host(context, host, columns_to_join=None):
     """Get all instances belonging to a host."""
-    return IMPL.instance_get_all_by_host(context, host,
-                                         columns_to_join,
-                                         use_slave=use_slave)
+    return IMPL.instance_get_all_by_host(context, host, columns_to_join)
 
 
 def instance_get_all_by_host_and_node(context, host, node,
@@ -1056,6 +1069,13 @@ def quota_get_all_by_project(context, project_id):
     return IMPL.quota_get_all_by_project(context, project_id)
 
 
+def quota_get_per_project_resources():
+    """Retrieve the names of resources whose quotas are calculated on a
+       per-project rather than a per-user basis.
+    """
+    return IMPL.quota_get_per_project_resources()
+
+
 def quota_get_all(context, project_id):
     """Retrieve all user quotas associated with a given project."""
     return IMPL.quota_get_all(context, project_id)
@@ -1118,6 +1138,27 @@ def quota_usage_update(context, project_id, user_id, resource, **kwargs):
     """Update a quota usage or raise if it does not exist."""
     return IMPL.quota_usage_update(context, project_id, user_id, resource,
                                    **kwargs)
+
+
+def quota_usage_refresh(context, resources, keys, until_refresh, max_age,
+                        project_id=None, user_id=None):
+    """Refresh the quota usages.
+
+    :param context: The request context, for access checks.
+    :param resources: A dictionary of the registered resources.
+    :param keys: Names of the resources whose usage is to be refreshed.
+    :param until_refresh:  The until_refresh configuration value.
+    :param max_age:  The max_age configuration value.
+    :param project_id: (Optional) The project_id containing the usages
+                       to be refreshed.  Defaults to the project_id
+                       in the context.
+    :param user_id: (Optional) The user_id containing the usages
+                     to be refreshed.  Defaults to the user_id
+                     in the context.
+
+    """
+    return IMPL.quota_usage_refresh(context, resources, keys, until_refresh,
+                              max_age, project_id=project_id, user_id=user_id)
 
 
 ###################
@@ -1209,27 +1250,31 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
     return IMPL.block_device_mapping_update_or_create(context, values, legacy)
 
 
-def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids,
-                                                   use_slave=False):
+def block_device_mapping_get_all_by_instance_uuids(context, instance_uuids):
     """Get all block device mapping belonging to a list of instances."""
     return IMPL.block_device_mapping_get_all_by_instance_uuids(context,
-                                                               instance_uuids,
-                                                               use_slave)
+                                                               instance_uuids)
 
 
-def block_device_mapping_get_all_by_instance(context, instance_uuid,
-                                             use_slave=False):
+def block_device_mapping_get_all_by_instance(context, instance_uuid):
     """Get all block device mapping belonging to an instance."""
     return IMPL.block_device_mapping_get_all_by_instance(context,
-                                                         instance_uuid,
-                                                         use_slave)
+                                                         instance_uuid)
 
 
-def block_device_mapping_get_by_volume_id(context, volume_id,
+def block_device_mapping_get_all_by_volume_id(context, volume_id,
         columns_to_join=None):
     """Get block device mapping for a given volume."""
-    return IMPL.block_device_mapping_get_by_volume_id(context, volume_id,
+    return IMPL.block_device_mapping_get_all_by_volume_id(context, volume_id,
             columns_to_join)
+
+
+def block_device_mapping_get_by_instance_and_volume_id(context, volume_id,
+                                                       instance_uuid,
+                                                       columns_to_join=None):
+    """Get block device mapping for a given volume ID and instance UUID."""
+    return IMPL.block_device_mapping_get_by_instance_and_volume_id(
+        context, volume_id, instance_uuid, columns_to_join)
 
 
 def block_device_mapping_destroy(context, bdm_id):
@@ -1327,6 +1372,11 @@ def security_group_rule_get_by_security_group(context, security_group_id,
     """Get all rules for a given security group."""
     return IMPL.security_group_rule_get_by_security_group(
         context, security_group_id, columns_to_join=columns_to_join)
+
+
+def security_group_rule_get_by_instance(context, instance_uuid):
+    """Get all rules for a given instance."""
+    return IMPL.security_group_rule_get_by_instance(context, instance_uuid)
 
 
 def security_group_rule_destroy(context, security_group_rule_id):
@@ -1540,6 +1590,12 @@ def pci_device_get_all_by_instance_uuid(context, instance_uuid):
     return IMPL.pci_device_get_all_by_instance_uuid(context, instance_uuid)
 
 
+def pci_device_get_all_by_parent_addr(context, node_id, parent_addr):
+    """Get all PCI devices by parent address."""
+    return IMPL.pci_device_get_all_by_parent_addr(context, node_id,
+                                                  parent_addr)
+
+
 def pci_device_destroy(context, node_id, address):
     """Delete a PCI device record."""
     return IMPL.pci_device_destroy(context, node_id, address)
@@ -1642,16 +1698,14 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 
-def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
+def bw_usage_get(context, uuid, start_period, mac):
     """Return bw usage for instance and mac in a given audit period."""
-    return IMPL.bw_usage_get(context, uuid, start_period, mac,
-                             use_slave=use_slave)
+    return IMPL.bw_usage_get(context, uuid, start_period, mac)
 
 
-def bw_usage_get_by_uuids(context, uuids, start_period, use_slave=False):
+def bw_usage_get_by_uuids(context, uuids, start_period):
     """Return bw usages for instance(s) in a given audit period."""
-    return IMPL.bw_usage_get_by_uuids(context, uuids, start_period,
-                                      use_slave=use_slave)
+    return IMPL.bw_usage_get_by_uuids(context, uuids, start_period)
 
 
 def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
@@ -1932,6 +1986,18 @@ def archive_deleted_rows(max_rows=None):
 
     """
     return IMPL.archive_deleted_rows(max_rows=max_rows)
+
+
+def pcidevice_online_data_migration(context, max_count):
+    return IMPL.pcidevice_online_data_migration(context, max_count)
+
+
+def aggregate_uuids_online_data_migration(context, max_count):
+    return IMPL.aggregate_uuids_online_data_migration(context, max_count)
+
+
+def computenode_uuids_online_data_migration(context, max_count):
+    return IMPL.computenode_uuids_online_data_migration(context, max_count)
 
 
 ####################

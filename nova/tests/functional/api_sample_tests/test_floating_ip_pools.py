@@ -12,14 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
-from nova.network import api as network_api
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV21):
@@ -38,8 +34,8 @@ class FloatingIPPoolsSampleTests(api_sample_base.ApiSampleTestBaseV21):
         def fake_get_floating_ip_pools(self, context):
             return pool_list
 
-        self.stubs.Set(network_api.API, "get_floating_ip_pools",
-                       fake_get_floating_ip_pools)
+        self.stub_out("nova.network.api.API.get_floating_ip_pools",
+                      fake_get_floating_ip_pools)
         response = self._do_get('os-floating-ip-pools')
         subs = {
             'pool1': pool_list[0],

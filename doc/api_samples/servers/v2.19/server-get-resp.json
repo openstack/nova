@@ -1,0 +1,59 @@
+{
+    "server": {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "addresses": {
+            "private": [
+                {
+                    "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "OS-EXT-IPS:type": "fixed",
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2015-12-07T17:24:14Z",
+        "description": "new-server-description",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "c656e68b04b483cfc87cdbaa2346557b174ec1cb6be6afbd2a0133a0",
+        "id": "ddb205dc-717e-496e-8e96-88a3b31b075d",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "key_name": null,
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/ddb205dc-717e-496e-8e96-88a3b31b075d",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/ddb205dc-717e-496e-8e96-88a3b31b075d",
+                "rel": "bookmark"
+            }
+        ],
+        "locked": false,
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "updated": "2015-12-07T17:24:15Z",
+        "user_id": "fake"
+    }
+}

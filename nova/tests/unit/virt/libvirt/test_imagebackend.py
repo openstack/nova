@@ -19,19 +19,19 @@ import os
 import shutil
 import tempfile
 
+from castellan import key_manager
 import fixtures
 import mock
 from oslo_concurrency import lockutils
-from oslo_config import cfg
 from oslo_config import fixture as config_fixture
+from oslo_utils import imageutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 
+import nova.conf
 from nova import context
 from nova import exception
-from nova import keymgr
 from nova import objects
-from nova.openstack.common import imageutils
 from nova import test
 from nova.tests.unit import fake_processutils
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
@@ -41,8 +41,7 @@ from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt.storage import rbd_utils
 
-CONF = cfg.CONF
-CONF.import_opt('fixed_key', 'nova.keymgr.conf_key_mgr', group='keymgr')
+CONF = nova.conf.CONF
 
 
 class FakeSecret(object):
@@ -107,15 +106,15 @@ class _ImageTestCase(object):
             return
 
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
-        self.stubs.Set(os.path, 'exists', lambda _: True)
-        self.stubs.Set(os, 'access', lambda p, w: True)
+        self.stub_out('os.path.exists', lambda _: True)
+        self.stub_out('os.access', lambda p, w: True)
 
         # Call twice to verify testing fallocate is only called once.
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
         self.assertEqual(fake_processutils.fake_execute_get_log(),
-            ['fallocate -n -l 1 %s.fallocate_test' % self.PATH,
+            ['fallocate -l 1 %s.fallocate_test' % self.PATH,
              'fallocate -n -l %s %s' % (self.SIZE, self.PATH),
              'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
 
@@ -132,8 +131,8 @@ class _ImageTestCase(object):
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, '_can_fallocate', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
-        self.stubs.Set(os.path, 'exists', lambda _: True)
-        self.stubs.Set(os, 'access', lambda p, w: False)
+        self.stub_out('os.path.exists', lambda _: True)
+        self.stub_out('os.access', lambda p, w: False)
 
         # Testing fallocate is only called when user has write access.
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -194,14 +193,15 @@ class _ImageTestCase(object):
         get_disk_size.assert_called_once_with(image.path)
 
 
-class RawTestCase(_ImageTestCase, test.NoDBTestCase):
+class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
 
     SIZE = 1024
 
     def setUp(self):
-        self.image_class = imagebackend.Raw
-        super(RawTestCase, self).setUp()
-        self.stubs.Set(imagebackend.Raw, 'correct_format', lambda _: None)
+        self.image_class = imagebackend.Flat
+        super(FlatTestCase, self).setUp()
+        self.stubs.Set(imagebackend.Flat, 'correct_format',
+                       lambda _: None)
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
@@ -765,7 +765,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -788,17 +788,17 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.flags(key_size=512, group='ephemeral_storage_encryption')
         self.flags(fixed_key='00000000000000000000000000000000'
                              '00000000000000000000000000000000',
-                   group='keymgr')
+                   group='key_manager')
         self.flags(images_volume_group=self.VG, group='libvirt')
         self.LV = '%s_%s' % (self.INSTANCE['uuid'], self.NAME)
         self.OLD_STYLE_INSTANCE_PATH = None
         self.LV_PATH = os.path.join('/dev', self.VG, self.LV)
         self.PATH = os.path.join('/dev/mapper',
             imagebackend.dmcrypt.volume_name(self.LV))
-        self.key_manager = keymgr.API()
+        self.key_manager = key_manager.API()
         self.INSTANCE['ephemeral_key_uuid'] =\
-            self.key_manager.create_key(self.CONTEXT)
-        self.KEY = self.key_manager.get_key(self.CONTEXT,
+            self.key_manager.create_key(self.CONTEXT, 'AES', 256)
+        self.KEY = self.key_manager.get(self.CONTEXT,
             self.INSTANCE['ephemeral_key_uuid']).get_encoded()
 
         self.lvm = imagebackend.lvm
@@ -1138,7 +1138,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -1154,6 +1154,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
 
 class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
+    FSID = "FakeFsID"
     POOL = "FakePool"
     USER = "FakeUser"
     CONF = "FakeConf"
@@ -1325,7 +1326,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -1441,6 +1442,137 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             mock_import.assert_called_once_with(mock.sentinel.file, name)
         _test()
 
+    def test_get_parent_pool(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        with mock.patch.object(rbd_utils.RBDDriver, 'parent_info') as mock_pi:
+            mock_pi.return_value = [self.POOL, 'fake-image', 'fake-snap']
+            parent_pool = image._get_parent_pool(self.CONTEXT, 'fake-image',
+                                                 self.FSID)
+            self.assertEqual(self.POOL, parent_pool)
+
+    def test_get_parent_pool_no_parent_info(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_uri = 'rbd://%s/%s/fake-image/fake-snap' % (self.FSID, self.POOL)
+        with test.nested(mock.patch.object(rbd_utils.RBDDriver, 'parent_info'),
+                         mock.patch.object(imagebackend.IMAGE_API, 'get'),
+                         ) as (mock_pi, mock_get):
+            mock_pi.side_effect = exception.ImageUnacceptable(image_id='test',
+                                                              reason='test')
+            mock_get.return_value = {'locations': [{'url': rbd_uri}]}
+            parent_pool = image._get_parent_pool(self.CONTEXT, 'fake-image',
+                                                 self.FSID)
+            self.assertEqual(self.POOL, parent_pool)
+
+    def test_get_parent_pool_non_local_image(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_uri = 'rbd://remote-cluster/remote-pool/fake-image/fake-snap'
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'parent_info'),
+                mock.patch.object(imagebackend.IMAGE_API, 'get')
+        ) as (mock_pi, mock_get):
+            mock_pi.side_effect = exception.ImageUnacceptable(image_id='test',
+                                                              reason='test')
+            mock_get.return_value = {'locations': [{'url': rbd_uri}]}
+            self.assertRaises(exception.ImageUnacceptable,
+                              image._get_parent_pool, self.CONTEXT,
+                              'fake-image', self.FSID)
+
+    def test_direct_snapshot(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/fake-image-id/snap' % (self.FSID, self.POOL)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'get_fsid',
+                                  return_value=self.FSID),
+                mock.patch.object(image, '_get_parent_pool',
+                                  return_value=self.POOL),
+                mock.patch.object(rbd_utils.RBDDriver, 'create_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'clone'),
+                mock.patch.object(rbd_utils.RBDDriver, 'flatten'),
+                mock.patch.object(image, 'cleanup_direct_snapshot')
+        ) as (mock_fsid, mock_parent, mock_create_snap, mock_clone,
+              mock_flatten, mock_cleanup):
+            location = image.direct_snapshot(self.CONTEXT, 'fake-snapshot',
+                                             'fake-format', 'fake-image-id',
+                                             'fake-base-image')
+            mock_fsid.assert_called_once_with()
+            mock_parent.assert_called_once_with(self.CONTEXT,
+                                                'fake-base-image',
+                                                self.FSID)
+            mock_create_snap.assert_has_calls([mock.call(image.rbd_name,
+                                                         'fake-snapshot',
+                                                         protect=True),
+                                               mock.call('fake-image-id',
+                                                         'snap',
+                                                         pool=self.POOL,
+                                                         protect=True)])
+            mock_clone.assert_called_once_with(mock.ANY, 'fake-image-id',
+                                               dest_pool=self.POOL)
+            mock_flatten.assert_called_once_with('fake-image-id',
+                                                 pool=self.POOL)
+            mock_cleanup.assert_called_once_with(mock.ANY)
+            self.assertEqual(test_snap, location)
+
+    def test_direct_snapshot_cleans_up_on_failures(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+                                             image.rbd_name)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'get_fsid',
+                                  return_value=self.FSID),
+                mock.patch.object(image, '_get_parent_pool',
+                                  return_value=self.POOL),
+                mock.patch.object(rbd_utils.RBDDriver, 'create_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'clone',
+                                  side_effect=exception.Forbidden('testing')),
+                mock.patch.object(rbd_utils.RBDDriver, 'flatten'),
+                mock.patch.object(image, 'cleanup_direct_snapshot')) as (
+                mock_fsid, mock_parent, mock_create_snap, mock_clone,
+                mock_flatten, mock_cleanup):
+            self.assertRaises(exception.Forbidden, image.direct_snapshot,
+                              self.CONTEXT, 'snap', 'fake-format',
+                              'fake-image-id', 'fake-base-image')
+            mock_create_snap.assert_called_once_with(image.rbd_name, 'snap',
+                                                     protect=True)
+            self.assertFalse(mock_flatten.called)
+            mock_cleanup.assert_called_once_with(dict(url=test_snap))
+
+    def test_cleanup_direct_snapshot(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+                                             image.rbd_name)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'remove_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'destroy_volume')
+        ) as (mock_rm, mock_destroy):
+            # Ensure that the method does nothing when no location is provided
+            image.cleanup_direct_snapshot(None)
+            self.assertFalse(mock_rm.called)
+
+            # Ensure that destroy_volume is not called
+            image.cleanup_direct_snapshot(dict(url=test_snap))
+            mock_rm.assert_called_once_with(image.rbd_name, 'snap', force=True,
+                                            ignore_errors=False,
+                                            pool=image.pool)
+            self.assertFalse(mock_destroy.called)
+
+    def test_cleanup_direct_snapshot_destroy_volume(self):
+        image = self.image_class(self.INSTANCE, self.NAME)
+        test_snap = 'rbd://%s/%s/%s/snap' % (self.FSID, image.pool,
+                                             image.rbd_name)
+        with test.nested(
+                mock.patch.object(rbd_utils.RBDDriver, 'remove_snap'),
+                mock.patch.object(rbd_utils.RBDDriver, 'destroy_volume')
+        ) as (mock_rm, mock_destroy):
+            # Ensure that destroy_volume is called
+            image.cleanup_direct_snapshot(dict(url=test_snap),
+                                          also_destroy_volume=True)
+            mock_rm.assert_called_once_with(image.rbd_name, 'snap',
+                                            force=True,
+                                            ignore_errors=False,
+                                            pool=image.pool)
+            mock_destroy.assert_called_once_with(image.rbd_name,
+                                                 pool=image.pool)
+
 
 class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
     SIZE = 1024
@@ -1504,7 +1636,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stub_out('os.path.exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
@@ -1538,20 +1670,26 @@ class BackendTestCase(test.NoDBTestCase):
         assertIsInstance(image1, image_not_cow)
         assertIsInstance(image2, image_cow)
 
-    def test_image_raw(self):
-        self._test_image('raw', imagebackend.Raw, imagebackend.Raw)
+    def test_image_flat(self):
+        self._test_image('raw', imagebackend.Flat, imagebackend.Flat)
 
-    def test_image_raw_preallocate_images(self):
+    def test_image_flat_preallocate_images(self):
         flags = ('space', 'Space', 'SPACE')
         for f in flags:
             self.flags(preallocate_images=f)
-            raw = imagebackend.Raw(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+            raw = imagebackend.Flat(self.INSTANCE, 'fake_disk',
+                                         '/tmp/xyz')
             self.assertTrue(raw.preallocate)
 
-    def test_image_raw_preallocate_images_bad_conf(self):
+    def test_image_flat_preallocate_images_bad_conf(self):
         self.flags(preallocate_images='space1')
-        raw = imagebackend.Raw(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        raw = imagebackend.Flat(self.INSTANCE, 'fake_disk', '/tmp/xyz')
         self.assertFalse(raw.preallocate)
+
+    def test_image_flat_native_io(self):
+        self.flags(preallocate_images="space")
+        raw = imagebackend.Flat(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        self.assertEqual(raw.driver_io, "native")
 
     def test_image_qcow2(self):
         self._test_image('qcow2', imagebackend.Qcow2, imagebackend.Qcow2)
@@ -1568,6 +1706,20 @@ class BackendTestCase(test.NoDBTestCase):
         qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
         self.assertFalse(qcow.preallocate)
 
+    def test_image_qcow2_native_io(self):
+        self.flags(preallocate_images="space")
+        qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
+        self.assertEqual(qcow.driver_io, "native")
+
+    def test_image_lvm_native_io(self):
+        def _test_native_io(is_sparse, driver_io):
+            self.flags(images_volume_group='FakeVG', group='libvirt')
+            self.flags(sparse_logical_volumes=is_sparse, group='libvirt')
+            lvm = imagebackend.Lvm(self.INSTANCE, 'fake_disk')
+            self.assertEqual(lvm.driver_io, driver_io)
+        _test_native_io(is_sparse=False, driver_io="native")
+        _test_native_io(is_sparse=True, driver_io=None)
+
     def test_image_lvm(self):
         self.flags(images_volume_group='FakeVG', group='libvirt')
         self._test_image('lvm', imagebackend.Lvm, imagebackend.Lvm)
@@ -1582,4 +1734,4 @@ class BackendTestCase(test.NoDBTestCase):
         self._test_image('rbd', imagebackend.Rbd, imagebackend.Rbd)
 
     def test_image_default(self):
-        self._test_image('default', imagebackend.Raw, imagebackend.Qcow2)
+        self._test_image('default', imagebackend.Flat, imagebackend.Qcow2)

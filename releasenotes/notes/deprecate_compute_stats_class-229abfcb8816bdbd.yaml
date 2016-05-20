@@ -1,0 +1,8 @@
+---
+deprecations:
+
+  - Deprecate ``compute_stats_class`` config option. This allowed
+    loading an alternate implementation for collecting statistics for
+    the local compute host. Deployments that felt the need to use
+    this facility are encouraged to propose additions upstream so we
+    can create a stable and supported interface here.

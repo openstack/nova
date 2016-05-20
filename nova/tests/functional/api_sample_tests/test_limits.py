@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class LimitsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -31,8 +28,6 @@ class LimitsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         # NOTE(gmann): We have to separate the template files between V2
         # and V2.1 as the response are different.
         self.template = 'limit-get-resp'
-        if self._legacy_v2_code:
-            self.template = 'v2-limit-get-resp'
 
     def _get_flags(self):
         f = super(LimitsSampleJsonTest, self)._get_flags()
@@ -44,5 +39,4 @@ class LimitsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_limits_get(self):
         response = self._do_get('limits')
-        subs = self._get_regexes()
-        self._verify_response(self.template, subs, response, 200)
+        self._verify_response(self.template, {}, response, 200)

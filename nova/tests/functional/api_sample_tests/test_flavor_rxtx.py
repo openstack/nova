@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -50,27 +47,24 @@ class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV21):
         return f
 
     def test_flavor_rxtx_get(self):
-        flavor_id = 1
+        flavor_id = '1'
         response = self._do_get('flavors/%s' % flavor_id)
         subs = {
             'flavor_id': flavor_id,
             'flavor_name': 'm1.tiny'
         }
-        subs.update(self._get_regexes())
         self._verify_response('flavor-rxtx-get-resp', subs, response, 200)
 
     def test_flavors_rxtx_detail(self):
         response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavor-rxtx-list-resp', subs, response, 200)
+        self._verify_response('flavor-rxtx-list-resp', {}, response, 200)
 
     def test_flavors_rxtx_create(self):
         subs = {
-            'flavor_id': 100,
+            'flavor_id': '100',
             'flavor_name': 'flavortest'
         }
         response = self._do_post('flavors',
                                  'flavor-rxtx-post-req',
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response('flavor-rxtx-post-resp', subs, response, 200)

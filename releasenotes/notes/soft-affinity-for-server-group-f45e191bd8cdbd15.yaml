@@ -1,0 +1,7 @@
+---
+features:
+  - Two new policies soft-affinty and soft-anti-affinity have been implemented
+    for the server-group feature of Nova. This means that
+        POST  /v2.1/{tenant_id}/os-server-groups
+    API resource now accepts 'soft-affinity' and 'soft-anti-affinity' as value
+    of the 'policies' key of the request body.

@@ -16,7 +16,6 @@
 
 """The cells extension."""
 
-from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_utils import strutils
 import six
@@ -28,14 +27,13 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.cells import rpcapi as cells_rpcapi
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import rpc
 
 
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
-CONF.import_opt('capabilities', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 ALIAS = "os-cells"
 authorize = extensions.os_compute_authorizer(ALIAS)

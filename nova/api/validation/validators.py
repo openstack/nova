@@ -27,6 +27,7 @@ from oslo_utils import uuidutils
 import rfc3986
 import six
 
+from nova.api.validation import parameter_types
 from nova import exception
 from nova.i18n import _
 
@@ -75,12 +76,66 @@ def _validate_uri(instance):
                                 require_authority=True)
 
 
+@jsonschema.FormatChecker.cls_checks('name_with_leading_trailing_spaces',
+                                     exception.InvalidName)
+def _validate_name_with_leading_trailing_spaces(instance):
+    regex = parameter_types.valid_name_leading_trailing_spaces_regex
+    try:
+        if re.search(regex.regex, instance):
+            return True
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        pass
+    raise exception.InvalidName(reason=regex.reason)
+
+
+@jsonschema.FormatChecker.cls_checks('name', exception.InvalidName)
+def _validate_name(instance):
+    regex = parameter_types.valid_name_regex
+    try:
+        if re.search(regex.regex, instance):
+            return True
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        pass
+    raise exception.InvalidName(reason=regex.reason)
+
+
+@jsonschema.FormatChecker.cls_checks('cell_name_with_leading_trailing_spaces',
+                                     exception.InvalidName)
+def _validate_cell_name_with_leading_trailing_spaces(instance):
+    regex = parameter_types.valid_cell_name_leading_trailing_spaces_regex
+    try:
+        if re.search(regex.regex, instance):
+            return True
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        pass
+    raise exception.InvalidName(reason=regex.reason)
+
+
+@jsonschema.FormatChecker.cls_checks('cell_name', exception.InvalidName)
+def _validate_cell_name(instance):
+    regex = parameter_types.valid_cell_name_regex
+    try:
+        if re.search(regex.regex, instance):
+            return True
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        pass
+    raise exception.InvalidName(reason=regex.reason)
+
+
 def _soft_validate_additional_properties(validator,
                                          additional_properties_value,
                                          instance,
                                          schema):
     """This validator function is used for legacy v2 compatible mode in v2.1.
-    This will skip all the addtional properties checking but keep check the
+    This will skip all the additional properties checking but keep check the
     'patternProperties'. 'patternProperties' is used for metadata API.
 
     If there are not any properties on the instance that are not specified in
@@ -132,6 +187,41 @@ def _soft_validate_additional_properties(validator,
             del instance[prop]
 
 
+class FormatChecker(jsonschema.FormatChecker):
+    """A FormatChecker can output the message from cause exception
+
+       We need understandable validation errors messages for users. When a
+       custom checker has an exception, the FormatChecker will output a
+       readable message provided by the checker.
+    """
+
+    def check(self, instance, format):
+        """Check whether the instance conforms to the given format.
+
+        :argument instance: the instance to check
+        :type: any primitive type (str, number, bool)
+        :argument str format: the format that instance should conform to
+        :raises: :exc:`FormatError` if instance does not conform to format
+        """
+
+        if format not in self.checkers:
+            return
+
+        # For safety reasons custom checkers can be registered with
+        # allowed exception types. Anything else will fall into the
+        # default formatter.
+        func, raises = self.checkers[format]
+        result, cause = None, None
+
+        try:
+            result = func(instance)
+        except raises as e:
+            cause = e
+        if not result:
+            msg = "%r is not a %r" % (instance, format)
+            raise jsonschema_exc.FormatError(msg, cause=cause)
+
+
 class _SchemaValidator(object):
     """A validator class
 
@@ -156,16 +246,18 @@ class _SchemaValidator(object):
 
         validator_cls = jsonschema.validators.extend(self.validator_org,
                                                      validators)
-        format_checker = jsonschema.FormatChecker()
+        format_checker = FormatChecker()
         self.validator = validator_cls(schema, format_checker=format_checker)
 
     def validate(self, *args, **kwargs):
         try:
             self.validator.validate(*args, **kwargs)
         except jsonschema.ValidationError as ex:
-            # NOTE: For whole OpenStack message consistency, this error
-            #       message has been written as the similar format of WSME.
-            if len(ex.path) > 0:
+            if isinstance(ex.cause, exception.InvalidName):
+                detail = ex.cause.format_message()
+            elif len(ex.path) > 0:
+                # NOTE: For whole OpenStack message consistency, this error
+                #       message has been written as the similar format of WSME.
                 detail = _("Invalid input for field/attribute %(path)s."
                            " Value: %(value)s. %(message)s") % {
                                'path': ex.path.pop(), 'value': ex.instance,

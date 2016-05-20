@@ -11,6 +11,7 @@
 #    under the License.
 
 import mock
+from os_brick import exception as os_brick_exception
 from os_brick.initiator import connector
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
@@ -74,3 +75,32 @@ Setting up iSCSI targets: unused
             # we don't care what the log message is, we just want to make sure
             # our stub method is called which asserts the password is scrubbed
             self.assertTrue(debug_mock.called)
+
+    def test_libvirt_iscsi_driver_get_config(self):
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)
+
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        conf = libvirt_driver.get_config(connection_info, self.disk_info)
+        tree = conf.format_dom()
+
+        self.assertEqual('block', tree.get('type'))
+        self.assertEqual(device_path, tree.find('./source').get('dev'))
+        self.assertEqual('raw', tree.find('./driver').get('type'))
+        self.assertEqual('native', tree.find('./driver').get('io'))
+
+    @mock.patch.object(iscsi.LOG, 'warning')
+    def test_libvirt_iscsi_driver_disconnect_volume_with_devicenotfound(self,
+            mock_LOG_warning):
+        device_path = '/dev/fake-dev'
+        connection_info = {'data': {'device_path': device_path}}
+
+        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_conn)
+        libvirt_driver.connector.disconnect_volume = mock.MagicMock(
+            side_effect=os_brick_exception.VolumeDeviceNotFound(
+                device=device_path))
+        libvirt_driver.disconnect_volume(connection_info, device_path)
+
+        msg = mock_LOG_warning.call_args_list[0]
+        self.assertIn('Ignoring VolumeDeviceNotFound', msg[0][0])

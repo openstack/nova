@@ -17,14 +17,12 @@ from oslo_config import cfg
 from oslo_utils import uuidutils
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import server_groups
 from nova.api.openstack.compute import server_groups as sg_v21
-from nova.api.openstack import extensions
 from nova import context
-import nova.db
 from nova import quota
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 CONF = cfg.CONF
 
@@ -63,9 +61,9 @@ def server_group_db(sg):
     attrs['created_at'] = None
     attrs['updated_at'] = None
     if 'user_id' not in attrs:
-        attrs['user_id'] = 'user_id'
+        attrs['user_id'] = fakes.FAKE_USER_ID
     if 'project_id' not in attrs:
-        attrs['project_id'] = 'project_id'
+        attrs['project_id'] = fakes.FAKE_PROJECT_ID
     attrs['id'] = 7
 
     return AttrDict(attrs)
@@ -136,7 +134,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
 
     def test_delete_server_group_by_id(self):
         self._setup_quotas()
-        sg = server_group_template(id='123')
+        sg = server_group_template(id=uuids.sg1_id)
         self.called = False
 
         def server_group_delete(context, id):
@@ -146,12 +144,12 @@ class ServerGroupQuotasTestV21(test.TestCase):
             self.assertEqual(sg['id'], group_id)
             return server_group_db(sg)
 
-        self.stubs.Set(nova.db, 'instance_group_delete',
-                       server_group_delete)
-        self.stubs.Set(nova.db, 'instance_group_get',
-                       return_server_group)
+        self.stub_out('nova.db.instance_group_delete',
+                      server_group_delete)
+        self.stub_out('nova.db.instance_group_get',
+                      return_server_group)
 
-        resp = self.controller.delete(self.req, '123')
+        resp = self.controller.delete(self.req, uuids.sg1_id)
         self.assertTrue(self.called)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
@@ -161,15 +159,3 @@ class ServerGroupQuotasTestV21(test.TestCase):
         else:
             status_int = resp.status_int
         self.assertEqual(204, status_int)
-
-
-class ServerGroupQuotasTestV2(ServerGroupQuotasTestV21):
-
-    def _setup_controller(self):
-        self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
-        self.controller = server_groups.ServerGroupController(self.ext_mgr)
-
-    def _setup_quotas(self):
-        self.ext_mgr.is_loaded('os-server-group-quotas').MultipleTimes()\
-                                                        .AndReturn(True)
-        self.mox.ReplayAll()

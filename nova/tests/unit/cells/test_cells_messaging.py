@@ -21,7 +21,6 @@ import uuid
 
 import mock
 from mox3 import mox
-from oslo_config import cfg
 import oslo_messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -32,6 +31,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
 from nova.compute import task_states
 from nova.compute import vm_states
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -43,12 +43,12 @@ from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
+from nova.tests import uuidsentinel as uuids
 
-CONF = cfg.CONF
-CONF.import_opt('name', 'nova.cells.opts', group='cells')
+CONF = nova.conf.CONF
 
 
-class CellsMessageClassesTestCase(test.TestCase):
+class CellsMessageClassesTestCase(test.NoDBTestCase):
     """Test case for the main Cells Message classes."""
     def setUp(self):
         super(CellsMessageClassesTestCase, self).setUp()
@@ -647,7 +647,33 @@ class CellsMessageClassesTestCase(test.TestCase):
             self.assertRaises(test.TestingException, response.value_or_raise)
 
 
-class CellsTargetedMethodsTestCase(test.TestCase):
+class CellsTargetedMethodsWithDatabaseTestCase(test.TestCase):
+    """These tests access the database unlike the others."""
+
+    def setUp(self):
+        super(CellsTargetedMethodsWithDatabaseTestCase, self).setUp()
+        fakes.init(self)
+        self.ctxt = context.RequestContext('fake', 'fake')
+        self._setup_attrs('api-cell', 'api-cell!child-cell2')
+
+    def _setup_attrs(self, source_cell, target_cell):
+        self.tgt_cell_name = target_cell
+        self.src_msg_runner = fakes.get_message_runner(source_cell)
+
+    def test_service_delete(self):
+        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
+                            topic='compute')
+
+        ctxt = self.ctxt.elevated()
+        db.service_create(ctxt, fake_service)
+
+        self.src_msg_runner.service_delete(
+            ctxt, self.tgt_cell_name, fake_service['id'])
+        self.assertRaises(exception.ServiceNotFound,
+                          db.service_get, ctxt, fake_service['id'])
+
+
+class CellsTargetedMethodsTestCase(test.NoDBTestCase):
     """Test case for _TargetedMessageMethods class.  Most of these
     tests actually test the full path from the MessageRunner through
     to the functionality of the message method.  Hits 2 birds with 1
@@ -859,22 +885,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 'fake_host', binary, params_to_update)
         result = response.value_or_raise()
         self.assertIsInstance(result, objects.Service)
-        # NOTE(sbauza): As NovaObjects can't be comparated directly, we need to
-        # check the fields by primitiving them first
-        self.assertEqual(jsonutils.to_primitive(fake_service),
-                         jsonutils.to_primitive(result))
-
-    def test_service_delete(self):
-        fake_service = dict(id=42, host='fake_host', binary='nova-compute',
-                            topic='compute')
-
-        ctxt = self.ctxt.elevated()
-        db.service_create(ctxt, fake_service)
-
-        self.src_msg_runner.service_delete(
-            ctxt, self.tgt_cell_name, fake_service['id'])
-        self.assertRaises(exception.ServiceNotFound,
-                          db.service_get, ctxt, fake_service['id'])
+        self.assertTrue(objects_base.obj_equal_prims(fake_service, result))
 
     def test_proxy_rpc_to_manager_call(self):
         fake_topic = 'fake-topic'
@@ -970,12 +981,12 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'actions_get')
         self.tgt_db_inst.actions_get(self.ctxt,
-                                     'fake-uuid').AndReturn([fake_act])
+                                     fake_uuid).AndReturn([fake_act])
         self.mox.ReplayAll()
 
         response = self.src_msg_runner.actions_get(self.ctxt,
                                                    self.tgt_cell_name,
-                                                   'fake-uuid')
+                                                   fake_uuid)
         result = response.value_or_raise()
         self.assertEqual([jsonutils.to_primitive(fake_act)], result)
 
@@ -986,11 +997,11 @@ class CellsTargetedMethodsTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'action_get_by_request_id')
         self.tgt_db_inst.action_get_by_request_id(self.ctxt,
-                'fake-uuid', 'req-fake').AndReturn(fake_act)
+                fake_uuid, 'req-fake').AndReturn(fake_act)
         self.mox.ReplayAll()
 
         response = self.src_msg_runner.action_get_by_request_id(self.ctxt,
-                self.tgt_cell_name, 'fake-uuid', 'req-fake')
+                self.tgt_cell_name, fake_uuid, 'req-fake')
         result = response.value_or_raise()
         self.assertEqual(jsonutils.to_primitive(fake_act), result)
 
@@ -1010,7 +1021,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual(jsonutils.to_primitive(fake_events), result)
 
     def test_validate_console_port(self):
-        instance_uuid = 'fake_instance_uuid'
+        instance_uuid = uuids.instance
         instance = objects.Instance(uuid=instance_uuid)
         console_port = 'fake-port'
         console_type = 'fake-type'
@@ -1408,7 +1419,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
                 {}, False)
 
 
-class CellsBroadcastMethodsTestCase(test.TestCase):
+class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
     """Test case for _BroadcastMessageMethods class.  Most of these
     tests actually test the full path from the MessageRunner through
     to the functionality of the message method.  Hits 2 birds with 1
@@ -1485,7 +1496,8 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
     def _test_instance_update_at_top(self, exists=True):
         fake_uuid = fake_server_actions.FAKE_UUID
-        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_info_cache = objects.InstanceInfoCache(
+            instance_uuid=fake_uuid)
         fake_sys_metadata = {'key1': 'value1',
                              'key2': 'value2'}
         fake_attrs = {'uuid': fake_uuid,
@@ -1507,7 +1519,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
             if exists:
                 mock_save.side_effect = fake_save
             else:
-                error = exception.InstanceNotFound(instance_id='fake_uuid')
+                error = exception.InstanceNotFound(instance_id=fake_uuid)
                 mock_save.side_effect = error
 
             self.src_msg_runner.instance_update_at_top(self.ctxt,
@@ -1530,7 +1542,8 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
     def test_instance_update_at_top_with_building_state(self):
         fake_uuid = fake_server_actions.FAKE_UUID
-        fake_info_cache = objects.InstanceInfoCache(instance_uuid='fake-uuid')
+        fake_info_cache = objects.InstanceInfoCache(
+            instance_uuid=fake_uuid)
         fake_sys_metadata = {'key1': 'value1',
                              'key2': 'value2'}
         fake_attrs = {'uuid': fake_uuid,
@@ -1557,7 +1570,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                 expected_vm_state=expected_vm_state, expected_task_state=None)
 
     def test_instance_destroy_at_top(self):
-        fake_instance = objects.Instance(uuid='fake_uuid')
+        fake_instance = objects.Instance(uuid=uuids.instance)
 
         with mock.patch.object(objects.Instance, 'destroy') as mock_destroy:
             self.src_msg_runner.instance_destroy_at_top(self.ctxt,
@@ -1565,7 +1578,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
             mock_destroy.assert_called_once_with()
 
     def test_instance_destroy_at_top_incomplete_instance_obj(self):
-        fake_instance = objects.Instance(uuid='fake_uuid')
+        fake_instance = objects.Instance(uuid=uuids.instance)
         with mock.patch.object(objects.Instance, 'get_by_uuid') as mock_get:
             self.src_msg_runner.instance_destroy_at_top(self.ctxt,
                     fake_instance)
@@ -1662,8 +1675,8 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         updated_since_parsed = 'fake_updated_since_parsed'
         deleted = 'fake_deleted'
 
-        instance1 = objects.Instance(uuid='fake_uuid1', deleted=False)
-        instance2 = objects.Instance(uuid='fake_uuid2', deleted=True)
+        instance1 = objects.Instance(uuid=uuids.instance_1, deleted=False)
+        instance2 = objects.Instance(uuid=uuids.instance_2, deleted=True)
         fake_instances = [instance1, instance2]
 
         self.mox.StubOutWithMock(self.tgt_msg_runner,
@@ -1929,7 +1942,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
     def test_bdm_update_or_create_with_false_create_vol_id(self):
         fake_bdm = {'id': 'fake_id',
-                    'instance_uuid': 'fake_instance_uuid',
+                    'instance_uuid': uuids.instance,
                     'device_name': 'fake_device_name',
                     'volume_id': 'fake_volume_id'}
         expected_bdm = fake_bdm.copy()
@@ -1957,7 +1970,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                 'block_device_mapping_update')
 
         self.tgt_db_inst.block_device_mapping_get_all_by_instance(
-                self.ctxt, 'fake_instance_uuid').AndReturn(
+                self.ctxt, uuids.instance).AndReturn(
                         fake_inst_bdms)
         # Should try to update ID 2.
         self.tgt_db_inst.block_device_mapping_update(
@@ -1971,7 +1984,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
     def test_bdm_update_or_create_with_false_create_dev_name(self):
         fake_bdm = {'id': 'fake_id',
-                    'instance_uuid': 'fake_instance_uuid',
+                    'instance_uuid': uuids.instance,
                     'device_name': 'fake_device_name',
                     'volume_id': 'fake_volume_id'}
         expected_bdm = fake_bdm.copy()
@@ -1999,7 +2012,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                 'block_device_mapping_update')
 
         self.tgt_db_inst.block_device_mapping_get_all_by_instance(
-                self.ctxt, 'fake_instance_uuid').AndReturn(
+                self.ctxt, uuids.instance).AndReturn(
                         fake_inst_bdms)
         # Should try to update ID 2.
         self.tgt_db_inst.block_device_mapping_update(
@@ -2012,7 +2025,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                                                         create=False)
 
     def test_bdm_destroy_by_volume(self):
-        fake_instance_uuid = 'fake-instance-uuid'
+        fake_instance_uuid = uuids.instance
         fake_volume_id = 'fake-volume-name'
 
         # Shouldn't be called for these 2 cells
@@ -2032,7 +2045,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                                                volume_id=fake_volume_id)
 
     def test_bdm_destroy_by_device(self):
-        fake_instance_uuid = 'fake-instance-uuid'
+        fake_instance_uuid = uuids.instance
         fake_device_name = 'fake-device-name'
 
         # Shouldn't be called for these 2 cells
@@ -2121,7 +2134,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.assertEqual(fake_process.return_value, responses)
 
 
-class CellsPublicInterfacesTestCase(test.TestCase):
+class CellsPublicInterfacesTestCase(test.NoDBTestCase):
     """Test case for the public interfaces into cells messaging."""
     def setUp(self):
         super(CellsPublicInterfacesTestCase, self).setUp()

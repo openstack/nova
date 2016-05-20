@@ -48,7 +48,7 @@ Interdependencies to other options:
 
 port_range_opt = cfg.StrOpt('port_range',
         default=DEFAULT_PORT_RANGE,
-        # TODO(markus_z): regex="\d+:\d+", As soon as we have oslo.config 2.7
+        regex="\d+:\d+",
         help="""
 A range of TCP ports a guest can use for its backend.
 
@@ -196,8 +196,4 @@ def register_cli_opts(conf):
 
 
 def list_opts():
-    # Because of bug 1395819 in oslo.config we cannot pass in the OptGroup.
-    # As soon as this bug is fixed is oslo.config and Nova uses the
-    # version which contains this fix, we can pass in the OptGroup instead
-    # of its name. This allows the generation of the group help too.
-    return (serial_opt_group.name, ALL_OPTS)
+    return {serial_opt_group: ALL_OPTS}

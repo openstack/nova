@@ -12,18 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import webob
-
 from nova.api.openstack.compute import access_ips
 from nova.api.openstack.compute import extension_info
-from nova.api.openstack.compute.legacy_v2 import servers as servers_v20
 from nova.api.openstack.compute import servers as servers_v21
-from nova.api.openstack import extensions as extensions_v20
 from nova.api.openstack import wsgi
-from nova.compute import api as compute_api
-from nova import db
 from nova import exception
-from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -170,10 +163,11 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
             pass
 
         self._set_up_controller()
-        fake.stub_out_image_service(self.stubs)
-        self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
-        self.stubs.Set(instance_obj.Instance, 'save', fake_save)
-        self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
+        fake.stub_out_image_service(self)
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      fakes.fake_instance_get())
+        self.stub_out('nova.objects.instance.Instance.save', fake_save)
+        self.stub_out('nova.compute.api.API.rebuild', fake_rebuild)
 
         self.req = fakes.HTTPRequest.blank('')
 
@@ -278,39 +272,6 @@ class AccessIPsExtAPIValidationTestV21(test.TestCase):
         params = {access_ips.AccessIPs.v6_key: 'fe80:::::::'}
         self.assertRaises(self.validation_error, self._test_rebuild,
                           params)
-
-
-class AccessIPsExtAPIValidationTestV2(AccessIPsExtAPIValidationTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _set_up_controller(self):
-        self.ext_mgr = extensions_v20.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.controller = servers_v20.Controller(self.ext_mgr)
-
-    def _verify_update_access_ip(self, res_dict, params):
-        for key, value in params.items():
-            value = value or ''
-            self.assertEqual(res_dict['server'][key], value)
-
-    # Note(gmann): Below tests are only valid for V2 as
-    # V2.1 has strong input validation and does not allow
-    # None or blank access ips.
-    def test_update_server_access_ipv4_none(self):
-        params = {access_ips.AccessIPs.v4_key: None}
-        self._test_update(params)
-
-    def test_update_server_access_ipv4_blank(self):
-        params = {access_ips.AccessIPs.v4_key: ''}
-        self._test_update(params)
-
-    def test_update_server_access_ipv6_none(self):
-        params = {access_ips.AccessIPs.v6_key: None}
-        self._test_update(params)
-
-    def test_update_server_access_ipv6_blank(self):
-        params = {access_ips.AccessIPs.v6_key: ''}
-        self._test_update(params)
 
 
 class AccessIPsControllerTestV21(test.NoDBTestCase):

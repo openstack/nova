@@ -109,6 +109,17 @@ class ServiceTestCase(test.NoDBTestCase):
 
         self.assertTrue(app)
 
+    def test_repr(self):
+        # Test if a Service object is correctly represented, for example in
+        # log files.
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.unit.test_service.FakeManager')
+        exp = "<Service: host=foo, binary=nova-fake, " \
+              "manager_class_name=nova.tests.unit.test_service.FakeManager>"
+        self.assertEqual(exp, repr(serv))
+
     def _service_start_mocks(self):
         self.mox.StubOutWithMock(objects.Service, 'create')
         self.mox.StubOutWithMock(objects.Service, 'get_by_host_and_binary')
@@ -145,6 +156,23 @@ class ServiceTestCase(test.NoDBTestCase):
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
         serv.start()
+
+    @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
+    def test_start_updates_version(self, mock_get_by_host_and_binary):
+        # test that the service version gets updated on services startup
+        service_obj = mock.Mock()
+        service_obj.binary = 'fake-binary'
+        service_obj.host = 'fake-host'
+        service_obj.version = -42
+        mock_get_by_host_and_binary.return_value = service_obj
+
+        serv = service.Service(self.host, self.binary, self.topic,
+                              'nova.tests.unit.test_service.FakeManager')
+        serv.start()
+
+        # test service version got updated and saved:
+        service_obj.save.assert_called_once()
+        self.assertEqual(objects.service.SERVICE_VERSION, service_obj.version)
 
     def _test_service_check_create_race(self, ex):
         self.manager_mock = self.mox.CreateMock(FakeManager)
@@ -359,7 +387,7 @@ class TestWSGIService(test.NoDBTestCase):
         test_service.reset()
         test_service.start()
         self.assertEqual(test_service.server._pool.size,
-                         CONF.wsgi_default_pool_size)
+                         CONF.wsgi.default_pool_size)
 
 
 class TestLauncher(test.NoDBTestCase):

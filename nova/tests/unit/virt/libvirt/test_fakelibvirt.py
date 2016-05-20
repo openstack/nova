@@ -12,12 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova import test
-
 from lxml import etree
 import six
 
 from nova.compute import arch
+from nova import test
 import nova.tests.unit.virt.libvirt.fakelibvirt as libvirt
 
 

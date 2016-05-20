@@ -21,8 +21,6 @@ from oslo_utils import timeutils
 from six.moves import range
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import simple_tenant_usage as \
-    simple_tenant_usage_v2
 from nova.api.openstack.compute import simple_tenant_usage as \
     simple_tenant_usage_v21
 from nova.compute import vm_states
@@ -34,6 +32,7 @@ from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_flavor
+from nova.tests import uuidsentinel as uuids
 
 SERVERS = 5
 TENANTS = 2
@@ -70,7 +69,7 @@ def get_fake_db_instance(start, end, instance_id, tenant_id,
                          vm_state=vm_states.ACTIVE):
     inst = fakes.stub_instance(
             id=instance_id,
-            uuid='00000000-0000-0000-0000-00000000000000%02d' % instance_id,
+            uuid=getattr(uuids, 'instance_%d' % instance_id),
             image_ref='1',
             project_id=tenant_id,
             user_id='fakeuser',
@@ -198,14 +197,15 @@ class SimpleTenantUsageTestV21(test.TestCase):
         usage = res_dict['tenant_usage']
         servers = usage['server_usages']
         self.assertEqual(TENANTS * SERVERS, len(usage['server_usages']))
-        uuids = ['00000000-0000-0000-0000-00000000000000%02d' %
-                    x for x in range(SERVERS)]
+        server_uuids = [getattr(uuids, 'instance_%d' % x)
+                        for x in range(SERVERS)]
         for j in range(SERVERS):
             delta = STOP - START
-            uptime = delta.days * 24 * 3600 + delta.seconds
+            # NOTE(javeme): cast seconds from float to int for clarity
+            uptime = int(delta.total_seconds())
             self.assertEqual(uptime, int(servers[j]['uptime']))
             self.assertEqual(HOURS, int(servers[j]['hours']))
-            self.assertIn(servers[j]['instance_id'], uuids)
+            self.assertIn(servers[j]['instance_id'], server_uuids)
 
     def test_verify_show_cannot_view_other_tenant(self):
         req = fakes.HTTPRequest.blank('?start=%s&end=%s' %
@@ -252,11 +252,6 @@ class SimpleTenantUsageTestV21(test.TestCase):
     def test_get_tenants_usage_with_no_end_date(self):
         self._test_get_tenants_usage_with_one_date(
             'start=%s' % (NOW - datetime.timedelta(5)).isoformat())
-
-
-class SimpleTenantUsageTestV2(SimpleTenantUsageTestV21):
-    policy_rule_prefix = "compute_extension:simple_tenant_usage"
-    controller = simple_tenant_usage_v2.SimpleTenantUsageController()
 
 
 class SimpleTenantUsageControllerTestV21(test.TestCase):
@@ -306,10 +301,6 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
         self.assertIsNone(flavor)
 
 
-class SimpleTenantUsageControllerTestV2(SimpleTenantUsageControllerTestV21):
-    controller = simple_tenant_usage_v2.SimpleTenantUsageController()
-
-
 class SimpleTenantUsageUtilsV21(test.NoDBTestCase):
     simple_tenant_usage = simple_tenant_usage_v21
 
@@ -325,7 +316,3 @@ class SimpleTenantUsageUtilsV21(test.NoDBTestCase):
                           self.simple_tenant_usage.parse_strtime,
                           "2014-02-21 13:47:20.824060",
                           "%Y-%m-%dT%H:%M:%S.%f")
-
-
-class SimpleTenantUsageUtilsV2(SimpleTenantUsageUtilsV21):
-    simple_tenant_usage = simple_tenant_usage_v2

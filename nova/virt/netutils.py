@@ -23,21 +23,11 @@ import os
 
 import jinja2
 import netaddr
-from oslo_config import cfg
 
+import nova.conf
 from nova.network import model
-from nova import paths
 
-CONF = cfg.CONF
-
-netutils_opts = [
-    cfg.StrOpt('injected_network_template',
-               default=paths.basedir_def('nova/virt/interfaces.template'),
-               help='Template file for injected network'),
-]
-
-CONF.register_opts(netutils_opts)
-CONF.import_opt('use_ipv6', 'nova.netconf')
+CONF = nova.conf.CONF
 
 
 def get_net_and_mask(cidr):
@@ -250,7 +240,8 @@ def _get_eth_link(vif, ifc_num):
     :param vif: Neutron VIF
     :param ifc_num: Interface index for generating name if the VIF's
         'devname' isn't defined.
-    :return:
+    :return: A dict with 'id', 'vif_id', 'type', 'mtu' and
+        'ethernet_mac_address' as keys
     """
     link_id = vif.get('devname')
     if not link_id:

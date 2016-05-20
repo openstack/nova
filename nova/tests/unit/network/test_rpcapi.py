@@ -19,7 +19,6 @@ Unit Tests for nova.network.rpcapi
 import collections
 
 import mock
-from mox3 import mox
 from oslo_config import cfg
 
 from nova import context
@@ -89,25 +88,38 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
             if CONF.multi_host:
                 prepare_kwargs['server'] = host
 
-        self.mox.StubOutWithMock(rpcapi, 'client')
+        with test.nested(
+            mock.patch.object(rpcapi.client, rpc_method),
+            mock.patch.object(rpcapi.client, 'prepare'),
+            mock.patch.object(rpcapi.client, 'can_send_version'),
+        ) as (
+            rpc_mock, prepare_mock, csv_mock
+        ):
 
-        version_check = [
-            'deallocate_for_instance', 'deallocate_fixed_ip',
-            'allocate_for_instance', 'release_fixed_ip', 'set_network_host',
-        ]
-        if method in version_check:
-            rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
+            version_check = [
+                'deallocate_for_instance', 'deallocate_fixed_ip',
+                'allocate_for_instance', 'release_fixed_ip',
+                'set_network_host', 'setup_networks_on_host'
+            ]
+            if method in version_check:
+                csv_mock.return_value = True
 
-        if prepare_kwargs:
-            rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
+            if prepare_kwargs:
+                prepare_mock.return_value = rpcapi.client
 
-        rpc_method = getattr(rpcapi.client, rpc_method)
-        rpc_method(ctxt, method, **expected_kwargs).AndReturn('foo')
+            if rpc_method == 'call':
+                rpc_mock.return_value = 'foo'
+            else:
+                rpc_mock.return_value = None
 
-        self.mox.ReplayAll()
+            retval = getattr(rpcapi, method)(ctxt, **kwargs)
+            self.assertEqual(expected_retval, retval)
 
-        retval = getattr(rpcapi, method)(ctxt, **kwargs)
-        self.assertEqual(expected_retval, retval)
+            if method in version_check:
+                csv_mock.assert_called_once_with(mock.ANY)
+            if prepare_kwargs:
+                prepare_mock.assert_called_once_with(**prepare_kwargs)
+            rpc_mock.assert_called_once_with(ctxt, method, **expected_kwargs)
 
     def test_create_networks(self):
         self._test_network_api('create_networks', rpc_method='call',
@@ -194,8 +206,36 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
                 domain='fake_domain', project='fake_project')
 
     def test_setup_networks_on_host(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = fake_instance.fake_instance_obj(ctxt)
         self._test_network_api('setup_networks_on_host', rpc_method='call',
-                instance_id='fake_id', host='fake_host', teardown=False)
+                instance_id=instance.id, host='fake_host', teardown=False,
+                instance=instance, version='1.16')
+
+    def test_setup_networks_on_host_v1_0(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = fake_instance.fake_instance_obj(ctxt)
+        host = 'fake_host'
+        teardown = True
+        rpcapi = network_rpcapi.NetworkAPI()
+        call_mock = mock.Mock()
+        cctxt_mock = mock.Mock(call=call_mock)
+        with test.nested(
+            mock.patch.object(rpcapi.client, 'can_send_version',
+                              return_value=False),
+            mock.patch.object(rpcapi.client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.setup_networks_on_host(ctxt, instance.id, host, teardown,
+                                          instance)
+        # assert our mocks were called as expected
+        can_send_mock.assert_called_once_with('1.16')
+        prepare_mock.assert_called_once_with(version='1.0')
+        call_mock.assert_called_once_with(ctxt, 'setup_networks_on_host',
+                                          host=host, teardown=teardown,
+                                          instance_id=instance.id)
 
     def test_lease_fixed_ip(self):
         self._test_network_api('lease_fixed_ip', rpc_method='cast',

@@ -21,10 +21,8 @@ from nova.objects import fields
 OPTIONAL_ATTRS = ['parent_group', 'grantee_group']
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @base.NovaObjectRegistry.register
-class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
-                        base.NovaObjectDictCompat):
+class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added create() and set id as read_only
     VERSION = '1.1'
@@ -52,9 +50,10 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject,
             expected_attrs = []
         for field in rule.fields:
             if field in expected_attrs:
-                rule[field] = rule._from_db_subgroup(context, db_rule[field])
+                setattr(rule, field,
+                        rule._from_db_subgroup(context, db_rule[field]))
             elif field not in OPTIONAL_ATTRS:
-                rule[field] = db_rule[field]
+                setattr(rule, field, db_rule[field])
         rule._context = context
         rule.obj_reset_changes()
         return rule
@@ -85,7 +84,7 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }
-    VERSION = '1.1'
+    VERSION = '1.2'
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, secgroup_id):
@@ -98,3 +97,15 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     @classmethod
     def get_by_security_group(cls, context, security_group):
         return cls.get_by_security_group_id(context, security_group.id)
+
+    @base.remotable_classmethod
+    def get_by_instance_uuid(cls, context, instance_uuid):
+        db_rules = db.security_group_rule_get_by_instance(context,
+                                                          instance_uuid)
+        return base.obj_make_list(context, cls(context),
+                                  objects.SecurityGroupRule, db_rules,
+                                  expected_attrs=['grantee_group'])
+
+    @classmethod
+    def get_by_instance(cls, context, instance):
+        return cls.get_by_instance_uuid(context, instance.uuid)

@@ -17,10 +17,11 @@
 
 """RequestContext: context for requests that persist through all of nova."""
 
+from contextlib import contextmanager
 import copy
 
-from keystoneclient import auth
-from keystoneclient import service_catalog
+from keystoneauth1.access import service_catalog as ksa_service_catalog
+from keystoneauth1 import plugin
 from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
@@ -35,8 +36,8 @@ from nova import utils
 LOG = logging.getLogger(__name__)
 
 
-class _ContextAuthPlugin(auth.BaseAuthPlugin):
-    """A keystoneclient auth plugin that uses the values from the Context.
+class _ContextAuthPlugin(plugin.BaseAuthPlugin):
+    """A keystoneauth auth plugin that uses the values from the Context.
 
     Ideally we would use the plugin provided by auth_token middleware however
     this plugin isn't serialized yet so we construct one from the serialized
@@ -47,8 +48,7 @@ class _ContextAuthPlugin(auth.BaseAuthPlugin):
         super(_ContextAuthPlugin, self).__init__()
 
         self.auth_token = auth_token
-        sc = {'serviceCatalog': sc}
-        self.service_catalog = service_catalog.ServiceCatalogV2(sc)
+        self.service_catalog = ksa_service_catalog.ServiceCatalogV2(sc)
 
     def get_token(self, *args, **kwargs):
         return self.auth_token
@@ -57,7 +57,7 @@ class _ContextAuthPlugin(auth.BaseAuthPlugin):
                      region_name=None, service_name=None, **kwargs):
         return self.service_catalog.url_for(service_type=service_type,
                                             service_name=service_name,
-                                            endpoint_type=interface,
+                                            interface=interface,
                                             region_name=region_name)
 
 
@@ -103,12 +103,13 @@ class RequestContext(context.RequestContext):
             show_deleted=kwargs.pop('show_deleted', False),
             request_id=request_id,
             resource_uuid=kwargs.pop('resource_uuid', None),
-            overwrite=overwrite)
+            overwrite=overwrite,
+            roles=roles)
         # oslo_context's RequestContext.to_dict() generates this field, we can
         # safely ignore this as we don't use it.
         kwargs.pop('user_identity', None)
         if kwargs:
-            LOG.warning(_LW('Arguments dropped when creating context: %s') %
+            LOG.warning(_LW('Arguments dropped when creating context: %s'),
                         str(kwargs))
 
         # FIXME(dims): user_id and project_id duplicate information that is
@@ -116,7 +117,6 @@ class RequestContext(context.RequestContext):
         # get rid of them.
         self.user_id = user_id
         self.project_id = project_id
-        self.roles = roles or []
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
@@ -142,6 +142,14 @@ class RequestContext(context.RequestContext):
         self.user_name = user_name
         self.project_name = project_name
         self.is_admin = is_admin
+
+        # NOTE(dheeraj): The following attributes are used by cellsv2 to store
+        # connection information for connecting to the target cell.
+        # It is only manipulated using the target_cell contextmanager
+        # provided by this module
+        self.db_connection = None
+        self.mq_connection = None
+
         self.user_auth_plugin = user_auth_plugin
         if self.is_admin is None:
             self.is_admin = policy.check_is_admin(self)
@@ -177,7 +185,6 @@ class RequestContext(context.RequestContext):
             'project_id': getattr(self, 'project_id', None),
             'is_admin': getattr(self, 'is_admin', None),
             'read_deleted': getattr(self, 'read_deleted', 'no'),
-            'roles': getattr(self, 'roles', None),
             'remote_address': getattr(self, 'remote_address', None),
             'timestamp': utils.strtime(self.timestamp) if hasattr(
                 self, 'timestamp') else None,
@@ -197,7 +204,10 @@ class RequestContext(context.RequestContext):
 
     def elevated(self, read_deleted=None):
         """Return a version of this context with admin flag set."""
-        context = copy.deepcopy(self)
+        context = copy.copy(self)
+        # context.roles must be deepcopied to leave original roles
+        # without changes
+        context.roles = copy.deepcopy(self.roles)
         context.is_admin = True
 
         if 'admin' not in context.roles:
@@ -270,3 +280,30 @@ def authorize_quota_class_context(context, class_name):
             raise exception.Forbidden()
         elif context.quota_class != class_name:
             raise exception.Forbidden()
+
+
+@contextmanager
+def target_cell(context, cell_mapping):
+    """Adds database and message queue connection information to the context
+    for communicating with the given target cell.
+
+    :param context: The RequestContext to add connection information
+    :param cell_mapping: A objects.CellMapping object
+    """
+    original_db_connection = context.db_connection
+    original_mq_connection = context.mq_connection
+    # avoid circular imports
+    from nova import db
+    from nova import rpc
+    db_connection_string = cell_mapping.database_connection
+    context.db_connection = db.create_context_manager(db_connection_string)
+    # NOTE(melwitt): none:// url is a special value meaning do not switch
+    if not cell_mapping.transport_url.startswith('none'):
+        transport_url = cell_mapping.transport_url
+        context.mq_connection = rpc.create_transport(transport_url)
+
+    try:
+        yield context
+    finally:
+        context.db_connection = original_db_connection
+        context.mq_connection = original_mq_connection

@@ -1,0 +1,16 @@
+---
+features:
+
+  - Provides API 2.18, which makes the use of project_ids in API urls
+    optional.
+
+upgrade:
+
+  - In order to make project_id optional in urls, we must constrain
+    the set of allowed values for project_id in our urls. This
+    defaults to a regex of ``[0-9a-f\-]+``, which will match hex uuids
+    (with / without dashes), and integers. This covers all known
+    project_id formats in the wild.
+
+    If your site uses other values for project_id, you can set a site
+    specific validation with ``project_id_regex`` config variable.

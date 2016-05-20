@@ -15,50 +15,43 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_db import options
 from oslo_log import log
 
+from nova.common import config
+import nova.conf
+from nova.conf import paths
 from nova.db.sqlalchemy import api as sqlalchemy_api
-from nova import debugger
-from nova import paths
 from nova import rpc
 from nova import version
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
-# NOTE(mikal): suds is used by the vmware driver, removing this will
-# cause many extraneous log lines for their tempest runs. Refer to
-# https://review.openstack.org/#/c/219225/ for details.
-_DEFAULT_LOG_LEVELS = ['amqp=WARN', 'amqplib=WARN', 'boto=WARN',
-                       'qpid=WARN', 'sqlalchemy=WARN', 'suds=INFO',
-                       'oslo_messaging=INFO', 'iso8601=WARN',
-                       'requests.packages.urllib3.connectionpool=WARN',
-                       'urllib3.connectionpool=WARN', 'websocket=WARN',
-                       'keystonemiddleware=WARN', 'routes.middleware=WARN',
-                       'stevedore=WARN', 'glanceclient=WARN']
-
-_DEFAULT_LOGGING_CONTEXT_FORMAT = ('%(asctime)s.%(msecs)03d %(process)d '
-                                   '%(levelname)s %(name)s [%(request_id)s '
-                                   '%(user_identity)s] %(instance)s'
-                                   '%(message)s')
+_EXTRA_DEFAULT_LOG_LEVELS = ['glanceclient=WARN']
 
 
-def parse_args(argv, default_config_files=None, configure_db=True):
-    log.set_defaults(_DEFAULT_LOGGING_CONTEXT_FORMAT, _DEFAULT_LOG_LEVELS)
+def parse_args(argv, default_config_files=None, configure_db=True,
+               init_rpc=True):
     log.register_options(CONF)
+    # We use the oslo.log default log levels which includes suds=INFO
+    # and add only the extra levels that Nova needs
+    log.set_defaults(default_log_levels=log.get_default_log_levels() +
+                     _EXTRA_DEFAULT_LOG_LEVELS)
     options.set_defaults(CONF, connection=_DEFAULT_SQL_CONNECTION,
                          sqlite_db='nova.sqlite')
     rpc.set_defaults(control_exchange='nova')
-    debugger.register_cli_opts()
+    config.set_middleware_defaults()
+
     CONF(argv[1:],
          project='nova',
          version=version.version_string(),
          default_config_files=default_config_files)
-    rpc.init(CONF)
+
+    if init_rpc:
+        rpc.init(CONF)
 
     if configure_db:
         sqlalchemy_api.configure(CONF)

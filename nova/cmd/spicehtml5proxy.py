@@ -20,25 +20,14 @@ SPICE HTML5 consoles. Leverages websockify.py by Joel Martin
 
 import sys
 
-from oslo_config import cfg
-
 from nova.cmd import baseproxy
+import nova.conf
+from nova.conf import spice
 from nova import config
 
 
-opts = [
-    cfg.StrOpt('html5proxy_host',
-               default='0.0.0.0',
-               help='Host on which to listen for incoming requests'),
-    cfg.IntOpt('html5proxy_port',
-               default=6082,
-               min=1,
-               max=65535,
-               help='Port on which to listen for incoming requests'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_cli_opts(opts, group='spice')
+CONF = nova.conf.CONF
+spice.register_cli_opts(CONF)
 
 
 def main():

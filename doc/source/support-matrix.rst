@@ -39,4 +39,4 @@ following general guiding principles were applied
   optional feature becoming mandatory at a later date, based on other
   principles above.
 
-.. support_matrix::
+.. support_matrix:: support-matrix.ini

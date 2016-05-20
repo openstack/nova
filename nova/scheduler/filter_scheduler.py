@@ -27,7 +27,6 @@ from six.moves import range
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova import rpc
 from nova.scheduler import driver
 from nova.scheduler import scheduler_options
@@ -44,14 +43,8 @@ class FilterScheduler(driver.Scheduler):
         self.options = scheduler_options.SchedulerOptions()
         self.notifier = rpc.get_notifier('scheduler')
 
-    def select_destinations(self, context, request_spec, filter_properties):
+    def select_destinations(self, context, spec_obj):
         """Selects a filtered set of hosts and nodes."""
-        # TODO(sbauza): Change the select_destinations method to accept a
-        # RequestSpec object directly (and add a new RPC API method for passing
-        # a RequestSpec object over the wire)
-        spec_obj = objects.RequestSpec.from_primitives(context,
-                                                       request_spec,
-                                                       filter_properties)
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
@@ -129,14 +122,12 @@ class FilterScheduler(driver.Scheduler):
 
             LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
 
-            scheduler_host_subset_size = CONF.scheduler_host_subset_size
-            if scheduler_host_subset_size > len(weighed_hosts):
-                scheduler_host_subset_size = len(weighed_hosts)
-            if scheduler_host_subset_size < 1:
-                scheduler_host_subset_size = 1
+            scheduler_host_subset_size = max(1,
+                                             CONF.scheduler_host_subset_size)
+            if scheduler_host_subset_size < len(weighed_hosts):
+                weighed_hosts = weighed_hosts[0:scheduler_host_subset_size]
+            chosen_host = random.choice(weighed_hosts)
 
-            chosen_host = random.choice(
-                weighed_hosts[0:scheduler_host_subset_size])
             LOG.debug("Selected host: %(host)s", {'host': chosen_host})
             selected_hosts.append(chosen_host)
 

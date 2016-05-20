@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -49,15 +46,15 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def _create_flavor(self):
         """Create a flavor."""
         subs = {
-            'flavor_id': 10,
+            'flavor_id': '10',
             'flavor_name': "test_flavor"
         }
         response = self._do_post("flavors",
                                  "flavor-create-post-req",
                                  subs)
-        subs.update(self._get_regexes())
         self._verify_response("flavor-create-post-resp", subs, response, 200)
 
+    # TODO(sdague): remove duplication
     def test_create_flavor(self):
         # Get api sample to create a flavor.
         self._create_flavor()

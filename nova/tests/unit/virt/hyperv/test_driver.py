@@ -18,6 +18,7 @@ Unit tests for the Hyper-V Driver.
 """
 
 import platform
+import sys
 
 import mock
 from os_win import exceptions as os_win_exc
@@ -88,6 +89,25 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.assertRaises(exception.InstanceNotFound,
                           self.driver.get_info, mock.sentinel.instance)
 
+    def test_assert_original_traceback_maintained(self):
+        def bar(self):
+            foo = "foofoo"
+            raise os_win_exc.HyperVVMNotFoundException(vm_name=foo)
+
+        self.driver._vmops.get_info.side_effect = bar
+        try:
+            self.driver.get_info(mock.sentinel.instance)
+            self.fail("Test expected exception, but it was not raised.")
+        except exception.InstanceNotFound:
+            # exception has been raised as expected.
+            _, _, trace = sys.exc_info()
+            while trace.tb_next:
+                # iterate until the original exception source, bar.
+                trace = trace.tb_next
+
+            # original frame will contain the 'foo' variable.
+            self.assertEqual('foofoo', trace.tb_frame.f_locals['foo'])
+
     @mock.patch.object(driver.eventhandler, 'InstanceEventHandler')
     def test_init_host(self, mock_InstanceEventHandler):
         self.driver.init_host(mock.sentinel.host)
@@ -107,8 +127,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver.list_instances()
         self.driver._vmops.list_instances.assert_called_once_with()
 
-    @mock.patch.object(driver.objects.ImageMeta, 'from_dict')
-    def test_spawn(self, mock_meta_from_dict):
+    def test_spawn(self):
         self.driver.spawn(
             mock.sentinel.context, mock.sentinel.instance,
             mock.sentinel.image_meta, mock.sentinel.injected_files,
@@ -117,7 +136,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
         self.driver._vmops.spawn.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
-            mock_meta_from_dict.return_value, mock.sentinel.injected_files,
+            mock.sentinel.image_meta, mock.sentinel.injected_files,
             mock.sentinel.admin_password, mock.sentinel.network_info,
             mock.sentinel.block_device_info)
 
@@ -378,8 +397,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.network_info, mock.sentinel.block_device_info,
             mock.sentinel.power_on)
 
-    @mock.patch.object(driver.objects.ImageMeta, 'from_dict')
-    def test_finish_migration(self, mock_meta_from_dict):
+    def test_finish_migration(self):
         self.driver.finish_migration(
             mock.sentinel.context, mock.sentinel.migration,
             mock.sentinel.instance, mock.sentinel.disk_info,
@@ -390,7 +408,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._migrationops.finish_migration.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.migration,
             mock.sentinel.instance, mock.sentinel.disk_info,
-            mock.sentinel.network_info, mock_meta_from_dict.return_value,
+            mock.sentinel.network_info, mock.sentinel.image_meta,
             mock.sentinel.resize_instance, mock.sentinel.block_device_info,
             mock.sentinel.power_on)
 

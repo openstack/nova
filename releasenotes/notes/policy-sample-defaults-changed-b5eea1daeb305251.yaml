@@ -1,0 +1,16 @@
+---
+other:
+
+  - The sample policy file shipped with Nova contained many policies set to
+    ""(allow all) which was not the proper default for many of those checks. It
+    was also a source of confusion as some people thought "" meant to use the
+    default rule. These empty policies have been updated to be explicit in all
+    cases.
+
+    Many of them were changed to match the default rule of "admin_or_owner"
+    which is a more restrictive policy check but does not change the
+    restrictiveness of the API calls overall because there are similar checks
+    in the database already.
+
+    This does not affect any existing deployment, just the sample file included
+    for use by new deployments.

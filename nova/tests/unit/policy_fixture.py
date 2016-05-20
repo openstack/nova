@@ -15,16 +15,16 @@
 import os
 
 import fixtures
-from oslo_config import cfg
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import six
 
-from nova import paths
+import nova.conf
+from nova.conf import paths
 import nova.policy
 from nova.tests.unit import fake_policy
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 
 class RealPolicyFixture(fixtures.Fixture):

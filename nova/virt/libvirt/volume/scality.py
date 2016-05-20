@@ -13,11 +13,11 @@
 import io
 import os
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from six.moves import urllib
 import six.moves.urllib.parse as urlparse
 
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import utils
@@ -25,16 +25,7 @@ from nova.virt.libvirt.volume import fs
 
 LOG = logging.getLogger(__name__)
 
-volume_opts = [
-    cfg.StrOpt('scality_sofs_config',
-               help='Path or URL to Scality SOFS configuration file'),
-    cfg.StrOpt('scality_sofs_mount_point',
-               default='$state_path/scality',
-               help='Base dir where Scality SOFS shall be mounted'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
@@ -85,7 +76,7 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         return conf
 
     def connect_volume(self, connection_info, disk_info):
-        """Connect the volume. Returns xml for libvirt."""
+        """Connect the volume."""
         self._check_prerequisites()
         self._mount_sofs()
 
@@ -99,7 +90,7 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         config = CONF.libvirt.scality_sofs_config
         if not config:
             msg = _("Value required for 'scality_sofs_config'")
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.NovaException(msg)
 
         # config can be a file path or a URL, check it
@@ -110,13 +101,13 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             urllib.request.urlopen(config, timeout=5).close()
         except urllib.error.URLError as e:
             msg = _("Cannot access 'scality_sofs_config': %s") % e
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.NovaException(msg)
 
         # mount.sofs must be installed
         if not os.access('/sbin/mount.sofs', os.X_OK):
             msg = _("Cannot execute /sbin/mount.sofs")
-            LOG.warn(msg)
+            LOG.warning(msg)
             raise exception.NovaException(msg)
 
     def _sofs_is_mounted(self):
@@ -141,5 +132,5 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
                           run_as_root=True)
             if not self._sofs_is_mounted():
                 msg = _("Cannot mount Scality SOFS, check syslog for errors")
-                LOG.warn(msg)
+                LOG.warning(msg)
                 raise exception.NovaException(msg)

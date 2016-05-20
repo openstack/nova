@@ -10,34 +10,46 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_versionedobjects import base as ovo
+from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
 from nova import objects
 from nova.objects import base
+from nova.objects import cell_mapping
 from nova.objects import fields
 
 
-# NOTE(danms): Maintain Dict compatibility because of ovo bug 1474952
 @base.NovaObjectRegistry.register
-class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
-                      ovo.VersionedObjectDictCompat):
+class InstanceMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
         'instance_uuid': fields.UUIDField(),
-        'cell_id': fields.IntegerField(),
+        'cell_mapping': fields.ObjectField('CellMapping', nullable=True),
         'project_id': fields.StringField(),
         }
+
+    def _update_with_cell_id(self, updates):
+        cell_mapping_obj = updates.pop("cell_mapping", None)
+        if cell_mapping_obj:
+            updates["cell_id"] = cell_mapping_obj.id
+        return updates
 
     @staticmethod
     def _from_db_object(context, instance_mapping, db_instance_mapping):
         for key in instance_mapping.fields:
-            setattr(instance_mapping, key, db_instance_mapping[key])
+            db_value = db_instance_mapping.get(key)
+            if key == 'cell_mapping':
+                # cell_mapping can be None indicating that the instance has
+                # not been scheduled yet.
+                if db_value:
+                    db_value = cell_mapping.CellMapping._from_db_object(
+                        context, cell_mapping.CellMapping(), db_value)
+            setattr(instance_mapping, key, db_value)
         instance_mapping.obj_reset_changes()
         instance_mapping._context = context
         return instance_mapping
@@ -45,9 +57,11 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_by_instance_uuid_from_db(context, instance_uuid):
-        db_mapping = context.session.query(
-                api_models.InstanceMapping).filter_by(
-                        instance_uuid=instance_uuid).first()
+        db_mapping = (context.session.query(api_models.InstanceMapping)
+                        .options(joinedload('cell_mapping'))
+                        .filter(
+                            api_models.InstanceMapping.instance_uuid
+                            == instance_uuid)).first()
         if not db_mapping:
             raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 
@@ -64,11 +78,18 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
         db_mapping = api_models.InstanceMapping()
         db_mapping.update(updates)
         db_mapping.save(context.session)
+        # NOTE: This is done because a later access will trigger a lazy load
+        # outside of the db session so it will fail. We don't lazy load
+        # cell_mapping on the object later because we never need an
+        # InstanceMapping without the CellMapping.
+        db_mapping.cell_mapping
         return db_mapping
 
     @base.remotable
     def create(self):
-        db_mapping = self._create_in_db(self._context, self.obj_get_changes())
+        changes = self.obj_get_changes()
+        changes = self._update_with_cell_id(changes)
+        db_mapping = self._create_in_db(self._context, changes)
         self._from_db_object(self._context, self, db_mapping)
 
     @staticmethod
@@ -81,12 +102,18 @@ class InstanceMapping(base.NovaTimestampObject, base.NovaObject,
             raise exception.InstanceMappingNotFound(uuid=instance_uuid)
 
         db_mapping.update(updates)
+        # NOTE: This is done because a later access will trigger a lazy load
+        # outside of the db session so it will fail. We don't lazy load
+        # cell_mapping on the object later because we never need an
+        # InstanceMapping without the CellMapping.
+        db_mapping.cell_mapping
         context.session.add(db_mapping)
         return db_mapping
 
     @base.remotable
     def save(self):
         changes = self.obj_get_changes()
+        changes = self._update_with_cell_id(changes)
         db_mapping = self._save_in_db(self._context, self.instance_uuid,
                 changes)
         self._from_db_object(self._context, self, db_mapping)
@@ -117,8 +144,10 @@ class InstanceMappingList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_by_project_id_from_db(context, project_id):
-        return context.session.query(api_models.InstanceMapping).filter_by(
-            project_id=project_id).all()
+        return (context.session.query(api_models.InstanceMapping)
+                .options(joinedload('cell_mapping'))
+                .filter(
+                    api_models.InstanceMapping.project_id == project_id)).all()
 
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):

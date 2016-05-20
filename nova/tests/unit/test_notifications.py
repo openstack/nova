@@ -18,7 +18,6 @@
 import copy
 
 import mock
-from oslo_config import cfg
 from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 
@@ -27,16 +26,13 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
-from nova.network import api as network_api
 from nova import notifications
 from nova import objects
 from nova.objects import base as obj_base
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
-
-CONF = cfg.CONF
-CONF.import_opt('compute_driver', 'nova.virt.driver')
+from nova.tests import uuidsentinel as uuids
 
 
 class NotificationsTestCase(test.TestCase):
@@ -45,24 +41,25 @@ class NotificationsTestCase(test.TestCase):
         super(NotificationsTestCase, self).setUp()
         self.fixture = self.useFixture(o_fixture.ClearRequestContext())
 
-        self.net_info = fake_network.fake_get_instance_nw_info(self.stubs, 1,
+        self.net_info = fake_network.fake_get_instance_nw_info(self, 1,
                                                                1)
 
         def fake_get_nw_info(cls, ctxt, instance):
             self.assertTrue(ctxt.is_admin)
             return self.net_info
 
-        self.stubs.Set(network_api.API, 'get_instance_nw_info',
+        self.stub_out('nova.network.api.API.get_instance_nw_info',
                 fake_get_nw_info)
-        fake_network.set_stub_network_methods(self.stubs)
+        fake_network.set_stub_network_methods(self)
 
         fake_notifier.stub_notifier(self.stubs)
         self.addCleanup(fake_notifier.reset)
 
-        self.flags(compute_driver='nova.virt.fake.FakeDriver',
-                   network_manager='nova.network.manager.FlatManager',
+        self.flags(network_manager='nova.network.manager.FlatManager',
                    notify_on_state_change="vm_and_task_state",
                    host='testhost')
+
+        self.flags(api_servers=['http://localhost:9292'], group='glance')
 
         self.user_id = 'fake'
         self.project_id = 'fake'
@@ -74,7 +71,7 @@ class NotificationsTestCase(test.TestCase):
 
     def _wrapped_create(self, params=None):
         instance_type = flavors.get_flavor_by_name('m1.tiny')
-        inst = objects.Instance(image_ref=1,
+        inst = objects.Instance(image_ref=uuids.image_ref,
                                 user_id=self.user_id,
                                 project_id=self.project_id,
                                 instance_type_id=instance_type['id'],
@@ -420,7 +417,7 @@ class NotificationsTestCase(test.TestCase):
 
         def sending_no_state_change(context, instance, **kwargs):
             called[0] = True
-        self.stubs.Set(notifications, '_send_instance_update_notification',
+        self.stub_out('nova.notifications._send_instance_update_notification',
                        sending_no_state_change)
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertTrue(called[0])
@@ -428,7 +425,7 @@ class NotificationsTestCase(test.TestCase):
     def test_fail_sending_update(self):
         def fail_sending(context, instance, **kwargs):
             raise Exception('failed to notify')
-        self.stubs.Set(notifications, '_send_instance_update_notification',
+        self.stub_out('nova.notifications._send_instance_update_notification',
                        fail_sending)
 
         notifications.send_update(self.context, self.instance, self.instance)
@@ -484,6 +481,31 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(n.event_type, func_name)
         self.assertEqual(n.context, ctxt)
         self.assertTrue(self.decorated_function_called)
+
+    def test_notify_decorator_wrong_default_notification_level(self):
+        func_name = self._decorated_function.__name__
+
+        self.flags(default_notification_level='fake_level')
+        self._decorated_function = notifications.notify_decorator(
+            func_name,
+            self._decorated_function)
+
+        mock_info = mock.Mock()
+
+        class FakeNotifier(object):
+
+            info = mock_info
+
+        mock_notifier_p = mock.patch.object(
+            notifications.rpc,
+            'get_notifier',
+            mock.Mock(return_value=FakeNotifier)
+        )
+        with mock_notifier_p:
+            self._decorated_function(1, 2)
+
+        self.assertTrue(self.decorated_function_called)
+        self.assertTrue(mock_info.called)
 
 
 class NotificationsFormatTestCase(test.NoDBTestCase):

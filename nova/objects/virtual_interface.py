@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
+
 from nova import db
 from nova import exception
 from nova import objects
@@ -22,7 +24,8 @@ from nova.objects import fields
 @base.NovaObjectRegistry.register
 class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add tag field
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -30,7 +33,13 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
         'network_id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
         'uuid': fields.UUIDField(),
+        'tag': fields.StringField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'tag' in primitive:
+            del primitive['tag']
 
     @staticmethod
     def _from_db_object(context, vif, db_vif):
@@ -93,9 +102,15 @@ class VirtualInterfaceList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context),
                                   objects.VirtualInterface, db_vifs)
 
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_virtual_interface_get_by_instance(context, instance_uuid,
+                                              use_slave=False):
+        return db.virtual_interface_get_by_instance(context, instance_uuid)
+
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
-        db_vifs = db.virtual_interface_get_by_instance(context, instance_uuid,
-                use_slave=use_slave)
+        db_vifs = cls._db_virtual_interface_get_by_instance(
+            context, instance_uuid, use_slave=use_slave)
         return base.obj_make_list(context, cls(context),
                                   objects.VirtualInterface, db_vifs)

@@ -17,35 +17,13 @@
 Resource monitor API specification.
 """
 
-from oslo_config import cfg
+import nova.conf
 from oslo_log import log as logging
 from stevedore import enabled
 
 from nova.i18n import _LW
 
-compute_monitors_opts = [
-    cfg.MultiStrOpt('compute_available_monitors',
-                    deprecated_for_removal=True,
-                    default=None,
-                    help='Monitor classes available to the compute which may '
-                         'be specified more than once. This option is '
-                         'DEPRECATED and no longer used. Use setuptools entry '
-                         'points to list available monitor plugins.'),
-    cfg.ListOpt('compute_monitors',
-                default=[],
-                help='A list of monitors that can be used for getting '
-                     'compute metrics. You can use the alias/name from '
-                     'the setuptools entry points for nova.compute.monitors.* '
-                     'namespaces. If no namespace is supplied, the "cpu." '
-                     'namespace is assumed for backwards-compatibility. '
-                     'An example value that would enable both the CPU and '
-                     'NUMA memory bandwidth monitors that used the virt '
-                     'driver variant: '
-                     '["cpu.virt_driver", "numa_mem_bw.virt_driver"]'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(compute_monitors_opts)
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -81,14 +59,13 @@ class MonitorHandler(object):
         namespace_parts = ept_parts[0].split('.')
         namespace = '.'.join(namespace_parts[0:-1])
         if self.type_monitor_loaded[namespace] is not False:
-            msg = _LW("Excluding %(namespace)s monitor %(monitor_name)s. "
-                      "Already loaded %(loaded_monitor)s.")
-            msg = msg % {
-                'namespace': namespace,
-                'monitor_name': ext.name,
-                'loaded_monitor': self.type_monitor_loaded[namespace]
-            }
-            LOG.warn(msg)
+            LOG.warning(_LW("Excluding %(namespace)s monitor "
+                            "%(monitor_name)s. Already loaded "
+                            "%(loaded_monitor)s."),
+                        {'namespace': namespace,
+                         'monitor_name': ext.name,
+                         'loaded_monitor': self.type_monitor_loaded[namespace]
+                        })
             return False
 
         # NOTE(jaypipes): We used to only have CPU monitors, so
@@ -108,12 +85,8 @@ class MonitorHandler(object):
         if namespace + '.' + ext.name in cfg_monitors:
             self.type_monitor_loaded[namespace] = ext.name
             return True
-        msg = _LW("Excluding %(namespace)s monitor %(monitor_name)s. "
-                  "Not in the list of enabled monitors "
-                  "(CONF.compute_monitors).")
-        msg = msg % {
-            'namespace': namespace,
-            'monitor_name': ext.name,
-        }
-        LOG.warn(msg)
+        LOG.warning(_LW("Excluding %(namespace)s monitor %(monitor_name)s. "
+                        "Not in the list of enabled monitors "
+                        "(CONF.compute_monitors)."),
+                    {'namespace': namespace, 'monitor_name': ext.name})
         return False

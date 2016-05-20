@@ -691,6 +691,27 @@ class HostTestCase(test.NoDBTestCase):
             self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
             self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
+    def test_get_capabilities_no_host_cpu_model(self):
+        """Tests that cpu features are not retrieved when the host cpu model
+        is not in the capabilities.
+        """
+        fake_caps_xml = '''
+<capabilities>
+  <host>
+    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+    <cpu>
+      <arch>x86_64</arch>
+      <vendor>Intel</vendor>
+    </cpu>
+  </host>
+</capabilities>'''
+        with mock.patch.object(fakelibvirt.virConnect, 'getCapabilities',
+                               return_value=fake_caps_xml):
+            caps = self.host.get_capabilities()
+            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
+            self.assertIsNone(caps.host.cpu.model)
+            self.assertEqual(0, len(caps.host.cpu.features))
+
     @mock.patch.object(fakelibvirt.virConnect, "getHostname")
     def test_get_hostname_caching(self, mock_hostname):
         mock_hostname.return_value = "foo"
@@ -873,6 +894,28 @@ Active:          8381604 kB
     def test_compare_cpu(self, mock_compareCPU):
         self.host.compare_cpu("cpuxml")
         mock_compareCPU.assert_called_once_with("cpuxml", 0)
+
+    def test_is_cpu_control_policy_capable_ok(self):
+        m = mock.mock_open(
+            read_data="""cg /cgroup/cpu,cpuacct cg opt1,cpu,opt3 0 0
+cg /cgroup/memory cg opt1,opt2 0 0
+""")
+        with mock.patch(
+                "six.moves.builtins.open", m, create=True):
+            self.assertTrue(self.host.is_cpu_control_policy_capable())
+
+    def test_is_cpu_control_policy_capable_ko(self):
+        m = mock.mock_open(
+            read_data="""cg /cgroup/cpu,cpuacct cg opt1,opt2,opt3 0 0
+cg /cgroup/memory cg opt1,opt2 0 0
+""")
+        with mock.patch(
+                "six.moves.builtins.open", m, create=True):
+            self.assertFalse(self.host.is_cpu_control_policy_capable())
+
+    @mock.patch('six.moves.builtins.open', side_effect=IOError)
+    def test_is_cpu_control_policy_capable_ioerror(self, mock_open):
+        self.assertFalse(self.host.is_cpu_control_policy_capable())
 
 
 class DomainJobInfoTestCase(test.NoDBTestCase):

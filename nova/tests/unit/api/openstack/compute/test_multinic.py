@@ -16,8 +16,6 @@
 import mock
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import multinic \
-        as multinic_v2
 from nova.api.openstack.compute import multinic as multinic_v21
 from nova import compute
 from nova import exception
@@ -60,13 +58,13 @@ class FixedIpTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FixedIpTestV21, self).setUp()
-        fakes.stub_out_networking(self.stubs)
+        fakes.stub_out_networking(self)
         fakes.stub_out_rate_limiting(self.stubs)
-        self.stubs.Set(compute.api.API, "add_fixed_ip",
-                       compute_api_add_fixed_ip)
-        self.stubs.Set(compute.api.API, "remove_fixed_ip",
-                       compute_api_remove_fixed_ip)
-        self.stubs.Set(compute.api.API, 'get', compute_api_get)
+        self.stub_out('nova.compute.api.API.add_fixed_ip',
+                      compute_api_add_fixed_ip)
+        self.stub_out('nova.compute.api.API.remove_fixed_ip',
+                      compute_api_remove_fixed_ip)
+        self.stub_out('nova.compute.api.API.get', compute_api_get)
         self.controller = self.controller_class.MultinicController()
         self.fake_req = fakes.HTTPRequest.blank('')
 
@@ -162,16 +160,6 @@ class FixedIpTestV21(test.NoDBTestCase):
                           self.controller._remove_fixed_ip,
                           self.fake_req,
                           UUID, body=body)
-
-
-class FixedIpTestV2(FixedIpTestV21):
-    controller_class = multinic_v2
-    validation_error = webob.exc.HTTPBadRequest
-
-    def test_remove_fixed_ip_invalid_address(self):
-        # NOTE(cyeoh): This test is disabled for the V2 API because it is
-        # has poorer input validation.
-        pass
 
 
 class MultinicPolicyEnforcementV21(test.NoDBTestCase):

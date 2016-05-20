@@ -15,14 +15,11 @@
 
 import uuid
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class SchedulerHintsJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -38,9 +35,9 @@ class SchedulerHintsJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_scheduler_hints_post(self):
         # Get api sample of scheduler hint post request.
-        subs = self._get_regexes()
-        subs.update({'image_id': fake.get_valid_image_id(),
-                     'image_near': str(uuid.uuid4())})
+        subs = {'image_id': fake.get_valid_image_id(),
+                'uuid': str(uuid.uuid4())}
         response = self._do_post('servers', 'scheduler-hints-post-req',
                                  subs)
+        del subs['uuid']
         self._verify_response('scheduler-hints-post-resp', subs, response, 202)

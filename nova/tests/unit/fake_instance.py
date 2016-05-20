@@ -74,7 +74,8 @@ def fake_db_instance(**updates):
                   'numa_topology': None,
                   'vcpu_model': None,
                  },
-        'tags': []
+        'tags': [],
+        'services': []
         }
 
     for name, field in objects.Instance.fields.items():
@@ -84,7 +85,7 @@ def fake_db_instance(**updates):
             db_instance[name] = None
         elif field.default != fields.UnspecifiedDefault:
             db_instance[name] = field.default
-        elif name in ['flavor', 'ec2_ids']:
+        elif name in ['flavor', 'ec2_ids', 'keypairs']:
             pass
         else:
             raise Exception('fake_db_instance needs help with %s' % name)
@@ -119,6 +120,7 @@ def fake_instance_obj(context, obj_instance_class=None, **updates):
     inst = obj_instance_class._from_db_object(context,
                obj_instance_class(), fake_db_instance(**updates),
                expected_attrs=expected_attrs)
+    inst.keypairs = objects.KeyPairList(objects=[])
     if flavor:
         inst.flavor = flavor
     inst.old_flavor = None

@@ -21,6 +21,7 @@ from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import requests_mock
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova import policy
@@ -28,6 +29,8 @@ from nova import test
 from nova.tests.unit import fake_policy
 from nova.tests.unit import policy_fixture
 from nova import utils
+
+CONF = nova.conf.CONF
 
 
 class PolicyFileTestCase(test.NoDBTestCase):
@@ -92,12 +95,12 @@ class PolicyTestCase(test.NoDBTestCase):
     def test_enforce_bad_action_noraise(self):
         action = "example:denied"
         result = policy.enforce(self.context, action, self.target, False)
-        self.assertEqual(result, False)
+        self.assertFalse(result)
 
     def test_enforce_good_action(self):
         action = "example:allowed"
         result = policy.enforce(self.context, action, self.target)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     @requests_mock.mock()
     def test_enforce_http_true(self, req_mock):
@@ -106,7 +109,7 @@ class PolicyTestCase(test.NoDBTestCase):
         action = "example:get_http"
         target = {}
         result = policy.enforce(self.context, action, target)
-        self.assertEqual(result, True)
+        self.assertTrue(result)
 
     @requests_mock.mock()
     def test_enforce_http_false(self, req_mock):
@@ -188,14 +191,14 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
 
         self.assertEqual(check.kind, 'is_admin')
         self.assertEqual(check.match, 'True')
-        self.assertEqual(check.expected, True)
+        self.assertTrue(check.expected)
 
     def test_init_false(self):
         check = policy.IsAdminCheck('is_admin', 'nottrue')
 
         self.assertEqual(check.kind, 'is_admin')
         self.assertEqual(check.match, 'False')
-        self.assertEqual(check.expected, False)
+        self.assertFalse(check.expected)
 
     def test_call_true(self):
         check = policy.IsAdminCheck('is_admin', 'True')
@@ -247,6 +250,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute:unlock_override",
 "compute:get_all_tenants",
 "compute:create:forced_host",
+"compute:swap_volume",
 "compute_extension:accounts",
 "compute_extension:admin_actions",
 "compute_extension:admin_actions:resetNetwork",
@@ -296,9 +300,13 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute_extension:os-assisted-volume-snapshots:delete",
 "compute_extension:console_auth_tokens",
 "compute_extension:os-server-external-events:create",
+"compute_extension:volume_attachments:update",
 "os_compute_api:servers:create:forced_host",
 "os_compute_api:servers:detail:get_all_tenants",
 "os_compute_api:servers:index:get_all_tenants",
+"os_compute_api:servers:show:host_status",
+"os_compute_api:servers:migrations:force_complete",
+"os_compute_api:servers:migrations:delete",
 "network:attach_external_network",
 "os_compute_api:os-admin-actions",
 "os_compute_api:os-admin-actions:reset_network",
@@ -360,7 +368,11 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-assisted-volume-snapshots:delete",
 "os_compute_api:os-console-auth-tokens",
 "os_compute_api:os-quota-class-sets:update",
-"os_compute_api:os-server-external-events:create")
+"os_compute_api:os-server-external-events:create",
+"os_compute_api:os-volumes-attachments:update",
+"os_compute_api:servers:migrations:index",
+"os_compute_api:servers:migrations:show",
+)
 
         self.admin_or_owner_rules = (
 "default",
@@ -381,6 +393,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute_extension:simple_tenant_usage:show",
 "os_compute_api:servers:start",
 "os_compute_api:servers:stop",
+"os_compute_api:servers:trigger_crash_dump",
 "os_compute_api:os-create-backup",
 "os_compute_api:ips:index",
 "os_compute_api:ips:show",
@@ -402,9 +415,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-simple-tenant-usage:show",
 "os_compute_api:os-suspend-server:suspend",
 "os_compute_api:os-suspend-server:resume",
-"os_compute_api:os-tenant-networks")
-
-        self.empty_rules = (
+"os_compute_api:os-tenant-networks",
 "compute:create",
 "compute:create:attach_network",
 "compute:create:attach_volume",
@@ -434,7 +445,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute:backup",
 "compute:get_instance_diagnostics",
 "compute:get_instance_metadata",
-"compute:get_lock",
 "compute:get_mks_console",
 "compute:get_rdp_console",
 "compute:get_serial_console",
@@ -452,7 +462,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute:set_admin_password",
 "compute:snapshot",
 "compute:suspend",
-"compute:swap_volume",
 "compute:unpause",
 "compute:unrescue",
 "compute:update",
@@ -461,9 +470,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute_extension:os-tenant-networks",
 "network:get_vif_by_mac_address",
 "os_compute_api:extensions",
-"os_compute_api:extensions:discoverable",
 "os_compute_api:os-config-drive",
-"os_compute_api:os-quota-sets:defaults",
 "os_compute_api:servers:confirm_resize",
 "os_compute_api:servers:create",
 "os_compute_api:servers:create:attach_network",
@@ -526,7 +533,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "compute_extension:volume_attachments:index",
 "compute_extension:volume_attachments:show",
 "compute_extension:volume_attachments:create",
-"compute_extension:volume_attachments:update",
 "compute_extension:volume_attachments:delete",
 "compute_extension:volumetypes",
 "compute_extension:availability_zone:list",
@@ -571,135 +577,149 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "network:create_public_dns_domain",
 "network:delete_dns_domain",
 "os_compute_api:servers:create_image:allow_volume_backed",
-"os_compute_api:os-access-ips:discoverable",
 "os_compute_api:os-access-ips",
-"os_compute_api:os-admin-actions:discoverable",
 "os_compute_api:os-admin-password",
-"os_compute_api:os-admin-password:discoverable",
-"os_compute_api:os-aggregates:discoverable",
-"os_compute_api:os-agents:discoverable",
 "os_compute_api:os-attach-interfaces",
-"os_compute_api:os-attach-interfaces:discoverable",
-"os_compute_api:os-baremetal-nodes:discoverable",
-"os_compute_api:os-block-device-mapping-v1:discoverable",
-"os_compute_api:os-cells:discoverable",
 "os_compute_api:os-certificates:create",
 "os_compute_api:os-certificates:show",
-"os_compute_api:os-certificates:discoverable",
-"os_compute_api:os-cloudpipe:discoverable",
-"os_compute_api:os-consoles:discoverable",
 "os_compute_api:os-consoles:create",
 "os_compute_api:os-consoles:delete",
 "os_compute_api:os-consoles:index",
 "os_compute_api:os-consoles:show",
-"os_compute_api:os-console-output:discoverable",
 "os_compute_api:os-console-output",
 "os_compute_api:os-remote-consoles",
+"os_compute_api:os-deferred-delete",
+"os_compute_api:os-disk-config",
+"os_compute_api:os-extended-status",
+"os_compute_api:os-extended-availability-zone",
+"os_compute_api:os-extended-volumes",
+"os_compute_api:os-flavor-access",
+"os_compute_api:os-flavor-rxtx",
+"os_compute_api:flavors",
+"os_compute_api:os-flavor-extra-specs:index",
+"os_compute_api:os-flavor-extra-specs:show",
+"os_compute_api:os-floating-ip-dns",
+"os_compute_api:os-floating-ip-pools",
+"os_compute_api:os-floating-ips",
+"os_compute_api:os-fping",
+"os_compute_api:image-size",
+"os_compute_api:os-instance-actions",
+"os_compute_api:os-keypairs",
+"os_compute_api:limits",
+"os_compute_api:os-multinic",
+"os_compute_api:os-networks:view",
+"os_compute_api:os-pci:pci_servers",
+"os_compute_api:os-rescue",
+"os_compute_api:os-security-groups",
+"os_compute_api:os-server-password",
+"os_compute_api:os-server-usage",
+"os_compute_api:os-server-groups",
+"os_compute_api:os-shelve:shelve",
+"os_compute_api:os-shelve:unshelve",
+"os_compute_api:os-virtual-interfaces",
+"os_compute_api:os-volumes",
+"os_compute_api:os-volumes-attachments:index",
+"os_compute_api:os-volumes-attachments:show",
+"os_compute_api:os-volumes-attachments:create",
+"os_compute_api:os-volumes-attachments:delete",
+"os_compute_api:os-availability-zone:list",
+)
+
+        self.non_admin_only_rules = (
+"compute_extension:hide_server_addresses",
+"os_compute_api:os-hide-server-addresses")
+
+        self.allow_all_rules = (
+"os_compute_api:os-quota-sets:defaults",
+"os_compute_api:extensions:discoverable",
+"os_compute_api:os-access-ips:discoverable",
+"os_compute_api:os-admin-actions:discoverable",
+"os_compute_api:os-admin-password:discoverable",
+"os_compute_api:os-aggregates:discoverable",
+"os_compute_api:os-agents:discoverable",
+"os_compute_api:os-attach-interfaces:discoverable",
+"os_compute_api:os-baremetal-nodes:discoverable",
+"os_compute_api:os-block-device-mapping-v1:discoverable",
+"os_compute_api:os-cells:discoverable",
+"os_compute_api:os-certificates:discoverable",
+"os_compute_api:os-cloudpipe:discoverable",
+"os_compute_api:os-config-drive:discoverable",
+"os_compute_api:os-consoles:discoverable",
+"os_compute_api:os-console-output:discoverable",
 "os_compute_api:os-remote-consoles:discoverable",
 "os_compute_api:os-create-backup:discoverable",
-"os_compute_api:os-deferred-delete",
 "os_compute_api:os-deferred-delete:discoverable",
-"os_compute_api:os-disk-config",
 "os_compute_api:os-disk-config:discoverable",
 "os_compute_api:os-evacuate:discoverable",
 "os_compute_api:os-extended-server-attributes:discoverable",
-"os_compute_api:os-extended-status",
 "os_compute_api:os-extended-status:discoverable",
-"os_compute_api:os-extended-availability-zone",
 "os_compute_api:os-extended-availability-zone:discoverable",
 "os_compute_api:extension_info:discoverable",
-"os_compute_api:os-extended-volumes",
 "os_compute_api:os-extended-volumes:discoverable",
 "os_compute_api:os-fixed-ips:discoverable",
-"os_compute_api:os-flavor-access",
 "os_compute_api:os-flavor-access:discoverable",
-"os_compute_api:os-flavor-rxtx",
 "os_compute_api:os-flavor-rxtx:discoverable",
-"os_compute_api:flavors",
 "os_compute_api:flavors:discoverable",
 "os_compute_api:os-flavor-extra-specs:discoverable",
-"os_compute_api:os-flavor-extra-specs:index",
-"os_compute_api:os-flavor-extra-specs:show",
 "os_compute_api:os-flavor-manage:discoverable",
-"os_compute_api:os-floating-ip-dns",
 "os_compute_api:os-floating-ip-dns:discoverable",
-"os_compute_api:os-floating-ip-pools",
 "os_compute_api:os-floating-ip-pools:discoverable",
-"os_compute_api:os-floating-ips",
 "os_compute_api:os-floating-ips:discoverable",
 "os_compute_api:os-floating-ips-bulk:discoverable",
-"os_compute_api:os-fping",
 "os_compute_api:os-fping:discoverable",
 "os_compute_api:os-hide-server-addresses:discoverable",
 "os_compute_api:os-hosts:discoverable",
 "os_compute_api:os-hypervisors:discoverable",
 "os_compute_api:images:discoverable",
-"os_compute_api:image-size",
 "os_compute_api:image-size:discoverable",
-"os_compute_api:os-instance-actions",
 "os_compute_api:os-instance-actions:discoverable",
 "os_compute_api:os-instance-usage-audit-log:discoverable",
 "os_compute_api:ips:discoverable",
 "os_compute_api:os-keypairs:discoverable",
-"os_compute_api:os-keypairs",
-"os_compute_api:limits",
 "os_compute_api:limits:discoverable",
 "os_compute_api:os-lock-server:discoverable",
 "os_compute_api:os-migrate-server:discoverable",
-"os_compute_api:os-multinic",
 "os_compute_api:os-multinic:discoverable",
-"os_compute_api:os-networks:view",
 "os_compute_api:os-networks:discoverable",
 "os_compute_api:os-networks-associate:discoverable",
 "os_compute_api:os-pause-server:discoverable",
-"os_compute_api:os-pci:pci_servers",
 "os_compute_api:os-pci:discoverable",
 "os_compute_api:os-personality:discoverable",
 "os_compute_api:os-preserve-ephemeral-rebuild:discoverable",
 "os_compute_api:os-quota-sets:discoverable",
 "os_compute_api:os-quota-class-sets:discoverable",
-"os_compute_api:os-rescue",
 "os_compute_api:os-rescue:discoverable",
 "os_compute_api:os-scheduler-hints:discoverable",
 "os_compute_api:os-security-group-default-rules:discoverable",
-"os_compute_api:os-security-groups",
 "os_compute_api:os-security-groups:discoverable",
 "os_compute_api:os-server-diagnostics:discoverable",
-"os_compute_api:os-server-password",
 "os_compute_api:os-server-password:discoverable",
-"os_compute_api:os-server-usage",
 "os_compute_api:os-server-usage:discoverable",
-"os_compute_api:os-server-groups",
 "os_compute_api:os-server-groups:discoverable",
+"os_compute_api:os-server-tags:delete",
+"os_compute_api:os-server-tags:delete_all",
+"os_compute_api:os-server-tags:index",
+"os_compute_api:os-server-tags:show",
+"os_compute_api:os-server-tags:update",
+"os_compute_api:os-server-tags:update_all",
 "os_compute_api:os-services:discoverable",
 "os_compute_api:server-metadata:discoverable",
 "os_compute_api:servers:discoverable",
-"os_compute_api:os-shelve:shelve",
 "os_compute_api:os-shelve:shelve:discoverable",
 "os_compute_api:os-simple-tenant-usage:discoverable",
 "os_compute_api:os-suspend-server:discoverable",
 "os_compute_api:os-tenant-networks:discoverable",
-"os_compute_api:os-shelve:unshelve",
 "os_compute_api:os-user-data:discoverable",
-"os_compute_api:os-virtual-interfaces",
 "os_compute_api:os-virtual-interfaces:discoverable",
-"os_compute_api:os-volumes",
 "os_compute_api:os-volumes:discoverable",
-"os_compute_api:os-volumes-attachments:index",
-"os_compute_api:os-volumes-attachments:show",
-"os_compute_api:os-volumes-attachments:create",
-"os_compute_api:os-volumes-attachments:update",
-"os_compute_api:os-volumes-attachments:delete",
 "os_compute_api:os-volumes-attachments:discoverable",
-"os_compute_api:os-availability-zone:list",
 "os_compute_api:os-availability-zone:discoverable",
 "os_compute_api:os-used-limits:discoverable",
 "os_compute_api:os-migrations:discoverable",
-"os_compute_api:os-assisted-volume-snapshots:discoverable")
-
-        self.non_admin_only_rules = (
-"compute_extension:hide_server_addresses",
-"os_compute_api:os-hide-server-addresses")
+"os_compute_api:os-assisted-volume-snapshots:discoverable",
+"os_compute_api:os-console-auth-tokens:discoverable",
+"os_compute_api:os-server-external-events:discoverable",
+)
 
     def test_all_rules_in_sample_file(self):
         special_rules = ["context_is_admin", "admin_or_owner", "default"]
@@ -727,20 +747,31 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
             policy.enforce(self.non_admin_context, rule,
                            {'project_id': 'fake', 'user_id': 'fake'})
 
-    def test_empty_rules(self):
-        rules = policy.get_rules()
-        for rule in self.empty_rules:
-            self.assertEqual('@', str(rules[rule]),
-                             "%s isn't empty rule" % rule)
+    def test_no_empty_rules(self):
+        # Parsed rules substitute '@' for '', so we need to look at the raw
+        # policy definitions
+        # CONF.oslo_policy.policy_file has been set to the sample file by
+        # the RealPolicyFixture used in setUp
+        with open(CONF.oslo_policy.policy_file, 'r') as policy_file:
+            policy_dict = jsonutils.loads(policy_file.read())
+
+        for rule_name, rule in policy_dict.items():
+            self.assertNotEqual('', str(rule),
+                    '%s should not be empty, use "@" instead if the policy '
+                    'should allow everything' % rule_name)
+
+    def test_allow_all_rules(self):
+        for rule in self.allow_all_rules:
+            policy.enforce(self.non_admin_context, rule, self.target)
 
     def test_rule_missing(self):
         rules = policy.get_rules()
         # eliqiao os_compute_api:os-quota-class-sets:show requires
-        # admin=True or quota_class match, this rule wont' belone to
+        # admin=True or quota_class match, this rule won't belong to
         # admin_only, non_admin, admin_or_user, empty_rule
         special_rules = ('admin_api', 'admin_or_owner', 'context_is_admin',
                          'os_compute_api:os-quota-class-sets:show')
         result = set(rules.keys()) - set(self.admin_only_rules +
-            self.admin_or_owner_rules + self.empty_rules +
-            self.non_admin_only_rules + special_rules)
+            self.admin_or_owner_rules + self.non_admin_only_rules +
+            self.allow_all_rules + special_rules)
         self.assertEqual(set([]), result)

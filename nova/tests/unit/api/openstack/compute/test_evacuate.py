@@ -15,24 +15,20 @@
 import uuid
 
 import mock
-from oslo_config import cfg
-import unittest
+import testtools
 import webob
 
 from nova.api.openstack.compute import evacuate as evacuate_v21
-from nova.api.openstack.compute.legacy_v2.contrib import evacuate \
-        as evacuate_v2
-from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import vm_states
+import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 
 
-CONF = cfg.CONF
-CONF.import_opt('password_length', 'nova.utils')
+CONF = nova.conf.CONF
 
 
 def fake_compute_api(*args, **kwargs):
@@ -236,43 +232,6 @@ class EvacuateTestV21(test.NoDBTestCase):
             self.assertIsNone(res.get('adminPass'))
 
 
-class EvacuateTestV2(EvacuateTestV21):
-    validation_error = webob.exc.HTTPBadRequest
-
-    def _set_up_controller(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {'os-extended-evacuate-find-host': 'fake'}
-        self.controller = evacuate_v2.Controller(ext_mgr)
-        ext_mgr_no_ext = extensions.ExtensionManager()
-        ext_mgr_no_ext.extensions = {}
-        self.controller_no_ext = evacuate_v2.Controller(ext_mgr_no_ext)
-
-    def test_no_target_fails_if_extension_not_loaded(self):
-        self._check_evacuate_failure(webob.exc.HTTPBadRequest,
-                                     {'onSharedStorage': 'False',
-                                      'adminPass': 'MyNewPass'},
-                                     controller=self.controller_no_ext)
-
-    def test_evacuate_instance_with_too_long_host(self):
-        pass
-
-    def test_evacuate_instance_with_invalid_characters_host(self):
-        pass
-
-    def test_evacuate_instance_with_invalid_on_shared_storage(self):
-        pass
-
-    def test_evacuate_disable_password_return(self):
-        pass
-
-    def test_evacuate_enable_password_return(self):
-        pass
-
-    def tet_evacuate_with_non_admin(self):
-        self.assertRaises(exception.AdminRequired, self.controller.evacuate,
-                          self.req, fakes.FAKE_UUID, {})
-
-
 class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
 
     def setUp(self):
@@ -335,19 +294,19 @@ class EvacuateTestV214(EvacuateTestV21):
 
         self.assertIsNone(res)
 
-    @unittest.skip('Password is not returned from Microversion 2.14')
+    @testtools.skip('Password is not returned from Microversion 2.14')
     def test_evacuate_disable_password_return(self):
         pass
 
-    @unittest.skip('Password is not returned from Microversion 2.14')
+    @testtools.skip('Password is not returned from Microversion 2.14')
     def test_evacuate_enable_password_return(self):
         pass
 
-    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     def test_evacuate_instance_with_invalid_on_shared_storage(self):
         pass
 
-    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     @mock.patch('nova.objects.Instance.save')
     def test_evacuate_not_shared_pass_generated(self, mock_save):
         pass
@@ -376,13 +335,13 @@ class EvacuateTestV214(EvacuateTestV21):
                           self.controller._evacuate,
                           self.req, self.UUID, body=body)
 
-    @unittest.skip('onSharedStorage was removed from Microversion 2.14')
+    @testtools.skip('onSharedStorage was removed from Microversion 2.14')
     @mock.patch('nova.objects.Instance.save')
     def test_evacuate_shared_and_pass(self, mock_save):
         pass
 
-    @unittest.skip('from Microversion 2.14 it is covered with '
-                   'test_evacuate_pass_generated')
+    @testtools.skip('from Microversion 2.14 it is covered with '
+                    'test_evacuate_pass_generated')
     def test_evacuate_instance_with_target(self):
         pass
 

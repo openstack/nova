@@ -206,17 +206,17 @@ class HostController(wsgi.Controller):
     def _get_total_resources(host_name, compute_node):
         return {'resource': {'host': host_name,
                              'project': '(total)',
-                             'cpu': compute_node['vcpus'],
-                             'memory_mb': compute_node['memory_mb'],
-                             'disk_gb': compute_node['local_gb']}}
+                             'cpu': compute_node.vcpus,
+                             'memory_mb': compute_node.memory_mb,
+                             'disk_gb': compute_node.local_gb}}
 
     @staticmethod
     def _get_used_now_resources(host_name, compute_node):
         return {'resource': {'host': host_name,
                              'project': '(used_now)',
-                             'cpu': compute_node['vcpus_used'],
-                             'memory_mb': compute_node['memory_mb_used'],
-                             'disk_gb': compute_node['local_gb_used']}}
+                             'cpu': compute_node.vcpus_used,
+                             'memory_mb': compute_node.memory_mb_used,
+                             'disk_gb': compute_node.local_gb_used}}
 
     @staticmethod
     def _get_resource_totals_from_instances(host_name, instances):

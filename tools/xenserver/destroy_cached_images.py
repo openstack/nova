@@ -27,6 +27,7 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'nova', '__init__.py')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
+import nova.conf
 from nova import config
 from nova import utils
 from nova.virt.xenapi.client import session
@@ -42,16 +43,8 @@ destroy_opts = [
                 help='Don\'t actually delete the VDIs.')
 ]
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_cli_opts(destroy_opts)
-
-CONF.import_opt('connection_url', 'nova.virt.xenapi.driver',
-                group='xenserver')
-CONF.import_opt('connection_username', 'nova.virt.xenapi.driver',
-                group='xenserver')
-CONF.import_opt('connection_password', 'nova.virt.xenapi.driver',
-                group='xenserver')
-
 
 def main():
     config.parse_args(sys.argv)

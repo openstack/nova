@@ -628,3 +628,152 @@ class HackingTestCase(test.NoDBTestCase):
                                 checks.check_config_option_in_central_place,
                                 filename="nova/cmd/serialproxy.py",
                                 expected_errors=errors)
+
+    def test_check_doubled_words(self):
+        errors = [(1, 0, "N343")]
+
+        # Artificial break to stop pep8 detecting the test !
+        code = "This is the" + " the best comment"
+        self._assert_has_errors(code, checks.check_doubled_words,
+                                expected_errors=errors)
+
+        code = "This is the then best comment"
+        self._assert_has_no_errors(code, checks.check_doubled_words)
+
+    def test_dict_iteritems(self):
+        self.assertEqual(1, len(list(checks.check_python3_no_iteritems(
+            "obj.iteritems()"))))
+
+        self.assertEqual(0, len(list(checks.check_python3_no_iteritems(
+            "six.iteritems(ob))"))))
+
+    def test_dict_iterkeys(self):
+        self.assertEqual(1, len(list(checks.check_python3_no_iterkeys(
+            "obj.iterkeys()"))))
+
+        self.assertEqual(0, len(list(checks.check_python3_no_iterkeys(
+            "six.iterkeys(ob))"))))
+
+    def test_dict_itervalues(self):
+        self.assertEqual(1, len(list(checks.check_python3_no_itervalues(
+            "obj.itervalues()"))))
+
+        self.assertEqual(0, len(list(checks.check_python3_no_itervalues(
+            "six.itervalues(ob))"))))
+
+    def test_cfg_help_with_enough_text(self):
+        errors = [(1, 0, 'N347')]
+
+        # Doesn't have help text at all => should raise error
+        code1 = """
+        opt = cfg.StrOpt("opt1")
+        """
+        self._assert_has_errors(code1, checks.cfg_help_with_enough_text,
+                                expected_errors=errors)
+
+        # Explicitly sets an empty string => should raise error
+        code2 = """
+        opt = cfg.StrOpt("opt2", help="")
+        """
+        self._assert_has_errors(code2, checks.cfg_help_with_enough_text,
+                                expected_errors=errors)
+
+        # Has help text but too few characters => should raise error
+        code3 = """
+        opt = cfg.StrOpt("opt3", help="meh")
+        """
+        self._assert_has_errors(code3, checks.cfg_help_with_enough_text,
+                                expected_errors=errors)
+
+        # Has long enough help text => should *not* raise an error
+        code4 = """
+        opt = cfg.StrOpt("opt4", help="This option does stuff")
+        """
+        self._assert_has_no_errors(code4, checks.cfg_help_with_enough_text)
+
+        # OptGroup objects help is optional => should *not* raise error
+        code5 = """
+        opt_group = cfg.OptGroup(name="group1", title="group title")
+        """
+        self._assert_has_no_errors(code5, checks.cfg_help_with_enough_text)
+
+        # The help text gets translated
+        code6 = """
+        opt = cfg.StrOpt("opt6",
+                         help=_("help with translation usage"))
+        """
+        self._assert_has_no_errors(code6, checks.cfg_help_with_enough_text)
+
+        # The help text uses a paranthesis (weird, but produces a valid string)
+        code7 = """
+        opt = cfg.StrOpt("opt7",
+                         help=("help text uses extra paranthesis"))
+        """
+        self._assert_has_no_errors(code7, checks.cfg_help_with_enough_text)
+
+        # Ignore deprecated options. They should be in the release notes
+        code8 = """
+        opt = cfg.DeprecatedOpt('opt8')
+        """
+        self._assert_has_no_errors(code8, checks.cfg_help_with_enough_text)
+
+        code9 = """
+        opt = cfg.StrOpt("opt9",
+                     help=\"\"\"
+        This
+
+        is
+
+        multiline
+
+        help
+
+        text.
+        \"\"\")
+        """
+        self._assert_has_no_errors(code9, checks.cfg_help_with_enough_text)
+
+    def test_no_os_popen(self):
+        code = """
+               import os
+
+               foobar_cmd = "foobar -get -beer"
+               answer = os.popen(foobar_cmd).read()
+
+               if answer == nok":
+                   try:
+                       os.popen(os.popen('foobar -beer -please')).read()
+
+                   except ValueError:
+                       go_home()
+               """
+        errors = [(4, 0, 'N348'), (8, 8, 'N348')]
+        self._assert_has_errors(code, checks.no_os_popen,
+                                expected_errors=errors)
+
+    def test_uncalled_closures(self):
+
+        checker = checks.CheckForUncalledTestClosure
+        code = """
+               def test_fake_thing():
+                   def _test():
+                       pass
+               """
+        self._assert_has_errors(code, checker,
+                expected_errors=[(1, 0, 'N349')])
+
+        code = """
+               def test_fake_thing():
+                   def _test():
+                       pass
+                   _test()
+               """
+        self._assert_has_no_errors(code, checker)
+
+        code = """
+               def test_fake_thing():
+                   def _test():
+                       pass
+                   self.assertRaises(FakeExcepion, _test)
+               """
+        self._assert_has_no_errors(code, checker)

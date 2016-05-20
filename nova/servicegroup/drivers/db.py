@@ -13,19 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import timeutils
 import six
 
+import nova.conf
 from nova.i18n import _, _LI, _LW, _LE
 from nova.servicegroup import api
 from nova.servicegroup.drivers import base
 
 
-CONF = cfg.CONF
-CONF.import_opt('service_down_time', 'nova.service')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -75,9 +74,11 @@ class DbDriver(base.Driver):
         elapsed = timeutils.delta_seconds(last_heartbeat, timeutils.utcnow())
         is_up = abs(elapsed) <= self.service_down_time
         if not is_up:
-            LOG.debug('Seems service is down. Last heartbeat was %(lhb)s. '
-                      'Elapsed time is %(el)s',
-                      {'lhb': str(last_heartbeat), 'el': str(elapsed)})
+            LOG.debug('Seems service %(binary)s on host %(host)s is down. '
+                      'Last heartbeat was %(lhb)s. Elapsed time is %(el)s',
+                      {'binary': service_ref.get('binary'),
+                       'host': service_ref.get('host'),
+                       'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return is_up
 
     def _report_state(self, service):
@@ -97,7 +98,7 @@ class DbDriver(base.Driver):
             # as nova-conductor is restarted, so only log this error once.
             if not getattr(service, 'model_disconnected', False):
                 service.model_disconnected = True
-                LOG.warn(_LW('Lost connection to nova-conductor '
+                LOG.warning(_LW('Lost connection to nova-conductor '
                              'for reporting service status.'))
         except Exception:
             # NOTE(rpodolyaka): we'd like to avoid catching of all possible

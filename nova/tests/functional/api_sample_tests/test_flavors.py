@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -40,18 +37,15 @@ class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_flavors_get(self):
         response = self._do_get('flavors/1')
-        subs = self._get_regexes()
-        self._verify_response('flavor-get-resp', subs, response, 200)
+        self._verify_response('flavor-get-resp', {}, response, 200)
 
     def test_flavors_list(self):
         response = self._do_get('flavors')
-        subs = self._get_regexes()
-        self._verify_response('flavors-list-resp', subs, response, 200)
+        self._verify_response('flavors-list-resp', {}, response, 200)
 
     def test_flavors_detail(self):
         response = self._do_get('flavors/detail')
-        subs = self._get_regexes()
-        self._verify_response('flavors-detail-resp', subs, response, 200)
+        self._verify_response('flavors-detail-resp', {}, response, 200)
 
 
 class FlavorsSampleAllExtensionJsonTest(FlavorsSampleJsonTest):

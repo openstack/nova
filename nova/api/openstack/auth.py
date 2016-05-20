@@ -14,16 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+import nova.conf
 from nova import context
 from nova import wsgi as base_wsgi
 
-CONF = cfg.CONF
-CONF.import_opt('use_forwarded_for', 'nova.api.auth')
+CONF = nova.conf.CONF
 
 
 class NoAuthMiddlewareBase(base_wsgi.Middleware):
@@ -74,10 +73,14 @@ class NoAuthMiddleware(NoAuthMiddlewareBase):
         return self.base_call(req, True, always_admin=False)
 
 
-# TODO(johnthetubaguy) this should be removed in the M release
-class NoAuthMiddlewareV3(NoAuthMiddlewareBase):
-    """Return a fake token if one isn't specified."""
+class NoAuthMiddlewareV2_18(NoAuthMiddlewareBase):
+    """Return a fake token if one isn't specified.
+
+    This provides a version of the middleware which does not add
+    project_id into server management urls.
+
+    """
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        return self.base_call(req, False)
+        return self.base_call(req, False, always_admin=False)

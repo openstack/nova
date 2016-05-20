@@ -2,16 +2,16 @@
 Faults
 ======
 
-This doc looks at how to understand what has happened to your API request.
+This doc explains how to understand what has happened to your API request.
 
 Every HTTP request has a status code. 2xx codes signify the API was a success.
 However, that is often not the end of the story. That generally only means the
-request to start the operation has been accepted, it does not mean the action
+request to start the operation has been accepted. It does not mean the action
 you requested has successfully completed.
 
 
 Tracking Errors by Request ID
-==============================
+=============================
 
 Every request made has a unique Request ID.
 This is returned in a response header.
@@ -70,15 +70,15 @@ information about the fault in the body of the response.
        }
     }
 
-The error code is returned in the body of the response for convenience.
-The message section returns a human-readable message that is appropriate
-for display to the end user. The details section is optional and may
+The error ``code`` is returned in the body of the response for convenience.
+The ``message`` section returns a human-readable message that is appropriate
+for display to the end user. The ``details`` section is optional and may
 contain information—for example, a stack trace—to assist in tracking
-down an error. The detail section might or might not be appropriate for
+down an error. The ``details`` section might or might not be appropriate for
 display to an end user.
 
 The root element of the fault (such as, computeFault) might change
-depending on the type of error. The following is a list of possible
+depending on the type of error. The following link contains a list of possible
 elements along with their associated error codes.
 
 For more information on possible error code, please see:
@@ -100,7 +100,7 @@ When a server is placed into an ``ERROR`` state, a fault is embedded in the
 offending server. Note that these asynchronous faults follow the same format
 as the synchronous ones. The fault contains an error code, a human readable
 message, and optional details about the error. Additionally, asynchronous
-faults may also contain a created timestamp that specifies when the fault
+faults may also contain a ``created`` timestamp that specifies when the fault
 occurred.
 
 

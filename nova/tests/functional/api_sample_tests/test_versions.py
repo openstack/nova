@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack import api_version_request as avr
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
@@ -22,21 +23,21 @@ class VersionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     # as those does not send request on particular endpoint and running
     # its tests alone is enough.
     scenarios = []
+    max_api_version = avr.max_api_version().get_string()
 
     def test_versions_get(self):
         response = self._do_get('', strip_version=True)
-        subs = self._get_regexes()
-        self._verify_response('versions-get-resp', subs,
+        self._verify_response('versions-get-resp',
+                              {'max_api_version': self.max_api_version},
                               response, 200, update_links=False)
 
     def test_versions_get_v2(self):
         response = self._do_get('/v2', strip_version=True)
-        subs = self._get_regexes()
-        self._verify_response('v2-version-get-resp', subs,
+        self._verify_response('v2-version-get-resp', {},
                               response, 200, update_links=False)
 
     def test_versions_get_v21(self):
         response = self._do_get('/v2.1', strip_version=True)
-        subs = self._get_regexes()
-        self._verify_response('v21-version-get-resp', subs,
+        self._verify_response('v21-version-get-resp',
+                              {'max_api_version': self.max_api_version},
                               response, 200, update_links=False)

@@ -15,15 +15,14 @@
 
 """Handles ConsoleProxy API requests."""
 
-from oslo_config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
+import nova.conf
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
 from nova import objects
 
-CONF = cfg.CONF
-CONF.import_opt('console_topic', 'nova.console.rpcapi')
+CONF = nova.conf.CONF
 
 
 class API(base.Base):

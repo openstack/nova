@@ -11,15 +11,13 @@
 #    under the License.
 
 from os_brick.initiator import connector
-from oslo_config import cfg
 from oslo_log import log as logging
 
+import nova.conf
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
 
-CONF = cfg.CONF
-CONF.import_opt('num_iscsi_scan_tries', 'nova.virt.libvirt.volume.iscsi',
-                group='libvirt')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -45,6 +43,7 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
 
         conf.source_type = "block"
         conf.source_path = connection_info['data']['device_path']
+        conf.driver_io = "native"
         return conf
 
     def connect_volume(self, connection_info, disk_info):

@@ -16,9 +16,12 @@
 
 import six
 
+import testscenarios
+
 from nova import context
 from nova import db
 from nova import exception as ex
+from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers as helper
@@ -37,7 +40,7 @@ def rand_flavor(**kwargs):
     return flav
 
 
-class FlavorManageFullstack(test.TestCase):
+class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
     """Tests for flavors manage administrative command.
 
     Extension: os-flavors-manage
@@ -73,10 +76,26 @@ class FlavorManageFullstack(test.TestCase):
     the database.
 
     """
+
+    _additional_fixtures = []
+
+    scenarios = [
+        # test v2.1 base microversion
+        ('v2_1', {
+            'api_major_version': 'v2.1'}),
+    ]
+
     def setUp(self):
         super(FlavorManageFullstack, self).setUp()
+
+        # load any additional fixtures specified by the scenario
+        for fix in self._additional_fixtures:
+            self.useFixture(fix())
+
         self.useFixture(policy_fixture.RealPolicyFixture())
-        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture())
+        api_fixture = self.useFixture(
+            nova_fixtures.OSAPIFixture(
+                api_version=self.api_major_version))
 
         # NOTE(sdague): because this test is primarily an admin API
         # test default self.api to the admin api.
@@ -147,7 +166,7 @@ class FlavorManageFullstack(test.TestCase):
         self.assertEqual(400, resp.status, resp)
         # ... and ensure that we didn't leak it into the db
         self.assertRaises(ex.FlavorNotFound,
-                          db.flavor_get_by_flavor_id,
+                          objects.Flavor.get_by_flavor_id,
                           ctx, flav['flavor']['id'])
 
         # bounds conditions - invalid ram
@@ -157,7 +176,7 @@ class FlavorManageFullstack(test.TestCase):
         self.assertEqual(400, resp.status)
         # ... and ensure that we didn't leak it into the db
         self.assertRaises(ex.FlavorNotFound,
-                          db.flavor_get_by_flavor_id,
+                          objects.Flavor.get_by_flavor_id,
                           ctx, flav['flavor']['id'])
 
         # NOTE(sdague): if there are other bounds conditions that
@@ -175,14 +194,22 @@ class FlavorManageFullstack(test.TestCase):
         self.api.api_post('flavors', new_flav)
         self.api.api_delete('flavors/%s' % new_flav['flavor']['id'])
 
-        # It is valid to directly fetch details of a deleted flavor
-        resp = self.api.api_get('flavors/%s' % new_flav['flavor']['id'])
-        self.assertEqual(200, resp.status)
-        self.assertFlavorAPIEqual(new_flav['flavor'], resp.body['flavor'])
-
         # deleted flavor should not show up in a list
         resp = self.api.api_get('flavors')
         self.assertFlavorNotInList(new_flav['flavor'], resp.body)
+
+    def test_flavor_create_frozen(self):
+        ctx = context.get_admin_context()
+        db.flavor_create(ctx, {
+            'name': 'foo', 'memory_mb': 512, 'vcpus': 1,
+            'root_gb': 1, 'ephemeral_gb': 0, 'flavorid': 'foo',
+            'swap': 0, 'rxtx_factor': 1.0, 'vcpu_weight': 1,
+            'disabled': False, 'is_public': True,
+        })
+        new_flav = {'flavor': rand_flavor()}
+        resp = self.api.api_post('flavors', new_flav,
+                                 check_response_status=False)
+        self.assertEqual(409, resp.status)
 
     def test_flavor_manage_func(self):
         """Basic flavor creation lifecycle testing.
@@ -202,7 +229,7 @@ class FlavorManageFullstack(test.TestCase):
         # Create flavor and ensure it made it to the database
         self.api.api_post('flavors', flav1)
 
-        flav1db = db.flavor_get_by_flavor_id(ctx, flav1['flavor']['id'])
+        flav1db = objects.Flavor.get_by_flavor_id(ctx, flav1['flavor']['id'])
         self.assertFlavorDbEqual(flav1['flavor'], flav1db)
 
         # Ensure new flavor is seen in the listing
@@ -212,7 +239,7 @@ class FlavorManageFullstack(test.TestCase):
         # Delete flavor and ensure it was removed from the database
         self.api.api_delete('flavors/%s' % flav1['flavor']['id'])
         self.assertRaises(ex.FlavorNotFound,
-                          db.flavor_get_by_flavor_id,
+                          objects.Flavor.get_by_flavor_id,
                           ctx, flav1['flavor']['id'])
 
         resp = self.api.api_delete('flavors/%s' % flav1['flavor']['id'],
@@ -232,7 +259,7 @@ class FlavorManageFullstack(test.TestCase):
         self.assertEqual(403, resp.status)
         # ... and that it didn't leak through
         self.assertRaises(ex.FlavorNotFound,
-                        db.flavor_get_by_flavor_id,
+                        objects.Flavor.get_by_flavor_id,
                         ctx, flav1['flavor']['id'])
 
         # Create the flavor as the admin user
@@ -244,4 +271,4 @@ class FlavorManageFullstack(test.TestCase):
         self.assertEqual(403, resp.status)
         # ... and ensure that we didn't actually delete the flavor,
         # this will throw an exception if we did.
-        db.flavor_get_by_flavor_id(ctx, flav1['flavor']['id'])
+        objects.Flavor.get_by_flavor_id(ctx, flav1['flavor']['id'])

@@ -154,3 +154,8 @@ class ImageMetadata(extensions.V21APIExtensionBase):
                        "/{project_id}/images/{image_id}/metadata",
                        controller=wsgi_resource,
                        action='update_all', conditions={"method": ['PUT']})
+        # Also connect the non project_id route
+        mapper.connect("metadata",
+                       "/images/{image_id}/metadata",
+                       controller=wsgi_resource,
+                       action='update_all', conditions={"method": ['PUT']})

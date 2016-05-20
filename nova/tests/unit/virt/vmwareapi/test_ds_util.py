@@ -36,6 +36,15 @@ class DsUtilTestCase(test.NoDBTestCase):
         super(DsUtilTestCase, self).tearDown()
         fake.reset()
 
+    def test_get_datacenter_ref(self):
+        with mock.patch.object(self.session, '_call_method') as call_method:
+            ds_util.get_datacenter_ref(self.session, "datacenter")
+            call_method.assert_called_once_with(
+                self.session.vim,
+                "FindByInventoryPath",
+                self.session.vim.service_content.searchIndex,
+                inventoryPath="datacenter")
+
     def test_file_delete(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('DeleteDatastoreFile_Task', method)
@@ -447,3 +456,30 @@ class DsUtilTestCase(test.NoDBTestCase):
                                                       "normal",
                                                       "VMFS",
                                                       datastore_regex))
+
+    def test_get_connected_hosts_none(self):
+        with mock.patch.object(self.session,
+                               '_call_method') as _call_method:
+            hosts = ds_util.get_connected_hosts(self.session,
+                                                'fake_datastore')
+            self.assertEqual([], hosts)
+            _call_method.assert_called_once_with(
+                    mock.ANY, 'get_object_property',
+                    'fake_datastore', 'host')
+
+    def test_get_connected_hosts(self):
+        host = mock.Mock(spec=object)
+        host.value = 'fake-host'
+        host_mount = mock.Mock(spec=object)
+        host_mount.key = host
+        host_mounts = mock.Mock(spec=object)
+        host_mounts.DatastoreHostMount = [host_mount]
+
+        with mock.patch.object(self.session, '_call_method',
+                               return_value=host_mounts) as _call_method:
+            hosts = ds_util.get_connected_hosts(self.session,
+                                                'fake_datastore')
+            self.assertEqual(['fake-host'], hosts)
+            _call_method.assert_called_once_with(
+                    mock.ANY, 'get_object_property',
+                    'fake_datastore', 'host')

@@ -19,13 +19,9 @@
 
 import urllib
 
-from oslo_config import cfg
-
 from nova import exception
 from nova.i18n import _
 from nova import utils
-
-CONF = cfg.CONF
 
 
 class SecurityGroupBase(object):
@@ -110,8 +106,9 @@ class SecurityGroupBase(object):
             if (ip_protocol.upper() in ['TCP', 'UDP'] and
                     (from_port < 1 or to_port > 65535)):
                 raise exception.InvalidPortRange(from_port=from_port,
-                      to_port=to_port, msg="Valid TCP ports should"
-                                           " be between 1-65535")
+                      to_port=to_port, msg="Valid %s ports should"
+                                           " be between 1-65535"
+                                           % ip_protocol.upper())
 
             # Verify ICMP type and code
             if (ip_protocol.upper() == "ICMP" and
@@ -160,9 +157,6 @@ class SecurityGroupBase(object):
     def ensure_default(self, context):
         pass
 
-    def trigger_handler(self, event, *args):
-        pass
-
     def trigger_rules_refresh(self, context, id):
         """Called when a rule is added to or removed from a security_group."""
         pass
@@ -175,7 +169,7 @@ class SecurityGroupBase(object):
         """
         pass
 
-    def populate_security_groups(self, instance, security_groups):
+    def populate_security_groups(self, security_groups):
         """Called when populating the database for an instances
         security groups.
         """
@@ -207,8 +201,7 @@ class SecurityGroupBase(object):
     def get_rule(self, context, id):
         raise NotImplementedError()
 
-    def get_instance_security_groups(self, context, instance_uuid,
-                                     detailed=False):
+    def get_instance_security_groups(self, context, instance, detailed=False):
         raise NotImplementedError()
 
     def add_to_instance(self, context, instance, security_group_name):

@@ -224,8 +224,8 @@ class API(base_api.NetworkAPI):
                             instance_id=orig_instance_uuid)
             LOG.info(_LI('re-assign floating IP %(address)s from '
                          'instance %(instance_id)s'), msg_dict)
-            orig_instance = objects.Instance.get_by_uuid(context,
-                                                         orig_instance_uuid)
+            orig_instance = objects.Instance.get_by_uuid(
+                context, orig_instance_uuid, expected_attrs=['flavor'])
 
             # purge cached nw info for the original instance
             base_api.update_instance_cache_with_nw_info(self, context,
@@ -244,7 +244,8 @@ class API(base_api.NetworkAPI):
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
                               security_groups=None,
-                              dhcp_options=None):
+                              dhcp_options=None,
+                              bind_host_id=None):
         """Allocates all network structures for an instance.
 
         :param context: The request context.
@@ -262,6 +263,7 @@ class API(base_api.NetworkAPI):
             configured with the baremetal hypervisor. It is expected that these
             are already formatted for the neutron v2 api.
             See nova/virt/driver.py:dhcp_options_for_instance for an example.
+        :param bind_host_id: ignored by this driver.
         :returns: network info as from get_instance_nw_info() below
         """
         # NOTE(vish): We can't do the floating ip allocation here because
@@ -298,7 +300,8 @@ class API(base_api.NetworkAPI):
 
     # NOTE(danms): Here for neutron compatibility
     def allocate_port_for_instance(self, context, instance, port_id,
-                                   network_id=None, requested_ip=None):
+                                   network_id=None, requested_ip=None,
+                                   bind_host_id=None):
         raise NotImplementedError()
 
     # NOTE(danms): Here for neutron compatibility
@@ -483,7 +486,8 @@ class API(base_api.NetworkAPI):
         # and instance.host is not yet or is no longer equal to
         args = {'instance_id': instance.id,
                 'host': host,
-                'teardown': teardown}
+                'teardown': teardown,
+                'instance': instance}
 
         self.network_rpcapi.setup_networks_on_host(context, **args)
 

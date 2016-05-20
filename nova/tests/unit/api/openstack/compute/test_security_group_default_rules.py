@@ -13,11 +13,8 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 import webob
 
-from nova.api.openstack.compute.legacy_v2.contrib import \
-    security_group_default_rules as security_group_default_rules_v2
 from nova.api.openstack.compute import \
     security_group_default_rules as security_group_default_rules_v21
 from nova import context
@@ -25,9 +22,6 @@ import nova.db
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-
-
-CONF = cfg.CONF
 
 
 class AttrDict(dict):
@@ -84,11 +78,6 @@ class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
             '/v2/fake/os-security-group-default-rules', use_admin_context=True)
         self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,
                           req, '602ed77c-a076-4f9b-a617-f93b847b62c5')
-
-
-class TestSecurityGroupDefaultRulesNeutronV2(test.TestCase):
-    controller_cls = (security_group_default_rules_v2.
-                      SecurityGroupDefaultRulesController)
 
 
 class TestSecurityGroupDefaultRulesV21(test.TestCase):
@@ -284,10 +273,10 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
             self.assertEqual(sgr['id'], id)
             return security_group_default_rule_db(sgr)
 
-        self.stubs.Set(nova.db, 'security_group_default_rule_destroy',
-                       security_group_default_rule_destroy)
-        self.stubs.Set(nova.db, 'security_group_default_rule_get',
-                       return_security_group_default_rule)
+        self.stub_out('nova.db.security_group_default_rule_destroy',
+                      security_group_default_rule_destroy)
+        self.stub_out('nova.db.security_group_default_rule_get',
+                      return_security_group_default_rule)
 
         self.controller.delete(self.req, '1')
 
@@ -317,30 +306,6 @@ class TestSecurityGroupDefaultRulesV21(test.TestCase):
         self.assertEqual(sgr['from_port'], security_group_rule.from_port)
         self.assertEqual(sgr['to_port'], security_group_rule.to_port)
         self.assertEqual(sgr['cidr'], security_group_rule.cidr)
-
-
-class TestSecurityGroupDefaultRulesV2(test.TestCase):
-    controller_cls = (security_group_default_rules_v2.
-                      SecurityGroupDefaultRulesController)
-
-    def setUp(self):
-        super(TestSecurityGroupDefaultRulesV2, self).setUp()
-        self.req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank(
-            '/v2/fake/os-security-group-default-rules')
-
-    def test_create_security_group_default_rules_with_non_admin(self):
-        self.controller = self.controller_cls()
-        sgr = security_group_default_rule_template()
-        sgr_dict = dict(security_group_default_rule=sgr)
-        self.assertRaises(exception.AdminRequired, self.controller.create,
-                          self.non_admin_req, sgr_dict)
-
-    def test_delete_security_group_default_rules_with_non_admin(self):
-        self.controller = self.controller_cls()
-        self.assertRaises(exception.AdminRequired,
-                          self.controller.delete, self.non_admin_req, 1)
 
 
 class SecurityGroupDefaultRulesPolicyEnforcementV21(test.NoDBTestCase):

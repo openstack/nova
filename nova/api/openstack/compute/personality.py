@@ -43,23 +43,27 @@ class Personality(extensions.V21APIExtensionBase):
             injected_files.append((item['path'], item['contents']))
         return injected_files
 
-    # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
-    # parameter as this is placed to handle scheduler_hint extension for V2.1.
-    # making 'body_deprecated_param' as optional to avoid changes for
-    # server_update & server_rebuild
-    def server_create(self, server_dict, create_kwargs,
-                      body_deprecated_param=None):
-        if 'personality' in server_dict:
-            create_kwargs['injected_files'] = self._get_injected_files(
-                                                  server_dict['personality'])
+    # Extend server in both create & rebuild
+    #
+    # TODO(sdague): it looks weird that server_create is different
+    # than server_rebuild, right? Well you can totally blame hooks for
+    # that. By accident this means that server personalities are
+    # always creating the injected_files kwarg, even if there is
+    # nothing in it. Hooks totally needs injected_files to be a
+    # thing. Once hooks are removed from tree, this function can be
+    # made to look like the rebuild one.
+    def server_create(self, server_dict, create_kwargs, body_deprecated):
+        create_kwargs['injected_files'] = self._get_injected_files(
+            server_dict.get('personality', []))
 
-    def server_rebuild(self, server_dict, create_kwargs,
-                      body_deprecated_param=None):
+    def server_rebuild(self, server_dict, create_kwargs):
         if 'personality' in server_dict:
             create_kwargs['files_to_inject'] = self._get_injected_files(
                                                   server_dict['personality'])
 
+    # Extend schema with the new allowed parameters
     def get_server_create_schema(self, version):
         return personality.server_create
 
-    get_server_rebuild_schema = get_server_create_schema
+    def get_server_rebuild_schema(self, version):
+        return personality.server_create

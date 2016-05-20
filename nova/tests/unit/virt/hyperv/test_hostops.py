@@ -16,6 +16,7 @@
 import datetime
 
 import mock
+from os_win import constants as os_win_const
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import units
@@ -62,7 +63,7 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self._hostops._hostutils.get_cpus_info.assert_called_once_with()
 
         expected = [mock.call(fkey)
-                    for fkey in constants.PROCESSOR_FEATURE.keys()]
+                    for fkey in os_win_const.PROCESSOR_FEATURE.keys()]
         self._hostops._hostutils.is_cpu_feature_present.has_calls(expected)
         expected_response = self._get_mock_cpu_info()
         self.assertEqual(expected_response, response)
@@ -72,7 +73,7 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
                 'model': self.FAKE_NAME,
                 'arch': constants.WMI_WIN32_PROCESSOR_ARCHITECTURE[
                     self.FAKE_ARCHITECTURE],
-                'features': list(constants.PROCESSOR_FEATURE.values()),
+                'features': list(os_win_const.PROCESSOR_FEATURE.values()),
                 'topology': {'cores': self.FAKE_NUM_CPUS,
                              'threads': self.FAKE_NUM_CPUS,
                              'sockets': self.FAKE_NUM_CPUS}}

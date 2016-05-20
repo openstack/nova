@@ -16,6 +16,7 @@ from nova import objects
 from nova.scheduler.filters import type_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
+from nova.tests import uuidsentinel as uuids
 
 
 class TestTypeFilter(test.NoDBTestCase):
@@ -31,13 +32,15 @@ class TestTypeFilter(test.NoDBTestCase):
         # True since no instances on host
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         # Add an instance with the same instance_type_id
-        inst1 = objects.Instance(uuid='aa', instance_type_id=target_id)
+        inst1 = objects.Instance(uuid=uuids.instance_1,
+                                 instance_type_id=target_id)
         host.instances = {inst1.uuid: inst1}
         # True since only same instance_type_id on host
         self.assertTrue(self.filt_cls.host_passes(host, spec_obj))
         # Add an instance with a different instance_type_id
         diff_type = target_id + 1
-        inst2 = objects.Instance(uuid='bb', instance_type_id=diff_type)
+        inst2 = objects.Instance(uuid=uuids.instance_2,
+                                 instance_type_id=diff_type)
         host.instances.update({inst2.uuid: inst2})
         # False since host now has an instance of a different type
         self.assertFalse(self.filt_cls.host_passes(host, spec_obj))

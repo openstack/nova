@@ -23,7 +23,7 @@ from oslo_log import log as logging
 import six
 
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ _PCI_ADDRESS_PATTERN = ("^(hex{4}):(hex{2}):(hex{2}).(oct{1})$".
                                              replace("oct", "[0-7]"))
 _PCI_ADDRESS_REGEX = re.compile(_PCI_ADDRESS_PATTERN)
 
-_VIRTFN_RE = re.compile("virtfn\d+")
+_SRIOV_TOTALVFS = "sriov_totalvfs"
 
 
 def pci_device_prop_match(pci_dev, specs):
@@ -70,37 +70,50 @@ def get_pci_address_fields(pci_addr):
     return (domain, bus, slot, func)
 
 
+def get_pci_address(domain, bus, slot, func):
+    return '%s:%s:%s.%s' % (domain, bus, slot, func)
+
+
 def get_function_by_ifname(ifname):
-    """Given the device name, returns the PCI address of a an device
+    """Given the device name, returns the PCI address of a device
     and returns True if the address in a physical function.
     """
-    try:
-        dev_path = "/sys/class/net/%s/device" % ifname
-        dev_info = os.listdir(dev_path)
-        for dev_file in dev_info:
-            if _VIRTFN_RE.match(dev_file):
-                return os.readlink(dev_path).strip("./"), True
-        else:
+    dev_path = "/sys/class/net/%s/device" % ifname
+    sriov_totalvfs = 0
+    if os.path.isdir(dev_path):
+        try:
+            # sriov_totalvfs contains the maximum possible VFs for this PF
+            with open(dev_path + _SRIOV_TOTALVFS) as fd:
+                sriov_totalvfs = int(fd.read())
+                return (os.readlink(dev_path).strip("./"),
+                        sriov_totalvfs > 0)
+        except (IOError, ValueError):
             return os.readlink(dev_path).strip("./"), False
-    except Exception:
-        LOG.error(_LE("PCI device %s not found") % ifname)
-        return None, False
+    return None, False
 
 
-def is_physical_function(pci_addr):
+def is_physical_function(domain, bus, slot, function):
     dev_path = "/sys/bus/pci/devices/%(d)s:%(b)s:%(s)s.%(f)s/" % {
-        "d": pci_addr.domain, "b": pci_addr.bus,
-        "s": pci_addr.slot, "f": pci_addr.func}
-    try:
-        dev_info = os.listdir(dev_path)
-        for dev_file in dev_info:
-            if _VIRTFN_RE.match(dev_file):
-                return True
-        else:
-            return False
-    except Exception:
-        LOG.error(_LE("PCI device %s not found") % dev_path)
-        return False
+        "d": domain, "b": bus, "s": slot, "f": function}
+    if os.path.isdir(dev_path):
+        sriov_totalvfs = 0
+        try:
+            with open(dev_path + _SRIOV_TOTALVFS) as fd:
+                sriov_totalvfs = int(fd.read())
+                return sriov_totalvfs > 0
+        except (IOError, ValueError):
+            pass
+    return False
+
+
+def _get_sysfs_netdev_path(pci_addr, pf_interface):
+    """Get the sysfs path based on the PCI address of the device.
+
+    Assumes a networking device - will not check for the existence of the path.
+    """
+    if pf_interface:
+        return "/sys/bus/pci/devices/%s/physfn/net" % (pci_addr)
+    return "/sys/bus/pci/devices/%s/net" % (pci_addr)
 
 
 def get_ifname_by_pci_address(pci_addr, pf_interface=False):
@@ -109,14 +122,32 @@ def get_ifname_by_pci_address(pci_addr, pf_interface=False):
     The returned interface name is either the parent PF's or that of the VF
     itself based on the argument of pf_interface.
     """
-    if pf_interface:
-        dev_path = "/sys/bus/pci/devices/%s/physfn/net" % (pci_addr)
-    else:
-        dev_path = "/sys/bus/pci/devices/%s/net" % (pci_addr)
+    dev_path = _get_sysfs_netdev_path(pci_addr, pf_interface)
     try:
         dev_info = os.listdir(dev_path)
         return dev_info.pop()
     except Exception:
+        raise exception.PciDeviceNotFoundById(id=pci_addr)
+
+
+def get_mac_by_pci_address(pci_addr, pf_interface=False):
+    """Get the MAC address of the nic based on it's PCI address
+
+    Raises PciDeviceNotFoundById in case the pci device is not a NIC
+    """
+    dev_path = _get_sysfs_netdev_path(pci_addr, pf_interface)
+    if_name = get_ifname_by_pci_address(pci_addr, pf_interface)
+    addr_file = os.path.join(dev_path, if_name, 'address')
+
+    try:
+        with open(addr_file) as f:
+            mac = next(f).strip()
+            return mac
+    except (IOError, StopIteration) as e:
+        LOG.warning(_LW("Could not find the expected sysfs file for "
+                        "determining the MAC address of the PCI device "
+                        "%(addr)s. May not be a NIC. Error: %(e)s"),
+                    {'addr': pci_addr, 'e': e})
         raise exception.PciDeviceNotFoundById(id=pci_addr)
 
 

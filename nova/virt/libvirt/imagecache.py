@@ -27,11 +27,11 @@ import time
 
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import fileutils
 
+import nova.conf
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
@@ -41,60 +41,18 @@ from nova.virt.libvirt import utils as libvirt_utils
 
 LOG = logging.getLogger(__name__)
 
-imagecache_opts = [
-    cfg.StrOpt('image_info_filename_pattern',
-               default='$instances_path/$image_cache_subdirectory_name/'
-                       '%(image)s.info',
-               help='Allows image information files to be stored in '
-                    'non-standard locations'),
-    cfg.BoolOpt('remove_unused_kernels',
-                default=True,
-                deprecated_for_removal=True,
-                help='DEPRECATED: Should unused kernel images be removed? '
-                     'This is only safe to enable if all compute nodes have '
-                     'been updated to support this option (running Grizzly or '
-                     'newer level compute). This will be the default behavior '
-                     'in the 13.0.0 release.'),
-    cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
-               default=3600,
-               help='Unused resized base images younger than this will not be '
-                    'removed'),
-    cfg.BoolOpt('checksum_base_images',
-                default=False,
-                help='Write a checksum for files in _base to disk'),
-    cfg.IntOpt('checksum_interval_seconds',
-               default=3600,
-               help='How frequently to checksum base images'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(imagecache_opts, 'libvirt')
-CONF.import_opt('instances_path', 'nova.compute.manager')
-CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
+CONF = nova.conf.CONF
 
 
-def get_cache_fname(images, key):
+def get_cache_fname(image_id):
     """Return a filename based on the SHA1 hash of a given image ID.
 
     Image files stored in the _base directory that match this pattern
     are considered for cleanup by the image cache manager. The cache
     manager considers the file to be in use if it matches an instance's
     image_ref, kernel_id or ramdisk_id property.
-
-    However, in grizzly-3 and before, only the image_ref property was
-    considered. This means that it's unsafe to store kernel and ramdisk
-    images using this pattern until we're sure that all compute nodes
-    are running a cache manager newer than grizzly-3. For now, we
-    require admins to confirm that by setting the remove_unused_kernels
-    boolean but, at some point in the future, we'll be safely able to
-    assume this.
     """
-    image_id = str(images[key])
-    if ((not CONF.libvirt.remove_unused_kernels and
-         key in ['kernel_id', 'ramdisk_id'])):
-        return image_id
-    else:
-        return hashlib.sha1(image_id).hexdigest()
+    return hashlib.sha1(image_id).hexdigest()
 
 
 def get_info_filename(base_path):
@@ -329,7 +287,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                             inuse_images.append(backing_path)
 
                         if backing_path in self.unexplained_images:
-                            LOG.warn(_LW('Instance %(instance)s is using a '
+                            LOG.warning(_LW('Instance %(instance)s is using a '
                                          'backing file %(backing)s which '
                                          'does not appear in the image '
                                          'service'),
@@ -449,10 +407,18 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         if not exists:
             return
 
-        if age < maxage:
-            LOG.info(_LI('Base or swap file too young to remove: %s'),
-                         base_file)
-        else:
+        lock_file = os.path.split(base_file)[-1]
+
+        @utils.synchronized(lock_file, external=True,
+                            lock_path=self.lock_path)
+        def _inner_remove_old_enough_file():
+            # NOTE(mikal): recheck that the file is old enough, as a new
+            # user of the file might have come along while we were waiting
+            # for the lock
+            exists, age = self._get_age_of_file(base_file)
+            if not exists or age < maxage:
+                return
+
             LOG.info(_LI('Removing base or swap file: %s'), base_file)
             try:
                 os.remove(base_file)
@@ -466,6 +432,11 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           {'base_file': base_file,
                            'error': e})
 
+        if age < maxage:
+            LOG.info(_LI('Base or swap file too young to remove: %s'),
+                         base_file)
+        else:
+            _inner_remove_old_enough_file()
             if remove_lock:
                 try:
                     # NOTE(jichenjc) The lock file will be constructed first
@@ -473,7 +444,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     # like nova-9e881789030568a317fad9daae82c5b1c65e0d4a
                     # or nova-03d8e206-6500-4d91-b47d-ee74897f9b4e
                     # according to the original file name
-                    lock_file = os.path.split(base_file)[-1]
                     lockutils.remove_external_lock_file(lock_file,
                         lock_file_prefix='nova-', lock_path=self.lock_path)
                 except OSError as e:
@@ -538,7 +508,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 self.active_base_files.append(base_file)
 
                 if not base_file:
-                    LOG.warn(_LW('image %(id)s at (%(base_file)s): warning '
+                    LOG.warning(_LW('image %(id)s at (%(base_file)s): warning '
                                  '-- an absent base file is in use! '
                                  'instances: %(instance_list)s'),
                                 {'id': img_id,
@@ -562,8 +532,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           {'id': img_id,
                            'base_file': base_file})
                 if os.path.exists(base_file):
-                    libvirt_utils.chown(base_file, os.getuid())
-                    os.utime(base_file, None)
+                    libvirt_utils.update_mtime(base_file)
 
     def _age_and_verify_swap_images(self, context, base_dir):
         LOG.debug('Verify swap images')
@@ -571,14 +540,13 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         for ent in self.back_swap_images:
             base_file = os.path.join(base_dir, ent)
             if ent in self.used_swap_images and os.path.exists(base_file):
-                    libvirt_utils.chown(base_file, os.getuid())
-                    os.utime(base_file, None)
+                libvirt_utils.update_mtime(base_file)
             elif self.remove_unused_base_images:
                 self._remove_swap_file(base_file)
 
         error_images = self.used_swap_images - self.back_swap_images
         for error_image in error_images:
-            LOG.warn(_LW('%s swap image was used by instance'
+            LOG.warning(_LW('%s swap image was used by instance'
                          ' but no back files existing!'), error_image)
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
@@ -604,7 +572,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         # Anything left is an unknown base image
         for img in self.unexplained_images:
-            LOG.warn(_LW('Unknown base file: %s'), img)
+            LOG.warning(_LW('Unknown base file: %s'), img)
             self.removable_base_files.append(img)
 
         # Dump these lists

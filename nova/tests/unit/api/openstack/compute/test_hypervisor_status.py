@@ -18,9 +18,6 @@ import mock
 
 from nova.api.openstack.compute import hypervisors \
         as hypervisors_v21
-from nova.api.openstack.compute.legacy_v2.contrib import hypervisors \
-        as hypervisors_v2
-from nova.api.openstack import extensions
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack.compute import test_hypervisors
@@ -84,13 +81,3 @@ class HypervisorStatusTestV21(test.NoDBTestCase):
         result = self.controller._view_hypervisor(hyper, service, True)
         self.assertEqual('disabled', result['status'],)
         self.assertEqual('fake', result['service']['disabled_reason'])
-
-
-class HypervisorStatusTestV2(HypervisorStatusTestV21):
-    def _prepare_extension(self):
-        ext_mgr = extensions.ExtensionManager()
-        ext_mgr.extensions = {}
-        ext_mgr.extensions['os-hypervisor-status'] = True
-        self.controller = hypervisors_v2.HypervisorsController(ext_mgr)
-        self.controller.servicegroup_api.service_is_up = mock.MagicMock(
-            return_value=True)

@@ -1,0 +1,19 @@
+---
+feature:
+  - On Mitaka compute nodes, if you want to modify the default disk allocation
+    ratio of 1.0, you should set that on every compute node, rather than
+    setting it in the scheduler. This means the disk, RAM and CPU allocation
+    ratios now all work in the same way.
+upgrade:
+  - For Liberty compute nodes, the disk_allocation_ratio works as before, you
+    must set it on the scheduler if you want to change it.
+    For Mitaka compute nodes, the disk_allocation_ratio set on the compute
+    nodes will be used only if the configuration is not set on the scheduler.
+    This is to allow, for backwards compatibility, the ability to still
+    override the disk allocation ratio by setting the configuration on the
+    scheduler node.
+    In Newton, we plan to remove the ability to set the disk allocation ratio
+    on the scheduler, at which point the compute nodes will always define the
+    disk allocation ratio, and pass that up to the scheduler. None of this
+    changes the default disk allocation ratio of 1.0. This matches the
+    behaviour of the RAM and CPU allocation ratios.

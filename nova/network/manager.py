@@ -32,7 +32,6 @@ import re
 import uuid
 
 import netaddr
-from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_service import periodic_task
@@ -44,6 +43,7 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
 
+import nova.conf
 from nova import context
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
@@ -63,89 +63,7 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-
-network_opts = [
-    cfg.StrOpt('flat_network_bridge',
-               help='Bridge for simple network instances'),
-    cfg.StrOpt('flat_network_dns',
-               default='8.8.4.4',
-               help='DNS server for simple network'),
-    cfg.BoolOpt('flat_injected',
-                default=False,
-                help='Whether to attempt to inject network setup into guest'),
-    cfg.StrOpt('flat_interface',
-               help='FlatDhcp will bridge into this interface if set'),
-    cfg.IntOpt('vlan_start',
-               default=100,
-               min=1,
-               max=4094,
-               help='First VLAN for private networks'),
-    cfg.StrOpt('vlan_interface',
-               help='VLANs will bridge into this interface if set'),
-    cfg.IntOpt('num_networks',
-               default=1,
-               help='Number of networks to support'),
-    cfg.StrOpt('vpn_ip',
-               default='$my_ip',
-               help='Public IP for the cloudpipe VPN servers'),
-    cfg.IntOpt('vpn_start',
-               default=1000,
-               help='First Vpn port for private networks'),
-    cfg.IntOpt('network_size',
-               default=256,
-               help='Number of addresses in each private subnet'),
-    cfg.StrOpt('fixed_range_v6',
-               default='fd00::/48',
-               help='Fixed IPv6 address block'),
-    cfg.StrOpt('gateway',
-               help='Default IPv4 gateway'),
-    cfg.StrOpt('gateway_v6',
-               help='Default IPv6 gateway'),
-    cfg.IntOpt('cnt_vpn_clients',
-               default=0,
-               help='Number of addresses reserved for vpn clients'),
-    cfg.IntOpt('fixed_ip_disassociate_timeout',
-               default=600,
-               help='Seconds after which a deallocated IP is disassociated'),
-    cfg.IntOpt('create_unique_mac_address_attempts',
-               default=5,
-               help='Number of attempts to create unique mac address'),
-    cfg.BoolOpt('fake_call',
-                default=False,
-                help='If True, skip using the queue and make local calls'),
-    cfg.BoolOpt('teardown_unused_network_gateway',
-                default=False,
-                help='If True, unused gateway devices (VLAN and bridge) are '
-                     'deleted in VLAN network mode with multi hosted '
-                     'networks'),
-    cfg.BoolOpt('force_dhcp_release',
-                default=True,
-                help='If True, send a dhcp release on instance termination'),
-    cfg.BoolOpt('update_dns_entries',
-                default=False,
-                help='If True, when a DNS entry must be updated, it sends a '
-                     'fanout cast to all network hosts to update their DNS '
-                     'entries in multi host mode'),
-    cfg.IntOpt("dns_update_periodic_interval",
-               default=-1,
-               help='Number of seconds to wait between runs of updates to DNS '
-                    'entries.'),
-    cfg.StrOpt('dhcp_domain',
-               default='novalocal',
-               help='Domain to use for building the hostnames'),
-    cfg.StrOpt('l3_lib',
-               default='nova.network.l3.LinuxNetL3',
-               help="Indicates underlying L3 management library"),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(network_opts)
-CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('network_topic', 'nova.network.rpcapi')
-CONF.import_opt('fake_network', 'nova.network.linux_net')
-CONF.import_opt('share_dhcp_address', 'nova.objects.network')
-CONF.import_opt('network_device_mtu', 'nova.objects.network')
+CONF = nova.conf.CONF
 
 
 class RPCAllocateFixedIP(object):
@@ -249,7 +167,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.15')
+    target = messaging.Target(version='1.16')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -474,9 +392,8 @@ class NetworkManager(manager.Manager):
         if (requested_networks and
                 not isinstance(requested_networks,
                                objects.NetworkRequestList)):
-            requested_networks = objects.NetworkRequestList(
-                objects=[objects.NetworkRequest.from_tuple(t)
-                         for t in requested_networks])
+            requested_networks = objects.NetworkRequestList.from_tuples(
+                requested_networks)
         vpn = kwargs['vpn']
         macs = kwargs['macs']
         admin_context = context.elevated()
@@ -606,12 +523,12 @@ class NetworkManager(manager.Manager):
         for fixed_ip in fixed_ips:
             vif = fixed_ip.virtual_interface
             if not vif:
-                LOG.warn(_LW('No VirtualInterface for FixedIP: %s'),
+                LOG.warning(_LW('No VirtualInterface for FixedIP: %s'),
                          str(fixed_ip.address), instance_uuid=instance_uuid)
                 continue
 
             if not fixed_ip.network:
-                LOG.warn(_LW('No Network for FixedIP: %s'),
+                LOG.warning(_LW('No Network for FixedIP: %s'),
                          str(fixed_ip.address), instance_uuid=instance_uuid)
                 continue
 
@@ -1236,7 +1153,7 @@ class NetworkManager(manager.Manager):
                     oversize_msg = _LW(
                         'Subnet(s) too large, defaulting to /%s.'
                         '  To override, specify network_size flag.') % subnet
-                    LOG.warn(oversize_msg)
+                    LOG.warning(oversize_msg)
                     kwargs["network_size"] = CONF.network_size
                 else:
                     kwargs["network_size"] = fixnet.size
@@ -1281,9 +1198,9 @@ class NetworkManager(manager.Manager):
         used_subnets = [net.cidr for net in nets]
 
         def find_next(subnet):
-            next_subnet = next(subnet)
+            next_subnet = subnet.next()
             while next_subnet in subnets_v4:
-                next_subnet = next(next_subnet)
+                next_subnet = next_subnet.next()
             if next_subnet in fixed_net_v4:
                 return next_subnet
 
@@ -1505,7 +1422,7 @@ class NetworkManager(manager.Manager):
         """Calls allocate_fixed_ip once for each network."""
         raise NotImplementedError()
 
-    def setup_networks_on_host(self, context, instance_id, host,
+    def setup_networks_on_host(self, context, instance_id, host, instance=None,
                                teardown=False):
         """calls setup/teardown on network hosts for an instance."""
         green_threads = []
@@ -1514,8 +1431,8 @@ class NetworkManager(manager.Manager):
             call_func = self._teardown_network_on_host
         else:
             call_func = self._setup_network_on_host
-
-        instance = objects.Instance.get_by_id(context, instance_id)
+        if instance is None:
+            instance = objects.Instance.get_by_id(context, instance_id)
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(
                 context, instance.uuid)
         LOG.debug('Setup networks on host', instance=instance)

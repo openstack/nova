@@ -16,6 +16,7 @@ from nova import db
 from nova.objects import instance
 from nova.objects import security_group
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 fake_secgroup = {
@@ -148,10 +149,10 @@ class _TestSecurityGroupListObject(object):
 
     def test_get_by_instance(self):
         inst = instance.Instance()
-        inst.uuid = 'fake-inst-uuid'
+        inst.uuid = uuids.instance
         self.mox.StubOutWithMock(db, 'security_group_get_by_instance')
         db.security_group_get_by_instance(self.context,
-                                          'fake-inst-uuid').AndReturn(
+                                          uuids.instance).AndReturn(
                                               fake_secgroups)
         self.mox.ReplayAll()
         secgroup_list = security_group.SecurityGroupList.get_by_instance(

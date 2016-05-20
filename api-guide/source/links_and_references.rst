@@ -72,8 +72,8 @@ following types of link relations are associated with resources:
    resource. For example, an OpenStack Compute image might have an
    alternate representation in the OpenStack Image service.
 
-.. note:: The type attribute provides a hint as to the type of representation
-   to expect when following the link.
+.. note:: The ``type`` attribute provides a hint as to the type of
+   representation to expect when following the link.
 
 **Example: Server with self links: JSON**
 

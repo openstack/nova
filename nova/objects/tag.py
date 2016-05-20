@@ -15,6 +15,8 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+MAX_TAG_LENGTH = 60
+
 
 @base.NovaObjectRegistry.register
 class Tag(base.NovaObject):

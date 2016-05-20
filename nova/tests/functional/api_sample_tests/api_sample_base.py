@@ -14,17 +14,17 @@
 
 import os
 
-from oslo_config import cfg
 import testscenarios
 
 from nova.api.openstack import API_V21_CORE_EXTENSIONS  # noqa
+import nova.conf
 from nova import test
 from nova.tests.functional import api_paste_fixture
 from nova.tests.functional import api_samples_test_base
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_utils
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 
 # API samples heavily uses testscenarios. This allows us to use the
 # same tests, with slight variations in configuration to ensure our
@@ -34,14 +34,11 @@ CONF = cfg.CONF
 # the scenario (should be unique), and the second item is a dictionary
 # of attributes to change in the class for the test.
 #
-# By default we're running scenarios for 3 situations
+# By default we're running scenarios for 2 situations
 #
-# - Hitting the default /v2 endpoint
+# - Hitting the default /v2 endpoint with the v2.1 Compatibility stack
 #
 # - Hitting the default /v2.1 endpoint
-#
-# - Hitting the /v2 but fixing the paste pipeline so that it uses the
-#   legacy v2 code. This requires a fixture.
 #
 # Things we need to set:
 #
@@ -51,14 +48,11 @@ CONF = cfg.CONF
 #
 # - _additional_fixtures - any additional fixtures need
 #
-# - _legacy_v2_code - True/False if we are using the legacy v2 code
-#   stack. Sadly, a few tests really care about this.
-#
 # NOTE(sdague): if you want to build a test that only tests specific
 # microversions, then replace the ``scenarios`` class variable in that
 # test class with something like:
 #
-# [("v2_11", {'api_major_version': 'v2.1', 'microversion', '2.11'})]
+# [("v2_11", {'api_major_version': 'v2.1', 'microversion': '2.11'})]
 
 
 class ApiSampleTestBaseV21(testscenarios.WithScenarios,
@@ -68,7 +62,7 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     _additional_fixtures = []
     sample_dir = None
     extra_extensions_to_load = None
-    _legacy_v2_code = False
+    _project_id = True
 
     scenarios = [
         # test v2 with the v2.1 compatibility stack
@@ -77,12 +71,12 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         # test v2.1 base microversion
         ('v2_1', {
             'api_major_version': 'v2.1'}),
-        # test v2 with the v2 legacy code
-        ('v2legacy', {
-            'api_major_version': 'v2',
-            '_legacy_v2_code': True,
+        # test v2.18 code without project id
+        ('v2_1_noproject_id', {
+            'api_major_version': 'v2.1',
+            '_project_id': False,
             '_additional_fixtures': [
-                api_paste_fixture.ApiPasteLegacyV2Fixture]})
+                api_paste_fixture.ApiPasteNoProjectId]})
     ]
 
     def setUp(self):

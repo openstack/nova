@@ -19,11 +19,11 @@
 import sys
 import traceback
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
 from nova.conductor import rpcapi as conductor_rpcapi
+import nova.conf
 from nova import config
 import nova.db.api
 from nova import exception
@@ -34,9 +34,7 @@ from nova import service
 from nova import utils
 from nova import version
 
-CONF = cfg.CONF
-CONF.import_opt('network_topic', 'nova.network.rpcapi')
-CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
+CONF = nova.conf.CONF
 LOG = logging.getLogger('nova.network')
 
 
@@ -70,6 +68,8 @@ def main():
         LOG.warning(_LW('Conductor local mode is deprecated and will '
                         'be removed in a subsequent release'))
 
+    LOG.warning(_LW('Nova network is deprecated and will be removed '
+                    'in the future'))
     server = service.Service.create(binary='nova-network',
                                     topic=CONF.network_topic,
                                     db_allowed=CONF.conductor.use_local)

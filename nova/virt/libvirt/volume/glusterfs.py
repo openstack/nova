@@ -10,31 +10,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
+import nova.conf
 from nova.i18n import _LE, _LW
-from nova import paths
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
 
-CONF = cfg.CONF
-CONF.import_opt('qemu_allowed_storage_drivers',
-                'nova.virt.libvirt.volume.volume',
-                group='libvirt')
-
-volume_opts = [
-    cfg.StrOpt('glusterfs_mount_point_base',
-               default=paths.state_path_def('mnt'),
-               help='Directory where the glusterfs volume is mounted on the '
-                    'compute node'),
-    ]
-
-CONF.register_opts(volume_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
@@ -118,6 +105,6 @@ class LibvirtGlusterfsVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             utils.execute(*gluster_cmd, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if ensure and 'already mounted' in six.text_type(exc):
-                LOG.warn(_LW("%s is already mounted"), glusterfs_share)
+                LOG.warning(_LW("%s is already mounted"), glusterfs_share)
             else:
                 raise

@@ -51,17 +51,14 @@ This module provides Manager, a base class for managers.
 
 """
 
-from oslo_config import cfg
-from oslo_log import log as logging
 from oslo_service import periodic_task
 
+import nova.conf
 from nova.db import base
 from nova import rpc
 
 
-CONF = cfg.CONF
-CONF.import_opt('host', 'nova.netconf')
-LOG = logging.getLogger(__name__)
+CONF = nova.conf.CONF
 
 
 class PeriodicTasks(periodic_task.PeriodicTasks):

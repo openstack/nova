@@ -29,6 +29,7 @@ if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
 
 from nova import config
 from nova import context
+import nova.conf
 from nova import db
 from nova import exception
 from oslo_utils import timeutils
@@ -45,11 +46,10 @@ cleaner_opts = [
 cli_opt = cfg.StrOpt('command',
                      help='Cleaner command')
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.register_opts(cleaner_opts)
 CONF.register_cli_opt(cli_opt)
 CONF.import_opt('verbose', 'nova.openstack.common.log')
-CONF.import_opt("resize_confirm_window", "nova.compute.manager")
 
 
 ALLOWED_COMMANDS = ["list-vdis", "clean-vdis", "list-instances",

@@ -19,26 +19,17 @@ import os
 import tempfile
 
 from oslo_concurrency import processutils
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six
 
+import nova.conf
 from nova.i18n import _LE, _LW
 from nova import utils
 
 LOG = logging.getLogger(__name__)
 
-libvirt_opts = [
-    cfg.StrOpt('remote_filesystem_transport',
-               default='ssh',
-               choices=('ssh', 'rsync'),
-               help='Use ssh or rsync transport for creating, copying, '
-                    'removing files on the remote host.'),
-    ]
-
-CONF = cfg.CONF
-CONF.register_opts(libvirt_opts, 'libvirt')
+CONF = nova.conf.CONF
 
 
 def mount_share(mount_path, export_path,
@@ -61,7 +52,7 @@ def mount_share(mount_path, export_path,
         utils.execute(*mount_cmd, run_as_root=True)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
-            LOG.warn(_LW("%s is already mounted"), export_path)
+            LOG.warning(_LW("%s is already mounted"), export_path)
         else:
             raise
 
@@ -189,20 +180,20 @@ class RemoteFilesystemDriver(object):
 class SshDriver(RemoteFilesystemDriver):
 
     def create_file(self, host, dst_path, on_execute, on_completion):
-        utils.execute('ssh', host, 'touch', dst_path,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'touch', dst_path,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def remove_file(self, host, dst, on_execute, on_completion):
-        utils.execute('ssh', host, 'rm', dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'rm', dst,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def create_dir(self, host, dst_path, on_execute, on_completion):
-        utils.execute('ssh', host, 'mkdir', '-p', dst_path,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'mkdir', '-p', dst_path,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def remove_dir(self, host, dst, on_execute, on_completion):
-        utils.execute('ssh', host, 'rm', '-rf', dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'rm', '-rf', dst,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
         utils.execute('scp', src, dst,

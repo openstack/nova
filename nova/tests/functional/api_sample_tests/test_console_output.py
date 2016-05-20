@@ -13,13 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
+import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 
-CONF = cfg.CONF
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
+CONF = nova.conf.CONF
 
 
 class ConsoleOutputSampleJsonTest(test_servers.ServersSampleBase):
@@ -37,5 +34,4 @@ class ConsoleOutputSampleJsonTest(test_servers.ServersSampleBase):
         uuid = self._post_server()
         response = self._do_post('servers/%s/action' % uuid,
                                  'console-output-post-req', {})
-        subs = self._get_regexes()
-        self._verify_response('console-output-post-resp', subs, response, 200)
+        self._verify_response('console-output-post-resp', {}, response, 200)

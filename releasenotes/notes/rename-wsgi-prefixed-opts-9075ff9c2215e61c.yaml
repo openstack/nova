@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The 'wsgi_default_pool_size' and 'wsgi_keep_alive' options have been
+    renamed to 'default_pool_size' and 'keep_alive' respectively.

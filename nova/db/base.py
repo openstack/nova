@@ -16,15 +16,12 @@
 
 """Base class for classes that need modular database access."""
 
-from oslo_config import cfg
 from oslo_utils import importutils
 
-db_driver_opt = cfg.StrOpt('db_driver',
-                           default='nova.db',
-                           help='The driver to use for database access')
+import nova.conf
 
-CONF = cfg.CONF
-CONF.register_opt(db_driver_opt)
+
+CONF = nova.conf.CONF
 
 
 class Base(object):

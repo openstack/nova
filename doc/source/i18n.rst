@@ -22,7 +22,7 @@ For example::
 
 or::
 
-    LOG.warn(_LW('Unknown base file %(img)s'), {'img': img})
+    LOG.warning(_LW('Unknown base file %(img)s'), {'img': img})
 
 You should use the basic wrapper ``_()`` for strings which are not log
 messages::

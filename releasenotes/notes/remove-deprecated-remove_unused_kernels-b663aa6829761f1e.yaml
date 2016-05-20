@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The deprecated config option ``remove_unused_kernels`` has been removed from the
+    ``[libvirt]`` config section. No replacement is required, as this behaviour
+    is no longer relevant.

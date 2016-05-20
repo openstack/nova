@@ -14,18 +14,13 @@
 
 import uuid as uuid_lib
 
-from oslo_config import cfg
-
-from nova.cloudpipe import pipelib
-from nova.network import api as network_api
+import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
 
 
-CONF = cfg.CONF
+CONF = nova.conf.CONF
 CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
-CONF.import_opt('osapi_compute_extension',
-                'nova.api.openstack.compute.legacy_v2.extensions')
 
 
 class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
@@ -53,9 +48,10 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
             return {'vpn_public_address': '127.0.0.1',
                     'vpn_public_port': 22}
 
-        self.stubs.Set(pipelib.CloudPipe, 'get_encoded_zip', get_user_data)
-        self.stubs.Set(network_api.API, "get",
-                       network_api_get)
+        self.stub_out('nova.cloudpipe.pipelib.CloudPipe.get_encoded_zip',
+                      get_user_data)
+        self.stub_out('nova.network.api.API.get',
+                      network_api_get)
 
     def generalize_subs(self, subs, vanilla_regexes):
         subs['project_id'] = '[0-9a-f-]+'
@@ -64,27 +60,23 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
     def test_cloud_pipe_create(self):
         # Get api samples of cloud pipe extension creation.
         self.flags(vpn_image_id=fake.get_valid_image_id())
-        project = {'project_id': str(uuid_lib.uuid4().hex)}
+        subs = {'project_id': str(uuid_lib.uuid4().hex)}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
-                                 project)
-        subs = self._get_regexes()
-        subs.update(project)
+                                 subs)
         subs['image_id'] = CONF.vpn_image_id
         self._verify_response('cloud-pipe-create-resp', subs, response, 200)
-        return project
+        return subs
 
     def test_cloud_pipe_list(self):
         # Get api samples of cloud pipe extension get request.
-        project = self.test_cloud_pipe_create()
+        subs = self.test_cloud_pipe_create()
         response = self._do_get('os-cloudpipe')
-        subs = self._get_regexes()
-        subs.update(project)
         subs['image_id'] = CONF.vpn_image_id
         self._verify_response('cloud-pipe-get-resp', subs, response, 200)
 
     def test_cloud_pipe_update(self):
         subs = {'vpn_ip': '192.168.1.1',
-                'vpn_port': 2000}
+                'vpn_port': '2000'}
         response = self._do_put('os-cloudpipe/configure-project',
                                 'cloud-pipe-update-req',
                                 subs)

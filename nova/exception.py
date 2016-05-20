@@ -376,6 +376,11 @@ class InvalidGlobalAPIVersion(Invalid):
                 "is %(min_ver)s and maximum is %(max_ver)s.")
 
 
+class ApiVersionsIntersect(Invalid):
+    msg_fmt = _("Version of %(name) %(min_ver) %(max_ver) intersects "
+                "with another versions.")
+
+
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
@@ -418,6 +423,11 @@ class InvalidSortKey(Invalid):
 
 class InvalidStrTime(Invalid):
     msg_fmt = _("Invalid datetime string: %(reason)s")
+
+
+class InvalidName(Invalid):
+    msg_fmt = _("An invalid 'name' value was provided. "
+                "The name must be: %(reason)s")
 
 
 class InstanceInvalidState(Invalid):
@@ -635,6 +645,11 @@ class VolumeBDMNotFound(NotFound):
     msg_fmt = _("No volume Block Device Mapping with id %(volume_id)s.")
 
 
+class VolumeBDMIsMultiAttach(Invalid):
+    msg_fmt = _("Block Device Mapping %(volume_id)s is a multi-attach volume"
+                " and is not valid for this operation.")
+
+
 class VolumeBDMPathNotFound(VolumeBDMNotFound):
     msg_fmt = _("No volume Block Device Mapping at path: %(path)s")
 
@@ -822,6 +837,10 @@ class VifDetailsMissingMacvtapParameters(Invalid):
                 " correct.")
 
 
+class OvsConfigurationFailure(NovaException):
+    msg_fmt = _("OVS configuration failed with: %(inner_exception)s.")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
@@ -836,6 +855,12 @@ class PortRequiresFixedIP(Invalid):
 
 class PortNotUsable(Invalid):
     msg_fmt = _("Port %(port_id)s not usable for instance %(instance)s.")
+
+
+class PortNotUsableDNS(Invalid):
+    msg_fmt = _("Port %(port_id)s not usable for instance %(instance)s. "
+                "Value %(value)s assigned to dns_name attribute does not "
+                "match instance's hostname %(hostname)s")
 
 
 class PortNotFree(Invalid):
@@ -1108,6 +1133,10 @@ class NoUniqueMatch(NovaException):
     code = 409
 
 
+class NoActiveMigrationForInstance(NotFound):
+    msg_fmt = _("Active live migration for instance %(instance_id)s not found")
+
+
 class MigrationNotFound(NotFound):
     msg_fmt = _("Migration %(migration_id)s could not be found.")
 
@@ -1115,6 +1144,17 @@ class MigrationNotFound(NotFound):
 class MigrationNotFoundByStatus(MigrationNotFound):
     msg_fmt = _("Migration not found for instance %(instance_id)s "
                 "with status %(status)s.")
+
+
+class MigrationNotFoundForInstance(MigrationNotFound):
+    msg_fmt = _("Migration %(migration_id)s not found for instance "
+                "%(instance_id)s")
+
+
+class InvalidMigrationState(Invalid):
+    msg_fmt = _("Migration %(migration_id)s state of instance "
+                "%(instance_uuid)s is %(state)s. Cannot %(method)s while the "
+                "migration is in this state.")
 
 
 class ConsoleLogOutputException(NovaException):
@@ -1144,6 +1184,10 @@ class ConsoleNotFound(NotFound):
 
 class ConsoleNotFoundForInstance(ConsoleNotFound):
     msg_fmt = _("Console for instance %(instance_uuid)s could not be found.")
+
+
+class ConsoleNotAvailable(NotFound):
+    msg_fmt = _("Guest does not have a console available.")
 
 
 class ConsoleNotFoundInPoolForInstance(ConsoleNotFound):
@@ -1178,7 +1222,7 @@ class FlavorAccessNotFound(NotFound):
 
 
 class FlavorExtraSpecUpdateCreateFailed(NovaException):
-    msg_fmt = _("Flavor %(id)d extra spec cannot be updated or created "
+    msg_fmt = _("Flavor %(id)s extra spec cannot be updated or created "
                 "after %(retries)d retries.")
 
 
@@ -1297,6 +1341,14 @@ class MigrationError(NovaException):
 
 class MigrationPreCheckError(MigrationError):
     msg_fmt = _("Migration pre-check error: %(reason)s")
+
+
+class MigrationPreCheckClientException(MigrationError):
+    msg_fmt = _("Client exception during Migration Pre check: %(reason)s")
+
+
+class MigrationSchedulerRPCError(MigrationError):
+    msg_fmt = _("Migration select destinations error: %(reason)s")
 
 
 class MalformedRequestBody(NovaException):
@@ -1440,10 +1492,6 @@ class AggregateHostExists(NovaException):
     msg_fmt = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 
 
-class FlavorCreateFailed(NovaException):
-    msg_fmt = _("Unable to create flavor")
-
-
 class InstancePasswordSetFailed(NovaException):
     msg_fmt = _("Failed to set admin password on %(instance)s "
                 "because %(reason)s")
@@ -1527,6 +1575,11 @@ class InterfaceAttachFailed(Invalid):
                 "%(instance_uuid)s")
 
 
+class InterfaceAttachFailedNoNetwork(InterfaceAttachFailed):
+    msg_fmt = _("No specific network was requested and none are available "
+                "for project '%(project_id)s'.")
+
+
 class InterfaceDetachFailed(Invalid):
     msg_fmt = _("Failed to detach network adapter device from "
                 "%(instance_uuid)s")
@@ -1579,11 +1632,6 @@ class CryptoCRLFileNotFound(FileNotFound):
 
 class InstanceRecreateNotSupported(Invalid):
     msg_fmt = _('Instance recreate is not supported.')
-
-
-class ServiceGroupUnavailable(NovaException):
-    msg_fmt = _("The service from servicegroup driver %(driver)s is "
-                "temporarily unavailable.")
 
 
 class DBNotAllowed(NovaException):
@@ -1731,6 +1779,19 @@ class PciDeviceInvalidStatus(Invalid):
         "instead of %(hopestatus)s")
 
 
+class PciDeviceVFInvalidStatus(Invalid):
+    msg_fmt = _(
+        "Not all Virtual Functions of PF %(compute_node_id)s:%(address)s "
+        "are free.")
+
+
+class PciDevicePFInvalidStatus(Invalid):
+    msg_fmt = _(
+        "Physical Function %(compute_node_id)s:%(address)s, related to VF"
+        " %(compute_node_id)s:%(vf_address)s is %(status)s "
+        "instead of %(hopestatus)s")
+
+
 class PciDeviceInvalidOwner(Invalid):
     msg_fmt = _(
         "PCI device %(compute_node_id)s:%(address)s is owned by %(owner)s "
@@ -1739,7 +1800,7 @@ class PciDeviceInvalidOwner(Invalid):
 
 class PciDeviceRequestFailed(NovaException):
     msg_fmt = _(
-        "PCI device request (%requests)s failed")
+        "PCI device request %(requests)s failed")
 
 
 class PciDevicePoolEmpty(NovaException):
@@ -1817,10 +1878,14 @@ class NoLiveMigrationForConfigDriveInLibVirt(NovaException):
                 "drive data is shared across compute nodes.")
 
 
-class LiveMigrationWithOldNovaNotSafe(NovaException):
-    msg_fmt = _("Host %(server)s is running an old version of Nova, "
-                "live migrations involving that version may cause data loss. "
-                "Upgrade Nova on %(server)s and try again.")
+class LiveMigrationWithOldNovaNotSupported(NovaException):
+    msg_fmt = _("Live migration with API v2.25 requires all the Mitaka "
+                "upgrade to be complete before it is available.")
+
+
+class LiveMigrationURINotAvailable(NovaException):
+    msg_fmt = _('No live migration URI configured and no default available '
+                'for "%(virt_type)s" hypervisor virtualization type.')
 
 
 class UnshelveException(NovaException):
@@ -1909,6 +1974,11 @@ class ImageSerialPortNumberExceedFlavorValue(Invalid):
                 "ports passed in image meta.")
 
 
+class SerialPortNumberLimitExceeded(Invalid):
+    msg_fmt = _("Maximum number of serial port exceeds %(allowed)d "
+                "for %(virt_type)s")
+
+
 class InvalidImageConfigDrive(Invalid):
     msg_fmt = _("Image's config drive option '%(config_drive)s' is invalid")
 
@@ -1974,6 +2044,11 @@ class ImageCPUPinningForbidden(Forbidden):
                 "CPU pinning policy set against the flavor")
 
 
+class ImageCPUThreadPolicyForbidden(Forbidden):
+    msg_fmt = _("Image property 'hw_cpu_thread_policy' is not permitted to "
+                "override CPU thread pinning policy set against the flavor")
+
+
 class UnsupportedPolicyException(Invalid):
     msg_fmt = _("ServerGroup policy is not supported: %(reason)s")
 
@@ -2015,9 +2090,56 @@ class RealtimeConfigurationInvalid(Invalid):
                 "cpu pinning policy")
 
 
+class CPUThreadPolicyConfigurationInvalid(Invalid):
+    msg_fmt = _("Cannot set cpu thread pinning policy in a non dedicated "
+                "cpu pinning policy")
+
+
 class RequestSpecNotFound(NotFound):
     msg_fmt = _("RequestSpec not found for instance %(instance_uuid)s")
 
 
-class NMINotSupported(Invalid):
-    msg_fmt = _("Injecting NMI is not supported")
+class UEFINotSupported(Invalid):
+    msg_fmt = _("UEFI is not supported")
+
+
+class TriggerCrashDumpNotSupported(Invalid):
+    msg_fmt = _("Triggering crash dump is not supported")
+
+
+class UnsupportedHostCPUControlPolicy(Invalid):
+    msg_fmt = _("Requested CPU control policy not supported by host")
+
+
+class LibguestfsCannotReadKernel(Invalid):
+    msg_fmt = _("Libguestfs does not have permission to read host kernel.")
+
+
+class RealtimePolicyNotSupported(Invalid):
+    msg_fmt = _("Realtime policy not supported by hypervisor")
+
+
+class RealtimeMaskNotFoundOrInvalid(Invalid):
+    msg_fmt = _("Realtime policy needs vCPU(s) mask configured with at least "
+                "1 RT vCPU and 1 ordinary vCPU. See hw:cpu_realtime_mask "
+                "or hw_cpu_realtime_mask")
+
+
+class OsInfoNotFound(NotFound):
+    msg_fmt = _("No configuration information found for operating system "
+                "%(os_name)s")
+
+
+class BuildRequestNotFound(NotFound):
+    msg_fmt = _("BuildRequest not found for instance %(uuid)s")
+
+
+class AttachInterfaceNotSupported(Invalid):
+    msg_fmt = _("Attaching interfaces is not supported for "
+                "instance %(instance)s.")
+
+
+class InvalidReservedMemoryPagesOption(Invalid):
+    msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
+                "(found '%(conf)s') Please refer to the nova "
+                "config-reference.")
