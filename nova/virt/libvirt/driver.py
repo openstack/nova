@@ -2836,17 +2836,18 @@ class LibvirtDriver(driver.ComputeDriver):
                 return True
         return False
 
-    def _inject_data(self, instance, network_info, admin_pass, files, suffix):
+    def _inject_data(self, injection_image, instance, network_info,
+                     admin_pass, files):
         """Injects data in a disk image
 
         Helper used for injecting data in a disk image file system.
 
         Keyword arguments:
+          injection_image -- An Image object we're injecting into
           instance -- a dict that refers instance specifications
           network_info -- a dict that refers network speficications
           admin_pass -- a string used to set an admin password
           files -- a list of files needs to be injected
-          suffix -- a string used as an image name suffix
         """
         # Handles the partition need to be used.
         target_partition = None
@@ -2874,19 +2875,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # Handles the metadata injection
         metadata = instance.get('metadata')
 
-        image_type = CONF.libvirt.images_type
         if any((key, net, metadata, admin_pass, files)):
-            injection_image = self.image_backend.image(
-                instance,
-                'disk' + suffix,
-                image_type)
             img_id = instance.image_ref
-
-            if not injection_image.check_image_exists():
-                LOG.warning(_LW('Image %s not found on disk storage. '
-                         'Continue without injecting data'),
-                         injection_image.path, instance=instance)
-                return
             try:
                 disk.inject_data(injection_image.get_model(self._conn),
                                  key, net, metadata, admin_pass, files,
@@ -2954,6 +2944,46 @@ class LibvirtDriver(driver.ComputeDriver):
 
         inst_type = instance.get_flavor()
 
+        # Config drive
+        config_drive_image = None
+        if configdrive.required_by(instance):
+            LOG.info(_LI('Using config drive'), instance=instance)
+            extra_md = {}
+            if admin_pass:
+                extra_md['admin_pass'] = admin_pass
+
+            inst_md = instance_metadata.InstanceMetadata(instance,
+                content=files, extra_md=extra_md, network_info=network_info)
+            with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
+                configdrive_path = self._get_disk_config_path(instance, suffix)
+                LOG.info(_LI('Creating config drive at %(path)s'),
+                         {'path': configdrive_path}, instance=instance)
+
+                try:
+                    cdb.make_drive(configdrive_path)
+                except processutils.ProcessExecutionError as e:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_LE('Creating config drive failed '
+                                      'with error: %s'),
+                                  e, instance=instance)
+
+            try:
+                # Tell the storage backend about the config drive
+                config_drive_image = self.image_backend.image(
+                    instance, 'disk.config' + suffix,
+                    self._get_disk_config_image_type())
+
+                config_drive_image.import_file(
+                    instance, configdrive_path, 'disk.config' + suffix)
+            finally:
+                # NOTE(mikal): if the config drive was imported into RBD, then
+                # we no longer need the local copy
+                if CONF.libvirt.images_type == 'rbd':
+                    os.unlink(configdrive_path)
+
+        need_inject = (config_drive_image is None and inject_files and
+                       CONF.libvirt.inject_partition != -2)
+
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to
         # create a base image.
@@ -2979,6 +3009,14 @@ class LibvirtDriver(driver.ComputeDriver):
             self._try_fetch_image_cache(backend, fetch_func, context,
                                         root_fname, disk_images['image_id'],
                                         instance, size, fallback_from_host)
+
+            if need_inject:
+                self._inject_data(backend, instance, network_info, admin_pass,
+                                  files)
+
+        elif need_inject:
+            LOG.warn(_LW('File injection into a boot from volume '
+                         'instance is not supported'), instance=instance)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(instance.os_type)
@@ -3043,50 +3081,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                          filename="swap_%s" % swap_mb,
                                          size=size,
                                          swap_mb=swap_mb)
-
-        # Config drive
-        if configdrive.required_by(instance):
-            LOG.info(_LI('Using config drive'), instance=instance)
-            extra_md = {}
-            if admin_pass:
-                extra_md['admin_pass'] = admin_pass
-
-            inst_md = instance_metadata.InstanceMetadata(instance,
-                content=files, extra_md=extra_md, network_info=network_info)
-            with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
-                configdrive_path = self._get_disk_config_path(instance, suffix)
-                LOG.info(_LI('Creating config drive at %(path)s'),
-                         {'path': configdrive_path}, instance=instance)
-
-                try:
-                    cdb.make_drive(configdrive_path)
-                except processutils.ProcessExecutionError as e:
-                    with excutils.save_and_reraise_exception():
-                        LOG.error(_LE('Creating config drive failed '
-                                      'with error: %s'),
-                                  e, instance=instance)
-
-            try:
-                # Tell the storage backend about the config drive
-                config_drive_image = self.image_backend.image(
-                    instance, 'disk.config' + suffix,
-                    self._get_disk_config_image_type())
-
-                config_drive_image.import_file(
-                    instance, configdrive_path, 'disk.config' + suffix)
-            finally:
-                # NOTE(mikal): if the config drive was imported into RBD, then
-                # we no longer need the local copy
-                if CONF.libvirt.images_type == 'rbd':
-                    os.unlink(configdrive_path)
-
-        # File injection only if needed
-        elif inject_files and CONF.libvirt.inject_partition != -2:
-            if booted_from_volume:
-                LOG.warning(_LW('File injection into a boot from volume '
-                             'instance is not supported'), instance=instance)
-            self._inject_data(
-                instance, network_info, admin_pass, files, suffix)
 
         if CONF.libvirt.virt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
