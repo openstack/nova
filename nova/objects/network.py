@@ -105,8 +105,6 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject,
             db_value = db_network[field]
             if field is 'netmask_v6' and db_value is not None:
                 db_value = network._convert_legacy_ipv6_netmask(db_value)
-            if field is 'mtu' and db_value is None:
-                db_value = CONF.network_device_mtu
             if field is 'dhcp_server' and db_value is None:
                 db_value = db_network['gateway']
             if field is 'share_address' and CONF.share_dhcp_address:

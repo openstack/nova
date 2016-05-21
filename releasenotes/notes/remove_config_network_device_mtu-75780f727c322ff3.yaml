@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The network_device_mtu option in Nova is deprecated for removal
+    in 13.0.0 since network MTU should be specified when creating
+    the network.
