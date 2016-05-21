@@ -81,7 +81,7 @@ from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 from nova import utils
 from nova.virt import hardware
-from nova import volume
+from nova.volume import cinder
 
 LOG = logging.getLogger(__name__)
 
@@ -197,7 +197,7 @@ class API(base.Base):
                  security_group_api=None, **kwargs):
         self.image_api = image_api or image.API()
         self.network_api = network_api or network.API()
-        self.volume_api = volume_api or volume.API()
+        self.volume_api = volume_api or cinder.API()
         self.security_group_api = (security_group_api or
             openstack_driver.get_openstack_security_group_driver())
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
