@@ -48,7 +48,7 @@ class TestServerGet(test.TestCase):
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
-        self.start_service('conductor', manager=CONF.conductor.manager)
+        self.start_service('conductor')
         self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         self.network = self.start_service('network')

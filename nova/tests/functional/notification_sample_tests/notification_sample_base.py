@@ -74,7 +74,7 @@ class NotificationSampleTestBase(test.TestCase,
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
-        self.start_service('conductor', manager=CONF.conductor.manager)
+        self.start_service('conductor')
         self.start_service('scheduler')
         self.start_service('network')
         self.compute = self.start_service('compute')

@@ -17,11 +17,11 @@
 """Tests For Console proxy."""
 
 import mock
-from oslo_utils import importutils
 
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova.console import api as console_api
+from nova.console import manager as console_manager
 from nova import context
 from nova import db
 from nova import exception
@@ -37,7 +37,7 @@ class ConsoleTestCase(test.TestCase):
     def setUp(self):
         super(ConsoleTestCase, self).setUp()
         self.flags(console_driver='nova.console.fake.FakeConsoleProxy')
-        self.console = importutils.import_object(CONF.console_manager)
+        self.console = console_manager.ConsoleProxyManager()
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)

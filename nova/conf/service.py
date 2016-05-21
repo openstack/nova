@@ -125,11 +125,6 @@ Possible Values:
 * Any positive integer
 * None (default value)
 """),
-    cfg.StrOpt('metadata_manager',
-               default='nova.api.manager.MetadataManager',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help="Full class name for the service metadata manager."),
     cfg.StrOpt('metadata_listen',
                default="0.0.0.0",
                help="""
@@ -169,21 +164,6 @@ Possible Values:
                deprecated_for_removal=True,
                deprecated_since='13.0.0',
                help='Full class name for the Manager for compute'),
-    cfg.StrOpt('console_manager',
-               default='nova.console.manager.ConsoleProxyManager',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help='Full class name for the Manager for console proxy'),
-    cfg.StrOpt('consoleauth_manager',
-               default='nova.consoleauth.manager.ConsoleAuthManager',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help='Full class name for the Manager for console auth'),
-    cfg.StrOpt('cert_manager',
-               default='nova.cert.manager.CertManager',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help='Full class name for the Manager for cert'),
     # NOTE(sdague): the network_manager has a bunch of different in
     # tree classes that are still legit options. In Newton we should
     # turn this into a selector.
@@ -195,11 +175,6 @@ Possible Values:
                ],
                default='nova.network.manager.VlanManager',
                help='Full class name for the Manager for network'),
-    cfg.StrOpt('scheduler_manager',
-               default='nova.scheduler.manager.SchedulerManager',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help='Full class name for the Manager for scheduler'),
     ]
 
 

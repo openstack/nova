@@ -1,0 +1,14 @@
+---
+upgrade:
+  - |
+    The concept that ``service manager`` were replaceable
+    components was deprecated in Mitaka, so following config
+    options are removed.
+
+    - ``metadata_manager``
+    - ``console_manager``
+    - ``consoleauth_manager``
+    - ``cert_manager``
+    - ``scheduler_manager``
+    - ``conductor.manager``
+

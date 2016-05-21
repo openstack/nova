@@ -82,7 +82,7 @@ class ServerGroupTestBase(test.TestCase,
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
-        self.start_service('conductor', manager=CONF.conductor.manager)
+        self.start_service('conductor')
         self.start_service('scheduler')
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)

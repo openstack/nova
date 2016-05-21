@@ -30,8 +30,7 @@ class ComputeManagerTestCase(test.TestCase):
         super(ComputeManagerTestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
-        self.conductor = self.start_service('conductor',
-                                            manager=CONF.conductor.manager)
+        self.conductor = self.start_service('conductor')
         self.start_service('scheduler')
         self.compute = self.start_service('compute')
         self.context = context.RequestContext('fake', 'fake')

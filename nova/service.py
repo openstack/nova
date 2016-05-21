@@ -47,6 +47,16 @@ LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
+SERVICE_MANAGERS = {
+    'nova-console': 'nova.console.manager.ConsoleProxyManager',
+    'nova-consoleauth': 'nova.consoleauth.manager.ConsoleAuthManager',
+    'nova-cert': 'nova.cert.manager.CertManager',
+    'nova-conductor': 'nova.conductor.manager.ConductorManager',
+    'nova-metadata': 'nova.api.manager.MetadataManager',
+    'nova-scheduler': 'nova.scheduler.manager.SchedulerManager',
+    'nova-cells': 'nova.cells.manager.CellsManager',
+}
+
 
 def _create_service_ref(this_service, context):
     service = objects.Service(context)
@@ -197,9 +207,11 @@ class Service(service.Service):
         if not topic:
             topic = binary.rpartition('nova-')[2]
         if not manager:
-            manager_cls = ('%s_manager' %
-                           binary.rpartition('nova-')[2])
-            manager = CONF.get(manager_cls, None)
+            manager = SERVICE_MANAGERS.get(binary)
+            if manager is None:
+                manager_cls = ('%s_manager' %
+                               binary.rpartition('nova-')[2])
+                manager = CONF.get(manager_cls, None)
         if report_interval is None:
             report_interval = CONF.report_interval
         if periodic_enable is None:
@@ -330,15 +342,11 @@ class WSGIService(service.Service):
         :returns: a Manager instance, or None.
 
         """
-        fl = '%s_manager' % self.name
-        if fl not in CONF:
+        manager = SERVICE_MANAGERS.get(self.binary)
+        if manager is None:
             return None
 
-        manager_class_name = CONF.get(fl, None)
-        if not manager_class_name:
-            return None
-
-        manager_class = importutils.import_class(manager_class_name)
+        manager_class = importutils.import_class(manager)
         return manager_class()
 
     def start(self):
