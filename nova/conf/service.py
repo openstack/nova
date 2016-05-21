@@ -157,13 +157,6 @@ Possible Values:
 * Any positive integer
 * None (default value)
 """),
-    # NOTE(sdague): Ironic is still using this facility for their HA
-    # manager. Ensure they are sorted before removing this.
-    cfg.StrOpt('compute_manager',
-               default='nova.compute.manager.ComputeManager',
-               deprecated_for_removal=True,
-               deprecated_since='13.0.0',
-               help='Full class name for the Manager for compute'),
     # NOTE(sdague): the network_manager has a bunch of different in
     # tree classes that are still legit options. In Newton we should
     # turn this into a selector.

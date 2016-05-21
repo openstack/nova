@@ -14,8 +14,7 @@
 #    under the License.
 """Tests for compute service with multiple compute nodes."""
 
-from oslo_utils import importutils
-
+from nova.compute import manager
 import nova.conf
 from nova import context
 from nova import objects
@@ -65,7 +64,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
     def setUp(self):
         super(MultiNodeComputeTestCase, self).setUp()
         self.flags(compute_driver='fake.FakeDriver')
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
 
         def fake_get_compute_nodes_in_db(context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,

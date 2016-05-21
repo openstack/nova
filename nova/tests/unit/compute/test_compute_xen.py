@@ -13,8 +13,8 @@
 """Tests for expectations of behaviour from the Xen driver."""
 
 import mock
-from oslo_utils import importutils
 
+from nova.compute import manager
 from nova.compute import power_state
 import nova.conf
 from nova import context
@@ -37,7 +37,7 @@ class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
                    group='xenserver')
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         # execute power syncing synchronously for testing:
         self.compute._sync_power_pool = eventlet_utils.SyncPool()
 

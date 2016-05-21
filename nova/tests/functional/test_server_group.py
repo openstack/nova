@@ -111,7 +111,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
     def setUp(self):
         super(ServerGroupTestV21, self).setUp()
 
-        self.start_service('network')
+        self.start_service('network', manager=CONF.network_manager)
         self.compute = self.start_service('compute')
 
         # NOTE(gibi): start a second compute host to be able to test affinity

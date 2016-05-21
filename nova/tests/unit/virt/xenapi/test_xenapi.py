@@ -34,6 +34,7 @@ import six
 import testtools
 
 from nova.compute import api as compute_api
+from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -2978,7 +2979,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self.api = compute_api.AggregateAPI()
         values = {'name': 'test_aggr',
                   'metadata': {'availability_zone': 'test_zone',

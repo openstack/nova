@@ -47,7 +47,6 @@ from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import fileutils
 from oslo_utils import fixture as utils_fixture
-from oslo_utils import importutils
 from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
@@ -7551,7 +7550,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
     def test_live_migration_update_graphics_xml(self):
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
                               'power_state': power_state.RUNNING,
@@ -7607,7 +7606,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           False, migrate_data, guest, [])
 
     def test_live_migration_update_volume_xml(self):
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
                               'power_state': power_state.RUNNING,
@@ -7661,7 +7660,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 guest, migrate_data, mock.ANY)
 
     def test_live_migration_with_valid_target_connect_addr(self):
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
                               'power_state': power_state.RUNNING,
@@ -7931,7 +7930,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
     def test_live_migration_update_serial_console_xml(self, mock_xml,
                                                       mock_migrate, mock_get):
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         instance_ref = self.test_instance
 
         xml_tmpl = ("<domain type='kvm'>"
@@ -7976,7 +7975,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 dxml=target_xml, flags=mock.ANY, bandwidth=bandwidth)
 
     def test_live_migration_fails_without_serial_console_address(self):
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self.flags(enabled=True, group='serial_console')
         self.flags(proxyclient_address='', group='serial_console')
         instance_dict = dict(self.test_instance)
@@ -8081,7 +8080,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.
         # Preparing data
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         instance_dict = dict(self.test_instance)
         instance_dict.update({'host': 'fake',
                               'power_state': power_state.RUNNING,

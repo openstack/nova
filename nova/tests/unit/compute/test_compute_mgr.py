@@ -22,7 +22,6 @@ import mock
 import netaddr
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
-from oslo_utils import importutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
@@ -73,7 +72,7 @@ CONF = nova.conf.CONF
 class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerUnitTestCase, self).setUp()
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
 
@@ -3325,7 +3324,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerBuildInstanceTestCase, self).setUp()
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
         self.instance = fake_instance.fake_instance_obj(self.context,
@@ -3394,7 +3393,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_and_run_instance_with_unlimited_max_concurrent_builds(self):
         self.flags(max_concurrent_builds=0)
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self._test_build_and_run_instance()
 
     @mock.patch.object(objects.InstanceActionEvent,
@@ -4563,7 +4562,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerMigrationTestCase, self).setUp()
-        self.compute = importutils.import_object(CONF.compute_manager)
+        self.compute = manager.ComputeManager()
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
         self.image = {}
@@ -5293,7 +5292,7 @@ class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def test_deleted_instance(self, mock_task_log):
         mock_task_log.get.return_value = None
 
-        compute = importutils.import_object(CONF.compute_manager)
+        compute = manager.ComputeManager()
         admin_context = context.get_admin_context()
 
         fake_db_flavor = fake_flavor.fake_db_flavor()

@@ -76,7 +76,7 @@ class NotificationSampleTestBase(test.TestCase,
 
         self.start_service('conductor')
         self.start_service('scheduler')
-        self.start_service('network')
+        self.start_service('network', manager=CONF.network_manager)
         self.compute = self.start_service('compute')
 
     def _get_notification_sample(self, sample):

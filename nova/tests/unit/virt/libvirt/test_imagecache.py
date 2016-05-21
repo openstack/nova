@@ -23,9 +23,9 @@ from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_log import formatters
 from oslo_log import log as logging
-from oslo_utils import importutils
 from six.moves import cStringIO
 
+from nova.compute import manager as compute_manager
 import nova.conf
 from nova import context
 from nova import objects
@@ -716,7 +716,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.flags(instances_path=tmpdir)
             ctxt = context.get_admin_context()
             mock_instance_list.return_value = fake_instances(ctxt)
-            compute = importutils.import_object(CONF.compute_manager)
+            compute = compute_manager.ComputeManager()
             compute._run_image_cache_manager_pass(ctxt)
             filters = {
                 'host': ['fake-mini'],
