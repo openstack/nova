@@ -66,20 +66,6 @@ FAKE_VIRT_STATS_JSON = jsonutils.dumps(FAKE_VIRT_STATS)
 CONF = cfg.CONF
 
 
-class UnsupportedVirtDriver(driver.ComputeDriver):
-    """Pretend version of a lame virt driver."""
-
-    def __init__(self):
-        super(UnsupportedVirtDriver, self).__init__(None)
-
-    def get_host_ip_addr(self):
-        return '127.0.0.1'
-
-    def get_available_resource(self, nodename):
-        # no support for getting resource usage info
-        return {}
-
-
 class FakeVirtDriver(driver.ComputeDriver):
 
     def __init__(self, pci_support=False, stats=None,
@@ -439,69 +425,6 @@ class BaseTestCase(test.TestCase):
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
         return tracker
-
-
-class UnsupportedDriverTestCase(BaseTestCase):
-    """Resource tracking should be disabled when the virt driver doesn't
-    support it.
-    """
-    def setUp(self):
-        super(UnsupportedDriverTestCase, self).setUp()
-        self.tracker = self._tracker()
-        # seed tracker with data:
-        self.tracker.update_available_resource(self.context)
-
-    def _driver(self):
-        return UnsupportedVirtDriver()
-
-    def test_disabled(self):
-        # disabled = no compute node stats
-        self.assertTrue(self.tracker.disabled)
-        self.assertIsNone(self.tracker.compute_node)
-
-    def test_disabled_claim(self):
-        # basic claim:
-        instance = self._fake_instance_obj()
-        with mock.patch.object(instance, 'save'):
-            claim = self.tracker.instance_claim(self.context, instance)
-        self.assertEqual(0, claim.memory_mb)
-
-    def test_disabled_instance_claim(self):
-        # instance variation:
-        instance = self._fake_instance_obj()
-        with mock.patch.object(instance, 'save'):
-            claim = self.tracker.instance_claim(self.context, instance)
-        self.assertEqual(0, claim.memory_mb)
-
-    @mock.patch('nova.objects.Instance.save')
-    def test_disabled_instance_context_claim(self, mock_save):
-        # instance context manager variation:
-        instance = self._fake_instance_obj()
-        self.tracker.instance_claim(self.context, instance)
-        with self.tracker.instance_claim(self.context, instance) as claim:
-            self.assertEqual(0, claim.memory_mb)
-
-    def test_disabled_updated_usage(self):
-        instance = self._fake_instance_obj(host='fakehost', memory_mb=5,
-                root_gb=10)
-        self.tracker.update_usage(self.context, instance)
-
-    def test_disabled_resize_claim(self):
-        instance = self._fake_instance_obj()
-        instance_type = self._fake_flavor_create()
-        claim = self.tracker.resize_claim(self.context, instance,
-                instance_type)
-        self.assertEqual(0, claim.memory_mb)
-        self.assertEqual(instance['uuid'], claim.migration['instance_uuid'])
-        self.assertEqual(instance_type['id'],
-                claim.migration['new_instance_type_id'])
-
-    def test_disabled_resize_context_claim(self):
-        instance = self._fake_instance_obj()
-        instance_type = self._fake_flavor_create()
-        with self.tracker.resize_claim(self.context, instance, instance_type) \
-                                       as claim:
-            self.assertEqual(0, claim.memory_mb)
 
 
 class MissingComputeNodeTestCase(BaseTestCase):

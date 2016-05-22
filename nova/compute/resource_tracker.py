@@ -456,13 +456,6 @@ class ResourceTracker(object):
                      "node %(node)s"),
                  {'node': self.nodename})
         resources = self.driver.get_available_resource(self.nodename)
-
-        if not resources:
-            # The virt driver does not support this function
-            LOG.info(_LI("Virt driver does not support "
-                 "'get_available_resource'. Compute tracking is disabled."))
-            self.compute_node = None
-            return
         resources['host_ip'] = CONF.my_ip
 
         # We want the 'cpu_info' to be None from the POV of the
