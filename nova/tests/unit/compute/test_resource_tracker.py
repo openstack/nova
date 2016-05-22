@@ -638,25 +638,6 @@ class TrackerTestCase(BaseTrackerTestCase):
                 expected, self.tracker.compute_node.pci_device_pools):
             self.assertEqual(expected_pool, actual_pool)
 
-    def test_set_instance_host_and_node(self):
-        inst = objects.Instance()
-        with mock.patch.object(inst, 'save') as mock_save:
-            self.tracker._set_instance_host_and_node(inst)
-            mock_save.assert_called_once_with()
-        self.assertEqual(self.tracker.host, inst.host)
-        self.assertEqual(self.tracker.nodename, inst.node)
-        self.assertEqual(self.tracker.host, inst.launched_on)
-
-    def test_unset_instance_host_and_node(self):
-        inst = objects.Instance()
-        with mock.patch.object(inst, 'save') as mock_save:
-            self.tracker._set_instance_host_and_node(inst)
-            self.tracker._unset_instance_host_and_node(inst)
-            self.assertEqual(2, mock_save.call_count)
-        self.assertIsNone(inst.host)
-        self.assertIsNone(inst.node)
-        self.assertEqual(self.tracker.host, inst.launched_on)
-
 
 class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
 
