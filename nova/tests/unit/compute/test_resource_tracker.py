@@ -603,44 +603,6 @@ class BaseTrackerTestCase(BaseTestCase):
             self.assertEqual(value, x)
 
 
-class TrackerTestCase(BaseTrackerTestCase):
-
-    def test_free_ram_resource_value(self):
-        driver = FakeVirtDriver()
-        mem_free = driver.memory_mb - driver.memory_mb_used
-        self.assertEqual(mem_free, self.tracker.compute_node.free_ram_mb)
-
-    def test_free_disk_resource_value(self):
-        driver = FakeVirtDriver()
-        mem_free = driver.local_gb - driver.local_gb_used
-        self.assertEqual(mem_free, self.tracker.compute_node.free_disk_gb)
-
-    def test_update_compute_node(self):
-        self.assertFalse(self.tracker.disabled)
-        self.assertTrue(self.updated)
-
-    def test_init(self):
-        driver = self._driver()
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
-        self._assert(FAKE_VIRT_VCPUS, 'vcpus')
-        self._assert(FAKE_VIRT_NUMA_TOPOLOGY, 'numa_topology')
-        self._assert(0, 'memory_mb_used')
-        self._assert(0, 'local_gb_used')
-        self._assert(0, 'vcpus_used')
-        self._assert(0, 'running_vms')
-        self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
-        self.assertFalse(self.tracker.disabled)
-        self.assertEqual(0, self.tracker.compute_node.current_workload)
-        expected = pci_device_pool.from_pci_stats(driver.pci_stats)
-        self.assertEqual(len(expected),
-                         len(self.tracker.compute_node.pci_device_pools))
-        for expected_pool, actual_pool in zip(
-                expected, self.tracker.compute_node.pci_device_pools):
-            self.assertEqual(expected_pool, actual_pool)
-
-
 class TrackerPciStatsTestCase(BaseTrackerTestCase):
 
     def test_update_compute_node(self):
