@@ -1057,24 +1057,6 @@ class StatsDictTestCase(BaseTrackerTestCase):
         self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
 
-class StatsInvalidTypeTestCase(BaseTrackerTestCase):
-    """Test stats handling for a virt driver that provides
-    an invalid type for stats.
-    """
-    def _driver(self):
-        return FakeVirtDriver(stats=10)
-
-    def _init_tracker(self):
-        # do not do initial update in setup
-        pass
-
-    def test_virt_stats(self):
-        # should throw exception for incorrect stats value type
-        self.assertRaises(ValueError,
-                          self.tracker.update_available_resource,
-                          context=self.context)
-
-
 class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
 
     @mock.patch.object(resource_tracker.ResourceTracker,
