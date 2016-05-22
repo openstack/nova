@@ -393,6 +393,7 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
 
         self.assertTrue(self.cells_rpcapi.live_migrate_instance.called)
 
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -402,7 +403,8 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(compute_api.API, '_record_action_start')
     def test_rebuild_instance(self, _record_action_start,
         _checks_for_create_and_rebuild, _check_auto_disk_config,
-        _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save):
+        _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
+        _req_spec_get_by_inst_uuid):
         orig_system_metadata = {}
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',

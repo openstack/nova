@@ -2670,6 +2670,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           "new password",
                           auto_disk_config=True)
 
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -2679,7 +2680,8 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(compute_api.API, '_record_action_start')
     def test_rebuild(self, _record_action_start,
             _checks_for_create_and_rebuild, _check_auto_disk_config,
-            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save):
+            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
+            req_spec_get_by_inst_uuid):
         orig_system_metadata = {}
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
@@ -2699,6 +2701,9 @@ class _ComputeAPIUnitTestMixIn(object):
         _get_image.return_value = (None, image)
         bdm_get_by_instance_uuid.return_value = bdms
 
+        fake_spec = objects.RequestSpec()
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+
         with mock.patch.object(self.compute_api.compute_task_api,
                 'rebuild_instance') as rebuild_instance:
             self.compute_api.rebuild(self.context, instance, image_href,
@@ -2709,13 +2714,15 @@ class _ComputeAPIUnitTestMixIn(object):
                     injected_files=files_to_inject, image_ref=image_href,
                     orig_image_ref=image_href,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
-                    preserve_ephemeral=False, host=instance.host, kwargs={})
+                    preserve_ephemeral=False, host=instance.host,
+                    request_spec=fake_spec, kwargs={})
 
         _check_auto_disk_config.assert_called_once_with(image=image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, image, flavor, {}, [], None)
         self.assertNotEqual(orig_system_metadata, instance.system_metadata)
 
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -2725,7 +2732,8 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(compute_api.API, '_record_action_start')
     def test_rebuild_change_image(self, _record_action_start,
             _checks_for_create_and_rebuild, _check_auto_disk_config,
-            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save):
+            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
+            req_spec_get_by_inst_uuid):
         orig_system_metadata = {}
         get_flavor.return_value = test_flavor.fake_flavor
         orig_image_href = 'orig_image'
@@ -2757,6 +2765,9 @@ class _ComputeAPIUnitTestMixIn(object):
         _get_image.side_effect = get_image
         bdm_get_by_instance_uuid.return_value = bdms
 
+        fake_spec = objects.RequestSpec()
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+
         with mock.patch.object(self.compute_api.compute_task_api,
                 'rebuild_instance') as rebuild_instance:
             self.compute_api.rebuild(self.context, instance, new_image_href,
@@ -2767,7 +2778,8 @@ class _ComputeAPIUnitTestMixIn(object):
                     injected_files=files_to_inject, image_ref=new_image_href,
                     orig_image_ref=orig_image_href,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
-                    preserve_ephemeral=False, host=instance.host, kwargs={})
+                    preserve_ephemeral=False, host=instance.host,
+                    request_spec=fake_spec, kwargs={})
 
         _check_auto_disk_config.assert_called_once_with(image=new_image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
