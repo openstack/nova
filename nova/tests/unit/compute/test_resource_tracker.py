@@ -15,7 +15,6 @@
 
 """Tests for compute resource tracking."""
 
-import copy
 import datetime
 import uuid
 
@@ -23,7 +22,6 @@ import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
-import six
 
 from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker
@@ -60,9 +58,6 @@ ROOT_GB = 5
 EPHEMERAL_GB = 1
 FAKE_VIRT_LOCAL_GB = ROOT_GB + EPHEMERAL_GB
 FAKE_VIRT_VCPUS = 1
-FAKE_VIRT_STATS = {'virt_stat': 10}
-FAKE_VIRT_STATS_COERCED = {'virt_stat': '10'}
-FAKE_VIRT_STATS_JSON = jsonutils.dumps(FAKE_VIRT_STATS)
 CONF = cfg.CONF
 
 
@@ -162,8 +157,6 @@ class FakeVirtDriver(driver.ComputeDriver):
                 'dev_type': fields.PciDeviceType.SRIOV_VF
             },
         ] if self.pci_support else []
-        if stats is not None:
-            self.stats = stats
 
     def get_host_ip_addr(self):
         return '127.0.0.1'
@@ -185,8 +178,6 @@ class FakeVirtDriver(driver.ComputeDriver):
         }
         if self.pci_support:
             d['pci_passthrough_devices'] = jsonutils.dumps(self.pci_devices)
-        if hasattr(self, 'stats'):
-            d['stats'] = self.stats
         return d
 
     def estimate_instance_overhead(self, instance_info):
@@ -1024,37 +1015,6 @@ class TrackerPeriodicTestCase(BaseTrackerTestCase):
             mock_uar.assert_called_once_with(self.context, resources)
 
         _test()
-
-
-class StatsDictTestCase(BaseTrackerTestCase):
-    """Test stats handling for a virt driver that provides
-    stats as a dictionary.
-    """
-    def _driver(self):
-        return FakeVirtDriver(stats=FAKE_VIRT_STATS)
-
-    def test_virt_stats(self):
-        # start with virt driver stats
-        stats = self.tracker.compute_node.stats
-        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
-
-        # adding an instance should keep virt driver stats
-        self._fake_instance_obj(vm_state=vm_states.ACTIVE, host=self.host)
-        self.tracker.update_available_resource(self.context)
-
-        stats = self.tracker.compute_node.stats
-        # compute node stats are coerced to strings
-        expected_stats = copy.deepcopy(FAKE_VIRT_STATS_COERCED)
-        for k, v in self.tracker.stats.items():
-            expected_stats[k] = six.text_type(v)
-        self.assertEqual(expected_stats, stats)
-
-        # removing the instances should keep only virt driver stats
-        self._instances = {}
-        self.tracker.update_available_resource(self.context)
-
-        stats = self.tracker.compute_node.stats
-        self.assertEqual(FAKE_VIRT_STATS_COERCED, stats)
 
 
 class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
