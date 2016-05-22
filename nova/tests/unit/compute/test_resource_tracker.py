@@ -257,29 +257,6 @@ class BaseTestCase(test.TestCase):
             compute.update(values)
         return compute
 
-    def _create_service(self, host="fakehost", compute=None):
-        if compute:
-            compute = [compute]
-
-        service = {
-            "id": 1,
-            "host": host,
-            "binary": "nova-compute",
-            "topic": "compute",
-            "compute_node": compute,
-            "report_count": 0,
-            'disabled': False,
-            'disabled_reason': None,
-            'created_at': None,
-            'updated_at': None,
-            'deleted_at': None,
-            'deleted': False,
-            'last_seen_up': None,
-            'forced_down': False,
-            'version': 0,
-        }
-        return service
-
     def _fake_instance_obj(self, stash=True, flavor=None, **kwargs):
 
         # Default to an instance ready to resize to or from the same
@@ -422,8 +399,6 @@ class BaseTrackerTestCase(BaseTestCase):
         self._migrations = {}
         self._fake_inventories = {}
 
-        self.stub_out('nova.db.service_get_by_compute_host',
-                self._fake_service_get_by_compute_host)
         self.stub_out('nova.db.compute_node_get_by_host_and_nodename',
                 self._fake_compute_node_get_by_host_and_nodename)
         self.stub_out('nova.db.compute_node_get',
@@ -447,10 +422,6 @@ class BaseTrackerTestCase(BaseTestCase):
 
         self._init_tracker()
         self.limits = self._limits()
-
-    def _fake_service_get_by_compute_host(self, ctx, host):
-        self.service = self._create_service(host, compute=self.compute)
-        return self.service
 
     def _fake_compute_node_get_by_host_and_nodename(self, ctx, host, nodename):
         self.compute = self._create_compute_node()
