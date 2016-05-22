@@ -427,49 +427,6 @@ class BaseTestCase(test.TestCase):
         return tracker
 
 
-class MissingComputeNodeTestCase(BaseTestCase):
-    def setUp(self):
-        super(MissingComputeNodeTestCase, self).setUp()
-        self.tracker = self._tracker()
-
-        self.stub_out('nova.db.service_get_by_compute_host',
-                self._fake_service_get_by_compute_host)
-        self.stub_out('nova.db.compute_node_get_by_host_and_nodename',
-                self._fake_compute_node_get_by_host_and_nodename)
-        self.stub_out('nova.db.compute_node_create',
-                self._fake_create_compute_node)
-        self.stub_out('nova.db.compute_node_get',
-                self._fake_compute_node_get)
-        self.tracker.scheduler_client.update_resource_stats = mock.Mock()
-
-    def _fake_create_compute_node(self, context, values):
-        self.created = True
-        self._values = values
-        return self._create_compute_node(values)
-
-    def _fake_compute_node_get(self, context, id):
-        if self.created:
-            return self._create_compute_node(self._values)
-
-    def _fake_service_get_by_compute_host(self, ctx, host):
-        # return a service with no joined compute
-        service = self._create_service()
-        return service
-
-    def _fake_compute_node_get_by_host_and_nodename(self, ctx, host, nodename):
-        # return no compute node
-        raise exception.ComputeHostNotFound(host=host)
-
-    def test_create_compute_node(self):
-        self.tracker.compute_node = None
-        self.tracker.update_available_resource(self.context)
-        self.assertTrue(self.created)
-
-    def test_enabled(self):
-        self.tracker.update_available_resource(self.context)
-        self.assertFalse(self.tracker.disabled)
-
-
 class BaseTrackerTestCase(BaseTestCase):
 
     def setUp(self):
