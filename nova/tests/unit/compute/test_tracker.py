@@ -29,6 +29,9 @@ from nova.objects import base as obj_base
 from nova.pci import manager as pci_manager
 from nova import test
 
+_HOSTNAME = 'fake-host'
+_NODENAME = 'fake-node'
+
 _VIRT_DRIVER_AVAIL_RESOURCES = {
     'vcpus': 4,
     'memory_mb': 512,
@@ -38,7 +41,7 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
     'local_gb_used': 0,
     'hypervisor_type': 'fake',
     'hypervisor_version': 0,
-    'hypervisor_hostname': 'fakehost',
+    'hypervisor_hostname': _NODENAME,
     'cpu_info': '',
     'numa_topology': None,
 }
@@ -46,7 +49,7 @@ _VIRT_DRIVER_AVAIL_RESOURCES = {
 _COMPUTE_NODE_FIXTURES = [
     objects.ComputeNode(
         id=1,
-        host='fake-host',
+        host=_HOSTNAME,
         vcpus=_VIRT_DRIVER_AVAIL_RESOURCES['vcpus'],
         memory_mb=_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'],
         local_gb=_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'],
@@ -55,7 +58,7 @@ _COMPUTE_NODE_FIXTURES = [
         local_gb_used=_VIRT_DRIVER_AVAIL_RESOURCES['local_gb_used'],
         hypervisor_type='fake',
         hypervisor_version=0,
-        hypervisor_hostname='fake-host',
+        hypervisor_hostname=_HOSTNAME,
         free_ram_mb=(_VIRT_DRIVER_AVAIL_RESOURCES['memory_mb'] -
                      _VIRT_DRIVER_AVAIL_RESOURCES['memory_mb_used']),
         free_disk_gb=(_VIRT_DRIVER_AVAIL_RESOURCES['local_gb'] -
@@ -202,9 +205,9 @@ _MIGRATION_FIXTURES = {
     'source-only': objects.Migration(
         id=1,
         instance_uuid='f15ecfb0-9bf6-42db-9837-706eb2c4bf08',
-        source_compute='fake-host',
+        source_compute=_HOSTNAME,
         dest_compute='other-host',
-        source_node='fake-node',
+        source_node=_NODENAME,
         dest_node='other-node',
         old_instance_type_id=1,
         new_instance_type_id=2,
@@ -216,9 +219,9 @@ _MIGRATION_FIXTURES = {
         id=2,
         instance_uuid='f6ed631a-8645-4b12-8e1e-2fff55795765',
         source_compute='other-host',
-        dest_compute='fake-host',
+        dest_compute=_HOSTNAME,
         source_node='other-node',
-        dest_node='fake-node',
+        dest_node=_NODENAME,
         old_instance_type_id=1,
         new_instance_type_id=2,
         migration_type='resize',
@@ -228,10 +231,10 @@ _MIGRATION_FIXTURES = {
     'source-and-dest': objects.Migration(
         id=3,
         instance_uuid='f4f0bfea-fe7e-4264-b598-01cb13ef1997',
-        source_compute='fake-host',
-        dest_compute='fake-host',
-        source_node='fake-node',
-        dest_node='fake-node',
+        source_compute=_HOSTNAME,
+        dest_compute=_HOSTNAME,
+        source_node=_NODENAME,
+        dest_node=_NODENAME,
         old_instance_type_id=1,
         new_instance_type_id=2,
         migration_type='resize',
@@ -242,9 +245,9 @@ _MIGRATION_FIXTURES = {
         id=4,
         instance_uuid='077fb63a-bdc8-4330-90ef-f012082703dc',
         source_compute='other-host',
-        dest_compute='fake-host',
+        dest_compute=_HOSTNAME,
         source_node='other-node',
-        dest_node='fake-node',
+        dest_node=_NODENAME,
         old_instance_type_id=2,
         new_instance_type_id=None,
         migration_type='evacuation',
@@ -419,7 +422,7 @@ class BaseTestCase(test.NoDBTestCase):
                   estimate_overhead=overhead_zero):
         (self.rt, self.sched_client_mock,
          self.driver_mock) = setup_rt(
-                 'fake-host', 'fake-node', virt_resources, estimate_overhead)
+                 _HOSTNAME, _NODENAME, virt_resources, estimate_overhead)
 
 
 class TestUpdateAvailableResources(BaseTestCase):
@@ -455,29 +458,29 @@ class TestUpdateAvailableResources(BaseTestCase):
         update_mock = self._update_available_resources()
 
         vd = self.driver_mock
-        vd.get_available_resource.assert_called_once_with('fake-node')
-        get_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                         'fake-node',
+        vd.get_available_resource.assert_called_once_with(_NODENAME)
+        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                         _NODENAME,
                                          expected_attrs=[
                                              'system_metadata',
                                              'numa_topology',
                                              'flavor',
                                              'migration_context'])
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
-        migr_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                          'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
+        migr_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                          _NODENAME)
 
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 6,
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -517,18 +520,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 5,  # 6GB avail - 1 GB reserved
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -575,18 +578,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 5,  # 6 - 1 used
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -651,18 +654,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 6,
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -729,18 +732,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 5,
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -802,18 +805,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 1,
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -872,18 +875,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 1,
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -952,18 +955,18 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                            'fake-node')
+        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                            _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # host is added in update_available_resources()
             # before calling _update()
-            'host': 'fake-host',
+            'host': _HOSTNAME,
             'host_ip': '1.1.1.1',
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             # 6 total - 1G existing - 5G new flav - 1G old flav
             'free_disk_gb': -1,
             'hypervisor_version': 0,
@@ -1026,8 +1029,8 @@ class TestInitComputeNode(BaseTestCase):
 
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
-        get_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                         'fake-node')
+        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                         _NODENAME)
         self.assertFalse(create_mock.called)
         self.assertFalse(self.rt.disabled)
 
@@ -1049,7 +1052,7 @@ class TestInitComputeNode(BaseTestCase):
             'numa_topology': None,
             'metrics': '[]',
             'cpu_info': '',
-            'hypervisor_hostname': 'fakehost',
+            'hypervisor_hostname': _NODENAME,
             'free_disk_gb': 6,
             'hypervisor_version': 0,
             'local_gb': 6,
@@ -1082,7 +1085,7 @@ class TestInitComputeNode(BaseTestCase):
             hypervisor_version=resources['hypervisor_version'],
             hypervisor_hostname=resources['hypervisor_hostname'],
             # NOTE(sbauza): ResourceTracker adds host field
-            host='fake-host',
+            host=_HOSTNAME,
             # NOTE(sbauza): ResourceTracker adds CONF allocation ratios
             ram_allocation_ratio=ram_alloc_ratio,
             cpu_allocation_ratio=cpu_alloc_ratio,
@@ -1106,8 +1109,8 @@ class TestInitComputeNode(BaseTestCase):
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
 
         self.assertFalse(self.rt.disabled)
-        get_mock.assert_called_once_with(mock.sentinel.ctx, 'fake-host',
-                                         'fake-node')
+        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                         _NODENAME)
         create_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected_compute,
                                                  self.rt.compute_node))
@@ -1145,7 +1148,7 @@ class TestUpdateComputeNode(BaseTestCase):
             numa_topology=None,
             metrics='[]',
             cpu_info='',
-            hypervisor_hostname='fakehost',
+            hypervisor_hostname=_NODENAME,
             free_disk_gb=6,
             hypervisor_version=0,
             local_gb=6,
@@ -1188,12 +1191,12 @@ class TestUpdateComputeNode(BaseTestCase):
         # We want to check that the code paths update the stored compute node
         # usage records with what is supplied to _update().
         compute = objects.ComputeNode(
-            host='fake-host',
+            host=_HOSTNAME,
             host_ip='1.1.1.1',
             numa_topology=None,
             metrics='[]',
             cpu_info='',
-            hypervisor_hostname='fakehost',
+            hypervisor_hostname=_NODENAME,
             free_disk_gb=2,
             hypervisor_version=0,
             local_gb=6,
