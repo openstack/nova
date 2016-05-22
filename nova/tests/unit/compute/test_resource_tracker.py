@@ -889,26 +889,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         for i, migration in enumerate(migrations):
             self.assertEqual(order[i], migration.instance.uuid)
 
-    @mock.patch('nova.compute.claims.Claim')
-    @mock.patch('nova.objects.Instance.save')
-    def test_claim_saves_numa_topology(self, mock_save, mock_claim):
-        def fake_save():
-            self.assertEqual(set(['numa_topology', 'host', 'node',
-                                  'launched_on']),
-                             inst.obj_what_changed())
-
-        mock_save.side_effect = fake_save
-        inst = objects.Instance(host=None, node=None, memory_mb=1024,
-                                root_gb=10, uuid=uuidsentinel.instance1)
-        inst.obj_reset_changes()
-        numa = objects.InstanceNUMATopology()
-        claim = mock.MagicMock()
-        claim.claimed_numa_topology = numa
-        mock_claim.return_value = claim
-        with mock.patch.object(self.tracker, '_update_usage_from_instance'):
-            self.tracker.instance_claim(self.context, inst)
-        mock_save.assert_called_once_with()
-
 
 class _MoveClaimTestCase(BaseTrackerTestCase):
 
