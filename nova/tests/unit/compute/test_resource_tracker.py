@@ -201,17 +201,12 @@ class BaseTestCase(test.TestCase):
         self.context = context.get_admin_context()
 
         self._set_pci_passthrough_whitelist()
-        self.flags(use_local=True, group='conductor')
-        self.conductor = self.start_service('conductor',
-                                            manager=CONF.conductor.manager)
 
         self._instances = {}
         self._instance_types = {}
 
         self.stubs.Set(objects.InstanceList, 'get_by_host_and_node',
                        self._fake_instance_get_by_host_and_node)
-        self.stubs.Set(self.conductor.db,
-                       'flavor_get', self._fake_flavor_get)
 
         self.host = 'fakehost'
         self.compute = self._create_compute_node()
@@ -392,9 +387,6 @@ class BaseTestCase(test.TestCase):
                                             expected_attrs=None):
         return objects.InstanceList(
             objects=[i for i in self._instances.values() if i['host'] == host])
-
-    def _fake_flavor_get(self, ctxt, id_):
-        return self._instance_types[id_]
 
     def _fake_compute_node_update(self, ctx, compute_node_id, values,
             prune_stats=False):
