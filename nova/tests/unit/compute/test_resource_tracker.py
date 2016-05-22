@@ -34,7 +34,6 @@ from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova.objects import pci_device_pool
 from nova import rpc
 from nova import test
 from nova.tests.unit.pci import fakes as pci_fakes
@@ -579,13 +578,6 @@ class BaseTrackerTestCase(BaseTestCase):
         self.assertEqual(expected.tags, observed.tags)
         self.assertEqual(expected.count, observed.count)
 
-    def assertEqualPciDevicePoolList(self, expected, observed):
-        ex_objs = expected.objects
-        ob_objs = observed.objects
-        self.assertEqual(len(ex_objs), len(ob_objs))
-        for i in range(len(ex_objs)):
-            self.assertEqualPciDevicePool(ex_objs[i], ob_objs[i])
-
     def _assert(self, value, field, tracker=None):
 
         if tracker is None:
@@ -601,34 +593,6 @@ class BaseTrackerTestCase(BaseTestCase):
                     value, objects.NUMATopology.obj_from_db_obj(x))
         else:
             self.assertEqual(value, x)
-
-
-class TrackerPciStatsTestCase(BaseTrackerTestCase):
-
-    def test_update_compute_node(self):
-        self.assertFalse(self.tracker.disabled)
-        self.assertTrue(self.updated)
-
-    def test_init(self):
-        driver = self._driver()
-        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
-        self._assert(FAKE_VIRT_VCPUS, 'vcpus')
-        self._assert(FAKE_VIRT_NUMA_TOPOLOGY, 'numa_topology')
-        self._assert(0, 'memory_mb_used')
-        self._assert(0, 'local_gb_used')
-        self._assert(0, 'vcpus_used')
-        self._assert(0, 'running_vms')
-        self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
-        self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
-        self.assertFalse(self.tracker.disabled)
-        self.assertEqual(0, self.tracker.compute_node.current_workload)
-        expected_pools = pci_device_pool.from_pci_stats(driver.pci_stats)
-        observed_pools = self.tracker.compute_node.pci_device_pools
-        self.assertEqualPciDevicePoolList(expected_pools, observed_pools)
-
-    def _driver(self):
-        return FakeVirtDriver(pci_support=True)
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):
