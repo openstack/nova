@@ -5710,37 +5710,27 @@ class LibvirtDriver(driver.ComputeDriver):
                     migrate_data.target_connect_addr is not None):
                 dest = migrate_data.target_connect_addr
 
-            if (not self._host.is_migratable_xml_flag() or (
-                    not listen_addrs and not migrate_data.bdms)):
-                dom.migrateToURI(self._live_migration_uri(dest),
-                                 migration_flags,
-                                 None,
-                                 CONF.libvirt.live_migration_bandwidth)
-            else:
+            new_xml_str = None
+            params = None
+            if (self._host.is_migratable_xml_flag() and (
+                    listen_addrs or migrate_data.bdms)):
                 new_xml_str = libvirt_migrate.get_updated_guest_xml(
                     # TODO(sahid): It's not a really well idea to pass
                     # the method _get_volume_config and we should to find
                     # a way to avoid this in future.
                     guest, migrate_data, self._get_volume_config)
-                if self._host.has_min_version(
-                        MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
-                    params = {
-                        'bandwidth': CONF.libvirt.live_migration_bandwidth,
-                        'destination_xml': new_xml_str,
-                        'migrate_disks': device_names,
-                    }
-                    dom.migrateToURI3(
-                        self._live_migration_uri(dest),
-                        params,
-                        migration_flags)
-                else:
-                    dom.migrateToURI2(
-                        self._live_migration_uri(dest),
-                        None,
-                        new_xml_str,
-                        migration_flags,
-                        None,
-                        CONF.libvirt.live_migration_bandwidth)
+            if self._host.has_min_version(
+                    MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
+                params = {
+                    'bandwidth': CONF.libvirt.live_migration_bandwidth,
+                    'destination_xml': new_xml_str,
+                    'migrate_disks': device_names,
+                }
+            guest.migrate(self._live_migration_uri(dest),
+                          flags=migration_flags,
+                          params=params,
+                          domain_xml=new_xml_str,
+                          bandwidth=CONF.libvirt.live_migration_bandwidth)
         except Exception as e:
             with excutils.save_and_reraise_exception():
                 LOG.error(_LE("Live Migration failure: %s"), e,

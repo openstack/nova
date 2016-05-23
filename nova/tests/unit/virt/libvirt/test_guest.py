@@ -505,6 +505,22 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.pause()
         self.domain.suspend.assert_called_once_with()
 
+    def test_migrate_v1(self):
+        self.guest.migrate('an-uri', flags=1, bandwidth=2)
+        self.domain.migrateToURI.assert_called_once_with(
+            'an-uri', flags=1, bandwidth=2)
+
+    def test_migrate_v2(self):
+        self.guest.migrate('an-uri', domain_xml='</xml>', flags=1, bandwidth=2)
+        self.domain.migrateToURI2.assert_called_once_with(
+            'an-uri', dxml='</xml>', flags=1, bandwidth=2)
+
+    def test_migrate_v3(self):
+        self.guest.migrate('an-uri', domain_xml='</xml>',
+                           params={'p1': 'v1'}, flags=1, bandwidth=2)
+        self.domain.migrateToURI3.assert_called_once_with(
+            'an-uri', bandwidth=2, flags=1, params={'p1': 'v1'})
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 

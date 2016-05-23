@@ -6982,11 +6982,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                 initial_xml)
         vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
-                             None,
-                             target_xml,
-                             mox.IgnoreArg(),
-                             None,
-                             _bandwidth).AndRaise(
+                             dxml=target_xml,
+                             flags=mox.IgnoreArg(),
+                             bandwidth=_bandwidth).AndRaise(
                                 fakelibvirt.libvirtError("ERR"))
 
         # start test
@@ -7103,7 +7101,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                            test_mock, [])
             test_mock.migrateToURI2.assert_called_once_with(
                 'qemu+tcp://127.0.0.2/system',
-                None, mupdate(), 0, None, 0)
+                dxml=mupdate(), flags=0, bandwidth=0)
 
     def test_update_volume_xml(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7329,7 +7327,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrate.assert_called_once_with(
                 drvr._live_migration_uri('dest'),
-                None, target_xml, mock.ANY, None, bandwidth)
+                dxml=target_xml, flags=mock.ANY, bandwidth=bandwidth)
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
@@ -7348,9 +7346,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                            mox.IgnoreArg(),
-                            None,
-                            _bandwidth).AndRaise(
+                            flags=mox.IgnoreArg(),
+                            bandwidth=_bandwidth).AndRaise(
                                 fakelibvirt.libvirtError("ERR"))
 
         # start test
@@ -7382,9 +7379,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                            mox.IgnoreArg(),
-                            None,
-                            _bandwidth).AndRaise(
+                            flags=mox.IgnoreArg(),
+                            bandwidth=_bandwidth).AndRaise(
                                 fakelibvirt.libvirtError("ERR"))
 
         # start test
@@ -7434,7 +7430,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.context, instance, 'dest',
                           False, migrate_data, dom, disk_paths)
         mock_migrateToURI3.assert_called_once_with(
-                drvr._live_migration_uri('dest'), params, 0)
+            drvr._live_migration_uri('dest'),
+            params=params, flags=0, bandwidth=0)
 
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.
@@ -7454,19 +7451,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         if getattr(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
             vdmock.migrateToURI(drvr._live_migration_uri('dest'),
-                                mox.IgnoreArg(),
-                                None,
-                                _bandwidth).AndRaise(
+                                flags=mox.IgnoreArg(),
+                                bandwidth=_bandwidth).AndRaise(
                                         fakelibvirt.libvirtError('ERR'))
         else:
             vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
             ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
             vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
-                                 None,
-                                 mox.IgnoreArg(),
-                                 mox.IgnoreArg(),
-                                 None,
-                                 _bandwidth).AndRaise(
+                                 dxml=mox.IgnoreArg(),
+                                 flags=mox.IgnoreArg(),
+                                 bandwidth=_bandwidth).AndRaise(
                                          fakelibvirt.libvirtError('ERR'))
 
         # start test
