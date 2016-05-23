@@ -3166,7 +3166,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         do_test()
 
-    def test_provision_instances_creates_destroys_build_request(self):
+    def test_provision_instances_creates_build_request(self):
         @mock.patch.object(self.compute_api, '_check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
@@ -3258,7 +3258,6 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_build_req.assert_has_calls(build_req_calls)
             for build_req_mock in build_req_mocks:
                 build_req_mock.create.assert_called_once_with()
-                build_req_mock.destroy.assert_called_once_with()
 
         do_test()
 

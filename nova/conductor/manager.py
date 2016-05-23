@@ -369,6 +369,24 @@ class ComputeTaskManager(base.Base):
                                      self.compute_rpcapi,
                                      self.scheduler_client)
 
+    def _destroy_build_request(self, context, instance):
+        try:
+            build_request = objects.BuildRequest.get_by_instance_uuid(context,
+                    instance.uuid)
+        except exception.BuildRequestNotFound:
+            LOG.debug('BuildRequest not found for instance %(uuid)s, likely '
+                      'due to an older nova-api service running.',
+                      {'uuid': instance.uuid})
+            return
+
+        # The BuildRequest needs to be stored until the instance is mapped to
+        # an instance table. At that point it will never be used again and
+        # should be deleted.
+        # TODO(alaski): Sync API updates to the build_request to the
+        # instance before it is destroyed. Right now only locked_by can
+        # be updated before this is destroyed.
+        build_request.destroy()
+
     def _populate_instance_mapping(self, context, instance, host):
         try:
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
@@ -452,6 +470,7 @@ class ComputeTaskManager(base.Base):
                     context, instance.uuid)
 
             self._populate_instance_mapping(context, instance, host)
+            self._destroy_build_request(context, instance)
 
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host['host'], image=image,

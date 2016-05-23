@@ -759,6 +759,93 @@ class _BaseTaskTestCase(object):
         mock_get_by_host.assert_has_calls([mock.call(self.context, 'host1'),
                                            mock.call(self.context, 'host2')])
 
+    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    @mock.patch.object(scheduler_client.SchedulerClient,
+                       'select_destinations')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify', new=mock.MagicMock())
+    def test_build_instances_destroy_build_request(self, mock_select_dests,
+            mock_build_req_get):
+
+        mock_select_dests.return_value = [
+                {'host': 'host1', 'nodename': 'node1', 'limits': []},
+                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
+
+        num_instances = 2
+        instances = [fake_instance.fake_instance_obj(self.context)
+                     for i in range(num_instances)]
+        build_req_mocks = [mock.Mock() for i in range(num_instances)]
+        mock_build_req_get.side_effect = build_req_mocks
+        image = {'fake-data': 'should_pass_silently'}
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        @mock.patch.object(self.conductor_manager.compute_rpcapi,
+                'build_and_run_instance', new=mock.MagicMock())
+        @mock.patch.object(self.conductor_manager,
+            '_populate_instance_mapping', new=mock.MagicMock())
+        def do_test():
+            self.conductor.build_instances(
+                              context=self.context,
+                              instances=instances,
+                              image=image,
+                              filter_properties={},
+                              admin_password='admin_password',
+                              injected_files='injected_files',
+                              requested_networks=None,
+                              security_groups='security_groups',
+                              block_device_mapping='block_device_mapping',
+                              legacy_bdm=False)
+
+        do_test()
+
+        for build_req in build_req_mocks:
+            build_req.destroy.assert_called_once_with()
+
+    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid',
+            side_effect=exc.BuildRequestNotFound(uuid='fake'))
+    @mock.patch.object(scheduler_client.SchedulerClient,
+                       'select_destinations')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify', new=mock.MagicMock())
+    def test_build_instances_build_request_not_found(self, mock_select_dests,
+            mock_build_req_get):
+
+        mock_select_dests.return_value = [
+                {'host': 'host1', 'nodename': 'node1', 'limits': []},
+                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
+
+        num_instances = 2
+        instances = [fake_instance.fake_instance_obj(self.context)
+                     for i in range(num_instances)]
+        image = {'fake-data': 'should_pass_silently'}
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        @mock.patch.object(self.conductor_manager.compute_rpcapi,
+                'build_and_run_instance')
+        @mock.patch.object(self.conductor_manager,
+            '_populate_instance_mapping', new=mock.MagicMock())
+        def do_test(mock_build_and_run):
+            self.conductor.build_instances(
+                              context=self.context,
+                              instances=instances,
+                              image=image,
+                              filter_properties={},
+                              admin_password='admin_password',
+                              injected_files='injected_files',
+                              requested_networks=None,
+                              security_groups='security_groups',
+                              block_device_mapping='block_device_mapping',
+                              legacy_bdm=False)
+            self.assertTrue(mock_build_and_run.called)
+
+        do_test()
+
     def test_unshelve_instance_on_host(self):
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED

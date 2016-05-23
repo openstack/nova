@@ -976,14 +976,6 @@ class API(base.Base):
 
                 self._create_block_device_mapping(
                         instance_type, instance.uuid, block_device_mapping)
-                # The BuildRequest needs to be stored until the instance is in
-                # an instance table. At that point it will never be used again
-                # and should be deleted. As instance creation is pushed back,
-                # as noted above, this will move with it.
-                # TODO(alaski): Sync API updates to the build_request to the
-                # instance before it is destroyed. Right now only locked_by can
-                # be updated before this is destroyed.
-                build_request.destroy()
 
                 if instance_group:
                     if check_server_group_quota:
