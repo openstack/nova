@@ -6803,3 +6803,40 @@ def instance_tag_exists(context, instance_uuid, tag):
     q = context.session.query(models.Tag).filter_by(
         resource_id=instance_uuid, tag=tag)
     return context.session.query(q.exists()).scalar()
+
+
+####################
+
+
+@pick_context_manager_writer
+def console_auth_token_create(context, values):
+    instance_uuid = values.get('instance_uuid')
+    _check_instance_exists_in_project(context, instance_uuid)
+    token_ref = models.ConsoleAuthToken()
+    token_ref.update(values)
+    context.session.add(token_ref)
+    return token_ref
+
+
+@pick_context_manager_reader
+def console_auth_token_get_valid(context, token_hash, instance_uuid):
+    _check_instance_exists_in_project(context, instance_uuid)
+    return context.session.query(models.ConsoleAuthToken).\
+        filter_by(token_hash=token_hash).\
+        filter_by(instance_uuid=instance_uuid).\
+        filter(models.ConsoleAuthToken.expires > timeutils.utcnow_ts()).\
+        first()
+
+
+@pick_context_manager_writer
+def console_auth_token_destroy_all_by_instance(context, instance_uuid):
+    context.session.query(models.ConsoleAuthToken).\
+        filter_by(instance_uuid=instance_uuid).delete()
+
+
+@pick_context_manager_writer
+def console_auth_token_destroy_expired_by_host(context, host):
+    context.session.query(models.ConsoleAuthToken).\
+        filter_by(host=host).\
+        filter(models.ConsoleAuthToken.expires <= timeutils.utcnow_ts()).\
+        delete()

@@ -1211,6 +1211,19 @@ def get_hash_str(base_str):
     return hashlib.md5(base_str).hexdigest()
 
 
+def get_sha256_str(base_str):
+    """Returns string that represents sha256 hash of base_str (in hex format).
+
+    sha1 and md5 are known to be breakable, so sha256 is a better option
+    when the hash is being used for security purposes. If hashing passwords
+    or anything else that needs to be retained for a long period a salted
+    hash is better.
+    """
+    if isinstance(base_str, six.text_type):
+        base_str = base_str.encode('utf-8')
+    return hashlib.sha256(base_str).hexdigest()
+
+
 def filter_and_format_resource_metadata(resource_type, resource_list,
         search_filts, metadata_type=None):
     """Get all metadata for a list of resources after filtering.

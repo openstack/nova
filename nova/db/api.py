@@ -2045,3 +2045,39 @@ def instance_tag_delete_all(context, instance_uuid):
 def instance_tag_exists(context, instance_uuid, tag):
     """Check if specified tag exist on the instance."""
     return IMPL.instance_tag_exists(context, instance_uuid, tag)
+
+
+####################
+
+
+def console_auth_token_create(context, values):
+    """Create a console authorization."""
+    return IMPL.console_auth_token_create(context, values)
+
+
+def console_auth_token_get_valid(context, token_hash, instance_uuid):
+    """Get a valid console authorization by token_hash and instance_uuid.
+
+    The console authorizations expire at the time specified by their
+    'expires' column. An expired console auth token will not be returned
+    to the caller - it is treated as if it does not exist.
+    """
+    return IMPL.console_auth_token_get_valid(context,
+                                             token_hash,
+                                             instance_uuid)
+
+
+def console_auth_token_destroy_all_by_instance(context, instance_uuid):
+    """Delete all console authorizations belonging to the instance."""
+    return IMPL.console_auth_token_destroy_all_by_instance(context,
+                                                           instance_uuid)
+
+
+def console_auth_token_destroy_expired_by_host(context, host):
+    """Delete expired console authorizations belonging to the host.
+
+    The console authorizations expire at the time specified by their
+    'expires' column. This function is used to garbage collect expired
+    tokens associated with the given host.
+    """
+    return IMPL.console_auth_token_destroy_expired_by_host(context, host)
