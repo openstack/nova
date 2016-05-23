@@ -27,7 +27,9 @@ class NotificationObject(base.NovaObject):
 @base.NovaObjectRegistry.register_notification
 class EventType(NotificationObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: New valid actions values are added to the
+    #              NotificationActionField enum
+    VERSION = '1.1'
 
     fields = {
         'object': fields.StringField(nullable=False),

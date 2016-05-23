@@ -597,8 +597,9 @@ class NotificationPhase(Enum):
 
 class NotificationAction(Enum):
     UPDATE = 'update'
+    EXCEPTION = 'exception'
 
-    ALL = (UPDATE,)
+    ALL = (UPDATE, EXCEPTION)
 
     def __init__(self):
         super(NotificationAction, self).__init__(

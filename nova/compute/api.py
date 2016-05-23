@@ -53,6 +53,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import crypto
 from nova.db import base
 from nova import exception
+from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
 from nova.i18n import _LE
@@ -85,9 +86,14 @@ from nova import volume
 LOG = logging.getLogger(__name__)
 
 get_notifier = functools.partial(rpc.get_notifier, service='compute')
-wrap_exception = functools.partial(exception.wrap_exception,
-                                   get_notifier=get_notifier)
-
+# NOTE(gibi): legacy notification used compute as a service but these
+# calls still run on the client side of the compute service which is
+# nova-api. By setting the binary to nova-api below, we can make sure
+# that the new versioned notifications has the right publisher_id but the
+# legacy notifications does not change.
+wrap_exception = functools.partial(exception_wrapper.wrap_exception,
+                                   get_notifier=get_notifier,
+                                   binary='nova-api')
 CONF = nova.conf.CONF
 
 MAX_USERDATA_SIZE = 65535
@@ -3891,8 +3897,9 @@ class KeypairAPI(base.Base):
     """Subset of the Compute Manager API for managing key pairs."""
 
     get_notifier = functools.partial(rpc.get_notifier, service='api')
-    wrap_exception = functools.partial(exception.wrap_exception,
-                                       get_notifier=get_notifier)
+    wrap_exception = functools.partial(exception_wrapper.wrap_exception,
+                                       get_notifier=get_notifier,
+                                       binary='nova-api')
 
     def _notify(self, context, event_suffix, keypair_name):
         payload = {
