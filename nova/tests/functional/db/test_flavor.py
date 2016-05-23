@@ -61,7 +61,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
     def _delete_main_flavors(self):
         flavors = db_api.flavor_get_all(self.context)
         for flavor in flavors:
-            db_api.flavor_destroy(self.context, flavor['name'])
+            db_api.flavor_destroy(self.context, flavor['flavorid'])
 
     def test_create(self):
         self._delete_main_flavors()
@@ -181,13 +181,13 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         flavor = objects.Flavor.get_by_flavor_id(self.context, 'mainflavor')
         self._test_destroy(flavor)
 
-    def test_destroy_missing_flavor_by_name(self):
-        flavor = objects.Flavor(context=self.context, name='foo')
-        self.assertRaises(exception.FlavorNotFoundByName,
+    def test_destroy_missing_flavor_by_flavorid(self):
+        flavor = objects.Flavor(context=self.context, flavorid='foo')
+        self.assertRaises(exception.FlavorNotFound,
                           flavor.destroy)
 
     def test_destroy_missing_flavor_by_id(self):
-        flavor = objects.Flavor(context=self.context, name='foo', id=1234)
+        flavor = objects.Flavor(context=self.context, flavorid='foo', id=1234)
         self.assertRaises(exception.FlavorNotFound,
                           flavor.destroy)
 
@@ -208,9 +208,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self._test_get_all(expect_len + 1)
 
     def test_get_all_with_all_api_flavors(self):
-        db_flavors = db_api.flavor_get_all(self.context)
-        for flavor in db_flavors:
-            db_api.flavor_destroy(self.context, flavor['name'])
+        self._delete_main_flavors()
         flavor = ForcedFlavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_get_all(1)

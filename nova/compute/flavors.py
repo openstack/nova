@@ -21,7 +21,6 @@
 import re
 import uuid
 
-from oslo_log import log as logging
 from oslo_utils import strutils
 import six
 
@@ -31,13 +30,10 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LE
 from nova import objects
 from nova import utils
 
 CONF = nova.conf.CONF
-
-LOG = logging.getLogger(__name__)
 
 # NOTE(luisg): Flavor names can include non-ascii characters so that users can
 # create flavor names in locales that use them, however flavor IDs are limited
@@ -166,18 +162,6 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     flavor = objects.Flavor(context=context.get_admin_context(), **kwargs)
     flavor.create()
     return flavor
-
-
-def destroy(name):
-    """Marks flavor as deleted."""
-    try:
-        if not name:
-            raise ValueError()
-        flavor = objects.Flavor(context=context.get_admin_context(), name=name)
-        flavor.destroy()
-    except (ValueError, exception.NotFound):
-        LOG.exception(_LE('Instance type %s not found for deletion'), name)
-        raise exception.FlavorNotFoundByName(flavor_name=name)
 
 
 def get_all_flavors_sorted_list(ctxt=None, filters=None, sort_key='flavorid',

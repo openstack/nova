@@ -4019,7 +4019,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         flavor2 = self._create_flavor({'name': 'name2', 'flavorid': 'a2',
                                        'extra_specs': specs2})
 
-        db.flavor_destroy(self.ctxt, 'name1')
+        db.flavor_destroy(self.ctxt, 'a1')
 
         self.assertRaises(exception.FlavorNotFound,
                           db.flavor_get, self.ctxt, flavor1['id'])
@@ -4068,7 +4068,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
     def test_flavor_get_all(self):
         # NOTE(boris-42): Remove base instance types
         for it in db.flavor_get_all(self.ctxt):
-            db.flavor_destroy(self.ctxt, it['name'])
+            db.flavor_destroy(self.ctxt, it['flavorid'])
 
         flavors = [
             {'root_gb': 600, 'memory_mb': 100, 'disabled': True,
@@ -4295,7 +4295,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
     def test_flavor_get_by_flavor_id_deleted(self):
         flavor = self._create_flavor({'name': 'abc', 'flavorid': '123'})
 
-        db.flavor_destroy(self.ctxt, 'abc')
+        db.flavor_destroy(self.ctxt, '123')
 
         flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
                 flavor['flavorid'], read_deleted='yes')
@@ -4307,7 +4307,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         param_dict = {'name': 'abc', 'flavorid': '123'}
 
         self._create_flavor(param_dict)
-        db.flavor_destroy(self.ctxt, 'abc')
+        db.flavor_destroy(self.ctxt, '123')
 
         # Recreate the flavor with the same params
         flavor = self._create_flavor(param_dict)
@@ -4473,13 +4473,13 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
         for v in values:
             self._create_flavor_access(*v)
 
-        db.flavor_destroy(self.ctxt, flavor1['name'])
+        db.flavor_destroy(self.ctxt, flavor1['flavorid'])
 
         p = (self.ctxt, flavor1['flavorid'])
         self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
         p = (self.ctxt, flavor2['flavorid'])
         self.assertEqual(1, len(db.flavor_access_get_by_flavor_id(*p)))
-        db.flavor_destroy(self.ctxt, flavor2['name'])
+        db.flavor_destroy(self.ctxt, flavor2['flavorid'])
         self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
 
 

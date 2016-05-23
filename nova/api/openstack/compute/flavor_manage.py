@@ -20,6 +20,7 @@ from nova.api import validation
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
+from nova import objects
 
 ALIAS = "os-flavor-manage"
 
@@ -43,13 +44,11 @@ class FlavorManageController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
-            flavor = flavors.get_flavor_by_flavor_id(
-                    id, ctxt=context, read_deleted="no")
+            flavor.destroy()
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-        flavors.destroy(flavor['name'])
 
     # NOTE(oomichi): Return 200 for backwards compatibility but should be 201
     # as this operation complete the creation of flavor resource.

@@ -18,6 +18,7 @@ from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
+from nova import objects
 
 
 authorize = extensions.extension_authorizer('compute', 'flavormanage')
@@ -34,13 +35,12 @@ class FlavorManageController(wsgi.Controller):
     def _delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
+
+        flavor = objects.Flavor(context=context, flavorid=id)
         try:
-            flavor = flavors.get_flavor_by_flavor_id(
-                    id, ctxt=context, read_deleted="no")
+            flavor.destroy()
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
-        flavors.destroy(flavor['name'])
 
         return webob.Response(status_int=202)
 

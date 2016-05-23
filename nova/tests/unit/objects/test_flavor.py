@@ -353,11 +353,13 @@ class _TestFlavor(object):
         flavor = flavor_obj.Flavor(id=123)
         self.assertRaises(exception.ObjectActionError, flavor.save)
 
-    def test_destroy(self):
-        flavor = flavor_obj.Flavor(context=self.context, name='foo')
+    @mock.patch('nova.objects.Flavor._flavor_destroy')
+    def test_destroy(self, mock_destroy):
+        mock_destroy.side_effect = exception.FlavorNotFound(flavor_id='foo')
+        flavor = flavor_obj.Flavor(context=self.context, flavorid='foo')
         with mock.patch.object(db, 'flavor_destroy') as destroy:
             flavor.destroy()
-            destroy.assert_called_once_with(self.context, flavor.name)
+            destroy.assert_called_once_with(self.context, flavor.flavorid)
 
     @mock.patch('nova.objects.Flavor._flavor_destroy')
     def test_destroy_api_by_id(self, mock_destroy):
@@ -366,10 +368,11 @@ class _TestFlavor(object):
         mock_destroy.assert_called_once_with(self.context, flavor_id=flavor.id)
 
     @mock.patch('nova.objects.Flavor._flavor_destroy')
-    def test_destroy_api_by_name(self, mock_destroy):
-        flavor = flavor_obj.Flavor(context=self.context, name='foo')
+    def test_destroy_api_by_flavorid(self, mock_destroy):
+        flavor = flavor_obj.Flavor(context=self.context, flavorid='foo')
         flavor.destroy()
-        mock_destroy.assert_called_once_with(self.context, name=flavor.name)
+        mock_destroy.assert_called_once_with(self.context,
+                                             flavorid=flavor.flavorid)
 
     def test_load_projects(self):
         flavor = flavor_obj.Flavor(context=self.context, flavorid='foo')

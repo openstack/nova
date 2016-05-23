@@ -5204,13 +5204,13 @@ def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
 
 
 @main_context_manager.writer
-def flavor_destroy(context, name):
+def flavor_destroy(context, flavor_id):
     """Marks specific flavor as deleted."""
     ref = model_query(context, models.InstanceTypes, read_deleted="no").\
-                filter_by(name=name).\
+                filter_by(flavorid=flavor_id).\
                 first()
     if not ref:
-        raise exception.FlavorNotFoundByName(flavor_name=name)
+        raise exception.FlavorNotFound(flavor_id=flavor_id)
 
     ref.soft_delete(context.session)
     model_query(context, models.InstanceTypeExtraSpecs, read_deleted="no").\
