@@ -48,12 +48,9 @@ def upgrade(migrate_engine):
                               name='uniq_resource_providers0name')
         uc.create()
 
-        # DB2 automatically creates an index for the unique
-        # constraint above, so skip adding the index on DB2.
-        if migrate_engine.name != 'ibm_db_sa':
-            utils.add_index(migrate_engine, 'resource_providers',
-                            'resource_providers_name_idx',
-                            ['name'])
+        utils.add_index(migrate_engine, 'resource_providers',
+                        'resource_providers_name_idx',
+                        ['name'])
 
     if not hasattr(resource_providers.c, 'generation'):
         resource_providers.create_column(generation)
@@ -87,7 +84,7 @@ def upgrade(migrate_engine):
         'resource_provider_id', 'resource_class_id', table=inventories,
         name='uniq_inventories0resource_provider_resource_class')
     inventories_uc.create()
-    if migrate_engine.name != 'ibm_db_sa':
-        utils.add_index(migrate_engine, 'inventories',
-                            'inventories_resource_provider_resource_class_idx',
-                            ['resource_provider_id', 'resource_class_id'])
+
+    utils.add_index(migrate_engine, 'inventories',
+                    'inventories_resource_provider_resource_class_idx',
+                    ['resource_provider_id', 'resource_class_id'])

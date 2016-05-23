@@ -1,0 +1,9 @@
+---
+upgrade:
+  - DB2 database support was removed from tree. This is a non open
+    source database that had no 3rd party CI, and a set of constraints
+    that meant we had to keep special casing it in code. It also made
+    the online data migrations needed for cells v2 and placement
+    engine much more difficult. With 0% of OpenStack survey users
+    reporting usage we decided it was time to remove this to focus on
+    features needed by the larger community.

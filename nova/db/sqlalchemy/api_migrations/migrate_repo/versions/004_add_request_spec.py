@@ -33,14 +33,9 @@ def upgrade(migrate_engine):
         Column('spec', Text, nullable=False),
         UniqueConstraint('instance_uuid',
             name='uniq_request_specs0instance_uuid'),
+        Index('request_spec_instance_uuid_idx', 'instance_uuid'),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
-
-    # NOTE(mriedem): DB2 creates an index when a unique constraint is created
-    # so trying to add a second index on the host column will fail with error
-    # SQL0605W, so omit the index in the case of DB2.
-    if migrate_engine.name != 'ibm_db_sa':
-        Index('request_spec_instance_uuid_idx', request_specs.c.instance_uuid)
 
     request_specs.create(checkfirst=True)
