@@ -1040,12 +1040,11 @@ class TestInitComputeNode(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     def test_compute_node_created_on_empty(self, get_mock, create_mock,
                                            pci_tracker_mock):
+        self.flags(cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0,
+                   disk_allocation_ratio=1.0)
         self._setup_rt()
 
         get_mock.side_effect = exc.NotFound
-        cpu_alloc_ratio = 1.0
-        ram_alloc_ratio = 1.0
-        disk_alloc_ratio = 1.0
 
         resources = {
             'host_ip': '1.1.1.1',
@@ -1087,17 +1086,12 @@ class TestInitComputeNode(BaseTestCase):
             # NOTE(sbauza): ResourceTracker adds host field
             host=_HOSTNAME,
             # NOTE(sbauza): ResourceTracker adds CONF allocation ratios
-            ram_allocation_ratio=ram_alloc_ratio,
-            cpu_allocation_ratio=cpu_alloc_ratio,
-            disk_allocation_ratio=disk_alloc_ratio,
+            ram_allocation_ratio=1.0,
+            cpu_allocation_ratio=1.0,
+            disk_allocation_ratio=1.0,
             stats={},
             pci_device_pools=objects.PciDevicePoolList(objects=[])
         )
-
-        # Forcing the flags to the values we know
-        self.rt.ram_allocation_ratio = ram_alloc_ratio
-        self.rt.cpu_allocation_ratio = cpu_alloc_ratio
-        self.rt.disk_allocation_ratio = disk_alloc_ratio
 
         def set_cn_id():
             # The PCI tracker needs the compute node's ID when starting up, so
@@ -1116,22 +1110,6 @@ class TestInitComputeNode(BaseTestCase):
                                                  self.rt.compute_node))
         pci_tracker_mock.assert_called_once_with(mock.sentinel.ctx,
                                                  42)
-
-    def test_copy_resources_adds_allocation_ratios(self):
-        self.flags(cpu_allocation_ratio=4.0, ram_allocation_ratio=3.0,
-                   disk_allocation_ratio=2.0)
-        self._setup_rt()
-
-        resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
-        # TODO(jaypipes): Remove this manual setting of the RT.compute_node
-        # attribute once the compute node object is always created in the
-        # RT's constructor.
-        self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
-
-        self.rt._copy_resources(resources)
-        self.assertEqual(4.0, self.rt.compute_node.cpu_allocation_ratio)
-        self.assertEqual(3.0, self.rt.compute_node.ram_allocation_ratio)
-        self.assertEqual(2.0, self.rt.compute_node.disk_allocation_ratio)
 
 
 class TestUpdateComputeNode(BaseTestCase):
