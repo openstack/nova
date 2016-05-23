@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 import mock
 
 import nova.conf
@@ -152,7 +154,7 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
             policies=['affinity']))
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
-            policies=[policy]))
+            policies=[policy]), instance_uuid=str(uuid.uuid4()))
         spec_obj.instance_group.hosts = []
         self.assertTrue(filt_cls.host_passes(host, spec_obj))
         spec_obj.instance_group.hosts = ['host2']
@@ -165,15 +167,27 @@ class TestGroupAffinityFilter(test.NoDBTestCase):
 
     def _test_group_anti_affinity_filter_fails(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
-        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
-            policies=[policy],
-            hosts=['host1']))
+        spec_obj = objects.RequestSpec(
+            instance_group=objects.InstanceGroup(policies=[policy],
+                                                 hosts=['host1']),
+            instance_uuid=str(uuid.uuid4()))
         self.assertFalse(filt_cls.host_passes(host, spec_obj))
 
     def test_group_anti_affinity_filter_fails(self):
         self._test_group_anti_affinity_filter_fails(
                 affinity_filter.ServerGroupAntiAffinityFilter(),
                 'anti-affinity')
+
+    def test_group_anti_affinity_filter_allows_instance_to_same_host(self):
+        fake_uuid = str(uuid.uuid4())
+        mock_instance = objects.Instance(uuid=fake_uuid)
+        host_state = fakes.FakeHostState('host1', 'node1',
+                                         {}, instances=[mock_instance])
+        spec_obj = objects.RequestSpec(instance_group=objects.InstanceGroup(
+            policies=['anti-affinity'], hosts=['host1', 'host2']),
+            instance_uuid=mock_instance.uuid)
+        self.assertTrue(affinity_filter.ServerGroupAntiAffinityFilter().
+                        host_passes(host_state, spec_obj))
 
     def _test_group_affinity_filter_passes(self, filt_cls, policy):
         host = fakes.FakeHostState('host1', 'node1', {})
