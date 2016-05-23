@@ -912,40 +912,6 @@ class API(base.Base):
         # by the network quotas
         return base_options, max_network_count, key_pair
 
-    def _create_build_request(self, context, instance, base_options,
-            request_spec, security_groups, num_instances, index):
-        # Store the BuildRequest that will help populate an instance
-        # object for a list/show request
-        info_cache = objects.InstanceInfoCache()
-        info_cache.instance_uuid = instance.uuid
-        info_cache.network_info = network_model.NetworkInfo()
-        # NOTE: base_options['config_drive'] is either True or '' due
-        # to how it's represented in the instances table in the db.
-        # BuildRequest needs a boolean.
-        bool_config_drive = strutils.bool_from_string(
-                base_options['config_drive'], default=False)
-        build_request = objects.BuildRequest(context,
-                instance=instance,
-                instance_uuid=instance.uuid,
-                request_spec=request_spec,
-                project_id=context.project_id,
-                user_id=context.user_id,
-                display_name=instance.display_name,
-                instance_metadata=base_options['metadata'],
-                progress=0,
-                vm_state=vm_states.BUILDING,
-                task_state=task_states.SCHEDULING,
-                image_ref=base_options['image_ref'],
-                access_ip_v4=base_options['access_ip_v4'],
-                access_ip_v6=base_options['access_ip_v6'],
-                info_cache=info_cache,
-                security_groups=security_groups,
-                config_drive=bool_config_drive,
-                key_name=base_options['key_name'],
-                locked_by=None)
-        build_request.create()
-        return build_request
-
     def _provision_instances(self, context, instance_type, min_count,
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
@@ -984,9 +950,10 @@ class API(base.Base):
                         block_device_mapping, num_instances, i,
                         shutdown_terminate, create_instance=False)
 
-                build_request = self._create_build_request(context,
-                        instance, base_options, req_spec, security_groups,
-                        num_instances, i)
+                build_request = objects.BuildRequest(context,
+                        instance=instance, instance_uuid=instance.uuid,
+                        project_id=instance.project_id)
+                build_request.create()
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
                 # for it need to instead look for the RequestSpec.

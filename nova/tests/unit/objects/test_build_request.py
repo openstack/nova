@@ -33,11 +33,8 @@ class _TestBuildRequestObject(object):
         req_obj = build_request.BuildRequest.get_by_instance_uuid(self.context,
                 fake_req['instance_uuid'])
 
-        self.assertEqual(fake_req['request_spec']['instance_uuid'],
-                         req_obj.request_spec.instance_uuid)
         self.assertEqual(fake_req['instance_uuid'], req_obj.instance_uuid)
         self.assertEqual(fake_req['project_id'], req_obj.project_id)
-        self.assertIsInstance(req_obj.request_spec, objects.RequestSpec)
         self.assertIsInstance(req_obj.instance, objects.Instance)
         get_by_uuid.assert_called_once_with(self.context,
                 fake_req['instance_uuid'])
@@ -67,19 +64,13 @@ class _TestBuildRequestObject(object):
                 build_request.BuildRequest.get_by_instance_uuid, self.context,
                 fake_req['instance_uuid'])
 
-    @mock.patch.object(build_request.BuildRequest,
-            '_create_in_db')
-    def test_create(self, create_in_db):
+    def test_create(self):
         fake_req = fake_build_request.fake_db_req()
         req_obj = fake_build_request.fake_req_obj(self.context, fake_req)
 
         def _test_create_args(self2, context, changes):
-            for field in [fields for fields in
-                    build_request.BuildRequest.fields if fields not in
-                    ['created_at', 'updated_at', 'request_spec', 'id']]:
+            for field in ['instance_uuid', 'project_id']:
                 self.assertEqual(fake_req[field], changes[field])
-            self.assertEqual(fake_req['request_spec']['id'],
-                    changes['request_spec_id'])
             self.assertEqual(
                     jsonutils.dumps(req_obj.instance.obj_to_primitive()),
                     changes['instance'])

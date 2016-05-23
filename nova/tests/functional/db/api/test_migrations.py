@@ -82,6 +82,17 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
         # the database. They will be removed from the model at a later time.
         fkey_whitelist = {'build_requests': ['request_spec_id']}
 
+        # Define a whitelist of columns that will be removed from the
+        # DB at a later release and aren't on a model anymore.
+
+        column_whitelist = {
+                'build_requests': ['vm_state', 'instance_metadata',
+                    'display_name', 'access_ip_v6', 'access_ip_v4', 'key_name',
+                    'locked_by', 'image_ref', 'progress', 'request_spec_id',
+                    'info_cache', 'user_id', 'task_state', 'security_groups',
+                    'config_drive']
+        }
+
         for element in diff:
             if isinstance(element, list):
                 # modify_nullable is a list
@@ -95,6 +106,12 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
                     column_keys = fkey.column_keys
                     if (tablename in fkey_whitelist and
                             column_keys == fkey_whitelist[tablename]):
+                        continue
+                elif element[0] == 'remove_column':
+                    tablename = element[2]
+                    column = element[3]
+                    if (tablename in column_whitelist and
+                            column.name in column_whitelist[tablename]):
                         continue
 
                 new_diff.append(element)
