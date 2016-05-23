@@ -211,7 +211,6 @@ class BaseTestCase(test.TestCase):
         self.host = 'fakehost'
         self.compute = self._create_compute_node()
         self.updated = False
-        self.deleted = False
         self.update_call_count = 0
 
     def _set_pci_passthrough_whitelist(self):
@@ -405,8 +404,6 @@ class BaseTrackerTestCase(BaseTestCase):
                 self._fake_compute_node_get)
         self.stub_out('nova.db.compute_node_update',
                 self._fake_compute_node_update)
-        self.stub_out('nova.db.compute_node_delete',
-                self._fake_compute_node_delete)
         self.stub_out('nova.db.migration_update',
                 self._fake_migration_update)
         self.stub_out('nova.db.migration_get_in_progress_by_host_and_node',
@@ -460,11 +457,6 @@ class BaseTrackerTestCase(BaseTestCase):
 
     def _fake_rp_create(self, context, updates):
         return dict(updates, id=1)
-
-    def _fake_compute_node_delete(self, ctx, compute_node_id):
-        self.deleted = True
-        self.compute.update({'deleted': 1})
-        return self.compute
 
     def _fake_migration_get_in_progress_by_host_and_node(self, ctxt, host,
                                                          node):
