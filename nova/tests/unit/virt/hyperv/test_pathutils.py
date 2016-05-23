@@ -33,7 +33,7 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
 
         self._pathutils = pathutils.PathUtils()
 
-    def _mock_lookup_configdrive_path(self, ext):
+    def _mock_lookup_configdrive_path(self, ext, rescue=False):
         self._pathutils.get_instance_dir = mock.MagicMock(
             return_value=self.fake_instance_dir)
 
@@ -42,15 +42,26 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
             return True if path[(path.rfind('.') + 1):] == ext else False
         self._pathutils.exists = mock_exists
         configdrive_path = self._pathutils.lookup_configdrive_path(
-            self.fake_instance_name)
+            self.fake_instance_name, rescue)
         return configdrive_path
 
-    def test_lookup_configdrive_path(self):
+    def _test_lookup_configdrive_path(self, rescue=False):
+        configdrive_name = 'configdrive'
+        if rescue:
+            configdrive_name += '-rescue'
+
         for format_ext in constants.DISK_FORMAT_MAP:
-            configdrive_path = self._mock_lookup_configdrive_path(format_ext)
-            fake_path = os.path.join(self.fake_instance_dir,
-                                     'configdrive.' + format_ext)
-            self.assertEqual(configdrive_path, fake_path)
+            configdrive_path = self._mock_lookup_configdrive_path(format_ext,
+                                                                  rescue)
+            expected_path = os.path.join(self.fake_instance_dir,
+                                         configdrive_name + '.' + format_ext)
+            self.assertEqual(expected_path, configdrive_path)
+
+    def test_lookup_configdrive_path(self):
+        self._test_lookup_configdrive_path()
+
+    def test_lookup_rescue_configdrive_path(self):
+        self._test_lookup_configdrive_path(rescue=True)
 
     def test_lookup_configdrive_path_non_exist(self):
         self._pathutils.get_instance_dir = mock.MagicMock(
