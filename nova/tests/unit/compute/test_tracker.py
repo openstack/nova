@@ -376,7 +376,8 @@ def overhead_zero(instance):
     # Emulate that the driver does not adjust the memory
     # of the instance...
     return {
-        'memory_mb': 0
+        'memory_mb': 0,
+        'disk_gb': 0,
     }
 
 

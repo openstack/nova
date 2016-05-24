@@ -170,6 +170,33 @@ class ClaimTestCase(test.NoDBTestCase):
     def test_memory_oversubscription(self):
         self._claim(memory_mb=4096)
 
+    def test_disk_with_overhead(self):
+        overhead = {'memory_mb': 0,
+                    'disk_gb': 1}
+        limits = {'disk_gb': 100}
+        claim_obj = self._claim(root_gb=99, ephemeral_gb=0, limits=limits,
+                                overhead=overhead)
+
+        self.assertEqual(100, claim_obj.disk_gb)
+
+    def test_disk_with_overhead_insufficient(self):
+        overhead = {'memory_mb': 0,
+                    'disk_gb': 2}
+        limits = {'disk_gb': 100}
+
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim, limits=limits, overhead=overhead,
+                          root_gb=99, ephemeral_gb=0)
+
+    def test_disk_with_overhead_insufficient_no_root(self):
+        overhead = {'memory_mb': 0,
+                    'disk_gb': 2}
+        limits = {'disk_gb': 1}
+
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim, limits=limits, overhead=overhead,
+                          root_gb=0, ephemeral_gb=0)
+
     def test_memory_insufficient(self):
         limits = {'memory_mb': 8192}
         self.assertRaises(exception.ComputeResourcesUnavailable,

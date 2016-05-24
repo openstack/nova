@@ -44,6 +44,7 @@ from nova.virt import driver
 
 FAKE_VIRT_MEMORY_MB = 5
 FAKE_VIRT_MEMORY_OVERHEAD = 1
+FAKE_VIRT_DISK_OVERHEAD = 0
 FAKE_VIRT_MEMORY_WITH_OVERHEAD = (
         FAKE_VIRT_MEMORY_MB + FAKE_VIRT_MEMORY_OVERHEAD)
 FAKE_VIRT_NUMA_TOPOLOGY = objects.NUMATopology(
@@ -206,7 +207,8 @@ class FakeVirtDriver(driver.ComputeDriver):
     def estimate_instance_overhead(self, instance_info):
         instance_info['memory_mb']  # make sure memory value is present
         overhead = {
-            'memory_mb': FAKE_VIRT_MEMORY_OVERHEAD
+            'memory_mb': FAKE_VIRT_MEMORY_OVERHEAD,
+            'disk_gb': FAKE_VIRT_DISK_OVERHEAD,
         }
         return overhead  # just return a constant value for testing
 
@@ -1068,7 +1070,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
         mock_save.side_effect = fake_save
         inst = objects.Instance(host=None, node=None, memory_mb=1024,
-                                uuid=uuidsentinel.instance1)
+                                root_gb=10, uuid=uuidsentinel.instance1)
         inst.obj_reset_changes()
         numa = objects.InstanceNUMATopology()
         claim = mock.MagicMock()
