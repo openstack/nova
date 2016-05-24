@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 =========================================
@@ -76,6 +75,13 @@ Request
 
 **Example Create Interface: JSON request**
 
+Create Interface with ``net_id`` and ``fixed_ips``.
+
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-net_id-req.json
+   :language: javascript
+
+Create Interface with ``port_id``.
+
 .. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-req.json
    :language: javascript
 
@@ -147,7 +153,7 @@ Detaches a port interface.
 Normal response codes: 202
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
-conflict(409), NotImplemented(501) 
+conflict(409), NotImplemented(501)
 
 Request
 -------
