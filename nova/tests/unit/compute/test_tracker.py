@@ -1889,6 +1889,32 @@ class TestInstanceInResizeState(test.NoDBTestCase):
         self.assertTrue(resource_tracker._instance_in_resize_state(instance))
 
 
+class TestSetInstanceHostAndNode(BaseTestCase):
+
+    def setUp(self):
+        super(TestSetInstanceHostAndNode, self).setUp()
+        self._setup_rt()
+
+    @mock.patch('nova.objects.Instance.save')
+    def test_set_instance_host_and_node(self, save_mock):
+        inst = objects.Instance()
+        self.rt._set_instance_host_and_node(inst)
+        save_mock.assert_called_once_with()
+        self.assertEqual(self.rt.host, inst.host)
+        self.assertEqual(self.rt.nodename, inst.node)
+        self.assertEqual(self.rt.host, inst.launched_on)
+
+    @mock.patch('nova.objects.Instance.save')
+    def test_unset_instance_host_and_node(self, save_mock):
+        inst = objects.Instance()
+        self.rt._set_instance_host_and_node(inst)
+        self.rt._unset_instance_host_and_node(inst)
+        self.assertEqual(2, save_mock.call_count)
+        self.assertIsNone(inst.host)
+        self.assertIsNone(inst.node)
+        self.assertEqual(self.rt.host, inst.launched_on)
+
+
 def _update_compute_node(node, **kwargs):
     for key, value in kwargs.items():
         setattr(node, key, value)
