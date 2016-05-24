@@ -909,22 +909,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
             self.tracker.instance_claim(self.context, inst)
         mock_save.assert_called_once_with()
 
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
-    def test_claim_sets_instance_host_and_node(self, mock_get):
-        instance = self._fake_instance_obj()
-        self.assertIsNone(instance['host'])
-        self.assertIsNone(instance['launched_on'])
-        self.assertIsNone(instance['node'])
-
-        with mock.patch.object(instance, 'save'):
-            claim = self.tracker.instance_claim(self.context, instance)
-        self.assertNotEqual(0, claim.memory_mb)
-
-        self.assertEqual('fakehost', instance['host'])
-        self.assertEqual('fakehost', instance['launched_on'])
-        self.assertEqual('fakenode', instance['node'])
-
 
 class _MoveClaimTestCase(BaseTrackerTestCase):
 

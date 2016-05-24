@@ -1397,6 +1397,10 @@ class TestInstanceClaim(BaseTestCase):
             self.assertTrue(obj_base.obj_equal_prims(expected,
                                                      self.rt.compute_node))
 
+        self.assertEqual(self.rt.host, self.instance.host)
+        self.assertEqual(self.rt.host, self.instance.launched_on)
+        self.assertEqual(self.rt.nodename, self.instance.node)
+
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
     @mock.patch('nova.pci.manager.PciDevTracker.claim_instance')
