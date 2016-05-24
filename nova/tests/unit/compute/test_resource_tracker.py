@@ -641,38 +641,6 @@ class TrackerTestCase(BaseTrackerTestCase):
             self.assertEqual(expected_pool, actual_pool)
 
 
-class SchedulerClientTrackerTestCase(BaseTrackerTestCase):
-
-    def setUp(self):
-        super(SchedulerClientTrackerTestCase, self).setUp()
-        self.tracker.scheduler_client.update_resource_stats = mock.Mock()
-
-    def test_update_resource(self):
-        # NOTE(pmurray): we are not doing a full pass through the resource
-        # trackers update path, so safest to do two updates and look for
-        # differences then to rely on the initial state being the same
-        # as an update
-        urs_mock = self.tracker.scheduler_client.update_resource_stats
-        self.tracker._update(self.context)
-        urs_mock.reset_mock()
-        # change a compute node value to simulate a change
-        self.tracker.compute_node.local_gb_used += 1
-        self.tracker._update(self.context)
-        urs_mock.assert_called_once_with(self.tracker.compute_node)
-
-    def test_no_update_resource(self):
-        # NOTE(pmurray): we are not doing a full pass through the resource
-        # trackers update path, so safest to do two updates and look for
-        # differences then to rely on the initial state being the same
-        # as an update
-        self.tracker._update(self.context)
-        update = self.tracker.scheduler_client.update_resource_stats
-        update.reset_mock()
-        self.tracker._update(self.context)
-        self.assertFalse(update.called, "update_resource_stats should not be "
-                                        "called when there is no change")
-
-
 class TrackerPciStatsTestCase(BaseTrackerTestCase):
 
     def test_update_compute_node(self):
