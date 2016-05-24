@@ -145,6 +145,8 @@ class SerialConsoleHandler(object):
         # as we can't use the serial port ElementName attribute because of
         # a Hyper-V bug.
         for pipe_path in serial_port_conns:
+            # expected pipe_path:
+            # '\\.\pipe\fc1bcc91-c7d3-4116-a210-0cd151e019cd_rw'
             port_type = pipe_path[-2:]
             if port_type in [constants.SERIAL_PORT_TYPE_RO,
                              constants.SERIAL_PORT_TYPE_RW]:

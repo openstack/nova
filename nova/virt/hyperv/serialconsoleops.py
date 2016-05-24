@@ -93,7 +93,7 @@ class SerialConsoleOps(object):
         try:
             log = b''
             # Start with the oldest console log file.
-            for log_path in console_log_paths[::-1]:
+            for log_path in reversed(console_log_paths):
                 if os.path.exists(log_path):
                     with open(log_path, 'rb') as fp:
                         log += fp.read()
