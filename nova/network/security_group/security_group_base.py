@@ -18,12 +18,12 @@
 #    under the License.
 
 from oslo_utils import encodeutils
+from oslo_utils import netutils as utils
 from six.moves import urllib
 
 from nova import exception
 from nova.i18n import _
 from nova.objects import security_group as security_group_obj
-from nova import utils
 
 
 class SecurityGroupBase(object):
