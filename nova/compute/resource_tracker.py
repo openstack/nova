@@ -372,7 +372,7 @@ class ResourceTracker(object):
 
             if instance_type is not None and instance_type.id == itype['id']:
                 numa_topology = self._get_migration_context_resource(
-                    'numa_topology', instance)
+                    'numa_topology', instance, prefix=prefix)
                 usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
                 if self.pci_tracker:

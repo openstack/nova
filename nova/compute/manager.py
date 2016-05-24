@@ -3543,7 +3543,8 @@ class ComputeManager(manager.Manager):
                 migration.save()
 
             rt = self._get_resource_tracker(migration.source_node)
-            rt.drop_move_claim(context, instance, old_instance_type)
+            rt.drop_move_claim(context, instance, old_instance_type,
+                               prefix='old_')
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
             # might have manually powered up the instance to confirm the
