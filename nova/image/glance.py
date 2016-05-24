@@ -454,6 +454,24 @@ class GlanceImageServiceV2(object):
 
     def __init__(self, client=None):
         self._client = client or GlanceClientWrapper()
+        # NOTE(jbresnah) build the table of download handlers at the beginning
+        # so that operators can catch errors at load time rather than whenever
+        # a user attempts to use a module.  Note this cannot be done in glance
+        # space when this python module is loaded because the download module
+        # may require configuration options to be parsed.
+        self._download_handlers = {}
+        download_modules = image_xfers.load_transfer_modules()
+
+        for scheme, mod in six.iteritems(download_modules):
+            if scheme not in CONF.glance.allowed_direct_url_schemes:
+                continue
+
+            try:
+                self._download_handlers[scheme] = mod.get_download_handler()
+            except Exception as ex:
+                LOG.error(_LE('When loading the module %(module_str)s the '
+                              'following error occurred: %(ex)s'),
+                          {'module_str': str(mod), 'ex': ex})
 
     def show(self, context, image_id, include_locations=False,
              show_deleted=True):
@@ -491,6 +509,111 @@ class GlanceImageServiceV2(object):
             image['locations'] = locations
 
         return image
+
+    def _get_transfer_module(self, scheme):
+        try:
+            return self._download_handlers[scheme]
+        except KeyError:
+            return None
+        except Exception:
+            LOG.error(_LE("Failed to instantiate the download handler "
+                          "for %(scheme)s"), {'scheme': scheme})
+        return
+
+    def download(self, context, image_id, data=None, dst_path=None):
+        """Calls out to Glance for data and writes data."""
+        if CONF.glance.allowed_direct_url_schemes and dst_path is not None:
+            image = self.show(context, image_id, include_locations=True)
+            for entry in image.get('locations', []):
+                loc_url = entry['url']
+                loc_meta = entry['metadata']
+                o = urlparse.urlparse(loc_url)
+                xfer_mod = self._get_transfer_module(o.scheme)
+                if xfer_mod:
+                    try:
+                        xfer_mod.download(context, o, dst_path, loc_meta)
+                        LOG.info(_LI("Successfully transferred "
+                                     "using %s"), o.scheme)
+                        return
+                    except Exception:
+                        LOG.exception(_LE("Download image error"))
+
+        try:
+            image_chunks = self._client.call(context, 2, 'data', image_id)
+        except Exception:
+            _reraise_translated_image_exception(image_id)
+
+        # Retrieve properties for verification of Glance image signature
+        verifier = None
+        if CONF.glance.verify_glance_signatures:
+            image_meta_dict = self.show(context, image_id,
+                                        include_locations=False)
+            image_meta = objects.ImageMeta.from_dict(image_meta_dict)
+            img_signature = image_meta.properties.get('img_signature')
+            img_sig_hash_method = image_meta.properties.get(
+                'img_signature_hash_method'
+            )
+            img_sig_cert_uuid = image_meta.properties.get(
+                'img_signature_certificate_uuid'
+            )
+            img_sig_key_type = image_meta.properties.get(
+                'img_signature_key_type'
+            )
+            try:
+                verifier = signature_utils.get_verifier(context,
+                                                        img_sig_cert_uuid,
+                                                        img_sig_hash_method,
+                                                        img_signature,
+                                                        img_sig_key_type)
+            except exception.SignatureVerificationError:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_LE('Image signature verification failed '
+                                  'for image: %s'), image_id)
+
+        close_file = False
+        if data is None and dst_path:
+            data = open(dst_path, 'wb')
+            close_file = True
+
+        if data is None:
+
+            # Perform image signature verification
+            if verifier:
+                try:
+                    for chunk in image_chunks:
+                        verifier.update(chunk)
+                    verifier.verify()
+
+                    LOG.info(_LI('Image signature verification succeeded '
+                                 'for image: %s'), image_id)
+
+                except cryptography.exceptions.InvalidSignature:
+                    with excutils.save_and_reraise_exception():
+                        LOG.error(_LE('Image signature verification failed '
+                                      'for image: %s'), image_id)
+            return image_chunks
+        else:
+            try:
+                for chunk in image_chunks:
+                    if verifier:
+                        verifier.update(chunk)
+                    data.write(chunk)
+                if verifier:
+                    verifier.verify()
+                    LOG.info(_LI('Image signature verification succeeded '
+                                 'for image %s'), image_id)
+            except cryptography.exceptions.InvalidSignature:
+                data.truncate(0)
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_LE('Image signature verification failed '
+                                  'for image: %s'), image_id)
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_LE("Error writing to %(path)s: %(exception)s"),
+                              {'path': dst_path, 'exception': ex})
+            finally:
+                if close_file:
+                    data.close()
 
 
 def _extract_query_params(params):
