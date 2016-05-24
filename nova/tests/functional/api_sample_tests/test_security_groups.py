@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
 
@@ -61,7 +62,9 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     sample_dir = 'os-security-groups'
 
     def setUp(self):
-        self.flags(security_group_api=('neutron'))
+        self.flags(use_neutron=True)
+        self.neutron = fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
         super(SecurityGroupsJsonTest, self).setUp()
         path = 'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
         self.stub_out(path + 'get', fake_get)

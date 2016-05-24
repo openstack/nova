@@ -42,7 +42,7 @@ UUID_SERVER = uuids.server
 class TestNeutronSecurityGroupsTestCase(test.TestCase):
     def setUp(self):
         super(TestNeutronSecurityGroupsTestCase, self).setUp()
-        cfg.CONF.set_override('security_group_api', 'neutron')
+        cfg.CONF.set_override('use_neutron', True)
         self.original_client = neutron_api.get_client
         neutron_api.get_client = get_client
 

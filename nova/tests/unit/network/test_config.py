@@ -18,11 +18,6 @@ import nova.network.security_group.openstack_driver as sgapi
 import nova.test
 
 
-class FileATicket(object):
-    def __init__(self, **kwargs):
-        pass
-
-
 class NetworkAPIConfigTest(nova.test.NoDBTestCase):
     """Test the transition from legacy to use_neutron config options."""
 
@@ -51,21 +46,8 @@ class SecurityGroupAPIConfigTest(nova.test.NoDBTestCase):
             nova.network.security_group.neutron_driver.SecurityGroupAPI)
 
     def test_sg_nova(self):
-        self.flags(security_group_api='nova')
+        self.flags(use_neutron=False)
         driver = sgapi.get_openstack_security_group_driver()
         self.assertIsInstance(
             driver,
             nova.compute.api.SecurityGroupAPI)
-
-    def test_sg_neutron(self):
-        self.flags(security_group_api='neutron')
-        driver = sgapi.get_openstack_security_group_driver()
-        self.assertIsInstance(
-            driver,
-            nova.network.security_group.neutron_driver.SecurityGroupAPI)
-
-    def test_sg_custom(self):
-        self.flags(security_group_api=
-                   'nova.tests.unit.network.test_config.FileATicket')
-        driver = sgapi.get_openstack_security_group_driver()
-        self.assertIsInstance(driver, FileATicket)
