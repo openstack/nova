@@ -28,6 +28,7 @@ import cryptography
 import glanceclient
 from glanceclient.common import http
 import glanceclient.exc
+from glanceclient.v2 import schemas
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import sslutils
@@ -454,6 +455,43 @@ class GlanceImageServiceV2(object):
     def __init__(self, client=None):
         self._client = client or GlanceClientWrapper()
 
+    def show(self, context, image_id, include_locations=False,
+             show_deleted=True):
+        """Returns a dict with image data for the given opaque image id.
+
+        :param context: The context object to pass to image client
+        :param image_id: The UUID of the image
+        :param include_locations: (Optional) include locations in the returned
+                                  dict of information if the image service API
+                                  supports it. If the image service API does
+                                  not support the locations attribute, it will
+                                  still be included in the returned dict, as an
+                                  empty list.
+        :param show_deleted: (Optional) show the image even the status of
+                             image is deleted.
+        """
+        try:
+            image = self._client.call(context, 2, 'get', image_id)
+        except Exception:
+            _reraise_translated_image_exception(image_id)
+
+        if not show_deleted and getattr(image, 'deleted', False):
+            raise exception.ImageNotFound(image_id=image_id)
+
+        if not _is_image_available(context, image):
+            raise exception.ImageNotFound(image_id=image_id)
+
+        image = _translate_from_glance(image,
+                                       include_locations=include_locations)
+        if include_locations:
+            locations = image.get('locations', None) or []
+            du = image.get('direct_url', None)
+            if du:
+                locations.append({'url': du, 'metadata': {}})
+            image['locations'] = locations
+
+        return image
+
 
 def _extract_query_params(params):
     _params = {}
@@ -519,8 +557,15 @@ def _translate_to_glance(image_meta):
 
 
 def _translate_from_glance(image, include_locations=False):
-    image_meta = _extract_attributes(image,
-                                     include_locations=include_locations)
+    # TODO(mfedosin): Remove this check once we move to glance V2
+    # completely.
+    if CONF.glance.use_glance_v1:
+        image_meta = _extract_attributes(
+            image, include_locations=include_locations)
+    else:
+        image_meta = _extract_attributes_v2(
+            image, include_locations=include_locations)
+
     image_meta = _convert_timestamps_to_datetimes(image_meta)
     image_meta = _convert_from_string(image_meta)
     return image_meta
@@ -570,6 +615,8 @@ def _convert_to_string(metadata):
 
 
 def _extract_attributes(image, include_locations=False):
+    # TODO(mfedosin): Remove this function once we move to glance V2
+    # completely.
     # NOTE(hdd): If a key is not found, base.Resource.__getattr__() may perform
     # a get(), resulting in a useless request back to glance. This list is
     # therefore sorted, with dependent attributes as the end
@@ -613,6 +660,31 @@ def _extract_attributes(image, include_locations=False):
             output[attr] = getattr(image, attr, None)
 
     output['properties'] = getattr(image, 'properties', {})
+
+    return output
+
+
+def _extract_attributes_v2(image, include_locations=False):
+    include_locations_attrs = ['direct_url', 'locations']
+    omit_attrs = ['self', 'schema', 'protected', 'virtual_size', 'file',
+                  'tags']
+    raw_schema = image.schema
+    schema = schemas.Schema(raw_schema)
+    output = {'properties': {}, 'deleted': False, 'deleted_at': None,
+              'disk_format': None, 'container_format': None, 'name': None,
+              'checksum': None}
+    for name, value in six.iteritems(image):
+        if (name in omit_attrs
+                or name in include_locations_attrs and not include_locations):
+            continue
+        elif name == 'visibility':
+            output['is_public'] = value == 'public'
+        elif name == 'size' and value is None:
+            output['size'] = 0
+        elif schema.is_base_property(name):
+            output[name] = value
+        else:
+            output['properties'][name] = value
 
     return output
 

@@ -14,12 +14,14 @@
 #    under the License.
 
 
+import collections
 import datetime
 from six.moves import StringIO
 
 import cryptography
 import glanceclient.exc
 from glanceclient.v1 import images
+import glanceclient.v2.schemas as schemas
 import mock
 
 import six
@@ -42,6 +44,151 @@ class tzinfo(datetime.tzinfo):
         return datetime.timedelta()
 
 NOW_DATETIME = datetime.datetime(2010, 10, 11, 10, 30, 22, tzinfo=tzinfo())
+
+
+class FakeSchema(object):
+    def __init__(self, raw_schema):
+        self.raw_schema = raw_schema
+        self.base_props = ('checksum', 'container_format', 'created_at',
+                           'direct_url', 'disk_format', 'file', 'id',
+                           'locations', 'min_disk', 'min_ram', 'name',
+                           'owner', 'protected', 'schema', 'self', 'size',
+                           'status', 'tags', 'updated_at', 'virtual_size',
+                           'visibility')
+
+    def is_base_property(self, prop_name):
+        return prop_name in self.base_props
+
+image_fixtures = {
+    'active_image_v1': {
+        'checksum': 'eb9139e4942121f22bbc2afc0400b2a4',
+        'container_format': 'ami',
+        'created_at': '2015-08-31T19:37:41Z',
+        'deleted': False,
+        'disk_format': 'ami',
+        'id': 'da8500d5-8b80-4b9c-8410-cc57fb8fb9d5',
+        'is_public': True,
+        'min_disk': 0,
+        'min_ram': 0,
+        'name': 'cirros-0.3.4-x86_64-uec',
+        'owner': 'ea583a4f34444a12bbe4e08c2418ba1f',
+        'properties': {
+            'kernel_id': 'f6ebd5f0-b110-4406-8c1e-67b28d4e85e7',
+            'ramdisk_id': '868efefc-4f2d-4ed8-82b1-7e35576a7a47'},
+        'protected': False,
+        'size': 25165824,
+        'status': 'active',
+        'updated_at': '2015-08-31T19:37:45Z'},
+    'active_image_v2': {
+        'checksum': 'eb9139e4942121f22bbc2afc0400b2a4',
+        'container_format': 'ami',
+        'created_at': '2015-08-31T19:37:41Z',
+        'direct_url': 'swift+config://ref1/glance/'
+                      'da8500d5-8b80-4b9c-8410-cc57fb8fb9d5',
+        'disk_format': 'ami',
+        'file': '/v2/images/'
+                'da8500d5-8b80-4b9c-8410-cc57fb8fb9d5/file',
+        'id': 'da8500d5-8b80-4b9c-8410-cc57fb8fb9d5',
+        'kernel_id': 'f6ebd5f0-b110-4406-8c1e-67b28d4e85e7',
+        'locations': [
+            {'metadata': {},
+             'url': 'swift+config://ref1/glance/'
+                    'da8500d5-8b80-4b9c-8410-cc57fb8fb9d5'}],
+        'min_disk': 0,
+        'min_ram': 0,
+        'name': 'cirros-0.3.4-x86_64-uec',
+        'owner': 'ea583a4f34444a12bbe4e08c2418ba1f',
+        'protected': False,
+        'ramdisk_id': '868efefc-4f2d-4ed8-82b1-7e35576a7a47',
+        'schema': '/v2/schemas/image',
+        'size': 25165824,
+        'status': 'active',
+        'tags': [],
+        'updated_at': '2015-08-31T19:37:45Z',
+        'virtual_size': None,
+        'visibility': 'public'},
+    'empty_image_v1': {
+        'created_at': '2015-09-01T22:37:32.000000',
+        'deleted': False,
+        'id': '885d1cb0-9f5c-4677-9d03-175be7f9f984',
+        'is_public': False,
+        'min_disk': 0,
+        'min_ram': 0,
+        'owner': 'ea583a4f34444a12bbe4e08c2418ba1f',
+        'properties': {},
+        'protected': False,
+        'size': 0,
+        'status': 'queued',
+        'updated_at': '2015-09-01T22:37:32.000000'
+    },
+    'empty_image_v2': {
+        'checksum': None,
+        'container_format': None,
+        'created_at': '2015-09-01T22:37:32Z',
+        'disk_format': None,
+        'file': '/v2/images/885d1cb0-9f5c-4677-9d03-175be7f9f984/file',
+        'id': '885d1cb0-9f5c-4677-9d03-175be7f9f984',
+        'locations': [],
+        'min_disk': 0,
+        'min_ram': 0,
+        'name': None,
+        'owner': 'ea583a4f34444a12bbe4e08c2418ba1f',
+        'protected': False,
+        'schema': '/v2/schemas/image',
+        'size': None,
+        'status': 'queued',
+        'tags': [],
+        'updated_at': '2015-09-01T22:37:32Z',
+        'virtual_size': None,
+        'visibility': 'private'
+    },
+    'custom_property_image_v1': {
+        'checksum': 'e533283e6aac072533d1d091a7d2e413',
+        'container_format': 'bare',
+        'created_at': '2015-09-02T00:31:16.000000',
+        'deleted': False,
+        'disk_format': 'qcow2',
+        'id': '10ca6b6b-48f4-43ac-8159-aa9e9353f5e4',
+        'is_public': False,
+        'min_disk': 0,
+        'min_ram': 0,
+        'name': 'MEXMAT rOBHO',
+        'owner': 'ea583a4f34444a12bbe4e08c2418ba1f',
+        'properties': {'image_type': 'HOBA COCET'},
+        'protected': False,
+        'size': 616,
+        'status': 'active',
+        'updated_at': '2015-09-02T00:31:17.000000'
+    },
+    'custom_property_image_v2': {
+        'checksum': 'e533283e6aac072533d1d091a7d2e413',
+        'container_format': 'bare',
+        'created_at': '2015-09-02T00:31:16Z',
+        'disk_format': 'qcow2',
+        'file': '/v2/images/10ca6b6b-48f4-43ac-8159-aa9e9353f5e4/file',
+        'id': '10ca6b6b-48f4-43ac-8159-aa9e9353f5e4',
+        'image_type': 'HOBA COCET',
+        'min_disk': 0,
+        'min_ram': 0,
+        'name': 'MEXMAT rOBHO',
+        'owner': 'ea583a4f34444a12bbe4e08c2418ba1f',
+        'protected': False,
+        'schema': '/v2/schemas/image',
+        'size': 616,
+        'status': 'active',
+        'tags': [],
+        'updated_at': '2015-09-02T00:31:17Z',
+        'virtual_size': None,
+        'visibility': 'private'
+    }
+}
+
+
+class ImageV2(dict):
+    # Wrapper class that is used to comply with dual nature of
+    # warlock objects, that are inherited from dict and have 'schema'
+    # attribute.
+    schema = mock.MagicMock()
 
 
 class TestConversions(test.NoDBTestCase):
@@ -936,7 +1083,8 @@ class TestShow(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_show_success(self, is_avail_mock, trans_from_mock):
+    def test_show_success_v1(self, is_avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
         is_avail_mock.return_value = True
         trans_from_mock.return_value = {'mock': mock.sentinel.trans_from}
         client = mock.MagicMock()
@@ -954,7 +1102,8 @@ class TestShow(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_show_not_available(self, is_avail_mock, trans_from_mock):
+    def test_show_not_available_v1(self, is_avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
         is_avail_mock.return_value = False
         client = mock.MagicMock()
         client.call.return_value = mock.sentinel.images_0
@@ -972,8 +1121,9 @@ class TestShow(test.NoDBTestCase):
     @mock.patch('nova.image.glance._reraise_translated_image_exception')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_show_client_failure(self, is_avail_mock, trans_from_mock,
+    def test_show_client_failure_v1(self, is_avail_mock, trans_from_mock,
                                  reraise_mock):
+        self.flags(use_glance_v1=True, group='glance')
         raised = exception.ImageNotAuthorized(image_id=123)
         client = mock.MagicMock()
         client.call.side_effect = glanceclient.exc.Forbidden
@@ -1026,7 +1176,8 @@ class TestShow(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_include_locations_success(self, avail_mock, trans_from_mock):
+    def test_include_locations_success_v1(self, avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
         locations = [mock.sentinel.loc1]
         avail_mock.return_value = True
         trans_from_mock.return_value = {'locations': locations}
@@ -1047,7 +1198,8 @@ class TestShow(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_include_direct_uri_success(self, avail_mock, trans_from_mock):
+    def test_include_direct_uri_success_v1(self, avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
         locations = [mock.sentinel.loc1]
         avail_mock.return_value = True
         trans_from_mock.return_value = {'locations': locations,
@@ -1068,7 +1220,10 @@ class TestShow(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_do_not_show_deleted_images(self, is_avail_mock, trans_from_mock):
+    def test_do_not_show_deleted_images_v1(
+            self, is_avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
+
         class fake_image_cls(dict):
             id = 'b31aa5dd-f07a-4748-8f15-398346887584'
             deleted = True
@@ -1083,6 +1238,174 @@ class TestShow(test.NoDBTestCase):
             service.show(ctx, glance_image.id, show_deleted=False)
 
         client.call.assert_called_once_with(ctx, 1, 'get',
+                                            glance_image.id)
+        self.assertFalse(is_avail_mock.called)
+        self.assertFalse(trans_from_mock.called)
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_success_v2(self, is_avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        is_avail_mock.return_value = True
+        trans_from_mock.return_value = {'mock': mock.sentinel.trans_from}
+        client = mock.MagicMock()
+        client.call.return_value = {}
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        info = service.show(ctx, mock.sentinel.image_id)
+
+        client.call.assert_called_once_with(ctx, 2, 'get',
+                                            mock.sentinel.image_id)
+        is_avail_mock.assert_called_once_with(ctx, {})
+        trans_from_mock.assert_called_once_with({}, include_locations=False)
+        self.assertIn('mock', info)
+        self.assertEqual(mock.sentinel.trans_from, info['mock'])
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_not_available_v2(self, is_avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        is_avail_mock.return_value = False
+        client = mock.MagicMock()
+        client.call.return_value = mock.sentinel.images_0
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        with testtools.ExpectedException(exception.ImageNotFound):
+            service.show(ctx, mock.sentinel.image_id)
+
+        client.call.assert_called_once_with(ctx, 2, 'get',
+                                            mock.sentinel.image_id)
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        self.assertFalse(trans_from_mock.called)
+
+    @mock.patch('nova.image.glance._reraise_translated_image_exception')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_client_failure_v2(self, is_avail_mock, trans_from_mock,
+                                 reraise_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        raised = exception.ImageNotAuthorized(image_id=123)
+        client = mock.MagicMock()
+        client.call.side_effect = glanceclient.exc.Forbidden
+        ctx = mock.sentinel.ctx
+        reraise_mock.side_effect = raised
+        service = glance.GlanceImageServiceV2(client)
+
+        with testtools.ExpectedException(exception.ImageNotAuthorized):
+            service.show(ctx, mock.sentinel.image_id)
+            client.call.assert_called_once_with(ctx, 2, 'get',
+                                                mock.sentinel.image_id)
+            self.assertFalse(is_avail_mock.called)
+            self.assertFalse(trans_from_mock.called)
+            reraise_mock.assert_called_once_with(mock.sentinel.image_id)
+
+    @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_queued_image_without_some_attrs_v2(self, is_avail_mock,
+                                                     mocked_schema):
+        self.flags(use_glance_v1=False, group='glance')
+        is_avail_mock.return_value = True
+        client = mock.MagicMock()
+
+        # fake image cls without disk_format, container_format, name attributes
+        class fake_image_cls(dict):
+            pass
+
+        glance_image = fake_image_cls(
+            id = 'b31aa5dd-f07a-4748-8f15-398346887584',
+            deleted = False,
+            protected = False,
+            min_disk = 0,
+            created_at = '2014-05-20T08:16:48',
+            size = 0,
+            status = 'queued',
+            visibility = 'private',
+            min_ram = 0,
+            owner = '980ec4870033453ead65c0470a78b8a8',
+            updated_at = '2014-05-20T08:16:48',
+            schema = '')
+        glance_image.id = glance_image['id']
+        glance_image.schema = ''
+        client.call.return_value = glance_image
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        image_info = service.show(ctx, glance_image.id)
+        client.call.assert_called_once_with(ctx, 2, 'get',
+                                            glance_image.id)
+        NOVA_IMAGE_ATTRIBUTES = set(['size', 'disk_format', 'owner',
+                                     'container_format', 'status', 'id',
+                                     'name', 'created_at', 'updated_at',
+                                     'deleted', 'deleted_at', 'checksum',
+                                     'min_disk', 'min_ram', 'is_public',
+                                     'properties'])
+
+        self.assertEqual(NOVA_IMAGE_ATTRIBUTES, set(image_info.keys()))
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_include_locations_success_v2(self, avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        locations = [mock.sentinel.loc1]
+        avail_mock.return_value = True
+        trans_from_mock.return_value = {'locations': locations}
+
+        client = mock.Mock()
+        client.call.return_value = mock.sentinel.image
+        service = glance.GlanceImageServiceV2(client)
+        ctx = mock.sentinel.ctx
+        image_id = mock.sentinel.image_id
+        info = service.show(ctx, image_id, include_locations=True)
+
+        client.call.assert_called_once_with(ctx, 2, 'get', image_id)
+        avail_mock.assert_called_once_with(ctx, mock.sentinel.image)
+        trans_from_mock.assert_called_once_with(mock.sentinel.image,
+                                                include_locations=True)
+        self.assertIn('locations', info)
+        self.assertEqual(locations, info['locations'])
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_include_direct_uri_success_v2(self, avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        locations = [mock.sentinel.loc1]
+        avail_mock.return_value = True
+        trans_from_mock.return_value = {'locations': locations,
+                                        'direct_uri': mock.sentinel.duri}
+
+        client = mock.Mock()
+        client.call.return_value = mock.sentinel.image
+        service = glance.GlanceImageServiceV2(client)
+        ctx = mock.sentinel.ctx
+        image_id = mock.sentinel.image_id
+        info = service.show(ctx, image_id, include_locations=True)
+
+        client.call.assert_called_once_with(ctx, 2, 'get', image_id)
+        expected = locations
+        expected.append({'url': mock.sentinel.duri, 'metadata': {}})
+        self.assertIn('locations', info)
+        self.assertEqual(expected, info['locations'])
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_do_not_show_deleted_images_v2(
+            self, is_avail_mock, trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+
+        class fake_image_cls(dict):
+            id = 'b31aa5dd-f07a-4748-8f15-398346887584'
+            deleted = True
+
+        glance_image = fake_image_cls()
+        client = mock.MagicMock()
+        client.call.return_value = glance_image
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        with testtools.ExpectedException(exception.ImageNotFound):
+            service.show(ctx, glance_image.id, show_deleted=False)
+
+        client.call.assert_called_once_with(ctx, 2, 'get',
                                             glance_image.id)
         self.assertFalse(is_avail_mock.called)
         self.assertFalse(trans_from_mock.called)
@@ -1354,3 +1677,76 @@ class TestUpdateGlanceImage(test.NoDBTestCase):
             consumer.start()
             mock_glance_image_service.update.assert_called_with(
                 'context', 'image_id', 'metadata', 'stream', purge_props=False)
+
+
+class TestExtractAttributes(test.NoDBTestCase):
+    """Test that image output translations from v1 and v2 are the same"""
+
+    @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
+    def test_extract_image_attributes_active_images_no_locations(
+            self, mocked_schema):
+        image_v1_dict = image_fixtures['active_image_v1']
+        image_v2 = ImageV2(image_fixtures['active_image_v2'])
+
+        image_v1 = collections.namedtuple('_', image_v1_dict.keys())(
+            **image_v1_dict)
+
+        self.flags(use_glance_v1=True, group='glance')
+        v1_output = glance._translate_from_glance(
+            image_v1, include_locations=False)
+        self.flags(use_glance_v1=False, group='glance')
+        v2_output = glance._translate_from_glance(
+            image_v2, include_locations=False)
+        self.assertEqual(v1_output, v2_output)
+
+    @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
+    def test_extract_image_attributes_active_images_with_locations(
+            self, mocked_schema):
+        # Glance API v1 doesn't provide info about locations
+        self.flags(use_glance_v1=False, group='glance')
+        image_v2 = ImageV2(image_fixtures['active_image_v2'])
+
+        image_v2_meta = glance._translate_from_glance(
+            image_v2, include_locations=True)
+
+        self.assertIn('locations', image_v2_meta)
+        self.assertIn('direct_url', image_v2_meta)
+
+        image_v2_meta = glance._translate_from_glance(
+            image_v2, include_locations=False)
+
+        self.assertNotIn('locations', image_v2_meta)
+        self.assertNotIn('direct_url', image_v2_meta)
+
+    @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
+    def test_extract_image_attributes_empty_images(self, mocked_schema):
+        image_v1_dict = image_fixtures['empty_image_v1']
+        image_v2 = ImageV2(image_fixtures['empty_image_v2'])
+
+        image_v1 = collections.namedtuple('_', image_v1_dict.keys())(
+            **image_v1_dict)
+
+        self.flags(use_glance_v1=True, group='glance')
+        v1_output = glance._translate_from_glance(
+            image_v1, include_locations=False)
+        self.flags(use_glance_v1=False, group='glance')
+        v2_output = glance._translate_from_glance(
+            image_v2, include_locations=False)
+        self.assertEqual(v1_output, v2_output)
+
+    @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
+    def test_extract_image_attributes_active_images_custom_prop(
+            self, mocked_schema):
+        image_v1_dict = image_fixtures['custom_property_image_v1']
+        image_v2 = ImageV2(image_fixtures['custom_property_image_v2'])
+
+        image_v1 = collections.namedtuple('_', image_v1_dict.keys())(
+            **image_v1_dict)
+
+        self.flags(use_glance_v1=True, group='glance')
+        v1_output = glance._translate_from_glance(
+            image_v1, include_locations=False)
+        self.flags(use_glance_v1=False, group='glance')
+        v2_output = glance._translate_from_glance(
+            image_v2, include_locations=False)
+        self.assertEqual(v1_output, v2_output)

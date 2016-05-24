@@ -78,6 +78,7 @@ class ImageSizeTestV21(test.NoDBTestCase):
         super(ImageSizeTestV21, self).setUp()
         self.stubs.Set(glance.GlanceImageService, 'show', fake_show)
         self.stubs.Set(glance.GlanceImageService, 'detail', fake_detail)
+        self.stubs.Set(glance.GlanceImageServiceV2, 'show', fake_show)
         self.flags(osapi_compute_extension=['nova.api.openstack.compute'
                                             '.contrib.image_size.Image_size'])
         self.flags(api_servers=['http://localhost:9292'], group='glance')
