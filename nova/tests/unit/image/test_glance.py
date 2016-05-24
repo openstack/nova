@@ -2020,7 +2020,8 @@ class TestDelete(test.NoDBTestCase):
 
     """Tests the delete method of the GlanceImageService."""
 
-    def test_delete_success(self):
+    def test_delete_success_v1(self):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = True
         ctx = mock.sentinel.ctx
@@ -2029,11 +2030,31 @@ class TestDelete(test.NoDBTestCase):
         client.call.assert_called_once_with(ctx, 1, 'delete',
                                             mock.sentinel.image_id)
 
-    def test_delete_client_failure(self):
+    def test_delete_client_failure_v1(self):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.side_effect = glanceclient.exc.NotFound
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageService(client)
+        self.assertRaises(exception.ImageNotFound, service.delete, ctx,
+                          mock.sentinel.image_id)
+
+    def test_delete_success_v2(self):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = True
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        service.delete(ctx, mock.sentinel.image_id)
+        client.call.assert_called_once_with(ctx, 2, 'delete',
+                                            mock.sentinel.image_id)
+
+    def test_delete_client_failure_v2(self):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.side_effect = glanceclient.exc.NotFound
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
         self.assertRaises(exception.ImageNotFound, service.delete, ctx,
                           mock.sentinel.image_id)
 
