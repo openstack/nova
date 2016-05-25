@@ -43,6 +43,8 @@ class ComputeHostAPITestCase(test.TestCase):
                                  allow_missing=test_service.OPTIONAL)
 
     def _compare_objs(self, obj_list, db_obj_list):
+        self.assertEqual(len(obj_list), len(db_obj_list),
+                         "The length of two object lists are different.")
         for index, obj in enumerate(obj_list):
             self._compare_obj(obj, db_obj_list[index])
 
