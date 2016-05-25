@@ -28,7 +28,6 @@ import webob.request
 from nova.api import auth as api_auth
 from nova.api import openstack as openstack_api
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack import auth
 from nova.api.openstack import compute
 from nova.api.openstack.compute.legacy_v2 import limits
 from nova.api.openstack.compute import versions
@@ -66,23 +65,19 @@ def fake_wsgi(self, req):
 
 
 def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
-        use_no_auth=False, ext_mgr=None, init_only=None, v2_compatible=False):
+        ext_mgr=None, init_only=None, v2_compatible=False):
     if not inner_app_v21:
         inner_app_v21 = compute.APIRouterV21(init_only)
 
     if v2_compatible:
         inner_app_v21 = openstack_api.LegacyV2CompatibleWrapper(inner_app_v21)
 
-    if use_no_auth:
-        api_v21 = openstack_api.FaultWrapper(auth.NoAuthMiddleware(
-              limits.RateLimitingMiddleware(inner_app_v21)))
+    if fake_auth_context is not None:
+        ctxt = fake_auth_context
     else:
-        if fake_auth_context is not None:
-            ctxt = fake_auth_context
-        else:
-            ctxt = context.RequestContext('fake', 'fake', auth_token=True)
-        api_v21 = openstack_api.FaultWrapper(api_auth.InjectContext(ctxt,
-              limits.RateLimitingMiddleware(inner_app_v21)))
+        ctxt = context.RequestContext('fake', 'fake', auth_token=True)
+    api_v21 = openstack_api.FaultWrapper(api_auth.InjectContext(ctxt,
+          limits.RateLimitingMiddleware(inner_app_v21)))
 
     mapper = urlmap.URLMap()
     mapper['/v2'] = api_v21
