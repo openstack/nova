@@ -635,11 +635,16 @@ class GuestBlockTestCase(test.NoDBTestCase):
         in_progress = self.gblock.wait_for_job(wait_for_job_clean=True)
         self.assertFalse(in_progress)
 
-    def test_wait_for_job_arbort_on_error(self):
+    def test_wait_for_job_abort_on_error(self):
         self.domain.blockJobInfo.return_value = -1
         self.assertRaises(
             exception.NovaException,
             self.gblock.wait_for_job, abort_on_error=True)
+
+    def test_wait_for_job_ignore_on_error(self):
+        self.domain.blockJobInfo.return_value = -1
+        in_progress = self.gblock.wait_for_job()
+        self.assertFalse(in_progress)
 
 
 class JobInfoTestCase(test.NoDBTestCase):
