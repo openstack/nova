@@ -12,6 +12,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import mock
 from oslo_utils import uuidutils
 import webob
 
@@ -36,6 +37,23 @@ class ResetStateTestsV21(test.NoDBTestCase):
 
         self.request = self._get_request()
         self.context = self.request.environ['nova.context']
+        self.instance = self._create_instance()
+
+    def _create_instance(self):
+        instance = objects.Instance()
+        instance.uuid = self.uuid
+        instance.vm_state = 'fake'
+        instance.task_state = 'fake'
+        instance.obj_reset_changes()
+        return instance
+
+    def _check_instance_state(self, expected):
+        self.assertEqual(set(expected.keys()),
+                         self.instance.obj_what_changed())
+        for k, v in expected.items():
+            self.assertEqual(v, getattr(self.instance, k),
+                             "Instance.%s doesn't match" % k)
+        self.instance.obj_reset_changes()
 
     def _get_request(self):
         return fakes.HTTPRequest.blank('')
@@ -53,43 +71,22 @@ class ResetStateTestsV21(test.NoDBTestCase):
                           body={"os-resetState": {"state": "spam"}})
 
     def test_no_instance(self):
-        self.mox.StubOutWithMock(self.compute_api, 'get')
-        exc = exception.InstanceNotFound(instance_id='inst_ud')
-        self.compute_api.get(
-            self.context, self.uuid, expected_attrs=None).AndRaise(exc)
-        self.mox.ReplayAll()
+        self.compute_api.get = mock.MagicMock(
+            side_effect=exception.InstanceNotFound(instance_id='inst_ud'))
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.admin_api._reset_state,
                           self.request, self.uuid,
                           body={"os-resetState": {"state": "active"}})
 
-    def _setup_mock(self, expected):
-        instance = objects.Instance()
-        instance.uuid = self.uuid
-        instance.vm_state = 'fake'
-        instance.task_state = 'fake'
-        instance.obj_reset_changes()
-
-        self.mox.StubOutWithMock(instance, 'save')
-        self.mox.StubOutWithMock(self.compute_api, 'get')
-
-        def check_state(admin_state_reset=True):
-            self.assertEqual(set(expected.keys()),
-                             instance.obj_what_changed())
-            for k, v in expected.items():
-                self.assertEqual(v, getattr(instance, k),
-                                 "Instance.%s doesn't match" % k)
-            instance.obj_reset_changes()
-
-        self.compute_api.get(self.context, instance.uuid,
-                             expected_attrs=None).AndReturn(instance)
-        instance.save(admin_state_reset=True).WithSideEffects(check_state)
+        self.compute_api.get.assert_called_once_with(
+            self.context, self.uuid, expected_attrs=None)
 
     def test_reset_active(self):
-        self._setup_mock(dict(vm_state=vm_states.ACTIVE,
-                              task_state=None))
-        self.mox.ReplayAll()
+        expected = dict(vm_state=vm_states.ACTIVE, task_state=None)
+        self.instance.save = mock.MagicMock(
+            side_effect=lambda **kw: self._check_instance_state(expected))
+        self.compute_api.get = mock.MagicMock(return_value=self.instance)
 
         body = {"os-resetState": {"state": "active"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
@@ -103,10 +100,16 @@ class ResetStateTestsV21(test.NoDBTestCase):
             status_int = result.status_int
         self.assertEqual(202, status_int)
 
+        self.compute_api.get.assert_called_once_with(
+            self.context, self.instance.uuid, expected_attrs=None)
+        self.instance.save.assert_called_once_with(admin_state_reset=True)
+
     def test_reset_error(self):
-        self._setup_mock(dict(vm_state=vm_states.ERROR,
-                              task_state=None))
-        self.mox.ReplayAll()
+        expected = dict(vm_state=vm_states.ERROR, task_state=None)
+        self.instance.save = mock.MagicMock(
+            side_effect=lambda **kw: self._check_instance_state(expected))
+        self.compute_api.get = mock.MagicMock(return_value=self.instance)
+
         body = {"os-resetState": {"state": "error"}}
         result = self.admin_api._reset_state(self.request, self.uuid,
                                              body=body)
@@ -118,3 +121,7 @@ class ResetStateTestsV21(test.NoDBTestCase):
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
+
+        self.compute_api.get.assert_called_once_with(
+            self.context, self.instance.uuid, expected_attrs=None)
+        self.instance.save.assert_called_once_with(admin_state_reset=True)
