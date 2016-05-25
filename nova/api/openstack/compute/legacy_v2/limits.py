@@ -38,7 +38,6 @@ import re
 import time
 
 from oslo_serialization import jsonutils
-from oslo_utils import importutils
 from six.moves import http_client as httplib
 import webob.dec
 import webob.exc
@@ -206,30 +205,19 @@ class RateLimitingMiddleware(base_wsgi.Middleware):
     information is stored in memory for this implementation.
     """
 
-    def __init__(self, application, limits=None, limiter=None, **kwargs):
+    def __init__(self, application, **kwargs):
         """Initialize new `RateLimitingMiddleware`.
 
         It wraps the given WSGI application and sets up the given limits.
 
         @param application: WSGI application to wrap
-        @param limits: String describing limits
-        @param limiter: String identifying class for representing limits
 
         Other parameters are passed to the constructor for the limiter.
         """
         base_wsgi.Middleware.__init__(self, application)
+        limiter = Limiter
 
-        # Select the limiter class
-        if limiter is None:
-            limiter = Limiter
-        else:
-            limiter = importutils.import_class(limiter)
-
-        # Parse the limits, if any are provided
-        if limits is not None:
-            limits = limiter.parse_limits(limits)
-
-        self._limiter = limiter(limits or DEFAULT_LIMITS, **kwargs)
+        self._limiter = limiter(DEFAULT_LIMITS, **kwargs)
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
