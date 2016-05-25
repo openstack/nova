@@ -21,6 +21,7 @@ import nova.conf
 from nova.conf import paths
 from nova import config
 from nova import ipv6
+import nova.keymgr
 from nova.tests.unit import utils
 
 CONF = nova.conf.CONF
