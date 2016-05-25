@@ -17,10 +17,8 @@ from nova.objects import fields
 from nova import utils
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @obj_base.NovaObjectRegistry.register
-class NetworkRequest(obj_base.NovaObject,
-                     obj_base.NovaObjectDictCompat):
+class NetworkRequest(obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pci_request_id
     VERSION = '1.1'
