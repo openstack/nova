@@ -86,7 +86,7 @@ console_id:
   type: string
 disabled_reason:
   description: |
-    The reason for disable a service.
+    The reason for disabling a service.
   in: path
   required: false
   type: string
@@ -241,11 +241,11 @@ server_id_path:
   required: true
   type: string
 service_id_path:
+  description: |
+    The id of the service.
   in: path
   required: true
-  type: int
-  description: |
-    The id of the service
+  type: integer
 snapshot_id_2:
   description: |
     The UUID of the snapshot.
@@ -1188,6 +1188,12 @@ device_resp:
   in: body
   required: true
   type: string
+disabled_reason_body:
+  description: |
+    The reason for disabling a service.
+  in: body
+  required: true
+  type: string
 disk_available_least:
   description: |
     The actual free disk on this hypervisor(in GB).
@@ -1537,13 +1543,14 @@ force_live_migrate:
   type: boolean
   min_version: 2.30
 forced_down:
-  in: body
-  required: true
-  type: boolean
   description: |
     Whether or not this service was forced down manually by an
     administrator. This value is useful to know that some 3rd party has
     verified the service should be marked down.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.11
 forceDelete:
   description: |
     The action.
@@ -3201,47 +3208,47 @@ server_uuid:
   type: string
 servers:
   description: |
-    List of ``server`` objects.
+    A list of ``server`` objects.
   in: body
   required: true
   type: array
 service:
+  description: |
+    Object representing a compute service.
   in: body
   required: true
   type: object
-  description: |
-    Object representing a compute service
 service_disable_reason:
-  in: body
-  required: true
-  type: string
   description: |
     The disable reason of the service, ``null`` if the service is enabled or
     disabled without reason provided.
+  in: body
+  required: true
+  type: string
 service_id_body:
+  description: |
+    The id of the service.
   in: body
   required: true
   type: integer
-  description: |
-    The id of the service
 service_state:
-  in: body
-  required: true
-  type: string
   description: |
     The state of the service. One of ``up`` or ``down``.
-service_status:
   in: body
   required: true
   type: string
+service_status:
   description: |
     The status of the service. One of ``enabled`` or ``disabled``.
+  in: body
+  required: true
+  type: string
 services:
+  description: |
+    A list of service objects.
   in: body
   required: true
   type: array
-  description: |
-    An array of service objects
 set_metadata:
   description: |
     The set_metadata object used to set metadata for host aggregate.
