@@ -39,7 +39,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
 
     def setUp(self):
         super(SchedulerHintsTestCaseV21, self).setUp()
-        self.fake_instance = fakes.stub_instance(1, uuid=UUID)
+        self.fake_instance = fakes.stub_instance_obj(None, id=1, uuid=UUID)
         self._set_up_router()
 
     def _set_up_router(self):

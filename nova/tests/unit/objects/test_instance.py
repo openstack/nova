@@ -829,7 +829,7 @@ class _TestInstanceObject(object):
         for index, group in enumerate(fake_inst['security_groups']):
             for key in group:
                 self.assertEqual(group[key],
-                                 inst.security_groups[index][key])
+                                 getattr(inst.security_groups[index], key))
                 self.assertIsInstance(inst.security_groups[index],
                                       security_group.SecurityGroup)
         self.assertEqual(set(), inst.security_groups.obj_what_changed())

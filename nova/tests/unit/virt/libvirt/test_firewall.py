@@ -171,40 +171,40 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
                                              name='testsourcegroup',
                                              description='src group')
 
-        r1 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r1 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='icmp',
                                        from_port=-1,
                                        to_port=-1,
                                        cidr='192.168.11.0/24',
                                        grantee_group=None)
 
-        r2 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r2 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='icmp',
                                        from_port=8,
                                        to_port=-1,
                                        cidr='192.168.11.0/24',
                                        grantee_group=None)
 
-        r3 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r3 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='tcp',
                                        from_port=80,
                                        to_port=81,
                                        cidr='192.168.10.0/24',
                                        grantee_group=None)
 
-        r4 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r4 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol='tcp',
                                        from_port=80,
                                        to_port=81,
                                        cidr=None,
                                        grantee_group=src_secgroup,
-                                       group_id=src_secgroup['id'])
+                                       group_id=src_secgroup.id)
 
-        r5 = objects.SecurityGroupRule(parent_group_id=secgroup['id'],
+        r5 = objects.SecurityGroupRule(parent_group_id=secgroup.id,
                                        protocol=None,
                                        cidr=None,
                                        grantee_group=src_secgroup,
-                                       group_id=src_secgroup['id'])
+                                       group_id=src_secgroup.id)
 
         secgroup_list = objects.SecurityGroupList()
         secgroup_list.objects.append(secgroup)
@@ -217,7 +217,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
             objects=[r1, r2, r3, r4, r5])
 
         def _fake_instlist(ctxt, id):
-            if id == src_secgroup['id']:
+            if id == src_secgroup.id:
                 insts = objects.InstanceList()
                 insts.objects.append(src_instance_ref)
                 return insts
