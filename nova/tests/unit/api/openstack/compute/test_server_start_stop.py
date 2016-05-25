@@ -132,7 +132,7 @@ class ServerStartStopTestV21(test.TestCase):
 
     @mock.patch.object(db, 'instance_get_by_uuid',
                        side_effect=exception.InstanceNotFound(
-                           instance_uuid=uuids.instance))
+                           instance_id=uuids.instance))
     def test_start_with_bogus_id(self, get_mock):
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -140,7 +140,7 @@ class ServerStartStopTestV21(test.TestCase):
 
     @mock.patch.object(db, 'instance_get_by_uuid',
                        side_effect=exception.InstanceNotFound(
-                           instance_uuid=uuids.InstanceNotFound))
+                           instance_id=uuids.instance))
     def test_stop_with_bogus_id(self, get_mock):
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
