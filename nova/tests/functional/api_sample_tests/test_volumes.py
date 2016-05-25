@@ -146,7 +146,6 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
     def setUp(self):
         super(VolumesSampleJsonTest, self).setUp()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
 
         self.stub_out("nova.volume.cinder.API.delete",
                       self._stub_volume_delete)

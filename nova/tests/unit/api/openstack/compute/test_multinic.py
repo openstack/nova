@@ -59,7 +59,6 @@ class FixedIpTestV21(test.NoDBTestCase):
     def setUp(self):
         super(FixedIpTestV21, self).setUp()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
         self.stub_out('nova.compute.api.API.add_fixed_ip',
                       compute_api_add_fixed_ip)
         self.stub_out('nova.compute.api.API.remove_fixed_ip',

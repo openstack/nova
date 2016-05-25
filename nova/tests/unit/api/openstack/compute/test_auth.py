@@ -40,7 +40,6 @@ class TestNoAuthMiddleware(testscenarios.WithScenarios, test.NoDBTestCase):
 
     def setUp(self):
         super(TestNoAuthMiddleware, self).setUp()
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_networking(self)
         api_v21 = openstack_api.FaultWrapper(
             self.auth_middleware(

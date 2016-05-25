@@ -227,7 +227,6 @@ class VolumeApiTestV21(test.NoDBTestCase):
     def setUp(self):
         super(VolumeApiTestV21, self).setUp()
         fakes.stub_out_networking(self)
-        fakes.stub_out_rate_limiting(self.stubs)
 
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_delete)
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)

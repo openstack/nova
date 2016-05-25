@@ -194,7 +194,6 @@ class ControllerTest(test.TestCase):
     def setUp(self):
         super(ControllerTest, self).setUp()
         self.flags(verbose=True, use_ipv6=False)
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self)
         return_server = fakes.fake_compute_get()
@@ -2418,7 +2417,6 @@ class ServersControllerCreateTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_key_pair_funcs(self.stubs)
         fake.stub_out_image_service(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
