@@ -2019,6 +2019,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.devices = []
         self.metadata = []
         self.idmaps = []
+        self.perf_events = []
 
     def _format_basic_props(self, root):
         root.append(self._text_node("uuid", self.uuid))
@@ -2102,6 +2103,15 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             idmaps.append(idmap.format_dom())
         root.append(idmaps)
 
+    def _format_perf_events(self, root):
+        if len(self.perf_events) == 0:
+            return
+        perfs = etree.Element("perf")
+        for pe in self.perf_events:
+            event = etree.Element("event", name=pe, enabled="yes")
+            perfs.append(event)
+        root.append(perfs)
+
     def format_dom(self):
         root = super(LibvirtConfigGuest, self).format_dom()
 
@@ -2127,6 +2137,8 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self._format_devices(root)
 
         self._format_idmaps(root)
+
+        self._format_perf_events(root)
 
         return root
 
@@ -2167,9 +2179,16 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                 obj = LibvirtConfigGuestCPU()
                 obj.parse_dom(c)
                 self.cpu = obj
+            elif c.tag == 'perf':
+                for p in c.getchildren():
+                    if p.get('enabled') and p.get('enabled') == 'yes':
+                        self.add_perf_event(p.get('name'))
 
     def add_device(self, dev):
         self.devices.append(dev)
+
+    def add_perf_event(self, event):
+        self.perf_events.append(event)
 
     def set_clock(self, clk):
         self.clock = clk
