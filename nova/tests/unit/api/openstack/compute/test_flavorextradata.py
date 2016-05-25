@@ -119,10 +119,3 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
         body = jsonutils.loads(res.body)
         for i, flavor in enumerate(body['flavors']):
             self._verify_flavor_response(flavor, expected[i])
-
-
-class FlavorExtraDataTestV2(FlavorExtraDataTestV21):
-
-    @property
-    def app(self):
-        return fakes.wsgi_app(init_only=('flavors',))

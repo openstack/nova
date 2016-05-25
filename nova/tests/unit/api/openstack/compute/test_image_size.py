@@ -116,8 +116,3 @@ class ImageSizeTestV21(test.NoDBTestCase):
         images = self._get_images(res.body)
         self.assertImageSize(images[0], 12345678)
         self.assertImageSize(images[1], 87654321)
-
-
-class ImageSizeTestV2(ImageSizeTestV21):
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('images',))

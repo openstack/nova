@@ -15,7 +15,6 @@
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
-import webob
 
 from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
@@ -140,22 +139,6 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ExtendedServerAttributesTestV2(ExtendedServerAttributesTestV21):
-
-    def setUp(self):
-        super(ExtendedServerAttributesTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_server_attributes'])
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        return res
 
 
 class ExtendedServerAttributesTestV23(ExtendedServerAttributesTestV21):

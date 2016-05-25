@@ -130,16 +130,3 @@ class ServerUsageTestV21(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ServerUsageTestV20(ServerUsageTestV21):
-
-    def setUp(self):
-        super(ServerUsageTestV20, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_usage'])
-
-    def _get_app(self):
-        return fakes.wsgi_app(init_only=('servers',))

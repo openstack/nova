@@ -16,13 +16,11 @@
 import copy
 import uuid as stdlib_uuid
 
-import mock
 from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack import api_version_request as avr
 from nova.api.openstack.compute import views
-from nova.api.openstack import extensions
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import matchers
@@ -103,13 +101,11 @@ def _get_self_href(response):
     return ''
 
 
-class VersionsTestV20(test.NoDBTestCase):
+class VersionsTestV21WithV2CompatibleWrapper(test.NoDBTestCase):
 
     @property
     def wsgi_app(self):
-        with mock.patch.object(extensions.ExtensionManager, 'load_extension'):
-            # patch load_extension because it's expensive in fakes.wsgi_app
-            return fakes.wsgi_app(init_only=('servers', 'images', 'versions'))
+        return fakes.wsgi_app_v21(v2_compatible=True, init_only=('versions',))
 
     def test_get_version_list(self):
         req = webob.Request.blank('/')
@@ -517,9 +513,7 @@ class VersionBehindSslTestCase(test.NoDBTestCase):
 
     @property
     def wsgi_app(self):
-        with mock.patch.object(extensions.ExtensionManager, 'load_extension'):
-            # patch load_extension because it's expensive in fakes.wsgi_app
-            return fakes.wsgi_app(init_only=('versions',))
+        return fakes.wsgi_app_v21(v2_compatible=True, init_only=('versions',))
 
     def test_versions_without_headers(self):
         req = wsgi.Request.blank('/')
@@ -537,10 +531,3 @@ class VersionBehindSslTestCase(test.NoDBTestCase):
         self.assertEqual(200, res.status_int)
         href = _get_self_href(res)
         self.assertTrue(href.startswith('https://'))
-
-
-class VersionsTestV21WithV2CompatibleWrapper(VersionsTestV20):
-
-    @property
-    def wsgi_app(self):
-        return fakes.wsgi_app_v21(v2_compatible=True, init_only=('versions',))

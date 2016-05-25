@@ -147,19 +147,3 @@ class ExtendedIpsTestV21(test.TestCase):
         self.assertEqual(res.status_int, 200)
         for i, server in enumerate(self._get_servers(res.body)):
             self.assertServerStates(server)
-
-
-class ExtendedIpsTestV2(ExtendedIpsTestV21):
-
-    def setUp(self):
-        super(ExtendedIpsTestV2, self).setUp()
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Extended_ips'])
-
-    def _make_request(self, url):
-        req = webob.Request.blank(url)
-        req.headers['Accept'] = self.content_type
-        res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        return res
