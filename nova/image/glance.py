@@ -630,6 +630,65 @@ class GlanceImageServiceV2(object):
                 if close_file:
                     data.close()
 
+    def create(self, context, image_meta, data=None):
+        """Store the image data and return the new image object."""
+        # Here we workaround the situation when user wants to activate an
+        # empty image right after the creation. In Glance v1 api (and
+        # therefore in Nova) it is enough to set 'size = 0'. v2 api
+        # doesn't allow this hack - we have to send an upload request with
+        # empty data.
+        force_activate = data is None and image_meta.get('size') == 0
+
+        sent_service_image_meta = _translate_to_glance(image_meta)
+
+        try:
+            image = self._create_v2(context, sent_service_image_meta,
+                                    data, force_activate)
+        except glanceclient.exc.HTTPException:
+            _reraise_translated_exception()
+
+        return _translate_from_glance(image)
+
+    def _add_location(self, context, image_id, location):
+        # 'show_multiple_locations' must be enabled in glance api conf file.
+        try:
+            return self._client.call(context, 2, 'add_location', image_id,
+                                     location, {})
+        except glanceclient.exc.HTTPBadRequest:
+            _reraise_translated_exception()
+
+    def _upload_data(self, context, image_id, data):
+        self._client.call(context, 2, 'upload', image_id, data)
+        return self._client.call(context, 2, 'get', image_id)
+
+    def _create_v2(self, context, sent_service_image_meta, data=None,
+                   force_activate=False):
+        # Glance v1 allows image activation without setting disk and
+        # container formats, v2 doesn't. It leads to the dirtiest workaround
+        # where we have to hardcode this parameters.
+        if force_activate:
+            data = ''
+            if 'disk_format' not in sent_service_image_meta:
+                sent_service_image_meta['disk_format'] = 'qcow2'
+            if 'container_format' not in sent_service_image_meta:
+                sent_service_image_meta['container_format'] = 'bare'
+
+        location = sent_service_image_meta.pop('location', None)
+        image = self._client.call(
+            context, 2, 'create', **sent_service_image_meta)
+        image_id = image['id']
+
+        # Sending image location in a separate request.
+        if location:
+            image = self._add_location(context, image_id, location)
+
+        # If we have some data we have to send it in separate request and
+        # update the image then.
+        if data is not None:
+            image = self._upload_data(context, image_id, data)
+
+        return image
+
     def delete(self, context, image_id):
         """Delete the given image.
 
@@ -748,7 +807,32 @@ def _is_image_available(context, image):
 def _translate_to_glance(image_meta):
     image_meta = _convert_to_string(image_meta)
     image_meta = _remove_read_only(image_meta)
+    # TODO(mfedosin): Remove this check once we move to glance V2
+    # completely and enable convert to v2 every time.
+    if not CONF.glance.use_glance_v1:
+        # v2 requires several additional changes
+        image_meta = _convert_to_v2(image_meta)
     return image_meta
+
+
+def _convert_to_v2(image_meta):
+    output = {}
+    for name, value in six.iteritems(image_meta):
+        if name == 'properties':
+            for prop_name, prop_value in six.iteritems(value):
+                output[prop_name] = str(prop_value)
+        elif name in ('min_ram', 'min_disk'):
+            output[name] = int(value)
+        elif name == 'is_public':
+            output['visibility'] = 'public' if value else 'private'
+        elif name == 'size' or name == 'deleted':
+            continue
+        elif name in ('kernel_id', 'ramdisk_id') and value == 'None':
+            output[name] = None
+        else:
+            output[name] = value
+
+    return output
 
 
 def _translate_from_glance(image, include_locations=False):
