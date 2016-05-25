@@ -689,6 +689,49 @@ class GlanceImageServiceV2(object):
 
         return image
 
+    def update(self, context, image_id, image_meta, data=None,
+               purge_props=True):
+        """Modify the given image with the new data."""
+        sent_service_image_meta = _translate_to_glance(image_meta)
+        # NOTE(bcwaldon): id is not an editable field, but it is likely to be
+        # passed in by calling code. Let's be nice and ignore it.
+        sent_service_image_meta.pop('id', None)
+        sent_service_image_meta['image_id'] = image_id
+
+        try:
+            if purge_props:
+                # In Glance v2 we have to explicitly set prop names
+                # we want to remove.
+                all_props = set(self.show(
+                        context, image_id)['properties'].keys())
+                props_to_update = set(
+                        image_meta.get('properties', {}).keys())
+                remove_props = list(all_props - props_to_update)
+                sent_service_image_meta['remove_props'] = remove_props
+
+            image = self._update_v2(context, sent_service_image_meta, data)
+        except Exception:
+            _reraise_translated_image_exception(image_id)
+
+        return _translate_from_glance(image)
+
+    def _update_v2(self, context, sent_service_image_meta, data=None):
+        location = sent_service_image_meta.pop('location', None)
+        image_id = sent_service_image_meta['image_id']
+        image = self._client.call(
+            context, 2, 'update', **sent_service_image_meta)
+
+        # Sending image location in a separate request.
+        if location:
+            image = self._add_location(context, image_id, location)
+
+        # If we have some data we have to send it in separate request and
+        # update the image then.
+        if data is not None:
+            image = self._upload_data(context, image_id, data)
+
+        return image
+
     def delete(self, context, image_id):
         """Delete the given image.
 
