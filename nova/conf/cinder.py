@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright (c) 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -25,36 +18,76 @@ from oslo_config import cfg
 
 cinder_group = cfg.OptGroup(
     'cinder',
-    title='Cinder Options')
+    title='Cinder Options',
+    help="Configuration options for the block storage")
 
 cinder_opts = [
     cfg.StrOpt('catalog_info',
             default='volumev2:cinderv2:publicURL',
-            help='Info to match when looking for cinder in the service '
-                 'catalog. Format is: separated values of the form: '
-                 '<service_type>:<service_name>:<endpoint_type>'),
+            regex='(\w+):(\w+):(.*?)',
+            help="""
+Info to match when looking for cinder in the service catalog.
+
+Possible values:
+
+* Format is separated values of the form:
+  <service_type>:<service_name>:<endpoint_type>
+
+Related options:
+
+* endpoint_template - Setting this option will override catalog_info
+"""),
     cfg.StrOpt('endpoint_template',
-               help='Override service catalog lookup with template for cinder '
-                    'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
+               help="""
+If this option is set then it will override service catalog lookup with
+this template for cinder endpoint
+
+Possible values:
+
+* URL for cinder endpoint API
+  e.g. http://localhost:8776/v1/%(project_id)s
+
+Related options:
+
+* catalog_info - If endpoint_template is not set, catalog_info will be used.
+"""),
     cfg.StrOpt('os_region_name',
-               help='Region name of this node'),
+               help="""
+Region name of this node. This is used when picking the URL in the service
+catalog.
+
+Possible values:
+
+* Any string representing region name
+"""),
     cfg.IntOpt('http_retries',
                default=3,
-               help='Number of cinderclient retries on failed http calls'),
+               min=0,
+               help="""
+Number of times cinderclient should retry on any failed http call.
+0 means connection is attempted only once. Setting it to any positive integer
+means that on failure connection is retried that many times e.g. setting it
+to 3 means total attempts to connect will be 4.
+
+Possible values:
+
+* Any integer value. 0 means connection is attempted only once
+"""),
     cfg.BoolOpt('cross_az_attach',
                 default=True,
-                help='Allow attach between instance and volume in different '
-                     'availability zones. If False, volumes attached to an '
-                     'instance must be in the same availability zone in '
-                     'Cinder as the instance availability zone in Nova. '
-                     'This also means care should be taken when booting an '
-                     'instance from a volume where source is not "volume" '
-                     'because Nova will attempt to create a volume using '
-                     'the same availability zone as what is assigned to the '
-                     'instance. If that AZ is not in Cinder (or '
-                     'allow_availability_zone_fallback=False in cinder.conf), '
-                     'the volume create request will fail and the instance '
-                     'will fail the build request.'),
+                help="""
+Allow attach between instance and volume in different availability zones.
+
+If False, volumes attached to an instance must be in the same availability
+zone in Cinder as the instance availability zone in Nova.
+This also means care should be taken when booting an instance from a volume
+where source is not "volume" because Nova will attempt to create a volume using
+the same availability zone as what is assigned to the instance.
+If that AZ is not in Cinder (or allow_availability_zone_fallback=False in
+cinder.conf), the volume create request will fail and the instance will fail
+the build request.
+By default there is no availability zone restriction on volume attach.
+"""),
 ]
 
 deprecated = {'timeout': [cfg.DeprecatedOpt('http_timeout',
