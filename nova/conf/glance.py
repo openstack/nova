@@ -42,14 +42,11 @@ should be fully qualified urls of the form
                      'via the direct_url.  Currently supported schemes: '
                      '[file].'),
     cfg.BoolOpt('use_glance_v1',
-                default=True,
+                default=False,
                 help="""
-This flag is a temporary conf value to segregate paths between glance v1
-and glance v2 API usage inside the nova image proxy. This is set to True
-by default to use Glance V1 APIs as default. However, it would be flipped
-to False, once the nova image proxy is ready to adopt V2 APIs. Eventually
-this flag would be deprecated once the proxy gets rid of all the glance
-V1 API code.
+This flag allows reverting to glance v1 if for some reason glance v2 doesn't
+work in your environment. This will only exist in Newton, and a fully working
+Glance v2 will be a hard requirement in Ocata.
 
 * Possible values:
 
@@ -66,8 +63,8 @@ V1 API code.
     None
 """,
                 deprecated_for_removal=True,
-                deprecated_reason='This is a temporary flag to be removed '
-                                  'as soon as the V2 path works'),
+                deprecated_reason='Glance v1 support will be removed in '
+                                  'Ocata'),
     cfg.BoolOpt('verify_glance_signatures',
                 default=False,
                 help='Require Nova to perform signature verification on '
