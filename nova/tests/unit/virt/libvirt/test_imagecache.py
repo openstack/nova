@@ -98,7 +98,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.flags(instances_path='/var/lib/nova/instances')
 
         image_cache_manager = imagecache.ImageCacheManager()
-        image_cache_manager._list_base_images(base_dir)
+        image_cache_manager._scan_base_images(base_dir)
 
         sanitized = []
         for ent in image_cache_manager.unexplained_images:
@@ -256,7 +256,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         base_dir = '/var/lib/nova/instances/_base'
         image_cache_manager = imagecache.ImageCacheManager()
-        image_cache_manager._list_base_images(base_dir)
+        image_cache_manager._scan_base_images(base_dir)
         res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
 
         base_file = os.path.join(base_dir, fingerprint + '_10737418240')
@@ -276,7 +276,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         base_dir = '/var/lib/nova/instances/_base'
         image_cache_manager = imagecache.ImageCacheManager()
-        image_cache_manager._list_base_images(base_dir)
+        image_cache_manager._scan_base_images(base_dir)
         res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
 
         base_file1 = os.path.join(base_dir, fingerprint)
