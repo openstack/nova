@@ -129,12 +129,6 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertIn('instance-00000001', running['instance_names'])
         self.assertIn('123', running['instance_names'])
 
-        self.assertEqual(4, len(running['image_popularity']))
-        self.assertEqual(1, running['image_popularity']['1'])
-        self.assertEqual(2, running['image_popularity']['2'])
-        self.assertEqual(1, running['image_popularity']['21'])
-        self.assertEqual(1, running['image_popularity']['22'])
-
         self.assertEqual(len(running['used_swap_images']), 2)
         self.assertIn('swap_128', running['used_swap_images'])
         self.assertIn('swap_256', running['used_swap_images'])
@@ -170,6 +164,3 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertEqual(set(['instance-00000001', '123',
                               'instance-00000001_resize', '123_resize']),
                          running['instance_names'])
-
-        self.assertEqual(1, len(running['image_popularity']))
-        self.assertEqual(1, running['image_popularity']['1'])

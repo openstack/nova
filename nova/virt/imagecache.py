@@ -44,11 +44,10 @@ class ImageCacheManager(object):
 
         This method returns a dictionary with the following keys:
             - used_images
-            - image_popularity
             - instance_names
+            - used_swap_images
         """
         used_images = {}
-        image_popularity = {}
         instance_names = set()
         used_swap_images = set()
         instance_bdms = objects.BlockDeviceMappingList.bdms_by_instance_uuid(
@@ -78,9 +77,6 @@ class ImageCacheManager(object):
                 insts.append(instance.name)
                 used_images[image_ref_str] = (local, remote, insts)
 
-                image_popularity.setdefault(image_ref_str, 0)
-                image_popularity[image_ref_str] += 1
-
             bdms = instance_bdms.get(instance.uuid)
             if bdms:
                 swap = driver_block_device.convert_swap(bdms)
@@ -89,7 +85,6 @@ class ImageCacheManager(object):
                     used_swap_images.add(swap_image)
 
         return {'used_images': used_images,
-                'image_popularity': image_popularity,
                 'instance_names': instance_names,
                 'used_swap_images': used_swap_images}
 
