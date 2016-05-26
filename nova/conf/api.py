@@ -427,15 +427,7 @@ ALL_OPTS = (auth_opts +
 
 
 def register_opts(conf):
-    conf.register_opts(auth_opts)
-    conf.register_opts(metadata_opts)
-    conf.register_opt(file_opt)
-    conf.register_opts(osapi_opts)
-    conf.register_opt(allow_instance_snapshots_opt)
-    conf.register_opt(osapi_hide_opt)
-    conf.register_opt(fping_path_opt)
-    conf.register_opts(os_network_opts)
-    conf.register_opt(enable_inst_pw_opt)
+    conf.register_opts(ALL_OPTS)
 
 
 def list_opts():

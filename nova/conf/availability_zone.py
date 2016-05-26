@@ -16,23 +16,19 @@
 
 from oslo_config import cfg
 
-internal_service_availability_zone = cfg.StrOpt(
-     'internal_service_availability_zone',
-      default='internal',
-      help='The availability_zone to show internal services under')
-
-default_availability_zone = cfg.StrOpt(
-     'default_availability_zone',
-      default='nova',
-      help='Default compute node availability_zone')
-
-ALL_OPTS = [internal_service_availability_zone,
-            default_availability_zone]
+availability_zone_opts = [
+    cfg.StrOpt('internal_service_availability_zone',
+        default='internal',
+        help='The availability_zone to show internal services under'),
+    cfg.StrOpt('default_availability_zone',
+        default='nova',
+        help='Default compute node availability_zone'),
+]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS)
+    conf.register_opts(availability_zone_opts)
 
 
 def list_opts():
-    return {'DEFAULT': ALL_OPTS}
+    return {'DEFAULT': availability_zone_opts}
