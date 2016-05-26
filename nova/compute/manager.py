@@ -85,6 +85,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
 from nova import rpc
@@ -727,7 +728,9 @@ class ComputeManager(manager.Manager):
         self._update_resource_tracker(context, instance)
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
-
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.DELETE,
+                phase=fields.NotificationPhase.END)
         self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
@@ -2279,6 +2282,10 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
                                               "delete.start")
+            compute_utils.notify_about_instance_action(context, instance,
+                    self.host, action=fields.NotificationAction.DELETE,
+                    phase=fields.NotificationPhase.START)
+
             self._shutdown_instance(context, instance, bdms)
             # NOTE(dims): instance.info_cache.delete() should be called after
             # _shutdown_instance in the compute manager as shutdown calls

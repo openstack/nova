@@ -665,3 +665,90 @@ class AllServicesCurrent(fixtures.Fixture):
 
     def _fake_minimum(self, *args, **kwargs):
         return service_obj.SERVICE_VERSION
+
+
+class NeutronFixture(fixtures.Fixture):
+    """A fixture to boot instances with neutron ports"""
+
+    # the default project_id in OsaAPIFixtures
+    tenant_id = '6f70656e737461636b20342065766572'
+    network_1 = {
+        'status': 'ACTIVE',
+        'subnets': [],
+        'name': 'private-network',
+        'admin_state_up': True,
+        'tenant_id': tenant_id,
+        'id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+    }
+    subnet_1 = {
+        'name': 'private-subnet',
+        'enable_dhcp': True,
+        'network_id': network_1['id'],
+        'tenant_id': tenant_id,
+        'dns_nameservers': [],
+        'allocation_pools': [
+            {
+                'start': '192.168.1.1',
+                'end': '192.168.1.254'
+            }
+        ],
+        'host_routes': [],
+        'ip_version': 4,
+        'gateway_ip': '192.168.1.1',
+        'cidr': '192.168.1.1/24',
+        'id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef'
+    }
+    network_1['subnets'] = [subnet_1['id']]
+
+    port_1 = {
+        'id': 'ce531f90-199f-48c0-816c-13e38010b442',
+        'network_id': network_1['id'],
+        'admin_state_up': True,
+        'status': 'ACTIVE',
+        'mac_address': 'fa:16:3e:4c:2c:30',
+        'fixed_ips': [
+            {
+                'ip_address': '192.168.1.3',
+                'subnet_id': subnet_1['id']
+            }
+        ],
+        'tenant_id': tenant_id
+    }
+
+    def __init__(self, test):
+        super(NeutronFixture, self).__init__()
+        self.test = test
+
+    def setUp(self):
+        super(NeutronFixture, self).setUp()
+
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API.'
+            'validate_networks',
+            lambda *args, **kwargs: 1)
+        self.test.stub_out(
+            'nova.network.neutronv2.api.API.'
+            'create_pci_requests_for_sriov_ports',
+            lambda *args, **kwargs: None)
+        self.test.stub_out(
+            'nova.network.security_group.neutron_driver.SecurityGroupAPI.'
+            'get_instances_security_groups_bindings',
+            lambda *args, **kwargs: {})
+
+        mock_neutron_client = mock.Mock()
+        mock_neutron_client.list_extensions.return_value = {'extensions': []}
+        mock_neutron_client.show_port.return_value = {
+            'port': NeutronFixture.port_1}
+        mock_neutron_client.list_networks.return_value = {
+            'networks': [NeutronFixture.network_1]}
+        mock_neutron_client.list_ports.return_value = {
+            'ports': [NeutronFixture.port_1]}
+        mock_neutron_client.list_subnets.return_value = {
+            'subnets': [NeutronFixture.subnet_1]}
+        mock_neutron_client.list_floatingips.return_value = {'floatingips': []}
+        mock_neutron_client.update_port.return_value = {
+            'port': NeutronFixture.port_1}
+
+        self.test.stub_out(
+            'nova.network.neutronv2.api.get_client',
+            lambda *args, **kwargs: mock_neutron_client)

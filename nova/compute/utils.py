@@ -32,7 +32,10 @@ from nova import exception
 from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
+from nova.notifications.objects import base as notification_base
+from nova.notifications.objects import instance as instance_notification
 from nova import objects
+from nova.objects import fields
 from nova import rpc
 from nova import safe_utils
 from nova import utils
@@ -316,6 +319,49 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
         method = notifier.info
 
     method(context, 'compute.instance.%s' % event_suffix, usage_info)
+
+
+def notify_about_instance_action(context, instance, host, action, phase=None,
+                                 binary='nova-compute'):
+    """Send versioned notification about the action made on the instance
+    :param instance: the instance which the action performed on
+    :param host: the host emitting the notification
+    :param action: the name of the action
+    :param phase: the phase of the action
+    :param binary: the binary emitting the notification
+    """
+    network_info = get_nw_info_for_instance(instance)
+    ips = []
+    if network_info is not None:
+        for vif in network_info:
+            for ip in vif.fixed_ips():
+                ips.append(instance_notification.IpPayload(
+                    label=vif["network"]["label"],
+                    mac=vif["address"],
+                    meta=vif["meta"],
+                    port_uuid=vif["id"],
+                    version=ip["version"],
+                    address=ip["address"],
+                    device_name=vif["devname"]))
+    flavor = instance_notification.FlavorPayload(instance=instance)
+    # TODO(gibi): handle fault during the transformation of the first error
+    # notifications
+    payload = instance_notification.InstanceActionPayload(
+            instance=instance,
+            fault=None,
+            ip_addresses=ips,
+            flavor=flavor)
+    notification = instance_notification.InstanceActionNotification(
+            context=context,
+            priority=fields.NotificationPriority.INFO,
+            publisher=notification_base.NotificationPublisher(
+                    context=context, host=host, binary=binary),
+            event_type=notification_base.EventType(
+                    object='instance',
+                    action=action,
+                    phase=phase),
+            payload=payload)
+    notification.emit(context)
 
 
 def notify_about_server_group_update(context, event_suffix, sg_payload):
