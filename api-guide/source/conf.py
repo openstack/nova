@@ -88,7 +88,7 @@ gitsha = subprocess.Popen(
 
 # source tree
 pwd = subprocess.Popen(
-    "pwd", stdout=subprocess.PIPE).communicate()[0].strip('\n')
+    "pwd", stdout=subprocess.PIPE).communicate()[0].decode().strip('\n')
 
 # html_context allows us to pass arbitrary values into the html template
 html_context = {"pwd": pwd,
