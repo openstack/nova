@@ -373,7 +373,6 @@ flavor_is_public_query:
     Filters the flavor list by only public flavors. By default ``non
     admin`` users only see public flavors, and ``admin`` users can see
     additional non public flavors.
-
 flavor_query:
   description: |
     Filters the response by a flavor, as a UUID. A flavor is a combination of memory,
@@ -834,6 +833,24 @@ availability_zone:
   in: body
   required: false
   type: string
+availability_zone_info:
+  description: |
+    The list of availability zone information.
+  in: body
+  required: true
+  type: array
+availability_zone_state:
+  description: |
+    The current state of the availability zone.
+  in: body
+  required: true
+  type: object
+available:
+  description: |
+    Returns true if the availability zone is available.
+  in: body
+  required: true
+  type: boolean
 backup_name:
   description: |
     The name of the image to be backed up.
@@ -854,70 +871,73 @@ backup_type:
   required: true
   type: string
 baremetal_cpus:
+  description: |
+    Number of CPUs the node has.
+
+    .. note:: This is a JSON string, even though it will look like an int value.
   in: body
   required: true
   type: string
-  description: |
-    Number of cpus the node has. Note: this is json string, even
-    though it will look like an int value.
 baremetal_disk:
+  description: |
+    Amount of disk in GiB the node has.
+
+    .. note:: This is a JSON string, even though it will look like an int value.
   in: body
   required: true
   type: string
-  description: |
-    Amount of disk in GiB the node has. Note: this is json string,
-    even though it will look like an int value.
 baremetal_host:
+  description: |
+    This will always have the value ``IRONIC MANAGED``.
   in: body
   required: true
   type: string
-  description: |
-    This will always have the value "IRONIC MANAGED".
 baremetal_id:
+  description: |
+    UUID of the baremetal node.
   in: body
   required: true
   type: string
-  description: |
-    UUID of baremetal node
 baremetal_instance_uuid:
+  description: |
+    UUID of the server instance on this node.
   in: body
   required: true
   type: string
-  description: |
-    UUID of server instance on this node
 baremetal_interfaces:
-  in: body
-  required: true
-  type: array
   description: |
     A list of interface objects for active interfaces on the baremetal
     node. Each will have an ``address`` field with the address.
-baremetal_mem:
-  in: body
-  required: true
-  type: string
-  description: |
-    Amount of memory in MiB the node has. Note: this is json string,
-    even though it will look like an int value.
-baremetal_node:
-  in: body
-  required: true
-  type: object
-  description: |
-    A baremetal node object
-baremetal_nodes:
   in: body
   required: true
   type: array
+baremetal_mem:
   description: |
-    An array of baremetal node objects
-baremetal_taskstate:
+    Amount of memory in MiB the node has.
+
+    .. note:: This is a JSON string, even though it will look like an int value.
   in: body
   required: true
   type: string
+baremetal_node:
+  description: |
+    A baremetal node object.
+  in: body
+  required: true
+  type: object
+baremetal_nodes:
+  description: |
+    An array of baremetal node objects.
+  in: body
+  required: true
+  type: array
+baremetal_taskstate:
   description: |
     The Ironic task state for the node. See Ironic project for more
     details.
+  in: body
+  required: true
+  type: string
 binary:
   description: |
     The binary name of the service.
@@ -1031,7 +1051,7 @@ console_id_in_body:
 console_output:
   description: |
     The console output as a string. Control characters will be escaped
-    to create a valid json string.
+    to create a valid JSON string.
   in: body
   required: true
   type: string
@@ -1053,6 +1073,12 @@ consoles:
   in: body
   required: true
   type: array
+contents:
+  description: |
+    The file contents field in the personality object.
+  in: body
+  required: true
+  type: string
 cores:
   description: |
     The number of allowed instance cores for each tenant.
@@ -1368,7 +1394,7 @@ flavor_cpus:
   required: true
   type: int
   description: |
-    The number of virtual cpus that will be allocated to the server.
+    The number of virtual CPUs that will be allocated to the server.
 flavor_disabled:
   in: body
   required: false
@@ -1410,61 +1436,61 @@ flavor_id_body:
   required: true
   type: string
 flavor_is_public:
+  description: |
+    Whether the flavor is public (available to all projects) or scoped
+    to a set of projects. Default is True if not specified.
   in: body
   required: true
   type: boolean
-  description: |
-    Wheter the flavor is public (available to all projects) or scoped
-    to a set of projects. Default is True if not specified.
 flavor_is_public_in:
+  description: |
+    Whether the flavor is public (available to all projects) or scoped
+    to a set of projects. Default is True if not specified.
   in: body
   required: false
   type: boolean
-  description: |
-    Wheter the flavor is public (available to all projects) or scoped
-    to a set of projects. Default is True if not specified.
 flavor_name:
+  description: |
+    The display name of a flavor.
   in: body
   required: true
   type: string
-  description: |
-    The display name of a flavor.
 flavor_ram:
-  in: body
-  required: true
-  type: int
   description: |
     The amount of RAM a flavor has, in MiB.
+  in: body
+  required: true
+  type: int
 flavor_rxtx_factor:
-  in: body
-  required: true
-  type: float
   description: |
     The receive / transimit factor (as a float) that will be set on
     ports if the network backend supports the QOS extension.
     Otherwise it will be ignored. It defaults to 1.0.
+  in: body
+  required: true
+  type: float
 flavor_rxtx_factor_in:
-  in: body
-  required: false
-  type: float
   description: |
     The receive / transimit factor (as a float) that will be set on
     ports if the network backend supports the QOS extension.
     Otherwise it will be ignored. It defaults to 1.0.
+  in: body
+  required: false
+  type: float
 flavor_swap:
+  description: |
+    The size of a dedicated swap disk that will be allocated, in
+    GiB. If 0 (the default), no dedicated swap disk will be created.
   in: body
   required: true
   type: int
+flavor_swap_in:
   description: |
     The size of a dedicated swap disk that will be allocated, in
     GiB. If 0 (the default), no dedicated swap disk will be created.
-flavor_swap_in:
   in: body
   required: false
   type: int
-  description: |
-    The size of a dedicated swap disk that will be allocated, in
-    GiB. If 0 (the default), no dedicated swap disk will be created.
 flavorRef:
   description: |
     The flavor reference, as a UUID or full URL, for the flavor for your server instance.
@@ -1652,7 +1678,7 @@ host_resource_array:
   type: array
 host_service:
   description: |
-    The service name which is running on the host.
+    The name of the service which is running on the host.
   in: body
   required: true
   type: string
@@ -1693,10 +1719,18 @@ hostId:
   type: string
 hosts:
   description: |
-    An array of host information
+    An array of host information.
   in: body
   required: true
   type: array
+hosts.availability_zone:
+  description: |
+    An object containing a list of host information. The host information is comprised
+    of host and service objects. The service object returns three parameters representing
+    the states of the service: ``active``, ``available``, and ``updated_at``.
+  in: body
+  required: true
+  type: object
 hypervisor:
   description: |
     The hypervisor object.
@@ -2435,7 +2469,7 @@ OS-DCF:diskConfig:
   type: string
 OS-EXT-AZ:availability_zone:
   description: |
-    The availability zone.
+    The availability zone name.
   in: body
   required: true
   type: string
@@ -2552,9 +2586,7 @@ OS-SRV-USG:terminated_at:
       CCYY-MM-DDThh:mm:ss±hh:mm
 
     For example, ``2015-08-27T09:49:58-05:00``.
-
     The ``±hh:mm`` value, if included, is the time zone as an offset from UTC.
-
     If the ``deleted_at`` date and time stamp is not set, its value is ``null``.
   in: body
   required: true
@@ -2587,6 +2619,12 @@ parent_group_id:
 password:
   description: |
     The password returned from metadata server.
+  in: body
+  required: false
+  type: string
+path:
+  description: |
+    The path field in the personality object.
   in: body
   required: false
   type: string
