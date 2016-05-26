@@ -117,7 +117,7 @@ class ExtendedVolumesTestV21(test.TestCase):
         req = webob.Request.blank('/v2/fake/servers' + url)
         req.headers['Accept'] = self.content_type
         req.headers = {os_wsgi.API_VERSION_REQUEST_HEADER:
-                       self.wsgi_api_version}
+                       'compute %s' % self.wsgi_api_version}
         if body:
             req.body = jsonutils.dump_as_bytes(body)
             req.method = 'POST'

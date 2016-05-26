@@ -283,3 +283,11 @@ user documentation.
   These filters can be combined. Also user can use more than one string tags
   for each filter. In this case string tags for each filter must be separated
   by comma: GET /servers?tags=red&tags-any=green,orange
+
+2.27
+----
+
+  Added support for the new form of microversion headers described in the
+  `Microversion Specification
+  <http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html>`_.
+  Both the original form of header and the new form is supported.

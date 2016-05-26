@@ -107,17 +107,28 @@ HTTP header::
 
   X-OpenStack-Nova-API-Version: 2.4
 
+Starting with microversion `2.27` it is also correct to use the
+following header to specify the microversion::
+
+  OpenStack-API-Version: compute 2.27
+
+.. note:: For more detail on this newer form see the `Microversion Specification
+   <http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html>`_.
+
 This acts conceptually like the "Accept" header. Semantically this means:
 
-* If `X-OpenStack-Nova-API-Version` is not provided, act as if the minimum
-  supported microversion was specified.
+* If neither `X-OpenStack-Nova-API-Version` nor `OpenStack-API-Version`
+  (specifying `compute`) is provided, act as if the minimum supported
+  microversion was specified.
 
-* If `X-OpenStack-Nova-API-Version` is provided, respond with the API at
-  that microversion. If that's outside of the range of microversions supported,
-  return 406 Not Acceptable.
+* If both headers are provided, `OpenStack-API-Version` will be preferred.
 
-* If `X-OpenStack-Nova-API-Version` is ``latest`` (special keyword), act as
-  if maximum was specified.
+* If `X-OpenStack-Nova-API-Version` or `OpenStack-API-Version` is provided,
+  respond with the API at that microversion. If that's outside of the range
+  of microversions supported, return 406 Not Acceptable.
+
+* If `X-OpenStack-Nova-API-Version` or `OpenStack-API-Version` has a value
+  of ``latest`` (special keyword), act as if maximum was specified.
 
 .. warning:: The ``latest`` value is mostly meant for integration testing and
   would be dangerous to rely on in client code since microversions are not
@@ -129,14 +140,21 @@ This means that out of the box, an old client without any knowledge of
 microversions can work with an OpenStack installation with microversions
 support.
 
-Two extra headers are always returned in the response:
+In microversions prior to `2.27` two extra headers are always returned in
+the response::
 
-* X-OpenStack-Nova-API-Version: microversion_number
-* Vary: X-OpenStack-Nova-API-Version
+    X-OpenStack-Nova-API-Version: microversion_number
+    Vary: X-OpenStack-Nova-API-Version
 
 The first header specifies the microversion number of the API which was
 executed.
 
-The second header is used as a hint to caching proxies that the response
-is also dependent on the X-OpenStack-Nova-API-Version and not just
-the body and query parameters. See :rfc:`2616` section 14.44 for details.
+The `Vary` header is used as a hint to caching proxies that the response
+is also dependent on the microversion and not just the body and query
+parameters. See :rfc:`2616` section 14.44 for details.
+
+From microversion `2.27` two additional headers are added to the
+response::
+
+    OpenStack-API-Version: compute microversion_number
+    Vary: OpenStack-API-Version
