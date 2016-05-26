@@ -36,8 +36,7 @@ def fake_compute_node_get_all(context, limit=None, marker=None):
     return test_hypervisors.TEST_HYPERS_OBJ
 
 
-@classmethod
-def fake_service_get_by_compute_host(cls, context, host):
+def fake_service_get_by_compute_host(context, host):
     for service in test_hypervisors.TEST_SERVICES:
         if service.host == host:
             return service
@@ -60,8 +59,6 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
 
     def _set_up_controller(self):
         self.controller = hypervisors_v21.HypervisorsController()
-        self.controller.servicegroup_api.service_is_up = mock.MagicMock(
-            return_value=True)
 
     def _get_request(self):
         return fakes.HTTPRequest.blank('/v2/fake/os-hypervisors/detail',
@@ -71,29 +68,50 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
         super(ExtendedHypervisorsTestV21, self).setUp()
         self._set_up_controller()
 
-        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
-                       fake_compute_node_get_all)
-        self.stubs.Set(self.controller.host_api, 'compute_node_get',
-                       fake_compute_node_get)
-        self.stubs.Set(objects.Service, 'get_by_compute_host',
-                       fake_service_get_by_compute_host)
-
     def test_view_hypervisor_detail_noservers(self):
-        req = self._get_request()
-        result = self.controller._view_hypervisor(
-            test_hypervisors.TEST_HYPERS_OBJ[0],
-            test_hypervisors.TEST_SERVICES[0], True, req)
+        with mock.patch.object(self.controller.servicegroup_api,
+                               'service_is_up',
+                               return_value=True) as mock_service_is_up:
+            req = self._get_request()
+            result = self.controller._view_hypervisor(
+                test_hypervisors.TEST_HYPERS_OBJ[0],
+                test_hypervisors.TEST_SERVICES[0], True, req)
 
-        self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
+            self.assertEqual(self.DETAIL_HYPERS_DICTS[0], result)
+            self.assertTrue(mock_service_is_up.called)
 
-    def test_detail(self):
-        req = self._get_request()
-        result = self.controller.detail(req)
+    @mock.patch.object(objects.Service, 'get_by_compute_host',
+                       side_effect=fake_service_get_by_compute_host)
+    def test_detail(self, mock_get_by_host):
+        with test.nested(
+            mock.patch.object(self.controller.host_api, 'compute_node_get_all',
+                              side_effect=fake_compute_node_get_all),
+            mock.patch.object(self.controller.servicegroup_api,
+                              'service_is_up', return_value=True),
+        ) as (mock_node_get_all, mock_service_is_up):
+            req = self._get_request()
+            result = self.controller.detail(req)
 
-        self.assertEqual(result, dict(hypervisors=self.DETAIL_HYPERS_DICTS))
+            self.assertEqual(dict(hypervisors=self.DETAIL_HYPERS_DICTS),
+                             result)
+            self.assertTrue(mock_service_is_up.called)
+            self.assertTrue(mock_get_by_host.called)
+            self.assertTrue(mock_node_get_all.called)
 
-    def test_show_withid(self):
-        req = self._get_request()
-        result = self.controller.show(req, '1')
+    @mock.patch.object(objects.Service, 'get_by_compute_host',
+                       side_effect=fake_service_get_by_compute_host)
+    def test_show_withid(self, mock_get_by_host):
+        with test.nested(
+            mock.patch.object(self.controller.host_api, 'compute_node_get',
+                              side_effect=fake_compute_node_get),
+            mock.patch.object(self.controller.servicegroup_api,
+                              'service_is_up', return_value=True),
+        ) as (mock_node_get, mock_service_is_up):
+            req = self._get_request()
+            result = self.controller.show(req, '1')
 
-        self.assertEqual(result, dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]))
+            self.assertEqual(dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]),
+                             result)
+            self.assertTrue(mock_service_is_up.called)
+            self.assertTrue(mock_get_by_host.called)
+            self.assertTrue(mock_node_get.called)
