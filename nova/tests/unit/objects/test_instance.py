@@ -590,6 +590,21 @@ class _TestInstanceObject(object):
             inst.save()
             self.assertFalse(mock_upd.called)
 
+    @mock.patch('nova.db.instance_extra_update_by_uuid')
+    def test_save_multiple_extras_updates_once(self, mock_update):
+        inst = fake_instance.fake_instance_obj(self.context)
+        inst.numa_topology = None
+        inst.migration_context = None
+        inst.vcpu_model = test_vcpu_model.fake_vcpumodel
+        inst.save()
+        json_vcpu_model = jsonutils.dumps(
+            test_vcpu_model.fake_vcpumodel.obj_to_primitive())
+        expected_vals = {'numa_topology': None,
+                         'migration_context': None,
+                         'vcpu_model': json_vcpu_model}
+        mock_update.assert_called_once_with(self.context, inst.uuid,
+                                            expected_vals)
+
     @mock.patch.object(notifications, 'send_update')
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_from_api')
     @mock.patch.object(cells_rpcapi.CellsAPI, 'instance_update_at_top')

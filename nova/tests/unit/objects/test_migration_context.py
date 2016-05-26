@@ -48,27 +48,6 @@ def get_fake_migration_context_obj(ctxt):
 
 
 class _TestMigrationContext(object):
-    @mock.patch('nova.db.instance_extra_update_by_uuid')
-    def test_create(self, mock_update):
-        ctxt_obj = get_fake_migration_context_obj(self.context)
-        ctxt_obj._save()
-        self.assertEqual(1, len(mock_update.call_args_list))
-        update_call = mock_update.call_args
-        self.assertEqual(self.context, update_call[0][0])
-        self.assertEqual(fake_instance_uuid, update_call[0][1])
-        self.assertIsInstance(ctxt_obj.new_numa_topology,
-                              objects.InstanceNUMATopology)
-        self.assertIsNone(ctxt_obj.old_numa_topology)
-
-    @mock.patch('nova.db.instance_extra_update_by_uuid')
-    def test_destroy(self, mock_update):
-        objects.MigrationContext._destroy(self.context, fake_instance_uuid)
-        self.assertEqual(1, len(mock_update.call_args_list))
-        update_call = mock_update.call_args
-        self.assertEqual(self.context, update_call[0][0])
-        self.assertEqual(fake_instance_uuid, update_call[0][1])
-        self.assertEqual({'migration_context': None}, update_call[0][2])
-
     def _test_get_by_instance_uuid(self, db_data):
         mig_context = objects.MigrationContext.get_by_instance_uuid(
             self.context, fake_db_context['instance_uuid'])

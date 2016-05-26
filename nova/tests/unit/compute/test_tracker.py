@@ -1729,11 +1729,12 @@ class TestMoveClaim(BaseTestCase):
         self.assertNotEqual(expected, self.rt.compute_node)
 
         claim.instance.migration_context = mig_context_obj
-        with mock.patch('nova.objects.MigrationContext._destroy') as destroy_m:
+        with mock.patch.object(claim.instance,
+                               'drop_migration_context') as drop_mig_ctxt:
             claim.abort()
             self.assertTrue(obj_base.obj_equal_prims(expected,
                                                      self.rt.compute_node))
-            destroy_m.assert_called_once_with(self.ctx, claim.instance.uuid)
+            drop_mig_ctxt.assert_called_once_with()
 
     def test_revert_reserve_source(
             self, pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
