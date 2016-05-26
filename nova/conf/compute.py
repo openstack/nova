@@ -336,16 +336,56 @@ running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
                default="reap",
                choices=('noop', 'log', 'shutdown', 'reap'),
-               help="Action to take if a running deleted instance is detected."
-                    "Set to 'noop' to take no action."),
+               help="""
+The compute service periodically checks for instances that have been
+deleted in the database but remain running on the compute node. The
+above option enables action to be taken when such instances are
+identified.
+
+Possible values:
+
+* reap: Powers down the instances and deletes them(default)
+* log: Logs warning message about deletion of the resource
+* shutdown: Powers down instances and marks them as non-
+  bootable which can be later used for debugging/analysis
+* noop: Takes no action
+
+Related options:
+
+* running_deleted_instance_poll
+* running_deleted_instance_timeout
+"""),
     cfg.IntOpt("running_deleted_instance_poll_interval",
                default=1800,
-               help="Number of seconds to wait between runs of the cleanup "
-                    "task."),
+               help="""
+Time interval in seconds to wait between runs for the clean up action.
+If set to 0, above check will be disabled. If "running_deleted_instance
+_action" is set to "log" or "reap", a value greater than 0 must be set.
+
+Possible values:
+
+* Any positive integer in seconds enables the option.
+* 0: Disables the option.
+* 1800: Default value.
+
+Related options:
+
+* running_deleted_instance_action
+"""),
     cfg.IntOpt("running_deleted_instance_timeout",
                default=0,
-               help="Number of seconds after being deleted when a running "
-                    "instance should be considered eligible for cleanup."),
+               help="""
+Time interval in seconds to wait for the instances that have
+been marked as deleted in database to be eligible for cleanup.
+
+Possible values:
+
+* Any positive integer in seconds(default is 0).
+
+Related options:
+
+* "running_deleted_instance_action"
+"""),
 ]
 
 instance_cleaning_opts = [
