@@ -14765,7 +14765,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
         drvr.image_backend.image.return_value = drvr.image_backend
-        drvr.image_backend.check_image_exists.return_value = False
+        drvr.image_backend.exists.return_value = False
         ins_ref = self._create_instance()
 
         with test.nested(
@@ -14876,7 +14876,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.image_backend = mock.Mock()
         drvr.image_backend.image.return_value = drvr.image_backend
-        drvr.image_backend.check_image_exists.return_value = False
+        drvr.image_backend.exists.return_value = False
 
         with test.nested(
                 mock.patch.object(os.path, 'exists'),

@@ -128,7 +128,7 @@ class _ImageTestCase(object):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'exists', lambda: True)
         self.stubs.Set(image, '_can_fallocate', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
         self.stub_out('os.path.exists', lambda _: True)
@@ -766,7 +766,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -1139,7 +1139,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -1176,9 +1176,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(image, 'check_image_exists')
+        self.mox.StubOutWithMock(image, 'exists')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
-        image.check_image_exists().AndReturn(False)
+        image.exists().AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
@@ -1196,9 +1196,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(image, 'check_image_exists')
+        self.mox.StubOutWithMock(image, 'exists')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        image.check_image_exists().AndReturn(False)
+        image.exists().AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
@@ -1214,9 +1214,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(image, 'check_image_exists')
+        self.mox.StubOutWithMock(image, 'exists')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        image.check_image_exists().AndReturn(True)
+        image.exists().AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
         self.mox.ReplayAll()
 
@@ -1228,9 +1228,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         image = self.image_class(self.INSTANCE, self.NAME)
 
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(image, 'check_image_exists')
+        self.mox.StubOutWithMock(image, 'exists')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        image.check_image_exists().AndReturn(False)
+        image.exists().AndReturn(False)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
         self.mox.ReplayAll()
 
@@ -1249,9 +1249,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         fake_processutils.stub_out_processutils_execute(self.stubs)
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.mox.StubOutWithMock(image, 'check_image_exists')
-        image.check_image_exists().AndReturn(False)
-        image.check_image_exists().AndReturn(False)
+        self.mox.StubOutWithMock(image, 'exists')
+        image.exists().AndReturn(False)
+        image.exists().AndReturn(False)
         self.mox.ReplayAll()
 
         image.create_image(fn, self.TEMPLATE_PATH, None)
@@ -1275,9 +1275,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         fake_processutils.stub_out_processutils_execute(self.stubs)
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.mox.StubOutWithMock(image, 'check_image_exists')
-        image.check_image_exists().AndReturn(False)
-        image.check_image_exists().AndReturn(False)
+        self.mox.StubOutWithMock(image, 'exists')
+        image.exists().AndReturn(False)
+        image.exists().AndReturn(False)
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         cmd = ('rbd', 'import', '--pool', self.POOL, self.TEMPLATE_PATH,
                rbd_name, '--image-format=2', '--id', self.USER,
@@ -1301,11 +1301,11 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.mox.StubOutWithMock(image, 'check_image_exists')
-        image.check_image_exists().AndReturn(True)
+        self.mox.StubOutWithMock(image, 'exists')
+        image.exists().AndReturn(True)
         self.mox.StubOutWithMock(image, 'get_disk_size')
         image.get_disk_size(self.TEMPLATE_PATH).AndReturn(self.SIZE)
-        image.check_image_exists().AndReturn(True)
+        image.exists().AndReturn(True)
         rbd_name = "%s_%s" % (self.INSTANCE['uuid'], self.NAME)
         image.get_disk_size(rbd_name).AndReturn(self.SIZE)
 
@@ -1327,7 +1327,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -1411,7 +1411,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_import_file(self):
         image = self.image_class(self.INSTANCE, self.NAME)
 
-        @mock.patch.object(image, 'check_image_exists')
+        @mock.patch.object(image, 'exists')
         @mock.patch.object(image.driver, 'remove_image')
         @mock.patch.object(image.driver, 'import_image')
         def _test(mock_import, mock_remove, mock_exists):
@@ -1428,7 +1428,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_import_file_not_found(self):
         image = self.image_class(self.INSTANCE, self.NAME)
 
-        @mock.patch.object(image, 'check_image_exists')
+        @mock.patch.object(image, 'exists')
         @mock.patch.object(image.driver, 'remove_image')
         @mock.patch.object(image.driver, 'import_image')
         def _test(mock_import, mock_remove, mock_exists):
@@ -1637,7 +1637,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'check_image_exists', lambda: True)
+        self.stubs.Set(image, 'exists', lambda: True)
         self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)

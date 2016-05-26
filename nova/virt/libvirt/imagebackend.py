@@ -180,7 +180,7 @@ class Image(object):
 
         return info
 
-    def check_image_exists(self):
+    def exists(self):
         return os.path.exists(self.path)
 
     def cache(self, fetch_func, filename, size=None, *args, **kwargs):
@@ -208,7 +208,7 @@ class Image(object):
             fileutils.ensure_tree(base_dir)
         base = os.path.join(base_dir, filename)
 
-        if not self.check_image_exists() or not os.path.exists(base):
+        if not self.exists() or not os.path.exists(base):
             self.create_image(fetch_func_sync, base, size,
                               *args, **kwargs)
 
@@ -491,7 +491,7 @@ class Flat(Image):
 
         generating = 'image_id' not in kwargs
         if generating:
-            if not self.check_image_exists():
+            if not self.exists():
                 # Generating image in place
                 prepare_template(target=self.path, *args, **kwargs)
         else:
@@ -823,7 +823,7 @@ class Rbd(Image):
     def _can_fallocate(self):
         return False
 
-    def check_image_exists(self):
+    def exists(self):
         return self.driver.exists(self.rbd_name)
 
     def get_disk_size(self, name):
@@ -836,12 +836,12 @@ class Rbd(Image):
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
 
-        if not self.check_image_exists():
+        if not self.exists():
             prepare_template(target=base, max_size=size, *args, **kwargs)
 
         # prepare_template() may have cloned the image into a new rbd
         # image already instead of downloading it locally
-        if not self.check_image_exists():
+        if not self.exists():
             self.driver.import_image(base, self.rbd_name)
         self.verify_base_size(base, size)
 
@@ -896,7 +896,7 @@ class Rbd(Image):
 
     def import_file(self, instance, local_file, remote_name):
         name = '%s_%s' % (instance.uuid, remote_name)
-        if self.check_image_exists():
+        if self.exists():
             self.driver.remove_image(name)
         self.driver.import_image(local_file, name)
 
