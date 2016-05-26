@@ -30,7 +30,6 @@ def list_opts():
     return [
         ('DEFAULT',
          itertools.chain(
-             nova.exception.exc_log_opts,
              nova.volume._volume_opts,
          )),
     ]
