@@ -149,6 +149,9 @@ def notification_sample(sample):
                    root.
     """
     def wrap(cls):
-        cls.sample = sample
+        if not getattr(cls, 'samples', None):
+            cls.samples = [sample]
+        else:
+            cls.samples.append(sample)
         return cls
     return wrap
