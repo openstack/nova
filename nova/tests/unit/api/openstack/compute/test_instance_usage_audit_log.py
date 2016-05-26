@@ -18,8 +18,6 @@ import datetime
 from oslo_utils import fixture as utils_fixture
 
 from nova.api.openstack.compute import instance_usage_audit_log as v21_ial
-from nova.api.openstack.compute.legacy_v2.contrib \
-        import instance_usage_audit_log as ial
 from nova import context
 from nova import exception
 from nova import test
@@ -186,25 +184,6 @@ class InstanceUsageAuditLogTestV21(test.NoDBTestCase):
         self.assertEqual(0, logs['num_hosts_not_run'])
         self.assertEqual("ALL hosts done. 3 errors.",
                          logs['overall_status'])
-
-
-class InstanceUsageAuditLogTest(InstanceUsageAuditLogTestV21):
-    def setUp(self):
-        super(InstanceUsageAuditLogTest, self).setUp()
-        self.req = fakes.HTTPRequest.blank('', use_admin_context=True)
-        self.non_admin_req = fakes.HTTPRequest.blank('')
-
-    def _set_up_controller(self):
-        self.controller = ial.InstanceUsageAuditLogController()
-
-    def test_index_non_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.index, self.non_admin_req)
-
-    def test_show_non_admin(self):
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.controller.show, self.non_admin_req,
-                          '2012-07-05 10:00:00')
 
 
 class InstanceUsageAuditPolicyEnforcementV21(test.NoDBTestCase):
