@@ -50,7 +50,7 @@ def get_cache_fname(image_id):
     manager considers the file to be in use if it matches an instance's
     image_ref, kernel_id or ramdisk_id property.
     """
-    return hashlib.sha1(image_id).hexdigest()
+    return hashlib.sha1(image_id.encode('utf-8')).hexdigest()
 
 
 def get_info_filename(base_path):
