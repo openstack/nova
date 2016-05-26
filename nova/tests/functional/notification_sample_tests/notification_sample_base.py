@@ -39,6 +39,8 @@ class NotificationSampleTestBase(test.TestCase):
     example.
     """
 
+    ANY = object()
+
     def setUp(self):
         super(NotificationSampleTestBase, self).setUp()
 
@@ -57,15 +59,22 @@ class NotificationSampleTestBase(test.TestCase):
             "../../../../doc/notification_samples"))
         return sample_dir + '/' + sample + '.json'
 
-    def _apply_replacements(self, replacements, sample_obj):
+    def _apply_replacements(self, replacements, sample_obj, notification):
         replacements = replacements or {}
         for key, value in replacements.items():
             obj = sample_obj['payload']
+            n_obj = notification['payload']
             for sub_key in key.split('.')[:-1]:
                 obj = obj['nova_object.data'][sub_key]
-            obj['nova_object.data'][key.split('.')[-1]] = value
+                n_obj = n_obj['nova_object.data'][sub_key]
+            if value == NotificationSampleTestBase.ANY:
+                del obj['nova_object.data'][key.split('.')[-1]]
+                del n_obj['nova_object.data'][key.split('.')[-1]]
+            else:
+                obj['nova_object.data'][key.split('.')[-1]] = value
 
-    def _verify_notification(self, sample_file_name, replacements=None):
+    def _verify_notification(self, sample_file_name, replacements=None,
+                             actual=None):
         """Assert if the generated notification matches with the stored sample
 
         :param sample_file_name: The name of the sample file to match relative
@@ -76,16 +85,24 @@ class NotificationSampleTestBase(test.TestCase):
                              The 'x.y':'new-value' key-value pair selects the
                              ["payload"]["nova_object.data"]["x"]
                              ["nova_object.data"]["y"] value from the sample
-                             data and overrides it with 'new-value'.
+                             data and overrides it with 'new-value'. There is
+                             a special value ANY that can be used to indicate
+                             that the actual field value shall be ignored
+                             during matching.
+        :param actual: Defines the actual notification to compare with. If
+                       None then it defaults to the first versioned
+                       notification emitted during the test.
         """
-
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
-        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        if not actual:
+            self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+            notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        else:
+            notification = actual
 
         with open(self._get_notification_sample(sample_file_name)) as sample:
             sample_data = sample.read()
 
         sample_obj = jsonutils.loads(sample_data)
-        self._apply_replacements(replacements, sample_obj)
+        self._apply_replacements(replacements, sample_obj, notification)
 
         self.assertJsonEqual(sample_obj, notification)
