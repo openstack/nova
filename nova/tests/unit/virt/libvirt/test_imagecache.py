@@ -850,11 +850,15 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     @mock.patch.object(lockutils, 'external_lock')
     @mock.patch.object(libvirt_utils, 'update_mtime')
-    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.path.exists')
     @mock.patch('os.path.getmtime')
     @mock.patch('os.remove')
     def test_age_and_verify_swap_images(self, mock_remove, mock_getmtime,
             mock_exist, mock_mtime, mock_lock):
+        base_dir = '/tmp_age_test'
+        self.flags(image_info_filename_pattern=base_dir + '/%(image)s.info',
+                   group='libvirt')
+
         image_cache_manager = imagecache.ImageCacheManager()
         expected_remove = set()
         expected_exist = set(['swap_128', 'swap_256'])
@@ -864,26 +868,25 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         image_cache_manager.used_swap_images.add('swap_128')
 
-        def getmtime(path):
-            return time.time() - 1000000
+        mock_getmtime.side_effect = lambda path: time.time() - 1000000
 
-        mock_getmtime.side_effect = getmtime
+        mock_exist.side_effect = \
+            lambda path: os.path.dirname(path) == base_dir and \
+                         os.path.basename(path) in expected_exist
 
         def removefile(path):
-            if not path.startswith('/tmp_age_test'):
-                return os.remove(path)
+            self.assertEqual(base_dir, os.path.dirname(path),
+                             'Attempt to remove unexpected path')
 
-            fn = os.path.split(path)[-1]
+            fn = os.path.basename(path)
             expected_remove.add(fn)
             expected_exist.remove(fn)
 
         mock_remove.side_effect = removefile
 
-        image_cache_manager._age_and_verify_swap_images(None, '/tmp_age_test')
-        self.assertEqual(1, len(expected_exist))
-        self.assertEqual(1, len(expected_remove))
-        self.assertIn('swap_128', expected_exist)
-        self.assertIn('swap_256', expected_remove)
+        image_cache_manager._age_and_verify_swap_images(None, base_dir)
+        self.assertEqual(set(['swap_128']), expected_exist)
+        self.assertEqual(set(['swap_256']), expected_remove)
 
     @mock.patch.object(utils, 'synchronized')
     @mock.patch.object(imagecache.ImageCacheManager, '_get_age_of_file',
