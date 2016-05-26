@@ -18,7 +18,6 @@ import mock
 from nova import exception
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
-from nova import utils
 from nova.virt.libvirt import host
 from nova.virt.libvirt.volume import volume
 
@@ -59,7 +58,7 @@ class LibvirtVolumeBaseTestCase(test.NoDBTestCase):
             self.executes.append(cmd)
             return None, None
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
 
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
 

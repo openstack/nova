@@ -24,12 +24,12 @@ from nova.virt.libvirt.volume import glusterfs
 class LibvirtGlusterfsVolumeDriverTestCase(
         test_volume.LibvirtVolumeBaseTestCase):
 
-    def test_libvirt_glusterfs_driver(self):
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
+    def test_libvirt_glusterfs_driver(self, mock_is_mounted):
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
-        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                 utils.get_hash_str(export_string))
@@ -47,6 +47,7 @@ class LibvirtGlusterfsVolumeDriverTestCase(
             ('mount', '-t', 'glusterfs', export_string, export_mnt_base),
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
+        self.assertTrue(mock_is_mounted.called)
 
     def test_libvirt_glusterfs_driver_get_config(self):
         mnt_base = '/mnt'
@@ -111,12 +112,12 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info, "vde")
         self.assertTrue(mock_LOG_debug.called)
 
-    def test_libvirt_glusterfs_driver_with_opts(self):
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
+    def test_libvirt_glusterfs_driver_with_opts(self, mock_is_mounted):
         mnt_base = '/mnt'
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
-        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         options = '-o backupvolfile-server=192.168.1.2'
         export_mnt_base = os.path.join(mnt_base,
@@ -136,11 +137,12 @@ class LibvirtGlusterfsVolumeDriverTestCase(
             ('umount', export_mnt_base),
         ]
         self.assertEqual(expected_commands, self.executes)
+        self.assertTrue(mock_is_mounted.called)
 
-    def test_libvirt_glusterfs_libgfapi(self):
+    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
+    def test_libvirt_glusterfs_libgfapi(self, mock_is_mounted):
         self.flags(qemu_allowed_storage_drivers=['gluster'], group='libvirt')
         libvirt_driver = glusterfs.LibvirtGlusterfsVolumeDriver(self.fake_conn)
-        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         name = 'volume-00001'
 
@@ -163,5 +165,6 @@ class LibvirtGlusterfsVolumeDriverTestCase(
         self.assertEqual('volume-00001/volume-00001', source.get('name'))
         self.assertEqual('192.168.1.1', source.find('./host').get('name'))
         self.assertEqual('24007', source.find('./host').get('port'))
+        self.assertFalse(mock_is_mounted.called)
 
         libvirt_driver.disconnect_volume(connection_info, "vde")
