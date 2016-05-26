@@ -23,7 +23,6 @@ import webob
 
 from nova.api.openstack.compute import consoles as consoles_v21
 from nova.compute import vm_states
-from nova import console
 from nova import exception
 from nova import policy
 from nova import test
@@ -141,7 +140,9 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
         def fake_create_console(cons_self, context, instance_id):
             self.assertEqual(instance_id, self.uuid)
             return {}
-        self.stubs.Set(console.api.API, 'create_console', fake_create_console)
+
+        self.stub_out('nova.console.api.API.create_console',
+                      fake_create_console)
 
         req = fakes.HTTPRequest.blank(self.url)
         self.controller.create(req, self.uuid, None)
@@ -149,7 +150,9 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
     def test_create_console_unknown_instance(self):
         def fake_create_console(cons_self, context, instance_id):
             raise exception.InstanceNotFound(instance_id=instance_id)
-        self.stubs.Set(console.api.API, 'create_console', fake_create_console)
+
+        self.stub_out('nova.console.api.API.create_console',
+                      fake_create_console)
 
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.create,
@@ -171,7 +174,7 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
                                 'instance_name': 'inst-0001',
                                 'console_type': 'fake_type'}}
 
-        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
+        self.stub_out('nova.console.api.API.get_console', fake_get_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         res_dict = self.controller.show(req, self.uuid, '20')
@@ -181,7 +184,7 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
         def fake_get_console(cons_self, context, instance_id, console_id):
             raise exception.ConsoleNotFound(console_id=console_id)
 
-        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
+        self.stub_out('nova.console.api.API.get_console', fake_get_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
@@ -192,7 +195,7 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
             raise exception.ConsoleNotFoundForInstance(
                 instance_uuid=instance_id)
 
-        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
+        self.stub_out('nova.console.api.API.get_console', fake_get_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.show,
@@ -216,7 +219,7 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
                 [{'console': {'id': 10, 'console_type': 'fake_type'}},
                  {'console': {'id': 11, 'console_type': 'fake_type2'}}]}
 
-        self.stubs.Set(console.api.API, 'get_consoles', fake_get_consoles)
+        self.stub_out('nova.console.api.API.get_consoles', fake_get_consoles)
 
         req = fakes.HTTPRequest.blank(self.url)
         res_dict = self.controller.index(req, self.uuid)
@@ -235,8 +238,9 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
             self.assertEqual(instance_id, self.uuid)
             self.assertEqual(console_id, 20)
 
-        self.stubs.Set(console.api.API, 'get_console', fake_get_console)
-        self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
+        self.stub_out('nova.console.api.API.get_console', fake_get_console)
+        self.stub_out('nova.console.api.API.delete_console',
+                      fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.controller.delete(req, self.uuid, '20')
@@ -245,7 +249,8 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
         def fake_delete_console(cons_self, context, instance_id, console_id):
             raise exception.ConsoleNotFound(console_id=console_id)
 
-        self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
+        self.stub_out('nova.console.api.API.delete_console',
+                      fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
@@ -256,7 +261,8 @@ class ConsolesControllerTestV21(test.NoDBTestCase):
             raise exception.ConsoleNotFoundForInstance(
                 instance_uuid=instance_id)
 
-        self.stubs.Set(console.api.API, 'delete_console', fake_delete_console)
+        self.stub_out('nova.console.api.API.delete_console',
+                      fake_delete_console)
 
         req = fakes.HTTPRequest.blank(self.url + '/20')
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.delete,
