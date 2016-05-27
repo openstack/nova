@@ -100,7 +100,9 @@ class RoleBasedPolicyFixture(RealPolicyFixture):
         self.role = role
 
     def _prepare_policy(self):
-        policy = jsonutils.load(open(CONF.oslo_policy.policy_file))
+        with open(CONF.oslo_policy.policy_file) as fp:
+            policy = fp.read()
+        policy = jsonutils.loads(policy)
 
         # Convert all actions to require specified role
         for action, rule in six.iteritems(policy):

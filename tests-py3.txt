@@ -68,10 +68,6 @@ nova.tests.unit.test_metadata.MetadataHandlerTestCase
 nova.tests.unit.test_metadata.MetadataPasswordTestCase
 nova.tests.unit.test_metadata.MetadataTestCase
 nova.tests.unit.test_metadata.OpenStackMetadataTestCase
-nova.tests.unit.test_pipelib.PipelibTest
-nova.tests.unit.test_policy.AdminRolePolicyTestCase
-nova.tests.unit.test_quota.QuotaIntegrationTestCase
-nova.tests.unit.test_test_utils.TestUtilsTestCase
 nova.tests.unit.test_wsgi.TestWSGIServerWithSSL
 nova.tests.unit.virt.disk.mount.test_nbd.NbdTestCase
 nova.tests.unit.virt.ironic.test_driver.IronicDriverTestCase

@@ -20,6 +20,7 @@ an instance with it.
 
 """
 
+import base64
 import os
 import string
 import zipfile
@@ -78,12 +79,13 @@ class CloudPipe(object):
                                       'server.crt')
             z.write(server_crt, 'server.crt')
             z.close()
-            with open(zippath, "r") as zippy:
+            with open(zippath, "rb") as zippy:
                 # NOTE(vish): run instances expects encoded userdata,
                 # it is decoded in the get_metadata_call.
                 # autorun.sh also decodes the zip file,
                 # hence the double encoding.
-                encoded = zippy.read().encode("base64").encode("base64")
+                encoded = base64.b64encode(zippy.read())
+                encoded = base64.b64encode(encoded)
 
         return encoded
 
