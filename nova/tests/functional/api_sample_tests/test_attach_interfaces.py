@@ -165,6 +165,25 @@ class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
         self._verify_response('attach-interfaces-create-resp', subs,
                               response, 200)
 
+    def test_create_interfaces_with_net_id_and_fixed_ips(self,
+                                                         instance_uuid=None):
+        if instance_uuid is None:
+            instance_uuid = self._post_server()
+        subs = {
+                'net_id': '3cb9bc59-5699-4588-a4b1-b87f96708bc6',
+                'port_id': 'ce531f90-199f-48c0-816c-13e38010b442',
+                'subnet_id': 'f8a6e8f8-c2ec-497c-9f23-da9616de54ef',
+                'ip_address': '192.168.1.3',
+                'port_state': 'ACTIVE',
+                'mac_addr': 'fa:16:3e:4c:2c:30',
+                }
+        self._stub_show_for_instance(instance_uuid, subs['port_id'])
+        response = self._do_post('servers/%s/os-interface'
+                                 % instance_uuid,
+                                 'attach-interfaces-create-net_id-req', subs)
+        self._verify_response('attach-interfaces-create-resp', subs,
+                              response, 200)
+
     def test_delete_interfaces(self):
         instance_uuid = self._post_server()
         port_id = 'ce531f90-199f-48c0-816c-13e38010b442'
