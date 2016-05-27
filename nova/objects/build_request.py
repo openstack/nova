@@ -132,10 +132,12 @@ class BuildRequest(base.NovaObject):
 
     @staticmethod
     @db.api_context_manager.writer
-    def _destroy_in_db(context, id):
-        context.session.query(api_models.BuildRequest).filter_by(
-                id=id).delete()
+    def _destroy_in_db(context, instance_uuid):
+        result = context.session.query(api_models.BuildRequest).filter_by(
+                instance_uuid=instance_uuid).delete()
+        if not result:
+            raise exception.BuildRequestNotFound(uuid=instance_uuid)
 
     @base.remotable
     def destroy(self):
-        self._destroy_in_db(self._context, self.id)
+        self._destroy_in_db(self._context, self.instance_uuid)
