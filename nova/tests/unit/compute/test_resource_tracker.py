@@ -774,8 +774,7 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    @mock.patch('nova.objects.ComputeNode._create_inventory')
-    def test_additive_claims(self, mock_ci, mock_get, mock_save):
+    def test_additive_claims(self, mock_get, mock_save):
 
         limits = self._limits(
               2 * FAKE_VIRT_MEMORY_WITH_OVERHEAD,
@@ -797,8 +796,7 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    @mock.patch('nova.objects.ComputeNode._create_inventory')
-    def test_move_type_not_tracked(self, mock_ci, mock_get, mock_save):
+    def test_move_type_not_tracked(self, mock_get, mock_save):
         self.claim_method(self.context, self.instance, self.instance_type,
                           limits=self.limits, move_type="live-migration")
         mock_save.assert_called_once_with()
