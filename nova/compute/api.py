@@ -1474,7 +1474,8 @@ class API(base.Base):
             if forced_host or forced_node:
                 check_policy(context, 'create:forced_host', {})
 
-    def _check_multiple_instances_neutron_ports(self, requested_networks):
+    def _check_multiple_instances_with_neutron_ports(self,
+                                                     requested_networks):
         """Check whether multiple instances are created from port id(s)."""
         for requested_net in requested_networks:
             if requested_net.port_id:
@@ -1483,7 +1484,7 @@ class API(base.Base):
                         " instance one by one with different ports.")
                 raise exception.MultiplePortsNotApplicable(reason=msg)
 
-    def _check_multiple_instances_and_specified_ip(self, requested_networks):
+    def _check_multiple_instances_with_specified_ip(self, requested_networks):
         """Check whether multiple instances are created with specified ip."""
 
         for requested_net in requested_networks:
@@ -1517,9 +1518,10 @@ class API(base.Base):
                 forced_node)
 
         if requested_networks and max_count > 1:
-            self._check_multiple_instances_and_specified_ip(requested_networks)
+            self._check_multiple_instances_with_specified_ip(
+                requested_networks)
             if utils.is_neutron():
-                self._check_multiple_instances_neutron_ports(
+                self._check_multiple_instances_with_neutron_ports(
                     requested_networks)
 
         if availability_zone:
