@@ -16,7 +16,6 @@
 from oslo_serialization import jsonutils
 import six
 
-from nova import compute
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -104,8 +103,8 @@ class ExtendedIpsTestV21(test.TestCase):
     def setUp(self):
         super(ExtendedIpsTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
 
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)
