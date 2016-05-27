@@ -33,7 +33,7 @@ class DeferredDeleteController(wsgi.Controller):
         self.compute_api = compute.API(skip_policy_check=True)
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409, 403))
+    @extensions.expected_errors((403, 404, 409))
     @wsgi.action('restore')
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
