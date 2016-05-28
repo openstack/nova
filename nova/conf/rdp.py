@@ -18,12 +18,51 @@ from oslo_config import cfg
 
 enabled = cfg.BoolOpt('enabled',
                       default=False,
-                      help='Enable RDP related features')
+                      help="""
+Enables RDP related features
+
+Hyper-V, unlike the majority of the hypervisors employed on
+Nova compute nodes, uses RDP instead of VNC and SPICE as a
+desktop sharing protocol to provide instance console access.
+This option enables RDP for graphical console access
+for virtual machines created by Hyper-V.
+
+* Possible values:
+
+    True or False(default).
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    None
+""")
+
 
 html5_proxy_base_url = cfg.StrOpt('html5_proxy_base_url',
         default='http://127.0.0.1:6083/',
-        help='Location of RDP html5 console proxy, in the form '
-             '"http://127.0.0.1:6083/"')
+        help="""
+Location of RDP html5 console proxy
+
+In order to use the web based console access, FreeRDP HTML5
+proxy should be configured and installed.
+
+* Possible values:
+
+    Must be a valid URL of the form:``http://host:port/"
+    where host and port should be configured in the node
+    running FreeRDP HTML5 proxy.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    [rdp]enabled = True
+""")
 
 ALL_OPTS = [enabled,
             html5_proxy_base_url]
