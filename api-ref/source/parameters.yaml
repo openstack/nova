@@ -1094,6 +1094,10 @@ extensions:
 fault:
   description: |
     A fault object. Only displayed in the failed response.
+    Default keys are ``code``, ``created``, and ``message``
+    (response code, created time, and message respectively).
+    In addition, the key ``details`` (stack trace) is available
+    if you have the administrator privilege.
   in: body
   required: false
   type: object
