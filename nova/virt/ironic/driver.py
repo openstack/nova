@@ -705,7 +705,8 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         # validate we are ready to do the deploy
         validate_chk = self.ironicclient.call("node.validate", node_uuid)
-        if not validate_chk.deploy or not validate_chk.power:
+        if (not validate_chk.deploy.get('result')
+                or not validate_chk.power.get('result')):
             # something is wrong. undo what we have done
             self._cleanup_deploy(node, instance, network_info)
             raise exception.ValidationError(_(
