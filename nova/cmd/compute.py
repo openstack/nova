@@ -17,17 +17,15 @@
 """Starter script for Nova Compute."""
 
 import sys
-import traceback
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
+from nova.cmd import common as cmd_common
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
-import nova.db.api
-from nova import exception
-from nova.i18n import _LE, _LW
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base as objects_base
 from nova import service
@@ -36,20 +34,6 @@ from nova import version
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger('nova.compute')
-
-
-def block_db_access():
-    class NoDB(object):
-        def __getattr__(self, attr):
-            return self
-
-        def __call__(self, *args, **kwargs):
-            stacktrace = "".join(traceback.format_stack())
-            LOG.error(_LE('No db access allowed in nova-compute: %s'),
-                      stacktrace)
-            raise exception.DBNotAllowed('nova-compute')
-
-    nova.db.api.IMPL = NoDB()
 
 
 def main():
@@ -61,7 +45,7 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     if not CONF.conductor.use_local:
-        block_db_access()
+        cmd_common.block_db_access('nova-compute')
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
     else:

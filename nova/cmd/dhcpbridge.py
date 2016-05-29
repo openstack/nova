@@ -22,19 +22,17 @@ from __future__ import print_function
 
 import os
 import sys
-import traceback
 
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import importutils
 
+from nova.cmd import common as cmd_common
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
 from nova import context
-import nova.db.api
-from nova import exception
 from nova.i18n import _LE, _LW
 from nova.network import rpcapi as network_rpcapi
 from nova import objects
@@ -96,20 +94,6 @@ CONF.register_cli_opt(
                       handler=add_action_parsers))
 
 
-def block_db_access():
-    class NoDB(object):
-        def __getattr__(self, attr):
-            return self
-
-        def __call__(self, *args, **kwargs):
-            stacktrace = "".join(traceback.format_stack())
-            LOG.error(_LE('No db access allowed in nova-dhcpbridge: %s'),
-                      stacktrace)
-            raise exception.DBNotAllowed('nova-dhcpbridge')
-
-    nova.db.api.IMPL = NoDB()
-
-
 def main():
     """Parse environment and arguments and call the appropriate action."""
     config.parse_args(sys.argv,
@@ -129,7 +113,7 @@ def main():
     objects.register_all()
 
     if not CONF.conductor.use_local:
-        block_db_access()
+        cmd_common.block_db_access('nova-dhcpbridge')
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
     else:

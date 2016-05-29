@@ -54,7 +54,7 @@
 
 from __future__ import print_function
 
-import argparse
+import functools
 import os
 import sys
 
@@ -71,6 +71,7 @@ import six.moves.urllib.parse as urlparse
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
+from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
 from nova import context
@@ -96,11 +97,7 @@ _EXTRA_DEFAULT_LOG_LEVELS = ['oslo_db=INFO']
 
 
 # Decorators for actions
-def args(*args, **kwargs):
-    def _decorator(func):
-        func.__dict__.setdefault('args', []).insert(0, (args, kwargs))
-        return func
-    return _decorator
+args = cmd_common.args
 
 
 def param2id(object_id):
@@ -1353,55 +1350,8 @@ CATEGORIES = {
 }
 
 
-def methods_of(obj):
-    """Get all callable methods of an object that don't start with underscore
-
-    returns a list of tuples of the form (method_name, method)
-    """
-    result = []
-    for i in dir(obj):
-        if callable(getattr(obj, i)) and not i.startswith('_'):
-            result.append((i, getattr(obj, i)))
-    return result
-
-
-def add_command_parsers(subparsers):
-    parser = subparsers.add_parser('version')
-
-    parser = subparsers.add_parser('bash-completion')
-    parser.add_argument('query_category', nargs='?')
-
-    for category in CATEGORIES:
-        command_object = CATEGORIES[category]()
-
-        desc = getattr(command_object, 'description', None)
-        parser = subparsers.add_parser(category, description=desc)
-        parser.set_defaults(command_object=command_object)
-
-        category_subparsers = parser.add_subparsers(dest='action')
-
-        for (action, action_fn) in methods_of(command_object):
-            parser = category_subparsers.add_parser(action, description=desc)
-
-            action_kwargs = []
-            for args, kwargs in getattr(action_fn, 'args', []):
-                # FIXME(markmc): hack to assume dest is the arg name without
-                # the leading hyphens if no dest is supplied
-                kwargs.setdefault('dest', args[0][2:])
-                if kwargs['dest'].startswith('action_kwarg_'):
-                    action_kwargs.append(
-                            kwargs['dest'][len('action_kwarg_'):])
-                else:
-                    action_kwargs.append(kwargs['dest'])
-                    kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
-
-                parser.add_argument(*args, **kwargs)
-
-            parser.set_defaults(action_fn=action_fn)
-            parser.set_defaults(action_kwargs=action_kwargs)
-
-            parser.add_argument('action_args', nargs='*',
-                                help=argparse.SUPPRESS)
+add_command_parsers = functools.partial(cmd_common.add_command_parsers,
+                                        categories=CATEGORIES)
 
 
 category_opt = cfg.SubCommandOpt('category',
@@ -1439,38 +1389,11 @@ def main():
         return(0)
 
     if CONF.category.name == "bash-completion":
-        if not CONF.category.query_category:
-            print(" ".join(CATEGORIES.keys()))
-        elif CONF.category.query_category in CATEGORIES:
-            fn = CATEGORIES[CONF.category.query_category]
-            command_object = fn()
-            actions = methods_of(command_object)
-            print(" ".join([k for (k, v) in actions]))
+        cmd_common.print_bash_completion(CATEGORIES)
         return(0)
 
-    fn = CONF.category.action_fn
-    fn_args = [arg.decode('utf-8') for arg in CONF.category.action_args]
-    fn_kwargs = {}
-    for k in CONF.category.action_kwargs:
-        v = getattr(CONF.category, 'action_kwarg_' + k)
-        if v is None:
-            continue
-        if isinstance(v, six.string_types):
-            v = v.decode('utf-8')
-        fn_kwargs[k] = v
-
-    # call the action with the remaining arguments
-    # check arguments
-    missing = utils.validate_args(fn, *fn_args, **fn_kwargs)
-    if missing:
-        # NOTE(mikal): this isn't the most helpful error message ever. It is
-        # long, and tells you a lot of things you probably don't want to know
-        # if you just got a single arg wrong.
-        print(fn.__doc__)
-        CONF.print_help()
-        print(_("Missing arguments: %s") % ", ".join(missing))
-        return(1)
     try:
+        fn, fn_args, fn_kwargs = cmd_common.get_action_fn()
         ret = fn(*fn_args, **fn_kwargs)
         rpc.cleanup()
         return(ret)
