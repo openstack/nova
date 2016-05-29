@@ -664,31 +664,6 @@ class ResizeClaimTestCase(_MoveClaimTestCase):
                       "migration record.")
 
 
-class OrphanTestCase(BaseTrackerTestCase):
-    def _driver(self):
-        class OrphanVirtDriver(FakeVirtDriver):
-            def get_per_instance_usage(self):
-                return {
-                    '1-2-3-4-5': {'memory_mb': FAKE_VIRT_MEMORY_MB,
-                                  'uuid': '1-2-3-4-5'},
-                    '2-3-4-5-6': {'memory_mb': FAKE_VIRT_MEMORY_MB,
-                                  'uuid': '2-3-4-5-6'},
-                }
-
-        return OrphanVirtDriver()
-
-    def test_usage(self):
-        self.assertEqual(2 * FAKE_VIRT_MEMORY_WITH_OVERHEAD,
-                self.tracker.compute_node.memory_mb_used)
-
-    def test_find(self):
-        # create one legit instance and verify the 2 orphans remain
-        self._fake_instance_obj()
-        orphans = self.tracker._find_orphaned_instances()
-
-        self.assertEqual(2, len(orphans))
-
-
 class ComputeMonitorTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeMonitorTestCase, self).setUp()
