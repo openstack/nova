@@ -566,28 +566,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    @mock.patch('nova.objects.Instance.save')
-    def test_context_claim_with_exception(self, mock_save, mock_get):
-        instance = self._fake_instance_obj(memory_mb=1, root_gb=1,
-                                           ephemeral_gb=1)
-        try:
-            with self.tracker.instance_claim(self.context, instance):
-                # <insert exciting things that utilize resources>
-                raise test.TestingException()
-        except test.TestingException:
-            pass
-
-        self.assertEqual(0, self.tracker.compute_node.memory_mb_used)
-        self.assertEqual(0, self.tracker.compute_node.local_gb_used)
-        self.assertEqual(0, self.compute['memory_mb_used'])
-        self.assertEqual(0, self.compute['local_gb_used'])
-        self.assertEqualNUMAHostTopology(
-                FAKE_VIRT_NUMA_TOPOLOGY,
-                objects.NUMATopology.obj_from_db_obj(
-                    self.compute['numa_topology']))
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
     def test_update_load_stats_for_instance(self, mock_get):
         instance = self._fake_instance_obj(task_state=task_states.SCHEDULING)
         with mock.patch.object(instance, 'save'):
