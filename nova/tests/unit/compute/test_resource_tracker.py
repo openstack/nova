@@ -566,35 +566,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    def test_instance_claim_with_oversubscription(self, mock_get):
-        memory_mb = FAKE_VIRT_MEMORY_MB * 2
-        root_gb = ephemeral_gb = FAKE_VIRT_LOCAL_GB
-        vcpus = FAKE_VIRT_VCPUS * 2
-        claim_topology = self._claim_topology(3)
-        instance_topology = self._instance_topology(3)
-
-        limits = {'memory_mb': memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
-                  'disk_gb': root_gb * 2,
-                  'vcpu': vcpus,
-                  'numa_topology': FAKE_VIRT_NUMA_TOPOLOGY_OVERHEAD}
-
-        instance = self._fake_instance_obj(memory_mb=memory_mb,
-                root_gb=root_gb, ephemeral_gb=ephemeral_gb,
-                numa_topology=instance_topology)
-
-        with mock.patch.object(instance, 'save'):
-            self.tracker.instance_claim(self.context, instance, limits)
-        self.assertEqual(memory_mb + FAKE_VIRT_MEMORY_OVERHEAD,
-                self.tracker.compute_node.memory_mb_used)
-        self.assertEqualNUMAHostTopology(
-                claim_topology,
-                objects.NUMATopology.obj_from_db_obj(
-                    self.compute['numa_topology']))
-        self.assertEqual(root_gb * 2,
-                self.tracker.compute_node.local_gb_used)
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.Instance.save')
     def test_additive_claims(self, mock_save, mock_get):
         self.limits['vcpu'] = 2
