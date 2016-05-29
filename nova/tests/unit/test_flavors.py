@@ -353,14 +353,14 @@ class CreateInstanceTypeTest(test.TestCase):
         db.flavor_get_all(_context)
         # We do * 10 since this is an approximation and we need to make sure
         # the difference is noticeble.
-        over_rxtx_factor = flavors.SQL_SP_FLOAT_MAX * 10
+        over_rxtx_factor = db.SQL_SP_FLOAT_MAX * 10
 
         self.assertInvalidInput('flavor1', 64, 1, 120,
                                 rxtx_factor=over_rxtx_factor)
 
         flavor = flavors.create('flavor2', 64, 1, 120,
-                                rxtx_factor=flavors.SQL_SP_FLOAT_MAX)
-        self.assertEqual(flavors.SQL_SP_FLOAT_MAX, flavor.rxtx_factor)
+                                rxtx_factor=db.SQL_SP_FLOAT_MAX)
+        self.assertEqual(db.SQL_SP_FLOAT_MAX, flavor.rxtx_factor)
 
     def test_is_public_must_be_valid_bool_string(self):
         self.assertInvalidInput('flavor1', 64, 1, 120, is_public='foo')
