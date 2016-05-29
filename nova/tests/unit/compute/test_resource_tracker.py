@@ -566,23 +566,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
-    def test_update_load_stats_for_instance(self, mock_get):
-        instance = self._fake_instance_obj(task_state=task_states.SCHEDULING)
-        with mock.patch.object(instance, 'save'):
-            with self.tracker.instance_claim(self.context, instance):
-                pass
-
-        self.assertEqual(1, self.tracker.compute_node.current_workload)
-
-        instance['vm_state'] = vm_states.ACTIVE
-        instance['task_state'] = None
-        instance['host'] = 'fakehost'
-
-        self.tracker.update_usage(self.context, instance)
-        self.assertEqual(0, self.tracker.compute_node.current_workload)
-
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.Instance.save')
     def test_cpu_stats(self, mock_save, mock_get):
         limits = {'disk_gb': 100, 'memory_mb': 100}
