@@ -18,3 +18,13 @@ server_create = {
         'format': 'base64'
     },
 }
+
+
+server_create_v20 = {
+    'user_data': {
+        'oneOf': [
+            {'type': 'string', 'format': 'base64'},
+            {'type': 'null'},
+        ],
+    },
+}

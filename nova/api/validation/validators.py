@@ -48,6 +48,10 @@ def _validate_base64_format(instance):
         base64.decodestring(instance)
     except base64.binascii.Error:
         return False
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        return False
 
     return True
 
