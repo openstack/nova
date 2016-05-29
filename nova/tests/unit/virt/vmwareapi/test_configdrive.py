@@ -37,8 +37,9 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(driver.VMwareVCDriver, '_register_openstack_extension')
-    def setUp(self, mock_register):
+    def setUp(self, mock_register, mock_service):
         super(ConfigDriveTestCase, self).setUp()
         vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
