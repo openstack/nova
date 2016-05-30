@@ -2264,6 +2264,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         self._destroy(instance)
+        # Domain XML will be redefined so we can safely undefine it
+        # from libvirt. This ensure that such process as create serial
+        # console for guest will run smoothly.
+        self._undefine_domain(instance)
 
         # Convert the system metadata to image metadata
         instance_dir = libvirt_utils.get_instance_path(instance)
