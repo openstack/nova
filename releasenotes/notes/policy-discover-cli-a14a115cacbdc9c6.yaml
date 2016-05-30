@@ -1,0 +1,7 @@
+---
+features:
+  - The nova-policy command line is implemented as a tool to experience the
+    under-development feature policy discovery. User can input the credentials
+    infomation and the instance info, the tool will return a list of API which
+    can be allowed to invoke. There isn't any contract for the interface of
+    the tool due to the feature still under-development.
