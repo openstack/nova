@@ -132,7 +132,7 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
             kwargs.pop('run_as_root', None)
             return real_execute(*cmd_parts, **kwargs)
 
-        self.stubs.Set(processutils, 'execute', nonroot_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', nonroot_execute)
         self.rawfile = imgmodel.LocalFileImage("/dummy.img",
                                                imgmodel.FORMAT_RAW)
 
@@ -167,7 +167,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global dirs, commands
         dirs = []
         commands = []
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
@@ -200,7 +200,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global files, commands
         files = {}
         commands = []
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
@@ -226,7 +226,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global files, commands
         files = {}
         commands = []
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
@@ -251,7 +251,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global commands, files
         files = {}
         commands = []
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
@@ -271,7 +271,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global commands, files
         files = {}
         commands = []
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
@@ -311,7 +311,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global commands, files
         commands = []
         files = {}
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"
@@ -342,7 +342,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         global commands, files
         commands = []
         files = {}
-        self.stubs.Set(processutils, 'execute', fake_execute)
+        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
 
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = "/scratch/dir"

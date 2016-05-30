@@ -181,7 +181,7 @@ class VirtDiskTest(test.NoDBTestCase):
         def fake_salt():
             return "1234567890abcdef"
 
-        self.stubs.Set(diskapi, '_generate_salt', fake_salt)
+        self.stub_out('nova.virt.disk.api._generate_salt', fake_salt)
 
         vfs.handle.write("/etc/shadow",
                          "root:$1$12345678$xxxxx:14917:0:99999:7:::\n" +
@@ -267,8 +267,10 @@ class VirtDiskTest(test.NoDBTestCase):
         def fake_make_path(*args, **kwargs):
             called['make_path'] = True
 
-        self.stubs.Set(vfs, 'has_file', fake_has_file)
-        self.stubs.Set(vfs, 'make_path', fake_make_path)
+        self.stub_out('nova.virt.disk.vfs.guestfs.VFSGuestFS.has_file',
+                      fake_has_file)
+        self.stub_out('nova.virt.disk.vfs.guestfs.VFSGuestFS.make_path',
+                      fake_make_path)
 
         # test for already exists dir
         diskapi._inject_files_into_fs([("/path/to/exists/file",
