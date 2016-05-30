@@ -18,15 +18,12 @@
 WSGI middleware for OpenStack Compute API.
 """
 
-from oslo_log import log as logging
-
 import nova.api.openstack
 from nova.api.openstack.compute import extension_info
 import nova.conf
 
 
 CONF = nova.conf.CONF
-LOG = logging.getLogger(__name__)
 
 
 class APIRouterV21(nova.api.openstack.APIRouterV21):
