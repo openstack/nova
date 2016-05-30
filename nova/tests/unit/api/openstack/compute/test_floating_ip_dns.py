@@ -119,22 +119,22 @@ class FloatingIpDNSTestV21(test.TestCase):
         super(FloatingIpDNSTestV21, self).setUp()
         # None of these APIs are implemented for Neutron.
         self.flags(use_neutron=False)
-        self.stubs.Set(network.api.API, "get_dns_domains",
-                       network_get_dns_domains)
-        self.stubs.Set(network.api.API, "get_dns_entries_by_address",
-                       network_get_dns_entries_by_address)
-        self.stubs.Set(network.api.API, "get_dns_entries_by_name",
-                       network_get_dns_entries_by_name)
-        self.stubs.Set(network.api.API, "get_floating_ip",
-                       network_api_get_floating_ip)
-        self.stubs.Set(network.api.API, "add_dns_entry",
-                       network_add_dns_entry)
-        self.stubs.Set(network.api.API, "modify_dns_entry",
-                       network_modify_dns_entry)
-        self.stubs.Set(network.api.API, "create_public_dns_domain",
-                       network_create_public_dns_domain)
-        self.stubs.Set(network.api.API, "create_private_dns_domain",
-                       network_create_private_dns_domain)
+        self.stub_out("nova.network.api.API.get_dns_domains",
+                      network_get_dns_domains)
+        self.stub_out("nova.network.api.API.get_dns_entries_by_address",
+                      network_get_dns_entries_by_address)
+        self.stub_out("nova.network.api.API.get_dns_entries_by_name",
+                      network_get_dns_entries_by_name)
+        self.stub_out("nova.network.api.API.get_floating_ip",
+                      network_api_get_floating_ip)
+        self.stub_out("nova.network.api.API.add_dns_entry",
+                      network_add_dns_entry)
+        self.stub_out("nova.network.api.API.modify_dns_entry",
+                      network_modify_dns_entry)
+        self.stub_out("nova.network.api.API.create_public_dns_domain",
+                      network_create_public_dns_domain)
+        self.stub_out("nova.network.api.API.create_private_dns_domain",
+                      network_create_private_dns_domain)
 
         self.context = context.get_admin_context()
 
@@ -192,16 +192,13 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.assertEqual(entry['dns_entry']['domain'],
                          domain)
 
-    def test_dns_entries_not_found(self):
-        def fake_get_dns_entries_by_name(self, context, address, domain):
-            raise webob.exc.HTTPNotFound()
-
-        self.stubs.Set(network.api.API, "get_dns_entries_by_name",
-                       fake_get_dns_entries_by_name)
-
+    @mock.patch.object(network.api.API, "get_dns_entries_by_name",
+                       side_effect=webob.exc.HTTPNotFound())
+    def test_dns_entries_not_found(self, mock_get_entries):
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.entry_controller.show,
                           self.req, _quote_domain(domain), 'nonexistent')
+        self.assertTrue(mock_get_entries.called)
 
     def test_create_entry(self):
         body = {'dns_entry':
@@ -247,63 +244,43 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.assertEqual(entry['domain_entry']['scope'], 'private')
         self.assertEqual(entry['domain_entry']['availability_zone'], 'zone1')
 
-    def test_delete_entry(self):
-        calls = []
-
-        def network_delete_dns_entry(fakeself, context, name, domain):
-            calls.append((name, domain))
-
-        self.stubs.Set(network.api.API, "delete_dns_entry",
-                       network_delete_dns_entry)
+    @mock.patch.object(network.api.API, "delete_dns_entry")
+    def test_delete_entry(self, mock_del_entry):
         delete = self.entry_controller.delete
-        res = delete(self.req, _quote_domain(domain),
-                                           name)
+        res = delete(self.req, _quote_domain(domain), name)
 
         self._check_status(202, res, delete)
-        self.assertEqual([(name, domain)], calls)
+        mock_del_entry.assert_called_once_with(mock.ANY, name, domain)
 
-    def test_delete_entry_notfound(self):
-        def delete_dns_entry_notfound(fakeself, context, name, domain):
-            raise exception.NotFound
-
-        self.stubs.Set(network.api.API, "delete_dns_entry",
-                       delete_dns_entry_notfound)
-
+    @mock.patch.object(network.api.API, "delete_dns_entry",
+                       side_effect=exception.NotFound)
+    def test_delete_entry_notfound(self, mock_del_entry):
         self.assertRaises(webob.exc.HTTPNotFound,
             self.entry_controller.delete, self.req, _quote_domain(domain),
             name)
+        self.assertTrue(mock_del_entry.called)
 
     def test_delete_domain(self):
         self._test_delete_domain(self.req)
 
-    def _test_delete_domain(self, req):
-        calls = []
-
-        def network_delete_dns_domain(fakeself, context, fqdomain):
-            calls.append(fqdomain)
-
-        self.stubs.Set(network.api.API, "delete_dns_domain",
-                       network_delete_dns_domain)
-
+    @mock.patch.object(network.api.API, "delete_dns_domain")
+    def _test_delete_domain(self, req, mock_del_dom):
         delete = self.domain_controller.delete
         res = delete(req, _quote_domain(domain))
 
         self._check_status(202, res, delete)
-        self.assertEqual([domain], calls)
+        mock_del_dom.assert_called_once_with(mock.ANY, domain)
 
     def test_delete_domain_notfound(self):
         self._test_delete_domain_notfound(self.req)
 
-    def _test_delete_domain_notfound(self, req):
-        def delete_dns_domain_notfound(fakeself, context, fqdomain):
-            raise exception.NotFound
-
-        self.stubs.Set(network.api.API, "delete_dns_domain",
-                       delete_dns_domain_notfound)
-
+    @mock.patch.object(network.api.API, "delete_dns_domain",
+                       side_effect=exception.NotFound)
+    def _test_delete_domain_notfound(self, req, mock_del_dom):
         self.assertRaises(
             webob.exc.HTTPNotFound, self.domain_controller.delete,
             req, _quote_domain(domain))
+        self.assertTrue(mock_del_dom.called)
 
     def test_modify(self):
         body = {'dns_entry':
