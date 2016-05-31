@@ -38,17 +38,17 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                       'contrib.instance_actions.Instance_actions')
         return f
 
-    def _fake_get(self, context, instance_uuid, expected_attrs=None,
-                 want_objects=True):
-        return fake_instance.fake_instance_obj(
-            None, **{'uuid': instance_uuid})
-
     def setUp(self):
         super(ServerActionsSampleJsonTest, self).setUp()
         self.api.microversion = self.microversion
         self.actions = fake_server_actions.FAKE_ACTIONS
         self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance(obj=True)
+
+        def _fake_get(stub_self, context, instance_uuid, expected_attrs=None,
+                      want_objects=True):
+            return fake_instance.fake_instance_obj(
+                None, **{'uuid': instance_uuid})
 
         def fake_instance_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
@@ -70,7 +70,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                       fake_instance_action_events_get)
         self.stub_out('nova.db.instance_get_by_uuid',
                       fake_instance_get_by_uuid)
-        self.stub_out('nova.compute.api.API.get', self._fake_get)
+        self.stub_out('nova.compute.api.API.get', _fake_get)
 
     def test_instance_action_get(self):
         fake_uuid = fake_server_actions.FAKE_UUID
@@ -104,9 +104,3 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 class ServerActionsV221SampleJsonTest(ServerActionsSampleJsonTest):
     microversion = '2.21'
     scenarios = [('v2_21', {'api_major_version': 'v2.1'})]
-
-    def _fake_get(self, context, instance_uuid, expected_attrs=None,
-                 want_objects=True):
-        self.assertEqual('yes', context.read_deleted)
-        return fake_instance.fake_instance_obj(
-            None, **{'uuid': instance_uuid})
