@@ -179,7 +179,9 @@ class IronicDriver(virt_driver.ComputeDriver):
             ironic_states.AVAILABLE, ironic_states.NOSTATE]
         return (node_obj.maintenance or
                 node_obj.power_state in bad_power_states or
-                node_obj.provision_state not in good_provision_states)
+                node_obj.provision_state not in good_provision_states or
+                (node_obj.provision_state in good_provision_states and
+                 node_obj.instance_uuid is not None))
 
     def _node_resources_used(self, node_obj):
         """Determine whether the node's resources are currently used.
