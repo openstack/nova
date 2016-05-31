@@ -10270,6 +10270,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_hard_reboot.assert_called_once_with(self.context,
                                                  instance, [], None)
 
+    @mock.patch('nova.virt.libvirt.LibvirtDriver._undefine_domain')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
@@ -10280,7 +10281,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
                          mock_get_instance_disk_info, mock_get_guest_xml,
                          mock_create_images_and_backing,
-                         mock_create_domain_and_network, mock_get_info):
+                         mock_create_domain_and_network, mock_get_info,
+                         mock_undefine):
         self.context.auth_token = True  # any non-None value will suffice
         instance = objects.Instance(**self.test_instance)
         instance_path = libvirt_utils.get_instance_path(instance)
@@ -10311,6 +10313,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr._hard_reboot(self.context, instance, network_info,
                           block_device_info)
+
+        mock_destroy.assert_called_once_with(instance)
+        mock_undefine.assert_called_once_with(instance)
 
         # make sure that _create_images_and_backing is passed the disk_info
         # returned from _get_instance_disk_info and not the one that is in
