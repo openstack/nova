@@ -290,16 +290,15 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
                           self.controller.create, self.req,
                           body=self.new_network)
 
-    def test_network_create_cidr_conflict(self):
-
-        @staticmethod
-        def get_all(context):
+    @mock.patch.object(objects.NetworkList, 'get_all')
+    def test_network_create_cidr_conflict(self, mock_get_all):
+        def fake_get_all(context):
             ret = objects.NetworkList(context=context, objects=[])
             net = objects.Network(cidr='10.0.0.0/23')
             ret.objects.append(net)
             return ret
 
-        self.stubs.Set(objects.NetworkList, 'get_all', get_all)
+        mock_get_all.side_effect = fake_get_all
 
         self.new_network['network']['cidr'] = '10.0.0.0/24'
         self.assertRaises(webob.exc.HTTPConflict,
