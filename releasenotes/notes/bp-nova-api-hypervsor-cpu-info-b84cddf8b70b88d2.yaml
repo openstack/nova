@@ -1,0 +1,4 @@
+---
+features:
+  - Added microversion v2.28 from which hypervisor's 'cpu_info' field returned
+   as JSON object by sending GET /v2.1/os-hypervisors/{hypervisor_id} request.

@@ -291,3 +291,12 @@ user documentation.
   `Microversion Specification
   <http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html>`_.
   Both the original form of header and the new form is supported.
+
+2.28
+----
+
+  Nova API hypervisor.cpu_info change from string to JSON object.
+
+  From this version of the API the hypervisor's 'cpu_info' field will be
+  will returned as JSON object (not string) by sending GET request
+  to the /v2.1/os-hypervisors/{hypervisor_id}.
