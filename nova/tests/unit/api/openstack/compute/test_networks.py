@@ -117,7 +117,6 @@ NEW_NETWORK = {
 class FakeNetworkAPI(object):
 
     _sentinel = object()
-    _vlan_is_disabled = False
 
     def __init__(self, skip_policy_check=False):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
@@ -153,8 +152,6 @@ class FakeNetworkAPI(object):
 
     def add_network_to_project(self, context,
                                project_id, network_uuid=None):
-        if self._vlan_is_disabled:
-            raise NotImplementedError()
         if network_uuid:
             for network in self.networks:
                 if network.get('project_id', None) is None:
