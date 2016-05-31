@@ -5826,6 +5826,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ret = conn._compare_cpu(None, None)
         self.assertIsNone(ret)
 
+    def test_compare_cpu_virt_type_qemu(self):
+        self.flags(virt_type='qemu', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._compare_cpu(None, None)
+        self.assertIsNone(ret)
+
     @mock.patch.object(host.Host, 'compare_cpu')
     @mock.patch.object(nova.virt.libvirt, 'config')
     def test_compare_cpu_invalid_cpuinfo_raises(self, mock_vconfig,
