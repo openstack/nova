@@ -120,7 +120,8 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.NetworkAmbiguous,
                 exception.NoMoreFixedIps,
                 exception.PortNotUsable,
-                exception.AttachInterfaceNotSupported) as e:
+                exception.AttachInterfaceNotSupported,
+                exception.SecurityGroupCannotBeApplied) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,
