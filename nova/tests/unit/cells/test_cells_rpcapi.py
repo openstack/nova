@@ -44,23 +44,26 @@ class CellsAPITestCase(test.NoDBTestCase):
 
         orig_prepare = self.cells_rpcapi.client.prepare
 
-        def fake_rpc_prepare(**kwargs):
+        def fake_rpc_prepare(self_rpcclient, **kwargs):
             if 'version' in kwargs:
                 call_info['version'] = kwargs.pop('version')
             return self.cells_rpcapi.client
 
-        def fake_csv(version):
+        def fake_csv(self, version):
             return orig_prepare(version).can_send_version()
 
-        def fake_rpc_method(ctxt, method, **kwargs):
+        def fake_rpc_method(self, ctxt, method, **kwargs):
             call_info['context'] = ctxt
             call_info['method'] = method
             call_info['args'] = kwargs
             return result
 
-        self.stubs.Set(self.cells_rpcapi.client, 'prepare', fake_rpc_prepare)
-        self.stubs.Set(self.cells_rpcapi.client, 'can_send_version', fake_csv)
-        self.stubs.Set(self.cells_rpcapi.client, rpc_method, fake_rpc_method)
+        self.stub_out('oslo_messaging.rpc.client.RPCClient.prepare',
+                      fake_rpc_prepare)
+        self.stub_out('oslo_messaging.rpc.client.RPCClient.can_send_version',
+                      fake_csv)
+        self.stub_out('oslo_messaging.rpc.client.RPCClient.%s' % rpc_method,
+                      fake_rpc_method)
 
         return call_info
 

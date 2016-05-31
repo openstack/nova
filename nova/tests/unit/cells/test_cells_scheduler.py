@@ -16,7 +16,6 @@
 Tests For CellsScheduler
 """
 import copy
-import time
 
 import mock
 from oslo_utils import uuidutils
@@ -30,7 +29,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
-from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_block_device
@@ -121,11 +119,12 @@ class CellsSchedulerTestCase(test.TestCase):
                         anon=True))
                ])
 
-        def _fake_instance_update_at_top(_ctxt, instance):
+        def _fake_instance_update_at_top(self, _ctxt, instance):
             call_info['uuids'].append(instance['uuid'])
 
-        self.stubs.Set(self.msg_runner, 'instance_update_at_top',
-                       _fake_instance_update_at_top)
+        self.stub_out('nova.cells.messaging.MessageRunner.'
+                      'instance_update_at_top',
+                      _fake_instance_update_at_top)
 
         self.scheduler._create_instances_here(self.ctxt, instance_uuids,
                 instance_props, inst_type, image,
@@ -197,7 +196,8 @@ class CellsSchedulerTestCase(test.TestCase):
 
         orig_fn = self.msg_runner.build_instances
 
-        def msg_runner_build_instances(ctxt, target_cell, build_inst_kwargs):
+        def msg_runner_build_instances(self_mr, ctxt, target_cell,
+                                       build_inst_kwargs):
             # This gets called twice.  Once for our running it
             # in this cell.. and then it'll get called when the
             # child cell is picked.  So, first time.. just run it
@@ -215,10 +215,10 @@ class CellsSchedulerTestCase(test.TestCase):
                     'image': image}
             return request_spec
 
-        self.stubs.Set(self.msg_runner, 'build_instances',
-                msg_runner_build_instances)
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                fake_build_request_spec)
+        self.stub_out('nova.cells.messaging.MessageRunner.build_instances',
+                      msg_runner_build_instances)
+        self.stub_out('nova.scheduler.utils.build_request_spec',
+                      fake_build_request_spec)
 
         self.msg_runner.build_instances(self.ctxt, self.my_cell_state,
                 self.build_inst_kwargs)
@@ -230,6 +230,8 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertIn(call_info['target_cell'], child_cells)
 
     def test_build_instances_selects_current_cell(self):
+        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
+                   group='cells')
         # Make sure there's no child cells so that we will be
         # selected
         self.state_manager.child_cells = {}
@@ -237,7 +239,7 @@ class CellsSchedulerTestCase(test.TestCase):
         call_info = {}
         build_inst_kwargs = copy.deepcopy(self.build_inst_kwargs)
 
-        def fake_create_instances_here(ctxt, instance_uuids,
+        def fake_create_instances_here(self_cs, ctxt, instance_uuids,
                 instance_properties, instance_type, image, security_groups,
                 block_device_mapping):
             call_info['ctxt'] = ctxt
@@ -249,7 +251,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['block_device_mapping'] = block_device_mapping
             return self.instances
 
-        def fake_rpc_build_instances(ctxt, **build_inst_kwargs):
+        def fake_rpc_build_instances(self, ctxt, **build_inst_kwargs):
             call_info['build_inst_kwargs'] = build_inst_kwargs
 
         def fake_build_request_spec(ctxt, image, instances):
@@ -258,12 +260,13 @@ class CellsSchedulerTestCase(test.TestCase):
                     'image': image}
             return request_spec
 
-        self.stubs.Set(self.scheduler, '_create_instances_here',
-                fake_create_instances_here)
-        self.stubs.Set(self.scheduler.compute_task_api,
-                       'build_instances', fake_rpc_build_instances)
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                fake_build_request_spec)
+        self.stub_out('nova.cells.scheduler.CellsScheduler.'
+                      '_create_instances_here',
+                      fake_create_instances_here)
+        self.stub_out('nova.conductor.api.ComputeTaskAPI.'
+                      'build_instances', fake_rpc_build_instances)
+        self.stub_out('nova.scheduler.utils.build_request_spec',
+                      fake_build_request_spec)
 
         self.msg_runner.build_instances(self.ctxt, self.my_cell_state,
                 build_inst_kwargs)
@@ -285,11 +288,12 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(self.instance_uuids, call_info['instance_uuids'])
 
     def test_build_instances_retries_when_no_cells_avail(self):
-        self.flags(scheduler_retries=7, group='cells')
+        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
+                   scheduler_retries=7, group='cells')
 
         call_info = {'num_tries': 0, 'errored_uuids': []}
 
-        def fake_grab_target_cells(filter_properties):
+        def fake_grab_target_cells(self, filter_properties):
             call_info['num_tries'] += 1
             raise exception.NoCellsAvailable()
 
@@ -306,12 +310,12 @@ class CellsSchedulerTestCase(test.TestCase):
                     'image': image}
             return request_spec
 
-        self.stubs.Set(self.scheduler, '_grab_target_cells',
-                fake_grab_target_cells)
-        self.stubs.Set(time, 'sleep', fake_sleep)
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                fake_build_request_spec)
+        self.stub_out('nova.cells.scheduler.CellsScheduler._grab_target_cells',
+                      fake_grab_target_cells)
+        self.stub_out('time.sleep', fake_sleep)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
+        self.stub_out('nova.scheduler.utils.build_request_spec',
+                       fake_build_request_spec)
 
         self.msg_runner.build_instances(self.ctxt, self.my_cell_state,
                 self.build_inst_kwargs)
@@ -320,7 +324,8 @@ class CellsSchedulerTestCase(test.TestCase):
         self.assertEqual(self.instance_uuids, call_info['errored_uuids'])
 
     def test_schedule_method_on_random_exception(self):
-        self.flags(scheduler_retries=7, group='cells')
+        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
+                   scheduler_retries=7, group='cells')
 
         instances = [objects.Instance(uuid=uuid) for uuid in
                      self.instance_uuids]
@@ -333,7 +338,7 @@ class CellsSchedulerTestCase(test.TestCase):
                      'errored_uuids1': [],
                      'errored_uuids2': []}
 
-        def fake_grab_target_cells(filter_properties):
+        def fake_grab_target_cells(self, filter_properties):
             call_info['num_tries'] += 1
             raise test.TestingException()
 
@@ -341,7 +346,7 @@ class CellsSchedulerTestCase(test.TestCase):
             self.assertEqual(vm_states.ERROR, inst.vm_state)
             call_info['errored_uuids1'].append(inst.uuid)
 
-        def fake_instance_update_at_top(ctxt, instance):
+        def fake_instance_update_at_top(self_mr, ctxt, instance):
             self.assertEqual(vm_states.ERROR, instance['vm_state'])
             call_info['errored_uuids2'].append(instance['uuid'])
 
@@ -351,13 +356,14 @@ class CellsSchedulerTestCase(test.TestCase):
                     'image': image}
             return request_spec
 
-        self.stubs.Set(self.scheduler, '_grab_target_cells',
-                fake_grab_target_cells)
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
-        self.stubs.Set(self.msg_runner, 'instance_update_at_top',
-                fake_instance_update_at_top)
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                fake_build_request_spec)
+        self.stub_out('nova.cells.scheduler.CellsScheduler._grab_target_cells',
+                      fake_grab_target_cells)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
+        self.stub_out('nova.cells.messaging.MessageRunner.'
+                      'instance_update_at_top',
+                      fake_instance_update_at_top)
+        self.stub_out('nova.scheduler.utils.build_request_spec',
+                      fake_build_request_spec)
 
         self.msg_runner.build_instances(self.ctxt, self.my_cell_state,
                 method_kwargs)
@@ -379,7 +385,8 @@ class CellsSchedulerTestCase(test.TestCase):
         our_path = 'nova.tests.unit.cells.test_cells_scheduler'
         cls_names = [our_path + '.' + 'FakeFilterClass1',
                      our_path + '.' + 'FakeFilterClass2']
-        self.flags(scheduler_filter_classes=cls_names, group='cells')
+        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
+                   scheduler_filter_classes=cls_names, group='cells')
         self._init_cells_scheduler()
 
         # Make sure there's no child cells so that we will be
@@ -388,7 +395,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         call_info = {}
 
-        def fake_create_instances_here(ctxt, instance_uuids,
+        def fake_create_instances_here(self_cs, ctxt, instance_uuids,
                 instance_properties, instance_type, image, security_groups,
                 block_device_mapping):
             call_info['ctxt'] = ctxt
@@ -399,10 +406,10 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['security_groups'] = security_groups
             call_info['block_device_mapping'] = block_device_mapping
 
-        def fake_rpc_build_instances(ctxt, **host_sched_kwargs):
+        def fake_rpc_build_instances(self, ctxt, **host_sched_kwargs):
             call_info['host_sched_kwargs'] = host_sched_kwargs
 
-        def fake_get_filtered_objs(filters, cells, filt_properties):
+        def fake_get_filtered_objs(self, filters, cells, filt_properties):
             call_info['filt_objects'] = filters
             call_info['filt_cells'] = cells
             call_info['filt_props'] = filt_properties
@@ -416,15 +423,16 @@ class CellsSchedulerTestCase(test.TestCase):
                     'instance_type': 'fake_type'}
             return request_spec
 
-        self.stubs.Set(self.scheduler, '_create_instances_here',
-                fake_create_instances_here)
-        self.stubs.Set(self.scheduler.compute_task_api,
-                       'build_instances', fake_rpc_build_instances)
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                       fake_build_request_spec)
-        filter_handler = self.scheduler.filter_handler
-        self.stubs.Set(filter_handler, 'get_filtered_objects',
-                       fake_get_filtered_objs)
+        self.stub_out('nova.cells.scheduler.CellsScheduler.'
+                      '_create_instances_here',
+                      fake_create_instances_here)
+        self.stub_out('nova.conductor.api.ComputeTaskAPI.'
+                      'build_instances', fake_rpc_build_instances)
+        self.stub_out('nova.scheduler.utils.build_request_spec',
+                      fake_build_request_spec)
+        self.stub_out('nova.cells.filters.CellFilterHandler.'
+                      'get_filtered_objects',
+                      fake_get_filtered_objs)
 
         host_sched_kwargs = {'image': 'fake_image',
                              'instances': self.instances,
@@ -461,7 +469,8 @@ class CellsSchedulerTestCase(test.TestCase):
         our_path = 'nova.tests.unit.cells.test_cells_scheduler'
         cls_names = [our_path + '.' + 'FakeFilterClass1',
                      our_path + '.' + 'FakeFilterClass2']
-        self.flags(scheduler_filter_classes=cls_names, group='cells')
+        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
+                   scheduler_filter_classes=cls_names, group='cells')
         self._init_cells_scheduler()
 
         # Make sure there's no child cells so that we will be
@@ -470,7 +479,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         call_info = {'scheduled': False}
 
-        def fake_create_instances_here(ctxt, request_spec):
+        def fake_create_instances_here(self, ctxt, request_spec):
             # Should not be called
             call_info['scheduled'] = True
 
@@ -479,11 +488,12 @@ class CellsSchedulerTestCase(test.TestCase):
             # filter did it.
             return None
 
-        self.stubs.Set(self.scheduler, '_create_instances_here',
-                fake_create_instances_here)
-        filter_handler = self.scheduler.filter_handler
-        self.stubs.Set(filter_handler, 'get_filtered_objects',
-                       fake_get_filtered_objs)
+        self.stub_out('nova.cells.scheduler.CellsScheduler.'
+                      '_create_instances_here',
+                      fake_create_instances_here)
+        self.stub_out('nova.cells.filters.CellFilterHandler.'
+                      'get_filtered_objects',
+                      fake_get_filtered_objs)
 
         self.msg_runner.build_instances(self.ctxt,
                 self.my_cell_state, {})
@@ -494,7 +504,8 @@ class CellsSchedulerTestCase(test.TestCase):
         our_path = 'nova.tests.unit.cells.test_cells_scheduler'
         cls_names = [our_path + '.' + 'FakeWeightClass1',
                      our_path + '.' + 'FakeWeightClass2']
-        self.flags(scheduler_weight_classes=cls_names, group='cells')
+        self.flags(scheduler='nova.cells.scheduler.CellsScheduler',
+                   scheduler_weight_classes=cls_names, group='cells')
         self._init_cells_scheduler()
 
         # Make sure there's no child cells so that we will be
@@ -503,7 +514,7 @@ class CellsSchedulerTestCase(test.TestCase):
 
         call_info = {}
 
-        def fake_create_instances_here(ctxt, instance_uuids,
+        def fake_create_instances_here(self_cs, ctxt, instance_uuids,
                 instance_properties, instance_type, image, security_groups,
                 block_device_mapping):
             call_info['ctxt'] = ctxt
@@ -514,10 +525,10 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['security_groups'] = security_groups
             call_info['block_device_mapping'] = block_device_mapping
 
-        def fake_rpc_build_instances(ctxt, **host_sched_kwargs):
+        def fake_rpc_build_instances(self, ctxt, **host_sched_kwargs):
             call_info['host_sched_kwargs'] = host_sched_kwargs
 
-        def fake_get_weighed_objs(weighers, cells, filt_properties):
+        def fake_get_weighed_objs(self, weighers, cells, filt_properties):
             call_info['weighers'] = weighers
             call_info['weight_cells'] = cells
             call_info['weight_props'] = filt_properties
@@ -531,15 +542,16 @@ class CellsSchedulerTestCase(test.TestCase):
                     'instance_type': 'fake_type'}
             return request_spec
 
-        self.stubs.Set(self.scheduler, '_create_instances_here',
-                fake_create_instances_here)
-        self.stubs.Set(scheduler_utils, 'build_request_spec',
-                fake_build_request_spec)
-        self.stubs.Set(self.scheduler.compute_task_api,
-                       'build_instances', fake_rpc_build_instances)
-        weight_handler = self.scheduler.weight_handler
-        self.stubs.Set(weight_handler, 'get_weighed_objects',
-                       fake_get_weighed_objs)
+        self.stub_out('nova.cells.scheduler.CellsScheduler.'
+                      '_create_instances_here',
+                      fake_create_instances_here)
+        self.stub_out('nova.scheduler.utils.build_request_spec',
+                      fake_build_request_spec)
+        self.stub_out('nova.conductor.api.ComputeTaskAPI.'
+                      'build_instances', fake_rpc_build_instances)
+        self.stub_out('nova.cells.weights.CellWeightHandler.'
+                      'get_weighed_objects',
+                      fake_get_weighed_objs)
 
         host_sched_kwargs = {'image': 'fake_image',
                              'instances': self.instances,
