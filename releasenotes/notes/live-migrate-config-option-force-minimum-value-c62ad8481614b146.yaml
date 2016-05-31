@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    Three live-migration related configuration options were restricted
+    by minimum values since 16.0.0 and will now raise a ValueError if these
+    configuration options' values less than minimum values, instead of
+    logging warning before. These configuration options are:
+
+    - ``live_migration_downtime`` with minimum value 100
+    - ``live_migration_downtime_steps`` with minimum value 3
+    - ``live_migration_downtime_delay`` with minimum value 10
