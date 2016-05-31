@@ -602,11 +602,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected = self._create_vm_config_spec()
         self.assertEqual(expected, result)
 
-        expected.version = None
-        expected.memoryMB = 2048
-        expected.guestId = constants.DEFAULT_OS_TYPE
-        expected.extraConfig = []
-
     def test_get_vm_create_spec_with_serial_port(self):
         extra_specs = vm_util.ExtraSpecs()
         fake_factory = fake.FakeFactory()
