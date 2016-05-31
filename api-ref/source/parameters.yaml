@@ -1032,6 +1032,12 @@ boot_index:
   in: body
   required: true
   type: string
+certificate:
+  description: |
+    The certificate object.
+  in: body
+  required: true
+  type: object
 changePassword:
   description: |
     The action.
@@ -1198,6 +1204,12 @@ current_workload:
   in: body
   required: true
   type: integer
+data:
+  description: |
+    The certificate.
+  in: body
+  required: true
+  type: string
 delete_on_termination:
   description: |
     To delete the boot volume when the server is destroyed, specify ``true``.
@@ -3004,6 +3016,12 @@ previous:
   format: uri
   in: body
   required: false
+  type: string
+private_key:
+  description: |
+    The secret key.
+  in: body
+  required: true
   type: string
 progress:
   description: |
