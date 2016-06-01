@@ -249,17 +249,30 @@ libvirt_imagecache_opts = [
                default='$instances_path/$image_cache_subdirectory_name/'
                        '%(image)s.info',
                help='Allows image information files to be stored in '
-                    'non-standard locations'),
+                    'non-standard locations',
+               deprecated_for_removal=True,
+               deprecated_reason='Image info files are no longer used by the '
+                                 'image cache'),
     cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
                default=3600,
                help='Unused resized base images younger than this will not be '
                     'removed'),
     cfg.BoolOpt('checksum_base_images',
                 default=False,
-                help='Write a checksum for files in _base to disk'),
+                help='Write a checksum for files in _base to disk',
+                deprecated_for_removal=True,
+                deprecated_reason='The image cache no longer periodically '
+                                  'calculates checksums of stored images. '
+                                  'Data integrity can be checked at the block '
+                                  'or filesystem level.'),
     cfg.IntOpt('checksum_interval_seconds',
                default=3600,
-               help='How frequently to checksum base images'),
+               help='How frequently to checksum base images',
+               deprecated_for_removal=True,
+               deprecated_reason='The image cache no longer periodically '
+                                 'calculates checksums of stored images. '
+                                 'Data integrity can be checked at the block '
+                                 'or filesystem level.'),
 ]
 
 libvirt_lvm_opts = [
