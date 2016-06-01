@@ -25,7 +25,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
-from nova.api.openstack.compute.legacy_v2 import limits
 from nova.api.openstack.compute import limits as limits_v21
 from nova.api.openstack.compute import views
 from nova.api.openstack import wsgi
@@ -42,7 +41,6 @@ class BaseLimitTestSuite(test.NoDBTestCase):
     def setUp(self):
         super(BaseLimitTestSuite, self).setUp()
         self.time = 0.0
-        self.stubs.Set(limits.Limit, "_get_time", self._get_time)
         self.absolute_limits = {}
 
         def stub_get_project_quotas(context, project_id, usages=True):
