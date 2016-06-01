@@ -90,7 +90,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         """Reset state variables used for each pass."""
 
         self.used_images = {}
-        self.image_popularity = {}
         self.instance_names = set()
 
         self.back_swap_images = set()
@@ -457,7 +456,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # read running instances data
         running = self._list_running_instances(context, all_instances)
         self.used_images = running['used_images']
-        self.image_popularity = running['image_popularity']
         self.instance_names = running['instance_names']
         self.used_swap_images = running['used_swap_images']
         # perform the aging and image verification
