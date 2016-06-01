@@ -349,58 +349,6 @@ class Limiter(object):
         return result
 
 
-class WsgiLimiter(object):
-    """Rate-limit checking from a WSGI application. Uses an in-memory
-    `Limiter`.
-
-    To use, POST ``/<username>`` with JSON data such as::
-
-        {
-            "verb" : GET,
-            "path" : "/servers"
-        }
-
-    and receive a 204 No Content, or a 403 Forbidden with an X-Wait-Seconds
-    header containing the number of seconds to wait before the action would
-    succeed.
-    """
-
-    def __init__(self, limits=None):
-        """Initialize the new `WsgiLimiter`.
-
-        @param limits: List of `Limit` objects
-        """
-        self._limiter = Limiter(limits or DEFAULT_LIMITS)
-
-    @webob.dec.wsgify(RequestClass=wsgi.Request)
-    def __call__(self, request):
-        """Handles a call to this application.
-
-        Returns 204 if the request is acceptable to the limiter, else a 403
-        is returned with a relevant header indicating when the request *will*
-        succeed.
-        """
-        if request.method != "POST":
-            raise webob.exc.HTTPMethodNotAllowed()
-
-        try:
-            info = dict(jsonutils.loads(request.body))
-        except ValueError:
-            raise webob.exc.HTTPBadRequest()
-
-        username = request.path_info_pop()
-        verb = info.get("verb")
-        path = info.get("path")
-
-        delay, error = self._limiter.check_for_delay(verb, path, username)
-
-        if delay:
-            headers = {"X-Wait-Seconds": "%.2f" % delay}
-            return webob.exc.HTTPForbidden(headers=headers, explanation=error)
-        else:
-            return webob.exc.HTTPNoContent()
-
-
 class WsgiLimiterProxy(object):
     """Rate-limit requests based on answers from a remote source."""
 
