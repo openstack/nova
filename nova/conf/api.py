@@ -336,8 +336,8 @@ Possible values:
 
     quota_networks
 """),
-    cfg.StrOpt('use_neutron_default_nets',
-            default="False",
+    cfg.BoolOpt('use_neutron_default_nets',
+            default=False,
             help="""
 When "True" (note that this is a string value, not a boolean), the
 TenantNetworkController will query the Neutron API to get the default networks

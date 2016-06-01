@@ -58,7 +58,7 @@ class TenantNetworkController(wsgi.Controller):
 
     def _refresh_default_networks(self):
         self._default_networks = []
-        if CONF.use_neutron_default_nets == "True":
+        if CONF.use_neutron_default_nets:
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:

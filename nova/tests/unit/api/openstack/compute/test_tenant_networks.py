@@ -39,21 +39,23 @@ NETWORKS = [
     }
 ]
 
-DEFAULT_NETWORK = {
-    "id": 3,
-    "cidr": "10.20.105.0/24",
-    "label": "default"
-}
+DEFAULT_NETWORK = [
+    {
+        "id": 3,
+        "cidr": "None",
+        "label": "default"
+    }
+]
 
 NETWORKS_WITH_DEFAULT_NET = copy.deepcopy(NETWORKS)
-NETWORKS_WITH_DEFAULT_NET.append(DEFAULT_NETWORK)
+NETWORKS_WITH_DEFAULT_NET.extend(DEFAULT_NETWORK)
 
-DEFAULT_TENANT_ID = 1
+DEFAULT_TENANT_ID = CONF.neutron_default_tenant_id
 
 
 def fake_network_api_get_all(context):
     if (context.project_id == DEFAULT_TENANT_ID):
-        return NETWORKS_WITH_DEFAULT_NET
+        return DEFAULT_NETWORK
     else:
         return NETWORKS
 
@@ -160,8 +162,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         get_all_mock.side_effect = fake_network_api_get_all
 
         expected = NETWORKS
-        if default_net is True:
-            self.req.environ['nova.context'].project_id = DEFAULT_TENANT_ID
+        if default_net:
             expected = NETWORKS_WITH_DEFAULT_NET
 
         res = self.controller.index(self.req)
