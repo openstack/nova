@@ -63,9 +63,9 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ConsoleOutputExtensionTestV21, self).setUp()
-        self.stubs.Set(compute_api.API, 'get_console_output',
-                       fake_get_console_output)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.stub_out('nova.compute.api.API.get_console_output',
+                      fake_get_console_output)
+        self.stub_out('nova.compute.api.API.get', fake_get)
         self.controller = self.controller_class.ConsoleOutputController()
         self.req = fakes.HTTPRequest.blank('')
 
@@ -97,21 +97,20 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
         self.assertEqual({'output': '2\n3\n4'}, output)
 
     def test_get_console_output_filtered_characters(self):
-        self.stubs.Set(compute_api.API, 'get_console_output',
-                       fake_get_console_output_all_characters)
+        self.stub_out('nova.compute.api.API.get_console_output',
+                      fake_get_console_output_all_characters)
         output = self._get_console_output()
         expect = string.digits + string.letters + string.punctuation + ' \t\n'
         self.assertEqual({'output': expect}, output)
 
     def test_get_text_console_no_instance(self):
-        self.stubs.Set(compute_api.API, 'get', fake_get_not_found)
+        self.stub_out('nova.compute.api.API.get', fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
         self._check_console_output_failure(webob.exc.HTTPNotFound, body)
 
     def test_get_text_console_no_instance_on_get_output(self):
-        self.stubs.Set(compute_api.API,
-                       'get_console_output',
-                       fake_get_not_found)
+        self.stub_out('nova.compute.api.API.get_console_output',
+                      fake_get_not_found)
         body = {'os-getConsoleOutput': {}}
         self._check_console_output_failure(webob.exc.HTTPNotFound, body)
 
@@ -128,14 +127,14 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
         self._check_console_output_failure(self.validation_error, body)
 
     def test_get_console_output_not_ready(self):
-        self.stubs.Set(compute_api.API, 'get_console_output',
-                       fake_get_console_output_not_ready)
+        self.stub_out('nova.compute.api.API.get_console_output',
+                      fake_get_console_output_not_ready)
         body = {'os-getConsoleOutput': {}}
         self._check_console_output_failure(webob.exc.HTTPConflict, body)
 
     def test_not_implemented(self):
-        self.stubs.Set(compute_api.API, 'get_console_output',
-                       fakes.fake_not_implemented)
+        self.stub_out('nova.compute.api.API.get_console_output',
+                      fakes.fake_not_implemented)
         body = {'os-getConsoleOutput': {}}
         self._check_console_output_failure(webob.exc.HTTPNotImplemented, body)
 
