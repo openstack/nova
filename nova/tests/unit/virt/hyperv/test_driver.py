@@ -49,6 +49,7 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._migrationops = mock.MagicMock()
         self.driver._rdpconsoleops = mock.MagicMock()
         self.driver._serialconsoleops = mock.MagicMock()
+        self.driver._imagecache = mock.MagicMock()
 
     @mock.patch.object(driver.utilsfactory, 'get_hostutils')
     def test_check_minimum_windows_version(self, mock_get_hostutils):
@@ -451,3 +452,9 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             self.driver._serialconsoleops.get_console_output)
         mock_get_serial_console.assert_called_once_with(
             mock_instance.name)
+
+    def test_manage_image_cache(self):
+        self.driver.manage_image_cache(mock.sentinel.context,
+                                       mock.sentinel.all_instances)
+        self.driver._imagecache.update.assert_called_once_with(
+            mock.sentinel.context, mock.sentinel.all_instances)

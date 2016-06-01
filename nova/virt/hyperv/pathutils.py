@@ -14,6 +14,7 @@
 #    under the License.
 
 import os
+import time
 
 from os_win.utils import pathutils
 
@@ -154,3 +155,16 @@ class PathUtils(pathutils.PathUtils):
                                                    remote_log_paths):
             if self.exists(local_log_path):
                 self.copy(local_log_path, remote_log_path)
+
+    def get_image_path(self, image_name):
+        # Note: it is possible that the path doesn't exist
+        base_dir = self.get_base_vhd_dir()
+        for ext in ['vhd', 'vhdx']:
+            file_path = os.path.join(base_dir,
+                                     image_name + '.' + ext.lower())
+            if self.exists(file_path):
+                return file_path
+        return None
+
+    def get_age_of_file(self, file_name):
+        return time.time() - os.path.getmtime(file_name)

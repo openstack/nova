@@ -13,6 +13,7 @@
 #    under the License.
 
 import os
+import time
 
 import mock
 from six.moves import builtins
@@ -111,3 +112,29 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
                       mock.sentinel.remote_log_path),
             mock.call(mock.sentinel.archived_log_path,
                       mock.sentinel.remote_archived_log_path)])
+
+    @mock.patch.object(pathutils.PathUtils, 'get_base_vhd_dir')
+    @mock.patch.object(pathutils.PathUtils, 'exists')
+    def test_get_image_path(self, mock_exists,
+                            mock_get_base_vhd_dir):
+        fake_image_name = 'fake_image_name'
+        mock_exists.side_effect = [True, False]
+        mock_get_base_vhd_dir.return_value = 'fake_base_dir'
+
+        res = self._pathutils.get_image_path(fake_image_name)
+
+        mock_get_base_vhd_dir.assert_called_once_with()
+
+        self.assertEqual(res,
+            os.path.join('fake_base_dir', 'fake_image_name.vhd'))
+
+    @mock.patch('os.path.getmtime')
+    @mock.patch.object(pathutils, 'time')
+    def test_get_age_of_file(self, mock_time, mock_getmtime):
+        mock_time.time.return_value = time.time()
+        mock_getmtime.return_value = mock_time.time.return_value - 42
+
+        actual_age = self._pathutils.get_age_of_file(mock.sentinel.filename)
+        self.assertEqual(42, actual_age)
+        mock_time.time.assert_called_once_with()
+        mock_getmtime.assert_called_once_with(mock.sentinel.filename)
