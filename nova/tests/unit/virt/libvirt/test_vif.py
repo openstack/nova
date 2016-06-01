@@ -393,7 +393,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             self.executes.append(cmd)
             return None, None
 
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
 
     def _get_node(self, xml):
         doc = etree.fromstring(xml)
