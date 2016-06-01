@@ -738,6 +738,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.shareable = False
         self.snapshot = None
         self.backing_store = None
+        self.device_addr = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -889,6 +890,10 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 self.readonly = True
             elif c.tag == 'shareable':
                 self.shareable = True
+            elif c.tag == 'address':
+                obj = LibvirtConfigGuestDeviceAddress.factory(c)
+                obj.parse_dom(c)
+                self.device_addr = obj
 
 
 class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
@@ -1131,6 +1136,63 @@ class LibvirtConfigGuestGIDMap(LibvirtConfigGuestIDMap):
                                                        **kwargs)
 
 
+class LibvirtConfigGuestDeviceAddress(LibvirtConfigObject):
+    def __init__(self, type=None, **kwargs):
+        super(LibvirtConfigGuestDeviceAddress, self).__init__(
+            root_name='address', **kwargs)
+        self.type = type
+
+    @staticmethod
+    def factory(xmldoc):
+        addr_type = xmldoc.get('type')
+        if addr_type == 'pci':
+            return LibvirtConfigGuestDeviceAddressPCI()
+        elif addr_type == 'drive':
+            return LibvirtConfigGuestDeviceAddressDrive()
+
+
+class LibvirtConfigGuestDeviceAddressDrive(LibvirtConfigGuestDeviceAddress):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDeviceAddressDrive, self).\
+                __init__(type='drive', **kwargs)
+        self.controller = None
+        self.bus = None
+        self.target = None
+        self.unit = None
+
+    def parse_dom(self, xmldoc):
+        self.controller = xmldoc.get('controller')
+        self.bus = xmldoc.get('bus')
+        self.target = xmldoc.get('target')
+        self.unit = xmldoc.get('unit')
+
+    def format_address(self):
+        return None
+
+
+class LibvirtConfigGuestDeviceAddressPCI(LibvirtConfigGuestDeviceAddress):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDeviceAddressPCI, self).\
+                __init__(type='pci', **kwargs)
+        self.domain = None
+        self.bus = None
+        self.slot = None
+        self.function = None
+
+    def parse_dom(self, xmldoc):
+        self.domain = xmldoc.get('domain')
+        self.bus = xmldoc.get('bus')
+        self.slot = xmldoc.get('slot')
+        self.function = xmldoc.get('function')
+
+    def format_address(self):
+        if self.domain is not None:
+            return pci_utils.get_pci_address(self.domain[2:],
+                                             self.bus[2:],
+                                             self.slot[2:],
+                                             self.function[2:])
+
+
 class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
@@ -1161,6 +1223,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vif_outbound_burst = None
         self.vif_outbound_average = None
         self.vlan = None
+        self.device_addr = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestInterface, self).format_dom()
@@ -1331,6 +1394,10 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                             self.vif_outbound_burst = int(sub.get('burst'))
                         if sub.get('peak'):
                             self.vif_outbound_peak = int(sub.get('peak'))
+            elif c.tag == 'address':
+                obj = LibvirtConfigGuestDeviceAddress.factory(c)
+                obj.parse_dom(c)
+                self.device_addr = obj
 
     def add_filter_param(self, key, value):
         self.filterparams.append({'key': key, 'value': value})
