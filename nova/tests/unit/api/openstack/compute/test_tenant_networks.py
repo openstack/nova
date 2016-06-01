@@ -199,7 +199,7 @@ class TenantNetworksTestV21(test.NoDBTestCase):
         reserve_mock.side_effect = exception.OverQuota(overs='fake')
         body = {'network': {"cidr": "10.20.105.0/24",
                             "label": "new net 1"}}
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.create, self.req, body=body)
         reserve_mock.assert_called_once_with(ctxt, networks=1)
 
