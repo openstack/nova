@@ -326,9 +326,6 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
     def _get_flags(self):
         f = super(ServersSampleMultiStatusJsonTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.legacy_v2.contrib.'
-            'server_list_multi_status.Server_list_multi_status')
         return f
 
     def test_servers_list(self):

@@ -39,9 +39,6 @@ class FpingSampleJsonTests(test_servers.ServersSampleBase):
         self.stub_out("nova.api.openstack.compute.fping."
                       "FpingController.check_fping",
                       fake_check_fping)
-        self.stub_out("nova.api.openstack.compute.legacy_v2.contrib.fping."
-                      "FpingController.check_fping",
-                      fake_check_fping)
 
     def test_get_fping(self):
         self._post_server()

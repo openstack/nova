@@ -36,7 +36,4 @@ class BlockDeviceMappingV2BootJsonTest(BlockDeviceMappingV1BootJsonTest):
     def _get_flags(self):
         f = super(BlockDeviceMappingV2BootJsonTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.legacy_v2.contrib.'
-            'block_device_mapping_v2_boot.Block_device_mapping_v2_boot')
         return f

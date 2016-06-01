@@ -32,9 +32,6 @@ class LimitsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def _get_flags(self):
         f = super(LimitsSampleJsonTest, self)._get_flags()
         f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append("nova.api.openstack.compute."
-                      "legacy_v2.contrib.server_group_quotas."
-                      "Server_group_quotas")
         return f
 
     def test_limits_get(self):
