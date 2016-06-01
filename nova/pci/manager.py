@@ -63,6 +63,7 @@ class PciDevTracker(object):
                     context, node_id)
         else:
             self.pci_devs = objects.PciDeviceList(objects=[])
+        self._build_device_tree(self.pci_devs)
         self._initial_instance_usage()
 
     def _initial_instance_usage(self):
@@ -117,6 +118,42 @@ class PciDevTracker(object):
                 devices.append(dev)
         self._set_hvdevs(devices)
 
+    @staticmethod
+    def _build_device_tree(all_devs):
+        """Build a tree of devices that represents parent-child relationships.
+
+        We need to have the relationships set up so that we can easily make
+        all the necessary changes to parent/child devices without having to
+        figure it out at each call site.
+
+        This method just adds references to relevant instances already found
+        in `pci_devs` to `child_devices` and `parent_device` fields of each
+        one.
+
+        Currently relationships are considered for SR-IOV PFs/VFs only.
+        """
+
+        # Ensures that devices are ordered in ASC so VFs will come
+        # after their PFs.
+        all_devs.sort(key=lambda x: x.address)
+
+        parents = {}
+        for dev in all_devs:
+            if dev.status in (fields.PciDeviceStatus.REMOVED,
+                              fields.PciDeviceStatus.DELETED):
+                # NOTE(ndipanov): Removed devs are pruned from
+                # self.pci_devs on save() so we need to make sure we
+                # are not looking at removed ones as we may build up
+                # the tree sooner than they are pruned.
+                continue
+            if dev.dev_type == fields.PciDeviceType.SRIOV_PF:
+                dev.child_devices = []
+                parents[dev.address] = dev
+            elif dev.dev_type == fields.PciDeviceType.SRIOV_VF:
+                dev.parent_device = parents.get(dev.parent_addr)
+                if dev.parent_device:
+                    parents[dev.parent_addr].child_devices.append(dev)
+
     def _set_hvdevs(self, devices):
         exist_addrs = set([dev.address for dev in self.pci_devs])
         new_addrs = set([dev['address'] for dev in devices])
@@ -168,6 +205,8 @@ class PciDevTracker(object):
             dev_obj = objects.PciDevice.create(self._context, dev)
             self.pci_devs.objects.append(dev_obj)
             self.stats.add_device(dev_obj)
+
+        self._build_device_tree(self.pci_devs)
 
     def _claim_instance(self, context, pci_requests, instance_numa_topology):
         instance_cells = None

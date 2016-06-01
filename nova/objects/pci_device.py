@@ -177,6 +177,11 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         super(PciDevice, self).__init__(*args, **kwargs)
         self.obj_reset_changes()
         self.extra_info = {}
+        # NOTE(ndipanov): These are required to build an in-memory device tree
+        # but don't need to be proper fields (and can't easily be as they would
+        # hold circular references)
+        self.parent_device = None
+        self.child_devices = []
 
     def __eq__(self, other):
         return compare_pci_device_attributes(self, other)
