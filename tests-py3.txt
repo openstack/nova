@@ -23,8 +23,6 @@ nova.tests.unit.api.openstack.compute.test_extended_server_attributes.ExtendedSe
 nova.tests.unit.api.openstack.compute.test_extended_server_attributes.ExtendedServerAttributesTestV23
 nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIPDNSDomainPolicyEnforcementV21
 nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIPDNSEntryPolicyEnforcementV21
-nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIpDNSTestV2
-nova.tests.unit.api.openstack.compute.test_floating_ip_dns.FloatingIpDNSTestV21
 nova.tests.unit.api.openstack.compute.test_hide_server_addresses.HideServerAddressesTestV2
 nova.tests.unit.api.openstack.compute.test_hide_server_addresses.HideServerAddressesTestV21
 nova.tests.unit.api.openstack.compute.test_keypairs.KeypairsTestV2
@@ -102,7 +100,6 @@ nova.tests.unit.test_metadata.MetadataHandlerTestCase
 nova.tests.unit.test_metadata.MetadataPasswordTestCase
 nova.tests.unit.test_metadata.MetadataTestCase
 nova.tests.unit.test_metadata.OpenStackMetadataTestCase
-nova.tests.unit.test_nova_manage.CellCommandsTestCase
 nova.tests.unit.test_pipelib.PipelibTest
 nova.tests.unit.test_policy.AdminRolePolicyTestCase
 nova.tests.unit.test_quota.QuotaIntegrationTestCase

@@ -14,9 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import urllib
-
 import mock
+from six.moves import urllib
 import webob
 
 from nova.api.openstack.compute import floating_ip_dns \
@@ -48,7 +47,7 @@ def _quote_domain(domain):
     by-hand quoting here.  This function needs to duplicate the one in
     python-novaclient/novaclient/v1_1/floating_ip_dns.py
     """
-    return urllib.quote(domain.replace('.', '%2E'))
+    return urllib.parse.quote(domain.replace('.', '%2E'))
 
 
 def network_api_get_floating_ip(self, context, id):
