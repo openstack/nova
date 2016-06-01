@@ -5477,8 +5477,13 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.
         """
 
-        # NOTE(berendt): virConnectCompareCPU not working for Xen
-        if CONF.libvirt.virt_type not in ['qemu', 'kvm']:
+        # NOTE(kchamart): Comparing host to guest CPU model for emulated
+        # guests (<domain type='qemu'>) should not matter -- in this
+        # mode (QEMU "TCG") the CPU is fully emulated in software and no
+        # hardware acceleration, like KVM, is involved. So, skip the CPU
+        # compatibility check for the QEMU domain type, and retain it for
+        # KVM guests.
+        if CONF.libvirt.virt_type not in ['kvm']:
             return
 
         if guest_cpu is None:
