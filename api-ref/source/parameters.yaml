@@ -767,6 +767,25 @@ availability_zone:
   in: body
   required: false
   type: string
+backup_name:
+  description: |
+    The name of the image to be backed up.
+  in: body
+  required: true
+  type: string
+backup_rotation:
+  description: |
+    The rotation of the back up image, the oldest image will be removed when image count
+    exceed the rotation count.
+  in: body
+  required: true
+  type: integer
+backup_type:
+  description: |
+    The type of the backup, for example, ``daily``.
+  in: body
+  required: true
+  type: string
 baremetal_cpus:
   in: body
   required: true
@@ -1898,6 +1917,13 @@ metadata_compat:
   in: body
   required: true
   type: object
+metadata_image:
+  description: |
+    Metadata key and value pairs. The maximum size for each metadata key and value
+    pair is 255 bytes.
+  in: body
+  required: false
+  type: object
 metadata_items:
   description: |
     The number of allowed metadata items for each instance.
@@ -2166,6 +2192,12 @@ os-getVNCConsole:
 os-resetState:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+os-resetState_state:
+  description: |
+    The state of the server to be set, ``active`` or ``error`` are valid.
   in: body
   required: true
   type: string
