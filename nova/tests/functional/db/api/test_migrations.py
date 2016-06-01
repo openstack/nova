@@ -363,6 +363,43 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertColumnExists(engine, 'resource_provider_aggregates',
                                 'aggregate_id')
 
+    def _check_017(self, engine, data):
+        # aggregate_metadata
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'aggregate_id',
+                       'key',
+                       'value']:
+            self.assertColumnExists(engine, 'aggregate_metadata', column)
+
+        self.assertUniqueConstraintExists(engine, 'aggregate_metadata',
+                ['aggregate_id', 'key'])
+        self.assertIndexExists(engine, 'aggregate_metadata',
+            'aggregate_metadata_key_idx')
+
+        # aggregate_hosts
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'host',
+                       'aggregate_id']:
+            self.assertColumnExists(engine, 'aggregate_hosts', column)
+
+        self.assertUniqueConstraintExists(engine, 'aggregate_hosts',
+                ['host', 'aggregate_id'])
+
+        # aggregates
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'name']:
+            self.assertColumnExists(engine, 'aggregates', column)
+
+        self.assertIndexExists(engine, 'aggregates',
+            'aggregate_uuid_idx')
+        self.assertUniqueConstraintExists(engine, 'aggregates', ['name'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
