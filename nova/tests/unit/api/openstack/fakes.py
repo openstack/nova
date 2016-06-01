@@ -64,10 +64,9 @@ def fake_wsgi(self, req):
     return self.application
 
 
-def wsgi_app_v21(inner_app_v21=None, fake_auth_context=None,
-        ext_mgr=None, init_only=None, v2_compatible=False):
-    if not inner_app_v21:
-        inner_app_v21 = compute.APIRouterV21(init_only)
+def wsgi_app_v21(fake_auth_context=None, init_only=None, v2_compatible=False):
+
+    inner_app_v21 = compute.APIRouterV21(init_only)
 
     if v2_compatible:
         inner_app_v21 = openstack_api.LegacyV2CompatibleWrapper(inner_app_v21)
