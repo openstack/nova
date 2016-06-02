@@ -124,7 +124,7 @@ class TestNeutronClient(test.NoDBTestCase):
         self.flags(url='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
         my_context = context.RequestContext('userid',
-                                            'my_tenantid',
+                                            uuids.my_tenant,
                                             auth_token='token')
         cl = neutronapi.get_client(my_context)
 
@@ -134,7 +134,7 @@ class TestNeutronClient(test.NoDBTestCase):
         self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
     def test_withouttoken(self):
-        my_context = context.RequestContext('userid', 'my_tenantid')
+        my_context = context.RequestContext('userid', uuids.my_tenant)
         self.assertRaises(exceptions.Unauthorized,
                           neutronapi.get_client,
                           my_context)
@@ -143,7 +143,7 @@ class TestNeutronClient(test.NoDBTestCase):
         self.flags(url='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
         my_context = context.RequestContext('userid',
-                                            'my_tenantid',
+                                            uuids.my_tenant,
                                             auth_token='token',
                                             is_admin=True)
         cl = neutronapi.get_client(my_context)
@@ -155,7 +155,7 @@ class TestNeutronClient(test.NoDBTestCase):
 
     def test_withouttoken_keystone_connection_error(self):
         self.flags(url='http://anyhost/', group='neutron')
-        my_context = context.RequestContext('userid', 'my_tenantid')
+        my_context = context.RequestContext('userid', uuids.my_tenant)
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           neutronapi.get_client,
                           my_context)
@@ -164,7 +164,7 @@ class TestNeutronClient(test.NoDBTestCase):
     @mock.patch.object(client.Client, "list_networks", new=mock.Mock())
     def test_reuse_admin_token(self, m):
         self.flags(url='http://anyhost/', group='neutron')
-        my_context = context.RequestContext('userid', 'my_tenantid',
+        my_context = context.RequestContext('userid', uuids.my_tenant,
                                             auth_token='token')
 
         tokens = ['new_token2', 'new_token1']
@@ -194,7 +194,7 @@ class TestNeutronv2Base(test.TestCase):
 
     def setUp(self):
         super(TestNeutronv2Base, self).setUp()
-        self.context = context.RequestContext('userid', 'my_tenantid')
+        self.context = context.RequestContext('userid', uuids.my_tenant)
         setattr(self.context,
                 'auth_token',
                 'bff4a5a6b9eb4ea2a6efec6eefb77936')
@@ -216,17 +216,17 @@ class TestNeutronv2Base(test.TestCase):
         self.nets1 = [{'id': 'my_netid1',
                       'name': 'my_netname1',
                       'subnets': ['mysubnid1'],
-                      'tenant_id': 'my_tenantid'}]
+                      'tenant_id': uuids.my_tenant}]
         self.nets2 = []
         self.nets2.append(self.nets1[0])
         self.nets2.append({'id': 'my_netid2',
                            'name': 'my_netname2',
                            'subnets': ['mysubnid2'],
-                           'tenant_id': 'my_tenantid'})
+                           'tenant_id': uuids.my_tenant})
         self.nets3 = self.nets2 + [{'id': 'my_netid3',
                                     'name': 'my_netname3',
                                     'subnets': ['mysubnid3'],
-                                    'tenant_id': 'my_tenantid'}]
+                                    'tenant_id': uuids.my_tenant}]
         self.nets4 = [{'id': 'his_netid4',
                       'name': 'his_netname4',
                       'tenant_id': 'his_tenantid'}]
@@ -258,7 +258,7 @@ class TestNeutronv2Base(test.TestCase):
         self.nets11 = [{'id': 'my_netid1',
                       'name': 'my_netname1',
                       'subnets': ['mysubnid1'],
-                      'tenant_id': 'my_tenantid',
+                      'tenant_id': uuids.my_tenant,
                       'dns_domain': 'my-domain.org.'}]
 
         self.nets = [self.nets1, self.nets2, self.nets3, self.nets4,
@@ -344,16 +344,16 @@ class TestNeutronv2Base(test.TestCase):
                               'name': 'nova',
                               'router:external': True,
                               'tenant_id': 'admin_tenantid'}
-        self.fip_unassociated = {'tenant_id': 'my_tenantid',
-                                 'id': 'fip_id1',
+        self.fip_unassociated = {'tenant_id': uuids.my_tenant,
+                                 'id': uuids.fip_id1,
                                  'floating_ip_address': '172.24.4.227',
                                  'floating_network_id': self.fip_pool['id'],
                                  'port_id': None,
                                  'fixed_ip_address': None,
                                  'router_id': None}
         fixed_ip_address = self.port_data2[1]['fixed_ips'][0]['ip_address']
-        self.fip_associated = {'tenant_id': 'my_tenantid',
-                               'id': 'fip_id2',
+        self.fip_associated = {'tenant_id': uuids.my_tenant,
+                               'id': uuids.fip_id2,
                                'floating_ip_address': '172.24.4.228',
                                'floating_network_id': self.fip_pool['id'],
                                'port_id': self.port_data2[1]['id'],
@@ -1383,14 +1383,14 @@ class TestNeutronv2(TestNeutronv2Base):
         """Only one network is available, it's external, and the client
            is authorized.
         """
-        admin_ctx = context.RequestContext('userid', 'my_tenantid',
+        admin_ctx = context.RequestContext('userid', uuids.my_tenant,
                                            is_admin=True)
         api = self._stub_allocate_for_instance(net_idx=8)
         api.allocate_for_instance(admin_ctx, self.instance)
 
     def test_allocate_for_instance_with_external_shared_net(self):
         """Only one network is available, it's external and shared."""
-        ctx = context.RequestContext('userid', 'my_tenantid')
+        ctx = context.RequestContext('userid', uuids.my_tenant)
         api = self._stub_allocate_for_instance(net_idx=10)
         api.allocate_for_instance(ctx, self.instance)
 
@@ -1568,10 +1568,10 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets2})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {'port': 50}})
         self.moxed_client.list_ports(
-            tenant_id='my_tenantid', fields=['id']).AndReturn(
+            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
                     {'ports': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1585,7 +1585,7 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets2})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {}})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1597,10 +1597,10 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(['my_netid1'])).AndReturn(
                 {'networks': self.nets1})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {'port': 50}})
         self.moxed_client.list_ports(
-            tenant_id='my_tenantid', fields=['id']).AndReturn(
+            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
                     {'ports': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1637,10 +1637,10 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                  {'networks': self.nets1})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                 {'quota': {'port': 50}})
         self.moxed_client.list_ports(
-            tenant_id='my_tenantid', fields=['id']).AndReturn(
+            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
                  {'ports': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1831,10 +1831,10 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets2})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {'port': 2}})
         self.moxed_client.list_ports(
-            tenant_id='my_tenantid', fields=['id']).AndReturn(
+            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
                     {'ports': self.port_data2})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1857,10 +1857,10 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets1})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {'port': 5}})
         self.moxed_client.list_ports(
-            tenant_id='my_tenantid', fields=['id']).AndReturn(
+            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
                     {'ports': self.port_data2})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1895,10 +1895,10 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets2})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {'port': 5}})
         self.moxed_client.list_ports(
-            tenant_id='my_tenantid', fields=['id']).AndReturn(
+            tenant_id=uuids.my_tenant, fields=['id']).AndReturn(
                     {'ports': self.port_data2})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -1918,7 +1918,7 @@ class TestNeutronv2(TestNeutronv2Base):
             id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets2})
         self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
+            tenant_id=uuids.my_tenant).AndReturn(
                     {'quota': {'port': -1}})
         self.mox.ReplayAll()
         api = neutronapi.API()
@@ -4331,7 +4331,7 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
         if admin_context:
             my_context = context.get_admin_context()
         else:
-            my_context = context.RequestContext('userid', 'my_tenantid',
+            my_context = context.RequestContext('userid', uuids.my_tenant,
                                                 auth_token='token')
 
         # clean global
