@@ -13,9 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.conf import paths
 
 from oslo_config import cfg
 from oslo_db import options as oslo_db_options
+
+_DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
 
 # NOTE(sdague): we know of at least 1 instance of out of tree usage
@@ -87,7 +90,8 @@ api_db_opts = [
 
 
 def register_opts(conf):
-    conf.register_opts(oslo_db_options.database_opts, 'database')
+    oslo_db_options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION,
+                         sqlite_db='nova.sqlite')
     conf.register_opt(db_driver_opt)
     conf.register_opts(api_db_opts, group='api_database')
 
