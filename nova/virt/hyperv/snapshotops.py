@@ -43,10 +43,10 @@ class SnapshotOps(object):
          image_id) = glance.get_remote_image_service(context, image_id)
         image_metadata = {"is_public": False,
                           "disk_format": "vhd",
-                          "container_format": "bare",
-                          "properties": {}}
+                          "container_format": "bare"}
         with self._pathutils.open(image_vhd_path, 'rb') as f:
-            glance_image_service.update(context, image_id, image_metadata, f)
+            glance_image_service.update(context, image_id, image_metadata, f,
+                                        purge_props=False)
 
     def snapshot(self, context, instance, image_id, update_task_state):
         # While the snapshot operation is not synchronized within the manager,
