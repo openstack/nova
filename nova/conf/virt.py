@@ -351,7 +351,7 @@ Interdependencies to other options:
 
 reserved_huge_pages = cfg.MultiOpt(
     "reserved_huge_pages",
-    item_type=types.Dict,
+    item_type=types.Dict(),
     help="""Reserves a number of huge/large memory pages per NUMA host cells
 
 Possible values:
@@ -359,8 +359,8 @@ Possible values:
 * A list of valid key=value which reflect NUMA node ID, page size
   (Default unit is KiB) and number of pages to be reserved.
 
-    reserved_huge_pages = node=0,size=2048,count=64
-    reserved_huge_pages = node=1,size=1GB,count=1
+    reserved_huge_pages = node:0,size:2048,count:64
+    reserved_huge_pages = node:1,size:1GB,count:1
 
   In this example we are reserving on NUMA node 0 64 pages of 2MiB
   and on NUMA node 1 1 page of 1GiB.
