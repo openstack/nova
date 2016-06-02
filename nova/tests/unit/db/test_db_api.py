@@ -1335,6 +1335,7 @@ class MigrationTestCase(test.TestCase):
         self._create(status='failed')
         self._create(status='accepted')
         self._create(status='completed')
+        self._create(status='cancelled')
         self._create(source_compute='host2', source_node='b',
                 dest_compute='host1', dest_node='a')
         self._create(source_compute='host2', dest_compute='host3')
@@ -1364,6 +1365,7 @@ class MigrationTestCase(test.TestCase):
             self.assertNotEqual('error', migration['status'])
             self.assertNotEqual('failed', migration['status'])
             self.assertNotEqual('accepted', migration['status'])
+            self.assertNotEqual('cancelled', migration['status'])
 
     def test_migration_get_in_progress_joins(self):
         self._create(source_compute='foo', system_metadata={'foo': 'bar'})
