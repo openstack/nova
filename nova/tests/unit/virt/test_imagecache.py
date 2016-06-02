@@ -63,9 +63,8 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                           cache_manager.update, None, [])
         self.assertRaises(NotImplementedError,
                           cache_manager._get_base)
-        base_images = cache_manager._list_base_images(None)
-        self.assertEqual([], base_images['unexplained_images'])
-        self.assertEqual([], base_images['originals'])
+        self.assertRaises(NotImplementedError,
+                          cache_manager._scan_base_images, None)
         self.assertRaises(NotImplementedError,
                           cache_manager._age_and_verify_cached_images,
                           None, [], None)

@@ -116,12 +116,10 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 LOG.debug('Adding %s into backend swap images', ent)
                 self.back_swap_images.add(ent)
 
-    def _list_base_images(self, base_dir):
-        """Return a list of the images present in _base.
-
-        Determine what images we have on disk. There will be other files in
-        this directory so we only grab the ones which are the right length
-        to be disk images.
+    def _scan_base_images(self, base_dir):
+        """Scan base images in base_dir and call _store_image or
+        _store_swap_image on each as appropriate. These methods populate
+        self.unexplained_images, self.originals, and self.back_swap_images.
         """
 
         digest_size = hashlib.sha1().digestsize * 2
@@ -156,9 +154,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
             else:
                 self._store_swap_image(ent)
-
-        return {'unexplained_images': self.unexplained_images,
-                'originals': self.originals}
 
     def _list_backing_images(self):
         """List the backing images currently in use."""
@@ -452,7 +447,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # reset the local statistics
         self._reset_state()
         # read the cached images
-        self._list_base_images(base_dir)
+        self._scan_base_images(base_dir)
         # read running instances data
         running = self._list_running_instances(context, all_instances)
         self.used_images = running['used_images']
