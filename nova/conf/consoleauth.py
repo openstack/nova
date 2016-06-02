@@ -18,9 +18,16 @@ from oslo_config import cfg
 
 
 consoleauth_opts = [
-    # TODO(aunnam): This option needs to be deprecated
+
     cfg.StrOpt('consoleauth_topic',
         default='consoleauth',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+There is no need to let users choose the RPC topic for all services - there
+is little gain from this. Furthermore, it makes it really easy to break Nova
+by using this option.
+""",
         help="""
 This option allows you to change the message topic used by nova-consoleauth
 service when communicating via the AMQP server. Nova Console Authentication

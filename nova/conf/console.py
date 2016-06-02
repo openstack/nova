@@ -33,9 +33,15 @@ Possible values
   * An empty list (default) or list of allowed origin hostnames.
 """),
 
-# TODO(pumaranikar): We can deprecate this option.
     cfg.StrOpt('console_topic',
                 default='console',
+                deprecated_for_removal=True,
+                deprecated_since='15.0.0',
+                deprecated_reason="""
+There is no need to let users choose the RPC topic for all services - there
+is little gain from this. Furthermore, it makes it really easy to break Nova
+by using this option.
+""",
                 help="""
 Represents the message queue topic name used by nova-console
 service when communicating via the AMQP server. The Nova API uses a message
