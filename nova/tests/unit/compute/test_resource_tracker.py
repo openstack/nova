@@ -564,41 +564,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                        memory_usage=mem, mempages=[], siblings=[],
                        pinned_cpus=set([]))])
 
-    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
-                return_value=objects.InstancePCIRequests(requests=[]))
-    @mock.patch('nova.objects.Instance.save')
-    def test_cpu_stats(self, mock_save, mock_get):
-        limits = {'disk_gb': 100, 'memory_mb': 100}
-        self.assertEqual(0, self.tracker.compute_node.vcpus_used)
-
-        vcpus = 1
-        instance = self._fake_instance_obj(vcpus=vcpus)
-
-        # should not do anything until a claim is made:
-        self.tracker.update_usage(self.context, instance)
-        self.assertEqual(0, self.tracker.compute_node.vcpus_used)
-
-        with self.tracker.instance_claim(self.context, instance, limits):
-            pass
-        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
-
-        # instance state can change without modifying vcpus in use:
-        instance['task_state'] = task_states.SCHEDULING
-        self.tracker.update_usage(self.context, instance)
-        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
-
-        add_vcpus = 10
-        vcpus += add_vcpus
-        instance = self._fake_instance_obj(vcpus=add_vcpus)
-        with self.tracker.instance_claim(self.context, instance, limits):
-            pass
-        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
-
-        instance['vm_state'] = vm_states.DELETED
-        self.tracker.update_usage(self.context, instance)
-        vcpus -= add_vcpus
-        self.assertEqual(vcpus, self.tracker.compute_node.vcpus_used)
-
     def test_skip_deleted_instances(self):
         # ensure that the audit process skips instances that have vm_state
         # DELETED, but the DB record is not yet deleted.
