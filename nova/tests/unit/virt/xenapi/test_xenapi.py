@@ -295,7 +295,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         stubs.stubout_get_this_vm_uuid(self.stubs)
         stubs.stub_out_vm_methods(self.stubs)
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -1676,7 +1676,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.migration = db.migration_create(
             context.get_admin_context(), migration_values)
 
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         stubs.stub_out_migration_methods(self.stubs)
         stubs.stubout_get_this_vm_uuid(self.stubs)
 

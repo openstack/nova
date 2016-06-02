@@ -101,7 +101,7 @@ def fake_execute(*cmd_parts, **kwargs):
     return reply
 
 
-def stub_out_processutils_execute(stubs):
+def stub_out_processutils_execute(test):
     fake_execute_set_repliers([])
     fake_execute_clear_log()
-    stubs.Set(processutils, 'execute', fake_execute)
+    test.stub_out('oslo_concurrency.processutils.execute', fake_execute)

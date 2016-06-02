@@ -99,7 +99,7 @@ class _ImageTestCase(object):
         CONF.set_override('preallocate_images', 'space')
 
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
@@ -122,7 +122,7 @@ class _ImageTestCase(object):
         CONF.set_override('preallocate_images', 'space')
 
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
@@ -759,7 +759,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         CONF.set_override('preallocate_images', 'space')
 
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
@@ -1132,7 +1132,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_prealloc_image(self):
         self.flags(preallocate_images='space')
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
@@ -1246,7 +1246,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
 
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mox.StubOutWithMock(image, 'exists')
@@ -1272,7 +1272,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
 
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mox.StubOutWithMock(image, 'exists')
@@ -1320,7 +1320,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         CONF.set_override('preallocate_images', 'space')
 
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
@@ -1630,7 +1630,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_prealloc_image(self):
         self.flags(preallocate_images='space')
         fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
+        fake_processutils.stub_out_processutils_execute(self)
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
