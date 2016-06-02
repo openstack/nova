@@ -35,7 +35,7 @@ class ComputeManagerTestCase(test.TestCase):
         self.start_service('scheduler')
         self.compute = self.start_service('compute')
         self.context = context.RequestContext('fake', 'fake')
-        fake_server_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self)
         fake_network.set_stub_network_methods(self)
 
     def test_instance_fault_message_no_traceback_with_retry(self):

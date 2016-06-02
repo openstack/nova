@@ -285,7 +285,7 @@ class _BaseTaskTestCase(object):
         self.user_id = fakes.FAKE_USER_ID
         self.project_id = fakes.FAKE_PROJECT_ID
         self.context = FakeContext(self.user_id, self.project_id)
-        fake_server_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self)
 
         def fake_deserialize_context(serializer, ctxt_dict):
             self.assertEqual(self.context.user_id, ctxt_dict['user_id'])
