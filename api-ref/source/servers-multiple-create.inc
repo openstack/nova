@@ -18,7 +18,7 @@ shows only the reservation ID.
 Create Multiple Servers
 =======================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers
+.. rest_method:: POST /servers
 
 Creates one or more servers.
 
@@ -32,7 +32,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - security_groups: security_groups
   - user_data: user_data
   - os-availability-zone:availability_zone: os-availability-zone:availability_zone
@@ -84,7 +84,7 @@ Response
 Create Multiple Servers With Reservation Id
 ===========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers
+.. rest_method:: POST /servers
 
 Creates one or more servers with a reservation ID.
 
@@ -100,7 +100,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - security_groups: security_groups
   - user_data: user_data
   - os-availability-zone:availability_zone: os-availability-zone:availability_zone

@@ -3,7 +3,7 @@
 Shelve Server (shelve Action)
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Shelves a server.
 
@@ -38,7 +38,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - shelve: shelve
 
@@ -59,7 +59,7 @@ No body is returned on successful request.
 Shelf-Offload (Remove) Server (shelveOffload Action)
 ====================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Shelf-offloads, or removes, a shelved server.
 
@@ -92,7 +92,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - shelveOffload: shelveOffload
 
@@ -113,7 +113,7 @@ No body is returned on successful request.
 Unshelve (Restore) Shelved Server (unshelve Action)
 ===================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Unshelves, or restores, a shelved server.
 
@@ -146,7 +146,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - unshelve: unshelve
 

@@ -6,7 +6,7 @@
 Add (Associate) Fixed Ip (Addfixedip Action)
 ============================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Adds a fixed IP address to a server instance, which associates that
 address with the server. The fixed IP address is retrieved from the
@@ -27,7 +27,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - addFixedIp: addFixedIp
 
@@ -42,7 +42,7 @@ Response
 Remove (Disassociate) Fixed Ip (Removefixedip Action)
 =====================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Removes, or disassociates, a fixed IP address from a server.
 
@@ -61,7 +61,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - removeFixedIp: removeFixedIp
 

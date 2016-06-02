@@ -17,7 +17,7 @@ the Xen driver.
 List Agent Builds
 =================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-agents
+.. rest_method:: GET /os-agents
 
 Lists agent builds.
 
@@ -30,7 +30,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - agent_id: agent_id
   - architecture: architecture
   - hypervisor: hypervisor_type
@@ -50,7 +50,7 @@ Response
 Create Agent Build
 ==================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-agents
+.. rest_method:: POST /os-agents
 
 Creates an agent build.
 
@@ -63,7 +63,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - hypervisor: hypervisor_type
   - architecture: architecture
   - os: os
@@ -97,7 +97,7 @@ Response
 Update Agent Build
 ==================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-agents/{agent_build_id}
+.. rest_method:: PUT /os-agents/{agent_build_id}
 
 Updates an agent build.
 
@@ -110,7 +110,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - agent_build_id: agent_build_id
   - url: url
   - md5hash: md5hash
@@ -139,7 +139,7 @@ Response
 Delete Agent Build
 ==================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-agents/{agent_build_id}
+.. rest_method:: DELETE /os-agents/{agent_build_id}
 
 Deletes an existing agent build.
 
@@ -152,7 +152,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - agent_build_id: agent_build_id
 
 Response

@@ -12,20 +12,13 @@ Shows availability zone information.
 Get Availability Zone Information
 =================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-availability-zone
+.. rest_method:: GET /os-availability-zone
 
 Gets availability zone information.
 
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -38,7 +31,7 @@ Response
 Get Detailed Availability Zone Information
 ==========================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-availability-zone/detail
+.. rest_method:: GET /os-availability-zone/detail
 
 Gets detailed availability zone information.
 Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
@@ -47,13 +40,6 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
 
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
 Response
 --------
 
@@ -61,4 +47,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-availability-zone/availability-zone-detail-resp.json
    :language: javascript
-

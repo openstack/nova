@@ -4,9 +4,6 @@
  API Versions
 ==============
 
-Concepts
-========
-
 In order to bring new features to users over time, the Nova API
 supports versioning. There are two kinds of versions in Nova.
 
@@ -18,6 +15,9 @@ supports versioning. There are two kinds of versions in Nova.
 For more detail about Microversion, please reference:
 `Microversions
 <http://developer.openstack.org/api-guide/compute/microversions.html>`_
+
+The Version APIs work differently from other APIs as they *do not*
+require authentication.
 
 List All Major Versions
 =======================

@@ -11,7 +11,7 @@ address.
 List Ips
 ========
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/ips
+.. rest_method:: GET /servers/{server_id}/ips
 
 Lists IP addresses that are assigned to an instance.
 
@@ -28,7 +28,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response
@@ -49,7 +49,7 @@ Response
 Show Ip Details
 ===============
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/ips/{network_label}
+.. rest_method:: GET /servers/{server_id}/ips/{network_label}
 
 Shows IP addresses details for a network label of a server instance.
 
@@ -66,7 +66,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - network_label: network_label
 

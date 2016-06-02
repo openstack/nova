@@ -12,20 +12,13 @@ Generates, imports, and deletes SSH keys.
 List Keypairs
 =============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-keypairs
+.. rest_method:: GET /os-keypairs
 
 Lists keypairs that are associated with the account.
 
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -38,7 +31,7 @@ Response
 Create Or Import Keypair
 ========================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-keypairs
+.. rest_method:: POST /os-keypairs
 
 Generates or imports a keypair.
 
@@ -51,7 +44,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - name: name
   - public_key: public_key
 
@@ -71,7 +63,7 @@ Response
 Show Keypair Details
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-keypairs/{keypair_name}
+.. rest_method:: GET /os-keypairs/{keypair_name}
 
 Shows details for a keypair that is associated with the account.
 
@@ -84,7 +76,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - keypair_name: keypair_name
 
 Response
@@ -98,7 +89,7 @@ Response
 Delete Keypair
 ==============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-keypairs/{keypair_name}
+.. rest_method:: DELETE /os-keypairs/{keypair_name}
 
 Deletes a keypair.
 
@@ -111,9 +102,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - keypair_name: keypair_name
 
 Response
 --------
-

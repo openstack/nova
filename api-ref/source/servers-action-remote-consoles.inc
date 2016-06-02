@@ -6,7 +6,7 @@
 Get Rdp Console (os-getRDPConsole Action)
 =========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Gets an `RDP <https://technet.microsoft.com/en-us/windowsserver/ee236407>`__ console for a server.
 
@@ -22,7 +22,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - os-getRDPConsole: os-getRDPConsole
 
@@ -42,7 +42,7 @@ Response
 Get Serial Console (os-getSerialConsole Action)
 ===============================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Gets a serial console for a server.
 
@@ -58,7 +58,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - os-getSerialConsole: os-getSerialConsole
 
@@ -78,7 +78,7 @@ Response
 Get Spice Console (os-getSPICEConsole Action)
 =============================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Gets a SPICE console for a server.
 
@@ -94,7 +94,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - os-getSPICEConsole: os-getSPICEConsole
 
@@ -114,7 +114,7 @@ Response
 Get Vnc Console (os-getVNCConsole Action)
 =========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Gets a VNC console for a server.
 
@@ -130,7 +130,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - os-getVNCConsole: os-getVNCConsole
 

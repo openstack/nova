@@ -12,7 +12,7 @@ details for a volume attachment, and detaches a volume.
 List volume attachments for an instance
 =======================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-volume_attachments
+.. rest_method:: GET /servers/{server_id}/os-volume_attachments
 
 List volume attachments for an instance.
 
@@ -25,7 +25,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
 
 Response
@@ -47,7 +47,7 @@ Response
 Attach a volume to an instance
 ==============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/os-volume_attachments
+.. rest_method:: POST /servers/{server_id}/os-volume_attachments
 
 Attach a volume to an instance.
 
@@ -60,7 +60,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - volumeAttachment: volumeAttachment
   - volumeId: volumeId
@@ -90,7 +90,7 @@ Response
 Show a detail of a volume attachment
 ====================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-volume_attachments/{attachment_id}
+.. rest_method:: GET /servers/{server_id}/os-volume_attachments/{attachment_id}
 
 Show a detail of a volume attachment.
 
@@ -103,7 +103,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - attachment_id: attachment_id
 
@@ -126,7 +126,7 @@ Response
 Update a volume attachment
 ==========================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/os-volume_attachments/{attachment_id}
+.. rest_method:: PUT /servers/{server_id}/os-volume_attachments/{attachment_id}
 
 Update a volume attachment.
 
@@ -139,7 +139,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - attachment_id: attachment_id
   - volumeAttachment: volumeAttachment
@@ -158,7 +158,7 @@ No body is returned on successful request.
 Detach a volume from an instance
 ================================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}/os-volume_attachments/{attachment_id}
+.. rest_method:: DELETE /servers/{server_id}/os-volume_attachments/{attachment_id}
 
 Detach a volume from an instance.
 
@@ -171,7 +171,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - attachment_id: attachment_id
 

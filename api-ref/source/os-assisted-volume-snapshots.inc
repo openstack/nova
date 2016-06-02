@@ -16,7 +16,7 @@ an emulator/hypervisor to add the snapshot feature.
 Create Assisted Volume Snapshots
 ================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-assisted-volume-snapshots
+.. rest_method:: POST /os-assisted-volume-snapshots
 
 Creates an assisted volume snapshot.
 
@@ -29,7 +29,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - snapshot: snapshot
   - volume_id: volume_id
   - create_info: create_info
@@ -58,7 +58,7 @@ Response
 Delete Assisted Volume Snapshot
 ===============================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-assisted-volume-snapshots/{snapshot_id}
+.. rest_method:: DELETE /os-assisted-volume-snapshots/{snapshot_id}
 
 Deletes an assisted volume snapshot.
 
@@ -76,7 +76,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - snapshot_id: snapshot_id
 
 Query Parameters

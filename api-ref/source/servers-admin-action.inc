@@ -16,7 +16,7 @@ of a server.
 Create Server Back Up (createBackup Action)
 ===========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Creates a back up of a server.
 
@@ -36,7 +36,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - createBackup: createBackup
   - name: backup_name
@@ -58,7 +58,7 @@ will be returned.
 Inject Network Information (injectNetworkInfo Action)
 =====================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Injects network information into a server.
 
@@ -81,7 +81,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - injectNetworkInfo: injectNetworkInfo
 
@@ -98,7 +98,7 @@ On success no body is returned.
 Migrate Server (migrate Action)
 ===============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Migrates a server to a host. The scheduler chooses the host.
 
@@ -118,7 +118,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - migrate: migrate
 
@@ -135,7 +135,7 @@ On success no body is returned.
 Live-Migrate Server (os-migrateLive Action)
 ===========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Live-migrates a server to a new host without rebooting.
 
@@ -165,7 +165,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - host: host_migration
   - block_migration: block_migration
@@ -184,7 +184,7 @@ On success no body is returned.
 Reset Networking On A Server (resetNetwork Action)
 ==================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Resets networking on a server. 
 
@@ -209,7 +209,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - resetNetwork: resetNetwork
 
@@ -226,7 +226,7 @@ On success no body is returned.
 Reset Server State (os-resetState Action)
 =========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Resets the state of a server.
 
@@ -245,7 +245,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - os-resetState: os-resetState
   - os-resetState.state: os-resetState_state

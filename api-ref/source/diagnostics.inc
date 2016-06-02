@@ -9,7 +9,7 @@ Shows the usage data for a server.
 Show Server Diagnostics
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/diagnostics
+.. rest_method:: GET /servers/{server_id}/diagnostics
 
 Shows basic usage data for a server.
 
@@ -26,7 +26,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response

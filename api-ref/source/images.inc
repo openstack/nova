@@ -20,7 +20,7 @@ image size in the ``OS-EXT-IMG-SIZE:size`` extended attribute.
 List Images
 ===========
 
-.. rest_method:: GET /v2.1/{tenant_id}/images
+.. rest_method:: GET /images
 
 List images.
 
@@ -28,13 +28,6 @@ Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -47,7 +40,7 @@ Response
 List Images With Details
 ========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/images/detail
+.. rest_method:: GET /images/detail
 
 List images with details.
 
@@ -55,13 +48,6 @@ Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -75,7 +61,7 @@ Response
 Show Image Details
 ==================
 
-.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}
+.. rest_method:: GET /images/{image_id}
 
 Shows details for an image.
 
@@ -88,7 +74,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
 
 Response
@@ -102,7 +87,7 @@ Response
 Delete Image
 ============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/images/{image_id}
+.. rest_method:: DELETE /images/{image_id}
 
 Deletes an image.
 
@@ -115,7 +100,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
 
 Response
@@ -124,7 +108,7 @@ Response
 List Image Metadata
 ===================
 
-.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata
+.. rest_method:: GET /images/{image_id}/metadata
 
 List metadata of an image.
 
@@ -137,7 +121,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
 
 Response
@@ -151,7 +134,7 @@ Response
 Create Image Metadata
 =====================
 
-.. rest_method:: POST /v2.1/{tenant_id}/images/{image_id}/metadata
+.. rest_method:: POST /images/{image_id}/metadata
 
 Create an image metadata.
 
@@ -165,7 +148,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
 
 **Example Create Image Metadata: JSON request**
@@ -184,7 +166,7 @@ Response
 Update Image Metadata
 =====================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/images/{image_id}/metadata
+.. rest_method:: PUT /images/{image_id}/metadata
 
 Update an image metadata
 
@@ -198,7 +180,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
 
 **Example Update Image Metadata: JSON request**
@@ -217,7 +198,7 @@ Response
 Show Image Metadata Item
 ========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
+.. rest_method:: GET /images/{image_id}/metadata/{key}
 
 Shows metadata item, by key, for an image.
 
@@ -230,7 +211,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
   - key: key
 
@@ -245,7 +225,7 @@ Response
 Create Or Update Image Metadata Item
 ====================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
+.. rest_method:: PUT /images/{image_id}/metadata/{key}
 
 Creates or updates a metadata item, by key, for an image.
 
@@ -258,7 +238,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
   - key: key
 
@@ -278,7 +257,7 @@ Response
 Delete Image Metadata Item
 ==========================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/images/{image_id}/metadata/{key}
+.. rest_method:: DELETE /images/{image_id}/metadata/{key}
 
 Deletes a metadata item, by key, for an image.
 
@@ -291,7 +270,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - image_id: image_id
   - key: key
 

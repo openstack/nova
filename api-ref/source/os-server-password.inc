@@ -11,7 +11,7 @@ server.
 Show Server Password
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-server-password
+.. rest_method:: GET /servers/{server_id}/os-server-password
 
 Shows the administrative password for a server.
 
@@ -35,7 +35,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response
@@ -53,7 +53,7 @@ Response
 Clear Admin Password
 ====================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}/os-server-password
+.. rest_method:: DELETE /servers/{server_id}/os-server-password
 
 Clears the encrypted administrative password for a server, which removes it
 from the database.
@@ -73,7 +73,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response

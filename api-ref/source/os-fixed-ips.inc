@@ -13,7 +13,7 @@ reserves and releases a fixed IP address.
 Show Fixed Ip Details
 =====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-fixed-ips/{fixed_ip}
+.. rest_method:: GET /os-fixed-ips/{fixed_ip}
 
 Shows details for a fixed IP address.
 
@@ -26,7 +26,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - fixed_ip: fixed_ip
 
 Response
@@ -40,7 +40,7 @@ Response
 Reserve Or Release A Fixed Ip
 =============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-fixed-ips/{fixed_ip}/action
+.. rest_method:: POST /os-fixed-ips/{fixed_ip}/action
 
 Reserves or releases a fixed IP.
 
@@ -55,7 +55,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - fixed_ip: fixed_ip
 
 **Example Reserve Or Release A Fixed Ip: JSON request**

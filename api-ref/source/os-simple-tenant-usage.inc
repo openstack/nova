@@ -12,20 +12,13 @@ Reports usage statistics on compute and storage resources.
 List Tenant Usage For All Tenants
 =================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-simple-tenant-usage
+.. rest_method:: GET /os-simple-tenant-usage
 
 Lists usage information for all tenants.
 
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -38,7 +31,7 @@ Response
 Show Usage Details For Tenant
 =============================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-simple-tenant-usage/{tenant_id}
+.. rest_method:: GET /os-simple-tenant-usage/{tenant_id}
 
 Shows usage details for a tenant.
 

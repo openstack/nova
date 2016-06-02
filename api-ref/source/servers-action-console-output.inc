@@ -3,7 +3,7 @@
 Show Console Output (Os-Getconsoleoutput Action)
 ================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Shows console output for a server instance.
 
@@ -21,7 +21,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - os-getConsoleOutput: os-getConsoleOutput
   - length: length

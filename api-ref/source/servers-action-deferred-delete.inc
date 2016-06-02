@@ -3,7 +3,7 @@
 Force-Delete Server (forceDelete Action)
 ========================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Force-deletes a server before deferred cleanup.
 
@@ -23,7 +23,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - forceDelete: forceDelete
 
@@ -40,7 +40,7 @@ No body is returned on a successful submission.
 Restore Soft-Deleted Instance (restore Action)
 ==============================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 Restores a previously soft-deleted server instance. You cannot use
 this method to restore deleted instances.
@@ -61,7 +61,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - restore: restore
 

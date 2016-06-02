@@ -12,20 +12,13 @@ Lists, shows information for, and creates default security group rules.
 List Default Security Group Rules
 =================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-security-group-default-rules
+.. rest_method:: GET /os-security-group-default-rules
 
 Lists default security group rules.
 
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), notImplemented(501)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -47,7 +40,7 @@ Response
 Show Default Security Group Rule Details
 ========================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-security-group-default-rules/{security_group_default_rule_id}
+.. rest_method:: GET /os-security-group-default-rules/{security_group_default_rule_id}
 
 Shows details for a security group rule.
 
@@ -60,7 +53,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - security_group_default_rule_id: security_group_default_rule_id
 
 Response
@@ -83,7 +75,7 @@ Response
 Create Default Security Group Rule
 ==================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-security-group-default-rules
+.. rest_method:: POST /os-security-group-default-rules
 
 Creates a default security group rule.
 
@@ -99,7 +91,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - id: id
   - ip_protocol: ip_protocol
   - from_port: from_port
@@ -131,7 +122,7 @@ Response
 Delete Default Security Group Rule
 ==================================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-security-group-default-rules/{security_group_default_rule_id}
+.. rest_method:: DELETE /os-security-group-default-rules/{security_group_default_rule_id}
 
 Deletes a security group rule.
 
@@ -144,7 +135,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - security_group_default_rule_id: security_group_default_rule_id
 
 Response

@@ -262,7 +262,7 @@ all_projects:
   description: |
     Administrator only. Lists server groups for all projects. For example:
 
-      ``GET /v2.1/{admin_tenant_id}/os-server-groups?all_projects=True``
+      ``GET /os-server-groups?all_projects=True``
 
     If you specify a tenant ID for a non-administrative user with this query parameter,
     the call lists all server groups for the tenant, or project, rather than for

@@ -7,6 +7,7 @@
 .. rest_expand_all::
 
 .. include:: versions.inc
+.. include:: urls.inc
 .. include:: servers.inc
 .. include:: servers-multiple-create.inc
 .. include:: servers-actions.inc

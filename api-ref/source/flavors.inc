@@ -13,7 +13,7 @@ allocated to a server built with this flavor.
 List Flavors
 ============
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors
+.. rest_method:: GET /flavors
 
 Lists all flavors accessible to your project.
 
@@ -26,7 +26,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - sort_key: sort_key
   - sort_dir: sort_dir
   - limit: limit
@@ -56,7 +55,7 @@ that was not customized by the site operators.
 Create Flavor
 =============
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors
+.. rest_method:: POST /flavors
 
 Creates a flavor.
 
@@ -73,7 +72,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-   - tenant_id: tenant_id
    - flavor: flavor
    - name: flavor_name
    - id: flavor_id_body
@@ -95,7 +93,6 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-   - tenant_id: tenant_id
    - flavor: flavor
    - name: flavor_name
    - id: flavor_id_body
@@ -118,7 +115,7 @@ Response
 List Flavors With Details
 =========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/detail
+.. rest_method:: GET /flavors/detail
 
 Lists flavors with details.
 
@@ -131,7 +128,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - sort_key: sort_key
   - sort_dir: sort_dir
   - limit: limit
@@ -146,7 +142,6 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-   - tenant_id: tenant_id
    - flavors: flavors
    - name: flavor_name
    - id: flavor_id_body
@@ -168,7 +163,7 @@ Response
 Show Flavor Details
 ===================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}
+.. rest_method:: GET /flavors/{flavor_id}
 
 Shows details for a flavor.
 
@@ -181,7 +176,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - flavor_id: flavor_id
 
 Response
@@ -189,7 +183,6 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-   - tenant_id: tenant_id
    - flavor: flavor
    - name: flavor_name
    - id: flavor_id_body
@@ -211,7 +204,7 @@ Response
 Delete Flavor
 =============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/flavors/{flavor_id}
+.. rest_method:: DELETE /flavors/{flavor_id}
 
 Deletes a flavor.
 
@@ -228,7 +221,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - flavor_id: flavor_id
 
 Response

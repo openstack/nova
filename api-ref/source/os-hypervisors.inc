@@ -14,7 +14,7 @@ for a hypervisor.
 List Hypervisors
 ================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors
+.. rest_method:: GET /os-hypervisors
 
 Lists hypervisors.
 
@@ -23,13 +23,6 @@ Policy defaults enable only users with the administrative role to perform this o
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -42,7 +35,7 @@ Response
 List Hypervisors Details
 ========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/detail
+.. rest_method:: GET /os-hypervisors/detail
 
 Lists hypervisors details.
 
@@ -51,13 +44,6 @@ Policy defaults enable only users with the administrative role to perform this o
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -70,7 +56,7 @@ Response
 Show Hypervisor Statistics
 ==========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/statistics
+.. rest_method:: GET /os-hypervisors/statistics
 
 Shows summary statistics for all hypervisors over all compute nodes.
 
@@ -79,13 +65,6 @@ Policy defaults enable only users with the administrative role to perform this o
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -98,7 +77,7 @@ Response
 Show Hypervisor Details
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/{hypervisor_id}
+.. rest_method:: GET /os-hypervisors/{hypervisor_id}
 
 Shows details for a hypervisor.
 
@@ -114,7 +93,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - hypervisor_id: hypervisor_id
 
 Response
@@ -128,7 +106,7 @@ Response
 Show Hypervisor Uptime
 ======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/{hypervisor_id}/uptime
+.. rest_method:: GET /os-hypervisors/{hypervisor_id}/uptime
 
 Shows the uptime for a hypervisor.
 
@@ -144,7 +122,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - hypervisor_id: hypervisor_id
 
 Response
@@ -158,7 +135,7 @@ Response
 Search Hypervisor
 =================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/{hypervisor_id}/search
+.. rest_method:: GET /os-hypervisors/{hypervisor_id}/search
 
 Search hypervisor by given hypervisor id.
 
@@ -174,7 +151,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - hypervisor_id: hypervisor_id
 
 Response
@@ -188,7 +164,7 @@ Response
 List Hypervisor Servers
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hypervisors/{hypervisor_id}/servers
+.. rest_method:: GET /os-hypervisors/{hypervisor_id}/servers
 
 List all servers belong to given hypervisor.
 
@@ -204,7 +180,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - hypervisor_id: hypervisor_id
 
 Response
