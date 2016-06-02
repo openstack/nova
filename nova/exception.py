@@ -220,7 +220,7 @@ class ImageNotAuthorized(NovaException):
 
 
 class Invalid(NovaException):
-    msg_fmt = _("Unacceptable parameters.")
+    msg_fmt = _("Bad Request - Invalid Parameters")
     code = 400
 
 
