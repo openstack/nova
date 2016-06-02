@@ -157,3 +157,12 @@ class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-hypervisors/%s/uptime' % hypervisor_id)
         subs = {'hypervisor_id': str(hypervisor_id)}
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
+
+
+class HypervisorsSampleJson228Tests(HypervisorsSampleJsonTests):
+    microversion = '2.28'
+    scenarios = [('v2_28', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(HypervisorsSampleJson228Tests, self).setUp()
+        self.api.microversion = self.microversion

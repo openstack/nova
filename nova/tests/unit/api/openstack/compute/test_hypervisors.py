@@ -16,6 +16,7 @@
 import copy
 import mock
 import netaddr
+from oslo_serialization import jsonutils
 from webob import exc
 
 from nova.api.openstack.compute import hypervisors \
@@ -28,6 +29,12 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests import uuidsentinel as uuids
 
+CPU_INFO = """
+{"arch": "x86_64",
+"vendor": "fake",
+"topology": {"cores": 1, "threads": 1, "sockets": 1},
+"features": [],
+"model": ""}"""
 
 TEST_HYPERS = [
     dict(id=1,
@@ -46,7 +53,7 @@ TEST_HYPERS = [
          free_disk_gb=125,
          current_workload=2,
          running_vms=2,
-         cpu_info='cpu_info',
+         cpu_info=CPU_INFO,
          disk_available_least=100,
          host_ip=netaddr.IPAddress('1.1.1.1')),
     dict(id=2,
@@ -65,7 +72,7 @@ TEST_HYPERS = [
          free_disk_gb=125,
          current_workload=2,
          running_vms=2,
-         cpu_info='cpu_info',
+         cpu_info=CPU_INFO,
          disk_available_least=100,
          host_ip=netaddr.IPAddress('2.2.2.2'))]
 
@@ -158,6 +165,8 @@ def fake_instance_get_all_by_host(context, host):
 
 
 class HypervisorsTestV21(test.NoDBTestCase):
+    api_version = '2.1'
+
     # copying the objects locally so the cells testcases can provide their own
     TEST_HYPERS_OBJ = copy.deepcopy(TEST_HYPERS_OBJ)
     TEST_SERVICES = copy.deepcopy(TEST_SERVICES)
@@ -176,7 +185,6 @@ class HypervisorsTestV21(test.NoDBTestCase):
                            'status': 'enabled',
                            'service': dict(id=2, host='compute2',
                                         disabled_reason=None)})
-
     INDEX_HYPER_DICTS = [
         dict(id=1, hypervisor_hostname="hyper1",
              state='up', status='enabled'),
@@ -184,7 +192,8 @@ class HypervisorsTestV21(test.NoDBTestCase):
              state='up', status='enabled')]
 
     def _get_request(self, use_admin_context):
-        return fakes.HTTPRequest.blank('', use_admin_context=use_admin_context)
+        return fakes.HTTPRequest.blank('', use_admin_context=use_admin_context,
+                                       version=self.api_version)
 
     def _set_up_controller(self):
         self.controller = hypervisors_v21.HypervisorsController()
@@ -208,21 +217,25 @@ class HypervisorsTestV21(test.NoDBTestCase):
                       fake_compute_node_statistics)
 
     def test_view_hypervisor_nodetail_noservers(self):
+        req = self._get_request(True)
         result = self.controller._view_hypervisor(
-            self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], False)
+            self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], False, req)
 
         self.assertEqual(result, self.INDEX_HYPER_DICTS[0])
 
     def test_view_hypervisor_detail_noservers(self):
+        req = self._get_request(True)
         result = self.controller._view_hypervisor(
-            self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], True)
+            self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], True, req)
 
         self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
 
     def test_view_hypervisor_servers(self):
+        req = self._get_request(True)
         result = self.controller._view_hypervisor(self.TEST_HYPERS_OBJ[0],
                                                   self.TEST_SERVICES[0],
-                                                  False, self.TEST_SERVERS)
+                                                  False, req,
+                                                  self.TEST_SERVERS)
         expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
         expected_dict.update({'servers': [
                                   dict(name="inst1", uuid=uuids.instance_1),
@@ -511,3 +524,11 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
                        fake_compute_node_statistics)
         self.stubs.Set(self.controller.host_api, 'instance_get_all_by_host',
                        self.fake_instance_get_all_by_host)
+
+
+class HypervisorsTestV228(HypervisorsTestV21):
+    api_version = '2.28'
+
+    DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV21.DETAIL_HYPERS_DICTS)
+    DETAIL_HYPERS_DICTS[0]['cpu_info'] = jsonutils.loads(CPU_INFO)
+    DETAIL_HYPERS_DICTS[1]['cpu_info'] = jsonutils.loads(CPU_INFO)

@@ -79,9 +79,10 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
                        fake_service_get_by_compute_host)
 
     def test_view_hypervisor_detail_noservers(self):
+        req = self._get_request()
         result = self.controller._view_hypervisor(
             test_hypervisors.TEST_HYPERS_OBJ[0],
-            test_hypervisors.TEST_SERVICES[0], True)
+            test_hypervisors.TEST_SERVICES[0], True, req)
 
         self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
 

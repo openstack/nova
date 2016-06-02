@@ -15,8 +15,10 @@
 
 """The hypervisors admin extension."""
 
+from oslo_serialization import jsonutils
 import webob.exc
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -38,7 +40,7 @@ class HypervisorsController(wsgi.Controller):
         self.servicegroup_api = servicegroup.API()
         super(HypervisorsController, self).__init__()
 
-    def _view_hypervisor(self, hypervisor, service, detail, servers=None,
+    def _view_hypervisor(self, hypervisor, service, detail, req, servers=None,
                          **kwargs):
         alive = self.servicegroup_api.service_is_up(service)
         hyp_dict = {
@@ -54,8 +56,7 @@ class HypervisorsController(wsgi.Controller):
                           'memory_mb_used', 'local_gb_used',
                           'hypervisor_type', 'hypervisor_version',
                           'free_ram_mb', 'free_disk_gb', 'current_workload',
-                          'running_vms', 'cpu_info', 'disk_available_least',
-                          'host_ip'):
+                          'running_vms', 'disk_available_least', 'host_ip'):
                 hyp_dict[field] = getattr(hypervisor, field)
 
             hyp_dict['service'] = {
@@ -63,6 +64,11 @@ class HypervisorsController(wsgi.Controller):
                 'host': hypervisor.host,
                 'disabled_reason': service.disabled_reason,
                 }
+
+            if api_version_request.is_supported(req, min_version='2.28'):
+                hyp_dict['cpu_info'] = jsonutils.loads(hypervisor.cpu_info)
+            else:
+                hyp_dict['cpu_info'] = hypervisor.cpu_info
 
         if servers:
             hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])
@@ -84,7 +90,7 @@ class HypervisorsController(wsgi.Controller):
                                  hyp,
                                  self.host_api.service_get_by_compute_host(
                                      context, hyp.host),
-                                 False)
+                                 False, req)
                                  for hyp in compute_nodes])
 
     @extensions.expected_errors(())
@@ -94,11 +100,8 @@ class HypervisorsController(wsgi.Controller):
         compute_nodes = self.host_api.compute_node_get_all(context)
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
-                                 hyp,
-                                 self.host_api.service_get_by_compute_host(
-                                     context, hyp.host),
-                                 True)
-                                 for hyp in compute_nodes])
+            hyp, self.host_api.service_get_by_compute_host(context, hyp.host),
+            True, req) for hyp in compute_nodes])
 
     @extensions.expected_errors(404)
     def show(self, req, id):
@@ -112,7 +115,8 @@ class HypervisorsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
         service = self.host_api.service_get_by_compute_host(
             context, hyp.host)
-        return dict(hypervisor=self._view_hypervisor(hyp, service, True))
+        return dict(hypervisor=self._view_hypervisor(
+            hyp, service, True, req))
 
     @extensions.expected_errors((400, 404, 501))
     def uptime(self, req, id):
@@ -135,7 +139,7 @@ class HypervisorsController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
         service = self.host_api.service_get_by_compute_host(context, host)
-        return dict(hypervisor=self._view_hypervisor(hyp, service, False,
+        return dict(hypervisor=self._view_hypervisor(hyp, service, False, req,
                                                      uptime=uptime))
 
     @extensions.expected_errors(404)
@@ -149,7 +153,7 @@ class HypervisorsController(wsgi.Controller):
                                      hyp,
                                      self.host_api.service_get_by_compute_host(
                                          context, hyp.host),
-                                     False)
+                                     False, req)
                                      for hyp in hypervisors])
         else:
             msg = _("No hypervisor matching '%s' could be found.") % id
@@ -170,7 +174,7 @@ class HypervisorsController(wsgi.Controller):
                     compute_node.host)
             service = self.host_api.service_get_by_compute_host(
                 context, compute_node.host)
-            hyp = self._view_hypervisor(compute_node, service, False,
+            hyp = self._view_hypervisor(compute_node, service, False, req,
                                         instances)
             hypervisors.append(hyp)
         return dict(hypervisors=hypervisors)
