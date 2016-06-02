@@ -22,7 +22,6 @@ from oslo_utils import units
 from nova import test
 from nova.virt.disk import api
 from nova.virt.disk.mount import api as mount
-from nova.virt.disk.vfs import localfs
 from nova.virt.image import model as imgmodel
 
 
@@ -41,14 +40,11 @@ class FakeMount(object):
 
 
 class APITestCase(test.NoDBTestCase):
-    @mock.patch.object(localfs.VFSLocalFS, 'get_image_fs', autospec=True,
-                       return_value='')
-    def test_can_resize_need_fs_type_specified(self, mock_image_fs):
+    def test_can_resize_need_fs_type_specified(self):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
         image = imgmodel.LocalFileImage(imgfile.name, imgmodel.FORMAT_QCOW2)
         self.assertFalse(api.is_image_extendable(image))
-        self.assertTrue(mock_image_fs.called)
 
     @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
     def test_is_image_extendable_raw(self, mock_exec):
