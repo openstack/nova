@@ -513,7 +513,9 @@ class ComputeTaskManager(base.Base):
                 self._destroy_build_request(context, instance)
             except exception.BuildRequestNotFound:
                 # This indicates an instance delete has been requested in the
-                # API. Stop the build and cleanup the instance_mapping.
+                # API. Stop the build, cleanup the instance_mapping and
+                # potentially the block_device_mappings
+                # TODO(alaski): Handle block_device_mapping cleanup
                 if inst_mapping:
                     inst_mapping.destroy()
                 return

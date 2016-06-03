@@ -221,6 +221,20 @@ class ComputeCellsAPI(compute_api.API):
                     context, instance.uuid)
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
+            if self._delete_while_booting(context, instance):
+                return
+            # If instance.cell_name was not set it's possible that the Instance
+            # object here was pulled from a BuildRequest object and is not
+            # fully populated. Notably it will be missing an 'id' field which
+            # will prevent instance.destroy from functioning properly. A
+            # lookup is attempted which will either return a full Instance or
+            # None if not found. If not found then it's acceptable to skip the
+            # rest of the delete processing.
+            instance = self._lookup_instance(context, instance.uuid)
+            if instance is None:
+                # Instance has been deleted out from under us
+                return
+
             try:
                 super(ComputeCellsAPI, self)._local_delete(context, instance,
                                                            bdms, method_name,

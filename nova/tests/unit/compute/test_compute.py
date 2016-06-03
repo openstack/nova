@@ -7492,6 +7492,11 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.fake_show = fake_show
 
+        def fake_lookup(self, context, instance):
+            return instance
+
+        self.stub_out('nova.compute.api.API._lookup_instance', fake_lookup)
+
         # Mock out build_instances and rebuild_instance since nothing in these
         # tests should need those to actually run. We do this to avoid
         # possible races with other tests that actually test those methods
@@ -8962,7 +8967,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context,
                                          instance, '192.168.1.1')
-        self.compute_api.delete(self.context, instance)
+        with mock.patch.object(self.compute_api, '_lookup_instance',
+                               return_value=instance):
+            self.compute_api.delete(self.context, instance)
 
     def test_attach_volume_invalid(self):
         instance = fake_instance.fake_instance_obj(None, **{

@@ -50,6 +50,7 @@ from nova.compute import vm_states
 from nova import conductor
 import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
+from nova import context as nova_context
 from nova import crypto
 from nova.db import base
 from nova import exception
@@ -1532,11 +1533,144 @@ class API(base.Base):
                                                auto_disk_config,
                                                image_ref)
 
+    def _lookup_instance(self, context, uuid):
+        '''Helper method for pulling an instance object from a database.
+
+        During the transition to cellsv2 there is some complexity around
+        retrieving an instance from the database which this method hides. If
+        there is an instance mapping then query the cell for the instance, if
+        no mapping exists then query the configured nova database.
+
+        Once we are past the point that all deployments can be assumed to be
+        migrated to cellsv2 this method can go away.
+        '''
+        inst_map = None
+        try:
+            inst_map = objects.InstanceMapping.get_by_instance_uuid(
+                context, uuid)
+        except exception.InstanceMappingNotFound:
+            # TODO(alaski): This exception block can be removed once we're
+            # guaranteed everyone is using cellsv2.
+            pass
+
+        if inst_map is None or inst_map.cell_mapping is None:
+            # If inst_map is None then the deployment has not migrated to
+            # cellsv2 yet.
+            # If inst_map.cell_mapping is None then the instance is not in a
+            # cell yet. Until instance creation moves to the conductor the
+            # instance can be found in the configured database, so attempt
+            # to look it up.
+            try:
+                instance = objects.Instance.get_by_uuid(context, uuid)
+            except exception.InstanceNotFound:
+                # If we get here then the conductor is in charge of writing the
+                # instance to the database and hasn't done that yet. It's up to
+                # the caller of this method to determine what to do with that
+                # information.
+                return
+        else:
+            with nova_context.target_cell(context, inst_map.cell_mapping):
+                try:
+                    instance = objects.Instance.get_by_uuid(context,
+                                                            uuid)
+                except exception.InstanceNotFound:
+                    # Since the cell_mapping exists we know the instance is in
+                    # the cell, however InstanceNotFound means it's already
+                    # deleted.
+                    return
+        return instance
+
+    def _delete_while_booting(self, context, instance):
+        """Handle deletion if the instance has not reached a cell yet
+
+        Deletion before an instance reaches a cell needs to be handled
+        differently. What we're attempting to do is delete the BuildRequest
+        before the api level conductor does.  If we succeed here then the boot
+        request stops before reaching a cell.  If not then the instance will
+        need to be looked up in a cell db and the normal delete path taken.
+        """
+        # Before service version 15 deletion of the BuildRequest has no effect
+        # and will be cleaned up as part of the boot process.
+        service_version = objects.Service.get_minimum_version(
+            context, 'nova-api')
+        if service_version < 15:
+            return False
+        deleted = self._attempt_delete_of_buildrequest(context, instance)
+        if deleted:
+            # If we've reached this block the successful deletion of the
+            # buildrequest indicates that the build process should be halted by
+            # the conductor.
+
+            # Since conductor has halted the build process no cleanup of the
+            # instance is necessary, but quotas must still be decremented.
+            project_id, user_id = quotas_obj.ids_from_instance(
+                context, instance)
+            # This is confusing but actually decrements quota.
+            quotas = self._create_reservations(context,
+                                               instance,
+                                               instance.task_state,
+                                               project_id, user_id)
+            try:
+                quotas.commit()
+
+                # NOTE(alaski): Though the conductor halts the build process it
+                # does not currently delete the instance record. This is
+                # because in the near future the instance record will not be
+                # created if the buildrequest has been deleted here. For now we
+                # ensure the instance has been set to deleted at this point.
+                # Yes this directly contradicts the comment earlier in this
+                # method, but this is a temporary measure.
+                # Look up the instance because the current instance object was
+                # stashed on the buildrequest and therefore not complete enough
+                # to run .destroy().
+                instance = self._lookup_instance(context, instance.uuid)
+                if instance is not None:
+                    # If instance is None it has already been deleted.
+                    instance.destroy()
+            except exception.InstanceNotFound:
+                quotas.rollback()
+
+            return True
+        return False
+
+    def _attempt_delete_of_buildrequest(self, context, instance):
+        # If there is a BuildRequest then the instance may not have been
+        # written to a cell db yet. Delete the BuildRequest here, which
+        # will indicate that the Instance build should not proceed.
+        try:
+            build_req = objects.BuildRequest.get_by_instance_uuid(
+                context, instance.uuid)
+            build_req.destroy()
+        except exception.BuildRequestNotFound:
+            # This means that conductor has deleted the BuildRequest so the
+            # instance is now in a cell and the delete needs to proceed
+            # normally.
+            return False
+        return True
+
     def _delete(self, context, instance, delete_type, cb, **instance_attrs):
         if instance.disable_terminate:
             LOG.info(_LI('instance termination disabled'),
                      instance=instance)
             return
+
+        # If there is an instance.host the instance has been scheduled and
+        # sent to a cell/compute which means it was pulled from the cell db.
+        # Normal delete should be attempted.
+        if not instance.host:
+            if self._delete_while_booting(context, instance):
+                return
+            # If instance.host was not set it's possible that the Instance
+            # object here was pulled from a BuildRequest object and is not
+            # fully populated. Notably it will be missing an 'id' field which
+            # will prevent instance.destroy from functioning properly. A lookup
+            # is attempted which will either return a full Instance or None if
+            # not found. If not found then it's acceptable to skip the rest of
+            # the delete processing.
+            instance = self._lookup_instance(context, instance.uuid)
+            if not instance:
+                # Instance is already deleted.
+                return
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
