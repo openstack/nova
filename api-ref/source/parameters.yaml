@@ -1405,6 +1405,14 @@ force:
   in: body
   required: false
   type: boolean
+force_evacuate:
+  description: |
+    Force an evacuation by not verifying the provided destination host by the
+    scheduler.
+  in: body
+  required: false
+  type: boolean
+  min_version: 2.29
 forced_down:
   in: body
   required: true

@@ -3445,7 +3445,7 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
     def evacuate(self, context, instance, host, on_shared_storage,
-                 admin_password=None):
+                 admin_password=None, force=None):
         """Running evacuate to target host.
 
         Checking vm compute host state, if the host not in expected_state,
@@ -3455,6 +3455,7 @@ class API(base.Base):
         :param host: Target host. if not set, the scheduler will pick up one
         :param on_shared_storage: True if instance files on shared storage
         :param admin_password: password to set on rebuilt instance
+        :param force: Force the evacuation to the specific host target
 
         """
         LOG.debug('vm evacuation scheduled', instance=instance)
@@ -3491,6 +3492,30 @@ class API(base.Base):
             # Some old instances can still have no RequestSpec object attached
             # to them, we need to support the old way
             request_spec = None
+
+        # NOTE(sbauza): Force is a boolean by the new related API version
+        if force is False and host:
+            nodes = objects.ComputeNodeList.get_all_by_host(context, host)
+            if not nodes:
+                raise exception.ComputeHostNotFound(host=host)
+            # NOTE(sbauza): Unset the host to make sure we call the scheduler
+            host = None
+            # FIXME(sbauza): Since only Ironic driver uses more than one
+            # compute per service but doesn't support evacuations,
+            # let's provide the first one.
+            target = nodes[0]
+            if request_spec:
+                # TODO(sbauza): Hydrate a fake spec for old instances not yet
+                # having a request spec attached to them (particularly true for
+                # cells v1). For the moment, let's keep the same behaviour for
+                # all the instances but provide the destination only if a spec
+                # is found.
+                destination = objects.Destination(
+                    host=target.host,
+                    node=target.hypervisor_hostname
+                )
+                request_spec.requested_destination = destination
+
         return self.compute_task_api.rebuild_instance(context,
                        instance=instance,
                        new_pass=admin_password,

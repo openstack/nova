@@ -300,3 +300,12 @@ user documentation.
   From this version of the API the hypervisor's 'cpu_info' field will be
   will returned as JSON object (not string) by sending GET request
   to the /v2.1/os-hypervisors/{hypervisor_id}.
+
+2.29
+----
+
+  Updates the POST request body for the ``evacuate`` action to include the
+  optional ``force`` boolean field defaulted to False.
+  Also changes the evacuate action behaviour when providing a ``host`` string
+  field by calling the nova scheduler to verify the provided host unless the
+  ``force`` attribute is set.
