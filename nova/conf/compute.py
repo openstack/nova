@@ -794,6 +794,10 @@ Possible values:
 * Any positive integer in seconds: The instance will exist for
   the specified number of seconds before being offloaded.
 """),
+    # NOTE(melwitt): We're also using this option as the interval for cleaning
+    # up expired console authorizations from the database. It's related to the
+    # delete_instance_interval in that it's another task for cleaning up
+    # resources related to an instance.
     cfg.IntOpt('instance_delete_interval',
         default=300,
         help="""
