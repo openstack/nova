@@ -35,6 +35,7 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
+from nova.pci import request as pci_request
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova import utils
@@ -217,15 +218,49 @@ class ResourceTracker(object):
                   "GB", {'flavor': instance.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
 
-        pci_requests = objects.InstancePCIRequests.\
-                       get_by_instance_uuid_and_newness(
-                           context, instance.uuid, True)
+        # TODO(moshele): we are recreating the pci requests even if
+        # there was no change on resize. This will cause allocating
+        # the old/new pci device in the resize phase. In the future
+        # we would like to optimise this.
+        new_pci_requests = pci_request.get_pci_requests_from_flavor(
+            new_instance_type)
+        new_pci_requests.instance_uuid = instance.uuid
+        # PCI requests come from two sources: instance flavor and
+        # SR-IOV ports. SR-IOV ports pci_request don't have an alias_name.
+        # On resize merge the SR-IOV ports pci_requests with the new
+        # instance flavor pci_requests.
+        if instance.pci_requests:
+            for request in instance.pci_requests.requests:
+                if request.alias_name is None:
+                    new_pci_requests.requests.append(request)
         claim = claims.MoveClaim(context, instance, new_instance_type,
                                  image_meta, self, self.compute_node,
-                                 pci_requests, overhead=overhead,
+                                 new_pci_requests, overhead=overhead,
                                  limits=limits)
+
         claim.migration = migration
-        instance.migration_context = claim.create_migration_context()
+        claimed_pci_devices_objs = []
+        if self.pci_tracker:
+            # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
+            # in _update_usage_from_instance().
+            claimed_pci_devices_objs = self.pci_tracker.claim_instance(
+                    context, new_pci_requests, claim.claimed_numa_topology)
+        claimed_pci_devices = objects.PciDeviceList(
+                objects=claimed_pci_devices_objs)
+
+        # TODO(jaypipes): Move claimed_numa_topology out of the Claim's
+        # constructor flow so the Claim constructor only tests whether
+        # resources can be claimed, not consume the resources directly.
+        mig_context = objects.MigrationContext(
+            context=context, instance_uuid=instance.uuid,
+            migration_id=migration.id,
+            old_numa_topology=instance.numa_topology,
+            new_numa_topology=claim.claimed_numa_topology,
+            old_pci_devices=instance.pci_devices,
+            new_pci_devices=claimed_pci_devices,
+            old_pci_requests=instance.pci_requests,
+            new_pci_requests=new_pci_requests)
+        instance.migration_context = mig_context
         instance.save()
 
         # Mark the resources in-use for the resize landing on this
@@ -323,9 +358,12 @@ class ResourceTracker(object):
                 usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
                 if self.pci_tracker:
-                    self.pci_tracker.update_pci_for_migration(context,
-                                                              instance,
-                                                              sign=-1)
+                    # free old allocated pci devices
+                    old_pci_devices = self._get_migration_context_resource(
+                        'pci_devices', instance, prefix='old_')
+                    if old_pci_devices:
+                        for pci_device in old_pci_devices:
+                            self.pci_tracker.free_device(pci_device, instance)
                 self._update_usage(usage, sign=-1)
 
                 ctxt = context.elevated()
@@ -685,8 +723,9 @@ class ResourceTracker(object):
     def _get_migration_context_resource(self, resource, instance,
                                         prefix='new_', itype=None):
         migration_context = instance.migration_context
-        if migration_context:
-            return getattr(migration_context, prefix + resource)
+        resource = prefix + resource
+        if migration_context and resource in migration_context:
+            return getattr(migration_context, resource)
         else:
             return None
 
@@ -710,7 +749,7 @@ class ResourceTracker(object):
         record = self.tracked_instances.get(uuid, None)
         itype = None
         numa_topology = None
-
+        sign = 0
         if same_node:
             # same node resize. record usage for whichever instance type the
             # instance is *not* in:
@@ -720,6 +759,7 @@ class ResourceTracker(object):
                         migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance)
+                sign = 1
             else:
                 # instance record already has new flavor, hold space for a
                 # possible revert to the old instance type:
@@ -752,8 +792,9 @@ class ResourceTracker(object):
         if itype:
             usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
-            if self.pci_tracker:
-                self.pci_tracker.update_pci_for_migration(context, instance)
+            if self.pci_tracker and sign:
+                self.pci_tracker.update_pci_for_instance(
+                    context, instance, sign=sign)
             self._update_usage(usage)
             if self.pci_tracker:
                 obj = self.pci_tracker.stats.to_device_pools_obj()

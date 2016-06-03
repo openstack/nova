@@ -26,7 +26,6 @@ from nova import objects
 from nova.objects import fields
 from nova.pci import stats
 from nova.pci import whitelist
-from nova.virt import hardware
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
@@ -249,16 +248,27 @@ class PciDevTracker(object):
             self.allocations[instance['uuid']] += devs
 
     def claim_instance(self, context, pci_requests, instance_numa_topology):
-        if not self.pci_devs or not pci_requests.requests:
-            return
+        devs = []
+        if self.pci_devs and pci_requests.requests:
+            instance_uuid = pci_requests.instance_uuid
+            devs = self._claim_instance(context, pci_requests,
+                                        instance_numa_topology)
+            if devs:
+                self.claims[instance_uuid] = devs
+        return devs
 
-        instance_uuid = pci_requests.instance_uuid
-        devs = self._claim_instance(context, pci_requests,
-                                    instance_numa_topology)
-        if devs:
-            self.claims[instance_uuid] = devs
-            return devs
-        return None
+    def free_device(self, dev, instance):
+        """Free device from pci resource tracker
+
+        :param dev: cloned pci device object that needs to be free
+        :param instance: the instance that this pci device
+                         is allocated to
+        """
+        for pci_dev in self.pci_devs:
+            # find the matching pci device in the pci resource tracker
+            # pci device. Once found one free it.
+            if dev == pci_dev and dev.instance_uuid == instance['uuid']:
+                self._free_device(pci_dev)
 
     def _free_device(self, dev, instance=None):
         freed_devs = dev.free(instance)
@@ -296,27 +306,6 @@ class PciDevTracker(object):
             self.free_instance(context, instance)
         if sign == 1:
             self.allocate_instance(instance)
-
-    def update_pci_for_migration(self, context, instance, sign=1):
-        """Update instance's pci usage information when it is migrated.
-
-        The caller should hold the COMPUTE_RESOURCE_SEMAPHORE lock.
-
-        :param sign: claim devices for instance when sign is 1, remove
-                     the claims when sign is -1
-        """
-        uuid = instance['uuid']
-        pci_requests = objects.InstancePCIRequests.get_by_instance(
-                context, instance)
-        instance_numa_topology = hardware.instance_topology_from_instance(
-                instance)
-        if sign == 1 and uuid not in self.claims:
-            devs = self._claim_instance(context, pci_requests,
-                                        instance_numa_topology)
-            if devs:
-                self.claims[uuid] = devs
-        if sign == -1 and uuid in self.claims:
-            self._free_instance(instance)
 
     def clean_usage(self, instances, migrations, orphans):
         """Remove all usages for instances not passed in the parameter.

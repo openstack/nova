@@ -52,6 +52,9 @@ _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
                           'flavor', 'vcpu_model', 'migration_context',
                           'keypairs']
+# These are fields that applied/drooped by migration_context
+_MIGRATION_CONTEXT_ATTRS = ['numa_topology', 'pci_requests',
+                            'pci_devices']
 
 # These are fields that can be specified as expected_attrs
 INSTANCE_OPTIONAL_ATTRS = (_INSTANCE_OPTIONAL_JOINED_FIELDS +
@@ -878,17 +881,26 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
     def apply_migration_context(self):
         if self.migration_context:
-            self.numa_topology = self.migration_context.new_numa_topology
+            self._set_migration_context_to_instance(prefix='new_')
         else:
             LOG.debug("Trying to apply a migration context that does not "
                       "seem to be set for this instance", instance=self)
 
     def revert_migration_context(self):
         if self.migration_context:
-            self.numa_topology = self.migration_context.old_numa_topology
+            self._set_migration_context_to_instance(prefix='old_')
         else:
             LOG.debug("Trying to revert a migration context that does not "
                       "seem to be set for this instance", instance=self)
+
+    def _set_migration_context_to_instance(self, prefix):
+        for inst_attr_name in _MIGRATION_CONTEXT_ATTRS:
+            setattr(self, inst_attr_name, None)
+            attr_name = prefix + inst_attr_name
+            if attr_name in self.migration_context:
+                attr_value = getattr(
+                    self.migration_context, attr_name)
+                setattr(self, inst_attr_name, attr_value)
 
     @contextlib.contextmanager
     def mutated_migration_context(self):
@@ -898,12 +910,15 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         context will be saved which can cause incorrect resource tracking, and
         should be avoided.
         """
-        current_numa_topo = self.numa_topology
+        current_values = {}
+        for attr_name in _MIGRATION_CONTEXT_ATTRS:
+            current_values[attr_name] = getattr(self, attr_name)
         self.apply_migration_context()
         try:
             yield
         finally:
-            self.numa_topology = current_numa_topo
+            for attr_name in _MIGRATION_CONTEXT_ATTRS:
+                setattr(self, attr_name, current_values[attr_name])
 
     @base.remotable
     def drop_migration_context(self):
