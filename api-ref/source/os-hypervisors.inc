@@ -23,6 +23,14 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
 
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: hypervisor_limit
+  - marker: hypervisor_marker
+
 Response
 --------
 
@@ -51,6 +59,14 @@ Policy defaults enable only users with the administrative role to perform this o
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - limit: hypervisor_limit
+  - marker: hypervisor_marker
 
 Response
 --------

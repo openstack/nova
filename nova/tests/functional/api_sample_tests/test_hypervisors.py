@@ -140,3 +140,30 @@ class HypervisorsSampleJson228Tests(HypervisorsSampleJsonTests):
     def setUp(self):
         super(HypervisorsSampleJson228Tests, self).setUp()
         self.api.microversion = self.microversion
+
+
+class HypervisorsSampleJson233Tests(api_sample_base.ApiSampleTestBaseV21):
+    ADMIN_API = True
+    sample_dir = "os-hypervisors"
+    microversion = '2.33'
+    scenarios = [('v2_33', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(HypervisorsSampleJson233Tests, self).setUp()
+        self.api.microversion = self.microversion
+        # Start a new compute service to fake a record with hypervisor id=2
+        # for pagination test.
+        self.start_service('compute', host='host1')
+
+    def test_hypervisors_list(self):
+        response = self._do_get('os-hypervisors?limit=1&marker=1')
+        self._verify_response('hypervisors-list-resp', {}, response, 200)
+
+    def test_hypervisors_detail(self):
+        subs = {
+            'hypervisor_id': '2',
+            'host': 'host1',
+            'host_name': 'host1'
+        }
+        response = self._do_get('os-hypervisors/detail?limit=1&marker=1')
+        self._verify_response('hypervisors-detail-resp', subs, response, 200)

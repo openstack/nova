@@ -402,6 +402,25 @@ host_query:
   in: query
   required: false
   type: string
+hypervisor_limit:
+  description: |
+    Requests a page size of items. Returns a number of items up to a limit value.
+    Use the ``limit`` parameter to make an initial limited request and use the ID
+    of the last-seen item from the response as the ``marker`` parameter value in a
+    subsequent limited request.
+  in: query
+  required: false
+  type: integer
+  min_version: 2.33
+hypervisor_marker:
+  description: |
+    The ID of the last-seen item. Use the ``limit`` parameter to make an initial limited
+    request and use the ID of the last-seen item from the response as the ``marker``
+    parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: string
+  min_version: 2.33
 hypervisor_query:
   description: |
     Filters the response by a hypervisor type.

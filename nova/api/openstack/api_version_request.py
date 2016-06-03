@@ -82,6 +82,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.31 - Fix os-console-auth-tokens to work for all console types.
     * 2.32 - Add tag to networks and block_device_mapping_v2 in server boot
              request body.
+    * 2.33 - Add pagination support for hypervisors.
 """
 
 # The minimum and maximum versions of the API supported
@@ -90,7 +91,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.32"
+_MAX_API_VERSION = "2.33"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

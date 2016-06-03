@@ -7488,6 +7488,58 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         new_stats = jsonutils.loads(node['stats'])
         self.assertEqual(self.stats, new_stats)
 
+    def test_compute_node_get_all_by_pagination(self):
+        service_dict = dict(host='host2', binary='nova-compute',
+                            topic=CONF.compute_topic, report_count=1,
+                            disabled=False)
+        service = db.service_create(self.ctxt, service_dict)
+        compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
+                                 uuid=uuidsentinel.fake_compute_node,
+                                 vcpus_used=0, memory_mb_used=0,
+                                 local_gb_used=0, free_ram_mb=1024,
+                                 free_disk_gb=2048, hypervisor_type="xen",
+                                 hypervisor_version=1, cpu_info="",
+                                 running_vms=0, current_workload=0,
+                                 service_id=service['id'],
+                                 host=service['host'],
+                                 disk_available_least=100,
+                                 hypervisor_hostname='abcde11',
+                                 host_ip='127.0.0.1',
+                                 supported_instances='',
+                                 pci_stats='',
+                                 metrics='',
+                                 extra_resources='',
+                                 cpu_allocation_ratio=16.0,
+                                 ram_allocation_ratio=1.5,
+                                 disk_allocation_ratio=1.0,
+                                 stats='', numa_topology='')
+        stats = dict(num_instances=2, num_proj_12345=1,
+                     num_proj_23456=1, num_vm_building=2)
+        compute_node_dict['stats'] = jsonutils.dumps(stats)
+        db.compute_node_create(self.ctxt, compute_node_dict)
+
+        nodes = db.compute_node_get_all_by_pagination(self.ctxt,
+                                                      limit=1, marker=1)
+        self.assertEqual(1, len(nodes))
+        node = nodes[0]
+        self._assertEqualObjects(compute_node_dict, node,
+                    ignored_keys=self._ignored_keys +
+                                 ['stats', 'service'])
+        new_stats = jsonutils.loads(node['stats'])
+        self.assertEqual(stats, new_stats)
+
+        nodes = db.compute_node_get_all_by_pagination(self.ctxt)
+        self.assertEqual(2, len(nodes))
+        node = nodes[0]
+        self._assertEqualObjects(self.compute_node_dict, node,
+                    ignored_keys=self._ignored_keys +
+                                 ['stats', 'service'])
+        new_stats = jsonutils.loads(node['stats'])
+        self.assertEqual(self.stats, new_stats)
+        self.assertRaises(exception.MarkerNotFound,
+                          db.compute_node_get_all_by_pagination,
+                          self.ctxt, limit=1, marker=999)
+
     def test_compute_node_get_all_deleted_compute_node(self):
         # Create a service and compute node and ensure we can find its stats;
         # delete the service and compute node when done and loop again

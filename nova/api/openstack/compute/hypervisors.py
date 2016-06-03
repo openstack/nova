@@ -20,6 +20,7 @@ import webob.exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.views import hypervisors as hyper_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -34,6 +35,8 @@ ALIAS = "os-hypervisors"
 
 class HypervisorsController(wsgi.Controller):
     """The Hypervisors API controller for the OpenStack API."""
+
+    _view_builder_class = hyper_view.ViewBuilder
 
     def __init__(self):
         self.host_api = compute.HostAPI()
@@ -80,28 +83,76 @@ class HypervisorsController(wsgi.Controller):
 
         return hyp_dict
 
+    @wsgi.Controller.api_version("2.33")  # noqa
+    @extensions.expected_errors((400))
+    def index(self, req):
+        limit, marker = common.get_limit_and_marker(req)
+        return self._index(req, limit=limit, marker=marker, links=True)
+
+    @wsgi.Controller.api_version("2.1", "2.32")  # noqa
     @extensions.expected_errors(())
     def index(self, req):
+        return self._index(req)
+
+    def _index(self, req, limit=None, marker=None, links=False):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)
-        compute_nodes = self.host_api.compute_node_get_all(context)
-        req.cache_db_compute_nodes(compute_nodes)
-        return dict(hypervisors=[self._view_hypervisor(
-                                 hyp,
-                                 self.host_api.service_get_by_compute_host(
-                                     context, hyp.host),
-                                 False, req)
-                                 for hyp in compute_nodes])
 
+        try:
+            compute_nodes = self.host_api.compute_node_get_all(
+                context, limit=limit, marker=marker)
+        except exception.MarkerNotFound:
+            msg = _('marker [%s] not found') % marker
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        req.cache_db_compute_nodes(compute_nodes)
+        hypervisors_list = [self._view_hypervisor(
+                            hyp,
+                            self.host_api.service_get_by_compute_host(
+                                context, hyp.host),
+                            False, req)
+                            for hyp in compute_nodes]
+
+        hypervisors_dict = dict(hypervisors=hypervisors_list)
+        if links:
+            hypervisors_links = self._view_builder.get_links(req,
+                                                             hypervisors_list)
+            if hypervisors_links:
+                hypervisors_dict['hypervisors_links'] = hypervisors_links
+        return hypervisors_dict
+
+    @wsgi.Controller.api_version("2.33")  # noqa
+    @extensions.expected_errors((400))
+    def detail(self, req):
+        limit, marker = common.get_limit_and_marker(req)
+        return self._detail(req, limit=limit, marker=marker, links=True)
+
+    @wsgi.Controller.api_version("2.1", "2.32")  # noqa
     @extensions.expected_errors(())
     def detail(self, req):
+        return self._detail(req)
+
+    def _detail(self, req, limit=None, marker=None, links=False):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)
-        compute_nodes = self.host_api.compute_node_get_all(context)
+
+        try:
+            compute_nodes = self.host_api.compute_node_get_all(
+                context, limit=limit, marker=marker)
+        except exception.MarkerNotFound:
+            msg = _('marker [%s] not found') % marker
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         req.cache_db_compute_nodes(compute_nodes)
-        return dict(hypervisors=[self._view_hypervisor(
+        hypervisors_list = [
+            self._view_hypervisor(
             hyp, self.host_api.service_get_by_compute_host(context, hyp.host),
-            True, req) for hyp in compute_nodes])
+            True, req) for hyp in compute_nodes]
+        hypervisors_dict = dict(hypervisors=hypervisors_list)
+        if links:
+            hypervisors_links = self._view_builder.get_links(
+                req, hypervisors_list, detail=True)
+            if hypervisors_links:
+                hypervisors_dict['hypervisors_links'] = hypervisors_links
+        return hypervisors_dict
 
     @extensions.expected_errors(404)
     def show(self, req, id):

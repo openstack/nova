@@ -32,7 +32,7 @@ def fake_compute_node_get(context, compute_id):
     raise exception.ComputeHostNotFound(host=compute_id)
 
 
-def fake_compute_node_get_all(context):
+def fake_compute_node_get_all(context, limit=None, marker=None):
     return test_hypervisors.TEST_HYPERS_OBJ
 
 

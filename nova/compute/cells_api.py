@@ -601,7 +601,9 @@ class HostAPI(compute_api.HostAPI):
         except exception.CellRoutingInconsistency:
             raise exception.ComputeHostNotFound(host=compute_id)
 
-    def compute_node_get_all(self, context):
+    def compute_node_get_all(self, context, limit=None, marker=None):
+        # NOTE(lyj): No pagination for cells, just make sure the arguments
+        #            for the method are the same with the compute.api for now.
         return self.cells_rpcapi.compute_node_get_all(context)
 
     def compute_node_search_by_hypervisor(self, context, hypervisor_match):

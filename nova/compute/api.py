@@ -3666,8 +3666,9 @@ class HostAPI(base.Base):
         """Return compute node entry for particular integer ID."""
         return objects.ComputeNode.get_by_id(context, int(compute_id))
 
-    def compute_node_get_all(self, context):
-        return objects.ComputeNodeList.get_all(context)
+    def compute_node_get_all(self, context, limit=None, marker=None):
+        return objects.ComputeNodeList.get_by_pagination(
+            context, limit=limit, marker=marker)
 
     def compute_node_search_by_hypervisor(self, context, hypervisor_match):
         return objects.ComputeNodeList.get_by_hypervisor(context,

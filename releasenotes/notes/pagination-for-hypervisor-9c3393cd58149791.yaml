@@ -1,0 +1,5 @@
+---
+features:
+  - Added microversion v2.33 which adds paging support for hypervisors, the
+    admin is able to perform paginate query by using limit and marker to get
+    a list of hypervisors. The result will be sorted by hypervisor id.

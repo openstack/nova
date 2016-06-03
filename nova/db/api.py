@@ -244,6 +244,19 @@ def compute_node_get_all(context):
     return IMPL.compute_node_get_all(context)
 
 
+def compute_node_get_all_by_pagination(context, limit=None, marker=None):
+    """Get compute nodes by pagination.
+    :param context: The security context
+    :param limit: Maximum number of items to return
+    :param marker: The last item of the previous page, the next results after
+                   this value will be returned
+
+    :returns: List of dictionaries each containing compute node properties
+    """
+    return IMPL.compute_node_get_all_by_pagination(context,
+                                                   limit=limit, marker=marker)
+
+
 def compute_node_get_all_by_host(context, host):
     """Get compute nodes by host name
 

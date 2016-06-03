@@ -335,3 +335,11 @@ user documentation.
   config drive. For example, a network interface on the virtual PCI bus tagged
   with 'nic1' will appear in the metadata along with its bus (PCI), bus address
   (ex: 0000:00:02.0), MAC address, and tag ('nic1').
+
+2.33
+----
+
+  Support pagination for hypervisor by accepting limit and marker from the GET
+  API request::
+
+    GET /v2.1/{tenant_id}/os-hypervisors?marker={hypervisor_id}&limit={limit}

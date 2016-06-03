@@ -382,6 +382,16 @@ class _TestComputeNodeObject(object):
                          subs=self.subs(),
                          comparators=self.comparators())
 
+    @mock.patch('nova.db.compute_node_get_all_by_pagination',
+                return_value=[fake_compute_node])
+    def test_get_by_pagination(self, fake_get_by_pagination):
+        computes = compute_node.ComputeNodeList.get_by_pagination(
+            self.context, limit=1, marker=1)
+        self.assertEqual(1, len(computes))
+        self.compare_obj(computes[0], fake_compute_node,
+                         subs=self.subs(),
+                         comparators=self.comparators())
+
     @mock.patch('nova.db.compute_nodes_get_by_service_id')
     def test__get_by_service(self, cn_get_by_svc_id):
         cn_get_by_svc_id.return_value = [fake_compute_node]

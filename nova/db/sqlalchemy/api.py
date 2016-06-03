@@ -564,7 +564,7 @@ def service_update(context, service_id, values):
 ###################
 
 
-def _compute_node_select(context, filters=None):
+def _compute_node_select(context, filters=None, limit=None, marker=None):
     if filters is None:
         filters = {}
 
@@ -582,11 +582,22 @@ def _compute_node_select(context, filters=None):
     if "hypervisor_hostname" in filters:
         hyp_hostname = filters["hypervisor_hostname"]
         select = select.where(cn_tbl.c.hypervisor_hostname == hyp_hostname)
+    if marker is not None:
+        try:
+            compute_node_get(context, marker)
+        except exception.ComputeHostNotFound:
+            raise exception.MarkerNotFound(marker)
+        select = select.where(cn_tbl.c.id > marker)
+    if limit is not None:
+        select = select.limit(limit)
+    # Explictly order by id, so we're not dependent on the native sort
+    # order of the underlying DB.
+    select = select.order_by(asc("id"))
     return select
 
 
-def _compute_node_fetchall(context, filters=None):
-    select = _compute_node_select(context, filters)
+def _compute_node_fetchall(context, filters=None, limit=None, marker=None):
+    select = _compute_node_select(context, filters, limit=limit, marker=marker)
     engine = get_engine(context)
     conn = engine.connect()
 
@@ -646,6 +657,11 @@ def compute_node_get_all_by_host(context, host):
 @pick_context_manager_reader
 def compute_node_get_all(context):
     return _compute_node_fetchall(context)
+
+
+@pick_context_manager_reader
+def compute_node_get_all_by_pagination(context, limit=None, marker=None):
+    return _compute_node_fetchall(context, limit=limit, marker=marker)
 
 
 @pick_context_manager_reader

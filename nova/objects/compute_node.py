@@ -452,7 +452,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.12 ComputeNode version 1.12
     # Version 1.13 ComputeNode version 1.13
     # Version 1.14 ComputeNode version 1.14
-    VERSION = '1.14'
+    # Version 1.15 ComputeNode version 1.15
+    VERSION = '1.15'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -460,6 +461,13 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
+                                  db_computes)
+
+    @base.remotable_classmethod
+    def get_by_pagination(cls, context, limit=None, marker=None):
+        db_computes = db.compute_node_get_all_by_pagination(
+            context, limit=limit, marker=marker)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
 

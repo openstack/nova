@@ -108,8 +108,18 @@ TEST_SERVERS = [dict(name="inst1", uuid=uuids.instance_1, host="compute1"),
                 dict(name="inst4", uuid=uuids.instance_4, host="compute2")]
 
 
-def fake_compute_node_get_all(context):
-    return TEST_HYPERS_OBJ
+def fake_compute_node_get_all(context, limit=None, marker=None):
+    if marker in ['99999']:
+        raise exception.MarkerNotFound(marker)
+    marker_found = True if marker is None else False
+    output = []
+    for hyper in TEST_HYPERS_OBJ:
+        if not marker_found and marker == str(hyper.id):
+            marker_found = True
+        elif marker_found:
+            if limit is None or len(output) < int(limit):
+                output.append(hyper)
+    return output
 
 
 def fake_compute_node_search_by_hypervisor(context, hypervisor_re):
@@ -191,8 +201,9 @@ class HypervisorsTestV21(test.NoDBTestCase):
         dict(id=2, hypervisor_hostname="hyper2",
              state='up', status='enabled')]
 
-    def _get_request(self, use_admin_context):
-        return fakes.HTTPRequest.blank('', use_admin_context=use_admin_context,
+    def _get_request(self, use_admin_context, url=''):
+        return fakes.HTTPRequest.blank(url,
+                                       use_admin_context=use_admin_context,
                                        version=self.api_version)
 
     def _set_up_controller(self):
@@ -477,7 +488,7 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
                          for hyp in INDEX_HYPER_DICTS]
 
     @classmethod
-    def fake_compute_node_get_all(cls, context):
+    def fake_compute_node_get_all(cls, context, limit=None, marker=None):
         return cls.TEST_HYPERS_OBJ
 
     @classmethod
@@ -532,3 +543,79 @@ class HypervisorsTestV228(HypervisorsTestV21):
     DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV21.DETAIL_HYPERS_DICTS)
     DETAIL_HYPERS_DICTS[0]['cpu_info'] = jsonutils.loads(CPU_INFO)
     DETAIL_HYPERS_DICTS[1]['cpu_info'] = jsonutils.loads(CPU_INFO)
+
+
+class HypervisorsTestV233(HypervisorsTestV228):
+    api_version = '2.33'
+
+    def test_index_pagination(self):
+        req = self._get_request(True,
+                                '/v2/1234/os-hypervisors?limit=1&marker=1')
+        result = self.controller.index(req)
+        expected = {
+            'hypervisors': [
+                {'hypervisor_hostname': 'hyper2',
+                 'id': 2,
+                 'state': 'up',
+                 'status': 'enabled'}
+            ],
+            'hypervisors_links': [
+                {'href': 'http://localhost/v2/hypervisors?limit=1&marker=2',
+                 'rel': 'next'}
+            ]
+        }
+
+        self.assertEqual(expected, result)
+
+    def test_index_pagination_with_invalid_marker(self):
+        req = self._get_request(True,
+                                '/v2/1234/os-hypervisors?marker=99999')
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.index, req)
+
+    def test_detail_pagination(self):
+        req = self._get_request(
+            True, '/v2/1234/os-hypervisors/detail?limit=1&marker=1')
+        result = self.controller.detail(req)
+        link = 'http://localhost/v2/hypervisors/detail?limit=1&marker=2'
+        expected = {
+            'hypervisors': [
+                {'cpu_info': {'arch': 'x86_64',
+                              'features': [],
+                              'model': '',
+                              'topology': {'cores': 1,
+                                           'sockets': 1,
+                                           'threads': 1},
+                              'vendor': 'fake'},
+                'current_workload': 2,
+                'disk_available_least': 100,
+                'free_disk_gb': 125,
+                'free_ram_mb': 5120,
+                'host_ip': netaddr.IPAddress('2.2.2.2'),
+                'hypervisor_hostname': 'hyper2',
+                'hypervisor_type': 'xen',
+                'hypervisor_version': 3,
+                'id': 2,
+                'local_gb': 250,
+                'local_gb_used': 125,
+                'memory_mb': 10240,
+                'memory_mb_used': 5120,
+                'running_vms': 2,
+                'service': {'disabled_reason': None,
+                            'host': 'compute2',
+                            'id': 2},
+                'state': 'up',
+                'status': 'enabled',
+                'vcpus': 4,
+                'vcpus_used': 2}
+            ],
+            'hypervisors_links': [{'href': link, 'rel': 'next'}]
+        }
+
+        self.assertEqual(expected, result)
+
+    def test_detail_pagination_with_invalid_marker(self):
+        req = self._get_request(True,
+                                '/v2/1234/os-hypervisors/detail?marker=99999')
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.index, req)
