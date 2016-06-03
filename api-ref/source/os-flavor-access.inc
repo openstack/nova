@@ -13,7 +13,7 @@ flavor has ``is_public`` set to ``false`` while a public flavor has
 List Flavor Access Information For Given Flavor
 ===============================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-flavor-access
+.. rest_method:: GET /flavors/{flavor_id}/os-flavor-access
 
 Lists flavor access information.
 
@@ -26,7 +26,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
 
 Response
@@ -46,7 +46,7 @@ Response
 Add Flavor Access To Tenant (addTenantAccess Action)
 ====================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/action
+.. rest_method:: POST /flavors/{flavor_id}/action
 
 Adds flavor access to a tenant and flavor.
 
@@ -62,7 +62,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - addTenantAccess: addTenantAccess
   - tenant: tenant_id_body
@@ -89,7 +89,7 @@ Response
 Remove Flavor Access From Tenant (removeTenantAccess Action)
 ============================================================
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/action
+.. rest_method:: POST /flavors/{flavor_id}/action
 
 Removes flavor access from a tenant and flavor.
 
@@ -105,7 +105,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - removeTenantAccess: removeTenantAccess
   - tenant: tenant_id_body

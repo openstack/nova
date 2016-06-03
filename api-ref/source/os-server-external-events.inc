@@ -20,7 +20,7 @@ server instance.
 Run Events
 ==========
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-server-external-events
+.. rest_method:: POST /os-server-external-events
 
 Creates one or more external events, which the API dispatches to the
 host a server is assigned to. If the server is not currently assigned
@@ -43,7 +43,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - events: events
   - name: event_name
   - server_uuid: server_uuid

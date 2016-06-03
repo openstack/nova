@@ -25,7 +25,7 @@ For information about extensions, see `Extensions
 List Extensions
 ===============
 
-.. rest_method:: GET /v2.1/{tenant_id}/extensions
+.. rest_method:: GET /extensions
 
 Lists all extensions to the API.
 
@@ -33,12 +33,6 @@ Normal response codes: 200
 
 Error response codes: unauthorized(401)
 
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-   - tenant_id: tenant_id
 
 Response
 --------
@@ -64,7 +58,7 @@ Lists all extensions to the API.
 Show Extension Details
 ======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/extensions/{alias}
+.. rest_method:: GET /extensions/{alias}
 
 Shows details for an extension, by alias.
 
@@ -77,7 +71,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - alias: alias
 
 Response

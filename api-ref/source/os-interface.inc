@@ -12,7 +12,7 @@ and shows details for a port interface.
 List Port Interfaces
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-interface
+.. rest_method:: GET /servers/{server_id}/os-interface
 
 Lists port interfaces that are attached to a server.
 
@@ -26,7 +26,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
 
 Response
@@ -51,7 +51,7 @@ Response
 Create Interface
 ================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/os-interface
+.. rest_method:: POST /servers/{server_id}/os-interface
 
 Creates a port interface and uses it to attach a port to a server instance.
 
@@ -65,7 +65,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - interfaceAttachment: interfaceAttachment
   - port_id: port_id
@@ -107,7 +107,7 @@ Response
 Show Port Interface Details
 ===========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-interface/{port_id}
+.. rest_method:: GET /servers/{server_id}/os-interface/{port_id}
 
 Shows details for a port interface that is attached to a server.
 
@@ -120,7 +120,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - port_id: port_id_path
 
@@ -146,7 +146,7 @@ Response
 Detach Interface
 ================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}/os-interface/{port_id}
+.. rest_method:: DELETE /servers/{server_id}/os-interface/{port_id}
 
 Detaches a port interface.
 
@@ -160,7 +160,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - port_id: port_id_path
 

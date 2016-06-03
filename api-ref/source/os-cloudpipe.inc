@@ -12,20 +12,13 @@ Manages virtual VPNs for projects.
 List Cloudpipes
 ===============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cloudpipe
+.. rest_method:: GET /os-cloudpipe
 
 Lists cloudpipes.
 
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound (404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -38,7 +31,7 @@ Response
 Create Cloudpipe
 ================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-cloudpipe
+.. rest_method:: POST /os-cloudpipe
 
 Creates a cloudpipe.
 
@@ -51,7 +44,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - project_id: project_id
 
 **Example Create Cloudpipe: JSON request**
@@ -70,7 +62,7 @@ Response
 Update Cloudpipe
 ================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-cloudpipe/configure-project
+.. rest_method:: POST /os-cloudpipe/configure-project
 
 Updates the virtual private network (VPN) IP address and port for a cloudpipe instance.
 
@@ -83,7 +75,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - vpn_ip: vpn_ip
   - vpn_port: vpn_port
 
@@ -94,4 +85,3 @@ Request
 
 Response
 --------
-

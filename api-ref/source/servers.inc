@@ -98,7 +98,7 @@ access the server directly.
 List Servers
 ============
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers
+.. rest_method:: GET /servers
 
 Lists IDs, names, and links for all servers.
 
@@ -156,7 +156,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - limit: limit
   - marker: marker
   - sort_key: sort_key
@@ -195,7 +195,7 @@ Response
 Create Server
 =============
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers
+.. rest_method:: POST /servers
 
 Creates a server.
 
@@ -277,7 +277,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server: server
   - name: server_name
   - flavorRef: flavorRef
@@ -360,7 +360,7 @@ Response
 List Servers Detailed
 =====================
 
-.. rest_method:: GET /v2.1/​{tenant_id}​/servers/detail
+.. rest_method:: GET /servers/detail
 
 For each server, shows server details including configuration drive,
 extended status, and server usage information.
@@ -387,7 +387,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - limit: limit
   - marker: marker
   - sort_key: sort_key
@@ -455,7 +455,7 @@ Response
 Show Server Details
 ===================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}
+.. rest_method:: GET /servers/{server_id}
 
 Shows details for a server.
 
@@ -483,7 +483,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
 
 Response
@@ -534,7 +534,7 @@ Response
 Update Server
 =============
 
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}
+.. rest_method:: PUT /servers/{server_id}
 
 Updates the editable attributes of an existing server.
 
@@ -548,7 +548,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - accessIPv4: accessIPv4_in
   - accessIPv6: accessIPv6_in
@@ -609,7 +609,7 @@ Response
   - security_group.name: name
   - status: server_status
   - host_status: host_status
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
 
@@ -621,7 +621,7 @@ Response
 Delete Server
 =============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}
+.. rest_method:: DELETE /servers/{server_id}
 
 Deletes a server.
 
@@ -671,7 +671,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
 
 Response

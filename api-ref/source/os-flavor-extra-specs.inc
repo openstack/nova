@@ -13,7 +13,7 @@ flavor.
 List Extra Specs For A Flavor
 =============================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs
+.. rest_method:: GET /flavors/{flavor_id}/os-extra_specs
 
 Lists all extra specs for a flavor, by ID.
 
@@ -26,7 +26,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
 
 Response
@@ -40,7 +40,7 @@ Response
 Create Extra Specs For A Flavor
 ===============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs
+.. rest_method:: POST /flavors/{flavor_id}/os-extra_specs
 
 Creates extra specs for a flavor, by ID.
 
@@ -53,7 +53,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
 
 **Example Create Extra Specs For A Flavor: JSON request**
@@ -72,7 +72,7 @@ Response
 Show An Extra Spec For A Flavor
 ===============================
 
-.. rest_method:: GET /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
+.. rest_method:: GET /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
 
 Shows an extra spec, by key, for a flavor, by ID.
 
@@ -85,7 +85,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
 
@@ -100,7 +100,7 @@ Response
 Update An Extra Spec For A Flavor
 =================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
+.. rest_method:: PUT /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
 
 Updates an extra spec, by key, for a flavor, by ID.
 
@@ -114,7 +114,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
 
@@ -134,7 +134,7 @@ Response
 Delete An Extra Spec For A Flavor
 =================================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
+.. rest_method:: DELETE /flavors/{flavor_id}/os-extra_specs/{flavor_extra_spec_key}
 
 Deletes an extra spec, by key, for a flavor, by ID.
 
@@ -147,7 +147,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
 

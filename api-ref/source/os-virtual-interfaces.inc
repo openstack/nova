@@ -12,7 +12,7 @@ Lists virtual interfaces for a server instance.
 List Virtual Interfaces
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-virtual-interfaces
+.. rest_method:: GET /servers/{server_id}/os-virtual-interfaces
 
 Lists the virtual interfaces for an instance.
 
@@ -27,7 +27,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response

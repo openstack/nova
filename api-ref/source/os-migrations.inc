@@ -12,7 +12,7 @@ Shows data on migrations.
 List Migrations
 ===============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-migrations
+.. rest_method:: GET /os-migrations
 
 Lists in-progress migrations.
 
@@ -29,7 +29,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - status: migration_status
   - host: migration_host
   - source_compute: migration_source_compute

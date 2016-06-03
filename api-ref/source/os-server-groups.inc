@@ -11,7 +11,7 @@ Lists, shows information for, creates, and deletes server groups.
 List Server Groups
 ==================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-server-groups
+.. rest_method:: GET /os-server-groups
 
 Lists all server groups for the tenant.
 
@@ -23,13 +23,6 @@ Error response codes: unauthorized(401), forbidden(403)
 
 Request
 -------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
-
-Query Parameters
-~~~~~~~~~~~~~~~~
 
 .. rest_parameters:: parameters.yaml
 
@@ -57,7 +50,7 @@ Response
 Create Server Group
 ===================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-server-groups
+.. rest_method:: POST /os-server-groups
 
 Creates a server group.
 
@@ -70,7 +63,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - name: name
   - policies: policies
 
@@ -101,7 +93,7 @@ Response
 Show Server Group Details
 =========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-server-groups/{server_group_id}
+.. rest_method:: GET /os-server-groups/{server_group_id}
 
 Shows details for a server group.
 
@@ -114,7 +106,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_group_id: server_group_id
 
 Response
@@ -139,7 +131,7 @@ Response
 Delete Server Group
 ===================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-server-groups/{server_group_id}
+.. rest_method:: DELETE /os-server-groups/{server_group_id}
 
 Deletes a server group.
 
@@ -152,9 +144,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - server_group_id: server_group_id
 
 Response
 --------
-

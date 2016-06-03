@@ -15,20 +15,13 @@ through the ``policy.json`` file.
 List Hosts
 ==========
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hosts
+.. rest_method:: GET /os-hosts
 
 Lists hosts.
 
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -48,7 +41,7 @@ Response
 Show Host Details
 =================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hosts/{host_name}
+.. rest_method:: GET /os-hosts/{host_name}
 
 Shows details for a host.
 
@@ -61,7 +54,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - host_name: host_name
 
 Response
@@ -85,7 +77,7 @@ Response
 Update Host status
 ==================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-hosts/{host_name}
+.. rest_method:: PUT /os-hosts/{host_name}
 
 Enables, disables a host or put a host in maintenance or normal mode.
 
@@ -99,7 +91,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - host_name: host_name
   - status: host_status_body_in
   - maintenance_mode: host_maintenance_mode_in
@@ -115,7 +106,7 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - host: host_name_body
-  - status: host_status_body 
+  - status: host_status_body
   - maintenance_mode: host_maintenance_mode
 
 **Example Enable Host**
@@ -126,7 +117,7 @@ Response
 Reboot Host
 ===========
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hosts/{host_name}/reboot
+.. rest_method:: GET /os-hosts/{host_name}/reboot
 
 Reboots a host.
 
@@ -140,7 +131,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - host_name: host_name
 
 Response
@@ -159,7 +149,7 @@ Response
 Shut Down Host
 ==============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hosts/{host_name}/shutdown
+.. rest_method:: GET /os-hosts/{host_name}/shutdown
 
 Shuts down a host.
 
@@ -173,7 +163,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - host_name: host_name
 
 Response
@@ -192,7 +181,7 @@ Response
 Start Host
 ==========
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-hosts/{host_name}/startup
+.. rest_method:: GET /os-hosts/{host_name}/startup
 
 Starts a host.
 
@@ -206,7 +195,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - host_name: host_name
 
 Response
@@ -221,4 +209,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-hosts/host-get-startup.json
    :language: javascript
-

@@ -9,7 +9,7 @@ Pings instances and reports which instances are alive.
 Ping Instances
 ==============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-fping
+.. rest_method:: GET /os-fping
 
 Runs the fping utility to ping instances and reports which instances are alive.
 
@@ -38,7 +38,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - all_tenants: all_tenants
   - include: include
   - exclude: exclude
@@ -63,7 +63,7 @@ Response
 Ping An Instance
 ================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-fping/{instance_id}
+.. rest_method:: GET /os-fping/{instance_id}
 
 Runs the fping utility to ping an instance and reports whether the instance is alive.
 
@@ -81,7 +81,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - instance_id: instance_id
 
 Response

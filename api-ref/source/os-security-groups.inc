@@ -12,20 +12,13 @@ Lists, shows information for, creates, updates and deletes security groups.
 List Security Groups
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-security-groups
+.. rest_method:: GET /os-security-groups
 
 Lists security groups.
 
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -37,7 +30,8 @@ Response
   - id: id
   - name: name
   - rules: rules
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
+
 
 **Example List security groups: JSON response**
 
@@ -47,7 +41,7 @@ Response
 Create Security Group
 =====================
 
-.. rest_method:: POST /v2.1/{tenant_id}/os-security-groups
+.. rest_method:: POST /os-security-groups
 
 Creates a security group.
 
@@ -60,7 +54,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - security_group: security_group
   - name: name
   - description: description
@@ -80,7 +73,8 @@ Response
   - id: id
   - name: name
   - rules: rules
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
+
 
 **Example Create security group: JSON response**
 
@@ -90,7 +84,7 @@ Response
 Show Security Group Details
 ===========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-security-groups/{security_group_id}
+.. rest_method:: GET /os-security-groups/{security_group_id}
 
 Shows details for a security group.
 
@@ -103,7 +97,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - security_group_id: security_group_id
 
 Response
@@ -116,7 +109,8 @@ Response
   - id: id
   - name: name
   - rules: rules
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
+
 
 **Example Show security group: JSON response**
 
@@ -126,7 +120,7 @@ Response
 Update Security Group
 =====================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-security-groups/{security_group_id}
+.. rest_method:: PUT /os-security-groups/{security_group_id}
 
 Updates a security group.
 
@@ -139,7 +133,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - security_group_id: security_group_id
   - name: name
   - description: description
@@ -159,7 +152,8 @@ Response
   - id: id
   - name: name
   - rules: rules
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
+
 
 **Example Update security group: JSON response**
 
@@ -169,7 +163,7 @@ Response
 Delete Security Group
 =====================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-security-groups/{security_group_id}
+.. rest_method:: DELETE /os-security-groups/{security_group_id}
 
 Deletes a security group.
 
@@ -182,7 +176,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - security_group_id: security_group_id
 
 Response
@@ -193,7 +186,7 @@ There is no body content for the response of a successful DELETE query.
 List Security Groups By Server
 ==============================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-security-groups
+.. rest_method:: GET /servers/{server_id}/os-security-groups
 
 Lists security groups for a server.
 
@@ -206,7 +199,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - server_id: server_id
 
 Response
@@ -219,7 +211,8 @@ Response
   - id: id
   - name: name
   - rules: rules
-  - tenant_id: tenant_id
+  - tenant_id: tenant_id_body
+
 
 **Example List security groups by server: JSON response**
 

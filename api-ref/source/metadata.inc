@@ -13,7 +13,7 @@ key, for a server.
 List All Metadata
 =================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/metadata
+.. rest_method:: GET /servers/{server_id}/metadata
 
 Lists all metadata for a server.
 
@@ -28,7 +28,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response
@@ -46,7 +46,7 @@ Response
 Update Metadata Items
 =====================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/metadata
+.. rest_method:: POST /servers/{server_id}/metadata
 
 Updates one or more metadata items for a server.
 
@@ -64,7 +64,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - metadata: metadata_object
 
@@ -88,7 +88,7 @@ Response
 Create Or Replace Metadata Items
 ================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/metadata
+.. rest_method:: PUT /servers/{server_id}/metadata
 
 Creates or replaces one or more metadata items for a server.
 
@@ -106,7 +106,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - metadata: metadata_object
 
@@ -130,7 +130,7 @@ Response
 Show Metadata Item Details
 ==========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/metadata/{key}
+.. rest_method:: GET /servers/{server_id}/metadata/{key}
 
 Shows details for a metadata item, by key, for a server.
 
@@ -145,7 +145,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - key: key
 
@@ -164,7 +164,7 @@ Response
 Create Or Update Metadata Item
 ==============================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/servers/{server_id}/metadata/{key}
+.. rest_method:: PUT /servers/{server_id}/metadata/{key}
 
 Creates or replaces a metadata item, by key, for a server.
 
@@ -182,7 +182,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - key: key
 
@@ -206,7 +206,7 @@ Response
 Delete Metadata Item
 ====================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}/metadata/{key}
+.. rest_method:: DELETE /servers/{server_id}/metadata/{key}
 
 Deletes a metadata item, by key, from a server.
 
@@ -221,7 +221,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - key: key
 

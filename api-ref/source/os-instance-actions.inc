@@ -12,7 +12,7 @@ All users can list available actions for a server.
 List Actions For Server
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-instance-actions
+.. rest_method:: GET /servers/{server_id}/os-instance-actions
 
 Lists actions for a server.
 
@@ -29,7 +29,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 Response
@@ -43,7 +43,7 @@ Response
 Show Server Action Details
 ==========================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-instance-actions/{request_id}
+.. rest_method:: GET /servers/{server_id}/os-instance-actions/{request_id}
 
 Shows details for a server action.
 
@@ -59,7 +59,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - request_id: request_id
 

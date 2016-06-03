@@ -17,7 +17,7 @@ Compute <http://docs.openstack.org/liberty/install-guide-obs/common/get_started_
 List Compute Services
 =====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-services
+.. rest_method:: GET /os-services
 
 Lists all running Compute services.
 
@@ -26,13 +26,6 @@ Includes reasons, if available, for why any services were disabled.
 Normal response codes: 200
 
 Error response codes: unauthorized(401), forbidden(403)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -58,7 +51,7 @@ Response
 Enable Scheduling For A Compute Service
 =======================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-services/enable
+.. rest_method:: PUT /os-services/enable
 
 Enables scheduling for a Compute service.
 
@@ -73,7 +66,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - host: host
   - binary: binary
 
@@ -100,7 +93,7 @@ Response
 Disable Scheduling For A Compute Service
 ========================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-services/disable
+.. rest_method:: PUT /os-services/disable
 
 Disables scheduling for a Compute service.
 
@@ -115,7 +108,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - host: host
   - binary: binary
 
@@ -142,7 +135,7 @@ Response
 Log Disabled Compute Service Information
 ========================================
 
-.. rest_method:: PUT /v2.1/{tenant_id}/os-services/disable-log-reason
+.. rest_method:: PUT /os-services/disable-log-reason
 
 Logs information to the Compute service table about why a Compute service was disabled.
 
@@ -157,7 +150,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - host: host
   - binary: binary
   - disabled_reason: disabled_reason
@@ -186,7 +179,7 @@ Response
 Delete Compute Service
 ======================
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/os-services/{service_id}
+.. rest_method:: DELETE /os-services/{service_id}
 
 Deletes a Compute service.
 
@@ -199,7 +192,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - service_id: service_id_path
 
 Response

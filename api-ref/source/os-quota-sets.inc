@@ -13,11 +13,9 @@ the quotas for a project or a project and user.
 Show A Quota
 ============
 
-.. rest_method:: GET /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}
+.. rest_method:: GET /os-quota-sets/{tenant_id}
 
 Show the quota for a project or a project and a user.
-
-In the request URI, you specify both the ID of the administrative project and the ID of the project for which you want to show quota.
 
 To show a quota for a project and a user, specify the ``user_id`` query parameter.
 
@@ -30,7 +28,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - admin_tenant_id: admin_tenant_id
   - tenant_id: tenant_id
   - user_id: user_id_query_quota
 
@@ -64,7 +61,7 @@ Response
 Update Quotas
 =============
 
-.. rest_method:: PUT /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}
+.. rest_method:: PUT /os-quota-sets/{tenant_id}
 
 Update the quotas for a project or a project and a user.
 
@@ -83,7 +80,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - admin_tenant_id: admin_tenant_id
   - tenant_id: tenant_id
   - user_id: user_id_query_set_quota
   - quota_set: quota_set
@@ -137,7 +133,7 @@ Response
 Revert Quotas To Defaults
 =========================
 
-.. rest_method:: DELETE /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}
+.. rest_method:: DELETE /os-quota-sets/{tenant_id}
 
 Reverts the quotas to default values for a project or a project and a user.
 
@@ -152,8 +148,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - admin_tenant_id: admin_tenant_id
   - tenant_id: tenant_id
+
   - user_id: user_id_query_quota_delete
 
 Response
@@ -162,11 +158,9 @@ Response
 List Default Quotas For Tenant
 ==============================
 
-.. rest_method:: GET /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}/defaults
+.. rest_method:: GET /os-quota-sets/{tenant_id}/defaults
 
 Lists the default quotas for a project.
-
-In the request URI, you specify both the ID of the administrative project and the ID of the project for which you want to show default quotas. These project IDs can match.
 
 Normal response codes: 200
 
@@ -177,7 +171,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - admin_tenant_id: admin_tenant_id
   - tenant_id: tenant_id
 
 Response
@@ -210,11 +203,9 @@ Response
 Show The Detail of Quota
 ========================
 
-.. rest_method:: GET /v2.1/{admin_tenant_id}/os-quota-sets/{tenant_id}/detail
+.. rest_method:: GET /os-quota-sets/{tenant_id}/detail
 
 Show the detail of quota for a project or a project and a user.
-
-In the request URI, you specify both the ID of the administrative project and the ID of the project for which you want to show the detail of quota.
 
 To show a quota for a project and a user, specify the ``user_id`` query parameter.
 
@@ -227,7 +218,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - admin_tenant_id: admin_tenant_id
   - tenant_id: tenant_id
   - user_id: user_id_query_quota
 

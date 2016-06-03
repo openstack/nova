@@ -3,7 +3,7 @@
 Trigger Crash Dump In Server
 ============================
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/action
+.. rest_method:: POST /servers/{server_id}/action
 
 .. versionadded:: 2.17
 
@@ -36,7 +36,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id_path
   - trigger_crash_dump: trigger_crash_dump
 

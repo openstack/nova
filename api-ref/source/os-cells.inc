@@ -14,7 +14,7 @@ the local cell.
 List Cells
 ==========
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells
+.. rest_method:: GET /os-cells
 
 Lists cells.
 
@@ -22,13 +22,6 @@ Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -41,7 +34,7 @@ Response
 List Cells With Details
 =======================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells
+.. rest_method:: GET /os-cells
 
 Lists cells with details.
 
@@ -49,13 +42,6 @@ Normal response codes: 200
 
 Error response codes: computeFault(400, 500), serviceUnavailable(503), badRequest(400),
 unauthorized(401), forbidden(403), badMethod(405), itemNotFound(404), NotImplemented(501)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - tenant_id: tenant_id
 
 Response
 --------
@@ -68,7 +54,7 @@ Response
 Show Cell Data
 ==============
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells/{cell_id}
+.. rest_method:: GET /os-cells/{cell_id}
 
 Shows data for a cell.
 
@@ -82,7 +68,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - cell_id: cell_id
 
 Response
@@ -96,7 +81,7 @@ Response
 Show Cell Capacities
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/os-cells/{cell_id}/capacities
+.. rest_method:: GET /os-cells/{cell_id}/capacities
 
 Shows capacities for a cell.
 
@@ -110,7 +95,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
   - cell_id: cell_id
 
 Response
@@ -120,4 +104,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-cells/cells-capacities-resp.json
    :language: javascript
-

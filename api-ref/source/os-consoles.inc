@@ -9,7 +9,7 @@ Manages server consoles.
 Lists Consoles
 ==============
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/consoles
+.. rest_method:: GET /servers/{server_id}/consoles
 
 Lists all consoles for a server instance.
 
@@ -22,7 +22,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 
@@ -47,7 +47,7 @@ Response
 Create Console
 ==============
 
-.. rest_method:: POST /v2.1/{tenant_id}/servers/{server_id}/consoles
+.. rest_method:: POST /servers/{server_id}/consoles
 
 Creates a console for a server instance.
 
@@ -60,7 +60,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 
@@ -73,7 +73,7 @@ No body content is returned on a successful POST.
 Show Console Details
 ====================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/consoles/{console_id}
+.. rest_method:: GET /servers/{server_id}/consoles/{console_id}
 
 Shows console details for a server instance.
 
@@ -86,7 +86,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - console_id: console_id
 
@@ -115,7 +115,7 @@ Response
 Delete Console
 ==============
 
-.. rest_method:: DELETE /v2.1/{tenant_id}/servers/{server_id}/consoles/{console_id}
+.. rest_method:: DELETE /servers/{server_id}/consoles/{console_id}
 
 Deletes a console for a server instance.
 
@@ -128,7 +128,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
   - id: console_id
 
@@ -141,7 +141,7 @@ No body content is returned on a successful DELETE.
 Show Console Authentication Token
 =================================
 
-.. rest_method:: GET /v2.1/{tenant_id}/servers/{server_id}/os-console-auth-token
+.. rest_method:: GET /servers/{server_id}/os-console-auth-token
 
 Given the console authentication token for a server instance,
 shows the related connection information.
@@ -157,7 +157,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - tenant_id: tenant_id
+
   - server_id: server_id
 
 |
