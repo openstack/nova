@@ -167,7 +167,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.16')
+    target = messaging.Target(version='1.17')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -983,6 +983,13 @@ class NetworkManager(manager.Manager):
                     #             release_fixed_ip callback will
                     #             get called by nova-dhcpbridge.
                     try:
+                        self.network_rpcapi.release_dhcp(context,
+                                                         instance.launched_on,
+                                                         dev, address,
+                                                         vif.address)
+                    except exception.RPCPinnedToOldVersion:
+                        # Fall back on previous behaviour of calling
+                        # release_dhcp on the local driver
                         self.driver.release_dhcp(dev, address, vif.address)
                     except exception.NetworkDhcpReleaseFailed:
                         LOG.error(_LE("Error releasing DHCP for IP %(address)s"
@@ -1017,6 +1024,9 @@ class NetworkManager(manager.Manager):
 
         # Commit the reservations
         quotas.commit()
+
+    def release_dhcp(self, context, dev, address, vif_address):
+        self.driver.release_dhcp(dev, address, vif_address)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when IP is leased."""

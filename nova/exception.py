@@ -1301,6 +1301,10 @@ class MigrationSchedulerRPCError(MigrationError):
     msg_fmt = _("Migration select destinations error: %(reason)s")
 
 
+class RPCPinnedToOldVersion(NovaException):
+    msg_fmt = _("RPC is pinned to old version")
+
+
 class MalformedRequestBody(NovaException):
     msg_fmt = _("Malformed message body: %(reason)s")
 
