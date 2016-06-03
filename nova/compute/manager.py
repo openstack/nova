@@ -49,7 +49,6 @@ from oslo_service import periodic_task
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
-from oslo_utils import uuidutils
 import six
 from six.moves import range
 
@@ -81,7 +80,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import console_auth_token as obj_console_auth_token
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
@@ -5052,7 +5050,6 @@ class ComputeManager(manager.Manager):
         """Return connection information for a vnc console."""
         context = context.elevated()
         LOG.debug("Getting vnc console", instance=instance)
-        token = uuidutils.generate_uuid()
 
         if not CONF.vnc.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
@@ -5060,9 +5057,9 @@ class ComputeManager(manager.Manager):
         if console_type == 'novnc':
             # For essex, novncproxy_base_url must include the full path
             # including the html file (like http://myhost/vnc_auto.html)
-            access_url = '%s?token=%s' % (CONF.vnc.novncproxy_base_url, token)
+            access_url_base = CONF.vnc.novncproxy_base_url
         elif console_type == 'xvpvnc':
-            access_url = '%s?token=%s' % (CONF.vnc.xvpvncproxy_base_url, token)
+            access_url_base = CONF.vnc.xvpvncproxy_base_url
         else:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
@@ -5070,7 +5067,19 @@ class ComputeManager(manager.Manager):
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_vnc_console(context, instance)
-            connect_info = console.get_connection_info(token, access_url)
+            console_auth = objects.ConsoleAuthToken(
+                context=context,
+                console_type=console_type,
+                host=console.host,
+                port=console.port,
+                internal_access_path=console.internal_access_path,
+                instance_uuid=instance.uuid,
+                access_url_base=access_url_base,
+            )
+            console_auth.authorize(CONF.consoleauth.token_ttl)
+            connect_info = console.get_connection_info(
+                console_auth.token, console_auth.access_url)
+
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
@@ -5089,24 +5098,30 @@ class ComputeManager(manager.Manager):
         """Return connection information for a spice console."""
         context = context.elevated()
         LOG.debug("Getting spice console", instance=instance)
-        token = uuidutils.generate_uuid()
 
         if not CONF.spice.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
-        if console_type == 'spice-html5':
-            # For essex, spicehtml5proxy_base_url must include the full path
-            # including the html file (like http://myhost/spice_auto.html)
-            access_url = '%s?token=%s' % (CONF.spice.html5proxy_base_url,
-                                          token)
-        else:
+        if console_type != 'spice-html5':
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_spice_console(context, instance)
-            connect_info = console.get_connection_info(token, access_url)
+            console_auth = objects.ConsoleAuthToken(
+                context=context,
+                console_type=console_type,
+                host=console.host,
+                port=console.port,
+                internal_access_path=console.internal_access_path,
+                instance_uuid=instance.uuid,
+                access_url_base=CONF.spice.html5proxy_base_url,
+            )
+            console_auth.authorize(CONF.consoleauth.token_ttl)
+            connect_info = console.get_connection_info(
+                console_auth.token, console_auth.access_url)
+
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
@@ -5125,22 +5140,30 @@ class ComputeManager(manager.Manager):
         """Return connection information for a RDP console."""
         context = context.elevated()
         LOG.debug("Getting RDP console", instance=instance)
-        token = uuidutils.generate_uuid()
 
         if not CONF.rdp.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
-        if console_type == 'rdp-html5':
-            access_url = '%s?token=%s' % (CONF.rdp.html5_proxy_base_url,
-                                          token)
-        else:
+        if console_type != 'rdp-html5':
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_rdp_console(context, instance)
-            connect_info = console.get_connection_info(token, access_url)
+            console_auth = objects.ConsoleAuthToken(
+                context=context,
+                console_type=console_type,
+                host=console.host,
+                port=console.port,
+                internal_access_path=console.internal_access_path,
+                instance_uuid=instance.uuid,
+                access_url_base=CONF.rdp.html5_proxy_base_url,
+            )
+            console_auth.authorize(CONF.consoleauth.token_ttl)
+            connect_info = console.get_connection_info(
+                console_auth.token, console_auth.access_url)
+
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
@@ -5159,22 +5182,30 @@ class ComputeManager(manager.Manager):
         """Return connection information for a MKS console."""
         context = context.elevated()
         LOG.debug("Getting MKS console", instance=instance)
-        token = uuidutils.generate_uuid()
 
         if not CONF.mks.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
 
-        if console_type == 'webmks':
-            access_url = '%s?token=%s' % (CONF.mks.mksproxy_base_url,
-                                          token)
-        else:
+        if console_type != 'webmks':
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_mks_console(context, instance)
-            connect_info = console.get_connection_info(token, access_url)
+            console_auth = objects.ConsoleAuthToken(
+                context=context,
+                console_type=console_type,
+                host=console.host,
+                port=console.port,
+                internal_access_path=console.internal_access_path,
+                instance_uuid=instance.uuid,
+                access_url_base=CONF.mks.mksproxy_base_url,
+            )
+            console_auth.authorize(CONF.consoleauth.token_ttl)
+            connect_info = console.get_connection_info(
+                console_auth.token, console_auth.access_url)
+
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
@@ -5203,14 +5234,23 @@ class ComputeManager(manager.Manager):
 
         context = context.elevated()
 
-        token = uuidutils.generate_uuid()
-        access_url = '%s?token=%s' % (CONF.serial_console.base_url, token)
-
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
             console = self.driver.get_serial_console(context, instance)
-            connect_info = console.get_connection_info(token, access_url)
+            console_auth = objects.ConsoleAuthToken(
+                context=context,
+                console_type=console_type,
+                host=console.host,
+                port=console.port,
+                internal_access_path=console.internal_access_path,
+                instance_uuid=instance.uuid,
+                access_url_base=CONF.serial_console.base_url,
+            )
+            console_auth.authorize(CONF.consoleauth.token_ttl)
+            connect_info = console.get_connection_info(
+                console_auth.token, console_auth.access_url)
+
         except exception.InstanceNotFound:
             if instance.vm_state != vm_states.BUILDING:
                 raise
@@ -6358,7 +6398,7 @@ class ComputeManager(manager.Manager):
         # If the database backend isn't in use, don't bother trying to clean
         # tokens. The database backend is not supported for cells v1.
         if not CONF.cells.enable and self._consoles_enabled():
-            obj_console_auth_token.ConsoleAuthToken.\
+            objects.ConsoleAuthToken.\
                 clean_console_auths_for_instance(ctxt, instance.uuid)
 
     @wrap_exception()
@@ -7846,5 +7886,5 @@ class ComputeManager(manager.Manager):
         # If the database backend isn't in use, don't bother looking for
         # expired tokens. The database backend is not supported for cells v1.
         if not CONF.cells.enable:
-            obj_console_auth_token.ConsoleAuthToken.\
+            objects.ConsoleAuthToken.\
                 clean_expired_console_auths_for_host(context, self.host)

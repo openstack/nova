@@ -3806,6 +3806,12 @@ class ComputeTestCase(BaseTestCase,
                                                instance=instance)
         self.assertTrue(console)
 
+        # Verify that the console auth has also been stored in the
+        # database backend.
+        auth = objects.ConsoleAuthToken.validate(self.context,
+                                                 console['token'])
+        self.assertIsNotNone(auth)
+
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_validate_console_port_vnc(self):
@@ -3968,6 +3974,12 @@ class ComputeTestCase(BaseTestCase,
                                                instance=instance)
         self.assertTrue(console)
 
+        # Verify that the console auth has also been stored in the
+        # database backend.
+        auth = objects.ConsoleAuthToken.validate(self.context,
+                                                 console['token'])
+        self.assertIsNotNone(auth)
+
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_invalid_spice_console_type(self):
@@ -4046,6 +4058,12 @@ class ComputeTestCase(BaseTestCase,
         console = self.compute.get_rdp_console(self.context, 'rdp-html5',
                                                instance=instance)
         self.assertTrue(console)
+
+        # Verify that the console auth has also been stored in the
+        # database backend.
+        auth = objects.ConsoleAuthToken.validate(self.context,
+                                                 console['token'])
+        self.assertIsNotNone(auth)
 
         self.compute.terminate_instance(self.context, instance, [])
 
