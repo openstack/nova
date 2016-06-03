@@ -47,6 +47,7 @@ from nova import quota
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_block_device
+from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_volume
 from nova.tests.unit.image import fake as fake_image
@@ -1161,6 +1162,8 @@ class _ComputeAPIUnitTestMixIn(object):
         quotas = quotas_obj.Quotas(self.context)
         updates = {'progress': 0, 'task_state': task_states.DELETING}
 
+        self.mox.StubOutWithMock(objects.BuildRequest,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(inst, 'save')
         self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
@@ -4068,6 +4071,158 @@ class _ComputeAPIUnitTestMixIn(object):
             count = self.compute_api._check_requested_networks(
                 self.context, requested_networks, 5)
         self.assertEqual(4, count)
+
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
+            side_effect=exception.InstanceMappingNotFound(uuid='fake'))
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_no_mapping(self, mock_get_inst, mock_get_build_req,
+            mock_get_inst_map):
+
+        self.useFixture(fixtures.AllServicesCurrent())
+        # Just check that an InstanceMappingNotFound causes the instance to
+        # get looked up normally.
+        self.compute_api.get(self.context, uuids.inst_uuid)
+        mock_get_build_req.assert_not_called()
+        mock_get_inst_map.assert_called_once_with(self.context,
+                                                  uuids.inst_uuid)
+        mock_get_inst.assert_called_once_with(self.context, uuids.inst_uuid,
+                                              expected_attrs=[
+                                                  'metadata',
+                                                  'system_metadata',
+                                                  'security_groups',
+                                                  'info_cache'])
+
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    def test_get_instance_not_in_cell(self, mock_get_build_req,
+            mock_get_inst_map):
+        self.useFixture(fixtures.AllServicesCurrent())
+        build_req_obj = fake_build_request.fake_req_obj(self.context)
+        mock_get_inst_map.return_value = objects.InstanceMapping(
+                cell_mapping=None)
+        mock_get_build_req.return_value = build_req_obj
+
+        instance = build_req_obj.instance
+        inst_from_build_req = self.compute_api.get(self.context, instance.uuid)
+        mock_get_inst_map.assert_called_once_with(self.context, instance.uuid)
+        mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
+        self.assertEqual(instance, inst_from_build_req)
+
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_not_in_cell_buildreq_deleted_inst_in_cell(
+            self, mock_get_inst, mock_get_build_req, mock_get_inst_map,
+            mock_target_cell):
+        # This test checks the following scenario:
+        # The instance is not mapped to a cell, so it should be retrieved from
+        # a BuildRequest object. However the BuildRequest does not exist
+        # because the instance was put in a cell and mapped while while
+        # attempting to get the BuildRequest. So pull the instance from the
+        # cell.
+        self.useFixture(fixtures.AllServicesCurrent())
+        build_req_obj = fake_build_request.fake_req_obj(self.context)
+        instance = build_req_obj.instance
+        inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
+
+        mock_get_inst_map.side_effect = [
+            objects.InstanceMapping(cell_mapping=None), inst_map]
+        mock_get_build_req.side_effect = exception.BuildRequestNotFound(
+            uuid=instance.uuid)
+        mock_get_inst.return_value = instance
+
+        inst_from_get = self.compute_api.get(self.context, instance.uuid)
+
+        inst_map_calls = [mock.call(self.context, instance.uuid),
+                          mock.call(self.context, instance.uuid)]
+        mock_get_inst_map.assert_has_calls(inst_map_calls)
+        self.assertEqual(2, mock_get_inst_map.call_count)
+        mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
+        mock_target_cell.assert_called_once_with(self.context,
+                                                 inst_map.cell_mapping)
+        mock_get_inst.assert_called_once_with(self.context, instance.uuid,
+                                              expected_attrs=[
+                                                  'metadata',
+                                                  'system_metadata',
+                                                  'security_groups',
+                                                  'info_cache'])
+        self.assertEqual(instance, inst_from_get)
+
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_not_in_cell_buildreq_deleted_inst_still_not_in_cell(
+            self, mock_get_inst, mock_get_build_req, mock_get_inst_map,
+            mock_target_cell):
+        # This test checks the following scenario:
+        # The instance is not mapped to a cell, so it should be retrieved from
+        # a BuildRequest object. However the BuildRequest does not exist which
+        # means it should now be possible to find the instance in a cell db.
+        # But the instance is not mapped which means the cellsv2 migration has
+        # not occurred in this scenario, so the instance is pulled from the
+        # configured Nova db.
+
+        # TODO(alaski): The tested case will eventually be an error condition.
+        # But until we force cellsv2 migrations we need this to work.
+        self.useFixture(fixtures.AllServicesCurrent())
+        build_req_obj = fake_build_request.fake_req_obj(self.context)
+        instance = build_req_obj.instance
+
+        mock_get_inst_map.side_effect = [
+            objects.InstanceMapping(cell_mapping=None),
+            objects.InstanceMapping(cell_mapping=None)]
+        mock_get_build_req.side_effect = exception.BuildRequestNotFound(
+            uuid=instance.uuid)
+        mock_get_inst.return_value = instance
+
+        inst_from_get = self.compute_api.get(self.context, instance.uuid)
+
+        inst_map_calls = [mock.call(self.context, instance.uuid),
+                          mock.call(self.context, instance.uuid)]
+        mock_get_inst_map.assert_has_calls(inst_map_calls)
+        self.assertEqual(2, mock_get_inst_map.call_count)
+        mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
+        mock_target_cell.assert_not_called()
+        mock_get_inst.assert_called_once_with(self.context, instance.uuid,
+                                              expected_attrs=[
+                                                  'metadata',
+                                                  'system_metadata',
+                                                  'security_groups',
+                                                  'info_cache'])
+        self.assertEqual(instance, inst_from_get)
+
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+    @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_get_instance_in_cell(self, mock_get_inst, mock_get_build_req,
+            mock_get_inst_map, mock_target_cell):
+        self.useFixture(fixtures.AllServicesCurrent())
+        # This just checks that the instance is looked up normally and not
+        # synthesized from a BuildRequest object. Verification of pulling the
+        # instance from the proper cell will be added when that capability is.
+        instance = self._create_instance_obj()
+        build_req_obj = fake_build_request.fake_req_obj(self.context)
+        inst_map = objects.InstanceMapping(cell_mapping=objects.CellMapping())
+        mock_get_inst_map.return_value = inst_map
+        mock_get_build_req.return_value = build_req_obj
+        mock_get_inst.return_value = instance
+
+        returned_inst = self.compute_api.get(self.context, instance.uuid)
+        mock_get_build_req.assert_not_called()
+        mock_get_inst_map.assert_called_once_with(self.context, instance.uuid)
+        self.assertEqual(instance, returned_inst)
+        mock_target_cell.assert_called_once_with(self.context,
+                                                 inst_map.cell_mapping)
+        mock_get_inst.assert_called_once_with(self.context, instance.uuid,
+                                              expected_attrs=[
+                                                  'metadata',
+                                                  'system_metadata',
+                                                  'security_groups',
+                                                  'info_cache'])
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

@@ -44,6 +44,62 @@ class ServersPreSchedulingTestCase(test.TestCase):
         self.api = api_fixture.api
         self.api.microversion = 'latest'
 
+    def test_instance_from_buildrequest(self):
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+        image_ref = fake_image.get_valid_image_id()
+        body = {
+            'server': {
+                'name': 'foo',
+                'imageRef': image_ref,
+                'flavorRef': '1',
+                'networks': 'none',
+            }
+        }
+        create_resp = self.api.api_post('servers', body)
+        get_resp = self.api.api_get('servers/%s' %
+                                    create_resp.body['server']['id'])
+
+        server = get_resp.body['server']
+        # Validate a few things
+        self.assertEqual('foo', server['name'])
+        self.assertEqual(image_ref, server['image']['id'])
+        self.assertEqual('1', server['flavor']['id'])
+        self.assertEqual('', server['hostId'])
+        self.assertIsNone(None, server['OS-SRV-USG:launched_at'])
+        self.assertIsNone(None, server['OS-SRV-USG:terminated_at'])
+        self.assertFalse(server['locked'])
+        self.assertEqual([], server['tags'])
+        self.assertEqual('scheduling', server['OS-EXT-STS:task_state'])
+        self.assertEqual('building', server['OS-EXT-STS:vm_state'])
+        self.assertEqual('BUILD', server['status'])
+
+    def test_instance_from_buildrequest_old_service(self):
+        image_ref = fake_image.get_valid_image_id()
+        body = {
+            'server': {
+                'name': 'foo',
+                'imageRef': image_ref,
+                'flavorRef': '1',
+                'networks': 'none',
+            }
+        }
+        create_resp = self.api.api_post('servers', body)
+        get_resp = self.api.api_get('servers/%s' %
+                                    create_resp.body['server']['id'])
+        server = get_resp.body['server']
+        # Just validate some basics
+        self.assertEqual('foo', server['name'])
+        self.assertEqual(image_ref, server['image']['id'])
+        self.assertEqual('1', server['flavor']['id'])
+        self.assertEqual('', server['hostId'])
+        self.assertIsNone(None, server['OS-SRV-USG:launched_at'])
+        self.assertIsNone(None, server['OS-SRV-USG:terminated_at'])
+        self.assertFalse(server['locked'])
+        self.assertEqual([], server['tags'])
+        self.assertEqual('scheduling', server['OS-EXT-STS:task_state'])
+        self.assertEqual('building', server['OS-EXT-STS:vm_state'])
+        self.assertEqual('BUILD', server['status'])
+
     def test_delete_instance_from_buildrequest(self):
         self.useFixture(nova_fixtures.AllServicesCurrent())
         image_ref = fake_image.get_valid_image_id()

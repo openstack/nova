@@ -78,6 +78,26 @@ class BuildRequest(base.NovaObject):
             LOG.exception(_LE('Could not deserialize instance in '
                               'BuildRequest'))
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
+        # NOTE(alaski): Set some fields on instance that are needed by the api,
+        # not lazy-loadable, and don't change.
+        self.instance.deleted = 0
+        self.instance.disable_terminate = False
+        self.instance.terminated_at = None
+        self.instance.host = None
+        self.instance.node = None
+        self.instance.launched_at = None
+        self.instance.launched_on = None
+        self.instance.cell_name = None
+        # The fields above are not set until the instance is in a cell at
+        # which point this BuildRequest will be gone. locked_by could
+        # potentially be set by an update so it should not be overwritten.
+        if not self.instance.obj_attr_is_set('locked_by'):
+            self.instance.locked_by = None
+        # created_at/updated_at are not on the serialized instance because it
+        # was never persisted.
+        self.instance.created_at = self.created_at
+        self.instance.updated_at = self.updated_at
+        self.instance.tags = objects.TagList([])
 
     def _load_block_device_mappings(self, db_bdms):
         # 'db_bdms' is a serialized BlockDeviceMappingList object. If it's None
@@ -102,13 +122,17 @@ class BuildRequest(base.NovaObject):
         req.instance_uuid = db_req['instance_uuid']
 
         for key in req.fields:
-            if isinstance(req.fields[key], fields.ObjectField):
+            if key == 'instance':
+                continue
+            elif isinstance(req.fields[key], fields.ObjectField):
                 try:
                     getattr(req, '_load_%s' % key)(db_req[key])
                 except AttributeError:
                     LOG.exception(_LE('No load handler for %s'), key)
             else:
                 setattr(req, key, db_req[key])
+        # Load instance last because other fields on req may be referenced
+        req._load_instance(db_req['instance'])
         req.obj_reset_changes()
         req._context = context
         return req

@@ -2107,6 +2107,72 @@ class API(base.Base):
 
         self.compute_rpcapi.trigger_crash_dump(context, instance)
 
+    def _get_instance_map_or_none(self, context, instance_uuid):
+        try:
+            inst_map = objects.InstanceMapping.get_by_instance_uuid(
+                    context, instance_uuid)
+        except exception.InstanceMappingNotFound:
+            # InstanceMapping should always be found generally. This exception
+            # may be raised if a deployment has partially migrated the nova-api
+            # services.
+            inst_map = None
+        return inst_map
+
+    def _get_instance(self, context, instance_uuid, expected_attrs):
+        # Before service version 15 the BuildRequest is not cleaned up during
+        # a delete request so there is no reason to look it up here as we can't
+        # trust that it's not referencing a deleted instance. Also even if
+        # there is an instance mapping we don't need to honor it for older
+        # service versions.
+        service_version = objects.Service.get_minimum_version(
+            context, 'nova-api')
+        if service_version < 15:
+            return objects.Instance.get_by_uuid(context, instance_uuid,
+                                                expected_attrs=expected_attrs)
+        inst_map = self._get_instance_map_or_none(context, instance_uuid)
+        if inst_map and (inst_map.cell_mapping is not None):
+            with nova_context.target_cell(context, inst_map.cell_mapping):
+                instance = objects.Instance.get_by_uuid(
+                    context, instance_uuid, expected_attrs=expected_attrs)
+        elif inst_map and (inst_map.cell_mapping is None):
+            # This means the instance has not been scheduled and put in
+            # a cell yet. For now it also may mean that the deployer
+            # has not created their cell(s) yet.
+            try:
+                build_req = objects.BuildRequest.get_by_instance_uuid(
+                        context, instance_uuid)
+                instance = build_req.instance
+            except exception.BuildRequestNotFound:
+                # Instance was mapped and the BuildRequest was deleted
+                # while fetching. Try again.
+                inst_map = self._get_instance_map_or_none(context,
+                                                          instance_uuid)
+                if inst_map and (inst_map.cell_mapping is not None):
+                    with nova_context.target_cell(context,
+                                                  inst_map.cell_mapping):
+                        instance = objects.Instance.get_by_uuid(
+                            context, instance_uuid,
+                            expected_attrs=expected_attrs)
+                else:
+                    # If BuildRequest is not found but inst_map.cell_mapping
+                    # does not point at a cell then cell migration has not
+                    # happened yet. This will be a failure case later.
+                    # TODO(alaski): Make this a failure case after we put in
+                    # a block that requires migrating to cellsv2.
+                    instance = objects.Instance.get_by_uuid(
+                        context, instance_uuid, expected_attrs=expected_attrs)
+        else:
+            # This should not happen if we made it past the service_version
+            # check above. But it does not need to be an exception yet.
+            LOG.warning(_LW('No instance_mapping found for instance %s. This '
+                            'should not be happening and will lead to errors '
+                            'in the future. Please open a bug at '
+                            'https://bugs.launchpad.net/nova'), instance_uuid)
+            instance = objects.Instance.get_by_uuid(
+                context, instance_uuid, expected_attrs=expected_attrs)
+
+        return instance
+
     def get(self, context, instance_id, expected_attrs=None):
         """Get a single instance with the given instance_id."""
         if not expected_attrs:
@@ -2118,8 +2184,9 @@ class API(base.Base):
             if uuidutils.is_uuid_like(instance_id):
                 LOG.debug("Fetching instance by UUID",
                            instance_uuid=instance_id)
-                instance = objects.Instance.get_by_uuid(
-                    context, instance_id, expected_attrs=expected_attrs)
+
+                instance = self._get_instance(context, instance_id,
+                                              expected_attrs)
             else:
                 LOG.debug("Failed to fetch instance by id %s", instance_id)
                 raise exception.InstanceNotFound(instance_id=instance_id)
