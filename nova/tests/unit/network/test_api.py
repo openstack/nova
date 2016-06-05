@@ -19,7 +19,6 @@ import itertools
 import uuid
 
 import mock
-from oslo_policy import policy as oslo_policy
 
 from nova.compute import flavors
 from nova import context
@@ -31,7 +30,6 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import fields
-from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -49,40 +47,6 @@ fake_info_cache = {
     'instance_uuid': uuids.instance,
     'network_info': '[]',
     }
-
-
-class NetworkPolicyTestCase(test.TestCase):
-    def setUp(self):
-        super(NetworkPolicyTestCase, self).setUp()
-
-        policy.reset()
-        policy.init()
-
-        self.context = context.get_admin_context()
-
-    def tearDown(self):
-        super(NetworkPolicyTestCase, self).tearDown()
-        policy.reset()
-
-    @mock.patch.object(policy, 'enforce')
-    def test_check_policy(self, mock_enforce):
-        target = {
-            'project_id': self.context.project_id,
-            'user_id': self.context.user_id,
-        }
-        api.check_policy(self.context, 'get_all')
-        mock_enforce.assert_called_once_with(
-            self.context, 'network:get_all', target)
-
-    def test_skip_policy(self):
-        policy.reset()
-        rules = {'network:get_all': '!'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        api = network.API()
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          api.get_all, self.context)
-        api = network.API(skip_policy_check=True)
-        api.get_all(self.context)
 
 
 class ApiTestCase(test.TestCase):
