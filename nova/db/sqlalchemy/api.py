@@ -4768,7 +4768,7 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
                             models.Migration.dest_node == node))).\
             filter(~models.Migration.status.in_(['accepted', 'confirmed',
                                                  'reverted', 'error',
-                                                 'failed'])).\
+                                                 'failed', 'completed'])).\
             options(joinedload_all('instance.system_metadata')).\
             all()
 
