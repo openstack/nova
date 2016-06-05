@@ -63,6 +63,28 @@ class LockServerTestsV21(admin_only_action_common.CommonTests):
                           self.controller._unlock,
                           self.req, instance.uuid, body)
 
+    @mock.patch.object(common, 'get_instance')
+    def test_unlock_override_not_authorized_with_non_admin_user(
+            self, mock_get_instance):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.locked_by = "owner"
+        mock_get_instance.return_value = instance
+        self.assertRaises(self.authorization_error,
+                          self.controller._unlock, self.req,
+                          instance.uuid,
+                          {'unlock': None})
+
+    @mock.patch.object(common, 'get_instance')
+    def test_unlock_override_with_admin_user(self, mock_get_instance):
+        admin_req = fakes.HTTPRequest.blank('', use_admin_context=True)
+        admin_ctxt = admin_req.environ['nova.context']
+        instance = fake_instance.fake_instance_obj(admin_ctxt)
+        instance.locked_by = "owner"
+        mock_get_instance.return_value = instance
+        with mock.patch.object(self.compute_api, 'unlock') as mock_unlock:
+            self.controller._unlock(admin_req, instance.uuid, {'unlock': None})
+            mock_unlock.assert_called_once_with(admin_ctxt, instance)
+
 
 class LockServerPolicyEnforcementV21(test.NoDBTestCase):
 
