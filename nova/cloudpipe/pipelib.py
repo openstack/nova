@@ -54,8 +54,8 @@ def _load_boot_script():
 
 
 class CloudPipe(object):
-    def __init__(self, skip_policy_check=False):
-        self.compute_api = compute.API(skip_policy_check=skip_policy_check)
+    def __init__(self):
+        self.compute_api = compute.API()
 
     def get_encoded_zip(self, project_id):
         # Make a payload.zip

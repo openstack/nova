@@ -38,7 +38,7 @@ CONF = nova.conf.CONF
 class FpingController(wsgi.Controller):
 
     def __init__(self, network_api=None):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.last_call = {}
 
     def check_fping(self):

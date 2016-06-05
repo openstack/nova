@@ -55,7 +55,7 @@ def is_neutron():
         return False
 
 
-def API(skip_policy_check=False):
+def API():
     if is_neutron() is None:
         network_api_class = CONF.network_api_class
     elif is_neutron():
@@ -64,4 +64,4 @@ def API(skip_policy_check=False):
         network_api_class = NOVA_NET_API
 
     cls = importutils.import_class(network_api_class)
-    return cls(skip_policy_check=skip_policy_check)
+    return cls()

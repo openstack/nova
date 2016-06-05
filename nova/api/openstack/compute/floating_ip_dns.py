@@ -84,7 +84,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPDNSDomainController, self).__init__()
-        self.network_api = network.API(skip_policy_check=True)
+        self.network_api = network.API()
 
     @extensions.expected_errors(501)
     def index(self, req):
@@ -162,7 +162,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
 
     def __init__(self):
         super(FloatingIPDNSEntryController, self).__init__()
-        self.network_api = network.API(skip_policy_check=True)
+        self.network_api = network.API()
 
     @extensions.expected_errors((404, 501))
     def show(self, req, domain_id, id):

@@ -36,7 +36,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class RescueController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(RescueController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     # TODO(cyeoh): Should be responding here with 202 Accept
     # because rescue is an async call, but keep to 200

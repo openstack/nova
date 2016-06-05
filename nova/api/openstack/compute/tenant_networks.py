@@ -53,7 +53,7 @@ def network_dict(network):
 
 class TenantNetworkController(wsgi.Controller):
     def __init__(self, network_api=None):
-        self.network_api = nova.network.API(skip_policy_check=True)
+        self.network_api = nova.network.API()
         self._default_networks = []
 
     def _refresh_default_networks(self):

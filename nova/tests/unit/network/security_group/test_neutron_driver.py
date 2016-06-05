@@ -22,7 +22,6 @@ from six.moves import range
 from nova import context
 from nova import exception
 from nova.network.security_group import neutron_driver
-from nova.network.security_group import openstack_driver
 from nova import objects
 from nova import test
 from nova.tests import uuidsentinel as uuids
@@ -434,19 +433,3 @@ class TestNeutronDriverWithoutMock(test.NoDBTestCase):
         r = sg_api.populate_security_groups('ignore')
         self.assertIsInstance(r, objects.SecurityGroupList)
         self.assertEqual(0, len(r))
-
-
-class TestGetter(test.NoDBTestCase):
-    @mock.patch('nova.network.security_group.openstack_driver.'
-                '_get_openstack_security_group_driver')
-    def test_caches(self, mock_get):
-        getter = openstack_driver.get_openstack_security_group_driver
-        openstack_driver.DRIVER_CACHE = {}
-        getter(False)
-        getter(False)
-        getter(True)
-        getter(False)
-        self.assertEqual(2, len(mock_get.call_args_list))
-        self.assertEqual({True: mock_get.return_value,
-                          False: mock_get.return_value},
-                         openstack_driver.DRIVER_CACHE)

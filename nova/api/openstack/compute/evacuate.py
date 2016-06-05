@@ -37,7 +37,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class EvacuateController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(EvacuateController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
 
     def _get_on_shared_storage(self, req, evacuate_body):

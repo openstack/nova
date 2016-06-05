@@ -39,7 +39,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     """The Assisted volume snapshots API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         super(AssistedVolumeSnapshotsController, self).__init__()
 
     @extensions.expected_errors(400)

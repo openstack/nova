@@ -30,7 +30,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class CreateBackupController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(CreateBackupController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action('createBackup')

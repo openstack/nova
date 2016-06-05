@@ -34,7 +34,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class MigrateServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(MigrateServerController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))

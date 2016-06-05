@@ -36,7 +36,7 @@ class IPsController(wsgi.Controller):
 
     def __init__(self, **kwargs):
         super(IPsController, self).__init__(**kwargs)
-        self._compute_api = nova.compute.API(skip_policy_check=True)
+        self._compute_api = nova.compute.API()
 
     @extensions.expected_errors(404)
     def index(self, req, server_id):

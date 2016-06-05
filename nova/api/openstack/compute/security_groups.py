@@ -49,10 +49,9 @@ class SecurityGroupControllerBase(wsgi.Controller):
 
     def __init__(self):
         self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver(
-                skip_policy_check=True))
+            openstack_driver.get_openstack_security_group_driver())
         self.compute_api = compute.API(
-            security_group_api=self.security_group_api, skip_policy_check=True)
+            security_group_api=self.security_group_api)
 
     def _format_security_group_rule(self, context, rule, group_rule_data=None):
         """Return a security group rule in desired API response format.
@@ -357,10 +356,9 @@ class SecurityGroupActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupActionController, self).__init__(*args, **kwargs)
         self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver(
-                skip_policy_check=True))
+            openstack_driver.get_openstack_security_group_driver())
         self.compute_api = compute.API(
-            security_group_api=self.security_group_api, skip_policy_check=True)
+            security_group_api=self.security_group_api)
 
     def _parse(self, body, action):
         try:
@@ -427,10 +425,9 @@ class SecurityGroupActionController(wsgi.Controller):
 class SecurityGroupsOutputController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(SecurityGroupsOutputController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver(
-                skip_policy_check=True))
+            openstack_driver.get_openstack_security_group_driver())
 
     def _extend_servers(self, req, servers):
         # TODO(arosen) this function should be refactored to reduce duplicate

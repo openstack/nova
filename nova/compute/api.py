@@ -188,15 +188,12 @@ class API(base.Base):
     """API for interacting with the compute manager."""
 
     def __init__(self, image_api=None, network_api=None, volume_api=None,
-                 security_group_api=None, skip_policy_check=False, **kwargs):
-        self.skip_policy_check = skip_policy_check
+                 security_group_api=None, **kwargs):
         self.image_api = image_api or image.API()
-        self.network_api = network_api or network.API(
-            skip_policy_check=skip_policy_check)
+        self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
         self.security_group_api = (security_group_api or
-            openstack_driver.get_openstack_security_group_driver(
-                skip_policy_check=skip_policy_check))
+            openstack_driver.get_openstack_security_group_driver())
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.compute_task_api = conductor.ComputeTaskAPI()
@@ -3983,9 +3980,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     # The nova security group api does not use a uuid for the id.
     id_is_uuid = False
 
-    def __init__(self, skip_policy_check=False, **kwargs):
+    def __init__(self, **kwargs):
         super(SecurityGroupAPI, self).__init__(**kwargs)
-        self.skip_policy_check = skip_policy_check
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
     def validate_property(self, value, property, allowed):

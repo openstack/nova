@@ -149,7 +149,7 @@ class ServersController(wsgi.Controller):
 
         self.extension_info = kwargs.pop('extension_info')
         super(ServersController, self).__init__(**kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
         # Look for implementation of extension point of server creation
         self.create_extension_manager = \

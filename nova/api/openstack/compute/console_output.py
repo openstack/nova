@@ -33,7 +33,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class ConsoleOutputController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ConsoleOutputController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @extensions.expected_errors((404, 409, 501))
     @wsgi.action('os-getConsoleOutput')

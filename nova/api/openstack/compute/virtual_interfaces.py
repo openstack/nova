@@ -49,8 +49,8 @@ class ServerVirtualInterfaceController(wsgi.Controller):
     """
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
-        self.network_api = network.API(skip_policy_check=True)
+        self.compute_api = compute.API()
+        self.network_api = network.API()
         super(ServerVirtualInterfaceController, self).__init__()
 
     def _items(self, req, server_id, entity_maker):

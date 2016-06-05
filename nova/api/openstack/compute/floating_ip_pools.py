@@ -38,7 +38,7 @@ class FloatingIPPoolsController(wsgi.Controller):
     """The Floating IP Pool API controller for the OpenStack API."""
 
     def __init__(self):
-        self.network_api = network.API(skip_policy_check=True)
+        self.network_api = network.API()
         super(FloatingIPPoolsController, self).__init__()
 
     @extensions.expected_errors(())
