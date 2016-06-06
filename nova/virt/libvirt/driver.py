@@ -2964,7 +2964,11 @@ class LibvirtDriver(driver.ComputeDriver):
                          {'path': configdrive_path}, instance=instance)
 
                 try:
-                    cdb.make_drive(configdrive_path)
+                    # FIXME(danms): This is (and was) broken for configdrive
+                    # on RBD. A slightly more complicated refactor needs to
+                    # happen to make it work in that case.
+                    if not os.path.exists(configdrive_path):
+                        cdb.make_drive(configdrive_path)
                 except processutils.ProcessExecutionError as e:
                     with excutils.save_and_reraise_exception():
                         LOG.error(_LE('Creating config drive failed '

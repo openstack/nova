@@ -9615,6 +9615,34 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertTrue(imported_files[0][0].endswith('/disk.config.rescue'))
         self.assertEqual('disk.config.rescue', imported_files[0][1])
 
+    @mock.patch.object(nova.virt.configdrive.ConfigDriveBuilder, 'make_drive')
+    @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
+    @mock.patch.object(instance_metadata, 'InstanceMetadata')
+    @mock.patch.object(os.path, 'exists')
+    def test_create_image_with_configdrive_and_config_drive_exists(
+            self, mock_exist, mock_instance_metadata, mock_image_cache,
+            mock_make_drive):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr.image_backend = mock.Mock()
+        drvr.image_backend.image.return_value = drvr.image_backend
+        instance = objects.Instance(**self.test_instance)
+        instance.task_state = task_states.RESIZE_FINISH
+        instance.config_drive = True
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance,
+                                            image_meta)
+
+        mock_exist.return_value = True
+        drvr._create_image(self.context, instance, disk_info['mapping'])
+        mock_make_drive.assert_not_called()
+        mock_exist.assert_any_call(
+            os.path.join(libvirt_utils.get_instance_path(instance),
+                         'disk.config'))
+        mock_exist.return_value = False
+        drvr._create_image(self.context, instance, disk_info['mapping'])
+        self.assertTrue(mock_make_drive.called)
+
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
     def test_create_image_not_exist_no_fallback(self, mock_cache):
