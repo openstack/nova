@@ -1427,7 +1427,7 @@ def host_topology_and_format_from_host(host):
 
     Since we may get a host as either a dict, a db object, or an actual
     ComputeNode object, or an instance of HostState class, this makes sure we
-    get beck either None, or an instance of objects.NUMATopology class.
+    get back either None, or an instance of objects.NUMATopology class.
 
     :returns: A two-tuple, first element is the topology itself or None, second
               is a boolean set to True if topology was in JSON format.
