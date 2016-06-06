@@ -84,7 +84,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                       instance_update_and_get_original)
 
         fakes.stub_out_nw_api(self)
-        fakes.stub_out_compute_api_snapshot(self.stubs)
+        fakes.stub_out_compute_api_snapshot(self)
         fake.stub_out_image_service(self)
         self.flags(allow_instance_snapshots=True,
                    enable_instance_password=True,

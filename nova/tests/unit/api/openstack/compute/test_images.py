@@ -53,8 +53,8 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         self.flags(api_servers=['http://localhost:9292'], group='glance')
         fakes.stub_out_networking(self)
         fakes.stub_out_key_pair_funcs(self)
-        fakes.stub_out_compute_api_snapshot(self.stubs)
-        fakes.stub_out_compute_api_backup(self.stubs)
+        fakes.stub_out_compute_api_snapshot(self)
+        fakes.stub_out_compute_api_backup(self)
 
         self.controller = self.image_controller_class()
         self.url_prefix = "http://localhost%s/images" % self.url_base

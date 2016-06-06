@@ -30,7 +30,6 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
 from nova.api.openstack import wsgi as os_wsgi
-from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import vm_states
 import nova.conf
@@ -128,7 +127,7 @@ def stub_out_networking(test):
     test.stub_out('oslo_utils.netutils.get_my_ipv4', get_my_ip)
 
 
-def stub_out_compute_api_snapshot(stubs):
+def stub_out_compute_api_snapshot(test):
 
     def snapshot(self, context, instance, name, extra_properties=None):
         # emulate glance rejecting image names which are too long
@@ -137,15 +136,14 @@ def stub_out_compute_api_snapshot(stubs):
         return dict(id='123', status='ACTIVE', name=name,
                     properties=extra_properties)
 
-    stubs.Set(compute_api.API, 'snapshot', snapshot)
+    test.stub_out('nova.compute.api.API.snapshot', snapshot)
 
 
 class stub_out_compute_api_backup(object):
 
-    def __init__(self, stubs):
-        self.stubs = stubs
+    def __init__(self, test):
         self.extra_props_last_call = None
-        stubs.Set(compute_api.API, 'backup', self.backup)
+        test.stub_out('nova.compute.api.API.backup', self.backup)
 
     def backup(self, context, instance, name, backup_type, rotation,
                extra_properties=None):
