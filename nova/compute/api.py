@@ -3352,7 +3352,7 @@ class API(base.Base):
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
     def live_migrate(self, context, instance, block_migration,
-                     disk_over_commit, host_name):
+                     disk_over_commit, host_name, force=None):
         """Migrate a server lively to a new host."""
         LOG.debug("Going to try to live migrate instance to %s",
                   host_name or "another host", instance=instance)
@@ -3369,6 +3369,30 @@ class API(base.Base):
             # Some old instances can still have no RequestSpec object attached
             # to them, we need to support the old way
             request_spec = None
+
+        # NOTE(sbauza): Force is a boolean by the new related API version
+        if force is False and host_name:
+            nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
+            if not nodes:
+                raise exception.ComputeHostNotFound(host=host_name)
+            # NOTE(sbauza): Unset the host to make sure we call the scheduler
+            host_name = None
+            # FIXME(sbauza): Since only Ironic driver uses more than one
+            # compute per service but doesn't support evacuations,
+            # let's provide the first one.
+            target = nodes[0]
+            if request_spec:
+                # TODO(sbauza): Hydrate a fake spec for old instances not yet
+                # having a request spec attached to them (particularly true for
+                # cells v1). For the moment, let's keep the same behaviour for
+                # all the instances but provide the destination only if a spec
+                # is found.
+                destination = objects.Destination(
+                    host=target.host,
+                    node=target.hypervisor_hostname
+                )
+                request_spec.requested_destination = destination
+
         try:
             self.compute_task_api.live_migrate_instance(context, instance,
                 host_name, block_migration=block_migration,

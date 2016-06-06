@@ -309,3 +309,12 @@ user documentation.
   Also changes the evacuate action behaviour when providing a ``host`` string
   field by calling the nova scheduler to verify the provided host unless the
   ``force`` attribute is set.
+
+2.30
+----
+
+Updates the POST request body for the ``live-migrate`` action to include the
+optional ``force`` boolean field defaulted to False.
+Also changes the live-migrate action behaviour when providing a ``host``
+string field by calling the nova scheduler to verify the provided host unless
+the ``force`` attribute is set.

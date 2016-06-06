@@ -49,3 +49,7 @@ migrate_live_v2_25['properties']['os-migrateLive']['properties'][
     'block_migration'] = block_migration
 migrate_live_v2_25['properties']['os-migrateLive']['required'] = (
     ['block_migration', 'host'])
+
+migrate_live_v2_30 = copy.deepcopy(migrate_live_v2_25)
+migrate_live_v2_30['properties']['os-migrateLive']['properties'][
+    'force'] = parameter_types.boolean

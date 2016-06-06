@@ -10086,28 +10086,38 @@ class ComputeAPITestCase(BaseTestCase):
         mock_refresh.assert_called_once_with(mock.sentinel.ctxt,
                                              mock.sentinel.instances)
 
-    def test_live_migrate(self):
+    def _test_live_migrate(self, force=None):
         instance, instance_uuid = self._run_instance()
 
         rpcapi = self.compute_api.compute_task_api
         fake_spec = objects.RequestSpec()
 
         @mock.patch.object(rpcapi, 'live_migrate_instance')
+        @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
         @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
         @mock.patch.object(self.compute_api, '_record_action_start')
         def do_test(record_action_start, get_by_instance_uuid,
-                    live_migrate_instance):
+                    get_all_by_host, live_migrate_instance):
             get_by_instance_uuid.return_value = fake_spec
+            get_all_by_host.return_value = objects.ComputeNodeList(
+                objects=[objects.ComputeNode(
+                    host='fake_dest_host',
+                    hypervisor_hostname='fake_dest_node')])
 
             self.compute_api.live_migrate(self.context, instance,
                                           block_migration=True,
                                           disk_over_commit=True,
-                                          host_name='fake_dest_host')
+                                          host_name='fake_dest_host',
+                                          force=force)
 
             record_action_start.assert_called_once_with(self.context, instance,
                                                         'live-migration')
+            if force is False:
+                host = None
+            else:
+                host = 'fake_dest_host'
             live_migrate_instance.assert_called_once_with(
-                self.context, instance, 'fake_dest_host',
+                self.context, instance, host,
                 block_migration=True,
                 disk_over_commit=True,
                 request_spec=fake_spec)
@@ -10115,6 +10125,33 @@ class ComputeAPITestCase(BaseTestCase):
         do_test()
         instance.refresh()
         self.assertEqual(instance['task_state'], task_states.MIGRATING)
+        if force is False:
+            req_dest = fake_spec.requested_destination
+            self.assertIsNotNone(req_dest)
+            self.assertIsInstance(req_dest, objects.Destination)
+            self.assertEqual('fake_dest_host', req_dest.host)
+            self.assertEqual('fake_dest_node', req_dest.node)
+
+    def test_live_migrate(self):
+        self._test_live_migrate()
+
+    def test_live_migrate_with_not_forced_host(self):
+        self._test_live_migrate(force=False)
+
+    def test_live_migrate_with_forced_host(self):
+        self._test_live_migrate(force=True)
+
+    def test_fail_live_migrate_with_non_existing_destination(self):
+        instance = self._create_fake_instance_obj(services=True)
+        self.assertIsNone(instance.task_state)
+
+        self.assertRaises(
+            exception.ComputeHostNotFound,
+            self.compute_api.live_migrate, self.context.elevated(),
+            instance, block_migration=True,
+            disk_over_commit=True,
+            host_name='fake_dest_host',
+            force=False)
 
     def _test_evacuate(self, force=None):
         instance = self._create_fake_instance_obj(services=True)

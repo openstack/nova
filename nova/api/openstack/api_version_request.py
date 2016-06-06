@@ -77,6 +77,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.28 - Changes compute_node.cpu_info from string to object
     * 2.29 - Add a force flag in evacuate request body and change the
              behaviour for the host flag by calling the scheduler.
+    * 2.30 - Add a force flag in live-migrate request body and change the
+             behaviour for the host flag by calling the scheduler.
 """
 
 # The minimum and maximum versions of the API supported
@@ -85,7 +87,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.29"
+_MAX_API_VERSION = "2.30"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

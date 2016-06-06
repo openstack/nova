@@ -1,0 +1,11 @@
+---
+features:
+  - On live-migrate actions, the default behaviour when providing a host in
+    the request body changed. Now, instead of bypassing the scheduler when
+    asking for a destination, it will instead call it with the requested
+    destination to make sure the proposed host is accepted by all the filters
+    and the original request.
+    In case the administrator doesn't want to call the scheduler when providing
+    a destination, a new request body field called ``force`` (defaulted to
+    False) will modify that new behaviour by forcing the live-migrate operation
+    to the destination without verifying the scheduler.

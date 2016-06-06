@@ -1413,6 +1413,14 @@ force_evacuate:
   required: false
   type: boolean
   min_version: 2.29
+force_live_migrate:
+  description: |
+    Force a live-migration by not verifying the provided destination host by
+    the scheduler.
+  in: body
+  required: false
+  type: boolean
+  min_version: 2.30
 forced_down:
   in: body
   required: true
