@@ -166,9 +166,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             'supported_hv_specs',
             'host',
             'pci_device_pools',
-            'local_gb',
-            'memory_mb',
-            'vcpus',
             ])
         fields = set(compute.fields) - special_cases
         for key in fields:
@@ -205,13 +202,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                         # It's not specified either on the controller
                         value = 1.0
             setattr(compute, key, value)
-
-        for key in ('vcpus', 'local_gb', 'memory_mb'):
-            inv_key = 'inv_%s' % key
-            if inv_key in db_compute and db_compute[inv_key] is not None:
-                setattr(compute, key, db_compute[inv_key])
-            else:
-                setattr(compute, key, db_compute[key])
 
         stats = db_compute['stats']
         if stats:
@@ -388,12 +378,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         self._convert_pci_stats_to_db_format(updates)
 
         db_compute = db.compute_node_create(self._context, updates)
-        # NOTE(danms): compute_node_create() operates on (and returns) the
-        # compute node model only. We need to get the full inventory-based
-        # result in order to satisfy _from_db_object(). So, we do a double
-        # query here. This can be removed in Newton once we're sure that all
-        # compute nodes are inventory-based
-        db_compute = db.compute_node_get(self._context, db_compute['id'])
         self._from_db_object(self._context, self, db_compute)
 
     @base.remotable
@@ -408,12 +392,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         self._convert_pci_stats_to_db_format(updates)
 
         db_compute = db.compute_node_update(self._context, self.id, updates)
-        # NOTE(danms): compute_node_update() operates on (and returns) the
-        # compute node model only. We need to get the full inventory-based
-        # result in order to satisfy _from_db_object(). So, we do a double
-        # query here. This can be removed in Newton once we're sure that all
-        # compute nodes are inventory-based
-        db_compute = db.compute_node_get(self._context, self.id)
         self._from_db_object(self._context, self, db_compute)
 
     @base.remotable
