@@ -1153,7 +1153,7 @@ object_data = {
     'Inventory': '1.0-84131c00c84a27ee6930d01b329c9a9d',
     'InventoryList': '1.0-de53f0fd078c27cc1d43400f4e8bcef8',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
-    'LibvirtLiveMigrateData': '1.2-c489f63478d13eace828128ea3dfa57c',
+    'LibvirtLiveMigrateData': '1.3-2795e5646ee21e8c7f1c3e64fb6c80a3',
     'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
     'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
     'Migration': '1.4-17979b9f2ae7f28d97043a220b2a8350',

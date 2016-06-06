@@ -9185,6 +9185,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             write_to_file.assert_called_with(disk_info_path,
                                              jsonutils.dumps(image_disk_info))
 
+    def test_pre_live_migration_with_perf_events(self):
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._supported_perf_events = ['cmt']
+
+        migrate_data = {}
+
+        instance = objects.Instance(**self.test_instance)
+
+        res = drvr.pre_live_migration(self.context, instance,
+                                      block_device_info=None,
+                                      network_info=[],
+                                      disk_info=None,
+                                      migrate_data=migrate_data)
+        self.assertEqual(['cmt'], res.supported_perf_events)
+
     def test_get_instance_disk_info_works_correctly(self):
         # Test data
         instance = objects.Instance(**self.test_instance)

@@ -109,7 +109,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.1: Added target_connect_addr
     # Version 1.2: Added 'serial_listen_ports' to allow live migration with
     #              serial console.
-    VERSION = '1.2'
+    # Version 1.3: Added 'supported_perf_events'
+    VERSION = '1.3'
 
     fields = {
         'filename': fields.StringField(),
@@ -127,12 +128,16 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         'serial_listen_ports': fields.ListOfIntegersField(),
         'bdms': fields.ListOfObjectsField('LibvirtLiveMigrateBDMInfo'),
         'target_connect_addr': fields.StringField(nullable=True),
+        'supported_perf_events': fields.ListOfStringsField(),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3):
+            if 'supported_perf_events' in primitive:
+                del primitive['supported_perf_events']
         if target_version < (1, 2):
             if 'serial_listen_ports' in primitive:
                 del primitive['serial_listen_ports']
