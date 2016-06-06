@@ -782,13 +782,6 @@ class ResourceTracker(object):
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance, prefix='old_')
 
-        if image_meta is None:
-            image_meta = objects.ImageMeta.from_instance(instance)
-        # TODO(jaypipes): Remove when image_meta is always passed
-        # as an objects.ImageMeta
-        elif not isinstance(image_meta, objects.ImageMeta):
-            image_meta = objects.ImageMeta.from_dict(image_meta)
-
         if itype:
             usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
