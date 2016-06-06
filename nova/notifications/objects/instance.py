@@ -106,6 +106,29 @@ class InstanceActionPayload(InstancePayload):
 
 
 @nova_base.NovaObjectRegistry.register_notification
+class InstanceUpdatePayload(InstancePayload):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
+        'audit_period': fields.ObjectField('AuditPeriodPayload'),
+        'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),
+        'old_display_name': fields.StringField(nullable=True)
+    }
+
+    def __init__(self, instance, flavor, ip_addresses, state_update,
+                 audit_period, bandwidth, old_display_name):
+        super(InstanceUpdatePayload, self).__init__(
+                instance=instance,
+                flavor=flavor,
+                ip_addresses=ip_addresses,
+                state_update=state_update,
+                audit_period=audit_period,
+                bandwidth=bandwidth,
+                old_display_name=old_display_name)
+
+
+@nova_base.NovaObjectRegistry.register_notification
 class IpPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -118,6 +141,25 @@ class IpPayload(base.NotificationPayloadBase):
         'address': fields.IPV4AndV6AddressField(),
         'device_name': fields.StringField(nullable=True)
     }
+
+    @classmethod
+    def from_network_info(cls, network_info):
+        """Returns a list of IpPayload object based on the passed
+        network_info.
+        """
+        ips = []
+        if network_info is not None:
+            for vif in network_info:
+                for ip in vif.fixed_ips():
+                    ips.append(cls(
+                        label=vif["network"]["label"],
+                        mac=vif["address"],
+                        meta=vif["meta"],
+                        port_uuid=vif["id"],
+                        version=ip["version"],
+                        address=ip["address"],
+                        device_name=vif["devname"]))
+        return ips
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -144,6 +186,39 @@ class FlavorPayload(base.NotificationPayloadBase):
     def __init__(self, instance, **kwargs):
         super(FlavorPayload, self).__init__(**kwargs)
         self.populate_schema(instance=instance, flavor=instance.flavor)
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class BandwidthPayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'network_name': fields.StringField(),
+        'in_bytes': fields.IntegerField(),
+        'out_bytes': fields.IntegerField(),
+    }
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class AuditPeriodPayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'audit_period_beginning': fields.DateTimeField(),
+        'audit_period_ending': fields.DateTimeField(),
+    }
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceStateUpdatePayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'old_state': fields.StringField(nullable=True),
+        'state': fields.StringField(nullable=True),
+        'old_task_state': fields.StringField(nullable=True),
+        'new_task_state': fields.StringField(nullable=True),
+    }
 
 
 @base.notification_sample('instance-delete-start.json')
@@ -181,4 +256,15 @@ class InstanceActionNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceActionPayload')
+    }
+
+
+@base.notification_sample('instance-update.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceUpdateNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceUpdatePayload')
     }

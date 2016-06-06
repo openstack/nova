@@ -77,7 +77,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.start_service('conductor', manager=CONF.conductor.manager)
         self.start_service('scheduler')
         self.start_service('network')
-        self.start_service('compute')
+        self.compute = self.start_service('compute')
 
     def _get_notification_sample(self, sample):
         sample_dir = os.path.dirname(os.path.abspath(__file__))
@@ -177,3 +177,8 @@ class NotificationSampleTestBase(test.TestCase,
             self.fail('Server failed to delete.')
         except api_client.OpenStackApiNotFoundException:
             return
+
+    def _get_notifications(self, event_type):
+        return [notification for notification
+                    in fake_notifier.VERSIONED_NOTIFICATIONS
+                    if notification['event_type'] == event_type]
