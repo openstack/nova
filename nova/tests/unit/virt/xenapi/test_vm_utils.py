@@ -457,10 +457,6 @@ class TestImageCompression(VMUtilsTestBase):
     def test_image_compression(self):
         # Testing for nova.conf, too low, negative, and a correct value.
         self.assertIsNone(vm_utils.get_compression_level())
-        self.flags(image_compression_level=0, group='xenserver')
-        self.assertIsNone(vm_utils.get_compression_level())
-        self.flags(image_compression_level=-6, group='xenserver')
-        self.assertIsNone(vm_utils.get_compression_level())
         self.flags(image_compression_level=6, group='xenserver')
         self.assertEqual(vm_utils.get_compression_level(), 6)
 
