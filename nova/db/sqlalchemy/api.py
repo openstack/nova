@@ -64,7 +64,6 @@ import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
-from nova.objects import fields
 from nova import quota
 from nova import safe_utils
 
@@ -564,153 +563,11 @@ def service_update(context, service_id, values):
 
 
 def _compute_node_select(context, filters=None):
-    # NOTE(jaypipes): With the addition of the resource-providers database
-    # schema, inventory and allocation information for various resources
-    # on a compute node are to be migrated from the compute_nodes and
-    # instance_extra tables into the new inventories and allocations tables.
-    # During the time that this data migration is ongoing we need to allow
-    # the scheduler to essentially be blind to the underlying database
-    # schema changes. So, this query here returns three sets of resource
-    # attributes:
-    #  - inv_memory_mb, inv_memory_mb_used, inv_memory_mb_reserved,
-    #    inv_ram_allocation_ratio
-    #  - inv_vcpus, inv_vcpus_used, inv_cpu_allocation_ratio
-    #  - inv_local_gb, inv_local_gb_used, inv_disk_allocation_ratio
-    # These resource capacity/usage fields store the total and used values
-    # for those three resource classes that are currently stored in similar
-    # fields in the compute_nodes table (e.g. memory_mb and memory_mb_used)
-    # The code that runs the online data migrations will be able to tell if
-    # the compute node has had its inventory information moved to the
-    # inventories table by checking for a non-None field value for the
-    # inv_memory_mb, inv_vcpus, and inv_local_gb fields.
-    #
-    # The below SQLAlchemy code below produces the following SQL statement
-    # exactly:
-    #
-    # SELECT
-    #   cn.*,
-    #   ram_inv.total as inv_memory_mb,
-    #   ram_inv.reserved as inv_memory_mb_reserved,
-    #   ram_inv.allocation_ratio as inv_ram_allocation_ratio,
-    #   ram_usage.used as inv_memory_mb_used,
-    #   cpu_inv.total as inv_vcpus,
-    #   cpu_inv.allocation_ratio as inv_cpu_allocation_ratio,
-    #   cpu_usage.used as inv_vcpus_used,
-    #   disk_inv.total as inv_local_gb,
-    #   disk_inv.allocation_ratio as inv_disk_allocation_ratio,
-    #   disk_usage.used as inv_local_gb_used
-    # FROM compute_nodes AS cn
-    #   LEFT OUTER JOIN resource_providers AS rp
-    #     ON cn.uuid = rp.uuid
-    #   LEFT OUTER JOIN inventories AS ram_inv
-    #     ON rp.id = ram_inv.resource_provider_id
-    #     AND ram_inv.resource_class_id = :RAM_MB
-    #   LEFT OUTER JOIN (
-    #     SELECT resource_provider_id, SUM(used) as used
-    #     FROM allocations
-    #     WHERE resource_class_id = :RAM_MB
-    #     GROUP BY resource_provider_id
-    #   ) AS ram_usage
-    #     ON ram_inv.resource_provider_id = ram_usage.resource_provider_id
-    #   LEFT OUTER JOIN inventories AS cpu_inv
-    #     ON rp.id = cpu_inv.resource_provider_id
-    #     AND cpu_inv.resource_class_id = :VCPUS
-    #   LEFT OUTER JOIN (
-    #     SELECT resource_provider_id, SUM(used) as used
-    #     FROM allocations
-    #     WHERE resource_class_id = :VCPUS
-    #     GROUP BY resource_provider_id
-    #   ) AS cpu_usage
-    #     ON cpu_inv.resource_provider_id = cpu_usage.resource_provider_id
-    #   LEFT OUTER JOIN inventories AS disk_inv
-    #     ON rp.id = disk_inv.resource_provider_id
-    #     AND disk_inv.resource_class_id = :DISK_GB
-    #   LEFT OUTER JOIN (
-    #     SELECT resource_provider_id, SUM(used) as used
-    #     FROM allocations
-    #     WHERE resource_class_id = :DISK_GB
-    #     GROUP BY resource_provider_id
-    #   ) AS disk_usage
-    #     ON disk_inv.resource_provider_id = disk_usage.resource_provider_id
-    # WHERE cn.deleted = 0;
     if filters is None:
         filters = {}
 
-    RAM_MB = fields.ResourceClass.index(fields.ResourceClass.MEMORY_MB)
-    VCPU = fields.ResourceClass.index(fields.ResourceClass.VCPU)
-    DISK_GB = fields.ResourceClass.index(fields.ResourceClass.DISK_GB)
-
     cn_tbl = sa.alias(models.ComputeNode.__table__, name='cn')
-    rp_tbl = sa.alias(models.ResourceProvider.__table__, name='rp')
-    inv_tbl = models.Inventory.__table__
-    alloc_tbl = models.Allocation.__table__
-    ram_inv = sa.alias(inv_tbl, name='ram_inv')
-    cpu_inv = sa.alias(inv_tbl, name='cpu_inv')
-    disk_inv = sa.alias(inv_tbl, name='disk_inv')
-
-    ram_usage = sa.select([alloc_tbl.c.resource_provider_id,
-                           sql.func.sum(alloc_tbl.c.used).label('used')])
-    ram_usage = ram_usage.where(alloc_tbl.c.resource_class_id == RAM_MB)
-    ram_usage = ram_usage.group_by(alloc_tbl.c.resource_provider_id)
-    ram_usage = sa.alias(ram_usage, name='ram_usage')
-
-    cpu_usage = sa.select([alloc_tbl.c.resource_provider_id,
-                           sql.func.sum(alloc_tbl.c.used).label('used')])
-    cpu_usage = cpu_usage.where(alloc_tbl.c.resource_class_id == VCPU)
-    cpu_usage = cpu_usage.group_by(alloc_tbl.c.resource_provider_id)
-    cpu_usage = sa.alias(cpu_usage, name='cpu_usage')
-
-    disk_usage = sa.select([alloc_tbl.c.resource_provider_id,
-                           sql.func.sum(alloc_tbl.c.used).label('used')])
-    disk_usage = disk_usage.where(alloc_tbl.c.resource_class_id == DISK_GB)
-    disk_usage = disk_usage.group_by(alloc_tbl.c.resource_provider_id)
-    disk_usage = sa.alias(disk_usage, name='disk_usage')
-
-    cn_rp_join = sql.outerjoin(
-        cn_tbl, rp_tbl,
-        cn_tbl.c.uuid == rp_tbl.c.uuid)
-    ram_inv_join = sql.outerjoin(
-        cn_rp_join, ram_inv,
-        sql.and_(rp_tbl.c.id == ram_inv.c.resource_provider_id,
-                 ram_inv.c.resource_class_id == RAM_MB))
-    ram_join = sql.outerjoin(
-        ram_inv_join, ram_usage,
-        ram_inv.c.resource_provider_id == ram_usage.c.resource_provider_id)
-    cpu_inv_join = sql.outerjoin(
-        ram_join, cpu_inv,
-        sql.and_(rp_tbl.c.id == cpu_inv.c.resource_provider_id,
-                 cpu_inv.c.resource_class_id == VCPU))
-    cpu_join = sql.outerjoin(
-        cpu_inv_join, cpu_usage,
-        cpu_inv.c.resource_provider_id == cpu_usage.c.resource_provider_id)
-    disk_inv_join = sql.outerjoin(
-        cpu_join, disk_inv,
-        sql.and_(rp_tbl.c.id == disk_inv.c.resource_provider_id,
-                 disk_inv.c.resource_class_id == DISK_GB))
-    disk_join = sql.outerjoin(
-        disk_inv_join, disk_usage,
-        disk_inv.c.resource_provider_id == disk_usage.c.resource_provider_id)
-    # TODO(jaypipes): Remove all capacity and usage fields from this method
-    # entirely and deal with allocations and inventory information in a
-    # tabular fashion instead of a columnar fashion like the legacy
-    # compute_nodes table schema does.
-    inv_cols = [
-        ram_inv.c.total.label('inv_memory_mb'),
-        ram_inv.c.reserved.label('inv_memory_mb_reserved'),
-        ram_inv.c.allocation_ratio.label('inv_ram_allocation_ratio'),
-        ram_usage.c.used.label('inv_memory_mb_used'),
-        cpu_inv.c.total.label('inv_vcpus'),
-        cpu_inv.c.allocation_ratio.label('inv_cpu_allocation_ratio'),
-        cpu_usage.c.used.label('inv_vcpus_used'),
-        disk_inv.c.total.label('inv_local_gb'),
-        disk_inv.c.reserved.label('inv_local_gb_reserved'),
-        disk_inv.c.allocation_ratio.label('inv_disk_allocation_ratio'),
-        disk_usage.c.used.label('inv_local_gb_used'),
-    ]
-    cols_in_output = list(cn_tbl.c)
-    cols_in_output.extend(inv_cols)
-
-    select = sa.select(cols_in_output).select_from(disk_join)
+    select = sa.select([cn_tbl])
 
     if context.read_deleted == "no":
         select = select.where(cn_tbl.c.deleted == 0)
@@ -866,66 +723,28 @@ def compute_node_statistics(context):
     agg_cols = [
         func.count().label('count'),
         sql.func.sum(
-            sql.func.coalesce(
-                inner_sel.c.inv_vcpus,
-                inner_sel.c.vcpus
-            )
+            inner_sel.c.vcpus
         ).label('vcpus'),
         sql.func.sum(
-            sql.func.coalesce(
-                inner_sel.c.inv_memory_mb,
-                inner_sel.c.memory_mb
-            )
+            inner_sel.c.memory_mb
         ).label('memory_mb'),
         sql.func.sum(
-            sql.func.coalesce(
-                inner_sel.c.inv_local_gb,
-                inner_sel.c.local_gb
-            )
+            inner_sel.c.local_gb
         ).label('local_gb'),
         sql.func.sum(
-            sql.func.coalesce(
-                inner_sel.c.inv_vcpus_used,
-                inner_sel.c.vcpus_used
-            )
+            inner_sel.c.vcpus_used
         ).label('vcpus_used'),
         sql.func.sum(
-            sql.func.coalesce(
-                inner_sel.c.inv_memory_mb_used,
-                inner_sel.c.memory_mb_used
-            )
+            inner_sel.c.memory_mb_used
         ).label('memory_mb_used'),
         sql.func.sum(
-            sql.func.coalesce(
-                inner_sel.c.inv_local_gb_used,
-                inner_sel.c.local_gb_used
-            )
+            inner_sel.c.local_gb_used
         ).label('local_gb_used'),
-        # NOTE(jaypipes): This mess cannot be removed until the
-        # resource-providers-allocations blueprint is completed and all of the
-        # data migrations for BOTH inventory and allocations fields have been
-        # completed.
         sql.func.sum(
-            # NOTE(jaypipes): free_ram_mb and free_disk_gb do NOT take
-            # allocation ratios for those resources into account but they DO
-            # take reserved memory and disk configuration option amounts into
-            # account. Awesomesauce.
-            sql.func.coalesce(
-                (inner_sel.c.inv_memory_mb - (
-                    inner_sel.c.inv_memory_mb_used +
-                    inner_sel.c.inv_memory_mb_reserved)
-                ),
-                inner_sel.c.free_ram_mb
-            )
+            inner_sel.c.free_ram_mb
         ).label('free_ram_mb'),
         sql.func.sum(
-            sql.func.coalesce(
-                (inner_sel.c.inv_local_gb - (
-                    inner_sel.c.inv_local_gb_used +
-                    inner_sel.c.inv_local_gb_reserved)
-                ),
-                inner_sel.c.free_disk_gb
-            )
+            inner_sel.c.free_disk_gb
         ).label('free_disk_gb'),
         sql.func.sum(
             inner_sel.c.current_workload
