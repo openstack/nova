@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import defaultdict
 from collections import deque
 import contextlib
 import copy
@@ -9616,15 +9617,25 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual('disk.config.rescue', imported_files[0][1])
 
     @mock.patch.object(nova.virt.configdrive.ConfigDriveBuilder, 'make_drive')
-    @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
     @mock.patch.object(instance_metadata, 'InstanceMetadata')
-    @mock.patch.object(os.path, 'exists')
     def test_create_image_with_configdrive_and_config_drive_exists(
-            self, mock_exist, mock_instance_metadata, mock_image_cache,
-            mock_make_drive):
+            self, mock_instance_metadata, mock_make_drive):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
+
+        def mock_disk_creator():
+            exists = mock.Mock(return_value=True)
+            return mock.Mock(exists=exists)
+
+        # The disks dictionary contains Mocks whose exists() method returns
+        # True
+        disks = defaultdict(mock_disk_creator)
+
+        def fake_image(instance, disk_name, image_type=None):
+            return disks[disk_name]
+
+        # image_backend returns mocks from the disks dict, keyed by disk name
+        drvr.image_backend.image = mock.Mock(side_effect=fake_image)
+
         instance = objects.Instance(**self.test_instance)
         instance.task_state = task_states.RESIZE_FINISH
         instance.config_drive = True
@@ -9633,13 +9644,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance,
                                             image_meta)
 
-        mock_exist.return_value = True
         drvr._create_image(self.context, instance, disk_info['mapping'])
         mock_make_drive.assert_not_called()
-        mock_exist.assert_any_call(
-            os.path.join(libvirt_utils.get_instance_path(instance),
-                         'disk.config'))
-        mock_exist.return_value = False
+
+        disks['disk.config'].exists.return_value = False
         drvr._create_image(self.context, instance, disk_info['mapping'])
         self.assertTrue(mock_make_drive.called)
 
@@ -15407,6 +15415,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         rescue_password = 'fake_password'
+
+        mock_backend.config.exists.return_value = False
 
         self.drvr.rescue(self.context, instance, network_info,
                                                 image_meta, rescue_password)
