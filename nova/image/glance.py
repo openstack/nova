@@ -448,6 +448,13 @@ class GlanceImageService(object):
         return True
 
 
+class GlanceImageServiceV2(object):
+    """Provides storage and retrieval of disk image objects within Glance."""
+
+    def __init__(self, client=None):
+        self._client = client or GlanceClientWrapper()
+
+
 def _extract_query_params(params):
     _params = {}
     accepted_params = ('filters', 'marker', 'limit',
@@ -681,12 +688,22 @@ def get_remote_image_service(context, image_href):
     except ValueError:
         raise exception.InvalidImageRef(image_href=image_href)
 
-    image_service = GlanceImageService(client=glance_client)
+    # TODO(sbiswas7): Remove this check once we move to glance V2
+    # completely.
+    if CONF.glance.use_glance_v1:
+        image_service = GlanceImageService(client=glance_client)
+    else:
+        image_service = GlanceImageServiceV2(client=glance_client)
     return image_service, image_id
 
 
 def get_default_image_service():
-    return GlanceImageService()
+    # TODO(sbiswas7): Remove this check once we move to glance V2
+    # completely.
+    if CONF.glance.use_glance_v1:
+        return GlanceImageService()
+    else:
+        return GlanceImageServiceV2()
 
 
 class UpdateGlanceImage(object):

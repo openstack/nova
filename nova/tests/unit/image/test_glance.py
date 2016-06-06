@@ -354,9 +354,10 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
         self.assertFalse(sleep_mock.called)
 
     def _get_static_client(self, create_client_mock):
+        version = 1 if CONF.glance.use_glance_v1 else 2
         url = 'http://host4:9295'
         client = glance.GlanceClientWrapper(context=self.ctx, endpoint=url)
-        create_client_mock.assert_called_once_with(self.ctx, mock.ANY, 1)
+        create_client_mock.assert_called_once_with(self.ctx, mock.ANY, version)
         return client
 
     def _mock_client_images_response(self, create_client_mock, side_effect):
@@ -989,7 +990,8 @@ class TestShow(test.NoDBTestCase):
             reraise_mock.assert_called_once_with(mock.sentinel.image_id)
 
     @mock.patch('nova.image.glance._is_image_available')
-    def test_show_queued_image_without_some_attrs(self, is_avail_mock):
+    def test_show_queued_image_without_some_attrs_v1(self, is_avail_mock):
+        self.flags(use_glance_v1=True, group='glance')
         is_avail_mock.return_value = True
         client = mock.MagicMock()
 
