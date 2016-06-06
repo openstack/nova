@@ -41,6 +41,33 @@ should be fully qualified urls of the form
                 help='A list of url scheme that can be downloaded directly '
                      'via the direct_url.  Currently supported schemes: '
                      '[file].'),
+    cfg.BoolOpt('use_glance_v1',
+                default=True,
+                help="""
+This flag is a temporary conf value to segregate paths between glance v1
+and glance v2 API usage inside the nova image proxy. This is set to True
+by default to use Glance V1 APIs as default. However, it would be flipped
+to False, once the nova image proxy is ready to adopt V2 APIs. Eventually
+this flag would be deprecated once the proxy gets rid of all the glance
+V1 API code.
+
+* Possible values:
+
+    True or False
+
+* Services that use this:
+
+    ``nova-api``
+    ``nova-compute``
+    ``nova-conductor``
+
+* Related options:
+
+    None
+""",
+                deprecated_for_removal=True,
+                deprecated_reason='This is a temporary flag to be removed '
+                                  'as soon as the V2 path works'),
     cfg.BoolOpt('verify_glance_signatures',
                 default=False,
                 help='Require Nova to perform signature verification on '

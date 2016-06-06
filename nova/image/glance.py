@@ -147,7 +147,11 @@ def get_api_servers():
 class GlanceClientWrapper(object):
     """Glance client wrapper class that implements retries."""
 
-    def __init__(self, context=None, endpoint=None, version=1):
+    def __init__(self, context=None, endpoint=None):
+        if CONF.glance.use_glance_v1:
+            version = 1
+        else:
+            version = 2
         if endpoint is not None:
             self.client = self._create_static_client(context,
                                                      endpoint,
