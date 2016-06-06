@@ -187,12 +187,12 @@ Reset Networking On A Server (resetNetwork Action)
 
 .. rest_method:: POST /servers/{server_id}/action
 
-Resets networking on a server. 
+Resets networking on a server.
 
 .. note::
 
     Only the XenServer driver implements this feature and only if the guest
-    has the XenAPI agent in the targeted server. 
+    has the XenAPI agent in the targeted server.
 
 Specify the ``resetNetwork`` action in the request body.
 
