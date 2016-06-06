@@ -9330,19 +9330,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.spawn(self.context, instance,
                    image_meta, [], None)
 
-    def test_chown_disk_config_for_instance(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(**self.test_instance)
-        self.mox.StubOutWithMock(fake_libvirt_utils, 'get_instance_path')
-        self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(fake_libvirt_utils, 'chown')
-        fake_libvirt_utils.get_instance_path(instance).AndReturn('/tmp/uuid')
-        os.path.exists('/tmp/uuid/disk.config').AndReturn(True)
-        fake_libvirt_utils.chown('/tmp/uuid/disk.config', os.getuid())
-
-        self.mox.ReplayAll()
-        drvr._chown_disk_config_for_instance(instance)
-
     def _test_create_image_plain(self, os_type='', filename='', mkfs=False):
         gotFiles = []
 
