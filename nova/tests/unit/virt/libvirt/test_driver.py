@@ -1532,7 +1532,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     def test_set_admin_password_bad_hyp(self, mock_svc, mock_image):
-        self.flags(virt_type='foo', group='libvirt')
+        self.flags(virt_type='lxc', group='libvirt')
         instance = objects.Instance(**self.test_instance)
         mock_image.return_value = {"properties": {
             "hw_qemu_guest_agent": "yes"}}
@@ -5288,7 +5288,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_config_os_command_line_through_image_meta(self):
         self.flags(virt_type="kvm",
-                   cpu_mode=None,
+                   cpu_mode='none',
                    group='libvirt')
 
         self.test_instance['kernel_id'] = "fake_kernel_id"
@@ -5311,7 +5311,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_config_os_command_line_without_kernel_id(self):
         self.flags(virt_type="kvm",
-                cpu_mode=None,
+                cpu_mode='none',
                 group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -5331,7 +5331,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_config_os_command_empty(self):
         self.flags(virt_type="kvm",
-                   cpu_mode=None,
+                   cpu_mode='none',
                    group='libvirt')
 
         self.test_instance['kernel_id'] = "fake_kernel_id"
@@ -5577,7 +5577,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_cpu_config_default_kvm(self):
         self.flags(virt_type="kvm",
-                   cpu_mode=None,
+                   cpu_mode='none',
                    group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5592,7 +5592,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       image_meta, disk_info)
         self.assertIsInstance(conf.cpu,
                               vconfig.LibvirtConfigGuestCPU)
-        self.assertEqual(conf.cpu.mode, "host-model")
+        self.assertIsNone(conf.cpu.mode)
         self.assertIsNone(conf.cpu.model)
         self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
@@ -5600,7 +5600,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_cpu_config_default_uml(self):
         self.flags(virt_type="uml",
-                   cpu_mode=None,
+                   cpu_mode='none',
                    group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5617,7 +5617,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_cpu_config_default_lxc(self):
         self.flags(virt_type="lxc",
-                   cpu_mode=None,
+                   cpu_mode='none',
                    group='libvirt')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -6256,7 +6256,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           "/dev/sda")
 
     def test_attach_blockio_invalid_hypervisor(self):
-        self.flags(virt_type='fake_type', group='libvirt')
+        self.flags(virt_type='lxc', group='libvirt')
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
         instance = objects.Instance(**self.test_instance)
@@ -7855,7 +7855,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             # anything else will return None
             ('lxc', None),
             ('parallels', None),
-            ('', None),
         )
         dest = 'destination'
         for hyperv, uri in hypervisor_uri_map:
@@ -13954,22 +13953,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         root_bdm = {'source_type': 'image',
                     'destination_type': 'volume',
                     'image_id': 'fake_id'}
-        self.flags(virt_type='fake_libvirt_type', group='libvirt')
+        self.flags(virt_type='qemu', group='libvirt')
 
         self.mox.StubOutWithMock(blockinfo, 'get_disk_bus_for_device_type')
         self.mox.StubOutWithMock(blockinfo, 'get_root_info')
 
         blockinfo.get_disk_bus_for_device_type(instance,
-                                               'fake_libvirt_type',
+                                               'qemu',
                                                image_meta,
                                                'disk').InAnyOrder().\
                                                 AndReturn('virtio')
         blockinfo.get_disk_bus_for_device_type(instance,
-                                               'fake_libvirt_type',
+                                               'qemu',
                                                image_meta,
                                                'cdrom').InAnyOrder().\
                                                 AndReturn('ide')
-        blockinfo.get_root_info(instance, 'fake_libvirt_type',
+        blockinfo.get_root_info(instance, 'qemu',
                                 image_meta, root_bdm,
                                 'virtio', 'ide').AndReturn({'dev': 'vda'})
         self.mox.ReplayAll()
@@ -17478,7 +17477,7 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     def test_can_quiesce_bad_hyp(self, ver):
-        self.flags(virt_type='xxx', group='libvirt')
+        self.flags(virt_type='lxc', group='libvirt')
         instance = objects.Instance(**self.inst)
         image_meta = objects.ImageMeta.from_dict(
             {"properties": {

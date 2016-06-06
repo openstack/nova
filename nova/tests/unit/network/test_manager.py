@@ -1485,7 +1485,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.VerifyAll()
 
     def test_floating_ip_init_host_without_public_interface(self):
-        self._test_floating_ip_init_host(public_interface=False,
+        self._test_floating_ip_init_host(public_interface='',
                                          expected_arg='fakeiface')
 
     def test_floating_ip_init_host_with_public_interface(self):

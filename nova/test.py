@@ -282,7 +282,7 @@ class TestCase(testtools.TestCase):
         """Override flag variables for a test."""
         group = kw.pop('group', None)
         for k, v in six.iteritems(kw):
-            CONF.set_override(k, v, group)
+            CONF.set_override(k, v, group, enforce_type=True)
 
     def start_service(self, name, host=None, **kwargs):
         svc = self.useFixture(

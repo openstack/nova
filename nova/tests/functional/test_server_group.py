@@ -46,9 +46,9 @@ class ServerGroupTestBase(test.TestCase,
 
     # Note(gibi): RamFilter is needed to ensure that
     # test_boot_servers_with_affinity_no_valid_host behaves as expected
-    _scheduler_default_filters = ('ServerGroupAntiAffinityFilter',
+    _scheduler_default_filters = ['ServerGroupAntiAffinityFilter',
                                   'ServerGroupAffinityFilter',
-                                  'RamFilter')
+                                  'RamFilter']
 
     # Override servicegroup parameters to make the tests run faster
     _service_down_time = 2
