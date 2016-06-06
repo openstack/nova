@@ -670,11 +670,6 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                                        side_effect=None,
                                        rescue=True)
 
-    def test_create_config_drive_other_drive_format(self):
-        self._test_create_config_drive(config_drive_format=mock.sentinel.OTHER,
-                                       config_drive_cdrom=False,
-                                       side_effect=None)
-
     def test_create_config_drive_execution_error(self):
         self._test_create_config_drive(
             config_drive_format=self.ISO9660,
