@@ -110,7 +110,7 @@ Request
   - server_id: server_id
   - metadata: metadata_object
 
-**Example Create Or Replace Metadata Items:** 
+**Example Create Or Replace Metadata Items:**
 
 .. literalinclude:: ../../doc/api_samples/server-metadata/server-metadata-all-req.json
    :language: javascript
