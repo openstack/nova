@@ -7438,7 +7438,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           False, migrate_data, dom, disk_paths)
         mock_migrateToURI3.assert_called_once_with(
             drvr._live_migration_uri('dest'),
-            params=params, flags=0, bandwidth=0)
+            params=params, flags=0)
 
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.

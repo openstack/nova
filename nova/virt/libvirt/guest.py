@@ -522,8 +522,7 @@ class Guest(object):
         else:
             if params:
                 self._domain.migrateToURI3(
-                    destination, params=params,
-                    flags=flags, bandwidth=bandwidth)
+                    destination, params=params, flags=flags)
             else:
                 self._domain.migrateToURI2(
                     destination, dxml=domain_xml,
