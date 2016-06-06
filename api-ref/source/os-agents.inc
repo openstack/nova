@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -30,17 +29,22 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
+  - hypervisor: hypervisor_query
 
-  - agent_id: agent_id
-  - architecture: architecture
-  - hypervisor: hypervisor_type
-  - url: url
-  - md5hash: md5hash
-  - os: os
-  - version: version
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - agents: agents
+  - agent_id: agent_id
+  - architecture: architecture
+  - hypervisor: hypervisor_type
+  - md5hash: md5hash
+  - os: os
+  - url: url
+  - version: version
 
 **Example List Agent Builds: JSON response**
 
@@ -63,13 +67,13 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
+  - agent: agent
   - hypervisor: hypervisor_type
-  - architecture: architecture
   - os: os
-  - url: url
-  - md5hash: md5hash
+  - architecture: architecture
   - version: version
+  - md5hash: md5hash
+  - url: url
 
 **Example Create Agent Build: JSON request**
 
@@ -81,13 +85,14 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - hypervisor: hypervisor_type
+  - agent: agent
+  - agent_id: agent_id
   - architecture: architecture
+  - hypervisor: hypervisor_type
+  - md5hash: md5hash
   - os: os
   - url: url
-  - md5hash: md5hash
   - version: version
-  - agent_id: agent_id
 
 **Example Create Agent Build: JSON response**
 
@@ -112,6 +117,7 @@ Request
 
 
   - agent_build_id: agent_build_id
+  - para: para
   - url: url
   - md5hash: md5hash
   - version: version
@@ -126,9 +132,10 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - agent: agent
   - agent_id: agent_id_str
-  - url: url
   - md5hash: md5hash
+  - url: url
   - version: version
 
 **Example Update Agent Build: JSON response**
@@ -158,3 +165,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful DELETE query
