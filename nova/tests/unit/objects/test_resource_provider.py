@@ -101,6 +101,14 @@ class TestResourceProvider(test_objects._LocalTest):
         self.assertEqual(_RESOURCE_PROVIDER_UUID, db_rp.uuid)
         self.assertEqual(_RESOURCE_PROVIDER_NAME, db_rp.name)
 
+    def test_save_immutable(self):
+        fields = {'id': 1, 'uuid': _RESOURCE_PROVIDER_UUID,
+                  'generation': 1}
+        for field in fields:
+            rp = objects.ResourceProvider(context=self.context)
+            setattr(rp, field, fields[field])
+            self.assertRaises(exception.ObjectActionError, rp.save)
+
     def test_get_by_uuid_from_db(self):
         rp = objects.ResourceProvider(context=self.context,
                                       uuid=_RESOURCE_PROVIDER_UUID,

@@ -67,6 +67,21 @@ class ResourceProviderTestCase(test.NoDBTestCase):
         self.assertEqual(0, created_resource_provider.generation)
         self.assertEqual(0, retrieved_resource_provider.generation)
 
+    def test_save_resource_provider(self):
+        created_resource_provider = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.fake_resource_provider,
+            name=uuidsentinel.fake_resource_name,
+        )
+        created_resource_provider.create()
+        created_resource_provider.name = 'new-name'
+        created_resource_provider.save()
+        retrieved_resource_provider = objects.ResourceProvider.get_by_uuid(
+            self.context,
+            uuidsentinel.fake_resource_provider
+        )
+        self.assertEqual('new-name', retrieved_resource_provider.name)
+
     def test_create_inventory_with_uncreated_provider(self):
         resource_provider = objects.ResourceProvider(
             context=self.context,
