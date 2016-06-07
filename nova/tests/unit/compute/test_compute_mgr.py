@@ -2911,6 +2911,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             instance.numa_topology = None
             instance.pci_requests = None
             instance.pci_devices = None
+            instance.device_metadata = None
             instance.task_state = task_states.REBUILDING
             instance.save(expected_task_state=[task_states.REBUILDING])
             self.compute._rebuild_default_impl(self.context,

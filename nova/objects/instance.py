@@ -51,7 +51,7 @@ _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['fault', 'flavor', 'old_flavor',
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
                           'flavor', 'vcpu_model', 'migration_context',
-                          'keypairs']
+                          'keypairs', 'device_metadata']
 # These are fields that applied/drooped by migration_context
 _MIGRATION_CONTEXT_ATTRS = ['numa_topology', 'pci_requests',
                             'pci_devices']
@@ -99,7 +99,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 2.0: Initial version
     # Version 2.1: Added services
     # Version 2.2: Added keypairs
-    VERSION = '2.2'
+    # Version 2.3: Added device_metadata
+    VERSION = '2.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -190,6 +191,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                                             nullable=True),
         'pci_requests': fields.ObjectField('InstancePCIRequests',
                                            nullable=True),
+        'device_metadata': fields.ObjectField('InstanceDeviceMetadata',
+                                              nullable=True),
         'tags': fields.ObjectField('TagList'),
         'flavor': fields.ObjectField('Flavor'),
         'old_flavor': fields.ObjectField('Flavor', nullable=True),
@@ -206,6 +209,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(Instance, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 3) and 'device_metadata' in primitive:
+            del primitive['device_metadata']
         if target_version < (2, 2) and 'keypairs' in primitive:
             del primitive['keypairs']
         if target_version < (2, 1) and 'services' in primitive:
@@ -336,6 +341,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                     db_inst['extra'].get('pci_requests'))
             else:
                 instance.pci_requests = None
+        if 'device_metadata' in expected_attrs:
+            if have_extra:
+                instance._load_device_metadata(
+                    db_inst['extra'].get('device_metadata'))
+            else:
+                instance.device_metadata = None
         if 'vcpu_model' in expected_attrs:
             if have_extra:
                 instance._load_vcpu_model(
@@ -456,6 +467,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 pci_requests.to_json())
         else:
             updates['extra']['pci_requests'] = None
+        device_metadata = updates.pop('device_metadata', None)
+        expected_attrs.append('device_metadata')
+        if device_metadata:
+            updates['extra']['device_metadata'] = (
+                device_metadata._to_json())
+        else:
+            updates['extra']['device_metadata'] = None
         flavor = updates.pop('flavor', None)
         if flavor:
             expected_attrs.append('flavor')
@@ -799,6 +817,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 objects.InstancePCIRequests.get_by_instance_uuid(
                     self._context, self.uuid)
 
+    def _load_device_metadata(self, db_requests=None):
+        if db_requests is not None:
+            self.device_metadata = \
+                objects.InstanceDeviceMetadata.obj_from_db(
+                self._context, db_requests)
+        else:
+            self.device_metadata = \
+                objects.InstanceDeviceMetadata.get_by_instance_uuid(
+                    self._context, self.uuid)
+
     def _load_flavor(self):
         instance = self.__class__.get_by_uuid(
             self._context, uuid=self.uuid,
@@ -957,6 +985,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             self._load_fault()
         elif attrname == 'numa_topology':
             self._load_numa_topology()
+        elif attrname == 'device_metadata':
+            self._load_device_metadata()
         elif attrname == 'pci_requests':
             self._load_pci_requests()
         elif attrname == 'vcpu_model':
