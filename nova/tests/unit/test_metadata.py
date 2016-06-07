@@ -799,8 +799,8 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertTrue(response_ctype.startswith("application/json"))
 
     def test_user_data_non_existing_fixed_address(self):
-        self.stub_out('nova.network.api.get_fixed_ip_by_address',
-                       return_non_existing_address)
+        self.stub_out('nova.network.api.API.get_fixed_ip_by_address',
+                      return_non_existing_address)
         response = fake_request(None, self.mdinst, "/2009-04-04/user-data",
                                 "127.1.1.1")
         self.assertEqual(response.status_int, 404)
