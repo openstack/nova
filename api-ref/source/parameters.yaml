@@ -2309,7 +2309,7 @@ policies:
   description: |
     A list of one or more policy names to associate with the server group. The list
     must contain at least one policy name. The current valid policy names are ``anti-affinity``
-    , ``affinity``, ``soft-anti-affinity`` and 'soft-affinity', the latter two were
+    , ``affinity``, ``soft-anti-affinity`` and ``soft-affinity``, the latter two were
     added in microversion 2.15.  Each policy name must be a non-empty string with
     no leading or trailing spaces. Maximum length is 255 characters.
   in: body

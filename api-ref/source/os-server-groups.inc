@@ -1,6 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
-.. needs:body_verification
 
 ==================================
  Server groups (os-server-groups)
@@ -106,7 +104,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_group_id: server_group_id
 
 Response
@@ -148,3 +145,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE action.
