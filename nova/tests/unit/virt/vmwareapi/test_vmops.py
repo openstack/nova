@@ -1527,7 +1527,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     self._ds.name,
                     upload_file_name,
                     cookies='Fake-CookieJar')
-            self.assertTrue(len(_wait_for_task.mock_calls) > 0)
+            self.assertGreater(len(_wait_for_task.mock_calls), 0)
             _get_inventory_path.call_count = 1
             extras = None
             if block_device_info and ('ephemerals' in block_device_info or

@@ -2733,18 +2733,18 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp'
                            ' -s 192.168.11.0/24')
-        self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
-                        "ICMP acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self._out_rules)), 0,
+                           "ICMP acceptance rule wasn't added")
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p icmp -m icmp'
                            ' --icmp-type 8 -s 192.168.11.0/24')
-        self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
-                        "ICMP Echo Request acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self._out_rules)), 0,
+                           "ICMP Echo Request acceptance rule wasn't added")
 
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp --dport 80:81'
                            ' -s 192.168.10.0/24')
-        self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
-                        "TCP port 80/81 acceptance rule wasn't added")
+        self.assertGreater(len(filter(regex.match, self._out_rules)), 0,
+                           "TCP port 80/81 acceptance rule wasn't added")
 
     def test_static_filters(self):
         instance_ref = self._create_instance_ref()
@@ -2787,8 +2787,8 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
                 continue
             regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p tcp'
                                ' --dport 80:81 -s %s' % ip['address'])
-            self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
-                            "TCP port 80/81 acceptance rule wasn't added")
+            self.assertGreater(len(filter(regex.match, self._out_rules)), 0,
+                               "TCP port 80/81 acceptance rule wasn't added")
 
         db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
@@ -2857,9 +2857,9 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         self.fw.refresh_security_group_rules(secgroup)
         regex = re.compile('\[0\:0\] -A .* -j ACCEPT -p udp --dport 200:299'
                            ' -s 192.168.99.0/24')
-        self.assertTrue(len(filter(regex.match, self._out_rules)) > 0,
-                        "Rules were not updated properly. "
-                        "The rule for UDP acceptance is missing")
+        self.assertGreater(len(filter(regex.match, self._out_rules)), 0,
+                           "Rules were not updated properly. "
+                           "The rule for UDP acceptance is missing")
 
 
 class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):

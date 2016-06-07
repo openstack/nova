@@ -403,7 +403,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         reservation_id = res.obj['reservation_id']
         self.assertNotEqual(reservation_id, "")
         self.assertIsNotNone(reservation_id)
-        self.assertTrue(len(reservation_id) > 1)
+        self.assertGreater(len(reservation_id), 1)
 
     def test_create_multiple_instances_with_resv_id_return(self):
         self._create_multiple_instances_resv_id_return(True)

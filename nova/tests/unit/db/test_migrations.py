@@ -910,7 +910,7 @@ class TestNovaMigrationsMySQL(NovaMigrationsCheckers,
             "FROM information_schema.TABLES "
             "WHERE TABLE_SCHEMA = '%(database)s'" %
             {'database': self.migrate_engine.url.database})
-        self.assertTrue(total.scalar() > 0, "No tables found. Wrong schema?")
+        self.assertGreater(total.scalar(), 0, "No tables found. Wrong schema?")
 
         noninnodb = self.migrate_engine.execute(
             "SELECT count(*) "
