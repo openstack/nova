@@ -91,5 +91,5 @@ class ImageTest(test.NoDBTestCase):
             ["rbd.example.org"])
 
         msg = str(img)
-        self.assertTrue(msg.find("braanes") == -1)
-        self.assertTrue(msg.find("***") != -1)
+        self.assertEqual(msg.find("braanes"), -1)
+        self.assertNotEqual(msg.find("***"), -1)

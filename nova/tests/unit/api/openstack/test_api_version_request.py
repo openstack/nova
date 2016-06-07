@@ -88,10 +88,10 @@ class APIVersionRequestTests(test.NoDBTestCase):
         self.assertGreater(vers3, vers2)
         self.assertGreaterEqual(vers1, vers4)
         self.assertGreaterEqual(vers3, vers2)
-        self.assertTrue(vers1 != vers2)
-        self.assertTrue(vers1 == vers4)
-        self.assertTrue(vers1 != v_null)
-        self.assertTrue(v_null == v_null)
+        self.assertNotEqual(vers1, vers2)
+        self.assertEqual(vers1, vers4)
+        self.assertNotEqual(vers1, v_null)
+        self.assertEqual(v_null, v_null)
         self.assertRaises(TypeError, vers1.__lt__, "2.1")
 
     def test_version_matches(self):
