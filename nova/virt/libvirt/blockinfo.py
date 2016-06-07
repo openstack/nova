@@ -262,7 +262,7 @@ def get_disk_bus_for_device_type(instance,
         if device_type == "cdrom":
             guestarch = libvirt_utils.get_arch(image_meta)
             if guestarch in (arch.PPC, arch.PPC64, arch.PPCLE, arch.PPC64LE,
-                arch.S390, arch.S390X):
+                arch.S390, arch.S390X, arch.AARCH64):
                 return "scsi"
             else:
                 return "ide"
