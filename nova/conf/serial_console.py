@@ -149,10 +149,8 @@ Interdependencies to other options:
   ``base_url`` of this section or use ``0.0.0.0`` to listen on all addresses.
 """)
 
-serialproxy_port_opt = cfg.IntOpt('serialproxy_port',
+serialproxy_port_opt = cfg.PortOpt('serialproxy_port',
         default=6083,
-        min=1,
-        max=65535,
         help="""
 The port number which is used by the ``nova-serialproxy`` service to listen
 for incoming requests.

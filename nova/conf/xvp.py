@@ -45,12 +45,10 @@ xvp_opts = [
                default='/var/log/xvp.log',
                deprecated_group='DEFAULT',
                help='XVP log file'),
-    cfg.IntOpt('console_xvp_multiplex_port',
-               default=5900,
-               deprecated_group='DEFAULT',
-               min=1,
-               max=65535,
-               help='Port for XVP to multiplex VNC connections on'),
+    cfg.PortOpt('console_xvp_multiplex_port',
+                default=5900,
+                deprecated_group='DEFAULT',
+                help='Port for XVP to multiplex VNC connections on'),
     ]
 
 
