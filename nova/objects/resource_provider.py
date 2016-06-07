@@ -160,12 +160,12 @@ class Inventory(_HasAResourceProvider):
         'id': fields.IntegerField(read_only=True),
         'resource_provider': fields.ObjectField('ResourceProvider'),
         'resource_class': fields.ResourceClassField(read_only=True),
-        'total': fields.IntegerField(),
-        'reserved': fields.IntegerField(),
-        'min_unit': fields.IntegerField(),
-        'max_unit': fields.IntegerField(),
-        'step_size': fields.IntegerField(),
-        'allocation_ratio': fields.FloatField(),
+        'total': fields.NonNegativeIntegerField(),
+        'reserved': fields.NonNegativeIntegerField(default=0),
+        'min_unit': fields.NonNegativeIntegerField(default=1),
+        'max_unit': fields.NonNegativeIntegerField(default=1),
+        'step_size': fields.NonNegativeIntegerField(default=1),
+        'allocation_ratio': fields.NonNegativeFloatField(default=1.0),
     }
 
     @base.remotable

@@ -164,6 +164,37 @@ class _TestInventoryNoDB(object):
         self.assertEqual(_INVENTORY_DB['id'], objs[0].id)
         self.assertEqual(_INVENTORY_DB['id'] + 1, objs[1].id)
 
+    def test_non_negative_handling(self):
+        # NOTE(cdent): Just checking, useless to be actually
+        # comprehensive here.
+        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                      uuid=_RESOURCE_PROVIDER_UUID)
+        kwargs = dict(resource_provider=rp,
+                      resource_class=_RESOURCE_CLASS_NAME,
+                      total=16,
+                      reserved=2,
+                      min_unit=1,
+                      max_unit=-8,
+                      step_size=1,
+                      allocation_ratio=1.0)
+        self.assertRaises(ValueError, objects.Inventory,
+                          **kwargs)
+
+    def test_set_defaults(self):
+        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                      uuid=_RESOURCE_PROVIDER_UUID)
+        kwargs = dict(resource_provider=rp,
+                      resource_class=_RESOURCE_CLASS_NAME,
+                      total=16)
+        inv = objects.Inventory(self.context, **kwargs)
+
+        inv.obj_set_defaults()
+        self.assertEqual(0, inv.reserved)
+        self.assertEqual(1, inv.min_unit)
+        self.assertEqual(1, inv.max_unit)
+        self.assertEqual(1, inv.step_size)
+        self.assertEqual(1.0, inv.allocation_ratio)
+
 
 class TestInventoryNoDB(test_objects._LocalTest,
                         _TestInventoryNoDB):
