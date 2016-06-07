@@ -26,7 +26,6 @@ import time
 
 import cryptography
 import glanceclient
-from glanceclient.common import http
 import glanceclient.exc
 from glanceclient.v2 import schemas
 from oslo_log import log as logging
@@ -47,8 +46,6 @@ from nova import signature_utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
-
-supported_glance_versions = (1, 2)
 
 
 def generate_glance_url():
@@ -103,25 +100,6 @@ def _glanceclient_from_endpoint(context, endpoint, version=1):
             if CONF.ssl.ca_file:
                 params['cacert'] = CONF.ssl.ca_file
         return glanceclient.Client(str(version), endpoint, **params)
-
-
-def _determine_curr_major_version(endpoint):
-    """Determines the current major version of the glance API in use
-
-    :returns Integer version number or None if unable to determine version
-    """
-    http_client = http.HTTPClient(endpoint)
-    try:
-        response, content = http_client.get('/versions')
-        for version in content['versions']:
-            if version['status'] == 'CURRENT':
-                res = version['id']
-                # The 'id' value looks like "v2.2",
-                # so grab the major version number which is 2 in this case
-                res = int(res[1:res.find(".")])
-                return res if res in supported_glance_versions else None
-    except Exception:
-        LOG.error(_LE("Unable to determine the glance API version"))
 
 
 def get_api_servers():
