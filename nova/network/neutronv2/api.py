@@ -596,7 +596,7 @@ class API(base_api.NetworkAPI):
             if port_security_enabled:
                 if not network.get('subnets'):
                     # Neutron can't apply security groups to a port
-                    # for a network without L3 assignements.
+                    # for a network without L3 assignments.
                     raise exception.SecurityGroupCannotBeApplied()
             else:
                 if security_group_ids:
