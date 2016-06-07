@@ -194,6 +194,8 @@ nova.tests.unit.virt.vmwareapi.test_configdrive.ConfigDriveTestCase
 nova.tests.unit.virt.vmwareapi.test_driver_api.VMwareAPIVMTestCase
 nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
 nova.tests.unit.virt.xenapi.test_vmops.SpawnTestCase
+nova.tests.unit.virt.xenapi.test_volumeops.VolumeDetachTestCase
+nova.tests.unit.virt.xenapi.test_xenapi.XenAPIMigrateInstance
 
 ##########################################################################
 # NOTE(cdent): The following test takes 10-15 minutes to run because
