@@ -2088,7 +2088,9 @@ class TestUpdate(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
-    def test_update_success(self, trans_to_mock, trans_from_mock):
+    def test_update_success_v1(
+            self, trans_to_mock, trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
         translated = {
             'id': mock.sentinel.image_id,
             'name': mock.sentinel.name
@@ -2100,7 +2102,8 @@ class TestUpdate(test.NoDBTestCase):
         client.call.return_value = mock.sentinel.image_meta
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageService(client)
-        image_meta = service.update(ctx, mock.sentinel.image_id, image_mock)
+        image_meta = service.update(
+                ctx, mock.sentinel.image_id, image_mock, purge_props=True)
 
         trans_to_mock.assert_called_once_with(image_mock)
         # Verify that the 'id' element has been removed as a kwarg to
@@ -2126,11 +2129,93 @@ class TestUpdate(test.NoDBTestCase):
                                             purge_props=True,
                                             data=mock.sentinel.data)
 
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._translate_to_glance')
+    def test_update_success_v2(
+            self, trans_to_mock, trans_from_mock, show_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        image = {
+            'id': mock.sentinel.image_id,
+            'name': mock.sentinel.name,
+            'properties': {'prop_to_keep': '4'}
+        }
+
+        translated = {
+            'id': mock.sentinel.image_id,
+            'name': mock.sentinel.name,
+            'prop_to_keep': '4'
+        }
+
+        trans_to_mock.return_value = translated
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        client = mock.MagicMock()
+        client.call.return_value = mock.sentinel.image_meta
+        ctx = mock.sentinel.ctx
+        show_mock.return_value = {
+            'image_id': mock.sentinel.image_id,
+            'properties': {'prop_to_remove': '1',
+                           'prop_to_keep': '3'}
+        }
+        service = glance.GlanceImageServiceV2(client)
+        image_meta = service.update(
+                ctx, mock.sentinel.image_id, image, purge_props=True)
+        show_mock.assert_called_once_with(
+                mock.sentinel.ctx, mock.sentinel.image_id)
+        trans_to_mock.assert_called_once_with(image)
+        # Verify that the 'id' element has been removed as a kwarg to
+        # the call to glanceclient's update (since the image ID is
+        # supplied as a positional arg), and that the
+        # purge_props default is True.
+        client.call.assert_called_once_with(ctx, 2, 'update',
+                                            image_id=mock.sentinel.image_id,
+                                            name=mock.sentinel.name,
+                                            prop_to_keep='4',
+                                            remove_props=['prop_to_remove'])
+        trans_from_mock.assert_called_once_with(mock.sentinel.image_meta)
+        self.assertEqual(mock.sentinel.trans_from, image_meta)
+
+        # Now verify that if we supply image data to the call,
+        # that the client is also called with the data kwarg
+        client.reset_mock()
+        client.call.return_value = {'id': mock.sentinel.image_id}
+        service.update(ctx, mock.sentinel.image_id, {},
+                       data=mock.sentinel.data)
+
+        self.assertEqual(3, client.call.call_count)
+
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._translate_to_glance')
+    def test_update_success_v2_with_location(
+            self, trans_to_mock, trans_from_mock, show_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        translated = {
+            'id': mock.sentinel.id,
+            'name': mock.sentinel.name,
+            'location': mock.sentinel.location
+        }
+        show_mock.return_value = {'image_id': mock.sentinel.image_id}
+        trans_to_mock.return_value = translated
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        image_mock = mock.MagicMock(spec=dict)
+        client = mock.MagicMock()
+        client.call.return_value = translated
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        image_meta = service.update(ctx, mock.sentinel.image_id,
+                                    image_mock, purge_props=False)
+        trans_to_mock.assert_called_once_with(image_mock)
+        self.assertEqual(2, client.call.call_count)
+        trans_from_mock.assert_called_once_with(translated)
+        self.assertEqual(mock.sentinel.trans_from, image_meta)
+
     @mock.patch('nova.image.glance._reraise_translated_image_exception')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
-    def test_update_client_failure(self, trans_to_mock, trans_from_mock,
+    def test_update_client_failure_v1(self, trans_to_mock, trans_from_mock,
                                    reraise_mock):
+        self.flags(use_glance_v1=True, group='glance')
         translated = {
             'name': mock.sentinel.name
         }
@@ -2152,6 +2237,48 @@ class TestUpdate(test.NoDBTestCase):
                                             purge_props=True,
                                             name=mock.sentinel.name)
         self.assertFalse(trans_from_mock.called)
+        reraise_mock.assert_called_once_with(mock.sentinel.image_id)
+
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.image.glance._reraise_translated_image_exception')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._translate_to_glance')
+    def test_update_client_failure_v2(self, trans_to_mock, trans_from_mock,
+                                   reraise_mock, show_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        image = {
+            'id': mock.sentinel.image_id,
+            'name': mock.sentinel.name,
+            'properties': {'prop_to_keep': '4'}
+        }
+
+        translated = {
+            'id': mock.sentinel.image_id,
+            'name': mock.sentinel.name,
+            'prop_to_keep': '4'
+        }
+        trans_to_mock.return_value = translated
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        raised = exception.ImageNotAuthorized(image_id=123)
+        client = mock.MagicMock()
+        client.call.side_effect = glanceclient.exc.Forbidden
+        ctx = mock.sentinel.ctx
+        reraise_mock.side_effect = raised
+        show_mock.return_value = {
+            'image_id': mock.sentinel.image_id,
+            'properties': {'prop_to_remove': '1',
+                           'prop_to_keep': '3'}
+        }
+        service = glance.GlanceImageServiceV2(client)
+
+        self.assertRaises(exception.ImageNotAuthorized,
+                          service.update, ctx, mock.sentinel.image_id,
+                          image)
+        client.call.assert_called_once_with(ctx, 2, 'update',
+                                            image_id=mock.sentinel.image_id,
+                                            name=mock.sentinel.name,
+                                            prop_to_keep='4',
+                                            remove_props=['prop_to_remove'])
         reraise_mock.assert_called_once_with(mock.sentinel.image_id)
 
 
