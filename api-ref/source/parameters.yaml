@@ -429,6 +429,23 @@ changes-since:
   in: query
   required: false
   type: string
+changes_since_instance_action:
+  description: |
+    Filters the response by a date and time stamp when the instance action last
+    changed.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+  min_version: 2.58
 changes_since_server:
   description: |
     Filters the response by a date and time stamp when the server last
@@ -679,6 +696,26 @@ include:
   in: query
   required: false
   type: string
+instance_action_limit:
+  description: |
+    Requests a page size of items. Returns a number of items up to a limit value.
+    Use the ``limit`` parameter to make an initial limited request and use the
+    last-seen item from the response as the ``marker`` parameter value in a
+    subsequent limited request.
+  in: query
+  required: false
+  type: integer
+  min_version: 2.58
+instance_action_marker:
+  description: |
+    The ``request_id`` of the last-seen instance action. Use the ``limit``
+    parameter to make an initial limited request and use the last-seen
+    item from the response as the ``marker`` parameter value in a subsequent
+    limited request.
+  in: query
+  required: false
+  type: string
+  min_version: 2.58
 ip6_query:
   description: |
     An IPv6 address to filter results by.
@@ -3398,6 +3435,17 @@ instance_action_events_2_51:
   required: true
   type: array
   min_version: 2.51
+instance_actions_next_links:
+  description: |
+    Links pertaining to the instance action.
+    This parameter is returned when paging and more data is available.
+    See `API Guide / Links and References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  required: false
+  type: array
+  min_version: 2.58
 instance_id_body:
   description: |
     The UUID of the server.
@@ -5794,6 +5842,23 @@ updated_consider_null:
   in: body
   required: true
   type: string
+updated_instance_action:
+  description: |
+    The date and time when the instance action or the action event of
+    instance action was updated. The date and time stamp format is
+    `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.58
 updated_version:
   description: |
     This is a fixed string. It is ``2011-01-21T11:33:21Z`` in version 2.0,

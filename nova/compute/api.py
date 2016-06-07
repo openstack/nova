@@ -4757,9 +4757,10 @@ class HostAPI(base.Base):
 class InstanceActionAPI(base.Base):
     """Sub-set of the Compute Manager API for managing instance actions."""
 
-    def actions_get(self, context, instance):
+    def actions_get(self, context, instance, limit=None, marker=None,
+                    filters=None):
         return objects.InstanceActionList.get_by_instance_uuid(
-            context, instance.uuid)
+            context, instance.uuid, limit, marker, filters)
 
     def action_get_by_request_id(self, context, instance, request_id):
         return objects.InstanceAction.get_by_request_id(

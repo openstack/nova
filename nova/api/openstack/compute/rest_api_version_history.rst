@@ -729,3 +729,12 @@ The 2.57 microversion makes the following changes:
 * The ``injected_files``, ``injected_file_content_bytes`` and
   ``injected_file_path_bytes`` quotas are removed from the ``os-quota-sets``
   and ``os-quota-class-sets`` APIs.
+
+2.58
+----
+
+  Add pagination support and ``changes-since`` filter for os-instance-actions
+  API. Users can now use ``limit`` and ``marker`` to perform paginated query
+  when listing instance actions. Users can also use ``changes-since`` filter
+  to filter the results based on the last time the instance action was
+  updated.
