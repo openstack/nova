@@ -1785,8 +1785,9 @@ class TestDetail(test.NoDBTestCase):
     @mock.patch('nova.image.glance._extract_query_params')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_detail_success_available(self, is_avail_mock, trans_from_mock,
-                                      ext_query_mock):
+    def test_detail_success_available_v1(self, is_avail_mock, trans_from_mock,
+                                         ext_query_mock):
+        self.flags(use_glance_v1=True, group='glance')
         params = {}
         is_avail_mock.return_value = True
         ext_query_mock.return_value = params
@@ -1805,8 +1806,9 @@ class TestDetail(test.NoDBTestCase):
     @mock.patch('nova.image.glance._extract_query_params')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_detail_success_unavailable(self, is_avail_mock, trans_from_mock,
-                                        ext_query_mock):
+    def test_detail_success_unavailable_v1(
+            self, is_avail_mock, trans_from_mock, ext_query_mock):
+        self.flags(use_glance_v1=True, group='glance')
         params = {}
         is_avail_mock.return_value = False
         ext_query_mock.return_value = params
@@ -1824,7 +1826,8 @@ class TestDetail(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_detail_params_passed(self, is_avail_mock, _trans_from_mock):
+    def test_detail_params_passed_v1(self, is_avail_mock, _trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = [mock.sentinel.images_0]
         ctx = mock.sentinel.ctx
@@ -1843,8 +1846,9 @@ class TestDetail(test.NoDBTestCase):
     @mock.patch('nova.image.glance._extract_query_params')
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._is_image_available')
-    def test_detail_client_failure(self, is_avail_mock, trans_from_mock,
-                                   ext_query_mock, reraise_mock):
+    def test_detail_client_failure_v1(self, is_avail_mock, trans_from_mock,
+                                      ext_query_mock, reraise_mock):
+        self.flags(use_glance_v1=True, group='glance')
         params = {}
         ext_query_mock.return_value = params
         raised = exception.Forbidden()
@@ -1858,6 +1862,87 @@ class TestDetail(test.NoDBTestCase):
             service.detail(ctx, **params)
 
         client.call.assert_called_once_with(ctx, 1, 'list')
+        self.assertFalse(is_avail_mock.called)
+        self.assertFalse(trans_from_mock.called)
+        reraise_mock.assert_called_once_with()
+
+    @mock.patch('nova.image.glance._extract_query_params_v2')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_success_available_v2(self, is_avail_mock, trans_from_mock,
+                                         ext_query_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        params = {}
+        is_avail_mock.return_value = True
+        ext_query_mock.return_value = params
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        images = service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 2, 'list')
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        trans_from_mock.assert_called_once_with(mock.sentinel.images_0)
+        self.assertEqual([mock.sentinel.trans_from], images)
+
+    @mock.patch('nova.image.glance._extract_query_params_v2')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_success_unavailable_v2(
+            self, is_avail_mock, trans_from_mock, ext_query_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        params = {}
+        is_avail_mock.return_value = False
+        ext_query_mock.return_value = params
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        images = service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 2, 'list')
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        self.assertFalse(trans_from_mock.called)
+        self.assertEqual([], images)
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_params_passed_v2(self, is_avail_mock, _trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        service.detail(ctx, page_size=5, limit=10)
+
+        client.call.assert_called_once_with(ctx, 2, 'list',
+                                            filters={},
+                                            page_size=5,
+                                            limit=10)
+
+    @mock.patch('nova.image.glance._reraise_translated_exception')
+    @mock.patch('nova.image.glance._extract_query_params_v2')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_client_failure_v2(self, is_avail_mock, trans_from_mock,
+                                      ext_query_mock, reraise_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        params = {}
+        ext_query_mock.return_value = params
+        raised = exception.Forbidden()
+        client = mock.MagicMock()
+        client.call.side_effect = glanceclient.exc.Forbidden
+        ctx = mock.sentinel.ctx
+        reraise_mock.side_effect = raised
+        service = glance.GlanceImageServiceV2(client)
+
+        with testtools.ExpectedException(exception.Forbidden):
+            service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 2, 'list')
         self.assertFalse(is_avail_mock.called)
         self.assertFalse(trans_from_mock.called)
         reraise_mock.assert_called_once_with()
@@ -2138,3 +2223,64 @@ class TestExtractAttributes(test.NoDBTestCase):
         v2_output = glance._translate_from_glance(
             image_v2, include_locations=False)
         self.assertEqual(v1_output, v2_output)
+
+
+class TestExtractQueryParams(test.NoDBTestCase):
+    """Test that list in v1 and v2 can work with the same query parameters"""
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_extract_query_params_v1(
+            self, is_avail_mock, _trans_from_mock):
+        self.flags(use_glance_v1=True, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        input_filters = {
+            'property-kernel-id': 'some-id',
+            'changes-since': 'some-date',
+            'is_public': 'true',
+            'name': 'some-name'
+        }
+
+        service.detail(ctx, filters=input_filters, page_size=5, limit=10)
+
+        expected_filters_v1 = {
+            'property-kernel-id': 'some-id',
+            'name': 'some-name',
+            'is_public': 'true',
+            'changes-since': 'some-date'}
+
+        client.call.assert_called_once_with(ctx, 1, 'list',
+                                            filters=expected_filters_v1,
+                                            page_size=5,
+                                            limit=10)
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_extract_query_params_v2(
+            self, is_avail_mock, _trans_from_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        input_filters = {
+            'property-kernel-id': 'some-id',
+            'changes-since': 'some-date',
+            'is_public': 'true',
+            'name': 'some-name'
+        }
+
+        service.detail(ctx, filters=input_filters, page_size=5, limit=10)
+
+        expected_filters_v1 = {'visibility': 'public',
+                               'name': 'some-name',
+                               'kernel-id': 'some-id',
+                               'updated_at': 'gte:some-date'}
+
+        client.call.assert_called_once_with(ctx, 2, 'list',
+                                            filters=expected_filters_v1,
+                                            page_size=5,
+                                            limit=10)

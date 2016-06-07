@@ -498,6 +498,21 @@ class GlanceImageServiceV2(object):
                           "for %(scheme)s"), {'scheme': scheme})
         return
 
+    def detail(self, context, **kwargs):
+        """Calls out to Glance for a list of detailed image information."""
+        params = _extract_query_params_v2(kwargs)
+        try:
+            images = self._client.call(context, 2, 'list', **params)
+        except Exception:
+            _reraise_translated_exception()
+
+        _images = []
+        for image in images:
+            if _is_image_available(context, image):
+                _images.append(_translate_from_glance(image))
+
+        return _images
+
     def download(self, context, image_id, data=None, dst_path=None):
         """Calls out to Glance for data and writes data."""
         if CONF.glance.allowed_direct_url_schemes and dst_path is not None:
@@ -622,6 +637,47 @@ def _extract_query_params(params):
     _params.setdefault('filters', {})
     # NOTE(vish): don't filter out private images
     _params['filters'].setdefault('is_public', 'none')
+
+    return _params
+
+
+def _extract_query_params_v2(params):
+    _params = {}
+    accepted_params = ('filters', 'marker', 'limit',
+                       'page_size', 'sort_key', 'sort_dir')
+    for param in accepted_params:
+        if params.get(param):
+            _params[param] = params.get(param)
+
+    # ensure filters is a dict
+    _params.setdefault('filters', {})
+    # NOTE(vish): don't filter out private images
+    _params['filters'].setdefault('is_public', 'none')
+
+    # adopt filters to be accepted by glance v2 api
+    filters = _params['filters']
+    new_filters = {}
+
+    for filter_ in filters:
+        # remove 'property-' prefix from filters by custom properties
+        if filter_.startswith('property-'):
+            new_filters[filter_.lstrip('property-')] = filters[filter_]
+        elif filter_ == 'changes-since':
+            # convert old 'changes-since' into new 'updated_at' filter
+            updated_at = 'gte:' + filters['changes-since']
+            new_filters['updated_at'] = updated_at
+        elif filter_ == 'is_public':
+            # convert old 'is_public' flag into 'visibility' filter
+            # omit the filter if is_public is None
+            is_public = filters['is_public']
+            if is_public.lower() in ('true', '1'):
+                new_filters['visibility'] = 'public'
+            elif is_public.lower() in ('false', '0'):
+                new_filters['visibility'] = 'private'
+        else:
+            new_filters[filter_] = filters[filter_]
+
+    _params['filters'] = new_filters
 
     return _params
 
