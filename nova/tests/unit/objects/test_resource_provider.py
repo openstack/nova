@@ -14,6 +14,7 @@ import mock
 
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
 
@@ -279,3 +280,33 @@ class TestInventory(test_objects._LocalTest):
         inventory_dict.pop('id')
         inventory = objects.Inventory(self.context, **inventory_dict)
         self.assertRaises(exception.ObjectActionError, inventory.save)
+
+    def test_find(self):
+        rp = objects.ResourceProvider(uuid=uuids.rp_uuid)
+        inv_list = objects.InventoryList(objects=[
+                objects.Inventory(
+                    resource_provider=rp,
+                    resource_class=fields.ResourceClass.VCPU,
+                    total=24),
+                objects.Inventory(
+                    resource_provider=rp,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    total=10240),
+        ])
+
+        found = inv_list.find(fields.ResourceClass.MEMORY_MB)
+        self.assertIsNotNone(found)
+        self.assertEqual(10240, found.total)
+
+        found = inv_list.find(fields.ResourceClass.VCPU)
+        self.assertIsNotNone(found)
+        self.assertEqual(24, found.total)
+
+        found = inv_list.find(fields.ResourceClass.DISK_GB)
+        self.assertIsNone(found)
+
+        # Try an integer resource class identifier...
+        found = inv_list.find(fields.ResourceClass.index(
+            fields.ResourceClass.VCPU))
+        self.assertIsNotNone(found)
+        self.assertEqual(24, found.total)

@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from sqlalchemy.orm import joinedload
 
 from nova.db.sqlalchemy import api as db_api
@@ -202,6 +203,22 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('Inventory'),
     }
+
+    def find(self, res_class):
+        """Return the inventory record from the list of Inventory records that
+        matches the supplied resource class, or None.
+
+        :param res_class: An integer or string representing a resource
+                          class. If the value is a string, the method first
+                          looks up the resource class identifier from the
+                          string.
+        """
+        if isinstance(res_class, six.string_types):
+            res_class = fields.ResourceClass.index(res_class)
+
+        for inv_rec in self.objects:
+            if fields.ResourceClass.index(inv_rec.resource_class) == res_class:
+                return inv_rec
 
     @staticmethod
     @db_api.api_context_manager.reader
