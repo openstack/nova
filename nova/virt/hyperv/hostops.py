@@ -105,6 +105,22 @@ class HostOps(object):
         LOG.debug('Windows version: %s ', version)
         return version
 
+    def _get_remotefx_gpu_info(self):
+        total_video_ram = 0
+        available_video_ram = 0
+
+        if CONF.hyperv.enable_remotefx:
+            gpus = self._hostutils.get_remotefx_gpu_info()
+            for gpu in gpus:
+                total_video_ram += int(gpu['total_video_ram'])
+                available_video_ram += int(gpu['available_video_ram'])
+        else:
+            gpus = []
+
+        return {'total_video_ram': total_video_ram,
+                'used_video_ram': total_video_ram - available_video_ram,
+                'gpu_info': jsonutils.dumps(gpus)}
+
     def get_available_resource(self):
         """Retrieve resource info.
 
@@ -146,6 +162,8 @@ class HostOps(object):
                'numa_topology': None,
                }
 
+        gpu_info = self._get_remotefx_gpu_info()
+        dic.update(gpu_info)
         return dic
 
     def host_power_action(self, action):
