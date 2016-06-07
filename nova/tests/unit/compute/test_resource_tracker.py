@@ -564,15 +564,6 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                        memory_usage=mem, mempages=[], siblings=[],
                        pinned_cpus=set([]))])
 
-    def test_skip_deleted_instances(self):
-        # ensure that the audit process skips instances that have vm_state
-        # DELETED, but the DB record is not yet deleted.
-        self._fake_instance_obj(vm_state=vm_states.DELETED, host=self.host)
-        self.tracker.update_available_resource(self.context)
-
-        self.assertEqual(0, self.tracker.compute_node.memory_mb_used)
-        self.assertEqual(0, self.tracker.compute_node.local_gb_used)
-
     @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     def test_deleted_instances_with_migrations(self, mock_migration_list):
         migration = objects.Migration(context=self.context,

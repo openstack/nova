@@ -580,6 +580,10 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         # Setup virt resources to match used resources to number
         # of defined instances on the hypervisor
+        # Note that the usage numbers here correspond to only the first
+        # Instance object, because the second instance object fixture is in
+        # DELETED state and therefore we should not expect it to be accounted
+        # for in the auditing process.
         virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
         virt_resources.update(vcpus_used=1,
                               memory_mb_used=128,
