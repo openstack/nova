@@ -2501,6 +2501,9 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_meta.obj_attr_is_set("id"):
             rescue_image_id = image_meta.id
 
+        # NOTE(dprince): for rescue console.log may already exist... chown it.
+        self._chown_console_log_for_instance(instance)
+
         rescue_images = {
             'image_id': (rescue_image_id or
                         CONF.libvirt.rescue_image_id or instance.image_ref),
@@ -2911,9 +2914,6 @@ class LibvirtDriver(driver.ComputeDriver):
         fileutils.ensure_tree(libvirt_utils.get_instance_path(instance))
 
         LOG.info(_LI('Creating image'), instance=instance)
-
-        # NOTE(dprince): for rescue console.log may already exist... chown it.
-        self._chown_console_log_for_instance(instance)
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(
