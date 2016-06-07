@@ -1,18 +1,17 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 =================
  Limits (limits)
 =================
 
-Shows rate and absolute limits for the tenant.
+Shows rate and absolute limits for the project.
 
 Show Rate And Absolute Limits
 =============================
 
 .. rest_method:: GET /limits
 
-Shows rate and absolute limits for the tenant.
+Shows rate and absolute limits for the project.
 
 Normal response codes: 200
 
