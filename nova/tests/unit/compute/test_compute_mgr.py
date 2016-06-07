@@ -643,8 +643,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 instance).AndReturn(power_state.SHUTDOWN)
         self.compute._get_power_state(mox.IgnoreArg(),
                 instance).AndReturn(power_state.SHUTDOWN)
-        self.compute._get_power_state(mox.IgnoreArg(),
-                instance).AndReturn(power_state.SHUTDOWN)
         self.compute.driver.plug_vifs(instance, mox.IgnoreArg())
         self.compute._get_instance_block_device_info(mox.IgnoreArg(),
                 instance).AndReturn('fake-bdm')
@@ -840,8 +838,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute, '_retry_reboot')
 
-        self.compute._retry_reboot(self.context, instance).AndReturn(
-                                                                (False, None))
+        self.compute._retry_reboot(self.context, instance,
+            power_state.SHUTDOWN).AndReturn((False, None))
         compute_utils.get_nw_info_for_instance(instance).AndReturn(
             network_model.NetworkInfo())
         self.compute.driver.plug_vifs(instance, [])
@@ -2213,68 +2211,56 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.uuid = uuids.instance
         instance.task_state = task_states.REBOOT_PENDING
         instance.vm_state = vm_states.ACTIVE
-        with mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.RUNNING):
-            allow_reboot, reboot_type = self.compute._retry_reboot(
-                                                             context, instance)
-            self.assertTrue(allow_reboot)
-            self.assertEqual(reboot_type, 'SOFT')
+        allow_reboot, reboot_type = self.compute._retry_reboot(
+            context, instance, power_state.RUNNING)
+        self.assertTrue(allow_reboot)
+        self.assertEqual(reboot_type, 'SOFT')
 
     def test_retry_reboot_pending_hard(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.task_state = task_states.REBOOT_PENDING_HARD
         instance.vm_state = vm_states.ACTIVE
-        with mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.RUNNING):
-            allow_reboot, reboot_type = self.compute._retry_reboot(
-                                                             context, instance)
-            self.assertTrue(allow_reboot)
-            self.assertEqual(reboot_type, 'HARD')
+        allow_reboot, reboot_type = self.compute._retry_reboot(
+            context, instance, power_state.RUNNING)
+        self.assertTrue(allow_reboot)
+        self.assertEqual(reboot_type, 'HARD')
 
     def test_retry_reboot_starting_soft_off(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.task_state = task_states.REBOOT_STARTED
-        with mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.NOSTATE):
-            allow_reboot, reboot_type = self.compute._retry_reboot(
-                                                             context, instance)
-            self.assertTrue(allow_reboot)
-            self.assertEqual(reboot_type, 'HARD')
+        allow_reboot, reboot_type = self.compute._retry_reboot(
+            context, instance, power_state.NOSTATE)
+        self.assertTrue(allow_reboot)
+        self.assertEqual(reboot_type, 'HARD')
 
     def test_retry_reboot_starting_hard_off(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.task_state = task_states.REBOOT_STARTED_HARD
-        with mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.NOSTATE):
-            allow_reboot, reboot_type = self.compute._retry_reboot(
-                                                             context, instance)
-            self.assertTrue(allow_reboot)
-            self.assertEqual(reboot_type, 'HARD')
+        allow_reboot, reboot_type = self.compute._retry_reboot(
+            context, instance, power_state.NOSTATE)
+        self.assertTrue(allow_reboot)
+        self.assertEqual(reboot_type, 'HARD')
 
     def test_retry_reboot_starting_hard_on(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.task_state = task_states.REBOOT_STARTED_HARD
-        with mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.RUNNING):
-            allow_reboot, reboot_type = self.compute._retry_reboot(
-                                                             context, instance)
-            self.assertFalse(allow_reboot)
-            self.assertEqual(reboot_type, 'HARD')
+        allow_reboot, reboot_type = self.compute._retry_reboot(
+            context, instance, power_state.RUNNING)
+        self.assertFalse(allow_reboot)
+        self.assertEqual(reboot_type, 'HARD')
 
     def test_retry_reboot_no_reboot(self):
         instance = objects.Instance(self.context)
         instance.uuid = uuids.instance
         instance.task_state = 'bar'
-        with mock.patch.object(self.compute, '_get_power_state',
-                               return_value=power_state.RUNNING):
-            allow_reboot, reboot_type = self.compute._retry_reboot(
-                                                             context, instance)
-            self.assertFalse(allow_reboot)
-            self.assertEqual(reboot_type, 'HARD')
+        allow_reboot, reboot_type = self.compute._retry_reboot(
+            context, instance, power_state.RUNNING)
+        self.assertFalse(allow_reboot)
+        self.assertEqual(reboot_type, 'HARD')
 
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume_and_instance')
     @mock.patch('nova.compute.manager.ComputeManager._driver_detach_volume')

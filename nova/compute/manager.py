@@ -874,8 +874,9 @@ class ComputeManager(manager.Manager):
                 self._set_instance_obj_error_state(context, instance)
             return
 
-        try_reboot, reboot_type = self._retry_reboot(context, instance)
         current_power_state = self._get_power_state(context, instance)
+        try_reboot, reboot_type = self._retry_reboot(context, instance,
+                                                     current_power_state)
 
         if try_reboot:
             LOG.debug("Instance in transitional state (%(task_state)s) at "
@@ -1038,8 +1039,7 @@ class ComputeManager(manager.Manager):
                 LOG.debug('Hypervisor driver does not support '
                           'firewall rules', instance=instance)
 
-    def _retry_reboot(self, context, instance):
-        current_power_state = self._get_power_state(context, instance)
+    def _retry_reboot(self, context, instance, current_power_state):
         current_task_state = instance.task_state
         retry_reboot = False
         reboot_type = compute_utils.get_reboot_type(current_task_state,
