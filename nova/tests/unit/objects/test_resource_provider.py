@@ -22,9 +22,12 @@ _RESOURCE_CLASS_NAME = 'DISK_GB'
 _RESOURCE_CLASS_ID = 2
 _RESOURCE_PROVIDER_ID = 1
 _RESOURCE_PROVIDER_UUID = uuids.resource_provider
+_RESOURCE_PROVIDER_NAME = uuids.resource_name
 _RESOURCE_PROVIDER_DB = {
     'id': _RESOURCE_PROVIDER_ID,
     'uuid': _RESOURCE_PROVIDER_UUID,
+    'name': _RESOURCE_PROVIDER_NAME,
+    'generation': 0,
 }
 _INVENTORY_ID = 2
 _INVENTORY_DB = {
@@ -55,12 +58,14 @@ class _TestResourceProviderNoDB(object):
                 return_value=_RESOURCE_PROVIDER_DB)
     def test_create(self, mock_db_create):
         obj = objects.ResourceProvider(context=self.context,
-                                       uuid=_RESOURCE_PROVIDER_UUID)
+                                       uuid=_RESOURCE_PROVIDER_UUID,
+                                       name=_RESOURCE_PROVIDER_NAME)
         obj.create()
         self.assertEqual(_RESOURCE_PROVIDER_UUID, obj.uuid)
         self.assertIsInstance(obj.id, int)
         mock_db_create.assert_called_once_with(
-            self.context, {'uuid': _RESOURCE_PROVIDER_UUID})
+            self.context, {'uuid': _RESOURCE_PROVIDER_UUID,
+                           'name': _RESOURCE_PROVIDER_NAME})
 
     def test_create_id_fail(self):
         obj = objects.ResourceProvider(context=self.context,
@@ -88,24 +93,28 @@ class TestRemoteResourceProviderNoDB(test_objects._RemoteTest,
 class TestResourceProvider(test_objects._LocalTest):
 
     def test_create_in_db(self):
-        updates = {'uuid': _RESOURCE_PROVIDER_UUID}
+        updates = {'uuid': _RESOURCE_PROVIDER_UUID,
+                   'name': _RESOURCE_PROVIDER_NAME}
         db_rp = objects.ResourceProvider._create_in_db(
             self.context, updates)
         self.assertIsInstance(db_rp.id, int)
         self.assertEqual(_RESOURCE_PROVIDER_UUID, db_rp.uuid)
+        self.assertEqual(_RESOURCE_PROVIDER_NAME, db_rp.name)
 
     def test_get_by_uuid_from_db(self):
         rp = objects.ResourceProvider(context=self.context,
-                                      uuid=_RESOURCE_PROVIDER_UUID)
+                                      uuid=_RESOURCE_PROVIDER_UUID,
+                                      name=_RESOURCE_PROVIDER_NAME)
         rp.create()
         retrieved_rp = objects.ResourceProvider._get_by_uuid_from_db(
             self.context, _RESOURCE_PROVIDER_UUID)
         self.assertEqual(rp.uuid, retrieved_rp.uuid)
+        self.assertEqual(rp.name, retrieved_rp.name)
 
+    def test_get_by_uuid_from_db_missing(self):
         self.assertRaises(exception.NotFound,
-                          objects.ResourceProvider._get_by_uuid_from_db,
-                          self.context,
-                          uuids.missing)
+                          objects.ResourceProvider.get_by_uuid,
+                          self.context, uuids.missing)
 
 
 class _TestInventoryNoDB(object):
@@ -169,7 +178,8 @@ class TestInventory(test_objects._LocalTest):
 
     def _make_inventory(self):
         db_rp = objects.ResourceProvider(
-            context=self.context, uuid=uuids.inventory_resource_provider)
+            context=self.context, uuid=uuids.inventory_resource_provider,
+            name=_RESOURCE_PROVIDER_NAME)
         db_rp.create()
         updates = dict(_INVENTORY_DB,
                        resource_provider_id=db_rp.id)
@@ -246,7 +256,8 @@ class TestInventory(test_objects._LocalTest):
 
     def test_create_requires_resource_class(self):
         rp = objects.ResourceProvider(
-            context=self.context, uuid=uuids.inventory_resource_provider)
+            context=self.context, uuid=uuids.inventory_resource_provider,
+            name=_RESOURCE_PROVIDER_NAME)
         rp.create()
         inventory_dict = dict(_INVENTORY_DB)
         inventory_dict.pop('id')

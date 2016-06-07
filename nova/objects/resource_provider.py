@@ -45,6 +45,8 @@ class ResourceProvider(base.NovaObject):
     fields = {
         'id': fields.IntegerField(read_only=True),
         'uuid': fields.UUIDField(nullable=False),
+        'name': fields.StringField(nullable=False),
+        'generation': fields.IntegerField(nullable=False),
     }
 
     @base.remotable
@@ -55,6 +57,9 @@ class ResourceProvider(base.NovaObject):
         if 'uuid' not in self:
             raise exception.ObjectActionError(action='create',
                                               reason='uuid is required')
+        if 'name' not in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='name is required')
         updates = self.obj_get_changes()
         db_rp = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_rp)

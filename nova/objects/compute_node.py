@@ -13,6 +13,7 @@
 #    under the License.
 
 
+from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
@@ -314,6 +315,27 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
         return True
 
+    def _ensure_resource_provider(self):
+        shortname = self.host.split('.')[0]
+        rp_name = 'compute-%s-%s' % (shortname, self.uuid)
+        rp = objects.ResourceProvider(
+            context=self._context, uuid=self.uuid,
+            name=rp_name)
+        try:
+            rp.create()
+        except db_exc.DBDuplicateEntry:
+            rp = objects.ResourceProvider.get_by_uuid(self._context, self.uuid)
+            if rp.name != rp_name:
+                # FIXME(danms): We probably need a .save() operation on RP
+                # so that we can update this
+                LOG.warning(_LW('Compute node %(uuid)s changed name '
+                                'from %(old)s to %(new)s'),
+                            {'uuid': self.uuid,
+                             'old': rp.name,
+                             'new': rp_name})
+
+        return rp
+
     def create_inventory(self):
         """Create the initial inventory objects for this compute node.
 
@@ -321,8 +343,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         is created, or after an upgrade where the required services have
         reached the required version.
         """
-        rp = objects.ResourceProvider(context=self._context, uuid=self.uuid)
-        rp.create()
+        rp = self._ensure_resource_provider()
 
         cpu = objects.Inventory(context=self._context,
                                 resource_provider=rp,
