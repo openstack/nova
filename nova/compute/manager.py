@@ -4892,7 +4892,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def detach_interface(self, context, instance, port_id):
-        """Detach an network adapter from an instance."""
+        """Detach a network adapter from an instance."""
         network_info = instance.info_cache.network_info
         condemned = None
         for vif in network_info:
