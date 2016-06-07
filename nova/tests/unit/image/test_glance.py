@@ -564,7 +564,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_no_data_no_dest_path(self, show_mock, open_mock):
+    def test_download_no_data_no_dest_path_v1(self, show_mock, open_mock):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = mock.sentinel.image_chunks
         ctx = mock.sentinel.ctx
@@ -579,7 +580,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_data_no_dest_path(self, show_mock, open_mock):
+    def test_download_data_no_dest_path_v1(self, show_mock, open_mock):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = [1, 2, 3]
         ctx = mock.sentinel.ctx
@@ -603,7 +605,8 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_no_data_dest_path(self, show_mock, open_mock):
+    def test_download_no_data_dest_path_v1(self, show_mock, open_mock):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = [1, 2, 3]
         ctx = mock.sentinel.ctx
@@ -629,12 +632,13 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_data_dest_path(self, show_mock, open_mock):
+    def test_download_data_dest_path_v1(self, show_mock, open_mock):
         # NOTE(jaypipes): This really shouldn't be allowed, but because of the
         # horrible design of the download() method in GlanceImageService, no
         # error is raised, and the dst_path is ignored...
         # #TODO(jaypipes): Fix the aforementioned horrible design of
         # the download() method.
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = [1, 2, 3]
         ctx = mock.sentinel.ctx
@@ -658,7 +662,9 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_data_dest_path_write_fails(self, show_mock, open_mock):
+    def test_download_data_dest_path_write_fails_v1(
+            self, show_mock, open_mock):
+        self.flags(use_glance_v1=True, group='glance')
         client = mock.MagicMock()
         client.call.return_value = [1, 2, 3]
         ctx = mock.sentinel.ctx
@@ -678,7 +684,7 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_direct_file_uri(self, show_mock, get_tran_mock):
+    def test_download_direct_file_uri_v1(self, show_mock, get_tran_mock):
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         show_mock.return_value = {
             'locations': [
@@ -709,12 +715,12 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_direct_exception_fallback(self, show_mock,
-                                                get_tran_mock,
-                                                open_mock):
+    def test_download_direct_exception_fallback_v1(
+            self, show_mock, get_tran_mock, open_mock):
         # Test that we fall back to downloading to the dst_path
         # if the download method of the transfer module raised
         # an exception.
+        self.flags(use_glance_v1=True, group='glance')
         self.flags(allowed_direct_url_schemes=['file'], group='glance')
         show_mock.return_value = {
             'locations': [
@@ -762,12 +768,12 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
     @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageService._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_direct_no_mod_fallback(self, show_mock,
-                                              get_tran_mock,
-                                              open_mock):
+    def test_download_direct_no_mod_fallback_v1(
+            self, show_mock, get_tran_mock, open_mock):
         # Test that we fall back to downloading to the dst_path
         # if no appropriate transfer module is found...
         # an exception.
+        self.flags(use_glance_v1=True, group='glance')
         self.flags(allowed_direct_url_schemes=['funky'], group='glance')
         show_mock.return_value = {
             'locations': [
@@ -793,6 +799,259 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                           include_locations=True)
         get_tran_mock.assert_called_once_with('file')
         client.call.assert_called_once_with(ctx, 1, 'data',
+                                            mock.sentinel.image_id)
+        # NOTE(jaypipes): log messages call open() in part of the
+        # download path, so here, we just check that the last open()
+        # call was done for the dst_path file descriptor.
+        open_mock.assert_called_with(mock.sentinel.dst_path, 'wb')
+        self.assertIsNone(res)
+        writer.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        writer.close.assert_called_once_with()
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_no_data_no_dest_path_v2(self, show_mock, open_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = mock.sentinel.image_chunks
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id)
+
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(ctx, 2, 'data',
+                                            mock.sentinel.image_id)
+        self.assertEqual(mock.sentinel.image_chunks, res)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_data_no_dest_path_v2(self, show_mock, open_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        data = mock.MagicMock()
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id, data=data)
+
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(ctx, 2, 'data',
+                                            mock.sentinel.image_id)
+        self.assertIsNone(res)
+        data.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        self.assertFalse(data.close.called)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_no_data_dest_path_v2(self, show_mock, open_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
+
+        self.assertFalse(show_mock.called)
+        client.call.assert_called_once_with(ctx, 2, 'data',
+                                            mock.sentinel.image_id)
+        open_mock.assert_called_once_with(mock.sentinel.dst_path, 'wb')
+        self.assertIsNone(res)
+        writer.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        writer.close.assert_called_once_with()
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_data_dest_path_v2(self, show_mock, open_mock):
+        # NOTE(jaypipes): This really shouldn't be allowed, but because of the
+        # horrible design of the download() method in GlanceImageService, no
+        # error is raised, and the dst_path is ignored...
+        # #TODO(jaypipes): Fix the aforementioned horrible design of
+        # the download() method.
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        data = mock.MagicMock()
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id, data=data)
+
+        self.assertFalse(show_mock.called)
+        self.assertFalse(open_mock.called)
+        client.call.assert_called_once_with(ctx, 2, 'data',
+                                            mock.sentinel.image_id)
+        self.assertIsNone(res)
+        data.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+        self.assertFalse(data.close.called)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_data_dest_path_write_fails_v2(
+            self, show_mock, open_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        # NOTE(mikal): data is a file like object, which in our case always
+        # raises an exception when we attempt to write to the file.
+        class FakeDiskException(Exception):
+            pass
+
+        class Exceptionator(StringIO):
+            def write(self, _):
+                raise FakeDiskException('Disk full!')
+
+        self.assertRaises(FakeDiskException, service.download, ctx,
+                          mock.sentinel.image_id, data=Exceptionator())
+
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_direct_file_uri_v2(self, show_mock, get_tran_mock):
+        self.flags(use_glance_v1=False, group='glance')
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'file:///files/image',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        tran_mod = mock.MagicMock()
+        get_tran_mock.return_value = tran_mod
+        client = mock.MagicMock()
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
+
+        self.assertIsNone(res)
+        self.assertFalse(client.call.called)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        get_tran_mock.assert_called_once_with('file')
+        tran_mod.download.assert_called_once_with(ctx, mock.ANY,
+                                                  mock.sentinel.dst_path,
+                                                  mock.sentinel.loc_meta)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_direct_exception_fallback_v2(
+            self, show_mock, get_tran_mock, open_mock):
+        # Test that we fall back to downloading to the dst_path
+        # if the download method of the transfer module raised
+        # an exception.
+        self.flags(use_glance_v1=False, group='glance')
+        self.flags(allowed_direct_url_schemes=['file'], group='glance')
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'file:///files/image',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        tran_mod = mock.MagicMock()
+        tran_mod.download.side_effect = Exception
+        get_tran_mock.return_value = tran_mod
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
+
+        self.assertIsNone(res)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        get_tran_mock.assert_called_once_with('file')
+        tran_mod.download.assert_called_once_with(ctx, mock.ANY,
+                                                  mock.sentinel.dst_path,
+                                                  mock.sentinel.loc_meta)
+        client.call.assert_called_once_with(ctx, 2, 'data',
+                                            mock.sentinel.image_id)
+        # NOTE(jaypipes): log messages call open() in part of the
+        # download path, so here, we just check that the last open()
+        # call was done for the dst_path file descriptor.
+        open_mock.assert_called_with(mock.sentinel.dst_path, 'wb')
+        self.assertIsNone(res)
+        writer.write.assert_has_calls(
+                [
+                    mock.call(1),
+                    mock.call(2),
+                    mock.call(3)
+                ]
+        )
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_direct_no_mod_fallback(
+            self, show_mock, get_tran_mock, open_mock):
+        # Test that we fall back to downloading to the dst_path
+        # if no appropriate transfer module is found...
+        # an exception.
+        self.flags(use_glance_v1=False, group='glance')
+        self.flags(allowed_direct_url_schemes=['funky'], group='glance')
+        show_mock.return_value = {
+            'locations': [
+                {
+                    'url': 'file:///files/image',
+                    'metadata': mock.sentinel.loc_meta
+                }
+            ]
+        }
+        get_tran_mock.return_value = None
+        client = mock.MagicMock()
+        client.call.return_value = [1, 2, 3]
+        ctx = mock.sentinel.ctx
+        writer = mock.MagicMock()
+        open_mock.return_value = writer
+        service = glance.GlanceImageServiceV2(client)
+        res = service.download(ctx, mock.sentinel.image_id,
+                               dst_path=mock.sentinel.dst_path)
+
+        self.assertIsNone(res)
+        show_mock.assert_called_once_with(ctx,
+                                          mock.sentinel.image_id,
+                                          include_locations=True)
+        get_tran_mock.assert_called_once_with('file')
+        client.call.assert_called_once_with(ctx, 2, 'data',
                                             mock.sentinel.image_id)
         # NOTE(jaypipes): log messages call open() in part of the
         # download path, so here, we just check that the last open()
@@ -839,21 +1098,22 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
             }
         }
         self.fake_img_data = ['A' * 256, 'B' * 256]
-        client = mock.MagicMock()
-        client.call.return_value = self.fake_img_data
-        self.service = glance.GlanceImageService(client)
+        self.client = mock.MagicMock()
+        self.client.call.return_value = self.fake_img_data
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     @mock.patch('nova.signature_utils.get_verifier')
-    def test_download_with_signature_verification(self,
-                                                  mock_get_verifier,
-                                                  mock_show,
-                                                  mock_log):
+    def test_download_with_signature_verification_v1(self,
+                                                     mock_get_verifier,
+                                                     mock_show,
+                                                     mock_log):
+        self.flags(use_glance_v1=True, group='glance')
+        service = glance.GlanceImageService(self.client)
         mock_get_verifier.return_value = self.MockVerifier()
         mock_show.return_value = self.fake_img_props
-        res = self.service.download(context=None, image_id=None,
-                                    data=None, dst_path=None)
+        res = service.download(context=None, image_id=None,
+                               data=None, dst_path=None)
         self.assertEqual(self.fake_img_data, res)
         mock_get_verifier.assert_called_once_with(None,
                                                   uuids.img_sig_cert_uuid,
@@ -865,18 +1125,20 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     @mock.patch('nova.signature_utils.get_verifier')
-    def test_download_dst_path_signature_verification(self,
-                                                      mock_get_verifier,
-                                                      mock_show,
-                                                      mock_log,
-                                                      mock_open):
+    def test_download_dst_path_signature_verification_v1(self,
+                                                         mock_get_verifier,
+                                                         mock_show,
+                                                         mock_log,
+                                                         mock_open):
+        self.flags(use_glance_v1=True, group='glance')
+        service = glance.GlanceImageService(self.client)
         mock_get_verifier.return_value = self.MockVerifier()
         mock_show.return_value = self.fake_img_props
         mock_dest = mock.MagicMock()
         fake_path = 'FAKE_PATH'
         mock_open.return_value = mock_dest
-        self.service.download(context=None, image_id=None,
-                              data=None, dst_path=fake_path)
+        service.download(context=None, image_id=None,
+                         data=None, dst_path=fake_path)
         mock_get_verifier.assert_called_once_with(None,
                                                   uuids.img_sig_cert_uuid,
                                                   'SHA-224',
@@ -888,17 +1150,19 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     @mock.patch('nova.signature_utils.get_verifier')
-    def test_download_with_get_verifier_failure(self,
-                                                mock_get_verifier,
-                                                mock_show,
-                                                mock_log):
+    def test_download_with_get_verifier_failure_v1(self,
+                                                   mock_get_verifier,
+                                                   mock_show,
+                                                   mock_log):
+        self.flags(use_glance_v1=True, group='glance')
+        service = glance.GlanceImageService(self.client)
         mock_get_verifier.side_effect = exception.SignatureVerificationError(
                                             reason='Signature verification '
                                                    'failed.'
                                         )
         mock_show.return_value = self.fake_img_props
         self.assertRaises(exception.SignatureVerificationError,
-                          self.service.download,
+                          service.download,
                           context=None, image_id=None,
                           data=None, dst_path=None)
         mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
@@ -906,29 +1170,33 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageService.show')
     @mock.patch('nova.signature_utils.get_verifier')
-    def test_download_with_invalid_signature(self,
-                                             mock_get_verifier,
-                                             mock_show,
-                                             mock_log):
+    def test_download_with_invalid_signature_v1(self,
+                                                mock_get_verifier,
+                                                mock_show,
+                                                mock_log):
+        self.flags(use_glance_v1=True, group='glance')
+        service = glance.GlanceImageService(self.client)
         mock_get_verifier.return_value = self.BadVerifier()
         mock_show.return_value = self.fake_img_props
         self.assertRaises(cryptography.exceptions.InvalidSignature,
-                          self.service.download,
+                          service.download,
                           context=None, image_id=None,
                           data=None, dst_path=None)
         mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
 
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_missing_signature_metadata(self,
-                                                 mock_show,
-                                                 mock_log):
+    def test_download_missing_signature_metadata_v1(self,
+                                                    mock_show,
+                                                    mock_log):
+        self.flags(use_glance_v1=True, group='glance')
+        service = glance.GlanceImageService(self.client)
         mock_show.return_value = {'properties': {}}
         self.assertRaisesRegex(exception.SignatureVerificationError,
                                'Required image properties for signature '
                                'verification do not exist. Cannot verify '
                                'signature. Missing property: .*',
-                               self.service.download,
+                               service.download,
                                context=None, image_id=None,
                                data=None, dst_path=None)
 
@@ -936,16 +1204,140 @@ class TestDownloadSignatureVerification(test.NoDBTestCase):
     @mock.patch('nova.signature_utils.get_verifier')
     @mock.patch('nova.image.glance.LOG')
     @mock.patch('nova.image.glance.GlanceImageService.show')
-    def test_download_dst_path_signature_fail(self, mock_show,
-                                              mock_log, mock_get_verifier,
-                                              mock_open):
+    def test_download_dst_path_signature_fail_v1(self, mock_show,
+                                                 mock_log, mock_get_verifier,
+                                                 mock_open):
+        self.flags(use_glance_v1=True, group='glance')
+        service = glance.GlanceImageService(self.client)
         mock_get_verifier.return_value = self.BadVerifier()
         mock_dest = mock.MagicMock()
         fake_path = 'FAKE_PATH'
         mock_open.return_value = mock_dest
         mock_show.return_value = self.fake_img_props
         self.assertRaises(cryptography.exceptions.InvalidSignature,
-                          self.service.download,
+                          service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=fake_path)
+        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+        mock_open.assert_called_once_with(fake_path, 'wb')
+        mock_dest.truncate.assert_called_once_with(0)
+        self.assertTrue(mock_dest.close.called)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_with_signature_verification_v2(self,
+                                                     mock_get_verifier,
+                                                     mock_show,
+                                                     mock_log):
+        self.flags(use_glance_v1=False, group='glance')
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_get_verifier.return_value = self.MockVerifier()
+        mock_show.return_value = self.fake_img_props
+        res = service.download(context=None, image_id=None,
+                               data=None, dst_path=None)
+        self.assertEqual(self.fake_img_data, res)
+        mock_get_verifier.assert_called_once_with(None,
+                                                  uuids.img_sig_cert_uuid,
+                                                  'SHA-224',
+                                                  'signature', 'RSA-PSS')
+        mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_dst_path_signature_verification_v2(self,
+                                                         mock_get_verifier,
+                                                         mock_show,
+                                                         mock_log,
+                                                         mock_open):
+        self.flags(use_glance_v1=False, group='glance')
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_get_verifier.return_value = self.MockVerifier()
+        mock_show.return_value = self.fake_img_props
+        mock_dest = mock.MagicMock()
+        fake_path = 'FAKE_PATH'
+        mock_open.return_value = mock_dest
+        service.download(context=None, image_id=None,
+                         data=None, dst_path=fake_path)
+        mock_get_verifier.assert_called_once_with(None,
+                                                  uuids.img_sig_cert_uuid,
+                                                  'SHA-224',
+                                                  'signature', 'RSA-PSS')
+        mock_log.info.assert_called_once_with(mock.ANY, mock.ANY)
+        self.assertEqual(len(self.fake_img_data), mock_dest.write.call_count)
+        self.assertTrue(mock_dest.close.called)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_with_get_verifier_failure_v2(self,
+                                                   mock_get_verifier,
+                                                   mock_show,
+                                                   mock_log):
+        self.flags(use_glance_v1=False, group='glance')
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_get_verifier.side_effect = exception.SignatureVerificationError(
+                                            reason='Signature verification '
+                                                   'failed.'
+                                        )
+        mock_show.return_value = self.fake_img_props
+        self.assertRaises(exception.SignatureVerificationError,
+                          service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=None)
+        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    @mock.patch('nova.signature_utils.get_verifier')
+    def test_download_with_invalid_signature_v2(self,
+                                                mock_get_verifier,
+                                                mock_show,
+                                                mock_log):
+        self.flags(use_glance_v1=False, group='glance')
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_get_verifier.return_value = self.BadVerifier()
+        mock_show.return_value = self.fake_img_props
+        self.assertRaises(cryptography.exceptions.InvalidSignature,
+                          service.download,
+                          context=None, image_id=None,
+                          data=None, dst_path=None)
+        mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
+
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_missing_signature_metadata_v2(self,
+                                                    mock_show,
+                                                    mock_log):
+        self.flags(use_glance_v1=False, group='glance')
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_show.return_value = {'properties': {}}
+        self.assertRaisesRegex(exception.SignatureVerificationError,
+                               'Required image properties for signature '
+                               'verification do not exist. Cannot verify '
+                               'signature. Missing property: .*',
+                               service.download,
+                               context=None, image_id=None,
+                               data=None, dst_path=None)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.signature_utils.get_verifier')
+    @mock.patch('nova.image.glance.LOG')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_dst_path_signature_fail_v2(self, mock_show,
+                                                 mock_log, mock_get_verifier,
+                                                 mock_open):
+        self.flags(use_glance_v1=False, group='glance')
+        service = glance.GlanceImageServiceV2(self.client)
+        mock_get_verifier.return_value = self.BadVerifier()
+        mock_dest = mock.MagicMock()
+        fake_path = 'FAKE_PATH'
+        mock_open.return_value = mock_dest
+        mock_show.return_value = self.fake_img_props
+        self.assertRaises(cryptography.exceptions.InvalidSignature,
+                          service.download,
                           context=None, image_id=None,
                           data=None, dst_path=fake_path)
         mock_log.error.assert_called_once_with(mock.ANY, mock.ANY)
