@@ -15,7 +15,6 @@
 
 import mock
 
-from nova import keymgr
 from nova import test
 from nova.tests.unit.keymgr import fake
 from nova.volume import encryptors
@@ -31,7 +30,7 @@ class VolumeEncryptorTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VolumeEncryptorTestCase, self).setUp()
 
-        self.stubs.Set(keymgr, 'API', fake.fake_api)
+        self.stub_out('nova.keymgr.API', fake.fake_api)
 
         self.connection_info = {
             "data": {
