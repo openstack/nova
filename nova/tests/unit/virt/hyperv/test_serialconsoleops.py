@@ -93,14 +93,14 @@ class SerialConsoleOpsTestCase(test_base.HyperVBaseTestCase):
     @mock.patch("os.path.exists")
     def test_get_console_output_exception(self, fake_path_exists, fake_open):
         self._serialops._pathutils.get_vm_console_log_paths.return_value = [
-            mock.sentinel.log_path]
+            mock.sentinel.log_path_1, mock.sentinel.log_path_2]
         fake_open.side_effect = IOError
         fake_path_exists.return_value = True
 
         self.assertRaises(exception.ConsoleLogOutputException,
                           self._serialops.get_console_output,
                           mock.sentinel.instance_name)
-        fake_open.assert_called_once_with(mock.sentinel.log_path, 'rb')
+        fake_open.assert_called_once_with(mock.sentinel.log_path_2, 'rb')
 
     @mock.patch('os.path.exists')
     @mock.patch.object(serialconsoleops.SerialConsoleOps,
