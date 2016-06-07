@@ -620,7 +620,6 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                                callargs={'instance': 'foo',
                                          'dest': 'foo',
                                          'block_migration': False,
-                                         'migration': None,
                                          'migrate_data': {
                                              'pre_live_migration_result': {}}},
                                callret=None,
