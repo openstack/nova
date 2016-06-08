@@ -585,6 +585,7 @@ class FloatingIpTestV21(test.TestCase):
     def test_associate_floating_ip_v4v6_fixed_ip(self, fixed_ips_mock):
         fixed_address = '192.168.1.100'
         fixed_ips_mock.return_value = [{'address': 'fc00:2001:db8::100'},
+                                       {'address': ''},
                                        {'address': fixed_address}]
         self._test_floating_ip_associate(fixed_address=fixed_address)
 
