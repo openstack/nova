@@ -217,15 +217,17 @@ class HypervisorsTestV21(test.NoDBTestCase):
         super(HypervisorsTestV21, self).setUp()
         self._set_up_controller()
         self.rule_hyp_show = "os_compute_api:os-hypervisors"
-        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
-                       fake_compute_node_get_all)
-        self.stubs.Set(self.controller.host_api, 'service_get_by_compute_host',
-                       fake_service_get_by_compute_host)
-        self.stubs.Set(self.controller.host_api,
-                       'compute_node_search_by_hypervisor',
-                       fake_compute_node_search_by_hypervisor)
-        self.stubs.Set(self.controller.host_api, 'compute_node_get',
-                       fake_compute_node_get)
+
+        host_api = self.controller.host_api
+        host_api.compute_node_get_all = mock.MagicMock(
+            side_effect=fake_compute_node_get_all)
+        host_api.service_get_by_compute_host = mock.MagicMock(
+            side_effect=fake_service_get_by_compute_host)
+        host_api.compute_node_search_by_hypervisor = mock.MagicMock(
+            side_effect=fake_compute_node_search_by_hypervisor)
+        host_api.compute_node_get = mock.MagicMock(
+            side_effect=fake_compute_node_get)
+
         self.stub_out('nova.db.compute_node_statistics',
                       fake_compute_node_statistics)
 
@@ -234,14 +236,14 @@ class HypervisorsTestV21(test.NoDBTestCase):
         result = self.controller._view_hypervisor(
             self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], False, req)
 
-        self.assertEqual(result, self.INDEX_HYPER_DICTS[0])
+        self.assertEqual(self.INDEX_HYPER_DICTS[0], result)
 
     def test_view_hypervisor_detail_noservers(self):
         req = self._get_request(True)
         result = self.controller._view_hypervisor(
             self.TEST_HYPERS_OBJ[0], self.TEST_SERVICES[0], True, req)
 
-        self.assertEqual(result, self.DETAIL_HYPERS_DICTS[0])
+        self.assertEqual(self.DETAIL_HYPERS_DICTS[0], result)
 
     def test_view_hypervisor_servers(self):
         req = self._get_request(True)
@@ -256,7 +258,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
                                   dict(name="inst3", uuid=uuids.instance_3),
                                   dict(name="inst4", uuid=uuids.instance_4)]})
 
-        self.assertEqual(result, expected_dict)
+        self.assertEqual(expected_dict, result)
 
     def _test_view_hypervisor_detail_cpuinfo_null(self, cpu_info):
         req = self._get_request(True)
@@ -282,7 +284,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(True)
         result = self.controller.index(req)
 
-        self.assertEqual(result, dict(hypervisors=self.INDEX_HYPER_DICTS))
+        self.assertEqual(dict(hypervisors=self.INDEX_HYPER_DICTS), result)
 
     def test_index_non_admin(self):
         req = self._get_request(False)
@@ -328,7 +330,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(True)
         result = self.controller.detail(req)
 
-        self.assertEqual(result, dict(hypervisors=self.DETAIL_HYPERS_DICTS))
+        self.assertEqual(dict(hypervisors=self.DETAIL_HYPERS_DICTS), result)
 
     def test_detail_non_admin(self):
         req = self._get_request(False)
@@ -390,7 +392,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
         req = self._get_request(True)
         result = self.controller.show(req, self.TEST_HYPERS_OBJ[0].id)
 
-        self.assertEqual(result, dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]))
+        self.assertEqual(dict(hypervisor=self.DETAIL_HYPERS_DICTS[0]), result)
 
     def test_show_non_admin(self):
         req = self._get_request(False)
@@ -403,30 +405,26 @@ class HypervisorsTestV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.uptime, req, '3')
 
     def test_uptime_notimplemented(self):
-        def fake_get_host_uptime(context, hyp):
-            raise exc.HTTPNotImplemented()
-
-        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
-                       fake_get_host_uptime)
-
-        req = self._get_request(True)
-        self.assertRaises(exc.HTTPNotImplemented,
-                          self.controller.uptime, req,
-                          self.TEST_HYPERS_OBJ[0].id)
+        with mock.patch.object(self.controller.host_api, 'get_host_uptime',
+                               side_effect=exc.HTTPNotImplemented()
+                               ) as mock_get_uptime:
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPNotImplemented,
+                              self.controller.uptime, req,
+                              self.TEST_HYPERS_OBJ[0].id)
+            self.assertEqual(1, mock_get_uptime.call_count)
 
     def test_uptime_implemented(self):
-        def fake_get_host_uptime(context, hyp):
-            return "fake uptime"
+        with mock.patch.object(self.controller.host_api, 'get_host_uptime',
+                               return_value="fake uptime"
+                               ) as mock_get_uptime:
+            req = self._get_request(True)
+            result = self.controller.uptime(req, self.TEST_HYPERS_OBJ[0].id)
 
-        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
-                       fake_get_host_uptime)
-
-        req = self._get_request(True)
-        result = self.controller.uptime(req, self.TEST_HYPERS_OBJ[0].id)
-
-        expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
-        expected_dict.update({'uptime': "fake uptime"})
-        self.assertEqual(result, dict(hypervisor=expected_dict))
+            expected_dict = copy.deepcopy(self.INDEX_HYPER_DICTS[0])
+            expected_dict.update({'uptime': "fake uptime"})
+            self.assertEqual(dict(hypervisor=expected_dict), result)
+            self.assertEqual(1, mock_get_uptime.call_count)
 
     def test_uptime_non_integer_id(self):
         req = self._get_request(True)
@@ -439,22 +437,21 @@ class HypervisorsTestV21(test.NoDBTestCase):
                           self.TEST_HYPERS_OBJ[0].id)
 
     def test_uptime_hypervisor_down(self):
-        def fake_get_host_uptime(context, hyp):
-            raise exception.ComputeServiceUnavailable(host='dummy')
-
-        self.stubs.Set(self.controller.host_api, 'get_host_uptime',
-                       fake_get_host_uptime)
-
-        req = self._get_request(True)
-        self.assertRaises(exc.HTTPBadRequest,
-                          self.controller.uptime, req,
-                          self.TEST_HYPERS_OBJ[0].id)
+        with mock.patch.object(self.controller.host_api, 'get_host_uptime',
+                side_effect=exception.ComputeServiceUnavailable(host='dummy')
+                ) as mock_get_uptime:
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPBadRequest,
+                              self.controller.uptime, req,
+                              self.TEST_HYPERS_OBJ[0].id)
+            mock_get_uptime.assert_called_once_with(
+                mock.ANY, self.TEST_HYPERS_OBJ[0].host)
 
     def test_search(self):
         req = self._get_request(True)
         result = self.controller.search(req, 'hyper')
 
-        self.assertEqual(result, dict(hypervisors=self.INDEX_HYPER_DICTS))
+        self.assertEqual(dict(hypervisors=self.INDEX_HYPER_DICTS), result)
 
     def test_search_non_admin(self):
         req = self._get_request(False)
@@ -463,14 +460,13 @@ class HypervisorsTestV21(test.NoDBTestCase):
                           self.TEST_HYPERS_OBJ[0].id)
 
     def test_search_non_exist(self):
-        def fake_compute_node_search_by_hypervisor_return_empty(context,
-                                                                hypervisor_re):
-            return []
-        self.stubs.Set(self.controller.host_api,
-                       'compute_node_search_by_hypervisor',
-                       fake_compute_node_search_by_hypervisor_return_empty)
-        req = self._get_request(True)
-        self.assertRaises(exc.HTTPNotFound, self.controller.search, req, 'a')
+        with mock.patch.object(self.controller.host_api,
+                               'compute_node_search_by_hypervisor',
+                               return_value=[]) as mock_node_search:
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPNotFound, self.controller.search,
+                              req, 'a')
+            self.assertEqual(1, mock_node_search.call_count)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        side_effect=fake_instance_get_all_by_host)
@@ -490,20 +486,17 @@ class HypervisorsTestV21(test.NoDBTestCase):
             servers = output['servers']
             for server in servers:
                 del server['name']
-        self.assertEqual(result, dict(hypervisors=expected_dict))
+        self.assertEqual(dict(hypervisors=expected_dict), result)
 
     def test_servers_non_id(self):
-        def fake_compute_node_search_by_hypervisor_return_empty(context,
-                                                                hypervisor_re):
-            return []
-        self.stubs.Set(self.controller.host_api,
-                       'compute_node_search_by_hypervisor',
-                       fake_compute_node_search_by_hypervisor_return_empty)
-
-        req = self._get_request(True)
-        self.assertRaises(exc.HTTPNotFound,
-                          self.controller.servers,
-                          req, '115')
+        with mock.patch.object(self.controller.host_api,
+                               'compute_node_search_by_hypervisor',
+                               return_value=[]) as mock_node_search:
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPNotFound,
+                              self.controller.servers,
+                              req, '115')
+            self.assertEqual(1, mock_node_search.call_count)
 
     def test_servers_non_admin(self):
         req = self._get_request(False)
@@ -512,31 +505,29 @@ class HypervisorsTestV21(test.NoDBTestCase):
                           self.TEST_HYPERS_OBJ[0].id)
 
     def test_servers_with_non_integer_hypervisor_id(self):
-        def fake_compute_node_search_by_hypervisor_return_empty(context,
-                                                                hypervisor_re):
-            return []
-        self.stubs.Set(self.controller.host_api,
-                       'compute_node_search_by_hypervisor',
-                       fake_compute_node_search_by_hypervisor_return_empty)
+        with mock.patch.object(self.controller.host_api,
+                               'compute_node_search_by_hypervisor',
+                               return_value=[]) as mock_node_search:
 
-        req = self._get_request(True)
-        self.assertRaises(exc.HTTPNotFound,
-                          self.controller.servers, req, 'abc')
+            req = self._get_request(True)
+            self.assertRaises(exc.HTTPNotFound,
+                              self.controller.servers, req, 'abc')
+            self.assertEqual(1, mock_node_search.call_count)
 
     def test_servers_with_no_server(self):
-        def fake_instance_get_all_by_host_return_empty(context, hypervisor_re):
-            return []
-        self.stubs.Set(self.controller.host_api, 'instance_get_all_by_host',
-                       fake_instance_get_all_by_host_return_empty)
-        req = self._get_request(True)
-        result = self.controller.servers(req, self.TEST_HYPERS_OBJ[0].id)
-        self.assertEqual(result, dict(hypervisors=self.INDEX_HYPER_DICTS))
+        with mock.patch.object(self.controller.host_api,
+                               'instance_get_all_by_host',
+                               return_value=[]) as mock_inst_get_all:
+            req = self._get_request(True)
+            result = self.controller.servers(req, self.TEST_HYPERS_OBJ[0].id)
+            self.assertEqual(dict(hypervisors=self.INDEX_HYPER_DICTS), result)
+            self.assertTrue(mock_inst_get_all.called)
 
     def test_statistics(self):
         req = self._get_request(True)
         result = self.controller.statistics(req)
 
-        self.assertEqual(result, dict(hypervisor_statistics=dict(
+        self.assertEqual(dict(hypervisor_statistics=dict(
                     count=2,
                     vcpus=8,
                     memory_mb=20 * 1024,
@@ -548,7 +539,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
                     free_disk_gb=250,
                     current_workload=4,
                     running_vms=4,
-                    disk_available_least=200)))
+                    disk_available_least=200)), result)
 
     def test_statistics_non_admin(self):
         req = self._get_request(False)
@@ -628,19 +619,19 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
 
         super(CellHypervisorsTestV21, self).setUp()
 
-        self.stubs.Set(self.controller.host_api, 'compute_node_get_all',
-                       self.fake_compute_node_get_all)
-        self.stubs.Set(self.controller.host_api, 'service_get_by_compute_host',
-                       self.fake_service_get_by_compute_host)
-        self.stubs.Set(self.controller.host_api,
-                       'compute_node_search_by_hypervisor',
-                       self.fake_compute_node_search_by_hypervisor)
-        self.stubs.Set(self.controller.host_api, 'compute_node_get',
-                       self.fake_compute_node_get)
-        self.stubs.Set(self.controller.host_api, 'compute_node_statistics',
-                       fake_compute_node_statistics)
-        self.stubs.Set(self.controller.host_api, 'instance_get_all_by_host',
-                       self.fake_instance_get_all_by_host)
+        host_api = self.controller.host_api
+        host_api.compute_node_get_all = mock.MagicMock(
+            side_effect=self.fake_compute_node_get_all)
+        host_api.service_get_by_compute_host = mock.MagicMock(
+            side_effect=self.fake_service_get_by_compute_host)
+        host_api.compute_node_search_by_hypervisor = mock.MagicMock(
+            side_effect=self.fake_compute_node_search_by_hypervisor)
+        host_api.compute_node_get = mock.MagicMock(
+            side_effect=self.fake_compute_node_get)
+        host_api.compute_node_statistics = mock.MagicMock(
+            side_effect=fake_compute_node_statistics)
+        host_api.instance_get_all_by_host = mock.MagicMock(
+            side_effect=self.fake_instance_get_all_by_host)
 
 
 class HypervisorsTestV228(HypervisorsTestV21):
