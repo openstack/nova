@@ -19,9 +19,13 @@ import six
 
 from nova import objects
 from nova import test
+from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import migration
+
+libvirt_guest.libvirt = fakelibvirt
+migration.libvirt = fakelibvirt
 
 
 class UtilityMigrationTestCase(test.NoDBTestCase):
@@ -179,3 +183,90 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
             doc, data, get_volume_config))
         self.assertIn('ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z',
                       six.text_type(res))
+
+
+class MigrationMonitorTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(MigrationMonitorTestCase, self).setUp()
+
+        flavor = objects.Flavor(memory_mb=2048,
+                                swap=0,
+                                vcpu_weight=None,
+                                root_gb=1,
+                                id=2,
+                                name=u'm1.small',
+                                ephemeral_gb=0,
+                                rxtx_factor=1.0,
+                                flavorid=u'1',
+                                vcpus=1,
+                                extra_specs={})
+
+        instance = {
+            'id': 1,
+            'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
+            'memory_kb': '1024000',
+            'basepath': '/some/path',
+            'bridge_name': 'br100',
+            'display_name': "Acme webserver",
+            'vcpus': 2,
+            'project_id': 'fake',
+            'bridge': 'br101',
+            'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            'root_gb': 10,
+            'ephemeral_gb': 20,
+            'instance_type_id': '5',  # m1.small
+            'extra_specs': {},
+            'system_metadata': {
+                'image_disk_format': 'raw',
+            },
+            'flavor': flavor,
+            'new_flavor': None,
+            'old_flavor': None,
+            'pci_devices': objects.PciDeviceList(),
+            'numa_topology': None,
+            'config_drive': None,
+            'vm_mode': None,
+            'kernel_id': None,
+            'ramdisk_id': None,
+            'os_type': 'linux',
+            'user_id': '838a72b0-0d54-4827-8fd6-fb1227633ceb',
+            'ephemeral_key_uuid': None,
+            'vcpu_model': None,
+            'host': 'fake-host',
+            'task_state': None,
+        }
+        self.instance = objects.Instance(**instance)
+        self.conn = fakelibvirt.Connection("qemu:///system")
+        self.dom = fakelibvirt.Domain(self.conn, "<domain/>", True)
+        self.guest = libvirt_guest.Guest(self.dom)
+
+    @mock.patch.object(libvirt_guest.Guest, "is_active", return_value=True)
+    def test_live_migration_find_type_active(self, mock_active):
+        self.assertEqual(migration.find_job_type(self.guest, self.instance),
+                         fakelibvirt.VIR_DOMAIN_JOB_FAILED)
+
+    @mock.patch.object(libvirt_guest.Guest, "is_active", return_value=False)
+    def test_live_migration_find_type_inactive(self, mock_active):
+        self.assertEqual(migration.find_job_type(self.guest, self.instance),
+                         fakelibvirt.VIR_DOMAIN_JOB_COMPLETED)
+
+    @mock.patch.object(libvirt_guest.Guest, "is_active")
+    def test_live_migration_find_type_no_domain(self, mock_active):
+        mock_active.side_effect = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            "No domain with ID",
+            error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
+
+        self.assertEqual(migration.find_job_type(self.guest, self.instance),
+                         fakelibvirt.VIR_DOMAIN_JOB_COMPLETED)
+
+    @mock.patch.object(libvirt_guest.Guest, "is_active")
+    def test_live_migration_find_type_bad_err(self, mock_active):
+        mock_active.side_effect = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            "Something wierd happened",
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
+
+        self.assertEqual(migration.find_job_type(self.guest, self.instance),
+                         fakelibvirt.VIR_DOMAIN_JOB_FAILED)
