@@ -39,7 +39,9 @@ def fake_get_flavor_by_flavor_id(flavorid, ctxt=None):
         'deleted_at': None,
         'vcpu_weight': None,
         'swap': 0,
+        'is_public': True,
         'disabled': False,
+        'rxtx_factor': 1.0,
     }
 
 
@@ -101,6 +103,8 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
+                'rxtx_factor': 1.0,
+                'os-flavor-access:is_public': True,
             },
             {
                 'id': '2',
@@ -109,6 +113,8 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
                 'vcpus': 1,
                 'disk': 1,
                 'OS-FLV-EXT-DATA:ephemeral': 1,
+                'rxtx_factor': 1.0,
+                'os-flavor-access:is_public': True,
             },
         ]
 

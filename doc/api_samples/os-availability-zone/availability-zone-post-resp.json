@@ -11,6 +11,12 @@
                 "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/3e45fa2a-5204-466f-a684-c2a8e1c82d7f",
                 "rel": "bookmark"
             }
+        ],
+        "OS-DCF:diskConfig": "AUTO",
+        "security_groups": [
+            {
+                "name": "default"
+            }
         ]
     }
 }

@@ -29,6 +29,8 @@ FAKE_FLAVORS = {
         "vcpus": 1,
         "ephemeral_gb": 1,
         "disabled": False,
+        "is_public": True,
+        "rxtx_factor": 1.0,
     },
     'flavor 2': {
         "flavorid": '2',
@@ -39,6 +41,8 @@ FAKE_FLAVORS = {
         "vcpus": 1,
         "ephemeral_gb": 1,
         "disabled": False,
+        "is_public": True,
+        "rxtx_factor": 1.0,
     },
 }
 

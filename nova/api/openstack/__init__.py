@@ -25,11 +25,8 @@ import stevedore
 import webob.dec
 import webob.exc
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.conf
-from nova import exception
-from nova.i18n import _LC
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
@@ -245,40 +242,7 @@ class APIRouterV21(base_wsgi.Router):
         # all extensions but eventually should be able to exclude
         # based on a config file
         def _check_load_extension(ext):
-            if (self.init_only is None or ext.obj.alias in
-                self.init_only) and isinstance(ext.obj,
-                                               extensions.V21APIExtensionBase):
-
-                # Check whitelist is either empty or if not then the extension
-                # is in the whitelist
-                if (not CONF.osapi_v21.extensions_whitelist or
-                        ext.obj.alias in CONF.osapi_v21.extensions_whitelist):
-
-                    # Check the extension is not in the blacklist
-                    blacklist = CONF.osapi_v21.extensions_blacklist
-                    if ext.obj.alias not in blacklist:
-                        return self._register_extension(ext)
-            return False
-
-        if (CONF.osapi_v21.extensions_blacklist or
-                CONF.osapi_v21.extensions_whitelist):
-            LOG.warning(
-                _LW('In the M release you must run all of the API. '
-                'The concept of API extensions will be removed from '
-                'the codebase to ensure there is a single Compute API.'))
-
-        self.init_only = init_only
-        LOG.debug("v21 API Extension Blacklist: %s",
-                  CONF.osapi_v21.extensions_blacklist)
-        LOG.debug("v21 API Extension Whitelist: %s",
-                  CONF.osapi_v21.extensions_whitelist)
-
-        in_blacklist_and_whitelist = set(
-            CONF.osapi_v21.extensions_whitelist).intersection(
-                CONF.osapi_v21.extensions_blacklist)
-        if len(in_blacklist_and_whitelist) != 0:
-            LOG.warning(_LW("Extensions in both blacklist and whitelist: %s"),
-                        list(in_blacklist_and_whitelist))
+            return self._register_extension(ext)
 
         self.api_extension_manager = stevedore.enabled.EnabledExtensionManager(
             namespace=self.api_extension_namespace(),
@@ -297,14 +261,6 @@ class APIRouterV21(base_wsgi.Router):
             # no plugins detected. I wonder if this is a bug.
             self._register_resources_check_inherits(mapper)
             self.api_extension_manager.map(self._register_controllers)
-
-        missing_core_extensions = self.get_missing_core_extensions(
-            self.loaded_extension_info.get_extensions().keys())
-        if not self.init_only and missing_core_extensions:
-            LOG.critical(_LC("Missing core API extensions: %s"),
-                         missing_core_extensions)
-            raise exception.CoreAPIMissing(
-                missing_apis=missing_core_extensions)
 
         LOG.info(_LI("Loaded extensions: %s"),
                  sorted(self.loaded_extension_info.get_extensions().keys()))
