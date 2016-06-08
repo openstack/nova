@@ -498,7 +498,7 @@ class Flat(Image):
                 prepare_template(target=self.path, *args, **kwargs)
         else:
             if not os.path.exists(base):
-                prepare_template(target=base, max_size=size, *args, **kwargs)
+                prepare_template(target=base, *args, **kwargs)
 
             # NOTE(mikal): Update the mtime of the base file so the image
             # cache manager knows it is in use.
@@ -556,7 +556,7 @@ class Qcow2(Image):
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
-            prepare_template(target=base, max_size=size, *args, **kwargs)
+            prepare_template(target=base, *args, **kwargs)
 
         # NOTE(ankit): Update the mtime of the base file so the image
         # cache manager knows it is in use.
@@ -721,7 +721,7 @@ class Lvm(Image):
                 prepare_template(target=self.path, *args, **kwargs)
         else:
             if not os.path.exists(base):
-                prepare_template(target=base, max_size=size, *args, **kwargs)
+                prepare_template(target=base, *args, **kwargs)
             with self.remove_volume_on_error(self.path):
                 create_lvm_image(base, size)
 
@@ -842,7 +842,7 @@ class Rbd(Image):
     def create_image(self, prepare_template, base, size, *args, **kwargs):
 
         if not self.exists():
-            prepare_template(target=base, max_size=size, *args, **kwargs)
+            prepare_template(target=base, *args, **kwargs)
 
         # prepare_template() may have cloned the image into a new rbd
         # image already instead of downloading it locally
@@ -1047,7 +1047,7 @@ class Ploop(Image):
                                         reason=reason)
 
         if not os.path.exists(base):
-            prepare_template(target=base, max_size=size, *args, **kwargs)
+            prepare_template(target=base, *args, **kwargs)
         self.verify_base_size(base, size)
 
         if os.path.exists(self.path):

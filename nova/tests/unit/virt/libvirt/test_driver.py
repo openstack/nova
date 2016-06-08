@@ -9247,8 +9247,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             fetch_image_mock.assert_has_calls([
                 mock.call(context=self.context,
                           target=backfile_path,
-                          image_id=self.test_instance['image_ref'],
-                          max_size=25165824),
+                          image_id=self.test_instance['image_ref']),
                 mock.call(self.context, kernel_path,
                           self.test_instance['kernel_id']),
                 mock.call(self.context, ramdisk_path,
@@ -10609,7 +10608,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def side_effect(fetch_func, filename, size=None, *args, **kwargs):
             def second_call(fetch_func, filename, size=None, *args, **kwargs):
                 # call copy_from_host ourselves because we mocked image.cache()
-                fetch_func('fake-target', 'fake-max-size')
+                fetch_func('fake-target')
                 # further calls have no side effect
                 mock_cache.side_effect = None
             mock_cache.side_effect = second_call
@@ -10654,8 +10653,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(default_ephemeral_format='ext3')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
-                               is_block_dev=True, max_size=20,
-                               specified_fs='ext4')
+                               is_block_dev=True, specified_fs='ext4')
         mock_exec.assert_called_once_with('mkfs', '-t', 'ext4', '-F', '-L',
                                           'myVol', '/dev/something',
                                           run_as_root=True)
@@ -10696,7 +10694,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                       '/dev/something', run_as_root=True)
         self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
-                               is_block_dev=True, max_size=20)
+                               is_block_dev=True)
 
     def test_create_ephemeral_with_conf(self):
         CONF.set_override('default_ephemeral_format', 'ext4')
@@ -10736,7 +10734,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         utils.execute('mkswap', '/dev/something', run_as_root=False)
         self.mox.ReplayAll()
 
-        drvr._create_swap('/dev/something', 1, max_size=20)
+        drvr._create_swap('/dev/something', 1)
 
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'

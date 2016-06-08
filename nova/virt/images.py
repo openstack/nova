@@ -29,7 +29,7 @@ from oslo_utils import units
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE
+from nova.i18n import _
 from nova import image
 from nova import utils
 
@@ -107,7 +107,7 @@ def _convert_image(source, dest, in_format, out_format, run_as_root):
         raise exception.ImageUnacceptable(image_id=source, reason=msg)
 
 
-def fetch(context, image_href, path, max_size=0):
+def fetch(context, image_href, path):
     with fileutils.remove_path_on_error(path):
         IMAGE_API.download(context, image_href, dest_path=path)
 
@@ -116,9 +116,9 @@ def get_info(context, image_href):
     return IMAGE_API.get(context, image_href)
 
 
-def fetch_to_raw(context, image_href, path, max_size=0):
+def fetch_to_raw(context, image_href, path):
     path_tmp = "%s.part" % path
-    fetch(context, image_href, path_tmp, max_size=max_size)
+    fetch(context, image_href, path_tmp)
 
     with fileutils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)
@@ -134,24 +134,6 @@ def fetch_to_raw(context, image_href, path, max_size=0):
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=(_("fmt=%(fmt)s backed by: %(backing_file)s") %
                         {'fmt': fmt, 'backing_file': backing_file}))
-
-        # We can't generally shrink incoming images, so disallow
-        # images > size of the flavor we're booting.  Checking here avoids
-        # an immediate DoS where we convert large qcow images to raw
-        # (which may compress well but not be sparse).
-        # TODO(p-draigbrady): loop through all flavor sizes, so that
-        # we might continue here and not discard the download.
-        # If we did that we'd have to do the higher level size checks
-        # irrespective of whether the base image was prepared or not.
-        disk_size = data.virtual_size
-        if max_size and max_size < disk_size:
-            LOG.error(_LE('%(base)s virtual size %(disk_size)s '
-                          'larger than flavor root disk size %(size)s'),
-                      {'base': path,
-                       'disk_size': disk_size,
-                       'size': max_size})
-            raise exception.FlavorDiskSmallerThanImage(
-                flavor_size=max_size, image_size=disk_size)
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path

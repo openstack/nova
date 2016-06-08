@@ -415,18 +415,18 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id, max_size=0):
+def fetch_image(context, target, image_id):
     """Grab image."""
-    images.fetch_to_raw(context, image_id, target, max_size=max_size)
+    images.fetch_to_raw(context, image_id, target)
 
 
-def fetch_raw_image(context, target, image_id, max_size=0):
+def fetch_raw_image(context, target, image_id):
     """Grab initrd or kernel image.
 
     This function does not attempt raw conversion, as these images will
     already be in raw format.
     """
-    images.fetch(context, image_id, target, max_size=max_size)
+    images.fetch(context, image_id, target)
 
 
 def get_instance_path(instance, forceold=False, relative=False):
