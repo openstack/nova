@@ -17,26 +17,16 @@ import copy
 
 import six
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
-
-CONF = nova.conf.CONF
 
 
 class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     microversion = None
     ADMIN_API = True
     extension_name = 'os-instance-actions'
-
-    def _get_flags(self):
-        f = super(ServerActionsSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.instance_actions.Instance_actions')
-        return f
 
     def setUp(self):
         super(ServerActionsSampleJsonTest, self).setUp()

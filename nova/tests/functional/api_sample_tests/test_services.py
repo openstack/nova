@@ -15,30 +15,14 @@
 
 from oslo_utils import fixture as utils_fixture
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
-
-
-CONF = nova.conf.CONF
 
 
 class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-services"
     microversion = None
-
-    def _get_flags(self):
-        f = super(ServicesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.services.Services')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.extended_services_delete.'
-                      'Extended_services_delete')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.extended_services.Extended_services')
-        return f
 
     def setUp(self):
         super(ServicesJsonTest, self).setUp()

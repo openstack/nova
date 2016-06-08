@@ -16,23 +16,12 @@
 import mock
 from oslo_utils import versionutils
 
-import nova.conf
 from nova import objects
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
 
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-migrate-server"
-
-    def _get_flags(self):
-        f = super(MigrateServerSamplesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.admin_actions.'
-            'Admin_actions')
-        return f
 
     def setUp(self):
         """setUp Method for MigrateServer api samples extension

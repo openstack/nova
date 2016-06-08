@@ -15,12 +15,9 @@
 
 import uuid
 
-import nova.conf
 from nova.objects import keypair as keypair_obj
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit import fake_crypto
-
-CONF = nova.conf.CONF
 
 
 class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
@@ -28,13 +25,6 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "keypairs"
     expected_delete_status_code = 202
     expected_post_status_code = 200
-
-    def _get_flags(self):
-        f = super(KeyPairsSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
-        return f
 
     def setUp(self):
         super(KeyPairsSampleJsonTest, self).setUp()

@@ -13,11 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
-
-CONF = nova.conf.CONF
 
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
@@ -70,18 +67,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     microversion = None
-
-    def _get_flags(self):
-        f = super(ServersSampleBase, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips_mac.'
-            'Extended_ips_mac')
-        return f
 
     def test_servers_post(self):
         return self._post_server()
@@ -166,14 +151,6 @@ class ServersUpdateSampleJsonTest(ServersSampleBase):
 
 class ServerSortKeysJsonTests(ServersSampleBase):
     sample_dir = 'servers-sort'
-
-    def _get_flags(self):
-        f = super(ServerSortKeysJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.server_sort_keys.'
-            'Server_sort_keys')
-        return f
 
     def test_servers_list(self):
         self._post_server()
@@ -294,14 +271,6 @@ class ServersActionsAllJsonTest(ServersActionsJsonTest):
 class ServerStartStopJsonTest(ServersSampleBase):
     sample_dir = 'servers'
 
-    def _get_flags(self):
-        f = super(ServerStartStopJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.server_start_stop.'
-            'Server_start_stop')
-        return f
-
     def _test_server_action(self, uuid, action, req_tpl):
         response = self._do_post('servers/%s/action' % uuid,
                                  req_tpl,
@@ -322,11 +291,6 @@ class ServerStartStopJsonTest(ServersSampleBase):
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     extra_extensions_to_load = ["os-access-ips"]
-
-    def _get_flags(self):
-        f = super(ServersSampleMultiStatusJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        return f
 
     def test_servers_list(self):
         uuid = self._post_server()

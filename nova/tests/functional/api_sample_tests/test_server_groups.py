@@ -13,21 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class ServerGroupsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-server-groups"
-
-    def _get_flags(self):
-        f = super(ServerGroupsSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.server_groups.Server_groups')
-        return f
 
     def _get_create_subs(self):
         return {'name': 'test'}

@@ -24,13 +24,6 @@ class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-floating-ips-bulk"
 
-    def _get_flags(self):
-        f = super(FloatingIpsBulkTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.floating_ips_bulk.Floating_ips_bulk')
-        return f
-
     def setUp(self):
         super(FloatingIpsBulkTest, self).setUp()
         pool = CONF.default_floating_pool

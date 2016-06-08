@@ -14,22 +14,11 @@
 
 import mock
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
 
 
 class ServerPasswordSampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-server-password"
-
-    def _get_flags(self):
-        f = super(ServerPasswordSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.server_password.'
-            'Server_password')
-        return f
 
     @mock.patch("nova.api.metadata.password.extract_password")
     def test_get_password(self, mock_extract_password):

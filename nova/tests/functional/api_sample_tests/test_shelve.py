@@ -23,13 +23,6 @@ CONF = nova.conf.CONF
 class ShelveJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-shelve"
 
-    def _get_flags(self):
-        f = super(ShelveJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.shelve.Shelve')
-        return f
-
     def setUp(self):
         super(ShelveJsonTest, self).setUp()
         # Don't offload instance, so we can test the offload call.

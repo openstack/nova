@@ -13,28 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
 
 
 class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-server-usage'
-
-    def _get_flags(self):
-        f = super(ServerUsageSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.server_usage.Server_usage')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips_mac.'
-            'Extended_ips_mac')
-        return f
 
     def setUp(self):
         """setUp method for server usage."""

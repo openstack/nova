@@ -15,7 +15,6 @@
 
 import datetime
 
-import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
@@ -23,8 +22,6 @@ from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
-
-CONF = nova.conf.CONF
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -35,13 +32,6 @@ class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
             'description': 'Daily backup',
             'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c'
     }
-
-    def _get_flags(self):
-        f = super(SnapshotsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
-        return f
 
     def setUp(self):
         super(SnapshotsSampleJsonTests, self).setUp()
@@ -142,13 +132,6 @@ def _stub_volume_create(stub_self, context, size, name, description,
 class VolumesSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-volumes"
 
-    def _get_flags(self):
-        f = super(VolumesSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
-        return f
-
     def setUp(self):
         super(VolumesSampleJsonTest, self).setUp()
         fakes.stub_out_networking(self)
@@ -242,16 +225,6 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
                 return {'uuid': instance_id}
 
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
-
-    def _get_flags(self):
-        f = super(VolumeAttachmentsSample, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.volumes.Volumes')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.'
-            'volume_attachment_update.Volume_attachment_update')
-        return f
 
     def test_attach_volume_to_server(self):
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)

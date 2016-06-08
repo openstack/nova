@@ -13,23 +13,12 @@
 #    under the License.
 
 from nova.compute import api as compute_api
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.image import fake
-
-CONF = nova.conf.CONF
 
 
 class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-preserve-ephemeral-rebuild'
-
-    def _get_flags(self):
-        f = super(PreserveEphemeralOnRebuildJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.preserve_ephemeral_rebuild.'
-            'Preserve_ephemeral_rebuild')
-        return f
 
     def _test_server_rebuild_preserve_ephemeral(self, value, resp_tpl=None):
         uuid = self._post_server()

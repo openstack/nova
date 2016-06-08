@@ -13,10 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
 
 
 class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
@@ -27,11 +24,6 @@ class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
         self.template = 'vifs-list-resp'
         if self.api_major_version == 'v2':
             self.template = 'vifs-list-resp-v2'
-
-    def _get_flags(self):
-        f = super(VirtualInterfacesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        return f
 
     def test_vifs_list(self):
         uuid = self._post_server()

@@ -14,10 +14,7 @@
 
 import mock
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class FakeNode(object):
@@ -48,13 +45,6 @@ class fake_client(object):
 class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-baremetal-nodes"
-
-    def _get_flags(self):
-        f = super(BareMetalNodesSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.baremetal_nodes.Baremetal_nodes')
-        return f
 
     @mock.patch("nova.api.openstack.compute.baremetal_nodes"
                 "._get_ironic_client")
