@@ -168,7 +168,7 @@ class FakeSessionForVMTests(fake.SessionBase):
                                   "# Completed on Sun Nov  6 22:49:02 2011\n")
 
     def host_call_plugin(self, _1, _2, plugin, method, _5):
-        if plugin == 'glance' and method in ('download_vhd', 'download_vhd2'):
+        if plugin == 'glance' and method in ('download_vhd2'):
             root_uuid = _make_fake_vdi()
             return pickle.dumps(dict(root=dict(uuid=root_uuid)))
         elif (plugin, method) == ("xenhost", "iptables_config"):
