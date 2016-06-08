@@ -21,6 +21,7 @@ from lxml import etree
 from oslo_log import log as logging
 
 from nova.i18n import _LI
+from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -163,3 +164,36 @@ def find_job_type(guest, instance):
             LOG.info(_LI("Error %(ex)s, migration failed"),
                      {"ex": ex}, instance=instance)
             return libvirt.VIR_DOMAIN_JOB_FAILED
+
+
+def should_abort(instance, now,
+                 progress_time, progress_timeout,
+                 elapsed, completion_timeout):
+    """Determine if the migration should be aborted
+
+    :param instance: a nova.objects.Instance
+    :param now: current time in secs since epoch
+    :param progress_time: when progress was last made in secs since epoch
+    :param progress_timeout: time in secs to allow for progress
+    :param elapsed: total elapsed time of migration in secs
+    :param completion_timeout: time in secs to allow for completion
+
+    Check the progress and completion timeouts to determine if either
+    of them have been hit, and should thus cause migration to be aborted
+
+    :returns: True if migration should be aborted, False otherwise
+    """
+    if (progress_timeout != 0 and
+            (now - progress_time) > progress_timeout):
+        LOG.warning(_LW("Live migration stuck for %d sec"),
+                    (now - progress_time), instance=instance)
+        return True
+
+    if (completion_timeout != 0 and
+            elapsed > completion_timeout):
+        LOG.warning(
+            _LW("Live migration not completed after %d sec"),
+            completion_timeout, instance=instance)
+        return True
+
+    return False
