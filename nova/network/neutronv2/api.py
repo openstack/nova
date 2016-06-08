@@ -123,6 +123,12 @@ def _is_not_duplicate(item, items, items_list_name, instance):
     return not present
 
 
+def _ensure_no_port_binding_failure(port):
+    binding_vif_type = port.get('binding:vif_type')
+    if binding_vif_type == network_model.VIF_TYPE_BINDING_FAILED:
+        raise exception.PortBindingFailed(port_id=port['id'])
+
+
 class API(base_api.NetworkAPI):
     """API for interacting with the neutron 2.x API."""
 
@@ -201,12 +207,17 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['tenant_id'] = instance.project_id
             if security_group_ids:
                 port_req_body['port']['security_groups'] = security_group_ids
-            port = port_client.create_port(port_req_body)
-            port_id = port['port']['id']
-            if (port['port'].get('binding:vif_type') ==
-                network_model.VIF_TYPE_BINDING_FAILED):
-                port_client.delete_port(port_id)
-                raise exception.PortBindingFailed(port_id=port_id)
+
+            port_response = port_client.create_port(port_req_body)
+
+            port = port_response['port']
+            port_id = port['id']
+            try:
+                _ensure_no_port_binding_failure(port)
+            except exception.PortBindingFailed:
+                with excutils.save_and_reraise_exception():
+                    port_client.delete_port(port_id)
+
             LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
             return port_id
@@ -403,10 +414,7 @@ class API(base_api.NetworkAPI):
                                 hostname=instance.hostname)
 
                     # Make sure the port is usable
-                    if (port.get('binding:vif_type') ==
-                        network_model.VIF_TYPE_BINDING_FAILED):
-                        raise exception.PortBindingFailed(
-                            port_id=request.port_id)
+                    _ensure_no_port_binding_failure(port)
 
                     if hypervisor_macs is not None:
                         if port['mac_address'] not in hypervisor_macs:
