@@ -17,7 +17,6 @@ import six
 
 from nova.api.openstack.compute import used_limits \
         as used_limits_v21
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.context
 from nova import exception
@@ -146,7 +145,6 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
             self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
                 self.include_server_group_quotas)
-        self.mox.StubOutWithMock(extensions, 'extension_authorizer')
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
         quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % project_id,
                                         usages=True).AndReturn({})
