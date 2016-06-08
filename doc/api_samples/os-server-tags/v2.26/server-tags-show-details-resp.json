@@ -1,8 +1,6 @@
 {
     "server": {
-        "tags": [
-            "sometag"
-        ],
+        "tags": ["tag1", "tag2"],
         "accessIPv4": "1.2.3.4",
         "accessIPv6": "80fe::",
         "addresses": {

@@ -55,7 +55,7 @@
             "updated": "%(isotime)s",
             "user_id": "fake",
             "locked": false,
-            "tags": ["%(tag)s"],
+            "tags": ["%(tag1)s", "%(tag2)s"],
             "description": null,
             "config_drive": "",
             "OS-DCF:diskConfig": "AUTO",
