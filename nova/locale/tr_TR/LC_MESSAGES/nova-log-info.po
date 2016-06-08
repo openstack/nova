@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -19,10 +19,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Turkish (Turkey)\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): kontrol toplamı üretiliyor"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -61,13 +57,6 @@ msgstr ""
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Ağ: '%s' sunucu için ayrıldı"
-
-msgid "Attach interface"
-msgstr "Arayüz ekle"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "%(device)s'daki %(server_id)s örneğine %(volume_id)s birimi ekleniyor"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -159,10 +148,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "Sanal disk %(src)s den %(dst)s e kopyalandı."
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "Bozuk temel dosyalar: %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -173,18 +158,6 @@ msgstr ""
 #, python-format
 msgid "Create Security Group %s"
 msgstr "%s güvenlik grubunu oluşturunuz"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "%s hacminden anlık görüntü oluştur"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "%s biriminden sistem görüntüsü oluşturuluyor"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "%s GB'lık birim oluştur"
 
 msgid "Created linked-clone VM from snapshot"
 msgstr "Anlık görüntüden bağlı-kopya VM oluşturuldu"
@@ -203,14 +176,6 @@ msgstr "İmaj oluşturuluyor"
 #, python-format
 msgid "Delete security group %s"
 msgstr "%s güvenlik grubunu siliniz"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "%s id'li sistem görüntüsü siliniyor"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "%s id'li birim siliniyor"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -254,16 +219,8 @@ msgstr ""
 "bulunan sunucu siliniyor."
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "%s arayüzünü ayır"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "%(mp)s bağlama noktasındaki %(volume_id)s bölümü ayrılıyor"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "Birimi ayır %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -976,13 +933,6 @@ msgstr "VM %(state)s (Yaşamdöngüsü Olayı)"
 msgid "VMware vCenter version: %s"
 msgstr "VMware vCenter sürümü: %s"
 
-msgid ""
-"Virt driver does not support 'get_available_resource'. Compute tracking is "
-"disabled."
-msgstr ""
-"Virt sürücüsü 'get_available_resource' desteklemiyor. Hesaplama takibi "
-"kapatıldı."
-
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -999,10 +949,6 @@ msgstr "WSGI sunucusu durduruldu."
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr ""
 "Askıdaki sunucudan %s anlık görüntüsünün silinmesi üzerine çalışılıyor..."
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Depolanan bilgi %s'e yazılıyor"
 
 msgid "XenServer tools are not installed in this image"
 msgstr "XenServer araçları bu imajda kurulu değil"
@@ -1058,12 +1004,6 @@ msgstr "(%(base_file)s) deki %(id)s imajı: kontrol ediliyor"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"(%(base_file)s) deki %(id)s imajı: imaj doğrulama atlandı, depolanan özet yok"
-
-#, python-format
-msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -1114,7 +1054,3 @@ msgstr "%(instance_id)s sunucusundan %(address)s değişken IP'sini yeniden ata"
 #, python-format
 msgid "tap-ctl check: %s"
 msgstr "tap-ctl kontrolü: %s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "birim=%s"

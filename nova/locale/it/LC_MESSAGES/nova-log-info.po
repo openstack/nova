@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -21,10 +21,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Italian\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): generazione checksum"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -46,14 +42,6 @@ msgstr "File di base attivi: %s"
 msgid "Adding security group %(security_group_id)s to port %(port_id)s"
 msgstr ""
 "Aggiunta del gruppo sicurezza %(security_group_id)s alla porta %(port_id)s"
-
-msgid "Attach interface"
-msgstr "Collega interfaccia"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr ""
-"Collegamento volume %(volume_id)s all'istanza %(server_id)s in %(device)s"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -118,10 +106,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "Disco virtuale copiato da %(src)s a %(dst)s."
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "File di base danneggiato: %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -134,14 +118,6 @@ msgid "Create Security Group %s"
 msgstr "Crea gruppo di sicurezza %s"
 
 #, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Crea istantanea dal volume %s"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Crea volume di %s GB"
-
-#, python-format
 msgid "Creating config drive at %(path)s"
 msgstr "Creazione unità config in %(path)s"
 
@@ -151,14 +127,6 @@ msgstr "Creazione immagine"
 #, python-format
 msgid "Delete security group %s"
 msgstr "Elimina gruppo di sicurezza %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Elimina istantanea con id: %s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Elimina volume con id: %s"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -195,16 +163,8 @@ msgstr ""
 "ancora presente sull'host."
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "Scollega interfaccia %s"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Scollegamento volume %(volume_id)s dal punto di montaggio %(mp)s"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "Scollegamento volume %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -739,10 +699,6 @@ msgstr "Il server WSGI è stato arrestato."
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr "Eliminazione in corso dello snapshot %s dall'istanza sospesa..."
 
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Scrittura informazioni memorizzate in %s"
-
 msgid "XenServer tools are not installed in this image"
 msgstr "Gli strumenti XenServer non sono installati in questa immagine"
 
@@ -799,13 +755,6 @@ msgstr "immagine %(id)s in (%(base_file)s): verifica"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"immagine %(id)s in (%(base_file)s): verifica dell'immagine ignorata, nessun "
-"hash memorizzato"
-
-#, python-format
-msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -846,7 +795,3 @@ msgstr ""
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "riassegna IP mobile %(address)s dall'istanza %(instance_id)s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "vol=%s"

@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-06-08 04:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -95,10 +95,6 @@ msgstr "Pokus o automatické nastavení disku selhalo z důvodu: %s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "Pokus o odstranění řetězu %s, který neexistuje"
-
-msgid ""
-"Can't create a migration_context record without a migration object specified."
-msgstr "Nelze vytvořit kontext přesunu bez zadání přesunovaného objektu."
 
 #, python-format
 msgid ""
@@ -208,19 +204,6 @@ msgid ""
 msgstr ""
 "Nesoulad databáze: Doména DNS |%s| je registrována v Nova db, ale není "
 "viditelná plovoucímu ovladači DNS ani instančnímu. Bude ignorována."
-
-msgid ""
-"Deprecated: Starting with the Liberty release, the v2 API was already "
-"deprecated and the v2.1 API is set as the default. Nova also supports v2.1 "
-"API legacy v2 compatible mode for switching to v2.1 API smoothly. For more "
-"information on how to configure v2.1 API and legacy v2 compatible mode, "
-"please refer Nova api-paste.ini sample file."
-msgstr ""
-"Zastaralé: Počínaje s verzí Liberty je API v2 již zastaralé a API v2.1 je "
-"použito jako výchozí, Nova také podporuje režim kompatibility API v2 jako "
-"součást API v2.1 pro snadný přechod na API v2.1. Pro další informace o "
-"nastavení tohoto režimu si prosím prohlédněte vzorový soubor api-paste.ini v "
-"Nova."
 
 #, python-format
 msgid ""
@@ -588,11 +571,6 @@ msgstr "Ignorování neplatných prvků volby %(name)s: %(options)s"
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr "Ignorování selhání čištění svazku kvůli %s"
 
-#, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr ""
-"Obraz %s nebyl na diskovém úložišti nalezen. Pokračuje se bez vložení dat"
-
 msgid "Image not found during snapshot"
 msgstr "Obraz nenalezen během snímkování"
 
@@ -620,10 +598,6 @@ msgstr ""
 
 msgid "Info cache for instance could not be found. Ignore."
 msgstr "Mezipaměť informaci instance nemohla být nalezena. Ignorováno."
-
-#, python-format
-msgid "Info cache is %r during associate"
-msgstr "Mezipaměť informací je %r během přidružování"
 
 #, python-format
 msgid ""
@@ -739,10 +713,6 @@ msgid ""
 msgstr ""
 "UUID instance nemohlo být získáno pro instanci %s. Událost změny stavu "
 "instance bude ignorována."
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr "Instance: %(instance_uuid)s nemohla být uložena do memcached."
 
 #, python-format
 msgid "IntegrityError detected when archiving table %(tablename)s: %(error)s"
@@ -1153,13 +1123,6 @@ msgstr ""
 "předpokládá se, že při jejich nasazení budou aktualizovány synchronizovaně, "
 "takže kompatibilita buněk n-1 nefunguje."
 
-msgid ""
-"The extension configure options are deprecated. In the near future you must "
-"run all of the API."
-msgstr ""
-"Volby nastavení rozšíření jsou zastaralé. V blízké budoucnosti budete muset "
-"spouštět celé API."
-
 #, python-format
 msgid ""
 "The legacy v2 API module already moved into'nova.api.openstack.compute."
@@ -1167,16 +1130,6 @@ msgid ""
 msgstr ""
 "Starý modul v2 API již byl přesunut do 'nova.api.openstack.compute.legacy_v2."
 "contrib'. Použijte novou cestu místo staré %s"
-
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"Ovladač libvirt nebyl projektem OpenStack testován na %(type)s/%(arch)s a "
-"proto jeho kvalita nemůže být zaručena. Pro další informace si přečtěte: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
 
 #, python-format
 msgid ""
@@ -1196,9 +1149,6 @@ msgid ""
 msgstr ""
 "Tento správce klíčů není bezpečný a nedoporučuje se ho používat v ostrých "
 "provozech"
-
-msgid "This key manager is not suitable for use in production deployments"
-msgstr "Tento správce klíčů se nehodí na použití v ostrých provozech"
 
 msgid "This shouldn't be getting called except during testing."
 msgstr "Toto by nemělo být voláno kromě případů testování."
@@ -1220,10 +1170,6 @@ msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr ""
 "Vypršel čas při čekání na zpětné volání zapojení virtuálního rozhraní pro "
 "instanci %(uuid)s"
-
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "Známka: %(token)s nemohla být uložena do memcached."
 
 msgid "Too many id maps, only included first five."
 msgstr "Příliš mnoho map id, zahrnuto pouze prvních pět."

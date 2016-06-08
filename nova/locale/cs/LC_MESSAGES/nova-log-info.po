@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:28+0000\n"
+"POT-Creation-Date: 2016-06-08 04:30+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -20,10 +20,6 @@ msgstr ""
 "Generated-By: Babel 2.0\n"
 "X-Generator: Zanata 3.7.3\n"
 "Language-Team: Czech\n"
-
-#, python-format
-msgid "%(id)s (%(base_file)s): generating checksum"
-msgstr "%(id)s (%(base_file)s): vytváření kontrolního součtu"
 
 #, python-format
 msgid "%(name)s listening on %(host)s:%(port)s"
@@ -66,13 +62,6 @@ msgstr ""
 #, python-format
 msgid "Allocated network: '%s' for instance"
 msgstr "Přidělena síť: '%s' pro instanci"
-
-msgid "Attach interface"
-msgstr "Připojit rozhraní"
-
-#, python-format
-msgid "Attach volume %(volume_id)s to instance %(server_id)s at %(device)s"
-msgstr "Připojit svazek %(volume_id)s k instanci %(server_id)s na %(device)s"
 
 #, python-format
 msgid "Attaching volume %(volume_id)s to %(mountpoint)s"
@@ -194,10 +183,6 @@ msgid "Copied virtual disk from %(src)s to %(dst)s."
 msgstr "Virtuální disk zkopírován z %(src)s do %(dst)s."
 
 #, python-format
-msgid "Corrupt base files: %s"
-msgstr "Poškozené základní soubory: %s"
-
-#, python-format
 msgid ""
 "Could not find domain in libvirt for instance %s. Cannot get block stats for "
 "device"
@@ -208,18 +193,6 @@ msgstr ""
 #, python-format
 msgid "Create Security Group %s"
 msgstr "Vytvořit bezpečnostní skupinu %s"
-
-#, python-format
-msgid "Create assisted snapshot from volume %s"
-msgstr "Vytvořit snímek s pomocí ze svazku %s"
-
-#, python-format
-msgid "Create snapshot from volume %s"
-msgstr "Vytvořit snímek ze svazku %s"
-
-#, python-format
-msgid "Create volume of %s GB"
-msgstr "Vytvořit svazek o %s GB"
 
 msgid "Created linked-clone VM from snapshot"
 msgstr "Propojený klon VM vytvořen ze snímku"
@@ -246,14 +219,6 @@ msgstr ""
 #, python-format
 msgid "Delete security group %s"
 msgstr "Smazat bezpečnostní skupinu %s"
-
-#, python-format
-msgid "Delete snapshot with id: %s"
-msgstr "Smazat snímek s id: %s"
-
-#, python-format
-msgid "Delete volume with id: %s"
-msgstr "Smazat svazek s id: %s"
 
 #, python-format
 msgid "Deleted %s snapshots."
@@ -297,16 +262,8 @@ msgstr ""
 "přítomna na hostiteli."
 
 #, python-format
-msgid "Detach interface %s"
-msgstr "Odpojit rozhraní %s"
-
-#, python-format
 msgid "Detach volume %(volume_id)s from mountpoint %(mp)s"
 msgstr "Odpojování svazku %(volume_id)s z bodu připojení %(mp)s"
-
-#, python-format
-msgid "Detach volume %s"
-msgstr "Odpojit svazek %s"
 
 #, python-format
 msgid "Detaching from volume api: %s"
@@ -1105,13 +1062,6 @@ msgstr "VM %(state)s (Událost životního cyklu)"
 msgid "VMware vCenter version: %s"
 msgstr "Verze VMware vCenter: %s"
 
-msgid ""
-"Virt driver does not support 'get_available_resource'. Compute tracking is "
-"disabled."
-msgstr ""
-"Ovladač Virt nepodporuje získání dostupných zdrojů. Sledování výpočtu je "
-"zakázáno."
-
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must have "
@@ -1126,10 +1076,6 @@ msgstr "Server WSGI byl zastaven."
 #, python-format
 msgid "Working on deleting snapshot %s from shelved instance..."
 msgstr "Mazání snímku %s z uskladněné instance..."
-
-#, python-format
-msgid "Writing stored info to %s"
-msgstr "Zapisování uložených informací do %s"
 
 msgid "XenServer tools are not installed in this image"
 msgstr "Nástroje XenServer nejsou v tomto obrazu nainstalovány"
@@ -1186,13 +1132,6 @@ msgstr "obraz %(id)s v (%(base_file)s): probíhá kontrola"
 
 #, python-format
 msgid ""
-"image %(id)s at (%(base_file)s): image verification skipped, no hash stored"
-msgstr ""
-"obraz %(id)s v (%(base_file)s): ověření obrazu přeskočeno, žádný kontrolní "
-"součet uložen"
-
-#, python-format
-msgid ""
 "image %(id)s at (%(base_file)s): in use: on this node %(local)d local, "
 "%(remote)d on other nodes sharing this instance storage"
 msgstr ""
@@ -1245,7 +1184,3 @@ msgstr ""
 #, python-format
 msgid "tap-ctl check: %s"
 msgstr "kontrola tap-ctl: %s"
-
-#, python-format
-msgid "vol=%s"
-msgstr "svazek=%s"

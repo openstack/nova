@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-06-08 04:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -420,12 +420,6 @@ msgid "Ignoring volume cleanup failure due to %s"
 msgstr "Echec de l'omission du nettoyage de volume. Cause : %s"
 
 #, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr ""
-"L'image %s n'est pas trouvée sur l'espace disque. Continuer sans injonction "
-"de données."
-
-#, python-format
 msgid ""
 "Instance %(instance)s is using a backing file %(backing)s which does not "
 "appear in the image service"
@@ -474,10 +468,6 @@ msgid ""
 msgstr ""
 "L'UUID d'instance n'a pu être récupéré pour l'instance %s. L’événement de "
 "changement d'état de l'instance va être ignoré."
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr "Instance: %(instance_uuid)s a échoué à sauvegarder dans le memcached"
 
 #, python-format
 msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
@@ -722,17 +712,6 @@ msgstr ""
 "Tenant_id %(tenant_id)s ne correspond pas avec le tenant_id de l'instance "
 "%(instance_id)s."
 
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"Le pilote libvirt n'est pas testé sur %(type)s/%(arch)s par le projet "
-"OpenStack et sa qualité ne peut donc être garantie. Pour plus "
-"d'informations, voir : https://wiki.openstack.org/wiki/"
-"HypervisorSupportMatrix"
-
 msgid "This shouldn't be getting called except during testing."
 msgstr "Le programme ne doit pas être appelé sauf pendant le test."
 
@@ -753,10 +732,6 @@ msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr ""
 "Dépassement du délai d'attente pour le rappel de la connexion int. virt., "
 "pour l'instance %(uuid)s"
-
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "Jeton : %(token)s a échoué à sauvegarder dans memcached. "
 
 msgid "Too many id maps, only included first five."
 msgstr "Trop de cartes id, inclure uniquement les cinq premières."
