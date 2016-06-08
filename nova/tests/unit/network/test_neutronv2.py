@@ -556,6 +556,8 @@ class TestNeutronv2Base(test.TestCase):
             else:
                 api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
                     neutron=self.moxed_client)
+            if macs:
+                port_req_body['port']['mac_address'] = macs.pop()
             if request.port_id:
                 port = ports[request.port_id]
                 self.moxed_client.update_port(request.port_id,
@@ -573,8 +575,6 @@ class TestNeutronv2Base(test.TestCase):
                 port_req_body['port']['admin_state_up'] = True
                 port_req_body['port']['tenant_id'] = \
                     self.instance.project_id
-                if macs:
-                    port_req_body['port']['mac_address'] = macs.pop()
                 if has_portbinding:
                     port_req_body['port']['binding:host_id'] = (
                         self.instance.get('host'))
@@ -1010,6 +1010,14 @@ class TestNeutronv2(TestNeutronv2Base):
         # port.
         self._allocate_for_instance(1, macs=set(['ab:cd:ef:01:23:45']))
 
+    def test_allocate_for_instance_with_mac_added_to_port(self):
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
+        # NOTE(johngarbutt) we override the provided mac with a new one
+        self._allocate_for_instance(net_idx=1,
+                                    requested_networks=requested_networks,
+                                    macs=set(['ab:cd:ef:01:23:45']))
+
     def test_allocate_for_instance_accepts_only_portid(self):
         # Make sure allocate_for_instance works when only a portid is provided
         self._returned_nw_info = self.port_data1
@@ -1072,19 +1080,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self._allocate_for_instance(
             net_idx=2, requested_networks=requested_networks,
             macs=set(['my_mac2', 'my_mac1']))
-
-    def test_allocate_for_instance_mac_conflicting_requested_port(self):
-        # specify only first and last network
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        api = self._stub_allocate_for_instance(
-            net_idx=1, requested_networks=requested_networks,
-            macs=set(['unknown:mac']),
-            _break='pre_list_networks')
-        self.assertRaises(exception.PortNotUsable,
-                          api.allocate_for_instance, self.context,
-                          self.instance, requested_networks=requested_networks,
-                          macs=set(['unknown:mac']))
 
     def test_allocate_for_instance_without_requested_networks(self):
         api = self._stub_allocate_for_instance(net_idx=3)
@@ -3270,15 +3265,30 @@ class TestNeutronv2WithMock(test.TestCase):
         port_req_body = {'port': {'device_id': instance['uuid'],
                                   'device_owner': zone,
                                   'mac_address': 'XX:XX:XX:XX:XX:XX'}}
-        available_macs = set(['XX:XX:XX:XX:XX:XX'])
         # Run the code.
         self.assertRaises(exception.PortInUse,
                           self.api._create_port,
                           neutronapi.get_client(self.context),
-                          instance, net['id'], port_req_body,
-                          available_macs=available_macs)
+                          instance, net['id'], port_req_body)
         # Assert the calls.
         create_port_mock.assert_called_once_with(port_req_body)
+
+    @mock.patch.object(client.Client, 'update_port',
+                       side_effect=exceptions.MacAddressInUseClient())
+    def test_update_port_for_instance_mac_address_in_use(self,
+                                                         update_port_mock):
+        port_uuid = uuids.port
+        instance = objects.Instance(uuid=uuids.instance)
+        port_req_body = {'port': {
+                            'id': port_uuid,
+                            'mac_address': 'XX:XX:XX:XX:XX:XX',
+                            'network_id': uuids.network_id}}
+
+        self.assertRaises(exception.PortInUse,
+                          self.api._update_port,
+                          neutronapi.get_client(self.context),
+                          instance, port_uuid, port_req_body)
+        update_port_mock.assert_called_once_with(port_uuid, port_req_body)
 
     @mock.patch.object(client.Client, 'create_port',
                        side_effect=exceptions.IpAddressInUseClient())
@@ -4472,13 +4482,13 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                 u'net1', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None, None),
+                None, [], None),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None, None)])
+                None, [], None)])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
@@ -4534,14 +4544,14 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
                 None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'],
-                None, None),
+                None),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
                 None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'],
-                None, None)])
+                None)])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
@@ -4594,13 +4604,13 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                 u'net1', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None, None),
+                None, [], None),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None, None)])
+                None, [], None)])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
