@@ -259,7 +259,9 @@ class API(base_api.NetworkAPI):
     def _update_port(self, port_client, instance, port_id,
                      port_req_body):
         try:
-            port_client.update_port(port_id, port_req_body)
+            port_response = port_client.update_port(port_id, port_req_body)
+            port = port_response['port']
+            _ensure_no_port_binding_failure(port)
             LOG.debug('Successfully updated port: %s', port_id,
                       instance=instance)
         except neutron_client_exc.MacAddressInUseClient:
