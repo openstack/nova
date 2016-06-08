@@ -436,17 +436,3 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
                 tests.add(name[5:])
         if tests != set(task_api.cells_compatible):
             self.fail("Testcases not equivalent to cells_compatible list")
-
-
-class CellsComputePolicyTestCase(test_compute.ComputePolicyTestCase):
-    def setUp(self):
-        super(CellsComputePolicyTestCase, self).setUp()
-        global ORIG_COMPUTE_API
-        ORIG_COMPUTE_API = self.compute_api
-        self.compute_api = compute_cells_api.ComputeCellsAPI()
-        deploy_stubs(self.stubs, self.compute_api)
-
-    def tearDown(self):
-        global ORIG_COMPUTE_API
-        self.compute_api = ORIG_COMPUTE_API
-        super(CellsComputePolicyTestCase, self).tearDown()

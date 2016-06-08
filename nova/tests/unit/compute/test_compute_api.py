@@ -19,7 +19,6 @@ import iso8601
 import mock
 from mox3 import mox
 from oslo_messaging import exceptions as oslo_exceptions
-from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
@@ -43,7 +42,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields as fields_obj
 from nova.objects import quotas as quotas_obj
-from nova import policy
 from nova import quota
 from nova import test
 from nova.tests.unit import fake_block_device
@@ -3507,44 +3505,6 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'device_type': None,
                                  'volume_id': 'volume_id'}]
         self._test_check_and_transform_bdm(block_device_mapping)
-
-    @mock.patch.object(objects.Instance, 'save')
-    @mock.patch.object(objects.InstanceAction, 'action_start')
-    @mock.patch.object(compute_rpcapi.ComputeAPI, 'pause_instance')
-    @mock.patch.object(objects.Instance, 'get_by_uuid')
-    @mock.patch.object(compute_api.API, '_get_instances_by_filters',
-                       return_value=[])
-    @mock.patch.object(compute_api.API, '_create_instance')
-    def test_skip_policy_check(self, mock_create, mock_get_ins_by_filters,
-                               mock_get, mock_pause, mock_action, mock_save):
-        policy.reset()
-        rules = {'compute:pause': '!',
-                 'compute:get': '!',
-                 'compute:get_all': '!',
-                 'compute:create': '!'}
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        instance = self._create_instance_obj()
-        mock_get.return_value = instance
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.compute_api.pause, self.context, instance)
-        api = compute_api.API(skip_policy_check=True)
-        api.pause(self.context, instance)
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.compute_api.get, self.context, instance.uuid)
-        api = compute_api.API(skip_policy_check=True)
-        api.get(self.context, instance.uuid)
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.compute_api.get_all, self.context)
-        api = compute_api.API(skip_policy_check=True)
-        api.get_all(self.context)
-
-        self.assertRaises(exception.PolicyNotAuthorized,
-                          self.compute_api.create, self.context, None, None)
-        api = compute_api.API(skip_policy_check=True)
-        api.create(self.context, None, None)
 
     @mock.patch.object(compute_api.API, '_get_instances_by_filters')
     def test_tenant_to_project_conversion(self, mock_get):

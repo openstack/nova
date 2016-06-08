@@ -31,8 +31,6 @@ from nova import rpc
 
 
 check_instance_state = compute_api.check_instance_state
-wrap_check_policy = compute_api.wrap_check_policy
-check_policy = compute_api.check_policy
 check_instance_lock = compute_api.check_instance_lock
 check_instance_cell = compute_api.check_instance_cell
 
@@ -319,7 +317,6 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).unrescue(context, instance)
         self._cast_to_cells(context, instance, 'unrescue')
 
-    @wrap_check_policy
     @check_instance_cell
     def shelve(self, context, instance, clean_shutdown=True):
         """Shelve the given instance."""
@@ -328,7 +325,6 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'shelve',
                 clean_shutdown=clean_shutdown)
 
-    @wrap_check_policy
     @check_instance_cell
     def shelve_offload(self, context, instance, clean_shutdown=True):
         """Offload the shelved instance."""
@@ -337,14 +333,12 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'shelve_offload',
                 clean_shutdown=clean_shutdown)
 
-    @wrap_check_policy
     @check_instance_cell
     def unshelve(self, context, instance):
         """Unshelve the given instance."""
         super(ComputeCellsAPI, self).unshelve(context, instance)
         self._cast_to_cells(context, instance, 'unshelve')
 
-    @wrap_check_policy
     @check_instance_cell
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to a VNC Console."""
@@ -360,7 +354,6 @@ class ComputeCellsAPI(compute_api.API):
                 instance.uuid, access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
-    @wrap_check_policy
     @check_instance_cell
     def get_spice_console(self, context, instance, console_type):
         """Get a url to a SPICE Console."""
@@ -376,7 +369,6 @@ class ComputeCellsAPI(compute_api.API):
                 instance.uuid, access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
-    @wrap_check_policy
     @check_instance_cell
     def get_rdp_console(self, context, instance, console_type):
         """Get a url to a RDP Console."""
@@ -392,7 +384,6 @@ class ComputeCellsAPI(compute_api.API):
                 instance.uuid, access_url=connect_info['access_url'])
         return {'url': connect_info['access_url']}
 
-    @wrap_check_policy
     @check_instance_cell
     def get_serial_console(self, context, instance, console_type):
         """Get a url to a serial console."""
@@ -434,7 +425,6 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'detach_volume',
                 volume)
 
-    @wrap_check_policy
     @check_instance_cell
     def associate_floating_ip(self, context, instance, address):
         """Makes calls to network_api to associate_floating_ip.
@@ -452,7 +442,6 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'delete_instance_metadata',
                 key)
 
-    @wrap_check_policy
     @check_instance_cell
     def update_instance_metadata(self, context, instance,
                                  metadata, delete=False):
