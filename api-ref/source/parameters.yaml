@@ -154,7 +154,7 @@ key:
   in: path
   required: true
   type: string
-keypair_name:
+keypair_name_path:
   description: |
     The keypair name.
   in: path
@@ -414,6 +414,13 @@ ip_query:
   in: query
   required: false
   type: string
+keypair_type_in:
+  in: query
+  required: false
+  type: string
+  description: |
+    The type of the keypair. Allowed values are ``ssh`` or ``x509``
+  min_version: 2.2
 limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -1948,6 +1955,74 @@ key_pairs_quota_optional:
   in: body
   required: false
   type: integer
+keypair:
+  in: body
+  type: object
+  required: true
+  description: |
+    Keypair object
+keypair_fingerprint:
+  in: body
+  required: true
+  type: string
+  description: |
+    The fingerprint for the keypair.
+keypair_name:
+  in: body
+  required: true
+  type: string
+  description: |
+    A name for the keypair which will be used to reference it later.
+keypair_private_key:
+  description: |
+    If you do not provide a public key on create, a new keypair will
+    be built for you, and the private key will be returned during the
+    initial create call. Make sure to save this, as there is no way to
+    get this private key again in the future.
+  in: body
+  required: false
+  type: string
+keypair_public_key:
+  description: |
+    The keypair public key.
+  in: body
+  required: true
+  type: string
+keypair_public_key_in:
+  description: |
+    The public ssh key to import. If you omit this value, a keypair is
+    generated for you.
+  in: body
+  required: false
+  type: string
+keypair_type:
+  in: body
+  required: true
+  type: string
+  description: |
+    The type of the keypair. Allowed values are ``ssh`` or ``x509``
+  min_version: 2.2
+keypair_userid:
+  in: body
+  required: true
+  type: string
+  description: |
+    The user_id for a keypair.
+  min_version: 2.10
+keypair_userid_in:
+  in: body
+  required: false
+  type: string
+  description: |
+    The user_id for a keypair. This allows administrative users to
+    upload keys for other users than themselves.
+  min_version: 2.10
+keypairs:
+  in: body
+  type: array
+  required: true
+  description: |
+    Array of Keypair objects
 length:
   description: |
     The number of lines to fetch from the end of console log. All
@@ -2533,12 +2608,6 @@ project_id_server_group:
   description: |
     The project ID who owns the server group.
   min_version: 2.13
-  in: body
-  required: false
-  type: string
-public_key:
-  description: |
-    The public ssh key to import. If you omit this value, a key is generated.
   in: body
   required: false
   type: string

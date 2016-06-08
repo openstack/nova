@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 =====================
  Keypairs (keypairs)
@@ -23,6 +20,15 @@ Error response codes: unauthorized(401), forbidden(403)
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - keypairs: keypairs
+  - name: keypair_name
+  - public_key: keypair_public_key
+  - fingerprint: keypair_fingerprint
+  - type: keypair_type
+  - user_id: keypair_userid
+
 **Example List Keypairs: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/keypairs/keypairs-list-resp.json
@@ -35,7 +41,11 @@ Create Or Import Keypair
 
 Generates or imports a keypair.
 
-Normal response codes: 200
+Normal response codes: 200, 201
+
+.. note::
+
+   The success status code was changed from 200 to 201 in version 2.2
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
 
@@ -44,8 +54,11 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - name: name
-  - public_key: public_key
+  - keypair: keypair
+  - name: keypair_name
+  - public_key: keypair_public_key_in
+  - type: keypair_type_in
+  - user_id: keypair_userid_in
 
 **Example Create Or Import Keypair: JSON request**
 
@@ -54,6 +67,16 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - keypair: keypair
+  - name: keypair_name
+  - public_key: keypair_public_key
+  - private_key: keypair_private_key
+  - fingerprint: keypair_fingerprint
+  - type: keypair_type
+  - user_id: keypair_userid
 
 **Example Create Or Import Keypair: JSON response**
 
@@ -76,10 +99,20 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - keypair_name: keypair_name
+  - keypair_name: keypair_name_path
+  - user_id: keypair_userid_in
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - keypair: keypair
+  - name: keypair_name
+  - public_key: keypair_public_key
+  - fingerprint: keypair_fingerprint
+  - type: keypair_type
+  - user_id: keypair_userid
 
 **Example Show Keypair Details: JSON response**
 
@@ -93,7 +126,12 @@ Delete Keypair
 
 Deletes a keypair.
 
-Normal response codes: 202
+Normal response codes: 202, 204
+
+.. note::
+
+   The normal return code is 204 in version 2.2 to match the fact that
+   no body content is returned.
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
@@ -103,6 +141,9 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - keypair_name: keypair_name
+  - user_id: keypair_userid_in
 
 Response
 --------
+
+There is no body returned in a successful response.
