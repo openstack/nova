@@ -6072,16 +6072,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 # admins see slow running migration operations
                 # when debug logs are off.
                 if (n % 10) == 0:
-                    # Note(Shaohe Feng) every 5 secs to update the migration
-                    # db, that keeps updates to the instance and migration
-                    # objects in sync.
-                    migration.memory_total = info.memory_total
-                    migration.memory_processed = info.memory_processed
-                    migration.memory_remaining = info.memory_remaining
-                    migration.disk_total = info.disk_total
-                    migration.disk_processed = info.disk_processed
-                    migration.disk_remaining = info.disk_remaining
-                    migration.save()
                     # Ignoring memory_processed, as due to repeated
                     # dirtying of data, this can be way larger than
                     # memory_total. Best to just look at what's
@@ -6095,8 +6085,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     if info.memory_total != 0:
                         remaining = round(info.memory_remaining *
                                           100 / info.memory_total)
-                    instance.progress = 100 - remaining
-                    instance.save()
+
+                    libvirt_migrate.save_stats(instance, migration,
+                                               info, remaining)
 
                     lg = LOG.debug
                     if (n % 60) == 0:
