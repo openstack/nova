@@ -312,3 +312,86 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
                                                 5000,
                                                 4500, 2000,
                                                 4500, 9000))
+
+    @mock.patch.object(libvirt_guest.Guest,
+                       "migrate_configure_max_downtime")
+    def test_live_migration_update_downtime_no_steps(self, mock_dt):
+        steps = []
+        newdt = migration.update_downtime(self.guest, self.instance,
+                                          None, steps, 5000)
+
+        self.assertIsNone(newdt)
+        self.assertFalse(mock_dt.called)
+
+    @mock.patch.object(libvirt_guest.Guest,
+                       "migrate_configure_max_downtime")
+    def test_live_migration_update_downtime_too_early(self, mock_dt):
+        steps = [
+            (9000, 50),
+            (18000, 200),
+        ]
+        # We shouldn't change downtime since haven't hit first time
+        newdt = migration.update_downtime(self.guest, self.instance,
+                                          None, steps, 5000)
+
+        self.assertIsNone(newdt)
+        self.assertFalse(mock_dt.called)
+
+    @mock.patch.object(libvirt_guest.Guest,
+                       "migrate_configure_max_downtime")
+    def test_live_migration_update_downtime_step1(self, mock_dt):
+        steps = [
+            (9000, 50),
+            (18000, 200),
+        ]
+        # We should pick the first downtime entry
+        newdt = migration.update_downtime(self.guest, self.instance,
+                                          None, steps, 11000)
+
+        self.assertEqual(newdt, 50)
+        mock_dt.assert_called_once_with(50)
+
+    @mock.patch.object(libvirt_guest.Guest,
+                       "migrate_configure_max_downtime")
+    def test_live_migration_update_downtime_nostep1(self, mock_dt):
+        steps = [
+            (9000, 50),
+            (18000, 200),
+        ]
+        # We shouldn't change downtime, since its already set
+        newdt = migration.update_downtime(self.guest, self.instance,
+                                          50, steps, 11000)
+
+        self.assertEqual(newdt, 50)
+        self.assertFalse(mock_dt.called)
+
+    @mock.patch.object(libvirt_guest.Guest,
+                       "migrate_configure_max_downtime")
+    def test_live_migration_update_downtime_step2(self, mock_dt):
+        steps = [
+            (9000, 50),
+            (18000, 200),
+        ]
+        newdt = migration.update_downtime(self.guest, self.instance,
+                                          50, steps, 22000)
+
+        self.assertEqual(newdt, 200)
+        mock_dt.assert_called_once_with(200)
+
+    @mock.patch.object(libvirt_guest.Guest,
+                       "migrate_configure_max_downtime")
+    def test_live_migration_update_downtime_err(self, mock_dt):
+        steps = [
+            (9000, 50),
+            (18000, 200),
+        ]
+        mock_dt.side_effect = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError,
+            "Failed to set downtime",
+            error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
+
+        newdt = migration.update_downtime(self.guest, self.instance,
+                                          50, steps, 22000)
+
+        self.assertEqual(newdt, 200)
+        mock_dt.assert_called_once_with(200)

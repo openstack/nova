@@ -5980,6 +5980,7 @@ class LibvirtDriver(driver.ComputeDriver):
             CONF.libvirt.live_migration_completion_timeout * data_gb)
         progress_timeout = CONF.libvirt.live_migration_progress_timeout
         migration = migrate_data.migration
+        curdowntime = None
 
         def _check_scheduled_migration_task():
             tasks = self.active_migrations.get(instance.uuid, deque())
@@ -6059,25 +6060,9 @@ class LibvirtDriver(driver.ComputeDriver):
                         self._clear_empty_migration(instance)
                         raise
 
-                # See if we need to increase the max downtime. We
-                # ignore failures, since we'd rather continue trying
-                # to migrate
-                if (len(downtime_steps) > 0 and
-                    elapsed > downtime_steps[0][0]):
-                    downtime = downtime_steps.pop(0)
-                    LOG.info(_LI("Increasing downtime to %(downtime)d ms "
-                                 "after %(waittime)d sec elapsed time"),
-                             {"downtime": downtime[1],
-                              "waittime": downtime[0]},
-                             instance=instance)
-
-                    try:
-                        guest.migrate_configure_max_downtime(downtime[1])
-                    except libvirt.libvirtError as e:
-                        LOG.warning(
-                            _LW("Unable to increase max downtime to %(time)d"
-                                "ms: %(e)s"),
-                            {"time": downtime[1], "e": e}, instance=instance)
+                curdowntime = libvirt_migrate.update_downtime(
+                    guest, instance, curdowntime,
+                    downtime_steps, elapsed)
 
                 # We loop every 500ms, so don't log on every
                 # iteration to avoid spamming logs for long
