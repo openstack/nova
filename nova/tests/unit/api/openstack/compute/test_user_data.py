@@ -118,7 +118,7 @@ class ServersControllerCreateTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         fakes.stub_out_nw_api(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)

@@ -35,7 +35,6 @@ from nova.api.openstack import wsgi as os_wsgi
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import vm_states
-import nova.conf
 from nova import context
 from nova.db.sqlalchemy import models
 from nova import exception as exc
@@ -83,7 +82,7 @@ def wsgi_app_v21(fake_auth_context=None, init_only=None, v2_compatible=False):
     return mapper
 
 
-def stub_out_key_pair_funcs(stubs, have_key_pair=True, **kwargs):
+def stub_out_key_pair_funcs(testcase, have_key_pair=True, **kwargs):
     def key_pair(context, user_id):
         return [dict(test_keypair.fake_keypair,
                      name='key', public_key='public_key', **kwargs)]
@@ -99,10 +98,10 @@ def stub_out_key_pair_funcs(stubs, have_key_pair=True, **kwargs):
         return []
 
     if have_key_pair:
-        stubs.Set(nova.db, 'key_pair_get_all_by_user', key_pair)
-        stubs.Set(nova.db, 'key_pair_get', one_key_pair)
+        testcase.stub_out('nova.db.key_pair_get_all_by_user', key_pair)
+        testcase.stub_out('nova.db.key_pair_get', one_key_pair)
     else:
-        stubs.Set(nova.db, 'key_pair_get_all_by_user', no_key_pair)
+        testcase.stub_out('nova.db.key_pair_get_all_by_user', no_key_pair)
 
 
 def stub_out_instance_quota(test, allowed, quota, resource='instances'):

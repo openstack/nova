@@ -333,7 +333,7 @@ class MetadataTestCase(test.TestCase):
         self.assertEqual(network_data, md.network_metadata)
 
     def test_InstanceMetadata_invoke_metadata_for_config_drive(self):
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         inst = self.instance.obj_clone()
         inst_md = base.InstanceMetadata(inst)
         expected_paths = [
@@ -520,7 +520,7 @@ class OpenStackMetadataTestCase(test.TestCase):
                          grizzly_supported_apis)
 
     def test_metadata_json(self):
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         inst = self.instance.obj_clone()
         content = [
             ('/etc/my.conf', "content of my.conf"),
@@ -571,7 +571,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_extra_md(self):
         # make sure extra_md makes it through to metadata
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         inst = self.instance.obj_clone()
         extra = {'foo': 'bar', 'mylist': [1, 2, 3],
                  'mydict': {"one": 1, "two": 2}}
@@ -611,7 +611,7 @@ class OpenStackMetadataTestCase(test.TestCase):
             mdinst.lookup, "/openstack/2012-08-10/user_data")
 
     def test_random_seed(self):
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
@@ -627,7 +627,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.assertNotIn("random_seed", jsonutils.loads(mdjson))
 
     def test_project_id(self):
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         mdinst = fake_InstanceMetadata(self.stubs, self.instance)
 
         # verify that 2015-10-15 has the 'project_id' field
@@ -643,7 +643,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def test_no_dashes_in_metadata(self):
         # top level entries in meta_data should not contain '-' in their name
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         inst = self.instance.obj_clone()
         mdinst = fake_InstanceMetadata(self.stubs, inst)
         mdjson = jsonutils.loads(
@@ -787,7 +787,7 @@ class MetadataHandlerTestCase(test.TestCase):
         self.assertEqual(response.status_int, 404)
 
     def test_json_data(self):
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         response = fake_request(self.stubs, self.mdinst,
                                 "/openstack/latest/meta_data.json")
         response_ctype = response.headers['Content-Type']
