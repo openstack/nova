@@ -243,6 +243,12 @@ class API(base_api.NetworkAPI):
                 LOG.exception(_LE('Neutron error creating port on network %s'),
                               network_id, instance=instance)
 
+    def _update_port(self, port_client, instance, port_id,
+                     port_req_body):
+        port_client.update_port(port_id, port_req_body)
+        LOG.debug('Successfully updated port: %s', port_id,
+                  instance=instance)
+
     @staticmethod
     def _populate_mac_address(instance, port_req_body, available_macs):
         if available_macs is not None:
@@ -629,10 +635,10 @@ class API(base_api.NetworkAPI):
                     created_port_ids.append(created_port_id)
                     ports_in_requested_order.append(created_port_id)
                 else:
-                    port = ports[request.port_id]
-                    port_client.update_port(port['id'], port_req_body)
-                    preexisting_port_ids.append(port['id'])
-                    ports_in_requested_order.append(port['id'])
+                    self._update_port(
+                        port_client, instance, request.port_id, port_req_body)
+                    preexisting_port_ids.append(request.port_id)
+                    ports_in_requested_order.append(request.port_id)
 
                 self._update_port_dns_name(context, instance, network,
                                            ports_in_requested_order[-1],
