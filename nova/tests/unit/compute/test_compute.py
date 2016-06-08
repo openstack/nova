@@ -10841,8 +10841,9 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
             self.api.delete_aggregate(self.context, 1)
         delete_aggregate.assert_called_once_with(self.context, agg)
 
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.add_aggregate_host')
     @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
-    def test_add_host_to_aggregate(self, update_aggregates):
+    def test_add_host_to_aggregate(self, update_aggregates, mock_add_agg):
         self.api.is_safe_to_update_az = mock.Mock()
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={})
@@ -10853,9 +10854,14 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                                   return_value=agg)):
             self.api.add_host_to_aggregate(self.context, 1, 'fakehost')
         update_aggregates.assert_called_once_with(self.context, [agg])
+        mock_add_agg.assert_called_once_with(self.context, aggregate=agg,
+                                             host_param='fakehost',
+                                             host='fakehost')
 
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.remove_aggregate_host')
     @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
-    def test_remove_host_from_aggregate(self, update_aggregates):
+    def test_remove_host_from_aggregate(self, update_aggregates,
+                                        mock_remove_agg):
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={})
         agg.delete_host = mock.Mock()
@@ -10865,6 +10871,9 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
                                   return_value=agg)):
             self.api.remove_host_from_aggregate(self.context, 1, 'fakehost')
         update_aggregates.assert_called_once_with(self.context, [agg])
+        mock_remove_agg.assert_called_once_with(self.context, aggregate=agg,
+                                                host_param='fakehost',
+                                                host='fakehost')
 
 
 class ComputeAggrTestCase(BaseTestCase):

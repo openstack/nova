@@ -52,6 +52,21 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                     {'source_type': 'volume', 'destination_type': 'volume',
                      'instance_uuid': self.fake_instance_obj.uuid,
                      'volume_id': 'fake-volume-id'}))
+        # FIXME(melwitt): Temporary while things have no mappings
+        self.patcher1 = mock.patch('nova.objects.InstanceMapping.'
+                                   'get_by_instance_uuid')
+        self.patcher2 = mock.patch('nova.objects.HostMapping.get_by_host')
+        mock_inst_mapping = self.patcher1.start()
+        mock_host_mapping = self.patcher2.start()
+        mock_inst_mapping.side_effect = exception.InstanceMappingNotFound(
+                uuid=self.fake_instance_obj.uuid)
+        mock_host_mapping.side_effect = exception.HostMappingNotFound(
+                name=self.fake_instance_obj.host)
+
+    def tearDown(self):
+        super(ComputeRpcAPITestCase, self).tearDown()
+        self.patcher1.stop()
+        self.patcher2.stop()
 
     @mock.patch('nova.objects.Service.get_minimum_version')
     def test_auto_pin(self, mock_get_min):
@@ -59,7 +74,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.flags(compute='auto', group='upgrade_levels')
         compute_rpcapi.LAST_VERSION = None
         rpcapi = compute_rpcapi.ComputeAPI()
-        self.assertEqual('4.4', rpcapi.client.version_cap)
+        self.assertEqual('4.4', rpcapi.router.version_cap)
         mock_get_min.assert_called_once_with(mock.ANY, 'nova-compute')
 
     @mock.patch('nova.objects.Service.get_minimum_version')
@@ -76,7 +91,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.flags(compute='auto', group='upgrade_levels')
         compute_rpcapi.LAST_VERSION = None
         rpcapi = compute_rpcapi.ComputeAPI()
-        self.assertEqual('4.11', rpcapi.client.version_cap)
+        self.assertEqual('4.11', rpcapi.router.version_cap)
         mock_get_min.assert_called_once_with(mock.ANY, 'nova-compute')
         self.assertIsNone(compute_rpcapi.LAST_VERSION)
 
@@ -95,11 +110,15 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
         rpcapi = kwargs.pop('rpcapi_class', compute_rpcapi.ComputeAPI)()
-        self.assertIsNotNone(rpcapi.client)
-        self.assertEqual(rpcapi.client.target.topic, CONF.compute_topic)
+        self.assertIsNotNone(rpcapi.router)
+        self.assertEqual(rpcapi.router.target.topic, CONF.compute_topic)
 
-        orig_prepare = rpcapi.client.prepare
-        base_version = rpcapi.client.target.version
+        # This test wants to run the real prepare function, so must use
+        # a real client object
+        default_client = rpcapi.router.clients['default'].client
+
+        orig_prepare = default_client.prepare
+        base_version = rpcapi.router.target.version
         expected_version = kwargs.pop('version', base_version)
 
         expected_kwargs = kwargs.copy()
@@ -127,13 +146,13 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
             expected_kwargs['scheduled_node'] = expected_kwargs.pop('node')
 
         with test.nested(
-            mock.patch.object(rpcapi.client, rpc_method),
-            mock.patch.object(rpcapi.client, 'prepare'),
-            mock.patch.object(rpcapi.client, 'can_send_version'),
+            mock.patch.object(default_client, rpc_method),
+            mock.patch.object(default_client, 'prepare'),
+            mock.patch.object(default_client, 'can_send_version'),
         ) as (
             rpc_mock, prepare_mock, csv_mock
         ):
-            prepare_mock.return_value = rpcapi.client
+            prepare_mock.return_value = default_client
             if '_return_value' in kwargs:
                 rpc_mock.return_value = kwargs.pop('_return_value')
                 del expected_kwargs['_return_value']
@@ -206,10 +225,13 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         rpcapi = compute_rpcapi.ComputeAPI()
         cast_mock = mock.Mock()
         cctxt_mock = mock.Mock(cast=cast_mock)
+        rpcapi.router.by_instance = mock.Mock()
+        mock_client = mock.Mock()
+        rpcapi.router.by_instance.return_value = mock_client
         with test.nested(
-            mock.patch.object(rpcapi.client, 'can_send_version',
+            mock.patch.object(mock_client, 'can_send_version',
                               return_value=False),
-            mock.patch.object(rpcapi.client, 'prepare',
+            mock.patch.object(mock_client, 'prepare',
                               return_value=cctxt_mock)
         ) as (
             can_send_mock, prepare_mock
@@ -313,8 +335,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         version = '4.12'
         rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.by_host = mock.Mock()
         mock_client = mock.MagicMock()
-        rpcapi.client = mock_client
+        rpcapi.router.by_host.return_value = mock_client
         mock_client.can_send_version.return_value = True
         mock_cctx = mock.MagicMock()
         mock_client.prepare.return_value = mock_cctx
@@ -333,8 +356,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         version = '4.9'
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = compute_rpcapi.ComputeAPI()
+        rpcapi.router.by_host = mock.Mock()
         mock_client = mock.MagicMock()
-        rpcapi.client = mock_client
+        rpcapi.router.by_host.return_value = mock_client
         mock_client.can_send_version.return_value = False
         mock_cctx = mock.MagicMock()
         mock_client.prepare.return_value = mock_cctx
@@ -600,33 +624,51 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def _test_simple_call(self, method, inargs, callargs, callret,
                                calltype='call', can_send=False):
         rpc = compute_rpcapi.ComputeAPI()
+        mock_client = mock.Mock()
+        rpc.router.by_instance = mock.Mock()
+        rpc.router.by_instance.return_value = mock_client
+        rpc.router.by_host = mock.Mock()
+        rpc.router.by_host.return_value = mock_client
 
-        @mock.patch.object(rpc, 'client')
         @mock.patch.object(compute_rpcapi, '_compute_host')
-        def _test(mock_ch, mock_client):
+        def _test(mock_ch):
             mock_client.can_send_version.return_value = can_send
             call = getattr(mock_client.prepare.return_value, calltype)
             call.return_value = callret
             ctxt = context.RequestContext()
             result = getattr(rpc, method)(ctxt, **inargs)
             call.assert_called_once_with(ctxt, method, **callargs)
+            # Get the target of the prepare call: prepare(server=<target>, ...)
+            prepare_target = mock_client.prepare.call_args[1]['server']
+            # If _compute_host(None, instance) was called, then by_instance
+            # should have been called with the instance. Otherwise by_host
+            # should have been called with the same host as the prepare target.
+            if mock_ch.called and mock_ch.call_args[0][0] is None:
+                instance = mock_ch.call_args[0][1]
+                rpc.router.by_instance.assert_called_once_with(ctxt, instance)
+                rpc.router.by_host.assert_not_called()
+            else:
+                rpc.router.by_host.assert_called_once_with(ctxt,
+                                                           prepare_target)
+                rpc.router.by_instance.assert_not_called()
             return result
 
         return _test()
 
     def test_check_can_live_migrate_source_converts_objects(self):
         obj = migrate_data_obj.LiveMigrateData()
+        inst = self.fake_instance_obj
         result = self._test_simple_call('check_can_live_migrate_source',
-                                        inargs={'instance': 'foo',
+                                        inargs={'instance': inst,
                                                 'dest_check_data': obj},
-                                        callargs={'instance': 'foo',
+                                        callargs={'instance': inst,
                                                   'dest_check_data': {}},
                                         callret=obj)
         self.assertEqual(obj, result)
         result = self._test_simple_call('check_can_live_migrate_source',
-                                        inargs={'instance': 'foo',
+                                        inargs={'instance': inst,
                                                 'dest_check_data': obj},
-                                        callargs={'instance': 'foo',
+                                        callargs={'instance': inst,
                                                   'dest_check_data': {}},
                                         callret={'foo': 'bar'})
         self.assertIsInstance(result, migrate_data_obj.LiveMigrateData)
@@ -635,12 +677,13 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 'detect_implementation')
     def test_check_can_live_migrate_destination_converts_dict(self,
                                                               mock_det):
+        inst = self.fake_instance_obj
         result = self._test_simple_call('check_can_live_migrate_destination',
-                                        inargs={'instance': 'foo',
+                                        inargs={'instance': inst,
                                                 'destination': 'bar',
                                                 'block_migration': False,
                                                 'disk_over_commit': False},
-                                        callargs={'instance': 'foo',
+                                        callargs={'instance': inst,
                                                   'block_migration': False,
                                                   'disk_over_commit': False},
                                         callret={'foo': 'bar'})
@@ -648,14 +691,15 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_live_migration_converts_objects(self):
         obj = migrate_data_obj.LiveMigrateData()
+        inst = self.fake_instance_obj
         self._test_simple_call('live_migration',
-                               inargs={'instance': 'foo',
+                               inargs={'instance': inst,
                                        'dest': 'foo',
                                        'block_migration': False,
                                        'host': 'foo',
                                        'migration': None,
                                        'migrate_data': obj},
-                               callargs={'instance': 'foo',
+                               callargs={'instance': inst,
                                          'dest': 'foo',
                                          'block_migration': False,
                                          'migrate_data': {
@@ -666,13 +710,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.migrate_data.LiveMigrateData.from_legacy_dict')
     def test_pre_live_migration_converts_objects(self, mock_fld):
         obj = migrate_data_obj.LiveMigrateData()
+        inst = self.fake_instance_obj
         result = self._test_simple_call('pre_live_migration',
-                                        inargs={'instance': 'foo',
+                                        inargs={'instance': inst,
                                                 'block_migration': False,
                                                 'disk': None,
                                                 'host': 'foo',
                                                 'migrate_data': obj},
-                                        callargs={'instance': 'foo',
+                                        callargs={'instance': inst,
                                                   'block_migration': False,
                                                   'disk': None,
                                                   'migrate_data': {}},
@@ -680,12 +725,12 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.assertFalse(mock_fld.called)
         self.assertEqual(obj, result)
         result = self._test_simple_call('pre_live_migration',
-                                        inargs={'instance': 'foo',
+                                        inargs={'instance': inst,
                                                 'block_migration': False,
                                                 'disk': None,
                                                 'host': 'foo',
                                                 'migrate_data': obj},
-                                        callargs={'instance': 'foo',
+                                        callargs={'instance': inst,
                                                   'block_migration': False,
                                                   'disk': None,
                                                   'migrate_data': {}},
@@ -696,13 +741,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
 
     def test_rollback_live_migration_at_destination_converts_objects(self):
         obj = migrate_data_obj.LiveMigrateData()
+        inst = self.fake_instance_obj
         method = 'rollback_live_migration_at_destination'
         self._test_simple_call(method,
-                               inargs={'instance': 'foo',
+                               inargs={'instance': inst,
                                        'host': 'foo',
                                        'destroy_disks': False,
                                        'migrate_data': obj},
-                               callargs={'instance': 'foo',
+                               callargs={'instance': inst,
                                          'destroy_disks': False,
                                          'migrate_data': {}},
                                callret=None,

@@ -31,11 +31,14 @@ import functools
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_service import periodic_task
+from oslo_utils import timeutils
 
 import nova.conf
 import nova.context
 import nova.exception
 from nova.i18n import _
+from nova import objects
 
 
 CONF = nova.conf.CONF
@@ -63,20 +66,6 @@ TRANSPORT_ALIASES = {
     'nova.rpc.impl_qpid': 'qpid',
     'nova.rpc.impl_zmq': 'zmq',
 }
-
-
-def get_cell_client(context, default_client):
-    """Get a RPCClient object based on a RequestContext.
-
-    :param context: The RequestContext that can contain a Transport
-    :param default_client: The default RPCClient
-    """
-    if context.mq_connection:
-        return messaging.RPCClient(
-                context.mq_connection, default_client.target,
-                version_cap=default_client.version_cap,
-                serializer=default_client.serializer)
-    return default_client
 
 
 def init(conf):
@@ -363,3 +352,85 @@ class LegacyValidatingNotifier(object):
                 LOG.warning(self.message, {'event_type': event_type})
 
         getattr(self.notifier, priority)(ctxt, event_type, payload)
+
+
+class ClientWrapper(object):
+    def __init__(self, client):
+        self._client = client
+        self.last_access_time = timeutils.utcnow()
+
+    @property
+    def client(self):
+        self.last_access_time = timeutils.utcnow()
+        return self._client
+
+
+class ClientRouter(periodic_task.PeriodicTasks):
+    """Creates and caches RPC clients that route to cells or the default.
+
+    The default client connects to the API cell message queue. The rest of the
+    clients connect to compute cell message queues.
+    """
+    def __init__(self, default_client):
+        super(ClientRouter, self).__init__(CONF)
+        self.clients = {}
+        self.clients['default'] = ClientWrapper(default_client)
+        self.target = default_client.target
+        self.version_cap = default_client.version_cap
+        # NOTE(melwitt): Cells v1 does its own serialization and won't
+        # have a serializer available on the client object.
+        self.serializer = getattr(default_client, 'serializer', None)
+        self.run_periodic_tasks(nova.context.RequestContext())
+
+    def _client(self, context, cell_mapping=None):
+        if cell_mapping:
+            client_id = cell_mapping.uuid
+        else:
+            client_id = 'default'
+
+        try:
+            client = self.clients[client_id].client
+        except KeyError:
+            transport = create_transport(cell_mapping.transport_url)
+            client = messaging.RPCClient(transport, self.target,
+                                         version_cap=self.version_cap,
+                                         serializer=self.serializer)
+            self.clients[client_id] = ClientWrapper(client)
+
+        return client
+
+    @periodic_task.periodic_task
+    def _remove_stale_clients(self, context):
+        timeout = 60
+
+        def stale(client_id, last_access_time):
+            if timeutils.is_older_than(last_access_time, timeout):
+                LOG.debug('Removing stale RPC client: %s as it was last '
+                          'accessed at %s', client_id, last_access_time)
+                return True
+            return False
+
+        # Never expire the default client
+        items_copy = list(self.clients.items())
+        for client_id, client_wrapper in items_copy:
+            if (client_id != 'default' and
+                    stale(client_id, client_wrapper.last_access_time)):
+                del self.clients[client_id]
+
+    def by_instance(self, context, instance):
+        try:
+            cell_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                               context, instance.uuid).cell_mapping
+        except nova.exception.InstanceMappingNotFound:
+            # Not a cells v2 deployment
+            cell_mapping = None
+        return self._client(context, cell_mapping=cell_mapping)
+
+    def by_host(self, context, host):
+        try:
+            cell_mapping = objects.HostMapping.get_by_host(
+                               context, host).cell_mapping
+        except nova.exception.HostMappingNotFound:
+            # Not a cells v2 deployment
+            cell_mapping = None
+        return self._client(context, cell_mapping=cell_mapping)

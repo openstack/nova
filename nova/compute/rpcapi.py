@@ -333,7 +333,8 @@ class ComputeAPI(object):
             version_cap = self.VERSION_ALIASES.get(upgrade_level,
                                                    upgrade_level)
         serializer = objects_base.NovaObjectSerializer()
-        self.client = self.get_client(target, version_cap, serializer)
+        default_client = self.get_client(target, version_cap, serializer)
+        self.router = rpc.ClientRouter(default_client)
 
     def _determine_version_cap(self, target):
         global LAST_VERSION
@@ -374,20 +375,11 @@ class ComputeAPI(object):
                   'service': service_version})
         return version_cap
 
-    def _compat_ver(self, current, legacy):
-        if self.client.can_send_version(current):
-            return current
-        else:
-            return legacy
-
     # Cells overrides this
     def get_client(self, target, version_cap, serializer):
         return rpc.get_client(target,
                               version_cap=version_cap,
                               serializer=serializer)
-
-    def get_cell_client(self, context):
-        return rpc.get_cell_client(context, self.client)
 
     def add_aggregate_host(self, ctxt, host, aggregate, host_param,
                            slave_info=None):
@@ -400,7 +392,7 @@ class ComputeAPI(object):
         :param host: This is the host to send the message to.
         '''
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'add_aggregate_host',
                    aggregate=aggregate, host=host_param,
@@ -408,7 +400,7 @@ class ComputeAPI(object):
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
                    instance=instance, network_id=network_id)
@@ -416,7 +408,7 @@ class ComputeAPI(object):
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'attach_interface',
                           instance=instance, network_id=network_id,
@@ -424,13 +416,13 @@ class ComputeAPI(object):
 
     def attach_volume(self, ctxt, instance, bdm):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'attach_volume', instance=instance, bdm=bdm)
 
     def change_instance_metadata(self, ctxt, instance, diff):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'change_instance_metadata',
                    instance=instance, diff=diff)
@@ -438,8 +430,8 @@ class ComputeAPI(object):
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
         version = '4.11'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_host(ctxt, destination)
+        if not client.can_send_version(version):
             # NOTE(eliqiao): This is a new feature that is only available
             # once all compute nodes support at least version 4.11.
             # This means the new REST API that supports this needs to handle
@@ -450,7 +442,7 @@ class ComputeAPI(object):
             else:
                 version = '4.0'
 
-        cctxt = cell_client.prepare(server=destination, version=version)
+        cctxt = client.prepare(server=destination, version=version)
         result = cctxt.call(ctxt, 'check_can_live_migrate_destination',
                             instance=instance,
                             block_migration=block_migration,
@@ -466,13 +458,13 @@ class ComputeAPI(object):
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         dest_check_data_obj = dest_check_data
         version = '4.8'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_instance(ctxt, instance)
+        if not client.can_send_version(version):
             version = '4.0'
             if dest_check_data:
                 dest_check_data = dest_check_data.to_legacy_dict()
         source = _compute_host(None, instance)
-        cctxt = cell_client.prepare(server=source, version=version)
+        cctxt = client.prepare(server=source, version=version)
         result = cctxt.call(ctxt, 'check_can_live_migrate_source',
                             instance=instance,
                             dest_check_data=dest_check_data)
@@ -486,7 +478,11 @@ class ComputeAPI(object):
 
     def check_instance_shared_storage(self, ctxt, instance, data, host=None):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        if not host:
+            client = self.router.by_instance(ctxt, instance)
+        else:
+            client = self.router.by_host(ctxt, host)
+        cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
         return cctxt.call(ctxt, 'check_instance_shared_storage',
                           instance=instance,
@@ -495,7 +491,11 @@ class ComputeAPI(object):
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        if not host:
+            client = self.router.by_instance(ctxt, instance)
+        else:
+            client = self.router.by_host(ctxt, host)
+        cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
         rpc_method = cctxt.cast if cast else cctxt.call
         return rpc_method(ctxt, 'confirm_resize',
@@ -504,7 +504,7 @@ class ComputeAPI(object):
 
     def detach_interface(self, ctxt, instance, port_id):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'detach_interface',
                    instance=instance, port_id=port_id)
@@ -512,11 +512,11 @@ class ComputeAPI(object):
     def detach_volume(self, ctxt, instance, volume_id, attachment_id=None):
         extra = {'attachment_id': attachment_id}
         version = '4.7'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_instance(ctxt, instance)
+        if not client.can_send_version(version):
             version = '4.0'
             extra.pop('attachment_id')
-        cctxt = cell_client.prepare(server=_compute_host(None, instance),
+        cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_volume',
                    instance=instance, volume_id=volume_id, **extra)
@@ -524,7 +524,7 @@ class ComputeAPI(object):
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'finish_resize',
                    instance=instance, migration=migration,
@@ -533,7 +533,7 @@ class ComputeAPI(object):
     def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'finish_revert_resize',
                    instance=instance, migration=migration,
@@ -541,78 +541,78 @@ class ComputeAPI(object):
 
     def get_console_output(self, ctxt, instance, tail_length):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_console_output',
                           instance=instance, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, host, console_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_console_pool_info',
                           console_type=console_type)
 
     def get_console_topic(self, ctxt, host):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
 
     def get_instance_diagnostics(self, ctxt, instance):
         version = '4.13'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_instance(ctxt, instance)
+        if not client.can_send_version(version):
             version = '4.0'
             instance = objects_base.obj_to_primitive(instance)
-        cctxt = cell_client.prepare(server=_compute_host(None, instance),
+        cctxt = client.prepare(server=_compute_host(None, instance),
                                     version=version)
         return cctxt.call(ctxt, 'get_instance_diagnostics', instance=instance)
 
     def get_vnc_console(self, ctxt, instance, console_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_vnc_console',
                           instance=instance, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_spice_console',
                           instance=instance, console_type=console_type)
 
     def get_rdp_console(self, ctxt, instance, console_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_rdp_console',
                           instance=instance, console_type=console_type)
 
     def get_mks_console(self, ctxt, instance, console_type):
         version = '4.3'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_mks_console',
                           instance=instance, console_type=console_type)
 
     def get_serial_console(self, ctxt, instance, console_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_serial_console',
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'validate_console_port',
                           instance=instance, port=port,
@@ -628,20 +628,20 @@ class ComputeAPI(object):
         :param host: This is the host to send the message to.
         '''
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'host_maintenance_mode',
                           host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, host, action):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_network_info(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
@@ -649,16 +649,16 @@ class ComputeAPI(object):
                        migration, migrate_data=None):
         args = {'migration': migration}
         version = '4.8'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_host(ctxt, host)
+        if not client.can_send_version(version):
             version = '4.2'
             if migrate_data:
                 migrate_data = migrate_data.to_legacy_dict(
                     pre_migration_result=True)
-        if not cell_client.can_send_version(version):
+        if not client.can_send_version(version):
             version = '4.0'
             args.pop('migration')
-        cctxt = cell_client.prepare(server=host, version=version)
+        cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'live_migration', instance=instance,
                    dest=dest, block_migration=block_migration,
                    migrate_data=migrate_data, **args)
@@ -666,31 +666,36 @@ class ComputeAPI(object):
     def live_migration_force_complete(self, ctxt, instance, migration):
         version = '4.12'
         kwargs = {}
-        if not self.client.can_send_version(version):
+        if not migration.source_compute:
+            client = self.router.by_instance(ctxt, instance)
+        else:
+            client = self.router.by_host(ctxt, migration.source_compute)
+        if not client.can_send_version(version):
             version = '4.9'
             kwargs['migration_id'] = migration.id
-        cctxt = self.get_cell_client(ctxt).prepare(server=_compute_host(
-            migration.source_compute, instance), version=version)
+        cctxt = client.prepare(
+                server=_compute_host(migration.source_compute, instance),
+                version=version)
         cctxt.cast(ctxt, 'live_migration_force_complete', instance=instance,
                    **kwargs)
 
     def live_migration_abort(self, ctxt, instance, migration_id):
         version = '4.10'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'live_migration_abort', instance=instance,
                 migration_id=migration_id)
 
     def pause_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'post_live_migration_at_destination',
             instance=instance, block_migration=block_migration)
@@ -699,12 +704,12 @@ class ComputeAPI(object):
             host, migrate_data=None):
         migrate_data_orig = migrate_data
         version = '4.8'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_host(ctxt, host)
+        if not client.can_send_version(version):
             version = '4.0'
             if migrate_data:
                 migrate_data = migrate_data.to_legacy_dict()
-        cctxt = cell_client.prepare(server=host, version=version)
+        cctxt = client.prepare(server=host, version=version)
         result = cctxt.call(ctxt, 'pre_live_migration',
                             instance=instance,
                             block_migration=block_migration,
@@ -732,18 +737,18 @@ class ComputeAPI(object):
                     'node': node,
                     'clean_shutdown': clean_shutdown}
         version = '4.1'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_host(ctxt, host)
+        if not client.can_send_version(version):
             version = '4.0'
             msg_args['instance_type'] = objects_base.obj_to_primitive(
                                             instance_type)
-        cctxt = cell_client.prepare(server=host, version=version)
+        cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'prep_resize', **msg_args)
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'reboot_instance',
                    instance=instance,
@@ -762,13 +767,16 @@ class ComputeAPI(object):
                  'scheduled_node': node,
                  'limits': limits}
         version = '4.5'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        if not host:
+            client = self.router.by_instance(ctxt, instance)
+        else:
+            client = self.router.by_host(ctxt, host)
+        if not client.can_send_version(version):
             version = '4.0'
             extra.pop('migration')
             extra.pop('scheduled_node')
             extra.pop('limits')
-        cctxt = cell_client.prepare(server=_compute_host(host, instance),
+        cctxt = client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
                    instance=instance, new_pass=new_pass,
@@ -789,7 +797,7 @@ class ComputeAPI(object):
         :param host: This is the host to send the message to.
         '''
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'remove_aggregate_host',
                    aggregate=aggregate, host=host_param,
@@ -797,14 +805,14 @@ class ComputeAPI(object):
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
                    instance=instance, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'remove_volume_connection',
                           instance=instance, volume_id=volume_id)
@@ -817,13 +825,13 @@ class ComputeAPI(object):
                     'rescue_image_ref': rescue_image_ref,
                     'instance': instance,
         }
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
     def reset_network(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
@@ -835,25 +843,29 @@ class ComputeAPI(object):
                     'clean_shutdown': clean_shutdown,
         }
         version = '4.1'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_instance(ctxt, instance)
+        if not client.can_send_version(version):
             msg_args['instance_type'] = objects_base.obj_to_primitive(
                                             instance_type)
             version = '4.0'
-        cctxt = cell_client.prepare(server=_compute_host(None, instance),
+        cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def resume_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        if not host:
+            client = self.router.by_instance(ctxt, instance)
+        else:
+            client = self.router.by_host(ctxt, host)
+        cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
         cctxt.cast(ctxt, 'revert_resize',
                    instance=instance, migration=migration,
@@ -863,34 +875,34 @@ class ComputeAPI(object):
                                                destroy_disks=True,
                                                migrate_data=None):
         version = '4.8'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_host(ctxt, host)
+        if not client.can_send_version(version):
             version = '4.0'
             if migrate_data:
                 migrate_data = migrate_data.to_legacy_dict()
         extra = {'destroy_disks': destroy_disks,
                  'migrate_data': migrate_data,
         }
-        cctxt = cell_client.prepare(server=host, version=version)
+        cctxt = client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
                    instance=instance, **extra)
 
     def set_admin_password(self, ctxt, instance, new_pass):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'set_admin_password',
                           instance=instance, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, host, enabled):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'swap_volume',
                    instance=instance, old_volume_id=old_volume_id,
@@ -898,7 +910,7 @@ class ComputeAPI(object):
 
     def get_host_uptime(self, ctxt, host):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_host_uptime')
 
@@ -909,14 +921,14 @@ class ComputeAPI(object):
               'device_type': device_type}
         version = '4.0'
 
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'reserve_block_device_name', **kw)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'backup_instance',
                    instance=instance,
@@ -926,7 +938,7 @@ class ComputeAPI(object):
 
     def snapshot_instance(self, ctxt, instance, image_id):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'snapshot_instance',
                    instance=instance,
@@ -934,7 +946,7 @@ class ComputeAPI(object):
 
     def start_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
@@ -942,14 +954,14 @@ class ComputeAPI(object):
         msg_args = {'instance': instance,
                     'clean_shutdown': clean_shutdown}
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', **msg_args)
 
     def suspend_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
@@ -959,7 +971,7 @@ class ComputeAPI(object):
         # the method signature has to match with `terminate_instance()`
         # method of cells rpcapi.
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'terminate_instance',
                    instance=instance, bdms=bdms,
@@ -967,26 +979,26 @@ class ComputeAPI(object):
 
     def unpause_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'soft_delete_instance',
                    instance=instance, reservations=reservations)
 
     def restore_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
 
@@ -995,7 +1007,7 @@ class ComputeAPI(object):
         msg_args = {'instance': instance, 'image_id': image_id,
                     'clean_shutdown': clean_shutdown}
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'shelve_instance', **msg_args)
 
@@ -1003,7 +1015,7 @@ class ComputeAPI(object):
                                 clean_shutdown=True):
         msg_args = {'instance': instance, 'clean_shutdown': clean_shutdown}
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'shelve_offload_instance', **msg_args)
 
@@ -1016,14 +1028,14 @@ class ComputeAPI(object):
             'filter_properties': filter_properties,
             'node': node,
         }
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'unshelve_instance', **msg_kwargs)
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance,
                    volume_id=volume_id, create_info=create_info)
@@ -1031,15 +1043,16 @@ class ComputeAPI(object):
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
                    volume_id=volume_id, snapshot_id=snapshot_id,
                    delete_info=delete_info)
 
     def external_instance_event(self, ctxt, instances, events):
-        cctxt = self.get_cell_client(ctxt).prepare(
-            server=_compute_host(None, instances[0]),
+        instance = instances[0]
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
+            server=_compute_host(None, instance),
             version='4.0')
         cctxt.cast(ctxt, 'external_instance_event', instances=instances,
                    events=events)
@@ -1050,7 +1063,7 @@ class ComputeAPI(object):
             block_device_mapping=None, node=None, limits=None):
 
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_host(ctxt, host).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
                 image=image, request_spec=request_spec,
@@ -1064,35 +1077,35 @@ class ComputeAPI(object):
 
     def quiesce_instance(self, ctxt, instance):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
 
     def unquiesce_instance(self, ctxt, instance, mapping=None):
         version = '4.0'
-        cctxt = self.get_cell_client(ctxt).prepare(
+        cctxt = self.router.by_instance(ctxt, instance).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
     def refresh_instance_security_rules(self, ctxt, instance, host):
         version = '4.4'
-        cell_client = self.get_cell_client(ctxt)
-        if not cell_client.can_send_version(version):
+        client = self.router.by_instance(ctxt, instance)
+        if not client.can_send_version(version):
             version = '4.0'
             instance = objects_base.obj_to_primitive(instance)
-        cctxt = cell_client.prepare(server=_compute_host(None, instance),
+        cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'refresh_instance_security_rules',
                    instance=instance)
 
     def trigger_crash_dump(self, ctxt, instance):
         version = '4.6'
-        cell_client = self.get_cell_client(ctxt)
+        client = self.router.by_instance(ctxt, instance)
 
-        if not cell_client.can_send_version(version):
+        if not client.can_send_version(version):
             raise exception.TriggerCrashDumpNotSupported()
 
-        cctxt = cell_client.prepare(server=_compute_host(None, instance),
+        cctxt = client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.cast(ctxt, "trigger_crash_dump", instance=instance)
