@@ -46,6 +46,7 @@
 .. include:: os-migrations.inc
 .. include:: os-quota-sets.inc
 .. include:: os-server-groups.inc
+.. include:: os-server-tags.inc
 .. include:: os-services.inc
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-server-external-events.inc
