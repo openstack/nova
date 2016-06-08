@@ -128,8 +128,7 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.stub_out('nova.db.instance_create', fake_instance_create)
 
     def _set_up_app(self):
-        self.app = compute.APIRouterV21(init_only=('servers', 'images',
-                                                   'os-disk-config'))
+        self.app = compute.APIRouterV21()
 
     def _get_expected_msg_for_invalid_disk_config(self):
         return ('{{"badRequest": {{"message": "Invalid input for'

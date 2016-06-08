@@ -66,52 +66,6 @@ class ImageDiskConfigController(wsgi.Controller):
             self._add_disk_config(context, images)
 
 
-class ServerDiskConfigController(wsgi.Controller):
-    def _add_disk_config(self, req, servers):
-        for server in servers:
-            db_server = req.get_db_instance(server['id'])
-            # server['id'] is guaranteed to be in the cache due to
-            # the core API adding it in its 'show'/'detail' methods.
-            value = db_server.get(INTERNAL_DISK_CONFIG)
-            server[API_DISK_CONFIG] = disk_config_to_api(value)
-
-    def _show(self, req, resp_obj):
-        if 'server' in resp_obj.obj:
-            server = resp_obj.obj['server']
-            self._add_disk_config(req, [server])
-
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        context = req.environ['nova.context']
-        if authorize(context):
-            self._show(req, resp_obj)
-
-    @wsgi.extends
-    def detail(self, req, resp_obj):
-        context = req.environ['nova.context']
-        if 'servers' in resp_obj.obj and authorize(context):
-            servers = resp_obj.obj['servers']
-            self._add_disk_config(req, servers)
-
-    @wsgi.extends
-    def create(self, req, resp_obj, body):
-        context = req.environ['nova.context']
-        if authorize(context):
-            self._show(req, resp_obj)
-
-    @wsgi.extends
-    def update(self, req, resp_obj, id, body):
-        context = req.environ['nova.context']
-        if authorize(context):
-            self._show(req, resp_obj)
-
-    @wsgi.extends(action='rebuild')
-    def _action_rebuild(self, req, resp_obj, id, body):
-        context = req.environ['nova.context']
-        if authorize(context):
-            self._show(req, resp_obj)
-
-
 class DiskConfig(extensions.V21APIExtensionBase):
     """Disk Management Extension."""
 
@@ -120,13 +74,10 @@ class DiskConfig(extensions.V21APIExtensionBase):
     version = 1
 
     def get_controller_extensions(self):
-        servers_extension = extensions.ControllerExtension(
-                self, 'servers', ServerDiskConfigController())
-
         images_extension = extensions.ControllerExtension(
                 self, 'images', ImageDiskConfigController())
 
-        return [servers_extension, images_extension]
+        return [images_extension]
 
     def get_resources(self):
         return []
