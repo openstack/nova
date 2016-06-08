@@ -5662,6 +5662,20 @@ def aggregate_get(context, aggregate_id):
 
 
 @main_context_manager.reader
+def aggregate_get_by_uuid(context, uuid):
+    query = _aggregate_get_query(context,
+                                 models.Aggregate,
+                                 models.Aggregate.uuid,
+                                 uuid)
+    aggregate = query.first()
+
+    if not aggregate:
+        raise exception.AggregateNotFound(aggregate_id=uuid)
+
+    return aggregate
+
+
+@main_context_manager.reader
 def aggregate_get_by_host(context, host, key=None):
     """Return rows that match host (mandatory) and metadata key (optional).
 

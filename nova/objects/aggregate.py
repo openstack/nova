@@ -52,7 +52,8 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Added uuid field
-    VERSION = '1.2'
+    # Version 1.3: Added get_by_uuid method
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -116,6 +117,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
             db_aggregate = _aggregate_get_from_db(context, aggregate_id)
         except exception.AggregateNotFound:
             db_aggregate = db.aggregate_get(context, aggregate_id)
+        return cls._from_db_object(context, cls(), db_aggregate)
+
+    @base.remotable_classmethod
+    def get_by_uuid(cls, context, aggregate_uuid):
+        db_aggregate = db.aggregate_get_by_uuid(context, aggregate_uuid)
         return cls._from_db_object(context, cls(), db_aggregate)
 
     @base.remotable

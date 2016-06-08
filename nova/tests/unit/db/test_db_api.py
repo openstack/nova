@@ -620,6 +620,13 @@ class AggregateDBApiTestCase(test.TestCase):
                           db.aggregate_get,
                           ctxt, aggregate_id)
 
+    def test_aggregate_get_by_uuid_raise_not_found(self):
+        ctxt = context.get_admin_context()
+        aggregate_uuid = uuidsentinel.missing_aggregate_uuid
+        self.assertRaises(exception.AggregateNotFound,
+                          db.aggregate_get_by_uuid,
+                          ctxt, aggregate_uuid)
+
     def test_aggregate_metadata_get_raise_not_found(self):
         ctxt = context.get_admin_context()
         # this does not exist!
@@ -653,6 +660,13 @@ class AggregateDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt)
         expected = db.aggregate_get(ctxt, result['id'])
+        self.assertEqual(_get_fake_aggr_hosts(), expected['hosts'])
+        self.assertEqual(_get_fake_aggr_metadata(), expected['metadetails'])
+
+    def test_aggregate_get_by_uuid(self):
+        ctxt = context.get_admin_context()
+        result = _create_aggregate_with_hosts(context=ctxt)
+        expected = db.aggregate_get_by_uuid(ctxt, result['uuid'])
         self.assertEqual(_get_fake_aggr_hosts(), expected['hosts'])
         self.assertEqual(_get_fake_aggr_metadata(), expected['metadetails'])
 
