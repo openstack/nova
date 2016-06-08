@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-06-08 04:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -94,34 +94,6 @@ msgstr "Zachycena chyba: %s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "Je vyžadována volba ovladače výpočtu, která ale není zadána"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::vložit_info_sítě %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::uzamčení %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pauza %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetování stavu %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_sítě %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::odemčení %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::zrušení pozastaevní %s"
 
 #, python-format
 msgid ""
@@ -235,18 +207,6 @@ msgstr ""
 "%(extra)s."
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "Chyba při kopírování klíče: %s"
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "Chyba při vytváření klienta Barbican: %s"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "Chyba při vytváření klíče: %s"
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Chyba při určování domény pomocí XML: %s"
 
@@ -257,10 +217,6 @@ msgstr "Chyba při určení tajného klíče pomocí XML: %s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "Chyba při mazání položek conntrack pro %s"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "Chyba při mazání klíče: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -296,21 +252,6 @@ msgid ""
 msgstr ""
 "Chyba od libvirt při vkládání NMI do %(instance_uuid)s: [Kód chyby "
 "%(error_code)s] %(ex)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "Chyba při získávání klíče: %s"
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "Chyba při získávání tajných dat: %s"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "Chyba při získávání tajných popisných dat: %s"
-
-msgid "Error in migrate"
-msgstr "Chyba při přesunu"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -355,10 +296,6 @@ msgid "Error processing message locally"
 msgstr "Chyba při místním zpracování zpráv"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr "Chyba při čtení souboru informací obrazu %(filename)s: %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr ""
 "Chyba při uvolňování DHCP pro IP adresu %(address)s s MAC %(mac_address)s"
@@ -373,10 +310,6 @@ msgstr "Chyba při odesílání zprávy do dalších skoků"
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "Chyba při spouštění xvp: %s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "Chyba při ukládání klíče: %s"
 
 msgid "Error trying to Rescue Instance"
 msgstr "Chyba při pokusu o záchranu instance"
@@ -789,10 +722,6 @@ msgid "Instance failed to spawn"
 msgstr "Instance nemohla být spuštěna"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "Vymazávaná Instance typu %s nebyla nalezena"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "Rozhraní %s nenalezeno"
 
@@ -1029,9 +958,6 @@ msgstr ""
 msgid "Unable to destroy VBD"
 msgstr "Nelze zničit VBD"
 
-msgid "Unable to determine the glance API version"
-msgstr "Nelze zjistit API verzi glance"
-
 #, python-format
 msgid "Unable to execute %(cmd)s. Exception: %(exception)s"
 msgstr "Nelze spustit %(cmd)s. Výjimka: %(exception)s"
@@ -1041,14 +967,6 @@ msgstr "Nelze najít SR z VBD"
 
 msgid "Unable to find SR from VDI"
 msgstr "Nelze najít SR z VDI"
-
-#, python-format
-msgid "Unable to find a service record to update for %(binary)s on %(host)s"
-msgstr "Nelze najít záznam služby k aktualizaci pro %(binary)s na %(host)s"
-
-#, python-format
-msgid "Unable to find address %r"
-msgstr "Nelze najít adresu %r"
 
 msgid "Unable to get record of VDI"
 msgstr "Nelze získat záznam VDI"
@@ -1186,14 +1104,6 @@ msgstr "přidělení portu pro instanci vrátilo %(ports)s portů"
 msgid "attaching network adapter failed."
 msgstr "připojování síťového adaptéru selhalo."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::pokračování %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::přerušení %s"
-
 msgid "detaching network adapter failed."
 msgstr "odpojování síťového adaptéru selhalo."
 
@@ -1203,10 +1113,6 @@ msgstr "chyba během stop() v synchronizaci stavu napájení."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "chyba při otevírání obrazu rbd %s"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "obraz %(id)s v (%(base_file)s): ověření obrazu selhalo"
 
 #, python-format
 msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"

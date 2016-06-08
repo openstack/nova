@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-06-08 04:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -93,10 +93,6 @@ msgstr "尝试自动配置磁盘auto_configure_disk 失败，原因是：%s"
 #, python-format
 msgid "Attempted to remove chain %s which does not exist"
 msgstr "试图移除不存在的链 %s。"
-
-msgid ""
-"Can't create a migration_context record without a migration object specified."
-msgstr "离开指定的迁移对象，不能创建一个迁移上下文 migration_context记录。"
 
 #, python-format
 msgid ""
@@ -190,17 +186,6 @@ msgid ""
 msgstr ""
 "数据库不一致：DNS域|%s| 在Nova数据库中注册，但是对浮动或者实例DNS驱动均不可"
 "见。将被忽略。"
-
-msgid ""
-"Deprecated: Starting with the Liberty release, the v2 API was already "
-"deprecated and the v2.1 API is set as the default. Nova also supports v2.1 "
-"API legacy v2 compatible mode for switching to v2.1 API smoothly. For more "
-"information on how to configure v2.1 API and legacy v2 compatible mode, "
-"please refer Nova api-paste.ini sample file."
-msgstr ""
-"废弃：从Liberty版本开始，V2 API废弃，缺省为V2.1 API。为了v2.1 API平滑切换，"
-"Nova也支持v2.1的兼容遗产v2模式。如何配置v2.1API 和遗产v2 兼容模式的更多信息，"
-"请参看Nova api-paste.ini 样例文件。"
 
 #, python-format
 msgid ""
@@ -507,10 +492,6 @@ msgstr "忽略选项  %(name)s: %(options)s 中无效的元素。"
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr "正在忽略由于 %s 而导致的卷清除故障"
 
-#, python-format
-msgid "Image %s not found on disk storage. Continue without injecting data"
-msgstr "在磁盘存储上，镜像 %s 没有找到。不注入数据，继续。"
-
 msgid "Image not found during snapshot"
 msgstr "快照期间，没有找到镜像"
 
@@ -535,10 +516,6 @@ msgstr ""
 
 msgid "Info cache for instance could not be found. Ignore."
 msgstr "实例的info 缓存没有找到。忽略。"
-
-#, python-format
-msgid "Info cache is %r during associate"
-msgstr "在绑定期间，Info 缓存是%r"
 
 #, python-format
 msgid ""
@@ -645,10 +622,6 @@ msgid ""
 "Instance uuid could not be retrieved for instance %s. Instance state change "
 "event will be ignored."
 msgstr "不能为实例%s 获取实例uuid。忽略实例状态变化事件。"
-
-#, python-format
-msgid "Instance: %(instance_uuid)s failed to save into memcached"
-msgstr "实例: %(instance_uuid)s 保存到memcached 失败。"
 
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr "无效 'agent_present' 值。回归到缺省。"
@@ -986,11 +959,6 @@ msgstr ""
 "是有风险的。同时注意到单元当前不支持回归更新，假设单元部署者升级中出现失败步"
 "骤，那么n-1个单元兼容性将不能正常工作。"
 
-msgid ""
-"The extension configure options are deprecated. In the near future you must "
-"run all of the API."
-msgstr "废弃扩展配置选项。在不远的未来，您必须运行API的所有部分。"
-
 #, python-format
 msgid ""
 "The legacy v2 API module already moved into'nova.api.openstack.compute."
@@ -998,16 +966,6 @@ msgid ""
 msgstr ""
 "遗留的v2 模块移动到'nova.api.openstack.compute.legacy_v2.contrib' 。使用新路"
 "径代替旧路径 %s"
-
-#, python-format
-msgid ""
-"The libvirt driver is not tested on %(type)s/%(arch)s by the OpenStack "
-"project and thus its quality can not be ensured. For more information, see: "
-"https://wiki.openstack.org/wiki/HypervisorSupportMatrix"
-msgstr ""
-"OpenStack项目没有在 %(type)s/%(arch)s 架构上测试过libvirt驱动，因此它的质量不"
-"能保证。了解更多信息，请参考：https://wiki.openstack.org/wiki/"
-"HypervisorSupportMatrix"
 
 #, python-format
 msgid ""
@@ -1021,9 +979,6 @@ msgid ""
 "This key manager is insecure and is not recommended for production "
 "deployments"
 msgstr "秘钥管理器是不安全的，不推荐在生产部署环境中使用"
-
-msgid "This key manager is not suitable for use in production deployments"
-msgstr "在生产部署环节中，秘钥 管理器key manager 不适合使用"
 
 msgid "This shouldn't be getting called except during testing."
 msgstr "不应该调用此项（在测试期间除外）。"
@@ -1042,10 +997,6 @@ msgstr "等待软关机时，超时。"
 #, python-format
 msgid "Timeout waiting for vif plugging callback for instance %(uuid)s"
 msgstr "等待实例%(uuid)s的vif 插入回调超时"
-
-#, python-format
-msgid "Token: %(token)s failed to save into memcached."
-msgstr "令牌：%(token)s 保存到memcached 失败。"
 
 msgid "Too many id maps, only included first five."
 msgstr "太多id映射，只能包含前5个。"

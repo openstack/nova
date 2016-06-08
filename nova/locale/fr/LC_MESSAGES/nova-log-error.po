@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev400\n"
+"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-21 04:29+0000\n"
+"POT-Creation-Date: 2016-06-08 04:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -81,34 +81,6 @@ msgstr "Erreur interceptée : %s"
 
 msgid "Compute driver option required, but not specified"
 msgstr "Option de pilote de calcul obligatoire, mais non spécifiée"
-
-#, python-format
-msgid "Compute.api::inject_network_info %s"
-msgstr "Compute.api::inject_network_info %s"
-
-#, python-format
-msgid "Compute.api::lock %s"
-msgstr "Compute.api::lock %s"
-
-#, python-format
-msgid "Compute.api::pause %s"
-msgstr "Compute.api::pause %s"
-
-#, python-format
-msgid "Compute.api::resetState %s"
-msgstr "Compute.api::resetState %s"
-
-#, python-format
-msgid "Compute.api::reset_network %s"
-msgstr "Compute.api::reset_network %s"
-
-#, python-format
-msgid "Compute.api::unlock %s"
-msgstr "Compute.api::unlock %s"
-
-#, python-format
-msgid "Compute.api::unpause %s"
-msgstr "Compute.api::unpause %s"
 
 #, python-format
 msgid "Connection to libvirt failed: %s"
@@ -194,18 +166,6 @@ msgid "Environment variable 'NETWORK_ID' must be set."
 msgstr "Variable d'environnement 'NETWORK_ID' doit être définie."
 
 #, python-format
-msgid "Error copying key: %s"
-msgstr "Erreur lors de la copie de clé: %s"
-
-#, python-format
-msgid "Error creating Barbican client: %s"
-msgstr "Erreur lors de la création du client Babican: %s"
-
-#, python-format
-msgid "Error creating key: %s"
-msgstr "Erreur lors de la création de la clé: %s"
-
-#, python-format
 msgid "Error defining a domain with XML: %s"
 msgstr "Erreur définissant un domaine avec XML : %s"
 
@@ -216,10 +176,6 @@ msgstr "Erreur lors de la définition d'un secret avec XML: %s"
 #, python-format
 msgid "Error deleting conntrack entries for %s"
 msgstr "Erreur lors de la suppression des entrées de connexions pour %s"
-
-#, python-format
-msgid "Error deleting key: %s"
-msgstr "Erreur lors de la suppression de la clé: %s"
 
 #, python-format
 msgid "Error deploying instance %(instance)s on baremetal node %(node)s."
@@ -250,21 +206,6 @@ msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr ""
 "Erreur de libvirt lors de l'annulation du filtre. Code = %(errcode)s Erreur "
 "= %(e)s"
-
-#, python-format
-msgid "Error getting key: %s"
-msgstr "Erreur lors de la réception de la clé: %s"
-
-#, python-format
-msgid "Error getting secret data: %s"
-msgstr "Erreur lors de la récupération des données secrète : %s"
-
-#, python-format
-msgid "Error getting secret metadata: %s"
-msgstr "Erreur lors de la récupération des métadonnées secrète : %s"
-
-msgid "Error in migrate"
-msgstr "Erreur dans la migration"
 
 #, python-format
 msgid "Error injecting data into image %(img_id)s (%(e)s)"
@@ -313,11 +254,6 @@ msgid "Error processing message locally"
 msgstr "Erreur lors du traitement du message en local"
 
 #, python-format
-msgid "Error reading image info file %(filename)s: %(error)s"
-msgstr ""
-"Erreur lors de la lecture du fichier d'infos d'image %(filename)s : %(error)s"
-
-#, python-format
 msgid "Error releasing DHCP for IP %(address)s with MAC %(mac_address)s"
 msgstr ""
 "Erreur lors de la libération DHCP pour l'IP %(address)s avec MAC "
@@ -333,10 +269,6 @@ msgstr "Erreur lors de l'envoi du message aux troncons suivants."
 #, python-format
 msgid "Error starting xvp: %s"
 msgstr "Erreur au démarrage xvp : %s"
-
-#, python-format
-msgid "Error storing key: %s"
-msgstr "Erreur lors du stockage de la clé: %s"
 
 msgid "Error trying to Rescue Instance"
 msgstr "Erreur en essayant de Sauver l'Instance"
@@ -756,10 +688,6 @@ msgid "Instance failed to spawn"
 msgstr "Echec de génération de l'instance"
 
 #, python-format
-msgid "Instance type %s not found for deletion"
-msgstr "Type d'instance %s non trouvé pour suppression"
-
-#, python-format
 msgid "Interface %s not found"
 msgstr "Interface %s non trouvé"
 
@@ -1014,10 +942,6 @@ msgstr "Impossible de trouver SR du VBD"
 msgid "Unable to find SR from VDI"
 msgstr "Impossible de trouver SR du VDI"
 
-#, python-format
-msgid "Unable to find address %r"
-msgstr "Adresse %r introuvable"
-
 msgid "Unable to get record of VDI"
 msgstr "Impossible de récuppérer l'enregistrement du VDI"
 
@@ -1147,14 +1071,6 @@ msgstr "allocate_port_for_instance a renvoyé les ports %(ports)s"
 msgid "attaching network adapter failed."
 msgstr "échec de connexion de l'adaptateur de réseau."
 
-#, python-format
-msgid "compute.api::resume %s"
-msgstr "compute.api::resume %s"
-
-#, python-format
-msgid "compute.api::suspend %s"
-msgstr "compute.api::suspend %s"
-
 msgid "detaching network adapter failed."
 msgstr "échec de déconnexion de l'adaptateur de réseau."
 
@@ -1164,10 +1080,6 @@ msgstr "Erreur lors du processus stop() dans sync_power_state."
 #, python-format
 msgid "error opening rbd image %s"
 msgstr "erreur en ouvrant image rbd %s"
-
-#, python-format
-msgid "image %(id)s at (%(base_file)s): image verification failed"
-msgstr "image %(id)s à (%(base_file)s) : échec de la vérification d'image"
 
 #, python-format
 msgid "image %(volume)s in pool %(pool)s has snapshots, failed to remove"
