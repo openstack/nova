@@ -13,11 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
-
-CONF = nova.conf.CONF
 
 
 def fake_get(*args, **kwargs):
@@ -62,21 +59,6 @@ def fake_create_security_group(self, context, name, description):
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-security-groups'
-
-    def _get_flags(self):
-        f = super(SecurityGroupsJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.security_groups.'
-            'Security_groups')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.Keypairs')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips.Extended_ips')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips_mac.'
-            'Extended_ips_mac')
-        return f
 
     def setUp(self):
         self.flags(security_group_api=('neutron'))

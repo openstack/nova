@@ -12,36 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = 'flavor-access'
-
-    def _get_flags(self):
-        f = super(FlavorAccessTestsBase, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavor_access.Flavor_access')
-        # FlavorAccess extension also needs Flavormanage to be loaded.
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavormanage.Flavormanage')
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavor_disabled.Flavor_disabled')
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavorextradata.Flavorextradata')
-        f['osapi_compute_extension'].append(
-                    'nova.api.openstack.compute.contrib.'
-                    'flavor_swap.Flavor_swap')
-        return f
 
     def _add_tenant(self):
         subs = {

@@ -13,22 +13,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
 
 
 class ConsoleOutputSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-console-output"
-
-    def _get_flags(self):
-        f = super(ConsoleOutputSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.console_output.'
-            'Console_output')
-        return f
 
     def test_get_console_output(self):
         uuid = self._post_server()

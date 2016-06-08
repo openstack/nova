@@ -13,25 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova import exception
 from nova.network import api as network_api
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit import fake_network_cache_model
 
-CONF = nova.conf.CONF
-
 
 class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = 'os-attach-interfaces'
-
-    def _get_flags(self):
-        f = super(AttachInterfacesSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.'
-            'attach_interfaces.Attach_interfaces')
-        return f
 
     def setUp(self):
         super(AttachInterfacesSampleJsonTest, self).setUp()

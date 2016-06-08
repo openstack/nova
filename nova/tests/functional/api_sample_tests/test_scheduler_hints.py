@@ -15,23 +15,12 @@
 
 import uuid
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
-
-CONF = nova.conf.CONF
 
 
 class SchedulerHintsJsonTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-scheduler-hints"
-
-    def _get_flags(self):
-        f = super(SchedulerHintsJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            "nova.api.openstack.compute.contrib.scheduler_hints."
-            "Scheduler_hints")
-        return f
 
     def test_scheduler_hints_post(self):
         # Get api sample of scheduler hint post request.

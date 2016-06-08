@@ -23,15 +23,6 @@ CONF = nova.conf.CONF
 class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-floating-ips"
 
-    def _get_flags(self):
-        f = super(FloatingIpsTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.floating_ips.Floating_ips')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.extended_floating_ips.Extended_floating_ips')
-        return f
-
     def setUp(self):
         super(FloatingIpsTest, self).setUp()
         pool = CONF.default_floating_pool

@@ -27,13 +27,6 @@ class ServersSampleHideAddressesJsonTest(test_servers.ServersSampleJsonTest):
     # to the extension name
     sample_dir = extension_name
 
-    def _get_flags(self):
-        f = super(ServersSampleHideAddressesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hide_server_addresses.'
-            'Hide_server_addresses')
-        return f
-
     def setUp(self):
         # We override osapi_hide_server_address_states in order
         # to have an example of in the json samples of the

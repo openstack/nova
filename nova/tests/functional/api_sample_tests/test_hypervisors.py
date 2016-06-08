@@ -16,29 +16,13 @@
 import mock
 
 from nova.cells import utils as cells_utils
-import nova.conf
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-hypervisors"
-
-    def _get_flags(self):
-        f = super(HypervisorsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisors.Hypervisors')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_hypervisors.'
-            'Extended_hypervisors')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisor_status.'
-            'Hypervisor_status')
-        return f
 
     def test_hypervisors_list(self):
         response = self._do_get('os-hypervisors')
@@ -111,16 +95,6 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-hypervisors"
-
-    def _get_flags(self):
-        f = super(HypervisorsCellsSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisors.Hypervisors')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hypervisor_status.'
-            'Hypervisor_status')
-        return f
 
     def setUp(self):
         self.flags(enable=True, cell_type='api', group='cells')

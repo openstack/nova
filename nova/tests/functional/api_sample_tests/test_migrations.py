@@ -15,12 +15,9 @@
 
 import datetime
 
-import nova.conf
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 # NOTE(ShaoHe Feng) here I can not use uuidsentinel, it generate a random
@@ -74,13 +71,6 @@ def _stub_migrations(stub_self, context, filters):
 class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-migrations"
-
-    def _get_flags(self):
-        f = super(MigrationsSamplesJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.migrations.Migrations')
-        return f
 
     def setUp(self):
         super(MigrationsSamplesJsonTest, self).setUp()

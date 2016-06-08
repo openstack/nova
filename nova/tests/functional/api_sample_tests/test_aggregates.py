@@ -13,22 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-aggregates"
-
-    def _get_flags(self):
-        f = super(AggregatesSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.aggregates.Aggregates')
-        return f
 
     def test_aggregate_create(self):
         subs = {

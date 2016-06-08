@@ -13,23 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.db.sqlalchemy import models
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-agents"
-
-    def _get_flags(self):
-        f = super(AgentsJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.agents.Agents')
-        return f
 
     def setUp(self):
         super(AgentsJsonTest, self).setUp()

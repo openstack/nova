@@ -13,22 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
-
-CONF = nova.conf.CONF
 
 
 class MultinicSampleJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
     extension_name = "os-multinic"
-
-    def _get_flags(self):
-        f = super(MultinicSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.multinic.Multinic')
-        return f
 
     def _disable_instance_dns_manager(self):
         # NOTE(markmc): it looks like multinic and instance_dns_manager are

@@ -26,15 +26,6 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-cloudpipe"
 
-    def _get_flags(self):
-        f = super(CloudPipeSampleTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.cloudpipe.Cloudpipe')
-        f['osapi_compute_extension'].append('nova.api.openstack.compute.'
-                      'contrib.cloudpipe_update.Cloudpipe_update')
-        return f
-
     def setUp(self):
         super(CloudPipeSampleTest, self).setUp()
 

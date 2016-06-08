@@ -13,32 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
-
-CONF = nova.conf.CONF
 
 
 class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
     extension_name = "os-extended-volumes"
-
-    def _get_flags(self):
-        f = super(ExtendedVolumesSampleJsonTests, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_volumes.'
-                      'Extended_volumes')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.keypairs.'
-                      'Keypairs')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips_mac.'
-                      'Extended_ips_mac')
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.extended_ips.'
-                      'Extended_ips')
-        return f
 
     def test_show(self):
         uuid = self._post_server()

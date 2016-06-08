@@ -15,22 +15,12 @@
 
 import base64
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.image import fake
-
-CONF = nova.conf.CONF
 
 
 class UserDataJsonTest(api_sample_base.ApiSampleTestBaseV21):
     extension_name = "os-user-data"
-
-    def _get_flags(self):
-        f = super(UserDataJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.user_data.User_data')
-        return f
 
     def test_user_data_post(self):
         user_data_contents = '#!/bin/bash\n/bin/su\necho "I am in you!"\n'

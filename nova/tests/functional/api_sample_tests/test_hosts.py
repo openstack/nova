@@ -13,22 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     extension_name = "os-hosts"
-
-    def _get_flags(self):
-        f = super(HostsSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.hosts.Hosts')
-        return f
 
     def test_host_startup(self):
         response = self._do_get('os-hosts/%s/startup' % self.compute.host)

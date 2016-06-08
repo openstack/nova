@@ -17,23 +17,12 @@ import urllib
 
 from oslo_utils import timeutils
 
-import nova.conf
 from nova.tests.functional.api_sample_tests import test_servers
 import nova.tests.functional.api_samples_test_base as astb
-
-CONF = nova.conf.CONF
 
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
     extension_name = "os-simple-tenant-usage"
-
-    def _get_flags(self):
-        f = super(SimpleTenantUsageSampleJsonTest, self)._get_flags()
-        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
-        f['osapi_compute_extension'].append(
-            'nova.api.openstack.compute.contrib.simple_tenant_usage.'
-            'Simple_tenant_usage')
-        return f
 
     def setUp(self):
         """setUp method for simple tenant usage."""
