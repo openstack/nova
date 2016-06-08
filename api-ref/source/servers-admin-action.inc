@@ -42,7 +42,7 @@ Request
   - name: backup_name
   - backup_type: backup_type
   - rotation: backup_rotation
-  - metadata: metadata_image
+  - metadata: metadata
 
 **Example Create Server Back Up (Createbackup Action): JSON request**
 

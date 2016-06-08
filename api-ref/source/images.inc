@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ====================
  Images (DEPRECATED)
@@ -15,12 +12,13 @@
    See: `Relevant Image APIs
    <http://developer.openstack.org/api-ref-image-v2.html#images-images-v2>`__.
 
-Lists, shows details for, and deletes images. Also sets, lists, shows
-details for, and deletes image metadata.
+Lists, shows details, creates, updates, and deletes images.
+Also sets, lists, shows details, create, update and deletes image metadata.
 
 An image is a collection of files that you use to create and rebuild a
 server. By default, operators provide pre-built operating system images.
-You can also create custom images. See Compute server actions.
+You can also create custom images. See: `Create Image Action
+<http://developer.openstack.org/api-ref/compute/#create-image-createimage-action>`__.
 
 By default, the ``policy.json`` file authorizes all users to view the
 image size in the ``OS-EXT-IMG-SIZE:size`` extended attribute.
@@ -34,11 +32,32 @@ List images.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - changes-since: changes-since
+  - server: image_server_query
+  - name: image_name_query
+  - status: image_status_query
+  - minDisk: minDisk
+  - minRam: minRam
+  - type : image_type_query
+  - limit : limit
+  - marker : marker
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+   - images: images
+   - id: image_id_body
+   - name: image_name
+   - links: links
 
 **Example List Images: JSON response**
 
@@ -54,11 +73,42 @@ List images with details.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - changes-since: changes-since
+  - server: image_server_query
+  - name: image_name_query
+  - status: image_status_query
+  - minDisk: minDisk
+  - minRam: minRam
+  - type : image_type_query
+  - limit : limit
+  - marker : marker
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+   - images: images
+   - id: image_id_body
+   - name: image_name
+   - minRam: minRam_body
+   - minDisk: minDisk_body
+   - metadata: metadata_image
+   - created: created
+   - updated: updated
+   - status: image_status
+   - progress: image_progress
+   - links: links
+   - server: image_server
+   - OS-EXT-IMG-SIZE:size: image_size
+   - OS-DCF:diskConfig: OS-DCF:diskConfig
 
 **Example List Images Details: JSON response**
 
@@ -87,6 +137,23 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+   - images: images
+   - id: image_id_body
+   - name: image_name
+   - minRam: minRam_body
+   - minDisk: minDisk_body
+   - metadata: metadata_image
+   - created: created
+   - updated: updated
+   - status: image_status
+   - progress: image_progress
+   - links: links
+   - server: image_server
+   - OS-EXT-IMG-SIZE:size: image_size
+   - OS-DCF:diskConfig: OS-DCF:diskConfig
+
 **Example Show Image Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/images/images-details-get-resp.json
@@ -113,6 +180,8 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful DELETE action.
+
 List Image Metadata
 ===================
 
@@ -134,7 +203,11 @@ Request
 Response
 --------
 
-**Example Show Image Metadata Details: JSON response**
+.. rest_parameters:: parameters.yaml
+
+   - metadata: metadata_image
+
+**Example List Image Metadata Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/images/image-metadata-get-resp.json
    :language: javascript
@@ -149,7 +222,7 @@ Create an image metadata.
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), requestEntityTooLarge(413)
+itemNotFound(404)
 
 Request
 -------
@@ -157,6 +230,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - image_id: image_id
+  - metadata: metadata_image
 
 **Example Create Image Metadata: JSON request**
 
@@ -165,6 +239,10 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+   - metadata: metadata_image
 
 **Example Create Image Metadata: JSON response**
 
@@ -181,7 +259,7 @@ Update an image metadata
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
-itemNotFound(404), requestEntityTooLarge(413)
+itemNotFound(404)
 
 Request
 -------
@@ -189,6 +267,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - image_id: image_id
+  - metadata: metadata_image
 
 **Example Update Image Metadata: JSON request**
 
@@ -197,6 +276,10 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+   - metadata: metadata_image
 
 **Example Update Image Metadata: JSON response**
 
@@ -225,6 +308,10 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+   - meta: meta
+
 **Example Show Image Metadata Item Details: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/images/image-meta-key-get.json
@@ -248,6 +335,7 @@ Request
 
   - image_id: image_id
   - key: key
+  - meta: meta
 
 **Example Create Or Update Image Metadata Item: JSON request**
 
@@ -256,6 +344,10 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+   - meta: meta
 
 **Example Create Or Update Image Metadata Item: JSON response**
 
@@ -283,3 +375,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE action.
