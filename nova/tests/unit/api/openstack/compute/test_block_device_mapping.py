@@ -231,6 +231,20 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.assertRaises(self.validation_error,
                           self._test_create, params, no_image=True)
 
+    def _test_create_instance_with_destination_type_error(self,
+                                                          destination_type):
+        self.bdm[0]['destination_type'] = destination_type
+
+        params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
+        self.assertRaises(self.validation_error,
+                          self._test_create, params, no_image=True)
+
+    def test_create_instance_with_destination_type_empty_string(self):
+        self._test_create_instance_with_destination_type_error('')
+
+    def test_create_instance_with_invalid_destination_type(self):
+        self._test_create_instance_with_destination_type_error('fake')
+
     def test_create_instance_bdm(self):
         bdm = [{
             'source_type': 'volume',
@@ -361,3 +375,13 @@ class BlockDeviceMappingTestV2(BlockDeviceMappingTestV21):
         params = {block_device_mapping.ATTRIBUTE_NAME: bdm}
         self._test_create(params,
                           override_controller=self.no_bdm_v2_controller)
+
+    def test_create_instance_with_destination_type_empty_string(self):
+        # Add a check whether the destination type is an empty string
+        # in V2.1 API only. So this test is skipped in V2.0 API
+        pass
+
+    def test_create_instance_with_invalid_destination_type(self):
+        # Add a check whether the destination type is invalid
+        # in V2.1 API only. So this test is skipped in V2.0 API
+        pass
