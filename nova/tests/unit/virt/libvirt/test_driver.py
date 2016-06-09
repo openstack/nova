@@ -6994,6 +6994,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(vdmock)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
@@ -7016,7 +7017,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock, [])
+                          False, migrate_data, guest, [])
 
     def test_live_migration_update_volume_xml(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -7053,6 +7054,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         test_mock = mock.MagicMock()
+        guest = libvirt_guest.Guest(test_mock)
 
         with mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info') as \
                 mget_info,\
@@ -7067,11 +7069,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             test_mock.XMLDesc.return_value = target_xml
             self.assertFalse(drvr._live_migration_operation(
                              self.context, instance_ref, 'dest', False,
-                             migrate_data, test_mock, []))
-            # guest object is created under this method we do not have
-            # other choice than using mock.ANY
+                             migrate_data, guest, []))
             mupdate.assert_called_once_with(
-                mock.ANY, migrate_data, mock.ANY)
+                guest, migrate_data, mock.ANY)
 
     def test_live_migration_with_valid_target_connect_addr(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -7108,6 +7108,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         test_mock = mock.MagicMock()
+        guest = libvirt_guest.Guest(test_mock)
 
         with mock.patch.object(libvirt_migrate,
                                'get_updated_guest_xml') as mupdate:
@@ -7115,7 +7116,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             test_mock.XMLDesc.return_value = target_xml
             drvr._live_migration_operation(self.context, instance_ref,
                                            'dest', False, migrate_data,
-                                           test_mock, [])
+                                           guest, [])
             test_mock.migrateToURI2.assert_called_once_with(
                 'qemu+tcp://127.0.0.2/system',
                 dxml=mupdate(), flags=0, bandwidth=0)
@@ -7335,11 +7336,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             bdms=[],
             block_migration=False)
         dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, dom, [])
+                          False, migrate_data, guest, [])
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrate.assert_called_once_with(
@@ -7360,6 +7362,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(vdmock)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.migrateToURI(drvr._live_migration_uri('dest'),
@@ -7379,7 +7382,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock, [])
+                          False, migrate_data, guest, [])
 
     def test_live_migration_uses_migrateToURI_without_dest_listen_addrs(self):
         self.compute = importutils.import_object(CONF.compute_manager)
@@ -7393,6 +7396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(vdmock)
         self.mox.StubOutWithMock(vdmock, "migrateToURI")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         vdmock.migrateToURI(drvr._live_migration_uri('dest'),
@@ -7410,7 +7414,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock, [])
+                          False, migrate_data, guest, [])
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
@@ -7440,12 +7444,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             block_migration=False)
 
         dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance, 'dest',
-                          False, migrate_data, dom, disk_paths)
+                          False, migrate_data, guest, disk_paths)
         mock_migrateToURI3.assert_called_once_with(
             drvr._live_migration_uri('dest'),
             params=params, flags=0)
@@ -7464,6 +7469,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Preparing mocks
         vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
+        guest = libvirt_guest.Guest(vdmock)
         self.mox.StubOutWithMock(vdmock, "migrateToURI2")
         _bandwidth = CONF.libvirt.live_migration_bandwidth
         if getattr(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
@@ -7492,7 +7498,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, vdmock, [])
+                          False, migrate_data, guest, [])
 
         self.assertEqual(vm_states.ACTIVE, instance_ref.vm_state)
         self.assertEqual(power_state.RUNNING, instance_ref.power_state)
@@ -7730,7 +7736,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(time, "sleep",
                        side_effect=lambda x: eventlet.sleep(0))
     @mock.patch.object(host.Host, "get_connection")
-    @mock.patch.object(host.DomainJobInfo, "for_domain")
+    @mock.patch.object(libvirt_guest.Guest, "get_job_info")
     @mock.patch.object(objects.Instance, "save")
     @mock.patch.object(objects.Migration, "save")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
@@ -7759,7 +7765,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         guest = libvirt_guest.Guest(dom)
         finish_event = eventlet.event.Event()
 
-        def fake_job_info(hostself):
+        def fake_job_info():
             while True:
                 self.assertGreater(len(job_info_records), 0)
                 rec = job_info_records.pop(0)
@@ -7801,7 +7807,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      fake_recover_method,
                                      False,
                                      migrate_data,
-                                     dom,
                                      finish_event,
                                      [])
         if scheduled_action_executed:
@@ -7840,17 +7845,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_live_migration_monitor_success(self):
         # A normal sequence where see all the normal job states
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
@@ -7861,18 +7866,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A normal sequence where see all the normal job states, and pause
         # scheduled in between VIR_DOMAIN_JOB_UNBOUNDED
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "force_complete",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
@@ -7887,17 +7892,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # not ready yet
         domain_info_records = [
             "force_complete",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
@@ -7911,18 +7916,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # scheduled in case of job type VIR_DOMAIN_JOB_NONE and finish_event is
         # ready
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
             "force_complete",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
@@ -7935,18 +7940,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A normal sequence where see all the normal job states, and pause
         # scheduled in case of job type VIR_DOMAIN_JOB_CANCELLED
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
             "force_complete",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
         ]
 
@@ -7960,18 +7965,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A normal sequence where see all the normal job states, and pause
         # scheduled in case of job type VIR_DOMAIN_JOB_FAILED
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
             "force_complete",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
         ]
 
@@ -7984,17 +7989,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A normalish sequence but we're too slow to see the
         # completed job state
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
         ]
 
@@ -8004,16 +8009,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_live_migration_monitor_failed(self):
         # A failed sequence where we see all the expected events
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
         ]
 
@@ -8024,16 +8029,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # A failed sequence where we are too slow to see the
         # failed event
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
         ]
 
@@ -8043,17 +8048,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_live_migration_monitor_cancelled(self):
         # A cancelled sequence where we see all the events
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
         ]
 
@@ -8087,21 +8092,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # A normal sequence where see all the normal job states
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
         ]
 
@@ -8122,21 +8127,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # A normal sequence where see all the normal job states
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
         ]
 
@@ -8154,21 +8159,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # A normal sequence where see all the normal job states
         domain_info_records = [
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
             "thread-finish",
             "domain-stop",
-            host.DomainJobInfo(
+            libvirt_guest.JobInfo(
                 type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
         ]
 
@@ -8240,11 +8245,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_thread.assert_called_once_with(
             drvr._live_migration_operation,
             self.context, instance, "fakehost", True,
-            migrate_data, dom, disks_to_copy[1])
+            migrate_data, guest, disks_to_copy[1])
         mock_monitor.assert_called_once_with(
             self.context, instance, guest, "fakehost",
             fake_post, fake_recover, True,
-            migrate_data, dom, AnyEventletEvent(), disks_to_copy[0])
+            migrate_data, AnyEventletEvent(), disks_to_copy[0])
 
     def _do_test_create_images_and_backing(self, disk_type):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
