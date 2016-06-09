@@ -348,12 +348,6 @@ def core_authorizer(api_name, extension_name):
     return authorize
 
 
-# This is only used for Nova V2 API, after v2 API depreciated, this will be
-# deprecated also.
-def extension_authorizer(api_name, extension_name):
-    return core_authorizer('%s_extension' % api_name, extension_name)
-
-
 def _soft_authorizer(hard_authorizer, api_name, extension_name):
     hard_authorize = hard_authorizer(api_name, extension_name)
 
@@ -366,21 +360,9 @@ def _soft_authorizer(hard_authorizer, api_name, extension_name):
     return authorize
 
 
-# This is only used for Nova V2 API, after V2 API depreciated, this will be
-# deprecated also.
-def soft_extension_authorizer(api_name, extension_name):
-    return _soft_authorizer(extension_authorizer, api_name, extension_name)
-
-
 # This will be deprecated after policy cleanup finished
 def soft_core_authorizer(api_name, extension_name):
     return _soft_authorizer(core_authorizer, api_name, extension_name)
-
-
-# This will be deprecated after ec2 old style policy removed in later release
-def check_compute_policy(context, action, target, scope='compute'):
-    _action = '%s:%s' % (scope, action)
-    nova.policy.enforce(context, _action, target)
 
 
 # NOTE(alex_xu): The functions os_compute_authorizer and
