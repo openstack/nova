@@ -326,13 +326,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         except db_exc.DBDuplicateEntry:
             rp = objects.ResourceProvider.get_by_uuid(self._context, self.uuid)
             if rp.name != rp_name:
-                # FIXME(danms): We probably need a .save() operation on RP
-                # so that we can update this
-                LOG.warning(_LW('Compute node %(uuid)s changed name '
-                                'from %(old)s to %(new)s'),
-                            {'uuid': self.uuid,
-                             'old': rp.name,
-                             'new': rp_name})
+                rp.name = rp_name
+                rp.save()
 
         return rp
 

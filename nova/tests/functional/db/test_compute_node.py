@@ -65,3 +65,7 @@ class ComputeNodeTestCase(test.TestCase):
         rp = self.cn._ensure_resource_provider()
         self.assertEqual('compute-%s-%s' % ('foo', self.cn.uuid),
                          rp.name)
+        self.cn.host = 'bar'
+        rp = self.cn._ensure_resource_provider()
+        self.assertEqual('compute-%s-%s' % ('bar', self.cn.uuid),
+                         rp.name)
