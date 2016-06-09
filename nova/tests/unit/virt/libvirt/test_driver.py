@@ -14743,7 +14743,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr.image_backend.image.return_value = drvr.image_backend
         context = 'fake_context'
         ins_ref = self._create_instance()
-        loopingcall.FixedIntervalLoopingCall = mock.Mock()
 
         with test.nested(
                 mock.patch.object(os.path, 'exists', return_value=backup_made),
@@ -14752,8 +14751,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 mock.patch.object(drvr, '_create_domain_and_network'),
                 mock.patch.object(drvr, '_get_guest_xml'),
                 mock.patch.object(shutil, 'rmtree'),
+                mock.patch.object(loopingcall, 'FixedIntervalLoopingCall'),
         ) as (mock_stat, mock_path, mock_exec, mock_cdn, mock_ggx,
-              mock_rmtree):
+              mock_rmtree, mock_looping_call):
             mock_path.return_value = '/fake/foo'
             if del_inst_failed:
                 mock_rmtree.side_effect = OSError(errno.ENOENT,
