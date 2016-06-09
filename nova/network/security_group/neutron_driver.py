@@ -23,7 +23,6 @@ from oslo_utils import uuidutils
 import six
 from webob import exc
 
-from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova.network.neutronv2 import api as neutronapi
@@ -424,7 +423,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             return port_security_enabled
         return False
 
-    @compute_api.wrap_check_security_groups_policy
     def add_to_instance(self, context, instance, security_group_name):
         """Add security group to the instance."""
 
@@ -482,7 +480,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_LE("Neutron Error:"))
 
-    @compute_api.wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
         """Remove the security group associated with the instance."""
         neutron = neutronapi.get_client(context)

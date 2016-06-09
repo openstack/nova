@@ -159,27 +159,6 @@ def check_instance_lock(function):
     return inner
 
 
-def policy_decorator(scope):
-    """Check corresponding policy prior of wrapped method to execution."""
-    def outer(func):
-        @functools.wraps(func)
-        def wrapped(self, context, target, *args, **kwargs):
-            if not self.skip_policy_check:
-                check_policy(context, func.__name__, target, scope)
-            return func(self, context, target, *args, **kwargs)
-        return wrapped
-    return outer
-
-
-wrap_check_security_groups_policy = policy_decorator(
-                                    scope='compute:security_groups')
-
-
-def check_policy(context, action, target, scope='compute'):
-    _action = '%s:%s' % (scope, action)
-    nova.policy.enforce(context, _action, target)
-
-
 def check_instance_cell(fn):
     def _wrapped(self, context, instance, *args, **kwargs):
         self._validate_cell(instance)
@@ -4208,7 +4187,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
         return False
 
-    @wrap_check_security_groups_policy
     def add_to_instance(self, context, instance, security_group_name):
         """Add security group to the instance."""
         security_group = self.db.security_group_get_by_name(context,
@@ -4230,7 +4208,6 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             self.compute_rpcapi.refresh_instance_security_rules(
                     context, instance.host, instance)
 
-    @wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
         """Remove the security group associated with the instance."""
         security_group = self.db.security_group_get_by_name(context,
