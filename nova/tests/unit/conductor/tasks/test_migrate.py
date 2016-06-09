@@ -75,7 +75,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task.scheduler_client.select_destinations.assert_called_once_with(
             self.context, self.request_spec)
         prep_resize_mock.assert_called_once_with(
-            self.context, legacy_request_spec['image'], self.instance,
+            self.context, self.instance, legacy_request_spec['image'],
             self.flavor, self.hosts[0]['host'], self.reservations,
             request_spec=legacy_request_spec,
             filter_properties=self.filter_properties,

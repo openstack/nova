@@ -74,7 +74,7 @@ class MigrationTask(base.TaskBase):
         legacy_spec = jsonutils.loads(jsonutils.dumps(legacy_spec))
 
         self.compute_rpcapi.prep_resize(
-            self.context, legacy_spec['image'], self.instance,
+            self.context, self.instance, legacy_spec['image'],
             self.flavor, host, self.reservations,
             request_spec=legacy_spec, filter_properties=legacy_props,
             node=node, clean_shutdown=self.clean_shutdown)
