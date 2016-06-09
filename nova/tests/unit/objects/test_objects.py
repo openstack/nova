@@ -1151,7 +1151,7 @@ object_data = {
     'InstanceNUMATopology': '1.2-d944a7d6c21e1c773ffdf09c6d025954',
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
-    'Inventory': '1.0-f4160797d47a533a58700e9ddcc9c5e2',
+    'Inventory': '1.0-84131c00c84a27ee6930d01b329c9a9d',
     'InventoryList': '1.0-de53f0fd078c27cc1d43400f4e8bcef8',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
     'LibvirtLiveMigrateData': '1.2-c489f63478d13eace828128ea3dfa57c',
