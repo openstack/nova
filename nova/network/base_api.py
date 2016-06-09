@@ -189,7 +189,7 @@ class NetworkAPI(base.Base):
         :param context: The request context.
         :param instance: nova.objects.instance.Instance object.
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
-        :param requested_networks: A dictionary of requested_networks,
+        :param requested_networks: A list of requested_networks,
             Optional value containing network_id, fixed_ip, and port_id.
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
