@@ -35,10 +35,10 @@ class LvmTestCase(test.NoDBTestCase):
             return 123456789, None
 
         expected_commands = [('blockdev', '--getsize64', '/dev/foo')]
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.utils.execute', fake_execute)
         size = lvm.get_volume_size('/dev/foo')
         self.assertEqual(expected_commands, executes)
-        self.assertEqual(size, 123456789)
+        self.assertEqual(123456789, size)
 
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError(
@@ -72,8 +72,9 @@ class LvmTestCase(test.NoDBTestCase):
         def fake_execute(*cmd, **kwargs):
             executes.append(cmd)
 
-        self.stubs.Set(lvm, 'get_volume_size', fake_lvm_size)
-        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stub_out('nova.virt.libvirt.storage.lvm.get_volume_size',
+                      fake_lvm_size)
+        self.stub_out('nova.utils.execute', fake_execute)
 
         # Test the correct dd commands are run for various sizes
         lvm_size = 1
