@@ -36,6 +36,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.store = glance.GlanceStore()
 
         self.flags(api_servers=['http://localhost:9292'], group='glance')
+        self.flags(use_glance_v1=True, group='glance')
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
                    group='xenserver')
@@ -61,6 +62,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         return {'image_id': 'fake_image_uuid',
                 'endpoint': 'http://localhost:9292',
                 'sr_path': '/fake/sr/path',
+                'api_version': 1,
                 'extra_headers': {'X-Auth-Token': 'foobar',
                                   'X-Roles': '',
                                   'X-Tenant-Id': 'project',
