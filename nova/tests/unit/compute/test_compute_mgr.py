@@ -1017,17 +1017,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertIsNone(instance.task_state)
 
-    def test_init_instance_errors_when_not_migrating(self):
-        instance = objects.Instance(self.context)
-        instance.uuid = uuids.instance
-        instance.vm_state = vm_states.ERROR
-        instance.task_state = task_states.IMAGE_UPLOADING
-        instance.host = self.compute.host
-        self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
-        self.mox.ReplayAll()
-        self.compute._init_instance(self.context, instance)
-        self.mox.VerifyAll()
-
     def test_init_instance_deletes_error_deleting_instance(self):
         instance = fake_instance.fake_instance_obj(
                 self.context,
@@ -1038,31 +1027,29 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 vm_state=vm_states.ERROR,
                 host=self.compute.host,
                 task_state=task_states.DELETING)
-
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.compute, '_delete_instance')
-        self.mox.StubOutWithMock(instance, 'obj_load_attr')
-        self.mox.StubOutWithMock(objects.quotas, 'ids_from_instance')
-        self.mox.StubOutWithMock(self.compute, '_create_reservations')
-
         bdms = []
         quotas = objects.quotas.Quotas(self.context)
-        instance.obj_load_attr('metadata')
-        instance.obj_load_attr('system_metadata')
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                self.context, instance.uuid).AndReturn(bdms)
-        objects.quotas.ids_from_instance(self.context, instance).AndReturn(
-            (instance.project_id, instance.user_id))
-        self.compute._create_reservations(self.context, instance,
-                                          instance.project_id,
-                                          instance.user_id).AndReturn(quotas)
-        self.compute._delete_instance(self.context, instance, bdms,
-                                      mox.IgnoreArg())
-        self.mox.ReplayAll()
 
-        self.compute._init_instance(self.context, instance)
-        self.mox.VerifyAll()
+        with test.nested(
+                mock.patch.object(objects.BlockDeviceMappingList,
+                                  'get_by_instance_uuid',
+                                  return_value=bdms),
+                mock.patch.object(self.compute, '_delete_instance'),
+                mock.patch.object(instance, 'obj_load_attr'),
+                mock.patch.object(self.compute, '_create_reservations',
+                                  return_value=quotas),
+                mock.patch.object(objects.quotas, 'ids_from_instance',
+                                  return_value=(instance.project_id,
+                                                instance.user_id))
+        ) as (mock_get, mock_delete, mock_load, mock_create, mock_ids):
+            self.compute._init_instance(self.context, instance)
+            mock_get.assert_called_once_with(self.context, instance.uuid)
+            mock_create.assert_called_once_with(self.context, instance,
+                                                instance.project_id,
+                                                instance.user_id)
+            mock_delete.assert_called_once_with(self.context, instance,
+                                                bdms, mock.ANY)
+            mock_ids.assert_called_once_with(self.context, instance)
 
     def test_init_instance_resize_prep(self):
         instance = fake_instance.fake_instance_obj(
@@ -1357,26 +1344,32 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_instance_usage_audit(self):
         instances = [objects.Instance(uuid=uuids.instance)]
 
-        @classmethod
         def fake_task_log(*a, **k):
             pass
 
-        @classmethod
         def fake_get(*a, **k):
             return instances
 
         self.flags(instance_usage_audit=True)
-        self.stubs.Set(objects.TaskLog, 'get', fake_task_log)
-        self.stubs.Set(objects.InstanceList,
-                       'get_active_by_window_joined', fake_get)
-        self.stubs.Set(objects.TaskLog, 'begin_task', fake_task_log)
-        self.stubs.Set(objects.TaskLog, 'end_task', fake_task_log)
-
-        self.mox.StubOutWithMock(compute_utils, 'notify_usage_exists')
-        compute_utils.notify_usage_exists(self.compute.notifier,
-            self.context, instances[0], ignore_missing_network_data=False)
-        self.mox.ReplayAll()
-        self.compute._instance_usage_audit(self.context)
+        with test.nested(
+            mock.patch.object(objects.TaskLog, 'get',
+                              side_effect=fake_task_log),
+            mock.patch.object(objects.InstanceList,
+                              'get_active_by_window_joined',
+                              side_effect=fake_get),
+            mock.patch.object(objects.TaskLog, 'begin_task',
+                              side_effect=fake_task_log),
+            mock.patch.object(objects.TaskLog, 'end_task',
+                              side_effect=fake_task_log),
+            mock.patch.object(compute_utils, 'notify_usage_exists')
+        ) as (mock_get, mock_get_active, mock_begin, mock_end, mock_notify):
+            self.compute._instance_usage_audit(self.context)
+            mock_notify.assert_called_once_with(self.compute.notifier,
+                self.context, instances[0], ignore_missing_network_data=False)
+            self.assertTrue(mock_get.called)
+            self.assertTrue(mock_get_active.called)
+            self.assertTrue(mock_begin.called)
+            self.assertTrue(mock_end.called)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     def test_sync_power_states(self, mock_get):
@@ -1399,49 +1392,51 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.host = self.compute.host
         instance.task_state = task_state
         instance.shutdown_terminate = shutdown_terminate
-        self.mox.StubOutWithMock(instance, 'refresh')
-        self.mox.StubOutWithMock(instance, 'save')
         return instance
 
-    def test_sync_instance_power_state_match(self):
+    @mock.patch.object(objects.Instance, 'refresh')
+    def test_sync_instance_power_state_match(self, mock_refresh):
         instance = self._get_sync_instance(power_state.RUNNING,
                                            vm_states.ACTIVE)
-        instance.refresh(use_slave=False)
-        self.mox.ReplayAll()
         self.compute._sync_instance_power_state(self.context, instance,
                                                 power_state.RUNNING)
+        mock_refresh.assert_called_once_with(use_slave=False)
 
-    def test_sync_instance_power_state_running_stopped(self):
+    @mock.patch.object(objects.Instance, 'refresh')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_sync_instance_power_state_running_stopped(self, mock_save,
+                                                       mock_refresh):
         instance = self._get_sync_instance(power_state.RUNNING,
                                            vm_states.ACTIVE)
-        instance.refresh(use_slave=False)
-        instance.save()
-        self.mox.ReplayAll()
         self.compute._sync_instance_power_state(self.context, instance,
                                                 power_state.SHUTDOWN)
         self.assertEqual(instance.power_state, power_state.SHUTDOWN)
+        mock_refresh.assert_called_once_with(use_slave=False)
+        self.assertTrue(mock_save.called)
 
     def _test_sync_to_stop(self, power_state, vm_state, driver_power_state,
                            stop=True, force=False, shutdown_terminate=False):
         instance = self._get_sync_instance(
             power_state, vm_state, shutdown_terminate=shutdown_terminate)
-        instance.refresh(use_slave=False)
-        instance.save()
-        self.mox.StubOutWithMock(self.compute.compute_api, 'stop')
-        self.mox.StubOutWithMock(self.compute.compute_api, 'delete')
-        self.mox.StubOutWithMock(self.compute.compute_api, 'force_stop')
-        if shutdown_terminate:
-            self.compute.compute_api.delete(self.context, instance)
-        elif stop:
-            if force:
-                self.compute.compute_api.force_stop(self.context, instance)
-            else:
-                self.compute.compute_api.stop(self.context, instance)
-        self.mox.ReplayAll()
-        self.compute._sync_instance_power_state(self.context, instance,
-                                                driver_power_state)
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
+
+        with test.nested(
+            mock.patch.object(objects.Instance, 'refresh'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute.compute_api, 'stop'),
+            mock.patch.object(self.compute.compute_api, 'delete'),
+            mock.patch.object(self.compute.compute_api, 'force_stop'),
+        ) as (mock_refresh, mock_save, mock_stop, mock_delete, mock_force):
+            self.compute._sync_instance_power_state(self.context, instance,
+                                                    driver_power_state)
+            if shutdown_terminate:
+                mock_delete.assert_called_once_with(self.context, instance)
+            elif stop:
+                if force:
+                    mock_force.assert_called_once_with(self.context, instance)
+                else:
+                    mock_stop.assert_called_once_with(self.context, instance)
+            mock_refresh.assert_called_once_with(use_slave=False)
+            self.assertTrue(mock_save.called)
 
     def test_sync_instance_power_state_to_stop(self):
         for ps in (power_state.SHUTDOWN, power_state.CRASHED,
@@ -1499,7 +1494,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                           power_state.NOSTATE,
                                                           use_slave=True)
 
-    def test_run_pending_deletes(self):
+    @mock.patch.object(virt_driver.ComputeDriver, 'delete_instance_files')
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    def test_run_pending_deletes(self, mock_get, mock_delete):
         self.flags(instance_delete_interval=10)
 
         class FakeInstance(object):
@@ -1515,35 +1512,33 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             def save(self):
                 pass
 
+        def _fake_get(ctx, filter, expected_attrs, use_slave):
+            mock_get.assert_called_once_with(
+                {'read_deleted': 'yes'},
+                {'deleted': True, 'soft_deleted': False, 'host': 'fake-mini',
+                 'cleaned': False},
+                expected_attrs=['info_cache', 'security_groups',
+                                'system_metadata'],
+                use_slave=True)
+            return [a, b, c]
+
         a = FakeInstance('123', 'apple', {'clean_attempts': '100'})
         b = FakeInstance('456', 'orange', {'clean_attempts': '3'})
         c = FakeInstance('789', 'banana', {})
 
-        self.mox.StubOutWithMock(objects.InstanceList,
-                                 'get_by_filters')
-        objects.InstanceList.get_by_filters(
-            {'read_deleted': 'yes'},
-            {'deleted': True, 'soft_deleted': False, 'host': 'fake-mini',
-             'cleaned': False},
-            expected_attrs=['info_cache', 'security_groups',
-                            'system_metadata'],
-            use_slave=True).AndReturn([a, b, c])
-
-        self.mox.StubOutWithMock(self.compute.driver, 'delete_instance_files')
-        self.compute.driver.delete_instance_files(
-            mox.IgnoreArg()).AndReturn(True)
-        self.compute.driver.delete_instance_files(
-            mox.IgnoreArg()).AndReturn(False)
-
-        self.mox.ReplayAll()
+        mock_get.side_effect = _fake_get
+        mock_delete.side_effect = [True, False]
 
         self.compute._run_pending_deletes({})
+
         self.assertFalse(a.cleaned)
         self.assertEqual('100', a.system_metadata['clean_attempts'])
         self.assertTrue(b.cleaned)
         self.assertEqual('4', b.system_metadata['clean_attempts'])
         self.assertFalse(c.cleaned)
         self.assertEqual('1', c.system_metadata['clean_attempts'])
+        mock_delete.assert_has_calls([mock.call(mock.ANY),
+                                      mock.call(mock.ANY)])
 
     @mock.patch.object(objects.Migration, 'obj_as_admin')
     @mock.patch.object(objects.Migration, 'save')
