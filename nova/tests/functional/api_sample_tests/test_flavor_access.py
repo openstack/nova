@@ -17,7 +17,10 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'flavor-access'
+    sample_dir = 'flavor-access'
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
 
     def _add_tenant(self):
         subs = {
@@ -35,17 +38,12 @@ class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
             'flavor_id': '10',
             'flavor_name': 'test_flavor'
         }
-        response = self._do_post("flavors",
-                                 "flavor-access-create-req",
-                                 subs)
-        self._verify_response("flavor-access-create-resp", subs, response, 200)
+        self._do_post("flavors",
+                      "flavor-create-req",
+                      subs)
 
 
 class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
-
-    def test_flavor_access_detail(self):
-        response = self._do_get('flavors/detail')
-        self._verify_response('flavor-access-detail-resp', {}, response, 200)
 
     def test_flavor_access_list(self):
         self._create_flavor()
@@ -57,14 +55,6 @@ class FlavorAccessSampleJsonTests(FlavorAccessTestsBase):
             'tenant_id': 'fake_tenant',
         }
         self._verify_response('flavor-access-list-resp', subs, response, 200)
-
-    def test_flavor_access_show(self):
-        flavor_id = '1'
-        response = self._do_get('flavors/%s' % flavor_id)
-        subs = {
-            'flavor_id': flavor_id
-        }
-        self._verify_response('flavor-access-show-resp', subs, response, 200)
 
     def test_flavor_access_add_tenant(self):
         self._create_flavor()
@@ -97,15 +87,7 @@ class FlavorAccessV27SampleJsonTests(FlavorAccessTestsBase):
         self.api.microversion = self.microversion
 
     def test_add_tenant_access_to_public_flavor(self):
-        subs = {
-            'flavor_id': '10',
-            'flavor_name': 'test_flavor'
-        }
-        # Create public flavor
-        response = self._do_post("flavors",
-                                 "flavor-access-create-req",
-                                 subs)
-        self.assertEqual(200, response.status_code)
+        self._create_flavor()
 
         subs = {
             'flavor_id': '10',

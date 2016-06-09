@@ -18,6 +18,7 @@
         "name": "test_flavor",
         "ram": 1024,
         "swap": "",
+        "rxtx_factor": 2.0,
         "vcpus": 2
     }
 }

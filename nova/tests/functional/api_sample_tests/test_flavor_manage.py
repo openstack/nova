@@ -18,7 +18,11 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'flavor-manage'
+    sample_dir = 'flavor-manage'
+
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
 
     def _create_flavor(self):
         """Create a flavor."""
@@ -31,13 +35,8 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                  subs)
         self._verify_response("flavor-create-post-resp", subs, response, 200)
 
-    # TODO(sdague): remove duplication
-    def test_create_flavor(self):
-        # Get api sample to create a flavor.
-        self._create_flavor()
-
-    def test_delete_flavor(self):
-        # Get api sample to delete a flavor.
+    def test_create_delete_flavor(self):
+        # Get api sample to create and delete a flavor.
         self._create_flavor()
         response = self._do_delete("flavors/10")
         self.assertEqual(202, response.status_code)
