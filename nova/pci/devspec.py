@@ -12,7 +12,6 @@
 #    under the License.
 
 import ast
-import re
 
 from nova import exception
 from nova.i18n import _
@@ -25,7 +24,6 @@ MAX_DOMAIN = 0xFFFF
 MAX_BUS = 0xFF
 MAX_SLOT = 0x1F
 ANY = '*'
-VIRTFN_RE = re.compile("virtfn\d+")
 
 
 def get_value(v):
