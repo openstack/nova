@@ -33,7 +33,7 @@ class ServerMetadataController(wsgi.Controller):
     """The server metadata API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):

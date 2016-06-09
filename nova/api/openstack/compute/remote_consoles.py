@@ -29,7 +29,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 
 class RemoteConsolesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.handlers = {'vnc': self.compute_api.get_vnc_console,
                          'spice': self.compute_api.get_spice_console,
                          'rdp': self.compute_api.get_rdp_console,

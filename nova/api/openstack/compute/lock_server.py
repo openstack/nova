@@ -26,7 +26,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class LockServerController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(LockServerController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @wsgi.response(202)
     @extensions.expected_errors(404)

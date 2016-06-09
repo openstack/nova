@@ -248,7 +248,7 @@ class VolumeAttachmentController(wsgi.Controller):
     """
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
         self.volume_api = volume.API()
         super(VolumeAttachmentController, self).__init__()
 

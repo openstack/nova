@@ -119,7 +119,7 @@ class FakeNetworkAPI(object):
     _sentinel = object()
     _vlan_is_disabled = False
 
-    def __init__(self, skip_policy_check=False):
+    def __init__(self):
         self.networks = copy.deepcopy(FAKE_NETWORKS)
 
     def delete(self, context, network_id):
@@ -325,7 +325,7 @@ class NetworksTestV21(test.NoDBTestCase):
         self.controller = networks_v21.NetworkController(
             self.fake_network_api)
         self.neutron_ctrl = networks_v21.NetworkController(
-            neutron.API(skip_policy_check=True))
+            neutron.API())
         self.req = fakes.HTTPRequest.blank('',
                                            project_id=fakes.FAKE_PROJECT_ID)
 
@@ -488,7 +488,7 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
             .NetworkAssociateActionController(self.fake_network_api)
         self.neutron_assoc_ctrl = (
             networks_associate_v21.NetworkAssociateActionController(
-                neutron.API(skip_policy_check=True)))
+                neutron.API()))
         self.req = fakes.HTTPRequest.blank('')
 
     def _check_status(self, res, method, code):

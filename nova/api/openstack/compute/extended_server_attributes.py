@@ -28,7 +28,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(ExtendedServerAttributesController, self).__init__(*args,
                                                                  **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     def _extend_server(self, context, server, instance, req):
         key = "OS-EXT-SRV-ATTR:hypervisor_hostname"

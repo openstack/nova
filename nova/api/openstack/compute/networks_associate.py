@@ -30,7 +30,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     """Network Association API Controller."""
 
     def __init__(self, network_api=None):
-        self.network_api = network_api or network.API(skip_policy_check=True)
+        self.network_api = network_api or network.API()
 
     @wsgi.action("disassociate_host")
     @wsgi.response(202)

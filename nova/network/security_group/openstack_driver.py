@@ -24,26 +24,15 @@ CONF = nova.conf.CONF
 NOVA_DRIVER = ('nova.compute.api.SecurityGroupAPI')
 NEUTRON_DRIVER = ('nova.network.security_group.neutron_driver.'
                   'SecurityGroupAPI')
-DRIVER_CACHE = {}
 
 
-def _get_openstack_security_group_driver(skip_policy_check=False):
+def get_openstack_security_group_driver():
     if is_neutron_security_groups():
-        return importutils.import_object(NEUTRON_DRIVER,
-                                         skip_policy_check=skip_policy_check)
+        return importutils.import_object(NEUTRON_DRIVER)
     elif CONF.security_group_api.lower() == 'nova':
-        return importutils.import_object(NOVA_DRIVER,
-                                         skip_policy_check=skip_policy_check)
+        return importutils.import_object(NOVA_DRIVER)
     else:
-        return importutils.import_object(CONF.security_group_api,
-                                         skip_policy_check=skip_policy_check)
-
-
-def get_openstack_security_group_driver(skip_policy_check=False):
-    if skip_policy_check not in DRIVER_CACHE:
-        DRIVER_CACHE[skip_policy_check] = _get_openstack_security_group_driver(
-            skip_policy_check)
-    return DRIVER_CACHE[skip_policy_check]
+        return importutils.import_object(CONF.security_group_api)
 
 
 def is_neutron_security_groups():

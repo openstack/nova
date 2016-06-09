@@ -89,8 +89,7 @@ class NetworkAPI(base.Base):
     """Base Network API for doing networking operations.
     New operations available on specific clients must be added here as well.
     """
-    def __init__(self, skip_policy_check=False, **kwargs):
-        self.skip_policy_check = skip_policy_check
+    def __init__(self, **kwargs):
         super(NetworkAPI, self).__init__(**kwargs)
 
     def get_all(self, context):

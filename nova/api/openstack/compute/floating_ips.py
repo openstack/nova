@@ -108,8 +108,8 @@ class FloatingIPController(object):
     """The Floating IPs API controller for the OpenStack API."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
-        self.network_api = network.API(skip_policy_check=True)
+        self.compute_api = compute.API()
+        self.network_api = network.API()
         super(FloatingIPController, self).__init__()
 
     @extensions.expected_errors((400, 404))
@@ -200,8 +200,8 @@ class FloatingIPController(object):
 class FloatingIPActionController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(FloatingIPActionController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
-        self.network_api = network.API(skip_policy_check=True)
+        self.compute_api = compute.API()
+        self.network_api = network.API()
 
     @extensions.expected_errors((400, 403, 404))
     @wsgi.action('addFloatingIp')

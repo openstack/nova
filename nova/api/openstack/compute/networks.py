@@ -80,7 +80,7 @@ def network_dict(context, network):
 class NetworkController(wsgi.Controller):
 
     def __init__(self, network_api=None):
-        self.network_api = network_api or network.API(skip_policy_check=True)
+        self.network_api = network_api or network.API()
 
     @extensions.expected_errors(())
     def index(self, req):

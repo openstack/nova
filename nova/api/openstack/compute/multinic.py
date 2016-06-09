@@ -33,7 +33,7 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 class MultinicController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(MultinicController, self).__init__(*args, **kwargs)
-        self.compute_api = compute.API(skip_policy_check=True)
+        self.compute_api = compute.API()
 
     @wsgi.response(202)
     @wsgi.action('addFixedIp')

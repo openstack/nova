@@ -42,9 +42,9 @@ class CloudpipeController(wsgi.Controller):
     """Handle creating and listing cloudpipe instances."""
 
     def __init__(self):
-        self.compute_api = compute.API(skip_policy_check=True)
-        self.network_api = network.API(skip_policy_check=True)
-        self.cloudpipe = pipelib.CloudPipe(skip_policy_check=True)
+        self.compute_api = compute.API()
+        self.network_api = network.API()
+        self.cloudpipe = pipelib.CloudPipe()
         self.setup()
 
     def setup(self):
