@@ -29,6 +29,14 @@ def _create_rp_in_db(context, updates):
     return db_rp
 
 
+@db_api.api_context_manager.writer
+def _update_rp_in_db(context, id, updates):
+    db_rp = context.session.query(models.ResourceProvider).filter_by(
+        id=id).first()
+    db_rp.update(updates)
+    db_rp.save(context.session)
+
+
 @db_api.api_context_manager.reader
 def _get_rp_by_uuid_from_db(context, uuid):
     result = context.session.query(models.ResourceProvider).filter_by(
@@ -65,6 +73,15 @@ class ResourceProvider(base.NovaObject):
         db_rp = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_rp)
 
+    @base.remotable
+    def save(self):
+        updates = self.obj_get_changes()
+        if updates and updates.keys() != ['name']:
+            raise exception.ObjectActionError(
+                action='save',
+                reason='Immutable fields changed')
+        self._update_in_db(self._context, self.id, updates)
+
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid):
         db_resource_provider = cls._get_by_uuid_from_db(context, uuid)
@@ -73,6 +90,10 @@ class ResourceProvider(base.NovaObject):
     @staticmethod
     def _create_in_db(context, updates):
         return _create_rp_in_db(context, updates)
+
+    @staticmethod
+    def _update_in_db(context, id, updates):
+        return _update_rp_in_db(context, id, updates)
 
     @staticmethod
     def _from_db_object(context, resource_provider, db_resource_provider):
