@@ -19,10 +19,10 @@ from nova import availability_zones
 from nova import db
 from nova import exception
 from nova.i18n import _LW
+from nova.notifications.objects import base as notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import notification
 
 
 LOG = logging.getLogger(__name__)

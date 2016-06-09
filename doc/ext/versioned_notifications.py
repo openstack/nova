@@ -23,8 +23,8 @@ It is used via a single directive in the .rst file
 from sphinx.util.compat import Directive
 from docutils import nodes
 
+from nova.notifications.objects import base as notification
 from nova.objects import base
-from nova.objects import notification
 
 
 def full_name(cls):
