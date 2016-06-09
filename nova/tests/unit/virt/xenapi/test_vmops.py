@@ -94,30 +94,35 @@ class VMOpsTestCase(VMOpsTestBase):
                     'task_state': task_states.RESIZE_MIGRATING}
         context = 'fake_context'
 
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        self.mox.StubOutWithMock(self._vmops, '_destroy')
-        self.mox.StubOutWithMock(vm_utils, 'set_vm_name_label')
-        self.mox.StubOutWithMock(self._vmops, '_attach_mapped_block_devices')
-        self.mox.StubOutWithMock(self._vmops, '_start')
-        self.mox.StubOutWithMock(vm_utils, 'is_vm_shutdown')
+        lookup_returns = [backup_made and 'foo' or None,
+                          (not backup_made or new_made) and 'foo' or None]
 
-        vm_utils.lookup(self._session, 'foo-orig').AndReturn(
-            backup_made and 'foo' or None)
-        vm_utils.lookup(self._session, 'foo').AndReturn(
-            (not backup_made or new_made) and 'foo' or None)
-        if backup_made:
-            if new_made:
-                self._vmops._destroy(instance, 'foo')
-            vm_utils.set_vm_name_label(self._session, 'foo', 'foo')
-            self._vmops._attach_mapped_block_devices(instance, [])
+        @mock.patch.object(vm_utils, 'lookup',
+                           side_effect=lookup_returns)
+        @mock.patch.object(self._vmops, '_destroy')
+        @mock.patch.object(vm_utils, 'set_vm_name_label')
+        @mock.patch.object(self._vmops, '_attach_mapped_block_devices')
+        @mock.patch.object(self._vmops, '_start')
+        @mock.patch.object(vm_utils, 'is_vm_shutdown',
+                           return_value=vm_shutdown)
+        def test(mock_is_vm, mock_start, mock_attach_bdm, mock_set_vm_name,
+                 mock_destroy, mock_lookup):
+            self._vmops.finish_revert_migration(context, instance, [])
 
-        vm_utils.is_vm_shutdown(self._session, 'foo').AndReturn(vm_shutdown)
-        if vm_shutdown:
-            self._vmops._start(instance, 'foo')
+            mock_lookup.assert_has_calls([mock.call(self._session, 'foo-orig'),
+                                          mock.call(self._session, 'foo')])
+            if backup_made:
+                if new_made:
+                    mock_destroy.assert_called_once_with(instance, 'foo')
+                mock_set_vm_name.assert_called_once_with(self._session, 'foo',
+                                                         'foo')
+                mock_attach_bdm.assert_called_once_with(instance, [])
 
-        self.mox.ReplayAll()
+            mock_is_vm.assert_called_once_with(self._session, 'foo')
+            if vm_shutdown:
+                mock_start.assert_called_once_with(instance, 'foo')
 
-        self._vmops.finish_revert_migration(context, instance, [])
+        test()
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(True, True)
@@ -143,14 +148,14 @@ class VMOpsTestCase(VMOpsTestBase):
 
         self.assertEqual(self.make_plugin_call_count, 1)
 
-    def test_get_vm_opaque_ref_raises_instance_not_found(self):
+    @mock.patch.object(vm_utils, 'lookup', return_value=None)
+    def test_get_vm_opaque_ref_raises_instance_not_found(self, mock_lookup):
         instance = {"name": "dummy"}
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        vm_utils.lookup(self._session, instance['name'], False).AndReturn(None)
-        self.mox.ReplayAll()
 
         self.assertRaises(exception.InstanceNotFound,
                 self._vmops._get_vm_opaque_ref, instance)
+        mock_lookup.assert_called_once_with(self._session, instance['name'],
+                                            False)
 
     @mock.patch.object(vm_utils, 'destroy_vm')
     @mock.patch.object(vm_utils, 'clean_shutdown_vm')
@@ -704,23 +709,21 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.ReplayAll()
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
 
-    def test_attach_orig_disks(self):
+    @mock.patch.object(vm_utils, 'lookup', return_value='ref')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_attach_orig_disks(self, mock_create_vbd, mock_lookup):
         instance = {"name": "dummy"}
         vm_ref = "vm_ref"
         vbd_refs = {vmops.DEVICE_ROOT: "vdi_ref"}
 
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        self.mox.StubOutWithMock(self.vmops, '_find_vdi_refs')
-        self.mox.StubOutWithMock(vm_utils, 'create_vbd')
-
-        vm_utils.lookup(self.vmops._session, "dummy").AndReturn("ref")
-        self.vmops._find_vdi_refs("ref", exclude_volumes=True).AndReturn(
-                vbd_refs)
-        vm_utils.create_vbd(self.vmops._session, vm_ref, "vdi_ref",
-                            vmops.DEVICE_RESCUE, bootable=False)
-
-        self.mox.ReplayAll()
-        self.vmops._attach_orig_disks(instance, vm_ref)
+        with mock.patch.object(self.vmops, '_find_vdi_refs',
+                               return_value=vbd_refs) as mock_find_vdi:
+            self.vmops._attach_orig_disks(instance, vm_ref)
+            mock_lookup.assert_called_once_with(self.vmops._session, 'dummy')
+            mock_find_vdi.assert_called_once_with('ref', exclude_volumes=True)
+            mock_create_vbd.assert_called_once_with(
+                self.vmops._session, vm_ref, 'vdi_ref', vmops.DEVICE_RESCUE,
+                bootable=False)
 
     def test_agent_update_setup(self):
         # agent updates need to occur after networking is configured

@@ -347,23 +347,19 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.conn.init_host(None)
         self.assertEqual(set(xenapi_fake.get_all('VBD')), set([vbd0, vbd2]))
 
-    def test_instance_exists(self):
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        vm_utils.lookup(mox.IgnoreArg(), 'foo').AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(vm_utils, 'lookup', return_value=True)
+    def test_instance_exists(self, mock_lookup):
         self.stubs.Set(objects.Instance, 'name', 'foo')
         instance = objects.Instance(uuid='fake-uuid')
         self.assertTrue(self.conn.instance_exists(instance))
+        mock_lookup.assert_called_once_with(mock.ANY, 'foo')
 
-    def test_instance_not_exists(self):
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        vm_utils.lookup(mox.IgnoreArg(), 'bar').AndReturn(None)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(vm_utils, 'lookup', return_value=None)
+    def test_instance_not_exists(self, mock_lookup):
         self.stubs.Set(objects.Instance, 'name', 'bar')
         instance = objects.Instance(uuid='fake-uuid')
         self.assertFalse(self.conn.instance_exists(instance))
+        mock_lookup.assert_called_once_with(mock.ANY, 'bar')
 
     def test_list_instances_0(self):
         instances = self.conn.list_instances()
@@ -1397,12 +1393,11 @@ iface eth0 inet6 static
 
         real_result = vm_utils.lookup(conn._session, instance['name'])
 
-        self.mox.StubOutWithMock(vm_utils, 'lookup')
-        vm_utils.lookup(conn._session, instance['name'],
-                        True).AndReturn(real_result)
-        self.mox.ReplayAll()
-
-        conn.reboot(self.context, instance, None, "SOFT")
+        with mock.patch.object(vm_utils, 'lookup',
+                               return_value=real_result) as mock_lookup:
+            conn.reboot(self.context, instance, None, "SOFT")
+            mock_lookup.assert_called_once_with(conn._session,
+                                                instance['name'], True)
 
     def test_get_console_output_succeeds(self):
 

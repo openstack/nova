@@ -679,55 +679,35 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
 
 class VMRefOrRaiseVMFoundTestCase(VMUtilsTestBase):
 
-    def test_lookup_call(self):
-        mock = mox.Mox()
-        mock.StubOutWithMock(vm_utils, 'lookup')
-
-        vm_utils.lookup('session', 'somename').AndReturn('ignored')
-
-        mock.ReplayAll()
+    @mock.patch.object(vm_utils, 'lookup', return_value='ignored')
+    def test_lookup_call(self, mock_lookup):
         vm_utils.vm_ref_or_raise('session', 'somename')
-        mock.VerifyAll()
+        mock_lookup.assert_called_once_with('session', 'somename')
 
-    def test_return_value(self):
-        mock = mox.Mox()
-        mock.StubOutWithMock(vm_utils, 'lookup')
-
-        vm_utils.lookup(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn('vmref')
-
-        mock.ReplayAll()
+    @mock.patch.object(vm_utils, 'lookup', return_value='vmref')
+    def test_return_value(self, mock_lookup):
         self.assertEqual(
             'vmref', vm_utils.vm_ref_or_raise('session', 'somename'))
-        mock.VerifyAll()
+        mock_lookup.assert_called_once_with('session', 'somename')
 
 
 class VMRefOrRaiseVMNotFoundTestCase(VMUtilsTestBase):
 
-    def test_exception_raised(self):
-        mock = mox.Mox()
-        mock.StubOutWithMock(vm_utils, 'lookup')
-
-        vm_utils.lookup('session', 'somename').AndReturn(None)
-
-        mock.ReplayAll()
+    @mock.patch.object(vm_utils, 'lookup', return_value=None)
+    def test_exception_raised(self, mock_lookup):
         self.assertRaises(
             exception.InstanceNotFound,
             lambda: vm_utils.vm_ref_or_raise('session', 'somename')
         )
-        mock.VerifyAll()
+        mock_lookup.assert_called_once_with('session', 'somename')
 
-    def test_exception_msg_contains_vm_name(self):
-        mock = mox.Mox()
-        mock.StubOutWithMock(vm_utils, 'lookup')
-
-        vm_utils.lookup('session', 'somename').AndReturn(None)
-
-        mock.ReplayAll()
+    @mock.patch.object(vm_utils, 'lookup', return_value=None)
+    def test_exception_msg_contains_vm_name(self, mock_lookup):
         try:
             vm_utils.vm_ref_or_raise('session', 'somename')
         except exception.InstanceNotFound as e:
             self.assertIn('somename', six.text_type(e))
-        mock.VerifyAll()
+        mock_lookup.assert_called_once_with('session', 'somename')
 
 
 @mock.patch.object(vm_utils, 'safe_find_sr', return_value='safe_find_sr')
