@@ -75,27 +75,6 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
         self.stub_out(path + 'create_security_group',
                       fake_create_security_group)
 
-    def test_server_create(self):
-        self._post_server(use_common_server_api_samples=False)
-
-    def test_server_get(self):
-        uuid = self._post_server(use_common_server_api_samples=False)
-        response = self._do_get('servers/%s' % uuid)
-        subs = {}
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = '1.2.3.4'
-        subs['access_ip_v6'] = '80fe::'
-        self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_server_detail(self):
-        self._post_server(use_common_server_api_samples=False)
-        response = self._do_get('servers/detail')
-        subs = {}
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = '1.2.3.4'
-        subs['access_ip_v6'] = '80fe::'
-        self._verify_response('servers-detail-resp', subs, response, 200)
-
     def _get_create_subs(self):
         return {
                 'group_name': 'default',

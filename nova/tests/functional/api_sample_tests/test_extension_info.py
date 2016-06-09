@@ -26,6 +26,7 @@ def fake_soft_extension_authorizer(extension_name, core=False):
 
 
 class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    sample_dir = "all_extensions"
     all_extensions = True
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')

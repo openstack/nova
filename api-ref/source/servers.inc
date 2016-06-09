@@ -353,7 +353,7 @@ Response
 
 **Example Create Server: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/all_extensions/server-create-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
    :language: javascript
 
 
@@ -448,7 +448,7 @@ Response
 
 **Example List Servers Detailed: JSON response**
 
-.. literalinclude:: /../../doc/api_samples/all_extensions/servers-details-resp.json
+.. literalinclude:: /../../doc/api_samples/servers/servers-details-resp.json
    :language: javascript
 
 
@@ -528,7 +528,7 @@ Response
 
 **Example Show Server Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/all_extensions/server-get-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/server-get-resp.json
    :language: javascript
 
 Update Server
