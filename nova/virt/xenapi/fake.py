@@ -663,7 +663,6 @@ class SessionBase(object):
         assert vdi_ref
         return pickle.dumps(None)
 
-    _plugin_glance_upload_vhd = _plugin_pickle_noop
     _plugin_glance_upload_vhd2 = _plugin_pickle_noop
     _plugin_kernel_copy_vdi = _plugin_noop
     _plugin_kernel_create_kernel_ramdisk = _plugin_noop
