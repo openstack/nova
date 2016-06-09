@@ -659,14 +659,20 @@ class IronicDriverTestCase(test.NoDBTestCase):
             # a node in deleted
             {'uuid': uuidutils.generate_uuid(),
              'power_state': ironic_states.POWER_ON,
-             'provision_state': ironic_states.DELETED}
+             'provision_state': ironic_states.DELETED},
+            # a node in AVAILABLE with an instance uuid
+            {'uuid': uuidutils.generate_uuid(),
+             'instance_uuid': uuidutils.generate_uuid(),
+             'power_state': ironic_states.POWER_OFF,
+             'provision_state': ironic_states.AVAILABLE}
         ]
         for n in node_dicts:
             node = ironic_utils.get_test_node(**n)
             self.assertTrue(self.driver._node_resources_unavailable(node))
 
         for ok_state in (ironic_states.AVAILABLE, ironic_states.NOSTATE):
-            # these are both ok and should present as available
+            # these are both ok and should present as available as they
+            # have no instance_uuid
             avail_node = ironic_utils.get_test_node(
                             power_state=ironic_states.POWER_OFF,
                             provision_state=ok_state)
