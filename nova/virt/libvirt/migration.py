@@ -21,6 +21,7 @@ from collections import deque
 from lxml import etree
 from oslo_log import log as logging
 
+from nova.compute import power_state
 from nova.i18n import _LI
 from nova.i18n import _LW
 
@@ -309,6 +310,41 @@ def run_tasks(guest, instance, active_migrations, on_migration_failure):
             except Exception as e:
                 LOG.warning(_LW("Failed to pause instance during "
                                 "live-migration %s"),
+                            e, instance=instance)
+        else:
+            LOG.warning(_LW("Unknown migration task '%(task)s'"),
+                        {"task": task}, instance=instance)
+
+
+def run_recover_tasks(host, guest, instance, on_migration_failure):
+    """Run any pending migration recovery tasks
+
+    :param host: a nova.virt.libvirt.host.Host
+    :param guest: a nova.virt.libvirt.guest.Guest
+    :param instance: a nova.objects.Instance
+    :param on_migration_failure: queue of recovery tasks
+
+    Run any recovery tasks provided in the on_migration_failure
+    queue.
+
+    Currently the only valid task that can be requested
+    is "unpause". Other tasks will be ignored
+    """
+
+    while on_migration_failure:
+        task = on_migration_failure.popleft()
+        # NOTE(tdurakov): there is still possibility to leave
+        # instance paused in case of live-migration failure.
+        # This check guarantee that instance will be resumed
+        # in this case
+        if task == 'unpause':
+            try:
+                state = guest.get_power_state(host)
+                if state == power_state.PAUSED:
+                    guest.resume()
+            except Exception as e:
+                LOG.warning(_LW("Failed to resume paused instance "
+                                "before live-migration rollback %s"),
                             e, instance=instance)
         else:
             LOG.warning(_LW("Unknown migration task '%(task)s'"),

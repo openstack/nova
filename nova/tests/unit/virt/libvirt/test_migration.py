@@ -19,6 +19,7 @@ from oslo_utils import units
 
 import six
 
+from nova.compute import power_state
 from nova import objects
 from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -243,6 +244,7 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
         self.instance = objects.Instance(**instance)
         self.conn = fakelibvirt.Connection("qemu:///system")
         self.dom = fakelibvirt.Domain(self.conn, "<domain/>", True)
+        self.host = host.Host("qemu:///system")
         self.guest = libvirt_guest.Guest(self.dom)
 
     @mock.patch.object(libvirt_guest.Guest, "is_active", return_value=True)
@@ -477,3 +479,48 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
 
         self.assertFalse(mock_pause.called)
         self.assertEqual(len(on_migration_failure), 0)
+
+    @mock.patch.object(libvirt_guest.Guest, "resume")
+    @mock.patch.object(libvirt_guest.Guest, "get_power_state",
+                       return_value=power_state.PAUSED)
+    def test_live_migration_recover_tasks_resume(self, mock_ps, mock_resume):
+        tasks = deque()
+        tasks.append("unpause")
+
+        migration.run_recover_tasks(self.host, self.guest,
+                                    self.instance, tasks)
+
+        mock_resume.assert_called_once_with()
+
+    @mock.patch.object(libvirt_guest.Guest, "resume")
+    @mock.patch.object(libvirt_guest.Guest, "get_power_state",
+                       return_value=power_state.RUNNING)
+    def test_live_migration_recover_tasks_no_resume(self, mock_ps,
+                                                    mock_resume):
+        tasks = deque()
+        tasks.append("unpause")
+
+        migration.run_recover_tasks(self.host, self.guest,
+                                    self.instance, tasks)
+
+        self.assertFalse(mock_resume.called)
+
+    @mock.patch.object(libvirt_guest.Guest, "resume")
+    def test_live_migration_recover_tasks_empty_tasks(self, mock_resume):
+        tasks = deque()
+
+        migration.run_recover_tasks(self.host, self.guest,
+                                    self.instance, tasks)
+
+        self.assertFalse(mock_resume.called)
+
+    @mock.patch.object(libvirt_guest.Guest, "resume")
+    def test_live_migration_recover_tasks_no_pause(self, mock_resume):
+        tasks = deque()
+        # Test to ensure unknown tasks are ignored
+        tasks.append("wibble")
+
+        migration.run_recover_tasks(self.host, self.guest,
+                                    self.instance, tasks)
+
+        self.assertFalse(mock_resume.called)
