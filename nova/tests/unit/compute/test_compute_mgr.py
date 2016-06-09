@@ -1822,38 +1822,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         update_bdm_mock.assert_called_once_with(mock.ANY, mock.ANY,
                                                 update_values, legacy=False)
 
+    @mock.patch.object(fake_driver.FakeDriver,
+                       'check_can_live_migrate_source')
+    @mock.patch.object(manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(compute_utils, 'is_volume_backed_instance')
     @mock.patch.object(compute_utils, 'EventReporter')
-    def test_check_can_live_migrate_source(self, event_mock):
+    def test_check_can_live_migrate_source(self, mock_event, mock_volume,
+                                           mock_get_inst, mock_check):
         is_volume_backed = 'volume_backed'
         dest_check_data = migrate_data_obj.LiveMigrateData()
         db_instance = fake_instance.fake_db_instance()
         instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
 
-        self.mox.StubOutWithMock(compute_utils,
-                                 'is_volume_backed_instance')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_source')
-
-        compute_utils.is_volume_backed_instance(
-                self.context, instance).AndReturn(is_volume_backed)
-        self.compute._get_instance_block_device_info(
-                self.context, instance, refresh_conn_info=True
-                ).AndReturn({'block_device_mapping': 'fake'})
-        self.compute.driver.check_can_live_migrate_source(
-                self.context, instance, dest_check_data,
-                {'block_device_mapping': 'fake'})
-
-        self.mox.ReplayAll()
+        mock_volume.return_value = is_volume_backed
+        mock_get_inst.return_value = {'block_device_mapping': 'fake'}
 
         self.compute.check_can_live_migrate_source(
                 self.context, instance=instance,
                 dest_check_data=dest_check_data)
-        event_mock.assert_called_once_with(
+        mock_event.assert_called_once_with(
             self.context, 'compute_check_can_live_migrate_source',
             instance.uuid)
+        mock_check.assert_called_once_with(self.context, instance,
+                                           dest_check_data,
+                                           {'block_device_mapping': 'fake'})
+        mock_volume.assert_called_once_with(self.context, instance)
+        mock_get_inst.assert_called_once_with(self.context, instance,
+                                              refresh_conn_info=True)
+
         self.assertTrue(dest_check_data.is_volume_backed)
 
     def test_can_live_migrate_source_for_cinder_client_exception(self):
@@ -1881,9 +1879,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               dest_check_data)
         do_test()
 
-    @mock.patch.object(compute_utils, 'EventReporter')
-    def _test_check_can_live_migrate_destination(self, event_mock,
-                                                 do_raise=False):
+    def _test_check_can_live_migrate_destination(self, do_raise=False):
         db_instance = fake_instance.fake_db_instance(host='fake-host')
         instance = objects.Instance._from_db_object(
                 self.context, objects.Instance(), db_instance)
@@ -1895,45 +1891,49 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         dest_check_data = dict(foo='bar')
         mig_data = dict(cow='moo')
 
-        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'check_can_live_migrate_source')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_can_live_migrate_destination_cleanup')
+        with test.nested(
+            mock.patch.object(self.compute, '_get_compute_info'),
+            mock.patch.object(self.compute.driver,
+                              'check_can_live_migrate_destination'),
+            mock.patch.object(self.compute.compute_rpcapi,
+                              'check_can_live_migrate_source'),
+            mock.patch.object(self.compute.driver,
+                              'check_can_live_migrate_destination_cleanup'),
+            mock.patch.object(db, 'instance_fault_create'),
+            mock.patch.object(compute_utils, 'EventReporter')
+        ) as (mock_get, mock_check_dest, mock_check_src, mock_check_clean,
+              mock_fault_create, mock_event):
+            mock_get.side_effect = (src_info, dest_info)
+            mock_check_dest.return_value = dest_check_data
 
-        self.compute._get_compute_info(self.context,
-                                       'fake-host').AndReturn(src_info)
-        self.compute._get_compute_info(self.context,
-                                       CONF.host).AndReturn(dest_info)
-        self.compute.driver.check_can_live_migrate_destination(
-                self.context, instance, src_info, dest_info,
-                block_migration, disk_over_commit).AndReturn(dest_check_data)
+            if do_raise:
+                mock_check_src.side_effect = test.TestingException
+                mock_fault_create.return_value = \
+                    test_instance_fault.fake_faults['fake-uuid'][0]
+            else:
+                mock_check_src.return_value = mig_data
 
-        mock_meth = self.compute.compute_rpcapi.check_can_live_migrate_source(
-                self.context, instance, dest_check_data)
-        if do_raise:
-            mock_meth.AndRaise(test.TestingException())
-            self.mox.StubOutWithMock(db, 'instance_fault_create')
-            db.instance_fault_create(
-                self.context, mox.IgnoreArg()).AndReturn(
-                    test_instance_fault.fake_faults['fake-uuid'][0])
-        else:
-            mock_meth.AndReturn(mig_data)
-        self.compute.driver.check_can_live_migrate_destination_cleanup(
-                self.context, dest_check_data)
-
-        self.mox.ReplayAll()
-
-        result = self.compute.check_can_live_migrate_destination(
+            result = self.compute.check_can_live_migrate_destination(
                 self.context, instance=instance,
                 block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
-        self.assertEqual(mig_data, result)
-        event_mock.assert_called_once_with(
-            self.context, 'compute_check_can_live_migrate_destination',
-            instance.uuid)
+
+            if do_raise:
+                mock_fault_create.assert_called_once_with(self.context,
+                                                          mock.ANY)
+            mock_check_src.assert_called_once_with(self.context, instance,
+                                                   dest_check_data)
+            mock_check_clean.assert_called_once_with(self.context,
+                                                     dest_check_data)
+            mock_get.assert_has_calls([mock.call(self.context, 'fake-host'),
+                                       mock.call(self.context, CONF.host)])
+            mock_check_dest.assert_called_once_with(self.context, instance,
+                        src_info, dest_info, block_migration, disk_over_commit)
+
+            self.assertEqual(mig_data, result)
+            mock_event.assert_called_once_with(
+                self.context, 'compute_check_can_live_migrate_destination',
+                instance.uuid)
 
     def test_check_can_live_migrate_destination_success(self):
         self._test_check_can_live_migrate_destination()
