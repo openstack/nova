@@ -19,7 +19,8 @@
             "os-flavor-access:is_public": true,
             "ram": 512,
             "swap": "",
-            "vcpus": 1
+            "vcpus": 1,
+            "rxtx_factor": 1.0
         },
         {
             "OS-FLV-DISABLED:disabled": false,
@@ -40,7 +41,8 @@
             "os-flavor-access:is_public": true,
             "ram": 2048,
             "swap": "",
-            "vcpus": 1
+            "vcpus": 1,
+            "rxtx_factor": 1.0
         },
         {
             "OS-FLV-DISABLED:disabled": false,
@@ -61,7 +63,8 @@
             "os-flavor-access:is_public": true,
             "ram": 4096,
             "swap": "",
-            "vcpus": 2
+            "vcpus": 2,
+            "rxtx_factor": 1.0
         },
         {
             "OS-FLV-DISABLED:disabled": false,
@@ -82,7 +85,8 @@
             "os-flavor-access:is_public": true,
             "ram": 8192,
             "swap": "",
-            "vcpus": 4
+            "vcpus": 4,
+            "rxtx_factor": 1.0
         },
         {
             "OS-FLV-DISABLED:disabled": false,
@@ -103,7 +107,8 @@
             "os-flavor-access:is_public": true,
             "ram": 16384,
             "swap": "",
-            "vcpus": 8
+            "vcpus": 8,
+            "rxtx_factor": 1.0
         }
     ]
 }

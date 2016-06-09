@@ -18,6 +18,7 @@
         "name": "m1.tiny",
         "ram": 512,
         "swap": "",
-        "vcpus": 1
+        "vcpus": 1,
+        "rxtx_factor": 1.0
     }
 }
