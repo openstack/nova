@@ -1472,6 +1472,36 @@ class NUMATopologyTest(test.NoDBTestCase):
         self.assertEqual(hostusage.cells[1].cpu_usage, 0)
         self.assertEqual(hostusage.cells[1].memory_usage, 0)
 
+    # Test the case where we have an instance with numa topology
+    # and one without
+    def test_topo_usage_mixed(self):
+        hosttopo = objects.NUMATopology(cells=[
+            objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
+                             cpu_usage=0, memory_usage=0, mempages=[],
+                             siblings=[], pinned_cpus=set([])),
+            objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
+                             cpu_usage=0, memory_usage=0, mempages=[],
+                             siblings=[], pinned_cpus=set([])),
+        ])
+        instance1_topo = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256),
+            objects.InstanceNUMACell(id=1, cpuset=set([2]), memory=128),
+        ])
+        instance2_topo = None
+
+        hostusage = hw.numa_usage_from_instances(hosttopo, [instance1_topo])
+        self.assertEqual(hostusage.cells[0].cpu_usage, 2)
+        self.assertEqual(hostusage.cells[0].memory_usage, 256)
+        self.assertEqual(hostusage.cells[1].cpu_usage, 1)
+        self.assertEqual(hostusage.cells[1].memory_usage, 128)
+
+        # This is like processing an instance with no numa_topology
+        hostusage = hw.numa_usage_from_instances(hostusage, instance2_topo)
+        self.assertEqual(hostusage.cells[0].cpu_usage, 2)
+        self.assertEqual(hostusage.cells[0].memory_usage, 256)
+        self.assertEqual(hostusage.cells[1].cpu_usage, 1)
+        self.assertEqual(hostusage.cells[1].memory_usage, 128)
+
     def assertNUMACellMatches(self, expected_cell, got_cell):
         attrs = ('cpuset', 'memory', 'id')
         if isinstance(expected_cell, objects.NUMATopology):

@@ -1353,9 +1353,8 @@ def numa_usage_from_instances(host, instances, free=False):
                             else:
                                 newcell.pin_cpus(pinned_cpus)
 
-            newcell.cpu_usage = max(0, cpu_usage)
-            newcell.memory_usage = max(0, memory_usage)
-
+        newcell.cpu_usage = max(0, cpu_usage)
+        newcell.memory_usage = max(0, memory_usage)
         cells.append(newcell)
 
     return objects.NUMATopology(cells=cells)
