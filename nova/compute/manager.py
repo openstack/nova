@@ -4846,9 +4846,8 @@ class ComputeManager(manager.Manager):
                                                           new_volume_id,
                                                           connector)
         old_cinfo = jsonutils.loads(bdm['connection_info'])
-        if old_cinfo and 'serial' not in old_cinfo:
-            old_cinfo['serial'] = old_volume_id
-        new_cinfo['serial'] = old_cinfo['serial']
+        if 'serial' not in new_cinfo:
+            new_cinfo['serial'] = new_volume_id
         return (old_cinfo, new_cinfo)
 
     def _swap_volume(self, context, instance, bdm, connector,
@@ -4905,6 +4904,13 @@ class ComputeManager(manager.Manager):
                                                       old_volume_id,
                                                       new_volume_id,
                                                       error=failed)
+            # If Cinder initiated the swap, the serial of new connection info
+            # is set to old volume ID.
+            if (new_cinfo is not None and
+                new_cinfo['serial'] == new_volume_id and
+                comp_ret['save_volume_id'] == old_volume_id):
+                new_cinfo['serial'] = old_volume_id
+
             LOG.debug("swap_volume: Cinder migrate_volume_completion "
                       "returned: %(comp_ret)s", {'comp_ret': comp_ret},
                       context=context, instance=instance)
