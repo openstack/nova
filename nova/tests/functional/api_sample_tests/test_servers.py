@@ -167,6 +167,10 @@ class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
 class ServersActionsJsonTest(ServersSampleBase):
     sample_dir = 'servers'
 
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
+
     def _test_server_action(self, uuid, action, req_tpl,
                             subs=None, resp_tpl=None, code=202):
         subs = subs or {}
@@ -263,13 +267,12 @@ class ServersActionsJson219Test(ServersSampleBase):
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
 
 
-class ServersActionsAllJsonTest(ServersActionsJsonTest):
-    all_extensions = True
-    sample_dir = None
-
-
 class ServerStartStopJsonTest(ServersSampleBase):
     sample_dir = 'servers'
+
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
 
     def _test_server_action(self, uuid, action, req_tpl):
         response = self._do_post('servers/%s/action' % uuid,

@@ -1,5 +1,6 @@
 {
     "resize" : {
-        "flavorRef" : "2"
+        "flavorRef" : "2",
+        "OS-DCF:diskConfig": "AUTO"
     }
 }
