@@ -532,7 +532,9 @@ def service_create(context, values):
     service_ref = models.Service()
     service_ref.update(values)
     if not CONF.enable_new_services:
+        msg = _("New service disabled due to config option.")
         service_ref.disabled = True
+        service_ref.disabled_reason = msg
     try:
         service_ref.save(context.session)
     except db_exc.DBDuplicateEntry as e:
