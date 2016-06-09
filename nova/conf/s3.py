@@ -19,30 +19,45 @@ from oslo_config import cfg
 
 s3_opts = [
     cfg.StrOpt('image_decryption_dir',
+               deprecated_for_removal=True,
+               deprecated_reason='EC2 API related options are not supported.',
                default='/tmp',
-               help='Parent directory for tempdir used for image decryption'),
+               help='DEPRECATED: Parent directory for tempdir used for image '
+                    'decryption'),
     cfg.StrOpt('s3_host',
+               deprecated_for_removal=True,
+               deprecated_reason='EC2 API related options are not supported.',
                default='$my_ip',
-               help='Hostname or IP for OpenStack to use when accessing '
-                    'the S3 api'),
+               help='DEPRECATED: Hostname or IP for OpenStack to use when '
+                    'accessing the S3 api'),
     cfg.IntOpt('s3_port',
+               deprecated_for_removal=True,
+               deprecated_reason='EC2 API related options are not supported.',
                default=3333,
                min=1,
                max=65535,
-               help='Port used when accessing the S3 api'),
+               help='DEPRECATED: Port used when accessing the S3 api'),
     cfg.StrOpt('s3_access_key',
+               deprecated_for_removal=True,
+               deprecated_reason='EC2 API related options are not supported.',
                default='notchecked',
-               help='Access key to use for S3 server for images'),
+               help='DEPRECATED: Access key to use for S3 server for images'),
     cfg.StrOpt('s3_secret_key',
+               deprecated_for_removal=True,
+               deprecated_reason='EC2 API related options are not supported.',
                default='notchecked',
-               help='Secret key to use for S3 server for images'),
+               help='DEPRECATED: Secret key to use for S3 server for images'),
     cfg.BoolOpt('s3_use_ssl',
+                deprecated_for_removal=True,
+                deprecated_reason='EC2 API related options are not supported.',
                 default=False,
-                help='Whether to use SSL when talking to S3'),
+                help='DEPRECATED: Whether to use SSL when talking to S3'),
     cfg.BoolOpt('s3_affix_tenant',
+                deprecated_for_removal=True,
+                deprecated_reason='EC2 API related options are not supported.',
                 default=False,
-                help='Whether to affix the tenant id to the access key '
-                     'when downloading from S3'),
+                help='DEPRECATED: Whether to affix the tenant id to the '
+                     'access key when downloading from S3'),
     ]
 
 

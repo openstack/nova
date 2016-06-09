@@ -1,0 +1,9 @@
+---
+deprecations:
+  - As mentioned in the release notes of the Mitaka release (version 13.0.0),
+    the EC2API support was fully removed. The *s3* image service related
+    config options were still there but weren't used anywhere in the code
+    since Mitaka. These are now deprecated and may be removed as early as the
+    15.0.0 release. This affects ``image_decryption_dir``, ``s3_host``,
+    ``s3_port``, ``s3_access_key``, ``s3_secret_key``, ``s3_use_ssl``,
+    ``s3_affix_tenant``.
