@@ -58,20 +58,3 @@ class AccessIPsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
         self._verify_response('servers-details-resp', subs, response, 200)
-
-    def test_servers_rebuild(self):
-        subs = {
-            'image_id': fake.get_valid_image_id(),
-            'compute_endpoint': self._get_compute_endpoint(),
-            'access_ip_v4': '1.2.3.4',
-            'access_ip_v6': 'fe80::'
-        }
-        uuid = self._servers_post(subs)
-        subs['access_ip_v4'] = "4.3.2.1"
-        subs['access_ip_v6'] = '80fe::'
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'server-action-rebuild', subs)
-        subs['hostid'] = '[a-f0-9]+'
-        subs['id'] = uuid
-        self._verify_response('server-action-rebuild-resp',
-                              subs, response, 202)

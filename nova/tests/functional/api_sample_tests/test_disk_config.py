@@ -14,7 +14,6 @@
 #    under the License.
 
 from nova.tests.functional.api_sample_tests import test_servers
-from nova.tests.unit.image import fake
 
 
 class DiskConfigJsonTest(test_servers.ServersSampleBase):
@@ -39,27 +38,3 @@ class DiskConfigJsonTest(test_servers.ServersSampleBase):
         subs['access_ip_v4'] = ''
         subs['access_ip_v6'] = ''
         self._verify_response('server-get-resp', subs, response, 200)
-
-    def test_resize_server(self):
-        self.flags(allow_resize_to_same_host=True)
-        uuid = self._post_server(use_common_server_api_samples=False)
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'server-resize-post-req', {})
-        self.assertEqual(202, response.status_code)
-        # NOTE(tmello): Resize does not return response body
-        # Bug #1085213.
-        self.assertEqual("", response.content)
-
-    def test_rebuild_server(self):
-        uuid = self._post_server(use_common_server_api_samples=False)
-        subs = {
-            'image_id': fake.get_valid_image_id(),
-            'compute_endpoint': self._get_compute_endpoint(),
-        }
-        response = self._do_post('servers/%s/action' % uuid,
-                                 'server-action-rebuild-req', subs)
-        subs['hostid'] = '[a-f0-9]+'
-        subs['access_ip_v4'] = ''
-        subs['access_ip_v6'] = ''
-        self._verify_response('server-action-rebuild-resp',
-                              subs, response, 202)
