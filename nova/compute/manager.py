@@ -6793,28 +6793,29 @@ class ComputeManager(manager.Manager):
                                          in migrations])
 
         inst_filters = {'deleted': True, 'soft_deleted': False,
-                        'uuid': inst_uuid_from_migrations, 'host': CONF.host}
+                        'uuid': inst_uuid_from_migrations}
         attrs = ['info_cache', 'security_groups', 'system_metadata']
         with utils.temporary_mutation(context, read_deleted='yes'):
             instances = objects.InstanceList.get_by_filters(
                 context, inst_filters, expected_attrs=attrs, use_slave=True)
 
         for instance in instances:
-            for migration in migrations:
-                if instance.uuid == migration.instance_uuid:
-                    # Delete instance files if not cleanup properly either
-                    # from the source or destination compute nodes when
-                    # the instance is deleted during resizing.
-                    self.driver.delete_instance_files(instance)
-                    try:
-                        migration.status = 'failed'
-                        with migration.obj_as_admin():
-                            migration.save()
-                    except exception.MigrationNotFound:
-                        LOG.warning(_LW("Migration %s is not found."),
-                                    migration.id, context=context,
-                                    instance=instance)
-                    break
+            if instance.host != CONF.host:
+                for migration in migrations:
+                    if instance.uuid == migration.instance_uuid:
+                        # Delete instance files if not cleanup properly either
+                        # from the source or destination compute nodes when
+                        # the instance is deleted during resizing.
+                        self.driver.delete_instance_files(instance)
+                        try:
+                            migration.status = 'failed'
+                            with migration.obj_as_admin():
+                                migration.save()
+                        except exception.MigrationNotFound:
+                            LOG.warning(_LW("Migration %s is not found."),
+                                        migration.id, context=context,
+                                        instance=instance)
+                        break
 
     @messaging.expected_exceptions(exception.InstanceQuiesceNotSupported,
                                    exception.QemuGuestAgentNotEnabled,
