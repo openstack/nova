@@ -3527,7 +3527,7 @@ class TestNeutronv2WithMock(test.TestCase):
         api = neutronapi.API()
         api._unbind_ports(mock_ctx, ports, mock_client)
 
-        body = {'port': {'device_id': '', 'device_owner': ''}}
+        body = {'port': {'device_id': '', 'device_owner': '', 'dns_name': ''}}
         if has_ext:
             body['port']['binding:host_id'] = None
             body['port']['binding:profile'] = {}
