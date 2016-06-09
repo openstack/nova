@@ -1,0 +1,6 @@
+---
+features:
+  - Nova has been enabled for mutable config. Certain options can be reloaded
+    by sending SIGHUP. Please refer to the configuration manual. Currently,
+    only DEFAULT/debug is supported, support for additional options must be
+    added individually.
