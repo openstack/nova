@@ -68,6 +68,10 @@ class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     microversion = None
 
+    # TODO(gmann): This will be removed once all API tests runs for
+    # all extension enable.
+    all_extensions = True
+
     def test_servers_post(self):
         return self._post_server()
 
@@ -77,7 +81,9 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
+        subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
@@ -95,7 +101,9 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
+        subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['hostname'] = r'[\w\.\-]+'
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
@@ -157,11 +165,6 @@ class ServerSortKeysJsonTests(ServersSampleBase):
         response = self._do_get('servers?sort_key=display_name&sort_dir=asc')
         self._verify_response('server-sort-keys-list-resp', {}, response,
                               200)
-
-
-class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
-    all_extensions = True
-    sample_dir = None
 
 
 class ServersActionsJsonTest(ServersSampleBase):
