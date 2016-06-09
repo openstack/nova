@@ -393,7 +393,7 @@ class WSGIService(service.Service):
 
 
 def process_launcher():
-    return service.ProcessLauncher(CONF)
+    return service.ProcessLauncher(CONF, restart_method='mutate')
 
 
 # NOTE(vish): the global launcher is to maintain the existing
