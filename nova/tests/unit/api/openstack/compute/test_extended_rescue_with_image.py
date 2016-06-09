@@ -54,7 +54,8 @@ class ExtendedRescueWithImageTest(test.NoDBTestCase):
             rescue_password=mock.ANY, rescue_image_ref=rescue_image_ref)
 
     def test_rescue_with_image_specified(self):
-        body = dict(rescue={"rescue_image_ref": "image-ref"})
+        body = dict(rescue={
+            "rescue_image_ref": "76fa36fc-c930-4bf3-8c8a-ea2a2420deb6"})
         self._make_rescue_request_with_image_ref(body)
 
     def test_rescue_without_image_specified(self):
