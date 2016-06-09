@@ -14,12 +14,13 @@
 #    under the License.
 
 from nova.tests.functional.api_sample_tests import api_sample_base
+from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
-    extra_extensions_to_load = ["os-access-ips"]
     microversion = None
+    all_extensions = True
 
     def _post_server(self, use_common_server_api_samples=True):
         # param use_common_server_api_samples: Boolean to set whether tests use
@@ -68,14 +69,12 @@ class ServersSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
     microversion = None
 
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
-
     def test_servers_post(self):
         return self._post_server()
 
     def test_servers_get(self):
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
+                      fakes.stub_bdm_get_all_by_instance_uuids)
         uuid = self.test_servers_post()
         response = self._do_get('servers/%s' % uuid)
         subs = {}
@@ -87,6 +86,8 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        # config drive can be a string for True or empty value for False
+        subs['cdrive'] = '.*'
         self._verify_response('server-get-resp', subs, response, 200)
 
     def test_servers_list(self):
@@ -96,6 +97,8 @@ class ServersSampleJsonTest(ServersSampleBase):
         self._verify_response('servers-list-resp', subs, response, 200)
 
     def test_servers_details(self):
+        self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
+                      fakes.stub_bdm_get_all_by_instance_uuids)
         uuid = self.test_servers_post()
         response = self._do_get('servers/detail')
         subs = {}
@@ -107,6 +110,8 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        # config drive can be a string for True or empty value for False
+        subs['cdrive'] = '.*'
         self._verify_response('servers-details-resp', subs, response, 200)
 
 
@@ -116,6 +121,11 @@ class ServersSampleJson29Test(ServersSampleJsonTest):
     # so defining scenarios only for v2.9 which will run the original tests
     # by appending '(v2_9)' in test_id.
     scenarios = [('v2_9', {'api_major_version': 'v2.1'})]
+
+
+class ServersSampleJson216Test(ServersSampleJsonTest):
+    microversion = '2.16'
+    scenarios = [('v2_16', {'api_major_version': 'v2.1'})]
 
 
 class ServersSampleJson219Test(ServersSampleJsonTest):
@@ -142,10 +152,6 @@ class ServersSampleJson219Test(ServersSampleJsonTest):
 class ServersUpdateSampleJsonTest(ServersSampleBase):
     sample_dir = 'servers'
 
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
-
     def test_update_server(self):
         uuid = self._post_server()
         subs = {}
@@ -169,10 +175,6 @@ class ServerSortKeysJsonTests(ServersSampleBase):
 
 class ServersActionsJsonTest(ServersSampleBase):
     sample_dir = 'servers'
-
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
 
     def _test_server_action(self, uuid, action, req_tpl,
                             subs=None, resp_tpl=None, code=202):
@@ -272,10 +274,6 @@ class ServersActionsJson219Test(ServersSampleBase):
 
 class ServerStartStopJsonTest(ServersSampleBase):
     sample_dir = 'servers'
-
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
 
     def _test_server_action(self, uuid, action, req_tpl):
         response = self._do_post('servers/%s/action' % uuid,

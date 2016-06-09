@@ -5,6 +5,8 @@
         "name" : "new-server-test",
         "imageRef" : "%(image_id)s",
         "flavorRef" : "1",
+        "availability_zone": "nova",
+        "OS-DCF:diskConfig": "AUTO",
         "metadata" : {
             "My Server Name" : "Apache1"
         },

@@ -49,7 +49,10 @@
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
-        "os-extended-volumes:volumes_attached": [],
+        "os-extended-volumes:volumes_attached": [
+            {"id": "volume_id1"},
+            {"id": "volume_id2"}
+        ],
         "OS-SRV-USG:launched_at": "%(strtime)s",
         "OS-SRV-USG:terminated_at": null,
         "progress": 0,

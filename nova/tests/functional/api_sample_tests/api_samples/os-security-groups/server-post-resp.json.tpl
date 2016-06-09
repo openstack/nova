@@ -1,5 +1,6 @@
 {
     "server": {
+        "OS-DCF:diskConfig": "AUTO",
         "adminPass": "%(password)s",
         "id": "%(id)s",
         "links": [

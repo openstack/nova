@@ -51,6 +51,10 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['tag'] = '[0-9a-zA-Z]+'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['hostname'] = r'[\w\.\-]+'
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['cdrive'] = '.*'
         self._verify_response('server-tags-show-details-resp',
                               subs, response, 200)
 
@@ -62,6 +66,10 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['tag'] = '[0-9a-zA-Z]+'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['hostname'] = r'[\w\.\-]+'
+        subs['instance_name'] = 'instance-\d{8}'
+        subs['hypervisor_hostname'] = r'[\w\.\-]+'
+        subs['cdrive'] = '.*'
         self._verify_response('servers-tags-details-resp', subs, response, 200)
 
     def test_server_tags_index(self):
