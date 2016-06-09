@@ -7915,7 +7915,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Migration, "save")
     @mock.patch.object(fakelibvirt.Connection, "_mark_running")
     @mock.patch.object(fakelibvirt.virDomain, "abortJob")
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "pause")
+    @mock.patch.object(libvirt_guest.Guest, "pause")
     def _test_live_migration_monitoring(self,
                                         job_info_records,
                                         time_records,

@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import deque
 from lxml import etree
 import mock
 from oslo_utils import units
@@ -425,3 +426,54 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
 
         mock_msave.assert_called_once_with()
         mock_isave.assert_called_once_with()
+
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_pause(self, mock_pause):
+        tasks = deque()
+        tasks.append("pause")
+        active_migrations = {self.instance.uuid: tasks}
+        on_migration_failure = deque()
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure)
+
+        mock_pause.assert_called_once_with()
+        self.assertEqual(len(on_migration_failure), 1)
+        self.assertEqual(on_migration_failure.pop(), "unpause")
+
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_empty_tasks(self, mock_pause):
+        tasks = deque()
+        active_migrations = {self.instance.uuid: tasks}
+        on_migration_failure = deque()
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure)
+
+        self.assertFalse(mock_pause.called)
+        self.assertEqual(len(on_migration_failure), 0)
+
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_no_tasks(self, mock_pause):
+        active_migrations = {}
+        on_migration_failure = deque()
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure)
+
+        self.assertFalse(mock_pause.called)
+        self.assertEqual(len(on_migration_failure), 0)
+
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_no_pause(self, mock_pause):
+        tasks = deque()
+        # Test to ensure unknown tasks are ignored
+        tasks.append("wibble")
+        active_migrations = {self.instance.uuid: tasks}
+        on_migration_failure = deque()
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure)
+
+        self.assertFalse(mock_pause.called)
+        self.assertEqual(len(on_migration_failure), 0)

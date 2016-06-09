@@ -17,6 +17,7 @@
 
 """
 
+from collections import deque
 from lxml import etree
 from oslo_log import log as logging
 
@@ -279,3 +280,36 @@ def save_stats(instance, migration, info, remaining):
     # The coarse % completion stats
     instance.progress = 100 - remaining
     instance.save()
+
+
+def run_tasks(guest, instance, active_migrations, on_migration_failure):
+    """Run any pending migration tasks
+
+    :param guest: a nova.virt.libvirt.guest.Guest
+    :param instance: a nova.objects.Instance
+    :param active_migrations: dict of active migrations
+    :param on_migration_failure: queue of recovery tasks
+
+    Run any pending migration tasks queued against the
+    provided instance object. The active migrations dict
+    should use instance UUIDs for keys and a queue of
+    tasks as the values.
+
+    Currently the only valid task that can be requested
+    is "pause". Other tasks will be ignored
+    """
+
+    tasks = active_migrations.get(instance.uuid, deque())
+    while tasks:
+        task = tasks.popleft()
+        if task == 'pause':
+            try:
+                guest.pause()
+                on_migration_failure.append("unpause")
+            except Exception as e:
+                LOG.warning(_LW("Failed to pause instance during "
+                                "live-migration %s"),
+                            e, instance=instance)
+        else:
+            LOG.warning(_LW("Unknown migration task '%(task)s'"),
+                        {"task": task}, instance=instance)
