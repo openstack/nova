@@ -67,14 +67,13 @@ def release_port(host, port):
 
 def _get_port_range():
     config_range = CONF.serial_console.port_range
-    try:
-        start, stop = map(int, config_range.split(':'))
-        if start >= stop:
-            raise ValueError
-    except ValueError:
+
+    start, stop = map(int, config_range.split(':'))
+    if start >= stop:
         default_port_range = nova.conf.serial_console.DEFAULT_PORT_RANGE
-        LOG.warning(_LW("serial_console.port_range should be <num>:<num>. "
-                        "Given value %(port_range)s could not be parsed. "
+        LOG.warning(_LW("serial_console.port_range should be in the "
+                        "format <start>:<stop> and start < stop, "
+                        "Given value %(port_range)s is invalid. "
                         "Taking the default port range %(default)s."),
                     {'port_range': config_range,
                      'default': default_port_range})

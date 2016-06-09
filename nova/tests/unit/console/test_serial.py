@@ -46,18 +46,6 @@ class SerialTestCase(test.NoDBTestCase):
         self.assertEqual(10000, start)
         self.assertEqual(20000, stop)
 
-    def test_get_port_range_not_numeric(self):
-        self.flags(port_range='xxx:yyy', group='serial_console')
-        start, stop = serial._get_port_range()
-        self.assertEqual(10000, start)
-        self.assertEqual(20000, stop)
-
-    def test_get_port_range_invalid_syntax(self):
-        self.flags(port_range='10:20:30', group='serial_console')
-        start, stop = serial._get_port_range()
-        self.assertEqual(10000, start)
-        self.assertEqual(20000, stop)
-
     @mock.patch('socket.socket')
     def test_verify_port(self, fake_socket):
         s = mock.MagicMock()
