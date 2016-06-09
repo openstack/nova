@@ -509,9 +509,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.init_virt_events()
         self.assertFalse(mock_register.called)
 
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    @mock.patch.object(manager.ComputeManager, '_get_instances_on_driver')
+    @mock.patch.object(manager.ComputeManager, 'init_virt_events')
+    @mock.patch.object(context, 'get_admin_context')
+    @mock.patch.object(objects.InstanceList, 'get_by_host')
+    @mock.patch.object(fake_driver.FakeDriver, 'destroy')
+    @mock.patch.object(fake_driver.FakeDriver, 'init_host')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')
-    def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get):
+    def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get,
+            mock_init_host, mock_destroy, mock_host_get, mock_admin_ctxt,
+            mock_init_virt, mock_get_inst, mock_get_net):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
 
@@ -519,41 +528,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, host=not_our_host, uuid=uuids.deleted_instance)
         migration = objects.Migration(instance_uuid=deleted_instance.uuid)
         mock_mig_get.return_value = [migration]
-
-        self.mox.StubOutWithMock(self.compute.driver, 'init_host')
-        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-        self.mox.StubOutWithMock(objects.InstanceList, 'get_by_host')
-        self.mox.StubOutWithMock(context, 'get_admin_context')
-        self.mox.StubOutWithMock(self.compute, 'init_virt_events')
-        self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute, '_init_instance')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-
-        self.compute.driver.init_host(host=our_host)
-        context.get_admin_context().AndReturn(self.context)
-        objects.InstanceList.get_by_host(self.context, our_host,
-                expected_attrs=['info_cache', 'metadata']
-                ).AndReturn(objects.InstanceList())
-        self.compute.init_virt_events()
+        mock_admin_ctxt.return_value = self.context
+        mock_host_get.return_value = objects.InstanceList()
 
         # simulate failed instance
-        self.compute._get_instances_on_driver(
-            self.context, {'deleted': False}).AndReturn([deleted_instance])
-        self.compute.network_api.get_instance_nw_info(
-            self.context, deleted_instance).AndRaise(
-            exception.InstanceNotFound(instance_id=deleted_instance['uuid']))
+        mock_get_inst.return_value = [deleted_instance]
+        mock_get_net.side_effect = exception.InstanceNotFound(
+            instance_id=deleted_instance['uuid'])
+
+        self.compute.init_host()
+
+        mock_init_host.assert_called_once_with(host=our_host)
+        mock_host_get.assert_called_once_with(self.context, our_host,
+                                expected_attrs=['info_cache', 'metadata'])
+        mock_init_virt.assert_called_once_with()
+        mock_get_inst.assert_called_once_with(self.context, {'deleted': False})
+        mock_get_net.assert_called_once_with(self.context, deleted_instance)
+
         # ensure driver.destroy is called so that driver may
         # clean up any dangling files
-        self.compute.driver.destroy(self.context, deleted_instance,
-            mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-        self.compute.init_host()
-        # tearDown() uses context.get_admin_context(), so we have
-        # to do the verification here and unstub it.
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
+        mock_destroy.assert_called_once_with(self.context, deleted_instance,
+                                             mock.ANY, mock.ANY, mock.ANY)
+        mock_save.assert_called_once_with()
 
     def test_init_instance_with_binding_failed_vif_type(self):
         # this instance will plug a 'binding_failed' vif
@@ -602,7 +598,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               self.compute._get_power_state,
                               self.context, instance)
 
-    def test_init_instance_failed_resume_sets_error(self):
+    @mock.patch.object(manager.ComputeManager, '_get_power_state')
+    @mock.patch.object(fake_driver.FakeDriver, 'plug_vifs')
+    @mock.patch.object(fake_driver.FakeDriver, 'resume_state_on_host_boot')
+    @mock.patch.object(manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(manager.ComputeManager, '_set_instance_obj_error_state')
+    def test_init_instance_failed_resume_sets_error(self, mock_set_inst,
+                mock_get_inst, mock_resume, mock_plug, mock_get_power):
         instance = fake_instance.fake_instance_obj(
                 self.context,
                 uuid=uuids.instance,
@@ -614,27 +617,18 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 expected_attrs=['info_cache'])
 
         self.flags(resume_guests_state_on_host_boot=True)
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'resume_state_on_host_boot')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_set_instance_obj_error_state')
-        self.compute._get_power_state(mox.IgnoreArg(),
-                instance).AndReturn(power_state.SHUTDOWN)
-        self.compute._get_power_state(mox.IgnoreArg(),
-                instance).AndReturn(power_state.SHUTDOWN)
-        self.compute.driver.plug_vifs(instance, mox.IgnoreArg())
-        self.compute._get_instance_block_device_info(mox.IgnoreArg(),
-                instance).AndReturn('fake-bdm')
-        self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
-                instance, mox.IgnoreArg(),
-                'fake-bdm').AndRaise(test.TestingException)
-        self.compute._set_instance_obj_error_state(mox.IgnoreArg(), instance)
-        self.mox.ReplayAll()
+        mock_get_power.side_effect = (power_state.SHUTDOWN,
+                                      power_state.SHUTDOWN)
+        mock_get_inst.return_value = 'fake-bdm'
+        mock_resume.side_effect = test.TestingException
         self.compute._init_instance('fake-context', instance)
+        mock_get_power.assert_has_calls([mock.call(mock.ANY, instance),
+                                         mock.call(mock.ANY, instance)])
+        mock_plug.assert_called_once_with(instance, mock.ANY)
+        mock_get_inst.assert_called_once_with(mock.ANY, instance)
+        mock_resume.assert_called_once_with(mock.ANY, instance, mock.ANY,
+                                            'fake-bdm')
+        mock_set_inst.assert_called_once_with(mock.ANY, instance)
 
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -732,26 +726,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 host=self.compute.host,
                 task_state=task_states.DELETING)
 
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.compute, '_delete_instance')
-        self.mox.StubOutWithMock(instance, 'obj_load_attr')
-        self.mox.StubOutWithMock(self.compute, '_create_reservations')
-
         bdms = []
         quotas = objects.quotas.Quotas(self.context)
-        instance.obj_load_attr('metadata')
-        instance.obj_load_attr('system_metadata')
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                self.context, instance.uuid).AndReturn(bdms)
-        self.compute._create_reservations(self.context, instance,
-                                          instance.project_id,
-                                          instance.user_id).AndReturn(quotas)
-        self.compute._delete_instance(self.context, instance, bdms,
-                                      mox.IgnoreArg())
 
-        self.mox.ReplayAll()
-        self.compute._init_instance(self.context, instance)
+        with test.nested(
+                mock.patch.object(objects.BlockDeviceMappingList,
+                                  'get_by_instance_uuid',
+                                  return_value=bdms),
+                mock.patch.object(self.compute, '_delete_instance'),
+                mock.patch.object(instance, 'obj_load_attr'),
+                mock.patch.object(self.compute, '_create_reservations',
+                                  return_value=quotas)
+        ) as (mock_get, mock_delete, mock_load, mock_create):
+            self.compute._init_instance(self.context, instance)
+            mock_get.assert_called_once_with(self.context, instance.uuid)
+            mock_create.assert_called_once_with(self.context, instance,
+                                                instance.project_id,
+                                                instance.user_id)
+            mock_delete.assert_called_once_with(self.context, instance,
+                                                bdms, mock.ANY)
 
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
@@ -811,34 +804,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 host=self.compute.host,
                 expected_attrs=['system_metadata'])
 
-        self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
-        self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'finish_revert_migration')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute.driver, 'get_info')
-        self.mox.StubOutWithMock(instance, 'save')
-        self.mox.StubOutWithMock(self.compute, '_retry_reboot')
+        with test.nested(
+            mock.patch.object(compute_utils, 'get_nw_info_for_instance',
+                              return_value=network_model.NetworkInfo()),
+            mock.patch.object(self.compute.driver, 'plug_vifs'),
+            mock.patch.object(self.compute.driver, 'finish_revert_migration'),
+            mock.patch.object(self.compute, '_get_instance_block_device_info',
+                              return_value=[]),
+            mock.patch.object(self.compute.driver, 'get_info'),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute, '_retry_reboot',
+                              return_value=(False, None))
+        ) as (mock_get_nw, mock_plug, mock_finish, mock_get_inst,
+              mock_get_info, mock_save, mock_retry):
+            mock_get_info.side_effect = (
+                hardware.InstanceInfo(state=power_state.SHUTDOWN),
+                hardware.InstanceInfo(state=power_state.SHUTDOWN))
 
-        self.compute._retry_reboot(self.context, instance,
-            power_state.SHUTDOWN).AndReturn((False, None))
-        compute_utils.get_nw_info_for_instance(instance).AndReturn(
-            network_model.NetworkInfo())
-        self.compute.driver.plug_vifs(instance, [])
-        self.compute._get_instance_block_device_info(
-            self.context, instance).AndReturn([])
-        self.compute.driver.finish_revert_migration(self.context, instance,
-                                                    [], [], power_on)
-        instance.save()
-        self.compute.driver.get_info(instance).AndReturn(
-            hardware.InstanceInfo(state=power_state.SHUTDOWN))
-        self.compute.driver.get_info(instance).AndReturn(
-            hardware.InstanceInfo(state=power_state.SHUTDOWN))
+            self.compute._init_instance(self.context, instance)
 
-        self.mox.ReplayAll()
-
-        self.compute._init_instance(self.context, instance)
+            mock_retry.assert_called_once_with(self.context, instance,
+                power_state.SHUTDOWN)
+            mock_get_nw.assert_called_once_with(instance)
+            mock_plug.assert_called_once_with(instance, [])
+            mock_get_inst.assert_called_once_with(self.context, instance)
+            mock_finish.assert_called_once_with(self.context, instance,
+                                                [], [], power_on)
+            mock_save.assert_called_once_with()
+            mock_get_info.assert_has_calls([mock.call(instance),
+                                            mock.call(instance)])
         self.assertIsNone(instance.task_state)
 
     def test_init_instance_reverts_crashed_migration_from_active(self):
