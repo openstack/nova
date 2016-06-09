@@ -18,7 +18,9 @@ from oslo_config import cfg
 exc_log_opts = [
     cfg.BoolOpt('fatal_exception_format_errors',
                 default=False,
-                help='Make exception message format errors fatal'),
+                deprecated_for_removal=True,
+                deprecated_reason='This is only used for internal testing.',
+                help='DEPRECATED: Make exception message format errors fatal'),
 ]
 
 
