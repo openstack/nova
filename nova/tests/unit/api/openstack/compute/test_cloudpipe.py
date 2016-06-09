@@ -51,7 +51,7 @@ def compute_api_get_all(context, search_opts=None, want_objects=True):
         return [fake_vpn_instance()]
 
 
-def utils_vpn_ping(addr, port, timoeout=0.05, session_id=None):
+def utils_vpn_ping(addr, port, timeout=0.05, session_id=None):
     return True
 
 

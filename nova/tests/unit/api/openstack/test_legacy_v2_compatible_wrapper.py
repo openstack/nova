@@ -25,7 +25,7 @@ from nova import test
 
 class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
 
-    def test_filter_out_microverions_request_header(self):
+    def test_filter_out_microversions_request_header(self):
         req = webob.Request.blank('/')
         req.headers[wsgi.API_VERSION_REQUEST_HEADER] = '2.2'
 
@@ -38,7 +38,7 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         wrapper = nova.api.openstack.LegacyV2CompatibleWrapper(fake_app)
         req.get_response(wrapper)
 
-    def test_filter_out_microverions_response_header(self):
+    def test_filter_out_microversions_response_header(self):
         req = webob.Request.blank('/')
 
         @webob.dec.wsgify
@@ -52,7 +52,7 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         response = req.get_response(wrapper)
         self.assertNotIn(wsgi.API_VERSION_REQUEST_HEADER, response.headers)
 
-    def test_filter_out_microverions_vary_header(self):
+    def test_filter_out_microversions_vary_header(self):
         req = webob.Request.blank('/')
 
         @webob.dec.wsgify
@@ -66,7 +66,7 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         response = req.get_response(wrapper)
         self.assertNotIn('Vary', response.headers)
 
-    def test_filter_out_microverions_vary_header_with_multi_fields(self):
+    def test_filter_out_microversions_vary_header_with_multi_fields(self):
         req = webob.Request.blank('/')
 
         @webob.dec.wsgify
@@ -83,7 +83,7 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         self.assertEqual('FAKE_HEADER1,FAKE_HEADER2',
                          response.headers['Vary'])
 
-    def test_filter_out_microverions_no_vary_header(self):
+    def test_filter_out_microversions_no_vary_header(self):
         req = webob.Request.blank('/')
 
         @webob.dec.wsgify
@@ -110,10 +110,10 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         req.get_response(wrapper)
 
 
-class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
+class TestSoftAdditionalPropertiesValidation(test.NoDBTestCase):
 
     def setUp(self):
-        super(TestSoftAddtionalPropertiesValidation, self).setUp()
+        super(TestSoftAdditionalPropertiesValidation, self).setUp()
         self.schema = {
             'type': 'object',
             'properties': {

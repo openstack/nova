@@ -1257,7 +1257,7 @@ def numa_get_reserved_huge_pages():
     to build NUMATopology.
 
     :raises: exceptionInvalidReservedMemoryPagesOption is option is
-             not corretly set.
+             not correctly set.
 
     :returns: a list of dict ordered by NUMA node ids; keys of dict
               are pages size where values are the number reserved.

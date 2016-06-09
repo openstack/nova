@@ -31,7 +31,7 @@ def fake_set_admin_password(self, context, instance, password=None):
 
 
 class AdminPasswordTestV21(test.NoDBTestCase):
-    validiation_error = exception.ValidationError
+    validation_error = exception.ValidationError
 
     def setUp(self):
         super(AdminPasswordTestV21, self).setUp()
@@ -74,7 +74,7 @@ class AdminPasswordTestV21(test.NoDBTestCase):
 
     def test_change_password_with_non_string_password(self):
         body = {'changePassword': {'adminPass': 1234}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
@@ -89,25 +89,25 @@ class AdminPasswordTestV21(test.NoDBTestCase):
 
     def test_change_password_without_admin_password(self):
         body = {'changPassword': {}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_none(self):
         body = {'changePassword': {'adminPass': None}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_adminpass_none(self):
         body = {'changePassword': None}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 
     def test_change_password_bad_request(self):
         body = {'changePassword': {'pass': '12345'}}
-        self.assertRaises(self.validiation_error,
+        self.assertRaises(self.validation_error,
                           self._get_action(),
                           self.fake_req, '1', body=body)
 

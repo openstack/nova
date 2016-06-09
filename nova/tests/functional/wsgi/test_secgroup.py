@@ -36,7 +36,7 @@ class SecgroupsFullstack(testscenarios.WithScenarios, test.TestCase):
     _flavor_ref_parameter = 'flavorRef'
 
     # This test uses ``testscenarios`` which matrix multiplies the
-    # test across the scenarios listed below setting the attributres
+    # test across the scenarios listed below setting the attributes
     # in the dictionary on ``self`` for each scenario.
     scenarios = [
         ('v2', {

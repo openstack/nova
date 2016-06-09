@@ -618,7 +618,7 @@ class HackingTestCase(test.NoDBTestCase):
                                    checks.check_config_option_in_central_place,
                                    filename="nova/conf/serial_console.py")
         # option at a location which is not in scope right now
-        # TODO(markus_z): This is remporary until all config options are
+        # TODO(markus_z): This is temporary until all config options are
         # moved to /nova/conf
         self._assert_has_no_errors(code,
                                    checks.check_config_option_in_central_place,
@@ -704,10 +704,10 @@ class HackingTestCase(test.NoDBTestCase):
         """
         self._assert_has_no_errors(code6, checks.cfg_help_with_enough_text)
 
-        # The help text uses a paranthesis (weird, but produces a valid string)
+        # The help text uses a parenthesis (weird, but produces a valid string)
         code7 = """
         opt = cfg.StrOpt("opt7",
-                         help=("help text uses extra paranthesis"))
+                         help=("help text uses extra parenthesis"))
         """
         self._assert_has_no_errors(code7, checks.cfg_help_with_enough_text)
 

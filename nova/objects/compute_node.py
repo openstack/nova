@@ -181,7 +181,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
             # restored for both cpu (16.0), ram (1.5) and disk (1.0)
             # allocation ratios.
             # TODO(sbauza): Remove that in the next major version bump where
-            # we break compatibilility with old Liberty computes
+            # we break compatibility with old Liberty computes
             if (key == 'cpu_allocation_ratio' or key == 'ram_allocation_ratio'
                 or key == 'disk_allocation_ratio'):
                 if value == 0.0:

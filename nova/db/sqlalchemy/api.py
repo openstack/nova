@@ -3812,7 +3812,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             usages = project_usages
         else:
             # NOTE(mriedem): user_usages is a dict of resource keys to
-            # QuotaUsage sqlalchemy dict-like objects and doen't log well
+            # QuotaUsage sqlalchemy dict-like objects and doesn't log well
             # so convert the user_usages values to something useful for
             # logging. Remove this if we ever change how
             # _get_project_user_quota_usages returns the user_usages values.

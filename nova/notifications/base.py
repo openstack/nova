@@ -190,7 +190,7 @@ def _compute_states_payload(instance, old_vm_state=None,
     # If the states were not specified we assume the current instance
     # states are the correct information. This is important to do for
     # both old and new states because otherwise we create some really
-    # confusing nofications like:
+    # confusing notifications like:
     #
     #   None(None) => Building(none)
     #

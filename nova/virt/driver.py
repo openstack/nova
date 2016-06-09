@@ -1254,14 +1254,14 @@ class ComputeDriver(object):
     def macs_for_instance(self, instance):
         """What MAC addresses must this instance have?
 
-        Some hypervisors (such as bare metal) cannot do freeform virtualisation
+        Some hypervisors (such as bare metal) cannot do freeform virtualization
         of MAC addresses. This method allows drivers to return a set of MAC
         addresses that the instance is to have. allocate_for_instance will take
         this into consideration when provisioning networking for the instance.
 
         Mapping of MAC addresses to actual networks (or permitting them to be
         freeform) is up to the network implementation layer. For instance,
-        with openflow switches, fixed MAC addresses can still be virtualised
+        with openflow switches, fixed MAC addresses can still be virtualized
         onto any L2 domain, with arbitrary VLANs etc, but regular switches
         require pre-configured MAC->network mappings that will match the
         actual configuration.

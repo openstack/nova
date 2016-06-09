@@ -281,7 +281,7 @@ class ApiTestCase(test.TestCase):
             expected['floating_addresses'] = ['fake_float1', 'fake_float2']
         return fake_instance, fake_migration, expected
 
-    def test_migrate_instance_start_with_multhost(self):
+    def test_migrate_instance_start_with_multihost(self):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_start', True, info)
@@ -289,14 +289,14 @@ class ApiTestCase(test.TestCase):
         self.network_api.migrate_instance_start(self.context, arg1, arg2)
         self.assertEqual(info['kwargs'], expected)
 
-    def test_migrate_instance_start_without_multhost(self):
+    def test_migrate_instance_start_without_multihost(self):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_start', False, info)
         self.network_api.migrate_instance_start(self.context, arg1, arg2)
         self.assertEqual(info['kwargs'], expected)
 
-    def test_migrate_instance_finish_with_multhost(self):
+    def test_migrate_instance_finish_with_multihost(self):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_finish', True, info)
@@ -304,7 +304,7 @@ class ApiTestCase(test.TestCase):
         self.network_api.migrate_instance_finish(self.context, arg1, arg2)
         self.assertEqual(info['kwargs'], expected)
 
-    def test_migrate_instance_finish_without_multhost(self):
+    def test_migrate_instance_finish_without_multihost(self):
         info = {'kwargs': {}}
         arg1, arg2, expected = self._stub_migrate_instance_calls(
                 'migrate_instance_finish', False, info)

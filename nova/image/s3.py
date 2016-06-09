@@ -195,7 +195,7 @@ class S3ImageService(object):
             raise exception.InvalidArchitectureName(arch=guestarch)
 
         # NOTE(yamahata):
-        # EC2 ec2-budlne-image --block-device-mapping accepts
+        # EC2 ec2-bundle-image --block-device-mapping accepts
         # <virtual name>=<device name> where
         # virtual name = {ami, root, swap, ephemeral<N>}
         #                where N is no negative integer

@@ -1672,7 +1672,7 @@ msgstr "Le type virtuel d'hyperviseur '%s' n'est pas valide"
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
 msgstr ""
-"Le type de virtualisation de l'hyperviseur '%(hv_type)s' n'est pas reconnu."
+"Le type de virtualization de l'hyperviseur '%(hv_type)s' n'est pas reconnu."
 
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
@@ -2324,7 +2324,7 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
+"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
 "count: %(vif_count)d, Pif count: %(pif_count)d)"
 msgstr ""
 "Non-concordance du nombre d'interfaces virtuelles et physiques sur le noeud "
@@ -2853,7 +2853,7 @@ msgid ""
 "\" hypervisor virtualization type."
 msgstr ""
 "Aucun URI de migration à chaud n'est configuré et aucune valeur par défaut "
-"n'est disponible pour le type de virtualisation d'hyperviseur \"%(virt_type)s"
+"n'est disponible pour le type de virtualization d'hyperviseur \"%(virt_type)s"
 "\"."
 
 #, python-format
@@ -4522,7 +4522,7 @@ msgstr ""
 #, python-format
 msgid "Virtualization type '%(virt)s' is not supported by this compute driver"
 msgstr ""
-"Le type de virtualisation '%(virt)s' n'est pas pris en charge par ce pilote "
+"Le type de virtualization '%(virt)s' n'est pas pris en charge par ce pilote "
 "de calcul"
 
 msgid "VlanID"

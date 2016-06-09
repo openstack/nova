@@ -241,7 +241,7 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                           {"name": "test",
                                            "availability_zone": "  nova1  "}})
 
-    def test_create_availabiltiy_zone_with_leading_trailing_spaces_compat_mode(
+    def test_create_availability_zone_with_leading_trailing_spaces_compat_mode(
             self):
 
         def fake_mock_aggs(context, name, az):

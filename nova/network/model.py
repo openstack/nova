@@ -276,7 +276,7 @@ class Subnet(Model):
             self['ips'].append(ip)
 
     def as_netaddr(self):
-        """Convience function to get cidr as a netaddr object."""
+        """Convenient function to get cidr as a netaddr object."""
         return netaddr.IPNetwork(self['cidr'])
 
     @classmethod

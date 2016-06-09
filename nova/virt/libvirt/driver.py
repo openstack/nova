@@ -210,7 +210,7 @@ NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 # Relative block commit & rebase (feature is detected,
 # this version is only used for messaging)
 MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
-# Libvirt version 1.2.17 is required for successfull block live migration
+# Libvirt version 1.2.17 is required for successful block live migration
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
 # libvirt discard feature
@@ -771,7 +771,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         # still hasn't gone then you get this EBUSY error.
                         # Usually when a QEMU process fails to go away upon
                         # SIGKILL it is because it is stuck in an
-                        # uninterruptable kernel sleep waiting on I/O from
+                        # uninterruptible kernel sleep waiting on I/O from
                         # some non-responsive server.
                         # Given the CPU load of the gate tests though, it is
                         # conceivable that the 15 second timeout is too short,
@@ -4462,7 +4462,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if pointer_model is None and CONF.libvirt.use_usb_tablet:
             # TODO(sahid): We set pointer_model to keep compatibility
             # until the next release O*. It means operators can continue
-            # to use the depecrated option "use_usb_tablet" or set a
+            # to use the deprecated option "use_usb_tablet" or set a
             # specific device to use
             pointer_model = "usbtablet"
             LOG.warning(_LW('The option "use_usb_tablet" has been '

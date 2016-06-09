@@ -109,8 +109,8 @@ class FloatingIpDNSTestV21(test.TestCase):
         db.floating_ip_destroy(self.context, test_ipv4_address)
         db.floating_ip_destroy(self.context, test_ipv6_address)
 
-    def _check_status(self, expected_status, res, controller_methord):
-        self.assertEqual(expected_status, controller_methord.wsgi_code)
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_code)
 
     def _bad_request(self):
         return webob.exc.HTTPBadRequest

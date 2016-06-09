@@ -31,7 +31,7 @@ class TestAggregateCreation(test.TestCase):
     def test_name_validation(self):
         """Regression test for bug #1552888.
 
-        The current aggregate accepts a null param for availablitliy zone,
+        The current aggregate accepts a null param for availability zone,
         change to the validation might affect some command like
         'nova aggregate create foo'
         This test ensure those kind of change won't affect validation

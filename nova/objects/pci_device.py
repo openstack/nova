@@ -324,7 +324,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         parent_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
                               fields.PciDeviceStatus.UNCLAIMABLE,
                               fields.PciDeviceStatus.UNAVAILABLE)
-        dependatns_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
+        dependants_ok_statuses = (fields.PciDeviceStatus.AVAILABLE,
                                   fields.PciDeviceStatus.UNCLAIMABLE)
         if self.status not in ok_statuses:
             raise exception.PciDeviceInvalidStatus(
@@ -339,7 +339,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 hopeowner=instance['uuid'])
         if self.dev_type == fields.PciDeviceType.SRIOV_PF:
             vfs_list = self.child_devices
-            if not all([vf.status in dependatns_ok_statuses for
+            if not all([vf.status in dependants_ok_statuses for
                         vf in vfs_list]):
                 raise exception.PciDeviceVFInvalidStatus(
                     compute_node_id=self.compute_node_id,

@@ -50,8 +50,8 @@ class CloudpipeUpdateTestV21(test.NoDBTestCase):
     def _setup(self):
         self.controller = clup_v21.CloudpipeController()
 
-    def _check_status(self, expected_status, res, controller_methord):
-        self.assertEqual(expected_status, controller_methord.wsgi_code)
+    def _check_status(self, expected_status, res, controller_method):
+        self.assertEqual(expected_status, controller_method.wsgi_code)
 
     def test_cloudpipe_configure_project(self):
         body = {"configure_project": {"vpn_ip": "1.2.3.4", "vpn_port": 222}}

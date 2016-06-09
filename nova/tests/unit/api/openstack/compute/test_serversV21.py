@@ -3778,7 +3778,7 @@ class ServersViewBuilderTest(test.TestCase):
 
         self.request.context = context.RequestContext('fake', 'fake')
         output = self.view_builder.show(self.request, self.instance)
-        # Regardless of vm_state deleted servers sholud be DELETED
+        # Regardless of vm_state deleted servers should be DELETED
         self.assertEqual("DELETED", output['server']['status'])
         self.assertThat(output['server']['fault'],
                         matchers.DictMatches(expected_fault))
@@ -4104,7 +4104,7 @@ class FakeExt(extensions.V21APIExtensionBase):
             return self.fake_schema
         elif version == '2.0':
             return {}
-        # This fake method should reuturn the schema for expected version
+        # This fake method should return the schema for expected version
         # Return None will make the tests failed, that means there is something
         # in the code.
         return None

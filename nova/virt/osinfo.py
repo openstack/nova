@@ -75,11 +75,11 @@ class _OsInfoDatabase(object):
         fltr = libosinfo.Filter.new()
         flt_field = 'id' if os_name.startswith('http') else 'short-id'
         fltr.add_constraint(flt_field, os_name)
-        filttered = self.oslist.new_filtered(fltr)
-        list_len = filttered.get_length()
+        filtered = self.oslist.new_filtered(fltr)
+        list_len = filtered.get_length()
         if not list_len:
             raise exception.OsInfoNotFound(os_name=os_name)
-        return filttered.get_nth(0)
+        return filtered.get_nth(0)
 
 
 class OsInfo(object):

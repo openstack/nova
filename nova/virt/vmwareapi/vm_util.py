@@ -164,7 +164,7 @@ def _get_allocation_info(client_factory, limits, allocation_type):
     if limits.limit:
         allocation.limit = limits.limit
     else:
-        # Set as 'umlimited'
+        # Set as 'unlimited'
         allocation.limit = -1
     if limits.reservation:
         allocation.reservation = limits.reservation

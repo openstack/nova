@@ -110,7 +110,7 @@ class CellsTestV21(BaseCellsTest):
         self.assertEqual(len(res_dict['cells']), 2)
         for i, cell in enumerate(res_dict['cells']):
             self.assertEqual(cell['name'], self.fake_cells[i]['name'])
-            self.assertNotIn('capabilitiles', cell)
+            self.assertNotIn('capabilities', cell)
             self.assertNotIn('password', cell)
 
     def test_detail(self):
