@@ -49,6 +49,7 @@
         "name": "%(name)s",
         "description": "%(description)s",
         "progress": 0,
+        "OS-DCF:diskConfig": "AUTO",
         "status": "ACTIVE",
         "tenant_id": "6f70656e737461636b20342065766572",
         "updated": "%(isotime)s",
