@@ -52,6 +52,23 @@ def intercept_log_messages():
         mylog.logger.removeHandler(handler)
 
 
+class GetCacheFnameTestCase(test.NoDBTestCase):
+    def test_get_cache_fname(self):
+        # Ensure a known input to this function produces a known output.
+
+        # This test assures us that, used in the expected manner, the function
+        # doesn't raise an exception in either python2 or python3. It also
+        # serves as a canary to warn if any change in underlying libraries
+        # would produce output incompatible with current usage.
+
+        # Take a known image_id and the pre-calculated hexdigest of its sha1
+        image_id = 'fd0cb2f1-8375-44c9-b1f4-3e1f4c4a8ef0'
+        expected_cache_name = '0d5e6b61602d758984b3bf038267614d6016eb2a'
+
+        cache_name = imagecache.get_cache_fname(image_id)
+        self.assertEqual(expected_cache_name, cache_name)
+
+
 class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def setUp(self):
