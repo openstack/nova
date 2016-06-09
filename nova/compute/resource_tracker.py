@@ -925,6 +925,8 @@ class ResourceTracker(object):
         for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 self._update_usage_from_instance(context, instance)
+        self.compute_node.free_ram_mb = max(0, self.compute_node.free_ram_mb)
+        self.compute_node.free_disk_gb = max(0, self.compute_node.free_disk_gb)
 
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for

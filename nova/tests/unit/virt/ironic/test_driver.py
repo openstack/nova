@@ -278,11 +278,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         else:
             props_dict = props
             expected_cpus = props['cpus']
-        self.assertEqual(expected_cpus, result['vcpus'])
+        self.assertEqual(0, result['vcpus'])
         self.assertEqual(expected_cpus, result['vcpus_used'])
-        self.assertEqual(props_dict['memory_mb'], result['memory_mb'])
+        self.assertEqual(0, result['memory_mb'])
         self.assertEqual(props_dict['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(props_dict['local_gb'], result['local_gb'])
+        self.assertEqual(0, result['local_gb'])
         self.assertEqual(props_dict['local_gb'], result['local_gb_used'])
 
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
@@ -397,11 +397,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
             instance_info=instance_info)
 
         result = self.driver._node_resource(node)
-        self.assertEqual(instance_info['vcpus'], result['vcpus'])
+        self.assertEqual(0, result['vcpus'])
         self.assertEqual(instance_info['vcpus'], result['vcpus_used'])
-        self.assertEqual(instance_info['memory_mb'], result['memory_mb'])
+        self.assertEqual(0, result['memory_mb'])
         self.assertEqual(instance_info['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(instance_info['local_gb'], result['local_gb'])
+        self.assertEqual(0, result['local_gb'])
         self.assertEqual(instance_info['local_gb'], result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
