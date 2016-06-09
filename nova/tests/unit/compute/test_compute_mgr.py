@@ -305,11 +305,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(mock_save.called)
         self.assertEqual('True', instance.system_metadata['network_allocated'])
 
-    def test_allocate_network_fails(self):
+    @mock.patch.object(network_api.API, 'allocate_for_instance')
+    def test_allocate_network_fails(self, mock_allocate):
         self.flags(network_allocate_retries=0)
 
-        nwapi = self.compute.network_api
-        self.mox.StubOutWithMock(nwapi, 'allocate_for_instance')
+        mock_allocate.side_effect = test.TestingException
 
         instance = {}
         is_vpn = 'fake-is-vpn'
@@ -318,26 +318,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         sec_groups = 'fake-sec-groups'
         dhcp_options = None
 
-        nwapi.allocate_for_instance(
-                self.context, instance, vpn=is_vpn,
-                requested_networks=req_networks, macs=macs,
-                security_groups=sec_groups,
-                dhcp_options=dhcp_options,
-                bind_host_id=instance.get('host')).AndRaise(
-                    test.TestingException())
-
-        self.mox.ReplayAll()
-
         self.assertRaises(test.TestingException,
                           self.compute._allocate_network_async,
                           self.context, instance, req_networks, macs,
                           sec_groups, is_vpn, dhcp_options)
 
-    def test_allocate_network_neg_conf_value_treated_as_zero(self):
+        mock_allocate.assert_called_once_with(
+            self.context, instance, vpn=is_vpn,
+            requested_networks=req_networks, macs=macs,
+            security_groups=sec_groups,
+            dhcp_options=dhcp_options,
+            bind_host_id=instance.get('host'))
+
+    @mock.patch.object(network_api.API, 'allocate_for_instance')
+    def test_allocate_network_neg_conf_value_treated_as_zero(self,
+                                                             mock_allocate):
         self.flags(network_allocate_retries=-1)
 
-        nwapi = self.compute.network_api
-        self.mox.StubOutWithMock(nwapi, 'allocate_for_instance')
+        mock_allocate.side_effect = test.TestingException
 
         instance = {}
         is_vpn = 'fake-is-vpn'
@@ -346,21 +344,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         sec_groups = 'fake-sec-groups'
         dhcp_options = None
 
-        # Only attempted once.
-        nwapi.allocate_for_instance(
-                self.context, instance, vpn=is_vpn,
-                requested_networks=req_networks, macs=macs,
-                security_groups=sec_groups,
-                dhcp_options=dhcp_options,
-                bind_host_id=instance.get('host')).AndRaise(
-                    test.TestingException())
-
-        self.mox.ReplayAll()
-
         self.assertRaises(test.TestingException,
                           self.compute._allocate_network_async,
                           self.context, instance, req_networks, macs,
                           sec_groups, is_vpn, dhcp_options)
+
+        mock_allocate.assert_called_once_with(
+            self.context, instance, vpn=is_vpn,
+            requested_networks=req_networks, macs = macs,
+            security_groups=sec_groups,
+            dhcp_options=dhcp_options,
+            bind_host_id=instance.get('host'))
 
     @mock.patch.object(network_api.API, 'allocate_for_instance')
     @mock.patch.object(manager.ComputeManager, '_instance_update')
@@ -447,56 +441,45 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             return instance_obj._make_instance_list(
                     self.context, objects.InstanceList(), db_list, None)
 
-        def _do_mock_calls(defer_iptables_apply):
-            self.compute.driver.init_host(host=our_host)
-            context.get_admin_context().AndReturn(self.context)
-            objects.InstanceList.get_by_host(
-                    self.context, our_host,
-                    expected_attrs=['info_cache', 'metadata']
-                    ).AndReturn(_make_instance_list(startup_instances))
-            if defer_iptables_apply:
-                self.compute.driver.filter_defer_apply_on()
-            self.compute._destroy_evacuated_instances(self.context)
-            self.compute._init_instance(self.context,
-                                        mox.IsA(objects.Instance))
-            self.compute._init_instance(self.context,
-                                        mox.IsA(objects.Instance))
-            self.compute._init_instance(self.context,
-                                        mox.IsA(objects.Instance))
-            if defer_iptables_apply:
-                self.compute.driver.filter_defer_apply_off()
+        @mock.patch.object(fake_driver.FakeDriver, 'init_host')
+        @mock.patch.object(fake_driver.FakeDriver, 'filter_defer_apply_on')
+        @mock.patch.object(fake_driver.FakeDriver, 'filter_defer_apply_off')
+        @mock.patch.object(objects.InstanceList, 'get_by_host')
+        @mock.patch.object(context, 'get_admin_context')
+        @mock.patch.object(manager.ComputeManager,
+                           '_destroy_evacuated_instances')
+        @mock.patch.object(manager.ComputeManager, '_init_instance')
+        def _do_mock_calls(mock_inst_init,
+                           mock_destroy, mock_admin_ctxt, mock_host_get,
+                           mock_filter_off, mock_filter_on, mock_init_host,
+                           defer_iptables_apply):
+            mock_admin_ctxt.return_value = self.context
+            inst_list = _make_instance_list(startup_instances)
+            mock_host_get.return_value = inst_list
 
-        self.mox.StubOutWithMock(self.compute.driver, 'init_host')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'filter_defer_apply_on')
-        self.mox.StubOutWithMock(self.compute.driver,
-                'filter_defer_apply_off')
-        self.mox.StubOutWithMock(objects.InstanceList, 'get_by_host')
-        self.mox.StubOutWithMock(context, 'get_admin_context')
-        self.mox.StubOutWithMock(self.compute,
-                '_destroy_evacuated_instances')
-        self.mox.StubOutWithMock(self.compute,
-                '_init_instance')
+            self.compute.init_host()
+
+            if defer_iptables_apply:
+                self.assertTrue(mock_filter_on.called)
+            mock_destroy.assert_called_once_with(self.context)
+            mock_inst_init.assert_has_calls(
+                [mock.call(self.context, inst_list[0]),
+                 mock.call(self.context, inst_list[1]),
+                 mock.call(self.context, inst_list[2])])
+
+            if defer_iptables_apply:
+                self.assertTrue(mock_filter_off.called)
+            mock_init_host.assert_called_once_with(host=our_host)
+            mock_host_get.assert_called_once_with(self.context, our_host,
+                                    expected_attrs=['info_cache', 'metadata'])
 
         # Test with defer_iptables_apply
         self.flags(defer_iptables_apply=True)
-        _do_mock_calls(True)
-
-        self.mox.ReplayAll()
-        self.compute.init_host()
-        self.mox.VerifyAll()
+        _do_mock_calls(defer_iptables_apply=True)
 
         # Test without defer_iptables_apply
-        self.mox.ResetAll()
         self.flags(defer_iptables_apply=False)
-        _do_mock_calls(False)
-
-        self.mox.ReplayAll()
-        self.compute.init_host()
-        # tearDown() uses context.get_admin_context(), so we have
-        # to do the verification here and unstub it.
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
+        _do_mock_calls(defer_iptables_apply=False)
 
     @mock.patch('nova.objects.InstanceList')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
