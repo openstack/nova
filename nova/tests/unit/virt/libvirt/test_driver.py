@@ -15302,7 +15302,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # cache() should have been called on the 3 disk backends
         for backend in (mock_backend.kernel, mock_backend.ramdisk,
                         mock_backend.root):
-            backend.cache.assert_called()
+            self.assertTrue(backend.cache.called)
 
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')
@@ -15424,10 +15424,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # cache() should habe been called on the 3 non-config disk backends
         for backend in (mock_backend.kernel, mock_backend.ramdisk,
                         mock_backend.root):
-            backend.cache.assert_called()
+            self.assertTrue(backend.cache.called)
 
         # import_file() should have been called for the config disk
-        mock_backend.config.import_file.assert_called()
+        self.assertTrue(mock_backend.config.import_file.called)
 
     @mock.patch('shutil.rmtree')
     @mock.patch('nova.utils.execute')

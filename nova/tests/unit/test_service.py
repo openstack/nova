@@ -171,7 +171,7 @@ class ServiceTestCase(test.NoDBTestCase):
         serv.start()
 
         # test service version got updated and saved:
-        service_obj.save.assert_called_once()
+        self.assertEqual(1, service_obj.save.call_count)
         self.assertEqual(objects.service.SERVICE_VERSION, service_obj.version)
 
     def _test_service_check_create_race(self, ex):
