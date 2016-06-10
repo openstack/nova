@@ -70,13 +70,6 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         loaded_ext_info = extension_info.LoadedExtensionInfo()
         self.assertFalse(loaded_ext_info._check_extension(fake_bad_extension))
 
-    def test_extensions_blacklist(self):
-        app = compute.APIRouterV21()
-        self.assertIn('os-hosts', app._loaded_extension_info.extensions)
-        CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v21')
-        app = compute.APIRouterV21()
-        self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
-
     @mock.patch('nova.api.openstack.APIRouterV21._register_resources_list')
     def test_extensions_inherit(self, mock_register):
         app = compute.APIRouterV21()
@@ -105,36 +98,6 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
                           'osapi_v21')
         app = compute.APIRouterV21()
         self.assertIn('os-hosts', app._loaded_extension_info.extensions)
-
-    def test_extensions_whitelist_block(self):
-        # NOTE(maurosr): just to avoid to get an exception raised for not
-        # loading all core api.
-        v21_core = openstack.API_V21_CORE_EXTENSIONS
-        openstack.API_V21_CORE_EXTENSIONS = set(['servers'])
-        self.addCleanup(self._set_v21_core, v21_core)
-
-        app = compute.APIRouterV21()
-        self.assertIn('os-hosts', app._loaded_extension_info.extensions)
-        CONF.set_override('extensions_whitelist', ['servers'], 'osapi_v21')
-        app = compute.APIRouterV21()
-        self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
-
-    def test_blacklist_overrides_whitelist(self):
-        # NOTE(maurosr): just to avoid to get an exception raised for not
-        # loading all core api.
-        v21_core = openstack.API_V21_CORE_EXTENSIONS
-        openstack.API_V21_CORE_EXTENSIONS = set(['servers'])
-        self.addCleanup(self._set_v21_core, v21_core)
-
-        app = compute.APIRouterV21()
-        self.assertIn('os-hosts', app._loaded_extension_info.extensions)
-        CONF.set_override('extensions_whitelist', ['servers', 'os-hosts'],
-                          'osapi_v21')
-        CONF.set_override('extensions_blacklist', ['os-hosts'], 'osapi_v21')
-        app = compute.APIRouterV21()
-        self.assertNotIn('os-hosts', app._loaded_extension_info.extensions)
-        self.assertIn('servers', app._loaded_extension_info.extensions)
-        self.assertEqual(1, len(app._loaded_extension_info.extensions))
 
     def test_get_missing_core_extensions(self):
         v21_core = openstack.API_V21_CORE_EXTENSIONS
@@ -168,13 +131,6 @@ class ExtensionLoadingTestCase(test.NoDBTestCase):
         # if no core API extensions are missing then an exception will
         # not be raised when creating an instance of compute.APIRouterV21
         compute.APIRouterV21()
-
-    def test_core_extensions_missing(self):
-        self.stubs.Set(stevedore.enabled, 'EnabledExtensionManager',
-                       fake_stevedore_enabled_extensions)
-        self.stubs.Set(extension_info, 'LoadedExtensionInfo',
-                       fake_loaded_extension_info)
-        self.assertRaises(exception.CoreAPIMissing, compute.APIRouterV21)
 
     def test_extensions_expected_error(self):
         @extensions.expected_errors(404)

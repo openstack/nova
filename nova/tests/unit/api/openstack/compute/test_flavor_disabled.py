@@ -29,6 +29,8 @@ FAKE_FLAVORS = {
         "vcpus": 1,
         "ephemeral_gb": 1,
         "disabled": False,
+        "is_public": True,
+        "rxtx_factor": 1.0,
     },
     'flavor 2': {
         "flavorid": '2',
@@ -39,8 +41,14 @@ FAKE_FLAVORS = {
         "vcpus": 1,
         "ephemeral_gb": 1,
         "disabled": True,
+        "is_public": True,
+        "rxtx_factor": 1.0,
     },
 }
+
+
+def fake_get_db_flavor(req, flavorid):
+    return fake_flavor_get_by_flavor_id(flavorid)
 
 
 def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
@@ -72,6 +80,8 @@ class FlavorDisabledTestV21(test.NoDBTestCase):
         self.stubs.Set(flavors,
                        "get_flavor_by_flavor_id",
                        fake_flavor_get_by_flavor_id)
+        self.stub_out('nova.api.openstack.wsgi.Request.get_db_flavor',
+                      fake_get_db_flavor)
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
