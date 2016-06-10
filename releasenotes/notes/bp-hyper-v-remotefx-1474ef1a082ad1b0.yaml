@@ -1,6 +1,7 @@
 ---
-features: |
-  - Hyper-V RemoteFX feature.
+features:
+  - |
+    Hyper-V RemoteFX feature.
 
     Microsoft RemoteFX enhances the visual experience in RDP connections,
     including providing access to virtualized instances of a physical GPU to
@@ -41,7 +42,7 @@ features: |
     * Windows / Hyper-V Server 2012 R2 does not support Generation 2 VMs
       with RemoteFX capabilities.
     * Per resolution, there is a maximum amount of monitors that can be
-      added. The limits are as follows::
+      added. The limits are as follows:
 
       For Windows / Hyper-V Server 2012 R2::
 
