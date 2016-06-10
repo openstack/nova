@@ -87,10 +87,6 @@ class PciDevTracker(object):
             elif dev.status == fields.PciDeviceStatus.AVAILABLE:
                 self.stats.add_device(dev)
 
-    @property
-    def all_devs(self):
-        return self.pci_devs
-
     def save(self, context):
         for dev in self.pci_devs:
             if dev.obj_what_changed():
