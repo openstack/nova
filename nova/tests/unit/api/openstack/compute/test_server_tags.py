@@ -84,7 +84,7 @@ class ServerTagsTest(test.TestCase):
         mock_db_set_inst_tags.assert_called_once_with(context, UUID, TAGS)
 
     def test_update_all_too_many_tags(self):
-        fake_tags = {'tags': [str(i) for i in xrange(
+        fake_tags = {'tags': [str(i) for i in range(
             instance.MAX_TAG_COUNT + 1)]}
 
         req = self._get_request(
@@ -157,7 +157,7 @@ class ServerTagsTest(test.TestCase):
     @mock.patch('nova.db.instance_tag_get_by_instance_uuid')
     def test_update_tag_limit_exceed(self, mock_db_get_inst_tags):
         fake_tags = [self._get_tag(str(i))
-                     for i in xrange(instance.MAX_TAG_COUNT)]
+                     for i in range(instance.MAX_TAG_COUNT)]
         mock_db_get_inst_tags.return_value = fake_tags
 
         req = self._get_request(
