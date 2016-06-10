@@ -105,7 +105,7 @@ class ConsoleProxyManager(manager.Manager):
             #                compute worker's flagfile, at least for
             #                xenserver. Thus we ned to ask.
             pool_info = self.compute_rpcapi.get_console_pool_info(context,
-                        console_type, instance_host)
+                        instance_host, console_type)
             pool_info['password'] = self.driver.fix_pool_password(
                                                     pool_info['password'])
             pool_info['host'] = self.host

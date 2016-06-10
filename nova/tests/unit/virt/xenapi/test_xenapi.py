@@ -3224,11 +3224,11 @@ class MockComputeAPI(object):
             self.add_aggregate_host, ctxt, aggregate,
             host_param, host, slave_info))
 
-    def remove_aggregate_host(self, ctxt, aggregate_id, host_param,
-                              host, slave_info):
+    def remove_aggregate_host(self, ctxt, host, aggregate_id, host_param,
+                              slave_info):
         self._mock_calls.append((
-            self.remove_aggregate_host, ctxt, aggregate_id,
-            host_param, host, slave_info))
+            self.remove_aggregate_host, ctxt, host, aggregate_id,
+            host_param, slave_info))
 
 
 class StubDependencies(object):
@@ -3274,8 +3274,8 @@ class HypervisorPoolTestCase(test.NoDBTestCase):
 
         self.assertIn(
             (slave.compute_rpcapi.add_aggregate_host,
-            "CONTEXT", jsonutils.to_primitive(self.fake_aggregate),
-            "slave", "master", "SLAVE_INFO"),
+            "CONTEXT", "slave", jsonutils.to_primitive(self.fake_aggregate),
+            "master", "SLAVE_INFO"),
             slave.compute_rpcapi._mock_calls)
 
     def test_slave_asks_master_to_remove_slave_from_pool(self):
@@ -3285,7 +3285,7 @@ class HypervisorPoolTestCase(test.NoDBTestCase):
 
         self.assertIn(
             (slave.compute_rpcapi.remove_aggregate_host,
-            "CONTEXT", 98, "slave", "master", "SLAVE_INFO"),
+             "CONTEXT", "slave", 98, "master", "SLAVE_INFO"),
             slave.compute_rpcapi._mock_calls)
 
 
