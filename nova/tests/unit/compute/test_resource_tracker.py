@@ -693,37 +693,6 @@ class ComputeMonitorTestCase(BaseTestCase):
         self.assertEqual(metrics, expected_metrics)
 
 
-class TrackerPeriodicTestCase(BaseTrackerTestCase):
-
-    def test_periodic_status_update(self):
-        # verify update called on instantiation
-        self.assertEqual(1, self.update_call_count)
-
-        # verify update not called if no change to resources
-        self.tracker.update_available_resource(self.context)
-        self.assertEqual(1, self.update_call_count)
-
-        # verify update is called when resources change
-        driver = self.tracker.driver
-        driver.memory_mb += 1
-        self.tracker.update_available_resource(self.context)
-        self.assertEqual(2, self.update_call_count)
-
-    def test_update_available_resource_calls_locked_inner(self):
-        @mock.patch.object(self.tracker, 'driver')
-        @mock.patch.object(self.tracker,
-                           '_update_available_resource')
-        @mock.patch.object(self.tracker, '_verify_resources')
-        @mock.patch.object(self.tracker, '_report_hypervisor_resource_view')
-        def _test(mock_rhrv, mock_vr, mock_uar, mock_driver):
-            resources = self._create_compute_node()
-            mock_driver.get_available_resource.return_value = resources
-            self.tracker.update_available_resource(self.context)
-            mock_uar.assert_called_once_with(self.context, resources)
-
-        _test()
-
-
 class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
 
     @mock.patch.object(resource_tracker.ResourceTracker,
