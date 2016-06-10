@@ -541,43 +541,6 @@ class BaseTrackerTestCase(BaseTestCase):
             self.assertEqual(value, x)
 
 
-class InstanceClaimTestCase(BaseTrackerTestCase):
-    def _instance_topology(self, mem):
-        mem = mem * 1024
-        return objects.InstanceNUMATopology(
-            cells=[objects.InstanceNUMACell(
-                id=0, cpuset=set([1]), memory=mem),
-                   objects.InstanceNUMACell(
-                       id=1, cpuset=set([3]), memory=mem)])
-
-    def _claim_topology(self, mem, cpus=1):
-        if self.tracker.driver.numa_topology is None:
-            return None
-        mem = mem * 1024
-        return objects.NUMATopology(
-            cells=[objects.NUMACell(
-                       id=0, cpuset=set([1, 2]), memory=3072, cpu_usage=cpus,
-                       memory_usage=mem, mempages=[], siblings=[],
-                       pinned_cpus=set([])),
-                   objects.NUMACell(
-                       id=1, cpuset=set([3, 4]), memory=3072, cpu_usage=cpus,
-                       memory_usage=mem, mempages=[], siblings=[],
-                       pinned_cpus=set([]))])
-
-    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
-    def test_deleted_instances_with_migrations(self, mock_migration_list):
-        migration = objects.Migration(context=self.context,
-                                      migration_type='resize',
-                                      instance_uuid='invalid')
-        mock_migration_list.return_value = [migration]
-        self.tracker.update_available_resource(self.context)
-        self.assertEqual(0, self.tracker.compute_node.memory_mb_used)
-        self.assertEqual(0, self.tracker.compute_node.local_gb_used)
-        mock_migration_list.assert_called_once_with(self.context,
-                                                    "fakehost",
-                                                    "fakenode")
-
-
 class _MoveClaimTestCase(BaseTrackerTestCase):
 
     def setUp(self):
