@@ -1,0 +1,9 @@
+---
+features:
+  - Adds serial console support to Ironic driver. Nova now supports
+    serial console to Ironic bare metals for Ironic ``socat`` console
+    driver.
+    In order to use this feature, serial console must be configured in Nova
+    and the Ironic ``socat`` console driver must be used and configured
+    in Ironic. Ironic serial console configuration is documented in
+    http://docs.openstack.org/developer/ironic/deploy/console.html.
