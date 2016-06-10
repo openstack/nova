@@ -836,6 +836,19 @@ class CellV2CommandsTestCase(test.TestCase):
         expected = 'No hosts found to map to cell, exiting.'
         self.assertEqual(expected, output)
 
+    def test_map_cell_and_hosts_no_transport_url(self):
+        retval = self.commands.map_cell_and_hosts()
+        self.assertEqual(1, retval)
+        output = sys.stdout.getvalue().strip()
+        expected = ('Must specify --transport-url if [DEFAULT]/transport_url '
+                    'is not set in the configuration file.')
+        self.assertEqual(expected, output)
+
+    def test_map_cell_and_hosts_transport_url_config(self):
+        self.flags(transport_url = "fake://guest:devstack@127.0.0.1:9999/")
+        retval = self.commands.map_cell_and_hosts()
+        self.assertEqual(0, retval)
+
     def test_map_instances(self):
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
