@@ -66,8 +66,6 @@ class _IntegratedTestBase(test.TestCase):
     def setUp(self):
         super(_IntegratedTestBase, self).setUp()
 
-        f = self._get_flags()
-        self.flags(**f)
         self.flags(verbose=True)
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
@@ -102,14 +100,6 @@ class _IntegratedTestBase(test.TestCase):
 
         self.network = self.start_service('network')
         self.scheduler = self._setup_scheduler_service()
-
-    def _get_flags(self):
-        """Allow subclass to modify global config before we start services."""
-        # NOTE(sdague): _get_flags is used by about 13 tests that
-        # subclass this mostly to modify the extensions list. We
-        # should instead make that declarative in the future, at which
-        # point we can get rid of this.
-        return {}
 
     def get_unused_server_name(self):
         servers = self.api.get_servers()
