@@ -75,7 +75,8 @@ def _delete_inventory_from_provider(conn, rp, to_delete):
     del_stmt = _INV_TBL.delete().where(sa.and_(
             _INV_TBL.c.resource_provider_id == rp.id,
             _INV_TBL.c.resource_class_id.in_(to_delete)))
-    conn.execute(del_stmt)
+    res = conn.execute(del_stmt)
+    return res.rowcount
 
 
 def _add_inventory_to_provider(conn, rp, inv_list, to_add):
@@ -89,6 +90,9 @@ def _add_inventory_to_provider(conn, rp, inv_list, to_add):
     """
     for res_class in to_add:
         inv_record = inv_list.find(res_class)
+        if inv_record.capacity <= 0:
+            raise exception.ObjectActionError(
+                action='add inventory', reason='invalid resource capacity')
         ins_stmt = _INV_TBL.insert().values(
                 resource_provider_id=rp.id,
                 resource_class_id=res_class,
@@ -112,6 +116,9 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
     """
     for res_class in to_update:
         inv_record = inv_list.find(res_class)
+        if inv_record.capacity <= 0:
+            raise exception.ObjectActionError(
+                action='update inventory', reason='invalid resource capacity')
         upd_stmt = _INV_TBL.update().where(sa.and_(
                 _INV_TBL.c.resource_provider_id == rp.id,
                 _INV_TBL.c.resource_class_id == res_class)).values(
@@ -121,7 +128,11 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
                         max_unit=inv_record.max_unit,
                         step_size=inv_record.step_size,
                         allocation_ratio=inv_record.allocation_ratio)
-        conn.execute(upd_stmt)
+        res = conn.execute(upd_stmt)
+        if not res.rowcount:
+            raise exception.NotFound(
+                'No inventory of class %s found for update'
+                % fields.ResourceClass.from_index(res_class))
 
 
 def _increment_provider_generation(conn, rp):
@@ -143,6 +154,43 @@ def _increment_provider_generation(conn, rp):
     if res.rowcount != 1:
         raise exception.ConcurrentUpdateDetected
     return new_generation
+
+
+@db_api.api_context_manager.writer
+def _add_inventory(context, rp, inventory):
+    """Add one Inventory that wasn't already on the provider."""
+    resource_class_id = fields.ResourceClass.index(inventory.resource_class)
+    inv_list = InventoryList(objects=[inventory])
+    conn = context.session.connection()
+    with conn.begin():
+        _add_inventory_to_provider(
+            conn, rp, inv_list, set([resource_class_id]))
+        rp.generation = _increment_provider_generation(conn, rp)
+
+
+@db_api.api_context_manager.writer
+def _update_inventory(context, rp, inventory):
+    """Update an inventory already on the provider."""
+    resource_class_id = fields.ResourceClass.index(inventory.resource_class)
+    inv_list = InventoryList(objects=[inventory])
+    conn = context.session.connection()
+    with conn.begin():
+        _update_inventory_for_provider(
+            conn, rp, inv_list, set([resource_class_id]))
+        rp.generation = _increment_provider_generation(conn, rp)
+
+
+@db_api.api_context_manager.writer
+def _delete_inventory(context, rp, resource_class_id):
+    """Delete up to one Inventory of the given resource_class id."""
+
+    conn = context.session.connection()
+    with conn.begin():
+        if not _delete_inventory_from_provider(conn, rp, [resource_class_id]):
+            raise exception.NotFound(
+                'No inventory of class %s found for delete'
+                % fields.ResourceClass.from_index(resource_class_id))
+        rp.generation = _increment_provider_generation(conn, rp)
 
 
 @db_api.api_context_manager.writer
@@ -234,8 +282,35 @@ class ResourceProvider(base.NovaObject):
         return cls._from_db_object(context, cls(), db_resource_provider)
 
     @base.remotable
+    def add_inventory(self, inventory):
+        """Add one new Inventory to the resource provider.
+
+        Fails if Inventory of the provided resource class is
+        already present.
+        """
+        _add_inventory(self._context, self, inventory)
+        self.obj_reset_changes()
+
+    @base.remotable
+    def delete_inventory(self, resource_class):
+        """Delete Inventory of provided resource_class."""
+        resource_class_id = fields.ResourceClass.index(resource_class)
+        _delete_inventory(self._context, self, resource_class_id)
+        self.obj_reset_changes()
+
+    @base.remotable
     def set_inventory(self, inv_list):
+        """Set all resource provider Inventory to be the provided list."""
         _set_inventory(self._context, self, inv_list)
+        self.obj_reset_changes()
+
+    @base.remotable
+    def update_inventory(self, inventory):
+        """Update one existing Inventory of the same resource class.
+
+        Fails if no Inventory of the same class is present.
+        """
+        _update_inventory(self._context, self, inventory)
         self.obj_reset_changes()
 
     @staticmethod
@@ -339,6 +414,11 @@ class Inventory(_HasAResourceProvider):
         'step_size': fields.NonNegativeIntegerField(default=1),
         'allocation_ratio': fields.NonNegativeFloatField(default=1.0),
     }
+
+    @property
+    def capacity(self):
+        """Inventory capacity, adjusted by allocation_ratio."""
+        return int((self.total - self.reserved) * self.allocation_ratio)
 
     @base.remotable
     def create(self):
