@@ -712,7 +712,8 @@ class ServersController(wsgi.Controller):
                 exception.ImageNUMATopologyCPUDuplicates,
                 exception.ImageNUMATopologyCPUsUnassigned,
                 exception.ImageNUMATopologyMemoryOutOfRange,
-                exception.InstanceGroupNotFound) as error:
+                exception.InstanceGroupNotFound,
+                exception.PciRequestAliasNotDefined) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
@@ -943,7 +944,8 @@ class ServersController(wsgi.Controller):
                 exception.CannotResizeDisk,
                 exception.CannotResizeToSameFlavor,
                 exception.FlavorNotFound,
-                exception.NoValidHost) as e:
+                exception.NoValidHost,
+                exception.PciRequestAliasNotDefined) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.Invalid:
             msg = _("Invalid instance image.")

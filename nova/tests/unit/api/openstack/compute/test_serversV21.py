@@ -3377,6 +3377,14 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create,
                           self.req, body=self.body)
 
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.PciRequestAliasNotDefined(
+                           alias='fake_name'))
+    def test_create_instance_pci_alias_not_defined(self, mock_create):
+        # Tests that PciRequestAliasNotDefined is translated to a 400 error.
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, {})
+
 
 class ServersControllerCreateTestV219(ServersControllerCreateTest):
     def _create_instance_req(self, set_desc, desc=None):
