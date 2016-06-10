@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 import mock
 
 from nova import exception
@@ -216,17 +218,22 @@ class TestRemoteInventoryNoDB(test_objects._RemoteTest,
 
 class TestInventory(test_objects._LocalTest):
 
-    def _make_inventory(self):
+    def _make_inventory(self, rp_uuid=None):
+        uuid = rp_uuid or uuids.inventory_resource_provider
+        name = uuid
         db_rp = objects.ResourceProvider(
-            context=self.context, uuid=uuids.inventory_resource_provider,
-            name=_RESOURCE_PROVIDER_NAME)
+            context=self.context, uuid=uuid, name=name)
         db_rp.create()
-        updates = dict(_INVENTORY_DB,
-                       resource_provider_id=db_rp.id)
-        updates.pop('id')
-        db_inventory = objects.Inventory._create_in_db(
-            self.context, updates)
+        db_inventory = self._create_inventory_in_db(db_rp.id)
         return db_rp, db_inventory
+
+    def _create_inventory_in_db(self, rp_id, **records):
+        updates = dict(_INVENTORY_DB,
+                       resource_provider_id=rp_id)
+        updates.pop('id')
+        updates.update(records)
+        return objects.Inventory._create_in_db(
+            self.context, updates)
 
     def test_create_in_db(self):
         updates = dict(_INVENTORY_DB)
@@ -267,6 +274,60 @@ class TestInventory(test_objects._LocalTest):
                 self.context, uuids.bad_rp_uuid)
         )
         self.assertEqual(0, len(retrieved_inventories))
+
+    def test_get_all_by_resource_provider_multiple_providers(self):
+        # TODO(cdent): This and other nearby tests are functional
+        # and should be moved.
+        # Create 2 resource providers with DISK_GB resources. And
+        # update total value for second one.
+        db_rp1, db_inv1 = self._make_inventory(str(uuid.uuid4()))
+        db_rp2, db_inv2 = self._make_inventory(str(uuid.uuid4()))
+
+        objects.Inventory._update_in_db(self.context,
+                                        db_inv2.id,
+                                        {'total': 32})
+
+        # Create IPV4_ADDRESS resources for each provider.
+        IPV4_ADDRESS_ID = objects.fields.ResourceClass.index(
+            objects.fields.ResourceClass.IPV4_ADDRESS)
+
+        self._create_inventory_in_db(db_rp1.id,
+                                     resource_provider_id=db_rp1.id,
+                                     resource_class_id=IPV4_ADDRESS_ID,
+                                     total=2)
+        self._create_inventory_in_db(db_rp2.id,
+                                     resource_provider_id=db_rp2.id,
+                                     resource_class_id=IPV4_ADDRESS_ID,
+                                     total=4)
+
+        expected_inv1 = {
+            _RESOURCE_CLASS_ID: _INVENTORY_DB['total'],
+            IPV4_ADDRESS_ID: 2}
+        expected_inv2 = {
+            _RESOURCE_CLASS_ID: 32,
+            IPV4_ADDRESS_ID: 4}
+
+        # Get inventories for each resource provider and validate
+        # that the inventory records for that resource provider uuid
+        # and match expected total value.
+        retrieved_inv = (
+            objects.InventoryList._get_all_by_resource_provider(
+                self.context, db_rp1.uuid)
+        )
+        for inv in retrieved_inv:
+            self.assertEqual(db_rp1.id, inv.resource_provider_id)
+            self.assertEqual(expected_inv1[inv.resource_class_id],
+                             inv.total)
+
+        retrieved_inv = (
+            objects.InventoryList._get_all_by_resource_provider(
+                self.context, db_rp2.uuid)
+        )
+
+        for inv in retrieved_inv:
+            self.assertEqual(db_rp2.id, inv.resource_provider_id)
+            self.assertEqual(expected_inv2[inv.resource_class_id],
+                             inv.total)
 
     def test_create_requires_resource_provider(self):
         inventory_dict = dict(_INVENTORY_DB)

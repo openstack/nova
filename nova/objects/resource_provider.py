@@ -11,7 +11,7 @@
 #    under the License.
 
 import six
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import contains_eager
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
@@ -244,9 +244,10 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_all_by_resource_provider(context, rp_uuid):
-        return context.session.query(models.Inventory).\
-            options(joinedload('resource_provider')).\
-            filter(models.ResourceProvider.uuid == rp_uuid).all()
+        return context.session.query(db_api.models.Inventory).\
+            join(db_api.models.Inventory.resource_provider).\
+            options(contains_eager('resource_provider')).\
+            filter(db_api.models.ResourceProvider.uuid == rp_uuid).all()
 
     @base.remotable_classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
