@@ -8243,7 +8243,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         expected_mig_status=None,
                                         scheduled_action=None,
                                         scheduled_action_executed=False,
-                                        block_migration=False):
+                                        block_migration=False,
+                                        expected_switch=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         drvr.active_migrations[instance.uuid] = deque()
@@ -8288,7 +8289,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         if current_mig_status:
             migrate_data.migration.status = current_mig_status
-            migrate_data.migration.save()
+        else:
+            migrate_data.migration.status = "unset"
+        migrate_data.migration.save()
 
         fake_post_method = mock.MagicMock()
         fake_recover_method = mock.MagicMock()
@@ -8317,6 +8320,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                              'Recover method called when success expected')
             self.assertFalse(mock_abort.called,
                              'abortJob not called when success expected')
+            if expected_switch:
+                self.assertTrue(mock_postcopy_switch.called)
             fake_post_method.assert_called_once_with(
                 self.context, instance, dest, False, migrate_data)
         else:
@@ -8942,6 +8947,34 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             (810, 238),
             (900, 400),
         ], list(steps))
+
+    @mock.patch('nova.virt.libvirt.migration.should_switch_to_postcopy')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_monitor_postcopy_switch(self,
+            mock_postcopy_enabled, mock_should_switch):
+        # A normal sequence where migration is swtiched to postcopy mode
+        mock_postcopy_enabled.return_value = True
+        switch_values = [False, False, True]
+        mock_should_switch.return_value = switch_values
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                                             self.EXPECT_SUCCESS,
+                                             expected_switch=True)
 
     @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(utils, "spawn")

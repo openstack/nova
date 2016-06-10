@@ -731,6 +731,7 @@ class JobInfo(object):
         self.memory_total = kwargs.get("memory_total", 0)
         self.memory_processed = kwargs.get("memory_processed", 0)
         self.memory_remaining = kwargs.get("memory_remaining", 0)
+        self.memory_iteration = kwargs.get("memory_iteration", 0)
         self.memory_constant = kwargs.get("memory_constant", 0)
         self.memory_normal = kwargs.get("memory_normal", 0)
         self.memory_normal_bytes = kwargs.get("memory_normal_bytes", 0)

@@ -6095,6 +6095,7 @@ class LibvirtDriver(driver.ComputeDriver):
         start = time.time()
         progress_time = start
         progress_watermark = None
+        previous_data_remaining = -1
         is_post_copy_enabled = self._is_post_copy_enabled(migration_flags)
         while True:
             info = guest.get_job_info()
@@ -6137,14 +6138,24 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 if libvirt_migrate.should_abort(instance, now, progress_time,
                                                 progress_timeout, elapsed,
-                                                completion_timeout):
+                                                completion_timeout,
+                                                migration.status):
                     try:
                         guest.abort_job()
                     except libvirt.libvirtError as e:
                         LOG.warning(_LW("Failed to abort migration %s"),
-                                 e, instance=instance)
+                                    e, instance=instance)
                         self._clear_empty_migration(instance)
                         raise
+
+                if (is_post_copy_enabled and
+                    libvirt_migrate.should_switch_to_postcopy(
+                    info.memory_iteration, info.data_remaining,
+                    previous_data_remaining, migration.status)):
+                    libvirt_migrate.trigger_postcopy_switch(guest,
+                                                            instance,
+                                                            migration)
+                previous_data_remaining = info.data_remaining
 
                 curdowntime = libvirt_migrate.update_downtime(
                     guest, instance, curdowntime,
