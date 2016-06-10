@@ -3273,6 +3273,14 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, {})
 
     @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.UnableToAutoAllocateNetwork(
+                           project_id=FAKE_UUID))
+    def test_create_instance_with_unable_to_auto_allocate_network(self,
+                                                                  mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, {})
+
+    @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.InstanceExists(
                            name='instance-name'))
     def test_create_instance_raise_instance_exists(self, mock_create):

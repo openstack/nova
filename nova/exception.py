@@ -805,6 +805,11 @@ class NetworkAmbiguous(Invalid):
                 "network ID(s) to select which one(s) to connect to.")
 
 
+class UnableToAutoAllocateNetwork(Invalid):
+    msg_fmt = _('Unable to automatically allocate a network for project '
+                '%(project_id)s')
+
+
 class NetworkRequiresSubnet(Invalid):
     msg_fmt = _("Network %(network_uuid)s requires a subnet in order to boot"
                 " instances on.")

@@ -713,7 +713,8 @@ class ServersController(wsgi.Controller):
                 exception.ImageNUMATopologyCPUsUnassigned,
                 exception.ImageNUMATopologyMemoryOutOfRange,
                 exception.InstanceGroupNotFound,
-                exception.PciRequestAliasNotDefined) as error:
+                exception.PciRequestAliasNotDefined,
+                exception.UnableToAutoAllocateNetwork) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
                 exception.InstanceExists,
