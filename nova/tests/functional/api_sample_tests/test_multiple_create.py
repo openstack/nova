@@ -18,7 +18,7 @@ from nova.tests.unit.image import fake
 
 
 class MultipleCreateJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-multiple-create"
+    sample_dir = "os-multiple-create"
 
     def test_multiple_create(self):
         subs = {

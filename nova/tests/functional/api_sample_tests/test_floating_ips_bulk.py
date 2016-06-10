@@ -22,7 +22,7 @@ CONF = nova.conf.CONF
 
 class FloatingIpsBulkTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-floating-ips-bulk"
+    sample_dir = "os-floating-ips-bulk"
 
     def setUp(self):
         super(FloatingIpsBulkTest, self).setUp()

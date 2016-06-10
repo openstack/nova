@@ -26,8 +26,7 @@ def fake_soft_extension_authorizer(extension_name, core=False):
 
 
 class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
-    sample_dir = "all_extensions"
-    all_extensions = True
+    sample_dir = "extension-info"
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_list_extensions(self, soft_auth):
@@ -45,7 +44,6 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
 class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "extension-info"
-    all_extensions = True
 
     @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
     def test_get_extensions(self, soft_auth):

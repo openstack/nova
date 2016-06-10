@@ -12,7 +12,7 @@
         "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
         "OS-EXT-SRV-ATTR:kernel_id": null,
         "OS-EXT-SRV-ATTR:ramdisk_id": null,
-        "OS-EXT-SRV-ATTR:user_data": null,
+        "OS-EXT-SRV-ATTR:user_data": "%(user_data)s",
         "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
@@ -52,7 +52,7 @@
             ]
         },
         "hostId": "%(hostid)s",
-        "id": "%(uuid)s",
+        "id": "%(id)s",
         "image": {
             "id": "%(uuid)s",
             "links": [

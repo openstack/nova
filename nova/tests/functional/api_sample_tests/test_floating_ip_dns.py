@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class FloatingIpDNSTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-floating-ip-dns"
+    sample_dir = "os-floating-ip-dns"
 
     domain = 'domain1.example.org'
     name = 'instance1'

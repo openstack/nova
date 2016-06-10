@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class ServerDiagnosticsSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-server-diagnostics"
+    sample_dir = "os-server-diagnostics"
 
     def test_server_diagnostics_get(self):
         uuid = self._post_server()

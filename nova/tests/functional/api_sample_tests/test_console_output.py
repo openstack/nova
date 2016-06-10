@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class ConsoleOutputSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-console-output"
+    sample_dir = "os-console-output"
 
     def test_get_console_output(self):
         uuid = self._post_server()

@@ -70,7 +70,7 @@ def _stub_migrations(stub_self, context, filters):
 
 class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-migrations"
+    sample_dir = "os-migrations"
 
     def setUp(self):
         super(MigrationsSamplesJsonTest, self).setUp()
@@ -86,7 +86,7 @@ class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
 class MigrationsSamplesJsonTestV2_23(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-migrations"
+    sample_dir = "os-migrations"
     microversion = '2.23'
     scenarios = [('v2_23', {'api_major_version': 'v2.1'})]
 

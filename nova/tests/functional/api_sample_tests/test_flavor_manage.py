@@ -20,10 +20,6 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = 'flavor-manage'
 
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
-
     def _create_flavor(self):
         """Create a flavor."""
         subs = {

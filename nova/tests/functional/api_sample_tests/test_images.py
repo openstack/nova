@@ -22,9 +22,6 @@ CONF = nova.conf.CONF
 
 class ImagesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'images'
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
 
     def test_images_list(self):
         # Get api sample of images get list request.

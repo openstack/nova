@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 class SecurityGroupDefaultRulesSampleJsonTest(
         api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = 'os-security-group-default-rules'
+    sample_dir = 'os-security-group-default-rules'
 
     def test_security_group_default_rules_create(self):
         response = self._do_post('os-security-group-default-rules',

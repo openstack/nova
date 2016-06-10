@@ -58,7 +58,7 @@ def fake_create_security_group(self, context, name, description):
 
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-security-groups'
+    sample_dir = 'os-security-groups'
 
     def setUp(self):
         self.flags(security_group_api=('neutron'))
@@ -113,21 +113,21 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
 
     def test_security_groups_list_server(self):
         # Get api sample of security groups for a specific server.
-        uuid = self._post_server(use_common_server_api_samples=False)
+        uuid = self._post_server()
         response = self._do_get('servers/%s/os-security-groups' % uuid)
         self._verify_response('server-security-groups-list-resp',
                               {}, response, 200)
 
     def test_security_groups_add(self):
         self._create_security_group()
-        uuid = self._post_server(use_common_server_api_samples=False)
+        uuid = self._post_server()
         response = self._add_group(uuid)
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.content)
 
     def test_security_groups_remove(self):
         self._create_security_group()
-        uuid = self._post_server(use_common_server_api_samples=False)
+        uuid = self._post_server()
         self._add_group(uuid)
         subs = {
                 'group_name': 'test'

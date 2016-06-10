@@ -63,8 +63,7 @@ def objectify(data):
 
 
 class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
-    all_extensions = False
-    extension_name = None
+    all_extensions = True
     sample_dir = None
     microversion = None
     _use_common_server_api_samples = False
@@ -102,10 +101,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         if cls._use_common_server_api_samples:
             parts.append('servers')
         else:
-            if cls.sample_dir:
-                parts.append(cls.sample_dir)
-            elif cls.extension_name:
-                parts.append(cls.extension_name)
+            parts.append(cls.sample_dir)
             if api_version:
                 parts.append('v' + api_version)
         parts.append(name + ".json" + suffix)
@@ -333,10 +329,10 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             template_data = response_data
         else:
             template_data = self._read_template(name)
-
         if (self.generate_samples and
                 not os.path.exists(self._get_sample(
                     name, self.microversion))):
+
             self._write_sample(name, response_data)
             sample_data = response_data
         else:

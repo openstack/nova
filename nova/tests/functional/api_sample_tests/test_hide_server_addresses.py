@@ -21,11 +21,7 @@ CONF = nova.conf.CONF
 
 
 class ServersSampleHideAddressesJsonTest(test_servers.ServersSampleJsonTest):
-    extension_name = 'os-hide-server-addresses'
-    # Override the sample dirname because
-    # test_servers.ServersSampleJsonTest does and so it won't default
-    # to the extension name
-    sample_dir = extension_name
+    sample_dir = 'os-hide-server-addresses'
 
     def setUp(self):
         # We override osapi_hide_server_address_states in order

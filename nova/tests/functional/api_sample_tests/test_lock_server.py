@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class LockServerSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-lock-server"
+    sample_dir = "os-lock-server"
 
     def setUp(self):
         """setUp Method for LockServer api samples extension

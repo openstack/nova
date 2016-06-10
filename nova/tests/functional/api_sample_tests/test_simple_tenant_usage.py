@@ -22,7 +22,7 @@ import nova.tests.functional.api_samples_test_base as astb
 
 
 class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-simple-tenant-usage"
+    sample_dir = "os-simple-tenant-usage"
 
     def setUp(self):
         """setUp method for simple tenant usage."""

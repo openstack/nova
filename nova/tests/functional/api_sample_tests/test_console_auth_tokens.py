@@ -21,8 +21,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 class ConsoleAuthTokensSampleJsonTests(test_servers.ServersSampleBase):
     ADMIN_API = True
-    extension_name = "os-console-auth-tokens"
-    extra_extensions_to_load = ["os-remote-consoles", "os-access-ips"]
+    sample_dir = "os-console-auth-tokens"
 
     def _get_console_url(self, data):
         return jsonutils.loads(data)["console"]["url"]

@@ -20,7 +20,7 @@ CONF = nova.conf.CONF
 
 
 class AdminPasswordJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-admin-password'
+    sample_dir = 'os-admin-password'
 
     def test_server_password(self):
         uuid = self._post_server()

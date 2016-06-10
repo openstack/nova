@@ -59,7 +59,7 @@
             "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
             "OS-EXT-SRV-ATTR:kernel_id": null,
             "OS-EXT-SRV-ATTR:ramdisk_id": null,
-            "OS-EXT-SRV-ATTR:user_data": null,
+            "OS-EXT-SRV-ATTR:user_data": "IyEvYmluL2Jhc2gKL2Jpbi9zdQplY2hvICJJIGFtIGluIHlvdSEiCg==",
             "locked": false,
             "accessIPv4": "1.2.3.4",
             "accessIPv6": "80fe::",

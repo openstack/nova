@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class PauseServerSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-pause-server"
+    sample_dir = "os-pause-server"
 
     def setUp(self):
         """setUp Method for PauseServer api samples extension

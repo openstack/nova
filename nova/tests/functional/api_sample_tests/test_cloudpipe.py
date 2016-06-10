@@ -24,7 +24,7 @@ CONF = nova.conf.CONF
 
 class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-cloudpipe"
+    sample_dir = "os-cloudpipe"
 
     def setUp(self):
         super(CloudPipeSampleTest, self).setUp()

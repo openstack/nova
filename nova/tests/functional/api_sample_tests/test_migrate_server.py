@@ -21,7 +21,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-migrate-server"
+    sample_dir = "os-migrate-server"
 
     def setUp(self):
         """setUp Method for MigrateServer api samples extension
@@ -77,7 +77,7 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
 
 
 class MigrateServerSamplesJsonTestV225(MigrateServerSamplesJsonTest):
-    extension_name = "os-migrate-server"
+    sample_dir = "os-migrate-server"
     microversion = '2.25'
     scenarios = [('v2_25', {'api_major_version': 'v2.1'})]
 
@@ -87,7 +87,7 @@ class MigrateServerSamplesJsonTestV225(MigrateServerSamplesJsonTest):
 
 
 class MigrateServerSamplesJsonTestV230(MigrateServerSamplesJsonTest):
-    extension_name = "os-migrate-server"
+    sample_dir = "os-migrate-server"
     microversion = '2.30'
     scenarios = [('v2_30', {'api_major_version': 'v2.1'})]
 

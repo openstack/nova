@@ -18,7 +18,7 @@ from nova.tests.unit.api.openstack.compute import test_fping
 
 
 class FpingSampleJsonTests(test_servers.ServersSampleBase):
-    extension_name = "os-fping"
+    sample_dir = "os-fping"
 
     def setUp(self):
         super(FpingSampleJsonTests, self).setUp()

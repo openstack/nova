@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class DeferredDeleteSampleJsonTests(test_servers.ServersSampleBase):
-    extension_name = "os-deferred-delete"
+    sample_dir = "os-deferred-delete"
 
     def setUp(self):
         super(DeferredDeleteSampleJsonTests, self).setUp()

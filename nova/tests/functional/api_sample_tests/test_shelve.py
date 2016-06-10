@@ -21,7 +21,7 @@ CONF = nova.conf.CONF
 
 
 class ShelveJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-shelve"
+    sample_dir = "os-shelve"
 
     def setUp(self):
         super(ShelveJsonTest, self).setUp()

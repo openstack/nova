@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
+
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -20,7 +22,10 @@ from nova.tests.unit.image import fake
 
 class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
     microversion = None
-    all_extensions = True
+    sample_dir = 'servers'
+
+    user_data_contents = '#!/bin/bash\n/bin/su\necho "I am in you!"\n'
+    user_data = base64.b64encode(user_data_contents)
 
     def _post_server(self, use_common_server_api_samples=True):
         # param use_common_server_api_samples: Boolean to set whether tests use
@@ -28,7 +33,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         # Default is True which means _get_sample_path method will fetch the
         # common server sample files from 'servers' directory.
         # Set False if tests need to use extension specific sample files
-
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
@@ -36,24 +40,19 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             'versioned_compute_endpoint': self._get_vers_compute_endpoint(),
             'glance_host': self._get_glance_host(),
             'access_ip_v4': '1.2.3.4',
-            'access_ip_v6': '80fe::'
+            'access_ip_v6': '80fe::',
+            'user_data': self.user_data,
+            'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
+                    '-[0-9a-f]{4}-[0-9a-f]{12}',
         }
-        # TODO(gmann): Remove this hack once all tests using this common
-        # _post_server method are enabled with all extension.
-        # This is added to avoid all tests updates together.
-        post_req_template = 'server-post-req'
-        post_resp_template = 'server-post-resp'
-        if self.all_extensions and use_common_server_api_samples:
-            post_req_template = 'server-create-req'
-            post_resp_template = 'server-create-resp'
 
         orig_value = self.__class__._use_common_server_api_samples
         orig_sample_dir = self.__class__.sample_dir
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
-            response = self._do_post('servers', post_req_template, subs)
-            status = self._verify_response(post_resp_template, subs,
+            response = self._do_post('servers', 'server-create-req', subs)
+            status = self._verify_response('server-create-resp', subs,
                                            response, 202)
             return status
         finally:
@@ -66,7 +65,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 
 
 class ServersSampleJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
     microversion = None
 
     def test_servers_post(self):
@@ -86,6 +84,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['user_data'] = self.user_data
         # config drive can be a string for True or empty value for False
         subs['cdrive'] = '.*'
         self._verify_response('server-get-resp', subs, response, 200)
@@ -110,6 +109,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         subs['mac_addr'] = '(?:[a-f0-9]{2}:){5}[a-f0-9]{2}'
         subs['access_ip_v4'] = '1.2.3.4'
         subs['access_ip_v6'] = '80fe::'
+        subs['user_data'] = self.user_data
         # config drive can be a string for True or empty value for False
         subs['cdrive'] = '.*'
         self._verify_response('servers-details-resp', subs, response, 200)
@@ -130,7 +130,6 @@ class ServersSampleJson216Test(ServersSampleJsonTest):
 
 class ServersSampleJson219Test(ServersSampleJsonTest):
     microversion = '2.19'
-    sample_dir = 'servers'
     scenarios = [('v2_19', {'api_major_version': 'v2.1'})]
 
     def test_servers_post(self):
@@ -150,7 +149,6 @@ class ServersSampleJson219Test(ServersSampleJsonTest):
 
 
 class ServersUpdateSampleJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
 
     def test_update_server(self):
         uuid = self._post_server()
@@ -174,7 +172,6 @@ class ServerSortKeysJsonTests(ServersSampleBase):
 
 
 class ServersActionsJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
 
     def _test_server_action(self, uuid, action, req_tpl,
                             subs=None, resp_tpl=None, code=202):
@@ -249,7 +246,6 @@ class ServersActionsJsonTest(ServersSampleBase):
 
 class ServersActionsJson219Test(ServersSampleBase):
     microversion = '2.19'
-    sample_dir = 'servers'
     scenarios = [('v2_19', {'api_major_version': 'v2.1'})]
 
     def test_server_rebuild(self):
@@ -273,7 +269,6 @@ class ServersActionsJson219Test(ServersSampleBase):
 
 
 class ServerStartStopJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
 
     def _test_server_action(self, uuid, action, req_tpl):
         response = self._do_post('servers/%s/action' % uuid,
@@ -293,8 +288,6 @@ class ServerStartStopJsonTest(ServersSampleBase):
 
 
 class ServersSampleMultiStatusJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
-    extra_extensions_to_load = ["os-access-ips"]
 
     def test_servers_list(self):
         uuid = self._post_server()
@@ -304,7 +297,6 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
 
 
 class ServerTriggerCrashDumpJsonTest(ServersSampleBase):
-    sample_dir = 'servers'
     microversion = '2.17'
     scenarios = [('v2_17', {'api_major_version': 'v2.1'})]
 

@@ -18,7 +18,7 @@ from nova.tests.unit.api.openstack import fakes
 
 
 class BlockDeviceMappingV1BootJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-block-device-mapping-v1"
+    sample_dir = "os-block-device-mapping-v1"
 
     def test_servers_post_with_bdm(self):
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
@@ -28,4 +28,4 @@ class BlockDeviceMappingV1BootJsonTest(test_servers.ServersSampleBase):
 
 
 class BlockDeviceMappingV2BootJsonTest(BlockDeviceMappingV1BootJsonTest):
-    extension_name = "os-block-device-mapping"
+    sample_dir = "os-block-device-mapping"

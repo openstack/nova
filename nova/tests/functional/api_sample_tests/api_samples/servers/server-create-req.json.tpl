@@ -20,6 +20,10 @@
             {
                 "name": "default"
             }
-        ]
+        ],
+        "user_data" : "%(user_data)s"
+    },
+    "OS-SCH-HNT:scheduler_hints": {
+        "same_host": "%(uuid)s"
     }
 }

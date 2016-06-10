@@ -25,7 +25,7 @@ from nova.tests.unit import fake_instance
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-volumes"
+    sample_dir = "os-volumes"
 
     create_subs = {
             'snapshot_name': 'snap-001',
@@ -130,7 +130,7 @@ def _stub_volume_create(stub_self, context, size, name, description,
 
 
 class VolumesSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-volumes"
+    sample_dir = "os-volumes"
 
     def setUp(self):
         super(VolumesSampleJsonTest, self).setUp()
@@ -193,7 +193,7 @@ class VolumesSampleJsonTest(test_servers.ServersSampleBase):
 
 
 class VolumeAttachmentsSample(test_servers.ServersSampleBase):
-    extension_name = "os-volumes"
+    sample_dir = "os-volumes"
 
     def _stub_db_bdms_get_all_by_instance(self, server_id):
 

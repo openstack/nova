@@ -16,7 +16,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class SuspendServerSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-suspend-server"
+    sample_dir = "os-suspend-server"
 
     def setUp(self):
         """setUp Method for SuspendServer api samples extension

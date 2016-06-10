@@ -18,8 +18,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class NetworksAssociateJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-networks-associate"
-    extra_extensions_to_load = ["os-networks"]
+    sample_dir = "os-networks-associate"
 
     _sentinel = object()
 

@@ -18,7 +18,7 @@ from nova.tests.unit import fake_crypto
 
 
 class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-certificates"
+    sample_dir = "os-certificates"
 
     def setUp(self):
         super(CertificatesSamplesJsonTest, self).setUp()

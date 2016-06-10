@@ -19,10 +19,6 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 class FlavorsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = 'flavors'
 
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
-
     def test_flavors_get(self):
         response = self._do_get('flavors/1')
         self._verify_response('flavor-get-resp', {}, response, 200)

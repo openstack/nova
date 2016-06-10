@@ -44,7 +44,7 @@ class fake_client(object):
 
 class BareMetalNodesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-baremetal-nodes"
+    sample_dir = "os-baremetal-nodes"
 
     @mock.patch("nova.api.openstack.compute.baremetal_nodes"
                 "._get_ironic_client")

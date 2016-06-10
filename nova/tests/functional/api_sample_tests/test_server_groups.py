@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 
 class ServerGroupsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-server-groups"
+    sample_dir = "os-server-groups"
 
     def _get_create_subs(self):
         return {'name': 'test'}

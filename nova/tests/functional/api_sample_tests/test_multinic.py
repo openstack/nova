@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 class MultinicSampleJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
-    extension_name = "os-multinic"
+    sample_dir = "os-multinic"
 
     def _disable_instance_dns_manager(self):
         # NOTE(markmc): it looks like multinic and instance_dns_manager are
