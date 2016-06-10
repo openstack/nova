@@ -190,9 +190,8 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
             self.assertEqual(kwargs['dns1'], '8.8.8.8')
             self.assertEqual(kwargs['dns2'], '8.8.4.4')
         self.flags(network_manager='nova.network.manager.VlanManager')
-        from nova.network import manager as net_manager
-        self.stubs.Set(net_manager.VlanManager, 'create_networks',
-                       fake_create_networks)
+        self.stub_out('nova.network.manager.VlanManager.create_networks',
+                      fake_create_networks)
         self.commands.create(
                             label='Test',
                             cidr='10.2.0.0/24',
