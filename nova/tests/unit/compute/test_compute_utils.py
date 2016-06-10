@@ -394,7 +394,7 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(network_api.API, 'get_instance_nw_info',
                        fake_get_nw_info)
 
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
         self.flags(use_local=True, group='conductor')

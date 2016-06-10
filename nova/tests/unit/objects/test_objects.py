@@ -239,7 +239,7 @@ class _BaseTestCase(test.TestCase):
         self.user_id = 'fake-user'
         self.project_id = 'fake-project'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
         # NOTE(danms): register these here instead of at import time
