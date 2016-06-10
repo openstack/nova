@@ -14,12 +14,12 @@
 #    under the License.
 
 from nova.notifications.objects import base
-from nova.objects import base as object_base
+from nova.objects import base as nova_base
 from nova.objects import fields
 
 
 @base.notification_sample('service-update.json')
-@object_base.NovaObjectRegistry.register
+@nova_base.NovaObjectRegistry.register_notification
 class ServiceStatusNotification(base.NotificationBase):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -29,7 +29,7 @@ class ServiceStatusNotification(base.NotificationBase):
     }
 
 
-@object_base.NovaObjectRegistry.register
+@nova_base.NovaObjectRegistry.register_notification
 class ServiceStatusPayload(base.NotificationPayloadBase):
     SCHEMA = {
         'host': ('service', 'host'),

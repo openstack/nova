@@ -12,14 +12,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 from nova.objects import base
 from nova.objects import fields
 from nova import rpc
 
 
-@base.NovaObjectRegistry.register
-class EventType(base.NovaObject):
+@base.NovaObjectRegistry.register_if(False)
+class NotificationObject(base.NovaObject):
+    """Base class for every notification related versioned object."""
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+
+@base.NovaObjectRegistry.register_notification
+class EventType(NotificationObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -37,10 +43,8 @@ class EventType(base.NovaObject):
         return s
 
 
-# Note(gibi): It is explicitly not registered as this class shall not be used
-# directly, it is just a base class for notification payloads.
 @base.NovaObjectRegistry.register_if(False)
-class NotificationPayloadBase(base.NovaObject):
+class NotificationPayloadBase(NotificationObject):
     """Base class for the payload of versioned notifications."""
     # SCHEMA defines how to populate the payload fields. It is a dictionary
     # where every key value pair has the following format:
@@ -81,8 +85,8 @@ class NotificationPayloadBase(base.NovaObject):
         self.populated = True
 
 
-@base.NovaObjectRegistry.register
-class NotificationPublisher(base.NovaObject):
+@base.NovaObjectRegistry.register_notification
+class NotificationPublisher(NotificationObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
@@ -96,10 +100,8 @@ class NotificationPublisher(base.NovaObject):
         return cls(host=service.host, binary=service.binary)
 
 
-# Note(gibi): It is explicitly not registered as this class shall not be used
-# directly, it is just a base class for notification.
 @base.NovaObjectRegistry.register_if(False)
-class NotificationBase(base.NovaObject):
+class NotificationBase(NotificationObject):
     """Base class for versioned notifications.
 
     Every subclass shall define a 'payload' field.

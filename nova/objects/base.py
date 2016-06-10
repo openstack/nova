@@ -40,6 +40,8 @@ def get_attrname(name):
 
 
 class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
+    notification_classes = []
+
     def registration_hook(self, cls, index):
         # NOTE(danms): This is called when an object is registered,
         # and is responsible for maintaining nova.objects.$OBJECT
@@ -52,6 +54,25 @@ class NovaObjectRegistry(ovoo_base.VersionedObjectRegistry):
                 getattr(objects, cls.obj_name()).VERSION)
             if version >= cur_version:
                 setattr(objects, cls.obj_name(), cls)
+
+    @classmethod
+    def register_notification(cls, notification_cls):
+        """Register a class as notification.
+        Use only to register concrete notification or payload classes,
+        do not register base classes intended for inheritance only.
+        """
+        cls.register_if(False)(notification_cls)
+        cls.notification_classes.append(notification_cls)
+        return notification_cls
+
+    @classmethod
+    def register_notification_objects(cls):
+        """Register previously decorated notification as normal ovos.
+        This is not intended for production use but only for testing and
+        document generation purposes.
+        """
+        for notification_cls in cls.notification_classes:
+            cls.register(notification_cls)
 
 
 remotable_classmethod = ovoo_base.remotable_classmethod
