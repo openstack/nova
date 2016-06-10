@@ -20,6 +20,7 @@ from nova import db
 from nova import exception
 from nova.i18n import _LW
 from nova.notifications.objects import base as notification
+from nova.notifications.objects import service as service_notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -305,8 +306,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         # every other field change. See the comment in save() too.
         if set(updates.keys()).intersection(
                 {'disabled', 'disabled_reason', 'forced_down'}):
-            payload = ServiceStatusPayload(self)
-            ServiceStatusNotification(
+            payload = service_notification.ServiceStatusPayload(self)
+            service_notification.ServiceStatusNotification(
                 publisher=notification.NotificationPublisher.from_service_obj(
                     self),
                 event_type=notification.EventType(
@@ -428,48 +429,3 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
                 context, db_services)
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)
-
-
-@notification.notification_sample('service-update.json')
-@base.NovaObjectRegistry.register
-class ServiceStatusNotification(notification.NotificationBase):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-
-    fields = {
-        'payload': fields.ObjectField('ServiceStatusPayload')
-    }
-
-
-@base.NovaObjectRegistry.register
-class ServiceStatusPayload(notification.NotificationPayloadBase):
-    SCHEMA = {
-        'host': ('service', 'host'),
-        'binary': ('service', 'binary'),
-        'topic': ('service', 'topic'),
-        'report_count': ('service', 'report_count'),
-        'disabled': ('service', 'disabled'),
-        'disabled_reason': ('service', 'disabled_reason'),
-        'availability_zone': ('service', 'availability_zone'),
-        'last_seen_up': ('service', 'last_seen_up'),
-        'forced_down': ('service', 'forced_down'),
-        'version': ('service', 'version')
-    }
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-    fields = {
-        'host': fields.StringField(nullable=True),
-        'binary': fields.StringField(nullable=True),
-        'topic': fields.StringField(nullable=True),
-        'report_count': fields.IntegerField(),
-        'disabled': fields.BooleanField(),
-        'disabled_reason': fields.StringField(nullable=True),
-        'availability_zone': fields.StringField(nullable=True),
-        'last_seen_up': fields.DateTimeField(nullable=True),
-        'forced_down': fields.BooleanField(),
-        'version': fields.IntegerField(),
-    }
-
-    def __init__(self, service):
-        super(ServiceStatusPayload, self).__init__()
-        self.populate_schema(service=service)
