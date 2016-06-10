@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class LimitsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "limits"
+    sample_dir = "limits"
 
     def setUp(self):
         super(LimitsSampleJsonTest, self).setUp()

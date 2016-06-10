@@ -22,7 +22,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-hypervisors"
+    sample_dir = "os-hypervisors"
 
     def test_hypervisors_list(self):
         response = self._do_get('os-hypervisors')
@@ -94,7 +94,7 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 @mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
 class HypervisorsCellsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-hypervisors"
+    sample_dir = "os-hypervisors"
 
     def setUp(self):
         self.flags(enable=True, cell_type='api', group='cells')

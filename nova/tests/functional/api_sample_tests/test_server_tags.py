@@ -17,7 +17,7 @@ TAG = 'sometag'
 
 
 class ServerTagsJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-server-tags'
+    sample_dir = 'os-server-tags'
     microversion = '2.26'
     scenarios = [('v2_26', {'api_major_version': 'v2.1'})]
 
@@ -55,6 +55,7 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
+        subs['user_data'] = self.user_data
         self._verify_response('server-tags-show-details-resp',
                               subs, response, 200)
 
@@ -70,6 +71,7 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         subs['cdrive'] = '.*'
+        subs['user_data'] = self.user_data
         self._verify_response('servers-tags-details-resp', subs, response, 200)
 
     def test_server_tags_index(self):

@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-aggregates"
+    sample_dir = "os-aggregates"
 
     def test_aggregate_create(self):
         subs = {

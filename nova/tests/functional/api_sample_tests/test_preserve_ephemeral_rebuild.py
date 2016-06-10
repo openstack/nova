@@ -18,7 +18,7 @@ from nova.tests.unit.image import fake
 
 
 class PreserveEphemeralOnRebuildJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-preserve-ephemeral-rebuild'
+    sample_dir = 'os-preserve-ephemeral-rebuild'
 
     def _test_server_rebuild_preserve_ephemeral(self, value, resp_tpl=None):
         uuid = self._post_server()

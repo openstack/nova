@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
     ADMIN_API = True
-    extension_name = "os-availability-zone"
+    sample_dir = "os-availability-zone"
 
     def test_availability_zone_list(self):
         response = self._do_get('os-availability-zone')

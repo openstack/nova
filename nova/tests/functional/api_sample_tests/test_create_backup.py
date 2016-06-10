@@ -20,7 +20,7 @@ from nova.tests.unit.image import fake
 
 
 class CreateBackupSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-create-backup"
+    sample_dir = "os-create-backup"
 
     def setUp(self):
         """setUp Method for PauseServer api samples extension

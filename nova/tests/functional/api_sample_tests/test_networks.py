@@ -38,7 +38,7 @@ def _fixtures_passthrough(method_name):
 
 class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-networks"
+    sample_dir = "os-networks"
 
     def setUp(self):
         super(NetworksJsonTests, self).setUp()
@@ -58,13 +58,6 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     def test_network_list(self):
         response = self._do_get('os-networks')
         self._verify_response('networks-list-resp', {}, response, 200)
-
-    def test_network_disassociate(self):
-        uuid = test_networks.FAKE_NETWORKS[0]['uuid']
-        response = self._do_post('os-networks/%s/action' % uuid,
-                                 'networks-disassociate-req', {})
-        self.assertEqual(202, response.status_code)
-        self.assertEqual("", response.content)
 
     def test_network_show(self):
         uuid = test_networks.FAKE_NETWORKS[0]['uuid']

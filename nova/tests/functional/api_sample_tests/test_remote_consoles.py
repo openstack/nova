@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
     microversion = None
-    extension_name = "os-remote-consoles"
+    sample_dir = "os-remote-consoles"
 
     def setUp(self):
         super(ConsolesSampleJsonTests, self).setUp()
@@ -70,7 +70,7 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
 
 class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
     microversion = '2.6'
-    extension_name = "os-remote-consoles"
+    sample_dir = "os-remote-consoles"
     # NOTE(gmann): microversion tests do not need to run for v2 API
     # so defining scenarios only for v2.6 which will run the original tests
     # by appending '(v2_6)' in test_id.
@@ -91,7 +91,7 @@ class ConsolesV26SampleJsonTests(test_servers.ServersSampleBase):
 
 
 class ConsolesV28SampleJsonTests(test_servers.ServersSampleBase):
-    extension_name = "os-remote-consoles"
+    sample_dir = "os-remote-consoles"
     microversion = '2.8'
     scenarios = [('v2_8', {'api_major_version': 'v2.1'})]
 

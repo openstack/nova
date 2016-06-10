@@ -21,7 +21,7 @@ CONF = nova.conf.CONF
 
 
 class FloatingIpsTest(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-floating-ips"
+    sample_dir = "os-floating-ips"
 
     def setUp(self):
         super(FloatingIpsTest, self).setUp()

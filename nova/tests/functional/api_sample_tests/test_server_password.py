@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class ServerPasswordSampleJsonTests(test_servers.ServersSampleBase):
-    extension_name = "os-server-password"
+    sample_dir = "os-server-password"
 
     @mock.patch("nova.api.metadata.password.extract_password")
     def test_get_password(self, mock_extract_password):

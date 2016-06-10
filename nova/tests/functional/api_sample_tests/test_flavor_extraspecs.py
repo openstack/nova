@@ -20,10 +20,6 @@ class FlavorExtraSpecsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = 'flavor-extra-specs'
 
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
-
     def _flavor_extra_specs_create(self):
         subs = {'value1': 'value1',
                 'value2': 'value2'

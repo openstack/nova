@@ -18,9 +18,6 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 class FlavorAccessTestsBase(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = 'flavor-access'
-    # TODO(gmann): This will be removed once all API tests runs for
-    # all extension enable.
-    all_extensions = True
 
     def _add_tenant(self):
         subs = {

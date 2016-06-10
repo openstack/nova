@@ -18,7 +18,7 @@ from nova.tests.functional.api_sample_tests import api_sample_base
 
 class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-quota-sets"
+    sample_dir = "os-quota-sets"
 
     def test_show_quotas(self):
         # Get api sample to show quotas.

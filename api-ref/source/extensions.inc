@@ -51,7 +51,7 @@ Response
 
 Lists all extensions to the API.
 
-.. literalinclude:: ../../doc/api_samples/all_extensions/extensions-list-resp.json
+.. literalinclude:: ../../doc/api_samples/extension-info/extensions-list-resp.json
    :language: javascript
 
 

@@ -20,8 +20,7 @@ from nova.tests import uuidsentinel as uuids
 
 
 class FixedIpTest(test_servers.ServersSampleBase):
-    extension_name = "os-fixed-ips"
-
+    sample_dir = "os-fixed-ips"
     microversion = None
 
     def setUp(self):

@@ -17,7 +17,7 @@ from nova.tests.unit.api.openstack import fakes
 
 
 class AssistedVolumeSnapshotsJsonTests(test_servers.ServersSampleBase):
-    extension_name = "os-assisted-volume-snapshots"
+    sample_dir = "os-assisted-volume-snapshots"
 
     def test_create(self):
         """Create a volume snapshots."""

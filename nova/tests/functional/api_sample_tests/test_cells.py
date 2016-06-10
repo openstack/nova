@@ -26,7 +26,7 @@ CONF = nova.conf.CONF
 
 
 class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
-    extension_name = "os-cells"
+    sample_dir = "os-cells"
 
     def setUp(self):
         # db_check_interval < 0 makes cells manager always hit the DB

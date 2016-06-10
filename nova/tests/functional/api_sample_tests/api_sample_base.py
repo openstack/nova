@@ -61,7 +61,6 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
     # any additional fixtures needed for this scenario
     _additional_fixtures = []
     sample_dir = None
-    extra_extensions_to_load = None
     _project_id = True
 
     scenarios = [
@@ -83,18 +82,6 @@ class ApiSampleTestBaseV21(testscenarios.WithScenarios,
         self.flags(use_ipv6=False,
                    osapi_compute_link_prefix=self._get_host(),
                    osapi_glance_link_prefix=self._get_glance_host())
-        if not self.all_extensions:
-            # Set the whitelist to ensure only the extensions we are
-            # interested in are loaded so the api samples don't include
-            # data from extensions we are not interested in
-            whitelist = API_V21_CORE_EXTENSIONS.copy()
-            if self.extension_name:
-                whitelist.add(self.extension_name)
-            if self.extra_extensions_to_load:
-                whitelist.update(set(self.extra_extensions_to_load))
-
-            CONF.set_override('extensions_whitelist', whitelist,
-                              'osapi_v21')
 
         # load any additional fixtures specified by the scenario
         for fix in self._additional_fixtures:

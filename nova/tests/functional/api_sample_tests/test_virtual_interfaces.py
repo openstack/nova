@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class VirtualInterfacesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-virtual-interfaces"
+    sample_dir = "os-virtual-interfaces"
 
     def setUp(self):
         super(VirtualInterfacesJsonTest, self).setUp()

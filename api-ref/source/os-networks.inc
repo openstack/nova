@@ -229,7 +229,7 @@ Request
 
 **Example Disassociate Network: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-networks/networks-disassociate-req.json
+.. literalinclude:: ../../doc/api_samples/os-networks-associate/network-disassociate-req.json
    :language: javascript
 
 Response

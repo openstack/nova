@@ -20,7 +20,7 @@ from nova.tests.unit import fake_network_cache_model
 
 
 class AttachInterfacesSampleJsonTest(test_servers.ServersSampleBase):
-    extension_name = 'os-attach-interfaces'
+    sample_dir = 'os-attach-interfaces'
 
     def setUp(self):
         super(AttachInterfacesSampleJsonTest, self).setUp()

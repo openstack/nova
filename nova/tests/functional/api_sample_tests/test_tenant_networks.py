@@ -24,7 +24,7 @@ CONF = nova.conf.CONF
 
 class TenantNetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
-    extension_name = "os-tenant-networks"
+    sample_dir = "os-tenant-networks"
 
     def setUp(self):
         super(TenantNetworksJsonTests, self).setUp()

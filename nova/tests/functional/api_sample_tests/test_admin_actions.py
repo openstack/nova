@@ -17,7 +17,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 
 
 class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
-    extension_name = "os-admin-actions"
+    sample_dir = "os-admin-actions"
 
     def setUp(self):
         """setUp Method for AdminActions api samples extension
