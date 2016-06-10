@@ -410,7 +410,6 @@ class ServersControllerTest(ControllerTest):
         expected_server = self._get_server_data_dict(uuid,
                                                      image_bookmark,
                                                      flavor_bookmark,
-                                                     status="BUILD",
                                                      progress=0)
         expected_server['server']['name'] = 'server1'
         expected_server['server']['metadata']['seq'] = '1'
@@ -1259,7 +1258,7 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['name'], 'server%d' % (i + 1))
             self.assertEqual(s['image'], expected_image)
             self.assertEqual(s['flavor'], expected_flavor)
-            self.assertEqual(s['status'], 'BUILD')
+            self.assertEqual(s['status'], 'ACTIVE')
             self.assertEqual(s['metadata']['seq'], str(i + 1))
 
     def test_get_all_server_details_with_host(self):
@@ -1337,7 +1336,6 @@ class ServersControllerTestV29(ServersControllerTest):
         expected_server = self._get_server_data_dict(uuid,
                                                      image_bookmark,
                                                      flavor_bookmark,
-                                                     status="BUILD",
                                                      progress=0)
         expected_server['server']['locked'] = True if locked_by else False
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
@@ -1432,7 +1430,6 @@ class ServersControllerTestV219(ServersControllerTest):
         expected_server = self._get_server_data_dict(uuid,
                                                      image_bookmark,
                                                      flavor_bookmark,
-                                                     status="BUILD",
                                                      progress=0,
                                                      description=description)
         self.assertThat(res_dict, matchers.DictMatches(expected_server))
@@ -3632,7 +3629,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
-                "status": "BUILD",
+                "status": "ACTIVE",
                 "hostId": '',
                 "image": {
                     "id": "5",
@@ -3933,7 +3930,7 @@ class ServersViewBuilderTest(test.TestCase):
                 "created": "2010-10-10T12:00:00Z",
                 "progress": 0,
                 "name": "test_server",
-                "status": "BUILD",
+                "status": "ACTIVE",
                 "hostId": '',
                 "image": {
                     "id": "5",
