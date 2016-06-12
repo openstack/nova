@@ -47,8 +47,7 @@ class NotificationSampleTestBase(test.TestCase):
 
         self.api = api_fixture.api
         self.admin_api = api_fixture.admin_api
-
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
     def _get_notification_sample(self, sample):

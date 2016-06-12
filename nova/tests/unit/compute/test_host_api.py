@@ -35,7 +35,7 @@ class ComputeHostAPITestCase(test.TestCase):
         super(ComputeHostAPITestCase, self).setUp()
         self.host_api = compute.HostAPI()
         self.ctxt = context.get_admin_context()
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
     def _compare_obj(self, obj, db_obj):

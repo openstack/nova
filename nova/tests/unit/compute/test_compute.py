@@ -154,7 +154,7 @@ class BaseTestCase(test.TestCase):
         fake.set_nodes([NODENAME])
         self.flags(use_local=True, group='conductor')
 
-        fake_notifier.stub_notifier(self.stubs)
+        fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
         self.compute = importutils.import_object(CONF.compute_manager)
