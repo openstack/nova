@@ -98,6 +98,14 @@ class _TestAggregateObject(object):
         self.assertEqual(fake_db_aggregate_hosts, expected.hosts)
         self.assertEqual(fake_db_aggregate_metadata, expected['metadetails'])
 
+    def test_aggregate_get_from_db_by_uuid(self):
+        result = _create_aggregate_with_hosts(self.context)
+        expected = aggregate._aggregate_get_from_db_by_uuid(
+                self.context, result['uuid'])
+        self.assertEqual(result.uuid, expected.uuid)
+        self.assertEqual(fake_db_aggregate_hosts, expected.hosts)
+        self.assertEqual(fake_db_aggregate_metadata, expected['metadetails'])
+
     def test_aggregate_get_from_db_raise_not_found(self):
         aggregate_id = 5
         self.assertRaises(exception.AggregateNotFound,
@@ -192,13 +200,26 @@ class _TestAggregateObject(object):
             self.assertEqual(uuid, obj.uuid)
             mock_save.assert_called_once_with()
 
+    @mock.patch('nova.objects.aggregate._aggregate_get_from_db_by_uuid')
     @mock.patch('nova.db.aggregate_get_by_uuid')
-    def test_get_by_uuid(self, get_by_uuid):
+    def test_get_by_uuid(self, get_by_uuid, get_by_uuid_api):
+        get_by_uuid_api.side_effect = exception.AggregateNotFound(
+                                                            aggregate_id=123)
         get_by_uuid.return_value = fake_aggregate
         agg = aggregate.Aggregate.get_by_uuid(self.context,
                                               uuidsentinel.fake_aggregate)
         self.assertEqual(uuidsentinel.fake_aggregate, agg.uuid)
         self.assertEqual(fake_aggregate['id'], agg.id)
+
+    @mock.patch('nova.objects.aggregate._aggregate_get_from_db_by_uuid')
+    @mock.patch('nova.db.aggregate_get_by_uuid')
+    def test_get_by_uuid_from_api(self, get_by_uuid, get_by_uuid_api):
+        get_by_uuid_api.return_value = fake_aggregate
+        agg = aggregate.Aggregate.get_by_uuid(self.context,
+                                              uuidsentinel.fake_aggregate)
+        self.assertEqual(uuidsentinel.fake_aggregate, agg.uuid)
+        self.assertEqual(fake_aggregate['id'], agg.id)
+        self.assertFalse(get_by_uuid.called)
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'aggregate_create')
