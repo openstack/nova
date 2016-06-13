@@ -67,6 +67,22 @@ from nova.policies import migrations
 from nova.policies import multinic
 from nova.policies import networks
 from nova.policies import networks_associate
+from nova.policies import pause_server
+from nova.policies import pci
+from nova.policies import personality
+from nova.policies import preserve_ephemeral_rebuild
+from nova.policies import quota_class_sets
+from nova.policies import quota_sets
+from nova.policies import remote_consoles
+from nova.policies import rescue
+from nova.policies import scheduler_hints
+from nova.policies import security_group_default_rules
+from nova.policies import security_groups
+from nova.policies import server_diagnostics
+from nova.policies import server_external_events
+from nova.policies import server_groups
+from nova.policies import server_metadata
+from nova.policies import server_password
 from nova.policies import servers
 
 
@@ -126,5 +142,21 @@ def list_rules():
         multinic.list_rules(),
         networks.list_rules(),
         networks_associate.list_rules(),
+        pause_server.list_rules(),
+        pci.list_rules(),
+        personality.list_rules(),
+        preserve_ephemeral_rebuild.list_rules(),
+        quota_class_sets.list_rules(),
+        quota_sets.list_rules(),
+        remote_consoles.list_rules(),
+        rescue.list_rules(),
+        scheduler_hints.list_rules(),
+        security_group_default_rules.list_rules(),
+        security_groups.list_rules(),
+        server_diagnostics.list_rules(),
+        server_external_events.list_rules(),
+        server_groups.list_rules(),
+        server_metadata.list_rules(),
+        server_password.list_rules(),
         servers.list_rules()
     )
