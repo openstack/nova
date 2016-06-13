@@ -160,7 +160,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             self._verfiy_config_drive(**kwargs)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         self._test_create_extra(params,
             override_controller=self.no_config_drive_controller)
 
@@ -172,7 +172,7 @@ class ServersControllerCreateTestV21(test.TestCase):
             return old_create(*args, **kwargs)
 
         old_create = compute_api.API.create
-        self.stubs.Set(compute_api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         flavor_ref = ('http://localhost' + self.base_url + 'flavors/3')
         body = {
