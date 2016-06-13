@@ -33,55 +33,37 @@ class VolumeOpsTestBase(stubs.XenAPITestBaseNoDB):
 
 
 class VolumeDetachTestCase(VolumeOpsTestBase):
-    def test_detach_volume_call(self):
-        registered_calls = []
-
-        def regcall(label):
-            def side_effect(*args, **kwargs):
-                registered_calls.append(label)
-            return side_effect
+    @mock.patch.object(volumeops.vm_utils, 'lookup', return_value='vmref')
+    @mock.patch.object(volumeops.volume_utils, 'find_vbd_by_number',
+                       return_value='vbdref')
+    @mock.patch.object(volumeops.vm_utils, 'is_vm_shutdown',
+                       return_value=False)
+    @mock.patch.object(volumeops.vm_utils, 'unplug_vbd')
+    @mock.patch.object(volumeops.vm_utils, 'destroy_vbd')
+    @mock.patch.object(volumeops.volume_utils, 'get_device_number',
+                       return_value='devnumber')
+    @mock.patch.object(volumeops.volume_utils, 'find_sr_from_vbd',
+                       return_value='srref')
+    @mock.patch.object(volumeops.volume_utils, 'purge_sr')
+    def test_detach_volume_call(self, mock_purge, mock_find_sr,
+                                mock_get_device_num, mock_destroy_vbd,
+                                mock_unplug_vbd, mock_is_vm, mock_find_vbd,
+                                mock_lookup):
 
         ops = volumeops.VolumeOps('session')
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'lookup')
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'find_vbd_by_number')
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'is_vm_shutdown')
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'unplug_vbd')
-        self.mox.StubOutWithMock(volumeops.vm_utils, 'destroy_vbd')
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'get_device_number')
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'find_sr_from_vbd')
-        self.mox.StubOutWithMock(volumeops.volume_utils, 'purge_sr')
-
-        volumeops.vm_utils.lookup('session', 'instance_1').AndReturn(
-            'vmref')
-
-        volumeops.volume_utils.get_device_number('mountpoint').AndReturn(
-            'devnumber')
-
-        volumeops.volume_utils.find_vbd_by_number(
-            'session', 'vmref', 'devnumber').AndReturn('vbdref')
-
-        volumeops.vm_utils.is_vm_shutdown('session', 'vmref').AndReturn(
-            False)
-
-        volumeops.vm_utils.unplug_vbd('session', 'vbdref', 'vmref')
-
-        volumeops.vm_utils.destroy_vbd('session', 'vbdref').WithSideEffects(
-            regcall('destroy_vbd'))
-
-        volumeops.volume_utils.find_sr_from_vbd(
-            'session', 'vbdref').WithSideEffects(
-                regcall('find_sr_from_vbd')).AndReturn('srref')
-
-        volumeops.volume_utils.purge_sr('session', 'srref')
-
-        self.mox.ReplayAll()
 
         ops.detach_volume(
             dict(driver_volume_type='iscsi', data='conn_data'),
             'instance_1', 'mountpoint')
 
-        self.assertEqual(
-            ['find_sr_from_vbd', 'destroy_vbd'], registered_calls)
+        mock_lookup.assert_called_once_with('session', 'instance_1')
+        mock_get_device_num.assert_called_once_with('mountpoint')
+        mock_find_vbd.assert_called_once_with('session', 'vmref', 'devnumber')
+        mock_is_vm.assert_called_once_with('session', 'vmref')
+        mock_unplug_vbd.assert_called_once_with('session', 'vbdref', 'vmref')
+        mock_destroy_vbd.assert_called_once_with('session', 'vbdref')
+        mock_find_sr.assert_called_once_with('session', 'vbdref')
+        mock_purge.assert_called_once_with('session', 'srref')
 
     @mock.patch.object(volumeops.VolumeOps, "_detach_vbds_and_srs")
     @mock.patch.object(volume_utils, "find_vbd_by_number")
