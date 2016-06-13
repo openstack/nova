@@ -24,12 +24,12 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 import nova.conf
 from nova.i18n import _
+from nova.policies import baremetal_nodes as bn_policies
 
 ironic_client = importutils.try_import('ironicclient.client')
 ironic_exc = importutils.try_import('ironicclient.exc')
 
 ALIAS = "os-baremetal-nodes"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
                'pm_user', 'service_host', 'terminal_port', 'instance_uuid']
@@ -83,7 +83,7 @@ class BareMetalNodeController(wsgi.Controller):
     @extensions.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(bn_policies.BASE_POLICY_NAME)
         nodes = []
         # proxy command to Ironic
         _check_ironic_client_enabled()
@@ -103,7 +103,7 @@ class BareMetalNodeController(wsgi.Controller):
     @extensions.expected_errors((404, 501))
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(bn_policies.BASE_POLICY_NAME)
         # proxy command to Ironic
         _check_ironic_client_enabled()
         icli = _get_ironic_client()
