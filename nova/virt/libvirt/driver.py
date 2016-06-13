@@ -6069,6 +6069,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return ram_gb + disk_gb
 
+    def _get_migration_flags(self, is_block_migration):
+        if is_block_migration:
+            return self._block_migration_flags
+        return self._live_migration_flags
+
     def _live_migration_monitor(self, context, instance, guest,
                                 dest, post_method,
                                 recover_method, block_migration,
@@ -6083,10 +6088,14 @@ class LibvirtDriver(driver.ComputeDriver):
         migration = migrate_data.migration
         curdowntime = None
 
+        migration_flags = self._get_migration_flags(
+                                  migrate_data.block_migration)
+
         n = 0
         start = time.time()
         progress_time = start
         progress_watermark = None
+        is_post_copy_enabled = self._is_post_copy_enabled(migration_flags)
         while True:
             info = guest.get_job_info()
 
@@ -6113,7 +6122,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 # the operation, change max bandwidth
                 libvirt_migrate.run_tasks(guest, instance,
                                           self.active_migrations,
-                                          on_migration_failure)
+                                          on_migration_failure,
+                                          migration,
+                                          is_post_copy_enabled)
 
                 now = time.time()
                 elapsed = now - start
@@ -6290,12 +6301,15 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.debug("Live migration monitoring is all done",
                       instance=instance)
 
+    def _is_post_copy_enabled(self, migration_flags):
+        if self._is_post_copy_available():
+            if (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0:
+                return True
+        return False
+
     def live_migration_force_complete(self, instance):
-        # NOTE(pkoniszewski): currently only pause during live migration is
-        # supported to force live migration to complete, so just try to pause
-        # the instance
         try:
-            self.active_migrations[instance.uuid].append('pause')
+            self.active_migrations[instance.uuid].append('force-complete')
         except KeyError:
             raise exception.NoActiveMigrationForInstance(
                 instance_id=instance.uuid)

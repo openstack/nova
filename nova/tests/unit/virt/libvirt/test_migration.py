@@ -429,54 +429,117 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
         mock_msave.assert_called_once_with()
         mock_isave.assert_called_once_with()
 
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
     @mock.patch.object(libvirt_guest.Guest, "pause")
-    def test_live_migration_run_tasks_pause(self, mock_pause):
-        tasks = deque()
-        tasks.append("pause")
-        active_migrations = {self.instance.uuid: tasks}
-        on_migration_failure = deque()
-
-        migration.run_tasks(self.guest, self.instance,
-                            active_migrations, on_migration_failure)
-
-        mock_pause.assert_called_once_with()
-        self.assertEqual(len(on_migration_failure), 1)
-        self.assertEqual(on_migration_failure.pop(), "unpause")
-
-    @mock.patch.object(libvirt_guest.Guest, "pause")
-    def test_live_migration_run_tasks_empty_tasks(self, mock_pause):
+    def test_live_migration_run_tasks_empty_tasks(self, mock_pause,
+                                                  mock_postcopy):
         tasks = deque()
         active_migrations = {self.instance.uuid: tasks}
         on_migration_failure = deque()
 
+        mig = objects.Migration(id=1, status="running")
+
         migration.run_tasks(self.guest, self.instance,
-                            active_migrations, on_migration_failure)
+                            active_migrations, on_migration_failure,
+                            mig, False)
 
         self.assertFalse(mock_pause.called)
+        self.assertFalse(mock_postcopy.called)
         self.assertEqual(len(on_migration_failure), 0)
 
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
     @mock.patch.object(libvirt_guest.Guest, "pause")
-    def test_live_migration_run_tasks_no_tasks(self, mock_pause):
+    def test_live_migration_run_tasks_no_tasks(self, mock_pause,
+                                               mock_postcopy):
         active_migrations = {}
         on_migration_failure = deque()
 
+        mig = objects.Migration(id=1, status="running")
+
         migration.run_tasks(self.guest, self.instance,
-                            active_migrations, on_migration_failure)
+                            active_migrations, on_migration_failure,
+                            mig, False)
 
         self.assertFalse(mock_pause.called)
+        self.assertFalse(mock_postcopy.called)
         self.assertEqual(len(on_migration_failure), 0)
 
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
     @mock.patch.object(libvirt_guest.Guest, "pause")
-    def test_live_migration_run_tasks_no_pause(self, mock_pause):
+    def test_live_migration_run_tasks_no_force_complete(self, mock_pause,
+                                                        mock_postcopy):
         tasks = deque()
         # Test to ensure unknown tasks are ignored
         tasks.append("wibble")
         active_migrations = {self.instance.uuid: tasks}
         on_migration_failure = deque()
 
-        migration.run_tasks(self.guest, self.instance,
-                            active_migrations, on_migration_failure)
+        mig = objects.Migration(id=1, status="running")
 
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure,
+                            mig, False)
+
+        self.assertFalse(mock_pause.called)
+        self.assertFalse(mock_postcopy.called)
+        self.assertEqual(len(on_migration_failure), 0)
+
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_force_complete(self, mock_pause,
+                                                     mock_postcopy):
+        tasks = deque()
+        tasks.append("force-complete")
+        active_migrations = {self.instance.uuid: tasks}
+        on_migration_failure = deque()
+
+        mig = objects.Migration(id=1, status="running")
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure,
+                            mig, False)
+
+        mock_pause.assert_called_once_with()
+        self.assertFalse(mock_postcopy.called)
+        self.assertEqual(len(on_migration_failure), 1)
+        self.assertEqual(on_migration_failure.pop(), "unpause")
+
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_force_complete_postcopy_running(self,
+        mock_pause, mock_postcopy):
+        tasks = deque()
+        tasks.append("force-complete")
+        active_migrations = {self.instance.uuid: tasks}
+        on_migration_failure = deque()
+
+        mig = objects.Migration(id=1, status="running (post-copy)")
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure,
+                            mig, True)
+
+        self.assertFalse(mock_pause.called)
+        self.assertFalse(mock_postcopy.called)
+        self.assertEqual(len(on_migration_failure), 0)
+
+    @mock.patch.object(objects.Migration, "save")
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
+    @mock.patch.object(libvirt_guest.Guest, "pause")
+    def test_live_migration_run_tasks_force_complete_postcopy(self,
+        mock_pause, mock_postcopy, mock_msave):
+        tasks = deque()
+        tasks.append("force-complete")
+        active_migrations = {self.instance.uuid: tasks}
+        on_migration_failure = deque()
+
+        mig = objects.Migration(id=1, status="running")
+
+        migration.run_tasks(self.guest, self.instance,
+                            active_migrations, on_migration_failure,
+                            mig, True)
+
+        mock_postcopy.assert_called_once_with()
         self.assertFalse(mock_pause.called)
         self.assertEqual(len(on_migration_failure), 0)
 

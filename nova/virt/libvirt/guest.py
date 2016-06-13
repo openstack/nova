@@ -539,6 +539,10 @@ class Guest(object):
         """
         self._domain.migrateSetMaxDowntime(mstime)
 
+    def migrate_start_postcopy(self):
+        """Switch running live migration to post-copy mode"""
+        self._domain.migrateStartPostCopy()
+
     def get_job_info(self):
         """Get job info for the domain
 

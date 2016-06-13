@@ -283,34 +283,62 @@ def save_stats(instance, migration, info, remaining):
     instance.save()
 
 
-def run_tasks(guest, instance, active_migrations, on_migration_failure):
+def trigger_postcopy_switch(guest, instance, migration):
+    try:
+        guest.migrate_start_postcopy()
+    except libvirt.libvirtError as e:
+        LOG.warning(_LW("Failed to switch to post-copy live "
+                        "migration: %s"),
+                    e, instance=instance)
+    else:
+        # NOTE(ltomas): Change the migration status to indicate that
+        # it is in post-copy active mode, i.e., the VM at
+        # destination is the active one
+        LOG.info(_LI("Switching to post-copy migration mode"),
+                 instance=instance)
+        migration.status = 'running (post-copy)'
+        migration.save()
+
+
+def run_tasks(guest, instance, active_migrations, on_migration_failure,
+              migration, is_post_copy_enabled):
     """Run any pending migration tasks
 
     :param guest: a nova.virt.libvirt.guest.Guest
     :param instance: a nova.objects.Instance
     :param active_migrations: dict of active migrations
     :param on_migration_failure: queue of recovery tasks
+    :param migration: a nova.objects.Migration
+    :param is_post_copy_enabled: True if post-copy can be used
 
     Run any pending migration tasks queued against the
     provided instance object. The active migrations dict
     should use instance UUIDs for keys and a queue of
     tasks as the values.
 
-    Currently the only valid task that can be requested
-    is "pause". Other tasks will be ignored
+    Currently the valid tasks that can be requested
+    are "pause" and "force-complete". Other tasks will
+    be ignored.
     """
 
     tasks = active_migrations.get(instance.uuid, deque())
     while tasks:
         task = tasks.popleft()
-        if task == 'pause':
-            try:
-                guest.pause()
-                on_migration_failure.append("unpause")
-            except Exception as e:
-                LOG.warning(_LW("Failed to pause instance during "
-                                "live-migration %s"),
-                            e, instance=instance)
+        if task == 'force-complete':
+            if migration.status == 'running (post-copy)':
+                LOG.warning(_LW("Live-migration %s already switched "
+                                "to post-copy mode."),
+                            instance=instance)
+            elif is_post_copy_enabled:
+                trigger_postcopy_switch(guest, instance, migration)
+            else:
+                try:
+                    guest.pause()
+                    on_migration_failure.append("unpause")
+                except Exception as e:
+                    LOG.warning(_LW("Failed to pause instance during "
+                                    "live-migration %s"),
+                                e, instance=instance)
         else:
             LOG.warning(_LW("Unknown migration task '%(task)s'"),
                         {"task": task}, instance=instance)

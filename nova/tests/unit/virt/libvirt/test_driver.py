@@ -8214,6 +8214,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     EXPECT_FAILURE = 2
     EXPECT_ABORT = 3
 
+    @mock.patch.object(libvirt_guest.Guest, "migrate_start_postcopy")
     @mock.patch.object(time, "time")
     @mock.patch.object(time, "sleep",
                        side_effect=lambda x: eventlet.sleep(0))
@@ -8237,9 +8238,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                         mock_conn,
                                         mock_sleep,
                                         mock_time,
+                                        mock_postcopy_switch,
+                                        current_mig_status=None,
                                         expected_mig_status=None,
                                         scheduled_action=None,
-                                        scheduled_action_executed=False):
+                                        scheduled_action_executed=False,
+                                        block_migration=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         drvr.active_migrations[instance.uuid] = deque()
@@ -8258,7 +8262,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     elif rec == "domain-stop":
                         dom.destroy()
                     elif rec == "force_complete":
-                        drvr.active_migrations[instance.uuid].append("pause")
+                        drvr.active_migrations[instance.uuid].append(
+                            "force-complete")
                 else:
                     if len(time_records) > 0:
                         time_records.pop(0)
@@ -8279,7 +8284,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         dest = mock.sentinel.migrate_dest
         migration = objects.Migration(context=self.context, id=1)
         migrate_data = objects.LibvirtLiveMigrateData(
-            migration=migration)
+            migration=migration, block_migration=block_migration)
+
+        if current_mig_status:
+            migrate_data.migration.status = current_mig_status
+            migrate_data.migration.save()
 
         fake_post_method = mock.MagicMock()
         fake_recover_method = mock.MagicMock()
@@ -8294,9 +8303,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         if scheduled_action_executed:
             if scheduled_action == 'pause':
                 self.assertTrue(mock_pause.called)
+            if scheduled_action == 'postcopy_switch':
+                self.assertTrue(mock_postcopy_switch.called)
         else:
             if scheduled_action == 'pause':
                 self.assertFalse(mock_pause.called)
+            if scheduled_action == 'postcopy_switch':
+                self.assertFalse(mock_postcopy_switch.called)
         mock_mig_save.assert_called_with()
 
         if expect_result == self.EXPECT_SUCCESS:
@@ -8365,6 +8378,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records, [],
                                              self.EXPECT_SUCCESS,
+                                             current_mig_status="running",
                                              scheduled_action="pause",
                                              scheduled_action_executed=True)
 
@@ -8390,6 +8404,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records, [],
                                              self.EXPECT_SUCCESS,
+                                             current_mig_status="preparing",
                                              scheduled_action="pause",
                                              scheduled_action_executed=True)
 
@@ -8415,6 +8430,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records, [],
                                              self.EXPECT_SUCCESS,
+                                             current_mig_status="completed",
                                              scheduled_action="pause",
                                              scheduled_action_executed=False)
 
@@ -8439,6 +8455,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self._test_live_migration_monitoring(domain_info_records, [],
                                              self.EXPECT_FAILURE,
+                                             current_mig_status="cancelled",
                                              expected_mig_status='cancelled',
                                              scheduled_action="pause",
                                              scheduled_action_executed=False)
@@ -8466,6 +8483,211 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                              self.EXPECT_FAILURE,
                                              scheduled_action="pause",
                                              scheduled_action_executed=False)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_postcopy_normal(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and postcopy
+        # switch scheduled in between VIR_DOMAIN_JOB_UNBOUNDED
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_SUCCESS,
+                current_mig_status="running",
+                scheduled_action="postcopy_switch",
+                scheduled_action_executed=True)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_postcopy_on_start(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and postcopy
+        # switch scheduled in case of job type VIR_DOMAIN_JOB_NONE and
+        # finish_event is not ready yet
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_SUCCESS,
+                current_mig_status="preparing",
+                scheduled_action="postcopy_switch",
+                scheduled_action_executed=True)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_postcopy_on_finish(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and postcopy
+        # switch scheduled in case of job type VIR_DOMAIN_JOB_NONE and
+        # finish_event is ready
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_SUCCESS,
+                current_mig_status="completed",
+                scheduled_action="postcopy_switch",
+                scheduled_action_executed=False)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_postcopy_on_cancel(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and postcopy
+        # scheduled in case of job type VIR_DOMAIN_JOB_CANCELLED
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_CANCELLED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_FAILURE,
+                current_mig_status="cancelled",
+                expected_mig_status='cancelled',
+                scheduled_action="postcopy_switch",
+                scheduled_action_executed=False)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_pause_on_postcopy(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled after migration switched to postcopy
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_SUCCESS,
+                current_mig_status="running (post-copy)",
+                scheduled_action="pause",
+                scheduled_action_executed=False)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_postcopy_on_postcopy(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and pause
+        # scheduled after migration switched to postcopy
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_SUCCESS,
+                current_mig_status="running (post-copy)",
+                scheduled_action="postcopy_switch",
+                scheduled_action_executed=False)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_is_post_copy_enabled")
+    def test_live_migration_handle_postcopy_on_failure(self,
+            mock_postcopy_enabled):
+        # A normal sequence where see all the normal job states, and postcopy
+        # scheduled in case of job type VIR_DOMAIN_JOB_FAILED
+        mock_postcopy_enabled.return_value = True
+        domain_info_records = [
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_NONE),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_UNBOUNDED),
+            "thread-finish",
+            "domain-stop",
+            "force_complete",
+            libvirt_guest.JobInfo(
+                type=fakelibvirt.VIR_DOMAIN_JOB_FAILED),
+        ]
+
+        self._test_live_migration_monitoring(domain_info_records, [],
+                self.EXPECT_FAILURE,
+                scheduled_action="postcopy_switch",
+                scheduled_action_executed=False)
 
     def test_live_migration_monitor_success_race(self):
         # A normalish sequence but we're too slow to see the
@@ -14134,7 +14356,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr.active_migrations[instance.uuid] = deque()
         drvr.live_migration_force_complete(instance)
         self.assertEqual(
-            1, drvr.active_migrations[instance.uuid].count("pause"))
+            1, drvr.active_migrations[instance.uuid].count("force-complete"))
 
     @mock.patch.object(host.Host, "get_connection")
     @mock.patch.object(fakelibvirt.virDomain, "abortJob")
