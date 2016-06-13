@@ -24,6 +24,22 @@ from nova.policies import availability_zone
 from nova.policies import baremetal_nodes
 from nova.policies import base
 from nova.policies import block_device_mapping_v1
+from nova.policies import cells
+from nova.policies import certificates
+from nova.policies import cloudpipe
+from nova.policies import config_drive
+from nova.policies import console_auth_tokens
+from nova.policies import console_output
+from nova.policies import consoles
+from nova.policies import create_backup
+from nova.policies import deferred_delete
+from nova.policies import evacuate
+from nova.policies import extended_availability_zone
+from nova.policies import extended_server_attributes
+from nova.policies import extended_status
+from nova.policies import extended_volumes
+from nova.policies import extension_info
+from nova.policies import extensions
 from nova.policies import servers
 
 
@@ -40,5 +56,21 @@ def list_rules():
         baremetal_nodes.list_rules(),
         base.list_rules(),
         block_device_mapping_v1.list_rules(),
+        cells.list_rules(),
+        certificates.list_rules(),
+        cloudpipe.list_rules(),
+        config_drive.list_rules(),
+        console_auth_tokens.list_rules(),
+        console_output.list_rules(),
+        consoles.list_rules(),
+        create_backup.list_rules(),
+        deferred_delete.list_rules(),
+        evacuate.list_rules(),
+        extended_availability_zone.list_rules(),
+        extended_server_attributes.list_rules(),
+        extended_status.list_rules(),
+        extended_volumes.list_rules(),
+        extension_info.list_rules(),
+        extensions.list_rules(),
         servers.list_rules()
     )
