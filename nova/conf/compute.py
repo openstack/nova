@@ -24,59 +24,114 @@ from nova.conf import paths
 compute_opts = [
     cfg.BoolOpt('allow_resize_to_same_host',
                 default=False,
-                help='Allow destination machine to match source for resize. '
-                     'Useful when testing in single-host environments.'),
+                help="""
+Allow destination machine to match source for resize. Useful when
+testing in single-host environments. By default it is not allowed
+to resize to the same host. Setting this option to true will add
+the same host to the destination options.
+"""),
     cfg.StrOpt('default_schedule_zone',
-               help='Availability zone to use when user doesn\'t specify one'),
+               help="""
+Availability zone to use when user doesn't specify one.
+
+This option is used by the scheduler to determine which availability
+zone to place a new VM instance into if the user did not specify one
+at the time of VM boot request.
+
+Possible values:
+
+* Any string representing an availability zone name
+* Default value is None.
+"""),
     cfg.ListOpt('non_inheritable_image_properties',
                 default=['cache_in_nova',
                          'bittorrent'],
-                help='These are image properties which a snapshot should not'
-                     ' inherit from an instance'),
+                help="""
+Image properties that should not be inherited from the instance
+when taking a snapshot.
+
+This option gives an opportunity to select which image-properties
+should not be inherited by newly created snapshots.
+
+Possible values:
+
+* A list whose item is an image property. Usually only the image
+  properties that are only needed by base images can be included
+  here, since the snapshots that are created from the base images
+  doesn't need them.
+* Default list: ['cache_in_nova', 'bittorrent']
+"""),
+    # TODO(aunnam): This option needs to be deprecated
     cfg.StrOpt('null_kernel',
                default='nokernel',
-               help='Kernel image that indicates not to use a kernel, but to '
-                    'use a raw disk image instead'),
+               help="""
+This option is used to decide when an image should have no external
+ramdisk or kernel. By default this is set to 'nokernel', so when an
+image is booted with the property 'kernel_id' with the value
+'nokernel', Nova assumes the image doesn't require an external kernel
+and ramdisk.
+"""),
+    # TODO(aunnam): This option needs to be deprecated
     cfg.StrOpt('multi_instance_display_name_template',
                default='%(name)s-%(count)d',
-               help='When creating multiple instances with a single request '
-                    'using the os-multiple-create API extension, this '
-                    'template will be used to build the display name for '
-                    'each instance. The benefit is that the instances '
-                    'end up with different hostnames. To restore legacy '
-                    'behavior of every instance having the same name, set '
-                    'this option to "%(name)s".  Valid keys for the '
-                    'template are: name, uuid, count.'),
+               help="""
+When creating multiple instances with a single request using the
+os-multiple-create API extension, this template will be used to build
+the display name for each instance. The benefit is that the instances
+end up with different hostnames. Example display names when creating
+two VM's: name-1, name-2.
+
+Possible values:
+
+* Valid keys for the template are: name, uuid, count.
+"""),
     cfg.IntOpt('max_local_block_devices',
                default=3,
-               help='Maximum number of devices that will result '
-                    'in a local image being created on the hypervisor node. '
-                    'A negative number means unlimited. Setting '
-                    'max_local_block_devices to 0 means that any request that '
-                    'attempts to create a local disk will fail. This option '
-                    'is meant to limit the number of local discs (so root '
-                    'local disc that is the result of --image being used, and '
-                    'any other ephemeral and swap disks). 0 does not mean '
-                    'that images will be automatically converted to volumes '
-                    'and boot instances from volumes - it just means that all '
-                    'requests that attempt to create a local disk will fail.'),
+               help="""
+Maximum number of devices that will result in a local image being
+created on the hypervisor node.
+
+A negative number means unlimited. Setting max_local_block_devices
+to 0 means that any request that attempts to create a local disk
+will fail. This option is meant to limit the number of local discs
+(so root local disc that is the result of --image being used, and
+any other ephemeral and swap disks). 0 does not mean that images
+will be automatically converted to volumes and boot instances from
+volumes - it just means that all requests that attempt to create a
+local disk will fail.
+
+Possible values:
+
+* 0: Creating a local disk is not allowed.
+* Negative number: Allows unlimited number of local discs.
+* Positive number: Allows only these many number of local discs.
+                       (Default value is 3).
+"""),
     cfg.MultiStrOpt('compute_available_monitors',
                     deprecated_for_removal=True,
-                    help='Monitor classes available to the compute which may '
-                         'be specified more than once. This option is '
-                         'DEPRECATED and no longer used. Use setuptools entry '
-                         'points to list available monitor plugins.'),
+                    deprecated_reason='stevedore and setuptools entry points '
+                                      'now allow a set of plugins to be '
+                                      'specified without this config option.',
+                    help="""
+Monitor classes available to the compute which may be specified more than once.
+This option is DEPRECATED and no longer used. Use setuptools entry points to
+list available monitor plugins.
+"""),
     cfg.ListOpt('compute_monitors',
                 default=[],
-                help='A list of monitors that can be used for getting '
-                     'compute metrics. You can use the alias/name from '
-                     'the setuptools entry points for nova.compute.monitors.* '
-                     'namespaces. If no namespace is supplied, the "cpu." '
-                     'namespace is assumed for backwards-compatibility. '
-                     'An example value that would enable both the CPU and '
-                     'NUMA memory bandwidth monitors that used the virt '
-                     'driver variant: '
-                     '["cpu.virt_driver", "numa_mem_bw.virt_driver"]'),
+                help="""
+A list of monitors that can be used for getting compute metrics.
+You can use the alias/name from the setuptools entry points for
+nova.compute.monitors.* namespaces. If no namespace is supplied,
+the "cpu." namespace is assumed for backwards-compatibility.
+
+Possible values:
+
+* An empty list will disable the feature(Default).
+* An example value that would enable both the CPU and NUMA memory
+  bandwidth monitors that used the virt driver variant:
+  ["cpu.virt_driver", "numa_mem_bw.virt_driver"]
+""")
 ]
 
 resource_tracker_opts = [
