@@ -257,7 +257,19 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
                           body=self.new_network)
 
     def test_network_create_no_cidr(self):
-        self.new_network['network']['cidr'] = ''
+        del self.new_network['network']['cidr']
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
+
+    def test_network_create_no_label(self):
+        del self.new_network['network']['label']
+        self.assertRaises(self.validation_error,
+                          self.controller.create, self.req,
+                          body=self.new_network)
+
+    def test_network_create_label_too_long(self):
+        self.new_network['network']['label'] = "x" * 256
         self.assertRaises(self.validation_error,
                           self.controller.create, self.req,
                           body=self.new_network)

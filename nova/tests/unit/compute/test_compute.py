@@ -7776,18 +7776,6 @@ class ComputeAPITestCase(BaseTestCase):
         group = objects.InstanceGroup.get_by_uuid(self.context, group.uuid)
         self.assertIn(refs[0]['uuid'], group.members)
 
-    def test_instance_create_with_group_name_fails(self):
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
-
-        inst_type = flavors.get_default_flavor()
-        self.assertRaises(
-                exception.InvalidInput,
-                self.compute_api.create,
-                self.context,
-                inst_type,
-                self.fake_image['id'],
-                scheduler_hints={'group': 'non-uuid'})
-
     def test_instance_create_with_group_uuid_fails_group_not_exist(self):
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)

@@ -210,6 +210,63 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
                             dns2='8.8.4.4',
                             uuid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
 
+    def test_create_without_lable(self):
+        self.assertRaises(exception.NetworkNotCreated,
+                          self.commands.create,
+                          cidr='10.2.0.0/24',
+                          num_networks=1,
+                          network_size=256,
+                          multi_host='F',
+                          vlan=200,
+                          vlan_start=201,
+                          vpn_start=2000,
+                          cidr_v6='fd00:2::/120',
+                          gateway='10.2.0.1',
+                          gateway_v6='fd00:2::22',
+                          bridge='br200',
+                          bridge_interface='eth0',
+                          dns1='8.8.8.8',
+                          dns2='8.8.4.4',
+                          uuid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
+    def test_create_with_lable_too_long(self):
+        self.assertRaises(exception.LabelTooLong,
+                          self.commands.create,
+                          label='x' * 256,
+                          cidr='10.2.0.0/24',
+                          num_networks=1,
+                          network_size=256,
+                          multi_host='F',
+                          vlan=200,
+                          vlan_start=201,
+                          vpn_start=2000,
+                          cidr_v6='fd00:2::/120',
+                          gateway='10.2.0.1',
+                          gateway_v6='fd00:2::22',
+                          bridge='br200',
+                          bridge_interface='eth0',
+                          dns1='8.8.8.8',
+                          dns2='8.8.4.4',
+                          uuid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
+    def test_create_without_cidr(self):
+        self.assertRaises(exception.NetworkNotCreated,
+                          self.commands.create,
+                          label='Test',
+                          num_networks=1,
+                          network_size=256,
+                          multi_host='F',
+                          vlan=200,
+                          vlan_start=201,
+                          vpn_start=2000,
+                          gateway='10.2.0.1',
+                          gateway_v6='fd00:2::22',
+                          bridge='br200',
+                          bridge_interface='eth0',
+                          dns1='8.8.8.8',
+                          dns2='8.8.4.4',
+                          uuid='aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa')
+
     def test_list(self):
 
         def fake_network_get_all(context):

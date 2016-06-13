@@ -1105,24 +1105,6 @@ class NetworkManager(manager.Manager):
             kwargs[name] = locals()[name]
         self._convert_int_args(kwargs)
 
-        # check for certain required inputs
-        # NOTE: We can remove this check after v2.0 API code is removed because
-        # jsonschema has checked already before this.
-        label = kwargs["label"]
-        if not label:
-            raise exception.NetworkNotCreated(req="label")
-
-        # Size of "label" column in nova.networks is 255, hence the restriction
-        # NOTE: We can remove this check after v2.0 API code is removed because
-        # jsonschema has checked already before this.
-        if len(label) > 255:
-            raise exception.LabelTooLong()
-
-        # NOTE: We can remove this check after v2.0 API code is removed because
-        # jsonschema has checked already before this.
-        if not (kwargs["cidr"] or kwargs["cidr_v6"]):
-            raise exception.NetworkNotCreated(req="cidr or cidr_v6")
-
         kwargs["bridge"] = kwargs["bridge"] or CONF.flat_network_bridge
         kwargs["bridge_interface"] = (kwargs["bridge_interface"] or
                                       CONF.flat_interface)
