@@ -54,6 +54,19 @@ from nova.policies import fping
 from nova.policies import hide_server_addresses
 from nova.policies import hosts
 from nova.policies import hypervisors
+from nova.policies import image_size
+from nova.policies import images
+from nova.policies import instance_actions
+from nova.policies import instance_usage_audit_log
+from nova.policies import ips
+from nova.policies import keypairs
+from nova.policies import limits
+from nova.policies import lock_server
+from nova.policies import migrate_server
+from nova.policies import migrations
+from nova.policies import multinic
+from nova.policies import networks
+from nova.policies import networks_associate
 from nova.policies import servers
 
 
@@ -100,5 +113,18 @@ def list_rules():
         hide_server_addresses.list_rules(),
         hosts.list_rules(),
         hypervisors.list_rules(),
+        image_size.list_rules(),
+        images.list_rules(),
+        instance_actions.list_rules(),
+        instance_usage_audit_log.list_rules(),
+        ips.list_rules(),
+        keypairs.list_rules(),
+        limits.list_rules(),
+        lock_server.list_rules(),
+        migrate_server.list_rules(),
+        migrations.list_rules(),
+        multinic.list_rules(),
+        networks.list_rules(),
+        networks_associate.list_rules(),
         servers.list_rules()
     )
