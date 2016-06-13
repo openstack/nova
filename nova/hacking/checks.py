@@ -290,6 +290,12 @@ def assert_equal_none(logical_line):
                "sentences not allowed")
 
 
+def check_python3_xrange(logical_line):
+    if re.search(r"\bxrange\s*\(", logical_line):
+        yield(0, "N327: Do not use xrange(). 'xrange()' is not compatible "
+              "with Python 3. Use range() or six.moves.range() instead.")
+
+
 def no_translate_debug_logs(logical_line, filename):
     """Check for 'LOG.debug(_('
 
@@ -793,6 +799,7 @@ def factory(register):
     register(check_python3_no_iteritems)
     register(check_python3_no_iterkeys)
     register(check_python3_no_itervalues)
+    register(check_python3_xrange)
     register(no_os_popen)
     register(no_log_warn)
     register(CheckForUncalledTestClosure)
