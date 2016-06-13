@@ -20,6 +20,7 @@ from nova.objects import build_request
 from nova.tests.unit import fake_build_request
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
 
 class _TestBuildRequestObject(object):
@@ -94,10 +95,11 @@ class _TestBuildRequestObject(object):
     @mock.patch.object(build_request.BuildRequest, '_destroy_in_db')
     def test_destroy(self, destroy_in_db):
         req_obj = build_request.BuildRequest(self.context)
-        req_obj.id = 1
+        req_obj.instance_uuid = uuids.instance
         req_obj.destroy()
 
-        destroy_in_db.assert_called_once_with(self.context, req_obj.id)
+        destroy_in_db.assert_called_once_with(self.context,
+                                              req_obj.instance_uuid)
 
 
 class TestBuildRequestObject(test_objects._LocalTest,

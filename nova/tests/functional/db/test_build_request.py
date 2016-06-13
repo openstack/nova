@@ -90,3 +90,19 @@ class BuildRequestTestCase(test.NoDBTestCase):
                                      'keypairs': obj_comp})
                 continue
             self.assertEqual(expected, db_value)
+
+    def test_destroy(self):
+        self._create_req()
+        db_req = self.build_req_obj.get_by_instance_uuid(self.context,
+                                                         self.instance_uuid)
+        db_req.destroy()
+        self.assertRaises(exception.BuildRequestNotFound,
+                self.build_req_obj._get_by_instance_uuid_from_db, self.context,
+                self.instance_uuid)
+
+    def test_destroy_twice_raises(self):
+        self._create_req()
+        db_req = self.build_req_obj.get_by_instance_uuid(self.context,
+                                                         self.instance_uuid)
+        db_req.destroy()
+        self.assertRaises(exception.BuildRequestNotFound, db_req.destroy)
