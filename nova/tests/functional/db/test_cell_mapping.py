@@ -19,6 +19,21 @@ from nova import test
 from nova.tests import fixtures
 
 
+SAMPLE_MAPPING = {'uuid': '',
+                  'name': 'fake-cell',
+                  'transport_url': 'rabbit:///',
+                  'database_connection': 'mysql+pymysql:///'}
+
+
+def create_mapping(**kwargs):
+    args = SAMPLE_MAPPING.copy()
+    if 'uuid' not in kwargs:
+        args['uuid'] = uuidutils.generate_uuid()
+    args.update(kwargs)
+    ctxt = context.RequestContext()
+    return cell_mapping.CellMapping._create_in_db(ctxt, args)
+
+
 class CellMappingTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 
@@ -27,22 +42,9 @@ class CellMappingTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
         self.mapping_obj = cell_mapping.CellMapping()
-        self.uuid = uuidutils.generate_uuid()
-
-    sample_mapping = {'uuid': '',
-                'name': 'fake-cell',
-                'transport_url': 'rabbit:///',
-                'database_connection': 'mysql+pymysql:///'}
-
-    def _create_mapping(self, **kwargs):
-        args = self.sample_mapping.copy()
-        if 'uuid' not in kwargs:
-            args['uuid'] = self.uuid
-        args.update(kwargs)
-        return self.mapping_obj._create_in_db(self.context, args)
 
     def test_get_by_uuid(self):
-        mapping = self._create_mapping()
+        mapping = create_mapping()
         db_mapping = self.mapping_obj._get_by_uuid_from_db(self.context,
                 mapping['uuid'])
         for key in self.mapping_obj.fields.keys():
@@ -50,10 +52,11 @@ class CellMappingTestCase(test.NoDBTestCase):
 
     def test_get_by_uuid_not_found(self):
         self.assertRaises(exception.CellMappingNotFound,
-                self.mapping_obj._get_by_uuid_from_db, self.context, self.uuid)
+                self.mapping_obj._get_by_uuid_from_db, self.context,
+                          uuidutils.generate_uuid())
 
     def test_save_in_db(self):
-        mapping = self._create_mapping()
+        mapping = create_mapping()
         self.mapping_obj._save_in_db(self.context, mapping['uuid'],
                 {'name': 'meow'})
         db_mapping = self.mapping_obj._get_by_uuid_from_db(self.context,
@@ -64,7 +67,7 @@ class CellMappingTestCase(test.NoDBTestCase):
             self.assertEqual(db_mapping[key], mapping[key])
 
     def test_destroy_in_db(self):
-        mapping = self._create_mapping()
+        mapping = create_mapping()
         self.mapping_obj._get_by_uuid_from_db(self.context, mapping['uuid'])
         self.mapping_obj._destroy_in_db(self.context, mapping['uuid'])
         self.assertRaises(exception.CellMappingNotFound,
@@ -73,4 +76,25 @@ class CellMappingTestCase(test.NoDBTestCase):
 
     def test_destroy_in_db_not_found(self):
         self.assertRaises(exception.CellMappingNotFound,
-                self.mapping_obj._destroy_in_db, self.context, self.uuid)
+                self.mapping_obj._destroy_in_db, self.context,
+                uuidutils.generate_uuid())
+
+
+class CellMappingListTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(CellMappingListTestCase, self).setUp()
+        self.useFixture(fixtures.Database(database='api'))
+
+    def test_get_all(self):
+        mappings = {}
+        mapping = create_mapping()
+        mappings[mapping['uuid']] = mapping
+        mapping = create_mapping()
+        mappings[mapping['uuid']] = mapping
+
+        ctxt = context.RequestContext()
+        db_mappings = cell_mapping.CellMappingList._get_all_from_db(ctxt)
+        for db_mapping in db_mappings:
+            mapping = mappings[db_mapping.uuid]
+            for key in cell_mapping.CellMapping.fields.keys():
+                self.assertEqual(db_mapping[key], mapping[key])
