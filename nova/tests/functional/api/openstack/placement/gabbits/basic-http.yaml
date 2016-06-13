@@ -1,0 +1,39 @@
+#
+# Test the basic handling of HTTP (expected response codes and the
+# like).
+#
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        # NOTE(cdent): Get past keystone, even though at this stage
+        # we don't require auth.
+        x-auth-token: admin
+        accept: application/json
+
+tests:
+- name: 404 at no service
+  GET: /barnabas
+  status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
+
+- name: error message has request id
+  GET: /barnabas
+  status: 404
+  response_json_paths:
+      $.errors[0].request_id: /req-[a-fA-F0-9-]+/
+
+- name: 405 on bad method at root
+  DELETE: /
+  status: 405
+  response_headers:
+      allow: GET
+  response_json_paths:
+      $.errors[0].title: Method Not Allowed
+
+- name: 200 at home
+  GET: /
+  status: 200
