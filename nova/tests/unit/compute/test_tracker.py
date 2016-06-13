@@ -1681,6 +1681,52 @@ class TestMoveClaim(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected,
                                                  self.rt.compute_node))
 
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
+                return_value=True)
+    @mock.patch('nova.pci.stats.PciDeviceStats.consume_requests')
+    def test_claim_with_pci(self, pci_stats_consume_mock,
+                            pci_stats_support_mock, pci_mock, inst_list_mock,
+                            inst_by_uuid, migr_mock, inst_save_mock):
+        # Test that a move claim involving PCI requests correctly claims
+        # PCI devices on the host and sends an updated pci_device_pools
+        # attribute of the ComputeNode object.
+        self.assertFalse(self.rt.disabled)
+
+        # TODO(jaypipes): Remove once the PCI tracker is always created
+        # upon the resource tracker being initialized...
+        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+
+        pci_dev = pci_device.PciDevice.create(
+            None, fake_pci_device.dev_dict)
+        pci_devs = [pci_dev]
+        self.rt.pci_tracker.pci_devs = objects.PciDeviceList(objects=pci_devs)
+        pci_stats_consume_mock.return_value = pci_devs
+
+        self.driver_mock.get_host_ip_addr.return_value = "fake-host"
+        migr_obj = _MIGRATION_FIXTURES['dest-only']
+        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
+        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid]
+        self.instance.migration_context = mig_context_obj
+        self.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        pci_requests = objects.InstancePCIRequests(
+                requests=[request],
+                instance_uuid=self.instance.uuid)
+        self.instance.pci_requests = pci_requests
+
+        with test.nested(
+            mock.patch.object(self.rt, '_update'),
+            mock.patch.object(self.instance, 'save'),
+            mock.patch.object(self.rt, '_create_migration',
+                              return_value=migr_obj),
+            mock.patch.object(pci_dev, 'allocate'),
+        ) as (update_mock, save_mock, create_mig_mock, allocate_mock):
+            self.rt.resize_claim(
+                self.ctx, self.instance, self.flavor, None)
+            allocate_mock.assert_called_once_with(self.instance)
+
     def test_claim_abort(self, pci_mock, inst_list_mock,
             inst_by_uuid, migr_mock, inst_save_mock):
         # Resize self.instance and check that the expected quantities of each
