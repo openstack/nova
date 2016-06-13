@@ -83,7 +83,20 @@ from nova.policies import server_external_events
 from nova.policies import server_groups
 from nova.policies import server_metadata
 from nova.policies import server_password
+from nova.policies import server_tags
+from nova.policies import server_usage
 from nova.policies import servers
+from nova.policies import servers_migrations
+from nova.policies import services
+from nova.policies import shelve
+from nova.policies import simple_tenant_usage
+from nova.policies import suspend_server
+from nova.policies import tenant_networks
+from nova.policies import used_limits
+from nova.policies import user_data
+from nova.policies import virtual_interfaces
+from nova.policies import volumes
+from nova.policies import volumes_attachments
 
 
 def list_rules():
@@ -158,5 +171,18 @@ def list_rules():
         server_groups.list_rules(),
         server_metadata.list_rules(),
         server_password.list_rules(),
-        servers.list_rules()
+        server_tags.list_rules(),
+        server_usage.list_rules(),
+        servers.list_rules(),
+        servers_migrations.list_rules(),
+        services.list_rules(),
+        shelve.list_rules(),
+        simple_tenant_usage.list_rules(),
+        suspend_server.list_rules(),
+        tenant_networks.list_rules(),
+        used_limits.list_rules(),
+        user_data.list_rules(),
+        virtual_interfaces.list_rules(),
+        volumes.list_rules(),
+        volumes_attachments.list_rules()
     )
