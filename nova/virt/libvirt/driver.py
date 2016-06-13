@@ -210,7 +210,7 @@ NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 # Relative block commit & rebase (feature is detected,
 # this version is only used for messaging)
 MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
-# Libvirt version 1.2.17 is required for successfull block live migration
+# Libvirt version 1.2.17 is required for successful block live migration
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
 # libvirt discard feature

@@ -704,7 +704,7 @@ class HackingTestCase(test.NoDBTestCase):
         """
         self._assert_has_no_errors(code6, checks.cfg_help_with_enough_text)
 
-        # The help text uses a paranthesis (weird, but produces a valid string)
+        # The help text uses a parenthesis (weird, but produces a valid string)
         code7 = """
         opt = cfg.StrOpt("opt7",
                          help=("help text uses extra paranthesis"))

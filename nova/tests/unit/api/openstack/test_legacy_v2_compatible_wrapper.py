@@ -110,10 +110,10 @@ class TestLegacyV2CompatibleWrapper(test.NoDBTestCase):
         req.get_response(wrapper)
 
 
-class TestSoftAddtionalPropertiesValidation(test.NoDBTestCase):
+class TestSoftAdditionalPropertiesValidation(test.NoDBTestCase):
 
     def setUp(self):
-        super(TestSoftAddtionalPropertiesValidation, self).setUp()
+        super(TestSoftAdditionalPropertiesValidation, self).setUp()
         self.schema = {
             'type': 'object',
             'properties': {
