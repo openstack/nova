@@ -284,6 +284,12 @@ ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 # realtime support
 MIN_LIBVIRT_REALTIME_VERSION = (1, 2, 13)
 
+# libvirt postcopy support
+MIN_LIBVIRT_POSTCOPY_VERSION = (1, 3, 3)
+
+# qemu postcopy support
+MIN_QEMU_POSTCOPY_VERSION = (2, 5, 0)
+
 MIN_LIBVIRT_OTHER_ARCH = {arch.S390: MIN_LIBVIRT_KVM_S390_VERSION,
                           arch.S390X: MIN_LIBVIRT_KVM_S390_VERSION,
                           arch.PPC: MIN_LIBVIRT_KVM_PPC64_VERSION,
@@ -587,6 +593,24 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return migration_flags
 
+    def _is_post_copy_available(self):
+        if self._host.has_min_version(lv_ver=MIN_LIBVIRT_POSTCOPY_VERSION,
+                                      hv_ver=MIN_QEMU_POSTCOPY_VERSION):
+            return True
+        return False
+
+    def _handle_live_migration_post_copy(self, migration_flags,
+                                         config_name):
+        if CONF.libvirt.live_migration_permit_post_copy:
+            if self._is_post_copy_available():
+                migration_flags |= libvirt.VIR_MIGRATE_POSTCOPY
+            else:
+                LOG.info(_LI('The live_migration_permit_post_copy is set '
+                             'to True, but it is not supported.'))
+        elif self._is_post_copy_available():
+            migration_flags &= ~libvirt.VIR_MIGRATE_POSTCOPY
+        return migration_flags
+
     def _parse_migration_flags(self):
         def str2sum(str_val):
             logical_sum = 0
@@ -616,6 +640,11 @@ class LibvirtDriver(driver.ComputeDriver):
         live_migration_flags = self._handle_live_migration_tunnelled(
             live_migration_flags, live_config_name)
         block_migration_flags = self._handle_live_migration_tunnelled(
+            block_migration_flags, block_config_name)
+
+        live_migration_flags = self._handle_live_migration_post_copy(
+            live_migration_flags, live_config_name)
+        block_migration_flags = self._handle_live_migration_post_copy(
             block_migration_flags, block_config_name)
 
         self._live_migration_flags = live_migration_flags

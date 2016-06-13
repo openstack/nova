@@ -152,6 +152,26 @@ libvirt_general_opts = [
                help='Time to wait, in seconds, for migration to make forward '
                     'progress in transferring data before aborting the '
                     'operation. Set to 0 to disable timeouts.'),
+    cfg.BoolOpt('live_migration_permit_post_copy',
+                default=False,
+                help="""
+This option allows nova to switch an on-going live migration to post-copy
+mode, i.e., switch the active VM to the one on the destination node before the
+migration is complete, therefore ensuring an upper bound on the memory that
+needs to be transferred. Post-copy requires libvirt>=1.3.3 and QEMU>=2.5.0.
+
+When permitted, post-copy mode will be automatically activated if a
+live-migration memory copy iteration does not make percentage increase of at
+least 10% over the last iteration.
+
+The live-migration force complete API also uses post-copy when permitted. If
+post-copy mode is not available, force complete falls back to pausing the VM
+to ensure the live-migration operation will complete.
+
+When using post-copy mode, if the source and destination hosts loose network
+connectivity, the VM being live-migrated will need to be rebooted. For more
+details, please see the Administration guide.
+"""),
     cfg.StrOpt('snapshot_image_format',
                choices=('raw', 'qcow2', 'vmdk', 'vdi'),
                help='Snapshot image format. Defaults to same as source image'),
