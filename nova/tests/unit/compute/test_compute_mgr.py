@@ -3171,11 +3171,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with(expected_task_state=
                                               (task_states.SCHEDULING, None))
 
-    def _build_resources_instance_update(self, stub=True):
-        if stub:
-            self.mox.StubOutWithMock(self.instance, 'save')
-        self.instance.save().AndReturn(self.instance)
-
     def _instance_action_events(self, mock_start, mock_finish):
         mock_start.assert_called_once_with(self.context, self.instance.uuid,
                 mock.ANY, want_result=False)
@@ -3938,16 +3933,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.requested_networks, self.security_groups,
             test.MatchType(objects.ImageMeta), self.block_device_mapping)
 
-    def test_build_resources_reraises_on_failed_bdm_prep(self):
-        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self._build_resources_instance_update()
-        self.compute._prep_block_device(self.context, self.instance,
-                self.block_device_mapping).AndRaise(test.TestingException())
-        self.mox.ReplayAll()
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(manager.ComputeManager, '_prep_block_device')
+    def test_build_resources_reraises_on_failed_bdm_prep(self, mock_prep,
+                                                        mock_build, mock_save):
+        mock_save.return_value = self.instance
+        mock_build.return_value = self.network_info
+        mock_prep.side_effect = test.TestingException
 
         try:
             with self.compute._build_resources(self.context, self.instance,
@@ -3956,6 +3949,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
+
+        mock_save.assert_called_once_with()
+        mock_build.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_prep.assert_called_once_with(self.context, self.instance,
+                self.block_device_mapping)
 
     def test_failed_bdm_prep_from_delete_raises_unexpected(self):
         with test.nested(
@@ -3984,12 +3983,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             save.assert_has_calls([mock.call()])
 
-    def test_build_resources_aborts_on_failed_network_alloc(self):
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndRaise(
-                        test.TestingException())
-        self.mox.ReplayAll()
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    def test_build_resources_aborts_on_failed_network_alloc(self, mock_build):
+        mock_build.side_effect = test.TestingException
 
         try:
             with self.compute._build_resources(self.context, self.instance,
@@ -3998,6 +3994,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 pass
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
+
+        mock_build.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
 
     def test_failed_network_alloc_from_delete_raises_unexpected(self):
         with mock.patch.object(self.compute,
@@ -4021,17 +4020,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups)])
 
-    def test_build_resources_with_network_info_obj_on_spawn_failure(self):
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self.compute._shutdown_instance(self.context, self.instance,
-                self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False)
-        self._build_resources_instance_update()
-        self.mox.ReplayAll()
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_build_resources_with_network_info_obj_on_spawn_failure(self,
+                                        mock_save, mock_shutdown, mock_build):
+        mock_save.return_value = self.instance
+        mock_build.return_value = self.network_info
 
         test_exception = test.TestingException()
 
@@ -4046,18 +4041,20 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         except Exception as e:
             self.assertEqual(test_exception, e)
 
-    def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self):
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self.compute._shutdown_instance(self.context, self.instance,
+        mock_save.assert_called_once_with()
+        mock_build.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_shutdown.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
-        self._build_resources_instance_update()
-        self.mox.ReplayAll()
 
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self,
+                                        mock_save, mock_shutdown, mock_build):
+        mock_save.return_value = self.instance
+        mock_build.return_value = self.network_info
         test_exception = test.TestingException()
 
         def fake_spawn():
@@ -4070,6 +4067,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 fake_spawn()
         except Exception as e:
             self.assertEqual(test_exception, e)
+
+        mock_save.assert_called_once_with()
+        mock_build.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_shutdown.assert_called_once_with(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
 
     @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
     @mock.patch(
@@ -4131,19 +4135,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups)
         mock_info_wait.assert_called_once_with(do_raise=False)
 
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(objects.Instance, 'save')
     @mock.patch('nova.compute.manager.LOG')
-    def test_build_resources_aborts_on_cleanup_failure(self, mock_log):
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self.compute._shutdown_instance(self.context, self.instance,
-                self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False).AndRaise(
-                        test.TestingException('Failed to shutdown'))
-        self._build_resources_instance_update()
-        self.mox.ReplayAll()
+    def test_build_resources_aborts_on_cleanup_failure(self, mock_log,
+                                        mock_save, mock_shutdown, mock_build):
+        mock_save.return_value = self.instance
+        mock_build.return_value = self.network_info
+        mock_shutdown.side_effect = test.TestingException('Failed to shutdown')
 
         def fake_spawn():
             raise test.TestingException('Failed to spawn')
@@ -4158,6 +4158,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertTrue(mock_log.warning.called)
         msg = mock_log.warning.call_args_list[0]
         self.assertIn('Failed to shutdown', msg[0][1])
+        mock_save.assert_called_once_with()
+        mock_build.assert_called_once_with(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+        mock_shutdown.assert_called_once_with(self.context, self.instance,
+                self.block_device_mapping, self.requested_networks,
+                try_deallocate_networks=False)
 
     def test_build_networks_if_not_allocated(self):
         instance = fake_instance.fake_instance_obj(self.context,
