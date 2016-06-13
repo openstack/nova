@@ -203,3 +203,18 @@ class TestPlacementURLs(test.NoDBTestCase):
                         % uuidsentinel.rp_uuid)
         self.assertEqual(expected_url, util.resource_provider_url(
             environ, self.resource_provider))
+
+    def test_inventories_url(self):
+        environ = {}
+        expected_url = ('/resource_providers/%s/inventories'
+                        % uuidsentinel.rp_uuid)
+        self.assertEqual(expected_url, util.inventory_url(
+            environ, self.resource_provider))
+
+    def test_inventory_url(self):
+        resource_class = 'DISK_GB'
+        environ = {}
+        expected_url = ('/resource_providers/%s/inventories/%s'
+                        % (uuidsentinel.rp_uuid, resource_class))
+        self.assertEqual(expected_url, util.inventory_url(
+            environ, self.resource_provider, resource_class))

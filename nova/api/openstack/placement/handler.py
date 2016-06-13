@@ -26,6 +26,7 @@ method.
 import routes
 import webob
 
+from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement import util
@@ -49,6 +50,16 @@ ROUTE_DECLARATIONS = {
         'GET': resource_provider.get_resource_provider,
         'DELETE': resource_provider.delete_resource_provider,
         'PUT': resource_provider.update_resource_provider
+    },
+    '/resource_providers/{uuid}/inventories': {
+        'GET': inventory.get_inventories,
+        'POST': inventory.create_inventory,
+        'PUT': inventory.set_inventories
+    },
+    '/resource_providers/{uuid}/inventories/{resource_class}': {
+        'GET': inventory.get_inventory,
+        'PUT': inventory.update_inventory,
+        'DELETE': inventory.delete_inventory
     },
 }
 
