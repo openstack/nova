@@ -636,31 +636,32 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_boot_image_no_metadata(self):
         self.test_boot_image_metadata(metadata=False)
 
-    def test_poll_bandwidth_usage_not_implemented(self):
+    @mock.patch.object(time, 'time')
+    @mock.patch.object(objects.InstanceList, 'get_by_host')
+    @mock.patch.object(utils, 'last_completed_audit_period')
+    @mock.patch.object(fake.FakeDriver, 'get_all_bw_counters')
+    def test_poll_bandwidth_usage_not_implemented(self, mock_get_counter,
+                                    mock_last, mock_get_host, mock_time):
         ctxt = context.get_admin_context()
 
-        self.mox.StubOutWithMock(self.compute.driver, 'get_all_bw_counters')
-        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
-        self.mox.StubOutWithMock(time, 'time')
-        self.mox.StubOutWithMock(objects.InstanceList, 'get_by_host')
         # Following methods will be called
-        utils.last_completed_audit_period().AndReturn((0, 0))
-        time.time().AndReturn(10)
         # Note - time called two more times from Log
-        time.time().AndReturn(20)
-        time.time().AndReturn(21)
-        objects.InstanceList.get_by_host(ctxt, 'fake-mini',
-                                         use_slave=True).AndReturn([])
-        self.compute.driver.get_all_bw_counters([]).AndRaise(
-            NotImplementedError)
-        self.mox.ReplayAll()
+        mock_last.return_value = (0, 0)
+        mock_time.side_effect = (10, 20, 21)
+
+        mock_get_host.return_value = []
+        mock_get_counter.side_effect = NotImplementedError
 
         self.flags(bandwidth_poll_interval=1)
         self.compute._poll_bandwidth_usage(ctxt)
         # A second call won't call the stubs again as the bandwidth
         # poll is now disabled
         self.compute._poll_bandwidth_usage(ctxt)
-        self.mox.UnsetStubs()
+
+        mock_get_counter.assert_called_once_with([])
+        mock_last.assert_called_once_with()
+        mock_get_host.assert_called_once_with(ctxt, 'fake-mini',
+                                              use_slave=True)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     @mock.patch.object(objects.BlockDeviceMappingList,
@@ -685,45 +686,56 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                  use_slave=False)
         self.assertEqual(expected_host_bdms, got_host_bdms)
 
-    def test_poll_volume_usage_disabled(self):
-        ctxt = 'MockContext'
-        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
-        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+    @mock.patch.object(utils, 'last_completed_audit_period')
+    @mock.patch.object(compute_manager.ComputeManager, '_get_host_volume_bdms')
+    def test_poll_volume_usage_disabled(self, mock_get, mock_last):
         # None of the mocks should be called.
-        self.mox.ReplayAll()
+        ctxt = 'MockContext'
 
         self.flags(volume_usage_poll_interval=0)
         self.compute._poll_volume_usage(ctxt)
-        self.mox.UnsetStubs()
 
-    def test_poll_volume_usage_returns_no_vols(self):
+        self.assertFalse(mock_get.called)
+        self.assertFalse(mock_last.called)
+
+    @mock.patch.object(compute_manager.ComputeManager, '_get_host_volume_bdms')
+    @mock.patch.object(fake.FakeDriver, 'get_all_volume_usage')
+    def test_poll_volume_usage_returns_no_vols(self, mock_get_usage,
+                                               mock_get_bdms):
         ctxt = 'MockContext'
-        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
-        self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
         # Following methods are called.
-        self.compute._get_host_volume_bdms(ctxt, use_slave=True).AndReturn([])
-        self.mox.ReplayAll()
+        mock_get_bdms.return_value = []
 
         self.flags(volume_usage_poll_interval=10)
         self.compute._poll_volume_usage(ctxt)
-        self.mox.UnsetStubs()
 
-    def test_poll_volume_usage_with_data(self):
+        mock_get_bdms.assert_called_once_with(ctxt, use_slave=True)
+
+    @mock.patch.object(compute_manager.ComputeManager, '_get_host_volume_bdms')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_update_volume_usage_cache')
+    @mock.patch.object(fake.FakeDriver, 'get_all_volume_usage')
+    def test_poll_volume_usage_with_data(self, mock_get_usage, mock_update,
+                                         mock_get_bdms):
         ctxt = 'MockContext'
-        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
-        self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
-        self.stubs.Set(self.compute.driver, 'get_all_volume_usage',
-                       lambda x, y: [3, 4])
+        mock_get_usage.side_effect = lambda x, y: [3, 4]
         # All the mocks are called
-        self.compute._get_host_volume_bdms(ctxt,
-                                           use_slave=True).AndReturn([1, 2])
-        self.compute._update_volume_usage_cache(ctxt, [3, 4])
-        self.mox.ReplayAll()
+        mock_get_bdms.return_value = [1, 2]
+
         self.flags(volume_usage_poll_interval=10)
         self.compute._poll_volume_usage(ctxt)
-        self.mox.UnsetStubs()
 
-    def test_detach_volume_usage(self):
+        mock_get_bdms.assert_called_once_with(ctxt, use_slave=True)
+        mock_update.assert_called_once_with(ctxt, [3, 4])
+
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(fake.FakeDriver, 'block_stats')
+    @mock.patch.object(compute_manager.ComputeManager, '_get_host_volume_bdms')
+    @mock.patch.object(fake.FakeDriver, 'get_all_volume_usage')
+    @mock.patch.object(fake.FakeDriver, 'instance_exists')
+    def test_detach_volume_usage(self, mock_exists, mock_get_all,
+                                 mock_get_bdms, mock_stats, mock_get):
         # Test that detach volume update the volume usage cache table correctly
         instance = self._create_fake_instance_obj()
         bdm = objects.BlockDeviceMapping(context=self.context,
@@ -740,39 +752,20 @@ class ComputeVolumeTestCase(BaseTestCase):
         host_volume_bdms = {'id': 1, 'device_name': '/dev/vdb',
                'connection_info': '{}', 'instance_uuid': instance['uuid'],
                'volume_id': uuids.volume_id}
-
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_and_instance')
-        self.mox.StubOutWithMock(self.compute.driver, 'block_stats')
-        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
-        self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
-        self.mox.StubOutWithMock(self.compute.driver, 'instance_exists')
-
-        # The following methods will be called
-        objects.BlockDeviceMapping.get_by_volume_and_instance(
-            self.context, uuids.volume_id, instance.uuid).AndReturn(
-                                                              bdm.obj_clone())
-        self.compute.driver.block_stats(instance, 'vdb').\
-            AndReturn([1, 30, 1, 20, None])
-        self.compute._get_host_volume_bdms(self.context,
-                                           use_slave=True).AndReturn(
-                                               host_volume_bdms)
-        self.compute.driver.get_all_volume_usage(
-                self.context, host_volume_bdms).AndReturn(
-                        [{'volume': uuids.volume_id,
-                          'rd_req': 1,
-                          'rd_bytes': 10,
-                          'wr_req': 1,
-                          'wr_bytes': 5,
-                          'instance': instance}])
-
-        self.compute.driver.instance_exists(mox.IgnoreArg()).AndReturn(True)
-
-        self.mox.ReplayAll()
+        mock_get.return_value = bdm.obj_clone()
+        mock_stats.return_value = [1, 30, 1, 20, None]
+        mock_get_bdms.return_value = host_volume_bdms
+        mock_get_all.return_value = [{'volume': uuids.volume_id,
+                                      'rd_req': 1,
+                                      'rd_bytes': 10,
+                                      'wr_req': 1,
+                                      'wr_bytes': 5,
+                                      'instance': instance}]
+        mock_exists.return_value = True
 
         def fake_get_volume_encryption_metadata(self, context, volume_id):
             return {}
-        self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
+        self.stub_out('nova.volume.cinder.API.get_volume_encryption_metadata',
                        fake_get_volume_encryption_metadata)
 
         self.compute.attach_volume(self.context, instance, bdm)
@@ -817,6 +810,13 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(30, volume_usage['tot_read_bytes'])
         self.assertEqual(1, volume_usage['tot_writes'])
         self.assertEqual(20, volume_usage['tot_write_bytes'])
+
+        mock_get.assert_called_once_with(self.context, uuids.volume_id,
+                                         instance.uuid)
+        mock_stats.assert_called_once_with(instance, 'vdb')
+        mock_get_bdms.assert_called_once_with(self.context, use_slave=True)
+        mock_get_all(self.context, host_volume_bdms)
+        mock_exists.assert_called_once_with(mock.ANY)
 
     def test_prepare_image_mapping(self):
         swap_size = 1
