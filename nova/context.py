@@ -218,6 +218,12 @@ class RequestContext(context.RequestContext):
 
         return context
 
+    def can(self, rule, target=None):
+        if target is None:
+            target = {'project_id': self.project_id,
+                      'user_id': self.user_id}
+        return policy.authorize(self, rule, target)
+
     def __str__(self):
         return "<Context %s>" % self.to_dict()
 

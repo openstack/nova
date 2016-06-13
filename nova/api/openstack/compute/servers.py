@@ -43,6 +43,7 @@ from nova.i18n import _
 from nova.i18n import _LW
 from nova.image import glance
 from nova import objects
+from nova.policies import servers as server_policies
 from nova import utils
 
 ALIAS = 'servers'
@@ -51,7 +52,6 @@ TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServersController(wsgi.Controller):
@@ -273,7 +273,7 @@ class ServersController(wsgi.Controller):
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
         context = req.environ['nova.context']
-        authorize(context, action="index")
+        context.can(server_policies.get_name('index'))
         try:
             servers = self._get_servers(req, is_detail=False)
         except exception.Invalid as err:
@@ -284,7 +284,7 @@ class ServersController(wsgi.Controller):
     def detail(self, req):
         """Returns a list of server details for a given user."""
         context = req.environ['nova.context']
-        authorize(context, action="detail")
+        context.can(server_policies.get_name('detail'))
         try:
             servers = self._get_servers(req, is_detail=True)
         except exception.Invalid as err:
@@ -383,9 +383,9 @@ class ServersController(wsgi.Controller):
         elevated = None
         if all_tenants:
             if is_detail:
-                authorize(context, action="detail:get_all_tenants")
+                context.can(server_policies.get_name('detail:get_all_tenants'))
             else:
-                authorize(context, action="index:get_all_tenants")
+                context.can(server_policies.get_name('index:get_all_tenants'))
             elevated = context.elevated()
         else:
             if context.project_id:
@@ -538,7 +538,7 @@ class ServersController(wsgi.Controller):
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
-        authorize(context, action="show")
+        context.can(server_policies.get_name('show'))
         instance = self._get_server(context, req, id, is_detail=True)
         return self._view_builder.show(req, instance)
 
@@ -585,7 +585,7 @@ class ServersController(wsgi.Controller):
             'project_id': context.project_id,
             'user_id': context.user_id,
             'availability_zone': availability_zone}
-        authorize(context, target, 'create')
+        context.can(server_policies.get_name('create'), target)
 
         # TODO(Shao He, Feng) move this policy check to os-availabilty-zone
         # extension after refactor it.
@@ -596,13 +596,14 @@ class ServersController(wsgi.Controller):
         except exception.InvalidInput as err:
             raise exc.HTTPBadRequest(explanation=six.text_type(err))
         if host or node:
-            authorize(context, {}, 'create:forced_host')
+            context.can(server_policies.get_name('create:forced_host'), {})
 
         block_device_mapping = create_kwargs.get("block_device_mapping")
         # TODO(Shao He, Feng) move this policy check to os-block-device-mapping
         # extension after refactor it.
         if block_device_mapping:
-            authorize(context, target, 'create:attach_volume')
+            context.can(server_policies.get_name('create:attach_volume'),
+                        target)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
@@ -626,7 +627,8 @@ class ServersController(wsgi.Controller):
                 requested_networks)
 
         if requested_networks and len(requested_networks):
-            authorize(context, target, 'create:attach_network')
+            context.can(server_policies.get_name('create:attach_network'),
+                        target)
 
         try:
             flavor_id = self._flavor_id_from_req_data(body)
@@ -801,7 +803,7 @@ class ServersController(wsgi.Controller):
         resize_schema['properties']['resize']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
-        authorize(context, action='delete')
+        context.can(server_policies.get_name('delete'))
         instance = self._get_server(context, req, instance_uuid)
         if CONF.reclaim_instance_interval:
             try:
@@ -823,7 +825,7 @@ class ServersController(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        authorize(ctxt, action='update')
+        ctxt.can(server_policies.get_name('update'))
 
         if 'name' in body['server']:
             update_dict['display_name'] = common.normalize_name(
@@ -857,7 +859,7 @@ class ServersController(wsgi.Controller):
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='confirm_resize')
+        context.can(server_policies.get_name('confirm_resize'))
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.confirm_resize(context, instance)
@@ -877,7 +879,7 @@ class ServersController(wsgi.Controller):
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='revert_resize')
+        context.can(server_policies.get_name('revert_resize'))
         instance = self._get_server(context, req, id)
         try:
             self.compute_api.revert_resize(context, instance)
@@ -903,7 +905,7 @@ class ServersController(wsgi.Controller):
 
         reboot_type = body['reboot']['type'].upper()
         context = req.environ['nova.context']
-        authorize(context, action='reboot')
+        context.can(server_policies.get_name('reboot'))
         instance = self._get_server(context, req, id)
 
         try:
@@ -917,7 +919,7 @@ class ServersController(wsgi.Controller):
     def _resize(self, req, instance_id, flavor_id, **kwargs):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
-        authorize(context, action='resize')
+        context.can(server_policies.get_name('resize'))
         instance = self._get_server(context, req, instance_id)
 
         try:
@@ -1023,7 +1025,7 @@ class ServersController(wsgi.Controller):
         password = self._get_server_admin_password(rebuild_dict)
 
         context = req.environ['nova.context']
-        authorize(context, action='rebuild')
+        context.can(server_policies.get_name('rebuild'))
         instance = self._get_server(context, req, id)
 
         attr_map = {
@@ -1098,7 +1100,7 @@ class ServersController(wsgi.Controller):
     def _action_create_image(self, req, id, body):
         """Snapshot a server instance."""
         context = req.environ['nova.context']
-        authorize(context, action='create_image')
+        context.can(server_policies.get_name('create_image'))
 
         entity = body["createImage"]
         image_name = common.normalize_name(entity["name"])
@@ -1114,7 +1116,8 @@ class ServersController(wsgi.Controller):
         try:
             if compute_utils.is_volume_backed_instance(context, instance,
                                                           bdms):
-                authorize(context, action="create_image:allow_volume_backed")
+                context.can(server_policies.get_name(
+                    'create_image:allow_volume_backed'))
                 image = self.compute_api.snapshot_volume_backed(
                                                        context,
                                                        instance,
@@ -1175,7 +1178,7 @@ class ServersController(wsgi.Controller):
         """Start an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorize(context, instance, 'start')
+        context.can(server_policies.get_name('start'), instance)
         LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
@@ -1194,7 +1197,7 @@ class ServersController(wsgi.Controller):
         """Stop an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorize(context, instance, 'stop')
+        context.can(server_policies.get_name('stop'), instance)
         LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
@@ -1215,7 +1218,7 @@ class ServersController(wsgi.Controller):
         """Trigger crash dump in an instance"""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        authorize(context, instance, 'trigger_crash_dump')
+        context.can(server_policies.get_name('trigger_crash_dump'), instance)
         try:
             self.compute_api.trigger_crash_dump(context, instance)
         except exception.InstanceInvalidState as state_error:

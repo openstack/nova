@@ -323,6 +323,8 @@ def get_fake_uuid(token=0):
 
 def fake_instance_get(**kwargs):
     def _return_server(context, uuid, columns_to_join=None, use_slave=False):
+        if 'project_id' not in kwargs:
+            kwargs['project_id'] = 'fake'
         return stub_instance(1, **kwargs)
     return _return_server
 

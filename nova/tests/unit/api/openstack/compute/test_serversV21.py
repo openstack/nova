@@ -1614,7 +1614,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             if uuid == 'test_inst':
                 raise webob.exc.HTTPNotFound(explanation='fakeout')
             return fakes.stub_instance_obj(None,
-                                           vm_state=vm_states.ACTIVE)
+                                           vm_state=vm_states.ACTIVE,
+                                           project_id='fake')
 
         self.useFixture(
             fixtures.MonkeyPatch('nova.api.openstack.compute.servers.'
@@ -2101,7 +2102,8 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
         super(ServersControllerTriggerCrashDumpTest, self).setUp()
 
         self.instance = fakes.stub_instance_obj(None,
-                                                vm_state=vm_states.ACTIVE)
+                                                vm_state=vm_states.ACTIVE,
+                                                project_id='fake')
 
         def fake_get(ctrl, ctxt, uuid):
             if uuid != FAKE_UUID:
