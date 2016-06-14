@@ -96,37 +96,66 @@ resource_tracker_opts = [
 allocation_ratio_opts = [
     cfg.FloatOpt('cpu_allocation_ratio',
         default=0.0,
-        help='Virtual CPU to physical CPU allocation ratio which affects '
-             'all CPU filters. This configuration specifies a global ratio '
-             'for CoreFilter. For AggregateCoreFilter, it will fall back to '
-             'this configuration value if no per-aggregate setting found. '
-             'NOTE: This can be set per-compute, or if set to 0.0, the value '
-             'set on the scheduler node(s) will be used '
-             'and defaulted to 16.0'),
+        help="""
+This option helps you specify virtual CPU to physical CPU allocation
+ratio which affects all CPU filters.
+
+This configuration specifies ratio for CoreFilter which can be set
+per compute node. For AggregateCoreFilter, it will fall back to this
+configuration value if no per-aggregate setting is found.
+
+Possible values:
+
+    * Any valid positive integer or float value
+    * Default value is 0.0
+
+NOTE: This can be set per-compute, or if set to 0.0, the value
+set on the scheduler node(s) or compute node(s) will be used
+and defaulted to 16.0'.
+"""),
     cfg.FloatOpt('ram_allocation_ratio',
         default=0.0,
-        help='Virtual ram to physical ram allocation ratio which affects '
-             'all ram filters. This configuration specifies a global ratio '
-             'for RamFilter. For AggregateRamFilter, it will fall back to '
-             'this configuration value if no per-aggregate setting found. '
-             'NOTE: This can be set per-compute, or if set to 0.0, the value '
-             'set on the scheduler node(s) will be used '
-             'and defaulted to 1.5'),
+        help="""
+This option helps you specify virtual RAM to physical RAM
+allocation ratio which affects all RAM filters.
+
+This configuration specifies ratio for RamFilter which can be set
+per compute node. For AggregateRamFilter, it will fall back to this
+configuration value if no per-aggregate setting found.
+
+Possible values:
+
+    * Any valid positive integer or float value
+    * Default value is 0.0
+
+NOTE: This can be set per-compute, or if set to 0.0, the value
+set on the scheduler node(s) or compute node(s) will be used and
+defaulted to 1.5.
+"""),
     cfg.FloatOpt('disk_allocation_ratio',
         default=0.0,
-        help='This is the virtual disk to physical disk allocation ratio used '
-             'by the disk_filter.py script to determine if a host has '
-             'sufficient disk space to fit a requested instance. A ratio '
-             'greater than 1.0 will result in over-subscription of the '
-             'available physical disk, which can be useful for more '
-             'efficiently packing instances created with images that do not '
-             'use the entire virtual disk,such as sparse or compressed '
-             'images. It can be set to a value between 0.0 and 1.0 in order '
-             'to preserve a percentage of the disk for uses other than '
-             'instances.'
-             'NOTE: This can be set per-compute, or if set to 0.0, the value '
-             'set on the scheduler node(s) will be used '
-             'and defaulted to 1.0'),
+        help="""
+This option helps you specify virtual disk to physical disk
+allocation ratio used by the disk_filter.py script to determine if
+a host has sufficient disk space to fit a requested instance.
+
+A ratio greater than 1.0 will result in over-subscription of the
+available physical disk, which can be useful for more
+efficiently packing instances created with images that do not
+use the entire virtual disk, such as sparse or compressed
+images. It can be set to a value between 0.0 and 1.0 in order
+to preserve a percentage of the disk for uses other than
+instances.
+
+Possible values:
+
+    * Any valid positive integer or float value
+    * Default value is 0.0
+
+NOTE: This can be set per-compute, or if set to 0.0, the value
+set on the scheduler node(s) or compute node(s) will be used and
+defaulted to 1.0'.
+""")
 ]
 
 compute_manager_opts = [
