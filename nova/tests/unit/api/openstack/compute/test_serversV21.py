@@ -16,7 +16,6 @@
 
 import base64
 import collections
-import copy
 import datetime
 import uuid
 
@@ -35,11 +34,9 @@ import webob
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import compute
-from nova.api.openstack.compute import disk_config
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import keypairs
-from nova.api.openstack.compute.schemas import servers as servers_schema
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
@@ -4124,95 +4121,6 @@ class FakeExt(extensions.V21APIExtensionBase):
 
     def get_resources(self):
         return []
-
-
-class TestServersExtensionPoint(test.NoDBTestCase):
-    def setUp(self):
-        super(TestServersExtensionPoint, self).setUp()
-        CONF.set_override('extensions_whitelist', ['os-disk-config'],
-                          'osapi_v21')
-        self.stubs.Set(disk_config, 'DiskConfig', FakeExt)
-
-    def _test_load_extension_point(self, name):
-        setattr(FakeExt, 'server_%s' % name,
-                FakeExt.fake_extension_point)
-        ext_info = extension_info.LoadedExtensionInfo()
-        controller = servers.ServersController(extension_info=ext_info)
-        self.assertEqual(
-            'os-disk-config',
-            list(getattr(controller,
-                         '%s_extension_manager' % name))[0].obj.alias)
-        delattr(FakeExt, 'server_%s' % name)
-
-    def test_load_update_extension_point(self):
-        self._test_load_extension_point('update')
-
-    def test_load_rebuild_extension_point(self):
-        self._test_load_extension_point('rebuild')
-
-    def test_load_create_extension_point(self):
-        self._test_load_extension_point('create')
-
-    def test_load_resize_extension_point(self):
-        self._test_load_extension_point('resize')
-
-
-class TestServersExtensionSchema(test.NoDBTestCase):
-    def setUp(self):
-        super(TestServersExtensionSchema, self).setUp()
-        CONF.set_override('extensions_whitelist', ['os-disk-config'],
-                          'osapi_v21')
-        self.stubs.Set(disk_config, 'DiskConfig', FakeExt)
-
-    def _test_load_extension_schema(self, name):
-        setattr(FakeExt, 'get_server_%s_schema' % name,
-                FakeExt.fake_schema_extension_point)
-        ext_info = extension_info.LoadedExtensionInfo()
-        controller = servers.ServersController(extension_info=ext_info)
-        self.assertTrue(hasattr(controller, '%s_schema_manager' % name))
-
-        delattr(FakeExt, 'get_server_%s_schema' % name)
-        return getattr(controller, 'schema_server_%s' % name)
-
-    def test_load_create_extension_point(self):
-        # The expected is the schema combination of base and keypairs
-        # because of the above extensions_whitelist.
-        expected_schema = copy.deepcopy(servers_schema.base_create)
-        expected_schema['properties']['server']['properties'].update(
-            FakeExt.fake_schema)
-
-        actual_schema = self._test_load_extension_schema('create')
-        self.assertEqual(expected_schema, actual_schema)
-
-    def test_load_update_extension_point(self):
-        # keypair extension does not contain update_server() and
-        # here checks that any extension is not added to the schema.
-        expected_schema = copy.deepcopy(servers_schema.base_update)
-        expected_schema['properties']['server']['properties'].update(
-            FakeExt.fake_schema)
-
-        actual_schema = self._test_load_extension_schema('update')
-        self.assertEqual(expected_schema, actual_schema)
-
-    def test_load_rebuild_extension_point(self):
-        # keypair extension does not contain rebuild_server() and
-        # here checks that any extension is not added to the schema.
-        expected_schema = copy.deepcopy(servers_schema.base_rebuild)
-        expected_schema['properties']['rebuild']['properties'].update(
-            FakeExt.fake_schema)
-
-        actual_schema = self._test_load_extension_schema('rebuild')
-        self.assertEqual(expected_schema, actual_schema)
-
-    def test_load_resize_extension_point(self):
-        # keypair extension does not contain resize_server() and
-        # here checks that any extension is not added to the schema.
-        expected_schema = copy.deepcopy(servers_schema.base_resize)
-        expected_schema['properties']['resize']['properties'].update(
-            FakeExt.fake_schema)
-
-        actual_schema = self._test_load_extension_schema('resize')
-        self.assertEqual(expected_schema, actual_schema)
 
 
 # TODO(alex_xu): There isn't specified file for ips extension. Most of

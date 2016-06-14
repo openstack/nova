@@ -42,7 +42,8 @@ base_create = {
                         },
                         'additionalProperties': False,
                     }
-                }
+                },
+                'OS-DCF:diskConfig': parameter_types.disk_config,
             },
             'required': ['name', 'flavorRef'],
             'additionalProperties': False,
@@ -70,6 +71,7 @@ base_update = {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
+                'OS-DCF:diskConfig': parameter_types.disk_config,
             },
             'additionalProperties': False,
         },
@@ -98,6 +100,7 @@ base_rebuild = {
                 'adminPass': parameter_types.admin_password,
                 'metadata': parameter_types.metadata,
                 'preserve_ephemeral': parameter_types.boolean,
+                'OS-DCF:diskConfig': parameter_types.disk_config
             },
             'required': ['imageRef'],
             'additionalProperties': False,
@@ -123,6 +126,7 @@ base_resize = {
             'type': 'object',
             'properties': {
                 'flavorRef': parameter_types.flavor_ref,
+                'OS-DCF:diskConfig': parameter_types.disk_config,
             },
             'required': ['flavorRef'],
             'additionalProperties': False,
