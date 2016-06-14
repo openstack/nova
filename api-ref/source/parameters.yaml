@@ -2930,24 +2930,76 @@ server_groups_quota_optional:
   in: body
   required: false
   type: integer
+server_hostname:
+  in: body
+  required: true
+  type: string
+  description: |
+    The hostname set on the instance when it is booted.
+  min_version: 2.3
 server_id:
   description: |
     The UUID of the server.
   in: body
   required: true
   type: string
+server_kernel_id:
+  in: body
+  required: true
+  type: string
+  description: |
+    The UUID of the kernel image when using an AMI. Will be null if not.
+  min_version: 2.3
+server_launch_index:
+  in: body
+  required: true
+  type: int
+  description: |
+    When servers are launched via multiple create, this is the
+    sequence in which the servers were launched.
+  min_version: 2.3
 server_name:
   description: |
     The server name.
   in: body
   required: true
   type: string
+server_ramdisk_id:
+  in: body
+  required: true
+  type: string
+  description: |
+    The UUID of the ramdisk image when using an AMI. Will be null if not.
+  min_version: 2.3
+server_reservation_id:
+  in: body
+  required: true
+  type: string
+  description: |
+    The reservation id for the server. This is an id that can
+    be useful in tracking groups of servers created with multiple
+    create, that will all have the same reservation_id.
+  min_version: 2.3
+server_root_device_name:
+  in: body
+  required: true
+  type: string
+  description: |
+    The root device name for the instance
+  min_version: 2.3
 server_status:
   description: |
     The server status.
   in: body
   required: true
   type: string
+server_user_data:
+  in: body
+  required: true
+  type: string
+  description: |
+    The user_data the instance was created with.
+  min_version: 2.3
 server_uuid:
   description: |
     The UUID of the server instance to which the API dispatches the event.  You must
