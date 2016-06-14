@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ============================================
  Floating IPs (os-floating-ips) (DEPRECATED)
@@ -13,7 +10,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead. These will fail with a 404 after microversion 2.35.
    See: `Relevant Network APIs
-   <http://developer.openstack.org/api-ref/networking/v2-ext/index.html#layer-3-networking-routers-floatingips>`__.
+   <http://developer.openstack.org/api-ref-networking-v2.html#networks>`__.
 
 Lists floating IP addresses for a project. Also, creates (allocates) a
 floating IP address for a project, shows floating IP address details,
@@ -27,12 +24,12 @@ address <http://developer.openstack.org/api-ref/compute/#create-allocate-floatin
 for a project, you can:
 
 -  `Add (associate) the floating IP
-   address <http://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
+   address <http://developer.openstack.org/api-ref/compute/#add-associate-floating-ip-addfloatingip-action>`__
    with an instance in the project. You can associate only one floating
    IP address with an instance at a time.
 
 -  `Remove (disassociate) the floating IP
-   address <http://developer.openstack.org/api-ref/compute/#delete-deallocate-floating-ip-address>`__
+   address <http://developer.openstack.org/api-ref/compute/#remove-disassociate-floating-ip-removefloatingip-action>`__
    from an instance in the project.
 
 -  Delete, or deallocate, a floating IP from the project, which
@@ -56,7 +53,16 @@ Error response codes: unauthorized(401), forbidden(403)
 Response
 --------
 
-**Example List Floating Ip Addresses: JSON response**
+.. rest_parameters:: parameters.yaml
+
+  - floating_ips: floating_ips_list
+  - fixed_ip: fixed_ip_address
+  - id: floating_ip_id_value
+  - instance_id: server_id
+  - ip: floating_ip
+  - pool: floating_ip_pool_name
+
+**Example List Floating Ip Addresses**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-list-resp.json
    :language: javascript
@@ -78,22 +84,32 @@ can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), 
+itemNotFound(404)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - pool: pool
+  - pool: floating_ip_pool_name
 
-**Example Create (Allocate) Floating Ip Address: JSON request**
+**Example Create (Allocate) Floating Ip Address**
 
 .. literalinclude:: ../../doc/api_samples/os-floating-ips/floating-ips-create-req.json
    :language: javascript
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ip: floating_ip_obj
+  - fixed_ip: fixed_ip_address
+  - id: floating_ip_id_value
+  - instance_id: server_id
+  - ip: floating_ip
+  - pool: floating_ip_pool_name
 
 **Example Create (Allocate) Floating Ip Address: JSON response**
 
@@ -113,7 +129,8 @@ can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), 
+itemNotFound(404)
 
 Request
 -------
@@ -124,6 +141,15 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ip: floating_ip_obj
+  - fixed_ip: fixed_ip_address
+  - id: floating_ip_id_value
+  - instance_id: server_id
+  - ip: floating_ip
+  - pool: floating_ip_pool_name
 
 **Example Show Floating Ip Address Details: JSON response**
 
@@ -147,8 +173,8 @@ can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404),
-conflict(409)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+ itemNotFound(404)
 
 Request
 -------
@@ -159,3 +185,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful DELETE action.
