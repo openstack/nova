@@ -47,6 +47,21 @@ def _aggregate_get_from_db(context, aggregate_id):
     return aggregate
 
 
+@db_api.api_context_manager.reader
+def _aggregate_get_from_db_by_uuid(context, aggregate_uuid):
+    query = context.session.query(api_models.Aggregate).\
+            options(joinedload('_hosts')).\
+            options(joinedload('_metadata'))
+    query = query.filter(api_models.Aggregate.uuid == aggregate_uuid)
+
+    aggregate = query.first()
+
+    if not aggregate:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_uuid)
+
+    return aggregate
+
+
 @base.NovaObjectRegistry.register
 class Aggregate(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
@@ -121,7 +136,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, aggregate_uuid):
-        db_aggregate = db.aggregate_get_by_uuid(context, aggregate_uuid)
+        try:
+            db_aggregate = _aggregate_get_from_db_by_uuid(context,
+                                                          aggregate_uuid)
+        except exception.AggregateNotFound:
+            db_aggregate = db.aggregate_get_by_uuid(context, aggregate_uuid)
         return cls._from_db_object(context, cls(), db_aggregate)
 
     @base.remotable
