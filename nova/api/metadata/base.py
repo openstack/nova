@@ -34,6 +34,7 @@ from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
+from nova import exception
 from nova import network
 from nova.network.security_group import openstack_driver
 from nova import objects
@@ -324,14 +325,26 @@ class InstanceMetadata(object):
                   context.get_admin_context(), self.instance.user_id,
                   self.instance.key_name)
             else:
-                keypair = keypair_obj.KeyPair.get_by_name(
-                    context.get_admin_context(), self.instance.user_id,
-                    self.instance.key_name)
-            metadata['keys'] = [
-                {'name': keypair.name,
-                 'type': keypair.type,
-                 'data': keypair.public_key}
-            ]
+                try:
+                    keypair = keypair_obj.KeyPair.get_by_name(
+                        context.get_admin_context(), self.instance.user_id,
+                        self.instance.key_name)
+                except exception.KeypairNotFound:
+                    # NOTE(mriedem): If the keypair was deleted from under us
+                    # don't totally fail the request, just treat it as if the
+                    # instance.key_name wasn't set.
+                    keypair = None
+
+            if keypair:
+                metadata['keys'] = [
+                    {'name': keypair.name,
+                     'type': keypair.type,
+                     'data': keypair.public_key}
+                ]
+            else:
+                LOG.debug("Unable to find keypair for instance with "
+                          "key name '%s'.", self.instance.key_name,
+                          instance=self.instance)
 
         metadata['hostname'] = self._get_hostname()
         metadata['name'] = self.instance.display_name
