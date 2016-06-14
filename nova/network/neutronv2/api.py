@@ -373,8 +373,8 @@ class API(base_api.NetworkAPI):
                 LOG.exception(_LE("Unable to clear device ID "
                                   "for port '%s'"), port_id)
 
-    def _process_requested_networks(self, context, instance, neutron,
-                                    requested_networks):
+    def _validate_requested_port_ids(self, context, instance, neutron,
+                                     requested_networks):
         """Processes and validates requested networks for allocation.
 
         Iterates over the list of NetworkRequest objects, validating the
@@ -401,7 +401,6 @@ class API(base_api.NetworkAPI):
             value assigned to its dns_name attribute.
         """
         ports = {}
-        net_ids = []
         ordered_networks = []
         # If we're asked to auto-allocate the network then there won't be any
         # ports or real neutron networks to lookup, so just return empty
@@ -445,10 +444,9 @@ class API(base_api.NetworkAPI):
 
                 # Process a request to use a specific neutron network.
                 if request.network_id:
-                    net_ids.append(request.network_id)
                     ordered_networks.append(request)
 
-        return ports, net_ids, ordered_networks
+        return ports, ordered_networks
 
     def _clean_security_groups(self, security_groups):
         """Cleans security groups requested from Nova API
@@ -560,10 +558,12 @@ class API(base_api.NetworkAPI):
             msg = _('empty project id for instance %s')
             raise exception.InvalidInput(
                 reason=msg % instance.uuid)
-        requested_networks = kwargs.get('requested_networks')
+
         dhcp_opts = kwargs.get('dhcp_options', None)
         bind_host_id = kwargs.get('bind_host_id')
-        ports, net_ids, ordered_networks = self._process_requested_networks(
+
+        requested_networks = kwargs.get('requested_networks')
+        ports, ordered_networks = self._validate_requested_port_ids(
             context, instance, neutron, requested_networks)
 
         hypervisor_macs = kwargs.get('macs', None)
@@ -571,6 +571,7 @@ class API(base_api.NetworkAPI):
                                                  hypervisor_macs)
 
         auto_allocate = requested_networks and requested_networks.auto_allocate
+        net_ids = [request.network_id for request in ordered_networks]
         nets = self._get_available_networks(context, instance.project_id,
                                             net_ids, neutron=neutron,
                                             auto_allocate=auto_allocate)
