@@ -59,7 +59,7 @@ class ImageMetadataController(wsgi.Controller):
         else:
             raise exc.HTTPNotFound()
 
-    @extensions.expected_errors((400, 403, 404, 413))
+    @extensions.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.create)
     def create(self, req, image_id, body):
         context = req.environ['nova.context']
@@ -75,7 +75,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(metadata=image['properties'])
 
-    @extensions.expected_errors((400, 403, 404, 413))
+    @extensions.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.update)
     def update(self, req, image_id, id, body):
         context = req.environ['nova.context']
@@ -97,7 +97,7 @@ class ImageMetadataController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(meta=meta)
 
-    @extensions.expected_errors((400, 403, 404, 413))
+    @extensions.expected_errors((400, 403, 404))
     @validation.schema(image_metadata.update_all)
     def update_all(self, req, image_id, body):
         context = req.environ['nova.context']
