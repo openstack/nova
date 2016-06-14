@@ -46,6 +46,20 @@ attachment_id:
   in: path
   required: true
   type: string
+before_timestamp:
+  description: |
+    Filters the response by the date and time before which to list usage
+    audits.
+    The date and time stamp format is as follows:
+
+    ::
+
+      CCYY-MM-DD hh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27 09:49:58`` or ``2015-08-27 09:49:58.123456``.
+  in: path
+  required: true
+  type: string
 cell_id:
   description: |
     The UUID of the cell.
@@ -284,22 +298,6 @@ all_tenants_query:
   in: query
   required: false
   type: integer
-before_timestamp:
-  description: |
-    Filters the response by the date and time before which to list usage
-    audits.
-    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
-
-    ::
-
-      CCYY-MM-DDThh:mm:ss±hh:mm
-
-    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
-    For example, ``2015-08-27T09:49:58-05:00``.
-    If you omit the time zone, the UTC time zone is assumed.
-  in: query
-  required: true
-  type: string
 changes-since:
   description: |
     Filters the response by a date and time when the image last changed status.
@@ -1147,6 +1145,12 @@ display_name:
   in: body
   required: false
   type: string
+errors:
+  description: |
+    The number of errors.
+  in: body
+  required: true
+  type: integer
 evacuate:
   description: |
     Specify the ``evacuate`` action in the request body.
@@ -1512,6 +1516,12 @@ host_disk_gb:
   in: body
   required: true
   type: string
+host_done_num:
+  description: |
+    The number of the hosts whose instance audit tasks have been done.
+  in: body
+  required: true
+  type: integer
 host_ip:
   description: |
     The IP address of the hypervisor's host.
@@ -1543,6 +1553,24 @@ host_name_body:
   in: body
   required: true
   type: string
+host_not_run:
+  description: |
+    A list of the hosts whose instance audit tasks have not run.
+  in: body
+  required: true
+  type: array
+host_not_run_num:
+  description: |
+    The number of the hosts whose instance audit tasks have not run.
+  in: body
+  required: true
+  type: integer
+host_num:
+  description: |
+    The number of the hosts.
+  in: body
+  required: true
+  type: integer
 host_power_action:
   description: |
     The power action on the host.
@@ -1567,6 +1595,12 @@ host_resource_array:
   in: body
   required: true
   type: array
+host_running_num:
+  description: |
+    The number of the hosts whose instance audit tasks are running.
+  in: body
+  required: true
+  type: integer
 host_service:
   description: |
     The service name which is running on the host.
@@ -1850,6 +1884,31 @@ instance_name:
   in: body
   required: true
   type: string
+instance_usage_audit_log:
+  description: |
+    The object of instance usage audit logs.
+  in: body
+  required: true
+  type: object
+instance_usage_audit_log_message:
+  description: |
+    The log message of the instance usage audit task.
+  in: body
+  required: true
+  type: string
+instance_usage_audit_logs:
+  description: |
+    The object of instance usage audit log information.
+  in: body
+  required: true
+  type: object
+instance_usage_audit_task_state:
+  description: |
+    The state of the instance usage audit task.
+    ``DONE`` or ``RUNNING``.
+  in: body
+  required: true
+  type: string
 instances:
   description: |
     The number of allowed instances for each tenant.
@@ -1868,6 +1927,12 @@ instances_quota_optional:
     The number of allowed instances for each tenant.
   in: body
   required: false
+  type: integer
+instances_usage_audit:
+  description: |
+    The number of instances.
+  in: body
+  required: true
   type: integer
 interfaceAttachment:
   description: |
@@ -2487,6 +2552,27 @@ os:scheduler_hints:
   in: body
   required: false
   type: object
+overall_status:
+  description: |
+    The overall status of instance audit tasks.
+
+    ::
+
+      M of N hosts done. K errors.
+
+    The ``M`` value is the number of hosts whose instance audit tasks have
+    been done in the period. The ``N`` value is the number of all hosts.
+    The ``K`` value is the number of hosts whose instance audit tasks
+    cause errors. If instance audit tasks have been done at all hosts
+    in the period, the overall status is as follows:
+
+    ::
+
+      ALL hosts done. K errors.
+
+  in: body
+  required: true
+  type: string
 parent_group_id:
   description: |
     Security group ID.
@@ -2502,6 +2588,20 @@ password:
 pause:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+period_beginning:
+  description: |
+    The beginning time of the instance usage audit period.
+    For example, ``2016-05-01 00:00:00``.
+  in: body
+  required: true
+  type: string
+period_ending:
+  description: |
+    The ending time of the instance usgae audit period.
+    For example, ``2016-06-01 00:00:00``.
   in: body
   required: true
   type: string
@@ -3063,6 +3163,18 @@ tenant_id_body:
 to_port:
   description: |
     The port at end of range.
+  in: body
+  required: true
+  type: integer
+total_errors:
+  description: |
+    The total number of instance audit task errors.
+  in: body
+  required: true
+  type: integer
+total_instances:
+  description: |
+    The total number of VM instances in the period.
   in: body
   required: true
   type: integer
