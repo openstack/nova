@@ -1,8 +1,16 @@
 .. -*- rst -*-
 
-==========================================
- Floating IP pools (os-floating-ip-pools)
-==========================================
+======================================================
+ Floating IP pools (os-floating-ip-pools) (DEPRECATED)
+======================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html>`__.
 
 Manages groups of floating IPs.
 

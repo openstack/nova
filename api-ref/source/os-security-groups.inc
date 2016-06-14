@@ -3,9 +3,17 @@
 .. needs:example_verification
 .. needs:body_verification
 
-======================================
- Security groups (os-security-groups)
-======================================
+==================================================
+ Security groups (os-security-groups) (DEPRECATED)
+==================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html#security_groups>`__.
 
 Lists, shows information for, creates, updates and deletes security groups.
 

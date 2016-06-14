@@ -3,9 +3,14 @@
 .. needs:example_verification
 .. needs:body_verification
 
-====================================================================
- Rules for default security group (os-security-group-default-rules)
-====================================================================
+================================================================================
+ Rules for default security group (os-security-group-default-rules) (DEPRECATED)
+================================================================================
+
+.. warning::
+
+   This API only available with ``nova-network`` which is
+   deprecated. It should be avoided in any new applications.
 
 Lists, shows information for, and creates default security group rules.
 

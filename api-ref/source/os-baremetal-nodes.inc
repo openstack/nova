@@ -1,13 +1,17 @@
 .. -*- rst -*-
 
-=======================================
- Bare metal nodes (os-baremetal-nodes)
-=======================================
+===================================================
+ Bare metal nodes (os-baremetal-nodes) (DEPRECATED)
+===================================================
 
 .. warning::
 
    These APIs are proxy calls to the Ironic service. They exist for
    legacy compatibility, but no new applications should use them.
+   Nova has deprecated all the proxy APIs and users should use the native
+   APIs instead.
+   See: `Relevant Bare metal APIs
+   <http://developer.openstack.org/api-ref/baremetal/index.html#nodes-nodes>`__.
 
 Bare metal nodes.
 

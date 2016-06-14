@@ -3,9 +3,17 @@
 .. needs:example_verification
 .. needs:body_verification
 
-=============================================
- Volume extension (os-volumes, os-snapshots)
-=============================================
+=========================================================
+ Volume extension (os-volumes, os-snapshots) (DEPRECATED)
+=========================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Volume service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
+   See: `Relevant Volume APIs
+   <http://developer.openstack.org/api-ref-blockstorage-v2.html#volumes-v2-volumes>`__.
 
 Manages volumes and snapshots for use with the Compute API.
 

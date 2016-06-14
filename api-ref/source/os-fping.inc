@@ -1,8 +1,13 @@
 .. -*- rst -*-
 
-===========================
- Ping instances (os-fping)
-===========================
+=======================================
+ Ping instances (os-fping) (DEPRECATED)
+=======================================
+
+.. warning::
+
+   This API only works with ``nova-network`` which is
+   deprecated. It should be avoided in any new applications.
 
 Pings instances and reports which instances are alive.
 
