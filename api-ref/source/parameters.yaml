@@ -2403,9 +2403,21 @@ os-getRDPConsole:
   in: body
   required: true
   type: string
+os-getRDPConsole-type:
+  description: |
+    The type of RDP console. The correct value is ``rdp-html5``.
+  in: body
+  required: true
+  type: string
 os-getSerialConsole:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+os-getSerialConsole-type:
+  description: |
+    The type of serial console. The correct value is ``serial``.
   in: body
   required: true
   type: string
@@ -2415,9 +2427,21 @@ os-getSPICEConsole:
   in: body
   required: true
   type: string
+os-getSPICEConsole-type:
+  description: |
+    The type of SPICE console. The correct value is ``spice-html5``.
+  in: body
+  required: true
+  type: string
 os-getVNCConsole:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+os-getVNCConsole-type:
+  description: |
+    The type of VNC console. The correct value is ``novnc``.
   in: body
   required: true
   type: string
@@ -3072,7 +3096,7 @@ trigger_crash_dump:
   type: none
   description: |
     Specifies the trigger crash dump action should be run
-type:
+type-os-assisted-volume-snapshot:
   description: |
     The snapshot type. A valid value is ``qcow2``.
   in: body

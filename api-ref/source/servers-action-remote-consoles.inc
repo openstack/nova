@@ -25,6 +25,7 @@ Request
 
   - server_id: server_id
   - os-getRDPConsole: os-getRDPConsole
+  - type: os-getRDPConsole-type
 
 **Example Get Rdp Console (os-getRDPConsole Action): JSON request**
 
@@ -61,6 +62,7 @@ Request
 
   - server_id: server_id
   - os-getSerialConsole: os-getSerialConsole
+  - type: os-getSerialConsole-type
 
 **Example Get Serial Console (os-getSerialConsole Action): JSON request**
 
@@ -97,6 +99,7 @@ Request
 
   - server_id: server_id
   - os-getSPICEConsole: os-getSPICEConsole
+  - type: os-getSPICEConsole-type
 
 **Example Get Spice Console (os-getSPICEConsole Action): JSON request**
 
@@ -133,6 +136,7 @@ Request
 
   - server_id: server_id
   - os-getVNCConsole: os-getVNCConsole
+  - type: os-getVNCConsole-type
 
 **Example Get Vnc Console (os-getVNCConsole Action): JSON request**
 
@@ -146,4 +150,3 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-remote-consoles/get-vnc-console-post-resp.json
    :language: javascript
-
