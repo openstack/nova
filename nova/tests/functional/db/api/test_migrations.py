@@ -400,6 +400,47 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             'aggregate_uuid_idx')
         self.assertUniqueConstraintExists(engine, 'aggregates', ['name'])
 
+    def _check_018(self, engine, data):
+        # instance_groups
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'user_id',
+                       'project_id',
+                       'uuid',
+                       'name']:
+            self.assertColumnExists(engine, 'instance_groups', column)
+
+        self.assertUniqueConstraintExists(engine, 'instance_groups', ['uuid'])
+
+        # instance_group_policy
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'policy',
+                       'group_id']:
+            self.assertColumnExists(engine, 'instance_group_policy', column)
+
+        self.assertIndexExists(engine, 'instance_group_policy',
+                               'instance_group_policy_policy_idx')
+        # Ensure the foreign key still exists
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('instance_group_policy')[0]
+        self.assertEqual('instance_groups', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+
+        # instance_group_member
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'instance_uuid',
+                       'group_id']:
+            self.assertColumnExists(engine, 'instance_group_member', column)
+
+        self.assertIndexExists(engine, 'instance_group_member',
+                               'instance_group_member_instance_idx')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,

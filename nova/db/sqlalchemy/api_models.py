@@ -344,3 +344,58 @@ class ResourceProviderAggregate(API_BASE):
 
     resource_provider_id = Column(Integer, primary_key=True, nullable=False)
     aggregate_id = Column(Integer, primary_key=True, nullable=False)
+
+
+class InstanceGroupMember(API_BASE):
+    """Represents the members for an instance group."""
+    __tablename__ = 'instance_group_member'
+    __table_args__ = (
+        Index('instance_group_member_instance_idx', 'instance_uuid'),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+    instance_uuid = Column(String(255))
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroupPolicy(API_BASE):
+    """Represents the policy type for an instance group."""
+    __tablename__ = 'instance_group_policy'
+    __table_args__ = (
+        Index('instance_group_policy_policy_idx', 'policy'),
+    )
+    id = Column(Integer, primary_key=True, nullable=False)
+    policy = Column(String(255))
+    group_id = Column(Integer, ForeignKey('instance_groups.id'),
+                      nullable=False)
+
+
+class InstanceGroup(API_BASE):
+    """Represents an instance group.
+
+    A group will maintain a collection of instances and the relationship
+    between them.
+    """
+
+    __tablename__ = 'instance_groups'
+    __table_args__ = (
+        schema.UniqueConstraint('uuid', name='uniq_instance_groups0uuid'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(255))
+    project_id = Column(String(255))
+    uuid = Column(String(36), nullable=False)
+    name = Column(String(255))
+    _policies = orm.relationship(InstanceGroupPolicy,
+            primaryjoin='InstanceGroup.id == InstanceGroupPolicy.group_id')
+    _members = orm.relationship(InstanceGroupMember,
+            primaryjoin='InstanceGroup.id == InstanceGroupMember.group_id')
+
+    @property
+    def policies(self):
+        return [p.policy for p in self._policies]
+
+    @property
+    def members(self):
+        return [m.instance_uuid for m in self._members]
