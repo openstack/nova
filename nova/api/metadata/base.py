@@ -306,17 +306,27 @@ class InstanceMetadata(object):
                   context.get_admin_context(), self.instance.user_id,
                   self.instance.key_name)
             else:
-                keypair = self.instance.keypairs[0]
+                keypairs = self.instance.keypairs
+                # NOTE(mriedem): It's possible for the keypair to be deleted
+                # before it was migrated to the instance_extra table, in which
+                # case lazy-loading instance.keypairs will handle the 404 and
+                # just set an empty KeyPairList object on the instance.
+                keypair = keypairs[0] if keypairs else None
 
-            metadata['public_keys'] = {
-                keypair.name: keypair.public_key,
-            }
+            if keypair:
+                metadata['public_keys'] = {
+                    keypair.name: keypair.public_key,
+                }
 
-            metadata['keys'] = [
-                {'name': keypair.name,
-                 'type': keypair.type,
-                 'data': keypair.public_key}
-            ]
+                metadata['keys'] = [
+                    {'name': keypair.name,
+                     'type': keypair.type,
+                     'data': keypair.public_key}
+                ]
+            else:
+                LOG.debug("Unable to find keypair for instance with "
+                          "key name '%s'.", self.instance.key_name,
+                          instance=self.instance)
 
         metadata['hostname'] = self._get_hostname()
         metadata['name'] = self.instance.display_name

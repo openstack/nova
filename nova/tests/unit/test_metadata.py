@@ -458,6 +458,21 @@ class MetadataTestCase(test.TestCase):
             self._test_as_json_with_options(is_cells=True,
                                             os_version=os_version)
 
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    def test_metadata_as_json_deleted_keypair(self, mock_inst_get_by_uuid):
+        """Tests that we handle missing instance keypairs.
+        """
+        instance = self.instance.obj_clone()
+        # we want to make sure that key_name is set but not keypairs so it has
+        # to be lazy-loaded from the database
+        delattr(instance, 'keypairs')
+        mock_inst_get_by_uuid.return_value = instance
+        md = fake_InstanceMetadata(self.stubs, instance)
+        meta = md._metadata_as_json(base.OPENSTACK_VERSIONS[-1], path=None)
+        meta = jsonutils.loads(meta)
+        self.assertNotIn('keys', meta)
+        self.assertNotIn('public_keys', meta)
+
 
 class OpenStackMetadataTestCase(test.TestCase):
     def setUp(self):
