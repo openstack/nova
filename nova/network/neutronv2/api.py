@@ -305,8 +305,8 @@ class API(base_api.NetworkAPI):
                       instance=instance)
             return port
         except neutron_client_exc.MacAddressInUseClient:
-            mac_address = port_req_body['port']['mac_address']
-            network_id = port_req_body['port']['network_id']
+            mac_address = port_req_body['port'].get('mac_address')
+            network_id = port_req_body['port'].get('network_id')
             LOG.warning(_LW('Neutron error: MAC address %(mac)s is already '
                             'in use on network %(network)s.'),
                         {'mac': mac_address, 'network': network_id},
@@ -595,6 +595,69 @@ class API(base_api.NetworkAPI):
 
         return {net['id']: net for net in nets}
 
+    def _create_ports_for_instance(self, context, instance, ordered_networks,
+            nets, neutron, security_group_ids):
+        """Create port for network_requests that don't have a port_id
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param ordered_networks: objects.NetworkRequestList in requested order
+        :param nets: a dict of network_id to networks returned from neutron
+        :param neutron: neutronclient using built from users request context
+        :param security_group_ids: a list of security_groups to go to neutron
+        :returns a list of pairs (NetworkRequest, created_port_uuid)
+        """
+        created_port_ids = []
+        requests_and_created_ports = []
+        for request in ordered_networks:
+            network = nets.get(request.network_id)
+            # if network_id did not pass validate_networks() and not available
+            # here then skip it safely not continuing with a None Network
+            if not network:
+                continue
+
+            try:
+                port_security_enabled = network.get(
+                    'port_security_enabled', True)
+                if port_security_enabled:
+                    if not network.get('subnets'):
+                        # Neutron can't apply security groups to a port
+                        # for a network without L3 assignments.
+                        LOG.debug('Network with port security enabled does '
+                                  'not have subnets so security groups '
+                                  'cannot be applied: %s',
+                                  network, instance=instance)
+                        raise exception.SecurityGroupCannotBeApplied()
+                else:
+                    if security_group_ids:
+                        # We don't want to apply security groups on port
+                        # for a network defined with
+                        # 'port_security_enabled=False'.
+                        LOG.debug('Network has port security disabled so '
+                                  'security groups cannot be applied: %s',
+                                  network, instance=instance)
+                        raise exception.SecurityGroupCannotBeApplied()
+
+                created_port_id = None
+                if not request.port_id:
+                    # create minimal port, if port not already created by user
+                    created_port = self._create_port_minimal(
+                            neutron, instance, request.network_id,
+                            request.address, security_group_ids)
+                    created_port_id = created_port['id']
+                    created_port_ids.append(created_port_id)
+
+                requests_and_created_ports.append((
+                    request, created_port_id))
+
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    if created_port_ids:
+                        self._delete_ports(
+                            neutron, instance, created_port_ids)
+
+        return requests_and_created_ports
+
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
@@ -637,11 +700,22 @@ class API(base_api.NetworkAPI):
             LOG.debug("No network configured", instance=instance)
             return network_model.NetworkInfo([])
 
+        #
+        # Create any ports that might be required,
+        # after validating requested security groups
+        #
         security_groups = self._clean_security_groups(
             kwargs.get('security_groups', []))
         security_group_ids = self._process_security_groups(
                                     instance, neutron, security_groups)
 
+        requests_and_created_ports = self._create_ports_for_instance(
+            context, instance, ordered_networks, nets, neutron,
+            security_group_ids)
+
+        #
+        # Update existing and newly created ports
+        #
         dhcp_opts = kwargs.get('dhcp_options', None)
         bind_host_id = kwargs.get('bind_host_id')
 
@@ -664,7 +738,7 @@ class API(base_api.NetworkAPI):
         created_port_ids = []
         ports_in_requested_order = []
         nets_in_requested_order = []
-        for request in ordered_networks:
+        for request, created_port_id in requests_and_created_ports:
             vifobj = objects.VirtualInterface(context)
             vifobj.instance_uuid = instance.uuid
             vifobj.tag = request.tag if 'tag' in request else None
@@ -676,25 +750,6 @@ class API(base_api.NetworkAPI):
                 continue
 
             nets_in_requested_order.append(network)
-
-            port_security_enabled = network.get('port_security_enabled', True)
-            if port_security_enabled:
-                if not network.get('subnets'):
-                    # Neutron can't apply security groups to a port
-                    # for a network without L3 assignments.
-                    LOG.debug('Network with port security enabled does not '
-                              'have subnets so security groups cannot be '
-                              'applied: %s', network, instance=instance)
-                    raise exception.SecurityGroupCannotBeApplied()
-            else:
-                if security_group_ids:
-                    # We don't want to apply security groups on port
-                    # for a network defined with
-                    # 'port_security_enabled=False'.
-                    LOG.debug('Network has port security disabled so security '
-                              'groups cannot be applied: %s', network,
-                              instance=instance)
-                    raise exception.SecurityGroupCannotBeApplied()
 
             zone = 'compute:%s' % instance.availability_zone
             port_req_body = {'port': {'device_id': instance.uuid,
@@ -711,24 +766,16 @@ class API(base_api.NetworkAPI):
                 if dhcp_opts is not None:
                     port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
 
-                if not request.port_id:
-                    # create minimal port, if port not already created by user
-                    # NOTE(johngarbutt) doing this extra hop so we can extract
-                    # this step later on
-                    created_port = self._create_port_minimal(
-                            port_client, instance, request.network_id,
-                            request.address, security_group_ids)
-                    created_port_id = created_port['id']
-                    created_port_ids.append(created_port_id)
-                    ports_in_requested_order.append(created_port_id)
-                    vifobj.uuid = created_port_id
+                if created_port_id:
+                    port_id = created_port_id
+                    created_port_ids.append(port_id)
                 else:
-                    ports_in_requested_order.append(request.port_id)
-                    vifobj.uuid = request.port_id
+                    port_id = request.port_id
+                ports_in_requested_order.append(port_id)
 
                 # After port is created, update other bits
                 updated_port = self._update_port(
-                    port_client, instance, vifobj.uuid, port_req_body)
+                    port_client, instance, port_id, port_req_body)
 
                 # NOTE(danms): The virtual_interfaces table enforces global
                 # uniqueness on MAC addresses, which clearly does not match
@@ -740,12 +787,12 @@ class API(base_api.NetworkAPI):
                 # for longer than that of course.
                 vifobj.address = '%s/%s' % (updated_port['mac_address'],
                                             updated_port['id'])
+                vifobj.uuid = port_id
                 vifobj.create()
 
-                # only add to preexisting_port_ids after update success
-                # we use request.port_id to check if is preexisting
-                if request.port_id:
-                    preexisting_port_ids.append(request.port_id)
+                if not created_port_id:
+                    # only add if update worked and port create not called
+                    preexisting_port_ids.append(port_id)
 
                 self._update_port_dns_name(context, instance, network,
                                            ports_in_requested_order[-1],
