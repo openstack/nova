@@ -191,7 +191,6 @@ class CinderConnectionFailed(NovaException):
 
 
 class Forbidden(NovaException):
-    ec2_code = 'AuthFailure'
     msg_fmt = _("Forbidden")
     code = 403
 
@@ -211,7 +210,6 @@ class VolumeLimitExceeded(Forbidden):
 class ImageNotActive(NovaException):
     # NOTE(jruzicka): IncorrectState is used for volumes only in EC2,
     # but it still seems like the most appropriate option.
-    ec2_code = 'IncorrectState'
     msg_fmt = _("Image %(image_id)s is not active.")
 
 
@@ -298,7 +296,6 @@ class VolumeAttachFailed(Invalid):
 
 
 class VolumeUnattached(Invalid):
-    ec2_code = 'IncorrectState'
     msg_fmt = _("Volume %(volume_id)s is not attached to anything")
 
 
@@ -314,7 +311,6 @@ class VolumeEncryptionNotSupported(Invalid):
 
 
 class InvalidKeypair(Invalid):
-    ec2_code = 'InvalidKeyPair.Format'
     msg_fmt = _("Keypair data is invalid: %(reason)s")
 
 
@@ -327,7 +323,6 @@ class InvalidInput(Invalid):
 
 
 class InvalidVolume(Invalid):
-    ec2_code = 'UnsupportedOperation'
     msg_fmt = _("Invalid volume: %(reason)s")
 
 
@@ -344,7 +339,6 @@ class InvalidMetadataSize(Invalid):
 
 
 class InvalidPortRange(Invalid):
-    ec2_code = 'InvalidParameterValue'
     msg_fmt = _("Invalid port range %(from_port)s:%(to_port)s. %(msg)s")
 
 
@@ -378,7 +372,6 @@ class ApiVersionsIntersect(Invalid):
 # Cannot be templated as the error syntax varies.
 # msg needs to be constructed when raised.
 class InvalidParameterValue(Invalid):
-    ec2_code = 'InvalidParameterValue'
     msg_fmt = _("%(err)s")
 
 
@@ -622,7 +615,6 @@ class AgentBuildExists(NovaException):
 
 
 class VolumeNotFound(NotFound):
-    ec2_code = 'InvalidVolume.NotFound'
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
@@ -657,7 +649,6 @@ class DeviceNotFound(NotFound):
 
 
 class SnapshotNotFound(NotFound):
-    ec2_code = 'InvalidSnapshot.NotFound'
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
 
 
@@ -915,7 +906,6 @@ class FixedIpInvalid(Invalid):
 
 
 class NoMoreFixedIps(NovaException):
-    ec2_code = 'UnsupportedOperation'
     msg_fmt = _("No fixed IP addresses available for network: %(net)s")
 
 
@@ -928,7 +918,6 @@ class FloatingIpExists(NovaException):
 
 
 class FloatingIpNotFound(NotFound):
-    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Floating IP not found for ID %(id)s.")
 
 
@@ -959,7 +948,6 @@ class NoMoreFloatingIps(FloatingIpNotFound):
 
 
 class FloatingIpAssociated(NovaException):
-    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Floating IP %(address)s is associated.")
 
 
@@ -972,7 +960,6 @@ class NoFloatingIpsDefined(NotFound):
 
 
 class NoFloatingIpInterface(NotFound):
-    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Interface %(interface)s not found.")
 
 
@@ -985,17 +972,14 @@ class FloatingIpAssociateFailed(NovaException):
 
 
 class FloatingIpBadRequest(Invalid):
-    ec2_code = "UnsupportedOperation"
     msg_fmt = _("The floating IP request failed with a BadRequest")
 
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
-    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Cannot disassociate auto assigned floating IP")
 
 
 class KeypairNotFound(NotFound):
-    ec2_code = 'InvalidKeyPair.NotFound'
     msg_fmt = _("Keypair %(name)s not found for user %(user_id)s")
 
 
@@ -1093,7 +1077,6 @@ class SecurityGroupNotFoundForRule(SecurityGroupNotFound):
 
 
 class SecurityGroupExists(Invalid):
-    ec2_code = 'InvalidGroup.Duplicate'
     msg_fmt = _("Security group %(security_group_name)s already exists "
                 "for project %(project_id)s.")
 
@@ -1118,7 +1101,6 @@ class SecurityGroupCannotBeApplied(Invalid):
 
 
 class SecurityGroupRuleExists(Invalid):
-    ec2_code = 'InvalidPermission.Duplicate'
     msg_fmt = _("Rule already exists in group: %(rule)s")
 
 
@@ -1296,7 +1278,6 @@ class RotationRequiredForBackup(NovaException):
 
 
 class KeyPairExists(NovaException):
-    ec2_code = 'InvalidKeyPair.Duplicate'
     msg_fmt = _("Key pair '%(key_name)s' already exists.")
 
 
@@ -1409,7 +1390,6 @@ class MaxRetriesExceeded(NoValidHost):
 
 
 class QuotaError(NovaException):
-    ec2_code = 'ResourceLimitExceeded'
     msg_fmt = _("Quota exceeded: code=%(code)s")
     # NOTE(cyeoh): 413 should only be used for the ec2 API
     # The error status code for out of quota for the nova api should be
@@ -1452,7 +1432,6 @@ class KeypairLimitExceeded(QuotaError):
 
 
 class SecurityGroupLimitExceeded(QuotaError):
-    ec2_code = 'SecurityGroupLimitExceeded'
     msg_fmt = _("Maximum number of security groups or rules exceeded")
 
 
@@ -1493,7 +1472,6 @@ class InstancePasswordSetFailed(NovaException):
 
 
 class InstanceNotFound(NotFound):
-    ec2_code = 'InvalidInstanceID.NotFound'
     msg_fmt = _("Instance %(instance_id)s could not be found.")
 
 
@@ -1503,7 +1481,6 @@ class InstanceInfoCacheNotFound(NotFound):
 
 
 class InvalidAssociation(NotFound):
-    ec2_code = 'InvalidAssociationID.NotFound'
     msg_fmt = _("Invalid association.")
 
 
@@ -1513,12 +1490,10 @@ class MarkerNotFound(NotFound):
 
 class InvalidInstanceIDMalformed(Invalid):
     msg_fmt = _("Invalid id: %(instance_id)s (expecting \"i-...\")")
-    ec2_code = 'InvalidInstanceID.Malformed'
 
 
 class InvalidVolumeIDMalformed(Invalid):
     msg_fmt = _("Invalid id: %(volume_id)s (expecting \"i-...\")")
-    ec2_code = 'InvalidVolumeID.Malformed'
 
 
 class CouldNotFetchImage(NovaException):
@@ -1812,7 +1787,6 @@ class PciRequestAliasNotDefined(NovaException):
 
 
 class MissingParameter(NovaException):
-    ec2_code = 'MissingParameter'
     msg_fmt = _("Not enough parameters: %(reason)s")
     code = 400
 
@@ -1823,7 +1797,6 @@ class PciConfigInvalidWhitelist(Invalid):
 
 # Cannot be templated, msg needs to be constructed when raised.
 class InternalError(NovaException):
-    ec2_code = 'InternalError'
     msg_fmt = "%(err)s"
 
 
