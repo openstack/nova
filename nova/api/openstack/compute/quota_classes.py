@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import db
 from nova import exception
+from nova.policies import quota_class_sets as qcs_policies
 from nova import quota
 from nova import utils
 
@@ -32,9 +33,6 @@ ALIAS = "os-quota-class-sets"
 # Quotas that are only enabled by specific extensions
 EXTENDED_QUOTAS = {'server_groups': 'os-server-group-quotas',
                    'server_group_members': 'os-server-group-quotas'}
-
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class QuotaClassSetsController(wsgi.Controller):
@@ -65,7 +63,7 @@ class QuotaClassSetsController(wsgi.Controller):
     @extensions.expected_errors(())
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='show', target={'quota_class': id})
+        context.can(qcs_policies.POLICY_ROOT % 'show', {'quota_class': id})
         values = QUOTAS.get_class_quotas(context, id)
         return self._format_quota_set(id, values)
 
@@ -73,7 +71,7 @@ class QuotaClassSetsController(wsgi.Controller):
     @validation.schema(quota_classes.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='update', target={'quota_class': id})
+        context.can(qcs_policies.POLICY_ROOT % 'update', {'quota_class': id})
         try:
             utils.check_string_length(id, 'quota_class_name',
                                       min_length=1, max_length=255)

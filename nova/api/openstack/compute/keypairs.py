@@ -27,11 +27,10 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.i18n import _
 from nova.objects import keypair as keypair_obj
+from nova.policies import keypairs as kp_policies
 
 
 ALIAS = 'os-keypairs'
-authorize = extensions.os_compute_authorizer(ALIAS)
-soft_authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class KeypairController(wsgi.Controller):
@@ -116,9 +115,9 @@ class KeypairController(wsgi.Controller):
         name = common.normalize_name(params['name'])
         key_type = params.get('type', keypair_obj.KEYPAIR_TYPE_SSH)
         user_id = user_id or context.user_id
-        authorize(context, action='create',
-                           target={'user_id': user_id,
-                                   'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'create',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
 
         try:
             if 'public_key' in params:
@@ -169,9 +168,9 @@ class KeypairController(wsgi.Controller):
         context = req.environ['nova.context']
         # handle optional user-id for admin only
         user_id = user_id or context.user_id
-        authorize(context, action='delete',
-                  target={'user_id': user_id,
-                          'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'delete',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
         try:
             self.api.delete_key_pair(context, user_id, id)
         except exception.KeypairNotFound as exc:
@@ -203,9 +202,9 @@ class KeypairController(wsgi.Controller):
         """Return data for the given key name."""
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
-        authorize(context, action='show',
-                  target={'user_id': user_id,
-                          'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'show',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
 
         try:
             # The return object needs to be a dict in order to pop the 'type'
@@ -243,9 +242,9 @@ class KeypairController(wsgi.Controller):
         """List of keypairs for a user."""
         context = req.environ['nova.context']
         user_id = user_id or context.user_id
-        authorize(context, action='index',
-                           target={'user_id': user_id,
-                                   'project_id': context.project_id})
+        context.can(kp_policies.POLICY_ROOT % 'index',
+                    target={'user_id': user_id,
+                            'project_id': context.project_id})
         key_pairs = self.api.get_key_pairs(context, user_id)
         rval = []
         for key_pair in key_pairs:
@@ -272,13 +271,14 @@ class Controller(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(kp_policies.BASE_POLICY_NAME, fatal=False):
             self._show(req, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if 'servers' in resp_obj.obj and soft_authorize(context):
+        if 'servers' in resp_obj.obj and context.can(
+                kp_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_key_name(req, servers)
 

@@ -25,12 +25,12 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import quota_sets as qs_policies
 from nova import quota
 
 
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class QuotaSetsController(wsgi.Controller):
@@ -85,7 +85,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(())
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='show', target={'project_id': id})
+        context.can(qs_policies.POLICY_ROOT % 'show', {'project_id': id})
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
         return self._format_quota_set(id,
@@ -94,7 +94,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(())
     def detail(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='detail', target={'project_id': id})
+        context.can(qs_policies.POLICY_ROOT % 'detail', {'project_id': id})
         user_id = req.GET.get('user_id', None)
         return self._format_quota_set(id, self._get_quotas(context, id,
                                                            user_id=user_id,
@@ -104,7 +104,7 @@ class QuotaSetsController(wsgi.Controller):
     @validation.schema(quota_sets.update)
     def update(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context, action='update', target={'project_id': id})
+        context.can(qs_policies.POLICY_ROOT % 'update', {'project_id': id})
         project_id = id
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
@@ -150,7 +150,7 @@ class QuotaSetsController(wsgi.Controller):
     @extensions.expected_errors(())
     def defaults(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='defaults', target={'project_id': id})
+        context.can(qs_policies.POLICY_ROOT % 'defaults', {'project_id': id})
         values = QUOTAS.get_defaults(context)
         return self._format_quota_set(id, values)
 
@@ -161,7 +161,7 @@ class QuotaSetsController(wsgi.Controller):
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='delete', target={'project_id': id})
+        context.can(qs_policies.POLICY_ROOT % 'delete', {'project_id': id})
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
         if user_id:

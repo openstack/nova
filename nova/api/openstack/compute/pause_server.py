@@ -20,10 +20,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.policies import pause_server as ps_policies
 
 ALIAS = "os-pause-server"
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class PauseServerController(wsgi.Controller):
@@ -37,7 +36,7 @@ class PauseServerController(wsgi.Controller):
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
-        authorize(ctxt, action='pause')
+        ctxt.can(ps_policies.POLICY_ROOT % 'pause')
         server = common.get_instance(self.compute_api, ctxt, id)
         try:
             self.compute_api.pause(ctxt, server)
@@ -58,7 +57,7 @@ class PauseServerController(wsgi.Controller):
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server."""
         ctxt = req.environ['nova.context']
-        authorize(ctxt, action='unpause')
+        ctxt.can(ps_policies.POLICY_ROOT % 'unpause')
         server = common.get_instance(self.compute_api, ctxt, id)
         try:
             self.compute_api.unpause(ctxt, server)

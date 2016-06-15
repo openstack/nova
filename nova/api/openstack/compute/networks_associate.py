@@ -20,10 +20,9 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova.policies import networks_associate as na_policies
 
 ALIAS = "os-networks-associate"
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class NetworkAssociateActionController(wsgi.Controller):
@@ -37,7 +36,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @extensions.expected_errors((404, 501))
     def _disassociate_host_only(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(na_policies.BASE_POLICY_NAME)
         try:
             self.network_api.associate(context, id, host=None)
         except exception.NetworkNotFound:
@@ -51,7 +50,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @extensions.expected_errors((404, 501))
     def _disassociate_project_only(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(na_policies.BASE_POLICY_NAME)
         try:
             self.network_api.associate(context, id, project=None)
         except exception.NetworkNotFound:
@@ -66,7 +65,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @validation.schema(networks_associate.associate_host)
     def _associate_host(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(na_policies.BASE_POLICY_NAME)
 
         try:
             self.network_api.associate(context, id,

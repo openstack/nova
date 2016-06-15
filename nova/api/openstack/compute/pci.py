@@ -20,11 +20,10 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova import objects
+from nova.policies import pci as pci_policies
 
 
 ALIAS = 'os-pci'
-soft_authorize = extensions.os_compute_soft_authorizer(ALIAS + ':pci_servers')
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 PCI_ADMIN_KEYS = ['id', 'address', 'vendor_id', 'product_id', 'status',
                   'compute_node_id']
@@ -42,7 +41,7 @@ class PciServerController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(pci_policies.POLICY_ROOT % 'pci_servers', fatal=False):
             server = resp_obj.obj['server']
             instance = req.get_db_instance(server['id'])
             self._extend_server(server, instance)
@@ -50,7 +49,7 @@ class PciServerController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if soft_authorize(context):
+        if context.can(pci_policies.POLICY_ROOT % 'pci_servers', fatal=False):
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 instance = req.get_db_instance(server['id'])
@@ -99,7 +98,7 @@ class PciController(wsgi.Controller):
 
     def _get_all_nodes_pci_devices(self, req, detail, action):
         context = req.environ['nova.context']
-        authorize(context, action=action)
+        context.can(pci_policies.POLICY_ROOT % action)
         compute_nodes = self.host_api.compute_node_get_all(context)
         results = []
         for node in compute_nodes:
@@ -117,7 +116,7 @@ class PciController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='show')
+        context.can(pci_policies.POLICY_ROOT % 'show')
         try:
             pci_dev = objects.PciDevice.get_by_dev_id(context, id)
         except exception.PciDeviceNotFoundById as e:
