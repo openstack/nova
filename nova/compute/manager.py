@@ -1485,8 +1485,7 @@ class ComputeManager(manager.Manager):
             return compute_utils.get_device_name_for_instance(
                 instance, bdms, block_device_obj.get("device_name"))
 
-    def _default_block_device_names(self, context, instance,
-                                    image_meta, block_devices):
+    def _default_block_device_names(self, instance, image_meta, block_devices):
         """Verify that all the devices have the device_name set. If not,
         provide a default name.
 
@@ -2026,8 +2025,8 @@ class ComputeManager(manager.Manager):
         try:
             # Verify that all the BDMs have a device_name set and assign a
             # default to the ones missing it with the help of the driver.
-            self._default_block_device_names(context, instance, image_meta,
-                    block_device_mapping)
+            self._default_block_device_names(instance, image_meta,
+                                             block_device_mapping)
 
             LOG.debug('Start building block device mappings for instance.',
                       instance=instance)
