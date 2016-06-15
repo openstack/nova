@@ -16,10 +16,12 @@
 
 """Starter script for Nova Compute."""
 
+import shlex
 import sys
 import traceback
 
 from oslo_log import log as logging
+from oslo_privsep import priv_context
 from oslo_reports import guru_meditation_report as gmr
 
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -55,6 +57,7 @@ def block_db_access():
 def main():
     config.parse_args(sys.argv)
     logging.setup(CONF, 'nova')
+    priv_context.init(root_helper=shlex.split(utils.get_root_helper()))
     utils.monkey_patch()
     objects.register_all()
 
