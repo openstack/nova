@@ -690,6 +690,9 @@ class API(base_api.NetworkAPI):
         # We do not want to create a new neutron session for each call
         neutron = get_client(context)
 
+        #
+        # Validate ports and networks with neutron
+        #
         requested_networks = kwargs.get('requested_networks')
         ports, ordered_networks = self._validate_requested_port_ids(
             context, instance, neutron, requested_networks)
@@ -716,12 +719,58 @@ class API(base_api.NetworkAPI):
         #
         # Update existing and newly created ports
         #
-        dhcp_opts = kwargs.get('dhcp_options', None)
+        dhcp_opts = kwargs.get('dhcp_options')
         bind_host_id = kwargs.get('bind_host_id')
 
         hypervisor_macs = kwargs.get('macs', None)
         available_macs = _filter_hypervisor_macs(instance, ports,
                                                  hypervisor_macs)
+
+        # We always need admin_client to build nw_info,
+        # we sometimes need it when updating ports
+        admin_client = get_client(context, admin=True)
+
+        ordered_nets, ordered_ports, preexisting_port_ids, \
+            created_port_ids = self._update_ports_for_instance(
+                context, instance,
+                neutron, admin_client, requests_and_created_ports, nets,
+                bind_host_id, dhcp_opts, available_macs)
+
+        #
+        # Perform a full update of the network_info_cache,
+        # including re-fetching lots of the required data from neutron
+        #
+        nw_info = self.get_instance_nw_info(
+            context, instance, networks=ordered_nets,
+            port_ids=ordered_ports,
+            admin_client=admin_client,
+            preexisting_port_ids=preexisting_port_ids,
+            update_cells=True)
+        # NOTE(danms): Only return info about ports we created in this run.
+        # In the initial allocation case, this will be everything we created,
+        # and in later runs will only be what was created that time. Thus,
+        # this only affects the attach case, not the original use for this
+        # method.
+        return network_model.NetworkInfo([vif for vif in nw_info
+                                          if vif['id'] in created_port_ids +
+                                          preexisting_port_ids])
+
+    def _update_ports_for_instance(self, context, instance, neutron,
+            admin_client, requests_and_created_ports, nets,
+            bind_host_id, dhcp_opts, available_macs):
+        """Create port for network_requests that don't have a port_id
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param neutron: client using user context
+        :param admin_client: client using admin context
+        :param requests_and_created_ports: [(NetworkRequest, created_port_id)]
+        :param nets: a dict of network_id to networks returned from neutron
+        :param bind_host_id: a string for port['binding:host_id']
+        :param dhcp_opts: a list dicts that contain dhcp option name and value
+            e.g. [{'opt_name': 'tftp-server', 'opt_value': '1.2.3.4'}]
+        :param available_macs: a list of available mac addresses
+        """
 
         # The neutron client and port_client (either the admin context or
         # tenant context) are read here. The reason for this is that there are
@@ -730,9 +779,7 @@ class API(base_api.NetworkAPI):
         port_client = (neutron if not
                        self._has_port_binding_extension(context,
                            refresh_cache=True, neutron=neutron) else
-                       get_client(context, admin=True))
-        # Store the admin client - this is used later
-        admin_client = port_client if neutron != port_client else None
+                       admin_client)
 
         preexisting_port_ids = []
         created_port_ids = []
@@ -803,20 +850,9 @@ class API(base_api.NetworkAPI):
                                        preexisting_port_ids,
                                        neutron, port_client)
                     self._delete_ports(neutron, instance, created_port_ids)
-        nw_info = self.get_instance_nw_info(
-            context, instance, networks=nets_in_requested_order,
-            port_ids=ports_in_requested_order,
-            admin_client=admin_client,
-            preexisting_port_ids=preexisting_port_ids,
-            update_cells=True)
-        # NOTE(danms): Only return info about ports we created in this run.
-        # In the initial allocation case, this will be everything we created,
-        # and in later runs will only be what was created that time. Thus,
-        # this only affects the attach case, not the original use for this
-        # method.
-        return network_model.NetworkInfo([vif for vif in nw_info
-                                          if vif['id'] in created_port_ids +
-                                          preexisting_port_ids])
+
+        return (nets_in_requested_order, ports_in_requested_order,
+            preexisting_port_ids, created_port_ids)
 
     def _refresh_neutron_extensions_cache(self, context, neutron=None):
         """Refresh the neutron extensions cache when necessary."""

@@ -540,7 +540,7 @@ class TestNeutronv2Base(test.TestCase):
                                  self.instance,
                                  networks=nets_in_requested_net_order,
                                  port_ids=ports_in_requested_net_order,
-                                 admin_client=None,
+                                 admin_client=self.moxed_client,
                                  preexisting_port_ids=preexisting_port_ids,
                                  update_cells=True
                                 ).AndReturn(self._returned_nw_info)
@@ -549,16 +549,17 @@ class TestNeutronv2Base(test.TestCase):
 
     def _stub_allocate_for_instance_port_binding(self, api, portbinding,
             has_dns_extension):
+        if portbinding:
+            neutronapi.get_client(mox.IgnoreArg()).AndReturn(
+                self.moxed_client)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
         has_portbinding = False
         if portbinding:
             has_portbinding = True
             api.extensions[constants.PORTBINDING_EXT] = 1
             self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
-            neutronapi.get_client(mox.IgnoreArg()).AndReturn(
-                self.moxed_client)
-            neutronapi.get_client(
-                mox.IgnoreArg(), admin=True).AndReturn(
-                self.moxed_client)
             api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
                 neutron=self.moxed_client)
             self.mox.StubOutWithMock(api, '_has_port_binding_extension')
@@ -1264,6 +1265,9 @@ class TestNeutronv2(TestNeutronv2Base):
             (request, ('portid_' + request.network_id))
             for request in requested_networks
         ]
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
         index = 0
         for network in self.nets2:
             binding_port_req_body = {
@@ -4285,12 +4289,54 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
                                     dhcp_options=dhcp_opts)
 
 
-class TestAllocateForInstanceHelpers(test.NoDBTestCase):
+class TestAllocateForInstance(test.NoDBTestCase):
     def setUp(self):
-        super(TestAllocateForInstanceHelpers, self).setUp()
+        super(TestAllocateForInstance, self).setUp()
         self.context = context.RequestContext('userid', uuids.my_tenant)
         self.instance = objects.Instance(uuid=uuids.instance,
             project_id=uuids.tenant_id, hostname="host")
+
+    def test_allocate_for_instance_raises_invalid_input(self):
+        api = neutronapi.API()
+        self.instance.project_id = ""
+
+        self.assertRaises(exception.InvalidInput,
+            api.allocate_for_instance, self.context, self.instance)
+
+    @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
+    @mock.patch.object(neutronapi.API, '_update_ports_for_instance')
+    @mock.patch.object(neutronapi, '_filter_hypervisor_macs')
+    @mock.patch.object(neutronapi.API, '_create_ports_for_instance')
+    @mock.patch.object(neutronapi.API, '_process_security_groups')
+    @mock.patch.object(neutronapi.API, '_clean_security_groups')
+    @mock.patch.object(neutronapi.API, '_validate_requested_network_ids')
+    @mock.patch.object(neutronapi.API, '_validate_requested_port_ids')
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_allocate_for_instance_minimal_args(self, mock_get_client,
+            mock_validate_ports, mock_validate_nets, mock_clean_sg, mock_sg,
+            mock_create_ports, mock_filter_macs, mock_update_ports, mock_gni):
+
+        api = neutronapi.API()
+        mock_get_client.side_effect = ["user", "admin"]
+        mock_validate_ports.return_value = ("ports", "ordered_nets")
+        mock_validate_nets.return_value = "nets"
+        mock_clean_sg.return_value = "security_groups"
+        mock_sg.return_value = "security_group_ids"
+        mock_create_ports.return_value = "requests_and_created_ports"
+        mock_filter_macs.return_value = "available_macs"
+        mock_update_ports.return_value = (
+            "nets", "ports", [uuids.preexist], [uuids.created])
+        mock_gni.return_value = [
+            {"id": uuids.created}, {"id": uuids.preexist}, {"id": "foo"}
+        ]
+
+        result = api.allocate_for_instance(self.context, self.instance)
+
+        # TODO(johngarbutt) we need to replace the old mox coverage
+        # with new tests that can build on this very poor test
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0], {"id": uuids.created})
+        self.assertEqual(result[1], {"id": uuids.preexist})
 
     def test_populate_mac_address_skip_if_none(self):
         api = neutronapi.API()
@@ -4612,6 +4658,51 @@ class TestAllocateForInstanceHelpers(test.NoDBTestCase):
             ordered_networks, nets, mock_client, [uuids.sg])
 
         self.assertFalse(mock_client.create_port.called)
+
+    @mock.patch.object(objects.VirtualInterface, "create")
+    def test_update_ports_for_instance_with_portbinding(self, mock_create):
+        api = neutronapi.API()
+        self.instance.availability_zone = "test_az"
+        mock_neutron = mock.Mock()
+        mock_admin = mock.Mock()
+        requests_and_created_ports = [
+            (objects.NetworkRequest(
+                network_id=uuids.net1), uuids.port1),
+            (objects.NetworkRequest(
+                network_id=uuids.net2, port_id=uuids.port2), None)]
+        net1 = {"id": uuids.net1}
+        net2 = {"id": uuids.net2}
+        nets = {uuids.net1: net1, uuids.net2: net2}
+        bind_host_id = "bind_host_id"
+        dhcp_opts = [{'opt_name': 'tftp-server', 'opt_value': '1.2.3.4'}]
+        available_macs = ["mac1", "mac2"]
+
+        mock_neutron.list_extensions.return_value = {"extensions": [
+            {"name": "asdf"}, {"name": constants.PORTBINDING_EXT}]}
+        port1 = {"port": {"id": uuids.port1, "mac_address": "mac1r"}}
+        port2 = {"port": {"id": uuids.port2, "mac_address": "mac2r"}}
+        mock_admin.update_port.side_effect = [port1, port2]
+
+        ordered_nets, ordered_ports, preexisting_port_ids, \
+            created_port_ids = api._update_ports_for_instance(
+                self.context, self.instance,
+                mock_neutron, mock_admin, requests_and_created_ports, nets,
+                bind_host_id, dhcp_opts, available_macs)
+
+        # TODO(johngarbutt) need to build on this test so we can replace
+        # all the mox based tests
+        self.assertEqual([net1, net2], ordered_nets, "ordered_nets")
+        self.assertEqual([uuids.port1, uuids.port2], ordered_ports,
+            "ordered_ports")
+        self.assertEqual([uuids.port2], preexisting_port_ids, "preexisting")
+        self.assertEqual([uuids.port1], created_port_ids, "created")
+        mock_admin.update_port.assert_called_with(uuids.port2,
+            {'port': {
+                'device_owner': 'compute:test_az',
+                'mac_address': 'mac1',
+                'binding:host_id': bind_host_id,
+                'extra_dhcp_opts': dhcp_opts,
+                'device_id': self.instance.uuid}})
 
 
 class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
