@@ -671,11 +671,7 @@ class Host(object):
                     features = self.get_connection().baselineCPU(
                         [self._caps.host.cpu.to_xml()],
                         libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
-                    # FIXME(wangpan): the return value of baselineCPU should be
-                    #                 None or xml string, but libvirt has a bug
-                    #                 of it from 1.1.2 which is fixed in 1.2.0,
-                    #                 this -1 checking should be removed later.
-                    if features and features != -1:
+                    if features:
                         cpu = vconfig.LibvirtConfigCPU()
                         cpu.parse_str(features)
                         self._caps.host.cpu.features = cpu.features
