@@ -732,12 +732,72 @@ agent_id_str:
   in: body
   required: true
   type: string
-aggregate_name:
+aggregate:
   description: |
-    The name of the aggregate.
+    The host aggregate object.
+  in: body
+  required: true
+  type: object
+aggregate_add_host:
+  description: |
+    The add_host object used to add host to aggregate.
+  in: body
+  required: true
+  type: object
+aggregate_az:
+  description: |
+    The availability zone of the host aggregate.
   in: body
   required: true
   type: string
+aggregate_az_optional:
+  description: |
+    The availability zone of the host aggregate.
+  in: body
+  required: false
+  type: string
+aggregate_host_list:
+  description: |
+    A list of host ids in this aggregate.
+  in: body
+  required: true
+  type: array
+aggregate_id_body:
+  description: |
+    The ID of the host aggregate.
+  in: body
+  required: true
+  type: string
+aggregate_metadata:
+  description: |
+    Metadata key and value pairs associate with the aggregate.
+  in: body
+  required: true
+  type: object
+aggregate_name:
+  description: |
+    The name of the host aggregate.
+  in: body
+  required: true
+  type: string
+aggregate_name_optional:
+  description: |
+    The name of the host aggregate.
+  in: body
+  required: false
+  type: string
+aggregate_remove_host:
+  description: |
+    The add_host object used to remove host from aggregate.
+  in: body
+  required: true
+  type: object
+aggregates:
+  description: |
+    The list of existing aggregates.
+  in: body
+  required: true
+  type: array
 alias:
   description: |
     A short name by which this extension is also known.
@@ -1064,6 +1124,29 @@ delete_on_termination:
   description: |
     To delete the boot volume when the server is destroyed, specify ``true``.
     Otherwise, specify ``false``.
+  in: body
+  required: true
+  type: string
+deleted:
+  description: |
+    A boolean indicate whether this aggregate is deleted or not, if it has
+    not been deleted, ``false`` will appear.
+  in: body
+  required: true
+  type: boolean
+deleted_at:
+  description: |
+    The date and time when the resource was deleted. If the resource has
+    not been deleted yet, this field will be ``null``, The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
   in: body
   required: true
   type: string
@@ -2186,6 +2269,14 @@ metadata_required:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
     255 bytes each. This field is never used, always kept empty.
+    The associated metadata key and value pairs.
+  in: body
+  required: true
+  type: object
+metadata_set_required:
+  description: |
+    Metadata key and value pairs. The maximum size of the metadata key and value is
+    255 bytes each.
   in: body
   required: true
   type: object
@@ -3051,6 +3142,12 @@ services:
   type: array
   description: |
     An array of service objects
+set_metadata:
+  description: |
+    The set_metadata object used to set metadata for host aggregate.
+  in: body
+  required: true
+  type: object
 shelve:
   description: |
     The action.
@@ -3157,6 +3254,22 @@ unshelve:
 updated:
   description: |
     The date and time when the resource was updated. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+updated_consider_null:
+  description: |
+    The date and time when the resource was updated, if the resource has
+    not been updated, this field will show as ``null``. The date and time
     stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
 
     ::
