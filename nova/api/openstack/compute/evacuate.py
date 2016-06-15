@@ -26,12 +26,12 @@ from nova import compute
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.policies import evacuate as evac_policies
 from nova import utils
 
 CONF = nova.conf.CONF
 
 ALIAS = "os-evacuate"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class EvacuateController(wsgi.Controller):
@@ -82,7 +82,7 @@ class EvacuateController(wsgi.Controller):
         to a new one.
         """
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(evac_policies.BASE_POLICY_NAME)
 
         evacuate_body = body["evacuate"]
         host = evacuate_body.get("host")

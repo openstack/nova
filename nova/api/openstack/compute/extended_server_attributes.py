@@ -18,10 +18,10 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.policies import extended_server_attributes as esa_policies
+from nova.policies import servers as servers_policies
 
 ALIAS = "os-extended-server-attributes"
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
-soft_authorize = extensions.os_compute_soft_authorizer('servers')
 
 
 class ExtendedServerAttributesController(wsgi.Controller):
@@ -62,10 +62,11 @@ class ExtendedServerAttributesController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize_extend = False
         authorize_host_status = False
-        if authorize(context):
+        if context.can(esa_policies.BASE_POLICY_NAME, fatal=False):
             authorize_extend = True
         if (api_version_request.is_supported(req, min_version='2.16') and
-            soft_authorize(context, action='show:host_status')):
+            context.can(servers_policies.SERVERS % 'show:host_status',
+                        fatal=False)):
             authorize_host_status = True
         if authorize_extend or authorize_host_status:
             server = resp_obj.obj['server']
@@ -82,10 +83,11 @@ class ExtendedServerAttributesController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize_extend = False
         authorize_host_status = False
-        if authorize(context):
+        if context.can(esa_policies.BASE_POLICY_NAME, fatal=False):
             authorize_extend = True
         if (api_version_request.is_supported(req, min_version='2.16') and
-            soft_authorize(context, action='show:host_status')):
+            context.can(servers_policies.SERVERS % 'show:host_status',
+                        fatal=False)):
             authorize_host_status = True
         if authorize_extend or authorize_host_status:
             servers = list(resp_obj.obj['servers'])

@@ -19,10 +19,10 @@ from nova.api.openstack.compute.schemas import config_drive as \
                                                   schema_config_drive
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import config_drive as cd_policies
 
 ALIAS = "os-config-drive"
 ATTRIBUTE_NAME = "config_drive"
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class ConfigDriveController(wsgi.Controller):
@@ -42,13 +42,14 @@ class ConfigDriveController(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
-        if authorize(context):
+        if context.can(cd_policies.BASE_POLICY_NAME, fatal=False):
             self._show(req, resp_obj)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
-        if 'servers' in resp_obj.obj and authorize(context):
+        if 'servers' in resp_obj.obj and context.can(
+                cd_policies.BASE_POLICY_NAME, fatal=False):
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
 

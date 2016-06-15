@@ -20,9 +20,9 @@ from nova.api.openstack import wsgi
 import nova.cert.rpcapi
 from nova import exception
 from nova.i18n import _
+from nova.policies import certificates as cert_policies
 
 ALIAS = "os-certificates"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_certificate_view(certificate, private_key=None):
@@ -43,7 +43,7 @@ class CertificatesController(wsgi.Controller):
     def show(self, req, id):
         """Return certificate information."""
         context = req.environ['nova.context']
-        authorize(context, action='show')
+        context.can(cert_policies.POLICY_ROOT % 'show')
         if id != 'root':
             msg = _("Only root certificate can be retrieved.")
             # TODO(oomichi): This seems a HTTPBadRequest case because of the
@@ -64,7 +64,7 @@ class CertificatesController(wsgi.Controller):
     def create(self, req, body=None):
         """Create a certificate."""
         context = req.environ['nova.context']
-        authorize(context, action='create')
+        context.can(cert_policies.POLICY_ROOT % 'create')
         pk, cert = self.cert_rpcapi.generate_x509_cert(context,
                 user_id=context.user_id, project_id=context.project_id)
         return {'certificate': _translate_certificate_view(cert, pk)}

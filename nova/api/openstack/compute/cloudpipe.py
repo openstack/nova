@@ -30,12 +30,12 @@ from nova import exception
 from nova.i18n import _
 from nova import network
 from nova import objects
+from nova.policies import cloudpipe as cp_policies
 from nova import utils
 
 CONF = nova.conf.CONF
 
 ALIAS = 'os-cloudpipe'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class CloudpipeController(wsgi.Controller):
@@ -113,7 +113,7 @@ class CloudpipeController(wsgi.Controller):
         """
 
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cp_policies.BASE_POLICY_NAME)
         params = body.get('cloudpipe', {})
         project_id = params.get('project_id', context.project_id)
         # NOTE(vish): downgrade to project context. Note that we keep
@@ -137,7 +137,7 @@ class CloudpipeController(wsgi.Controller):
     def index(self, req):
         """List running cloudpipe instances."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cp_policies.BASE_POLICY_NAME)
         vpns = [self._vpn_dict(context, x['project_id'], x)
                 for x in self._get_all_cloudpipes(context)]
         return {'cloudpipes': vpns}
@@ -149,7 +149,7 @@ class CloudpipeController(wsgi.Controller):
         """Configure cloudpipe parameters for the project."""
 
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cp_policies.BASE_POLICY_NAME)
 
         if id != "configure-project":
             msg = _("Unknown action %s") % id

@@ -25,9 +25,9 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.policies import console_output as co_policies
 
 ALIAS = "os-console-output"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ConsoleOutputController(wsgi.Controller):
@@ -41,7 +41,7 @@ class ConsoleOutputController(wsgi.Controller):
     def get_console_output(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(co_policies.BASE_POLICY_NAME)
 
         instance = common.get_instance(self.compute_api, context, id)
         length = body['os-getConsoleOutput'].get('length')
