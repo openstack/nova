@@ -23,12 +23,12 @@ from nova.api.openstack import wsgi
 from nova import compute
 import nova.conf
 from nova.i18n import _
+from nova.policies import instance_usage_audit_log as iual_policies
 from nova import utils
 
 CONF = nova.conf.CONF
 
 ALIAS = 'os-instance-usage-audit-log'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class InstanceUsageAuditLogController(wsgi.Controller):
@@ -38,14 +38,14 @@ class InstanceUsageAuditLogController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(iual_policies.BASE_POLICY_NAME)
         task_log = self._get_audit_task_logs(context)
         return {'instance_usage_audit_logs': task_log}
 
     @extensions.expected_errors(400)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(iual_policies.BASE_POLICY_NAME)
         try:
             if '.' in id:
                 before_date = datetime.datetime.strptime(str(id),

@@ -16,9 +16,9 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import flavor_rxtx as fr_policies
 
 ALIAS = 'os-flavor-rxtx'
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class FlavorRxtxController(wsgi.Controller):
@@ -29,7 +29,8 @@ class FlavorRxtxController(wsgi.Controller):
             flavor[key] = db_flavor['rxtx_factor'] or ""
 
     def _show(self, req, resp_obj):
-        if not authorize(req.environ['nova.context']):
+        context = req.environ['nova.context']
+        if not context.can(fr_policies.BASE_POLICY_NAME, fatal=False):
             return
         if 'flavor' in resp_obj.obj:
             self._extend_flavors(req, [resp_obj.obj['flavor']])
@@ -44,7 +45,8 @@ class FlavorRxtxController(wsgi.Controller):
 
     @wsgi.extends
     def detail(self, req, resp_obj):
-        if not authorize(req.environ['nova.context']):
+        context = req.environ['nova.context']
+        if not context.can(fr_policies.BASE_POLICY_NAME, fatal=False):
             return
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 

@@ -25,11 +25,11 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import hypervisors as hv_policies
 from nova import servicegroup
 
 
 ALIAS = "os-hypervisors"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class HypervisorsController(wsgi.Controller):
@@ -83,7 +83,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         compute_nodes = self.host_api.compute_node_get_all(context)
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
@@ -96,7 +96,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors(())
     def detail(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         compute_nodes = self.host_api.compute_node_get_all(context)
         req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(
@@ -106,7 +106,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         try:
             hyp = self.host_api.compute_node_get(context, id)
             req.cache_db_compute_node(hyp)
@@ -121,7 +121,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 501))
     def uptime(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         try:
             hyp = self.host_api.compute_node_get(context, id)
             req.cache_db_compute_node(hyp)
@@ -145,7 +145,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def search(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         hypervisors = self.host_api.compute_node_search_by_hypervisor(
                 context, id)
         if hypervisors:
@@ -162,7 +162,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def servers(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         compute_nodes = self.host_api.compute_node_search_by_hypervisor(
                 context, id)
         if not compute_nodes:
@@ -182,7 +182,7 @@ class HypervisorsController(wsgi.Controller):
     @extensions.expected_errors(())
     def statistics(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(hv_policies.BASE_POLICY_NAME)
         stats = self.host_api.compute_node_statistics(context)
         return dict(hypervisor_statistics=stats)
 

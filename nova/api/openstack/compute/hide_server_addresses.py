@@ -19,12 +19,12 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import vm_states
 import nova.conf
+from nova.policies import hide_server_addresses as hsa_policies
 
 
 CONF = nova.conf.CONF
 
 ALIAS = 'os-hide-server-addresses'
-authorize = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 class Controller(wsgi.Controller):
@@ -47,7 +47,8 @@ class Controller(wsgi.Controller):
     @wsgi.extends
     def show(self, req, resp_obj, id):
         resp = resp_obj
-        if not authorize(req.environ['nova.context']):
+        context = req.environ['nova.context']
+        if not context.can(hsa_policies.BASE_POLICY_NAME, fatal=False):
             return
 
         if 'server' in resp.obj and 'addresses' in resp.obj['server']:
@@ -57,7 +58,8 @@ class Controller(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         resp = resp_obj
-        if not authorize(req.environ['nova.context']):
+        context = req.environ['nova.context']
+        if not context.can(hsa_policies.BASE_POLICY_NAME, fatal=False):
             return
 
         for server in list(resp.obj['servers']):

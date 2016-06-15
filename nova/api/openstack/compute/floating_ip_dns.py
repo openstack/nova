@@ -24,10 +24,10 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import network
+from nova.policies import floating_ip_dns as fid_policies
 
 
 ALIAS = "os-floating-ip-dns"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_dns_entry_view(dns_entry):
@@ -90,7 +90,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def index(self, req):
         """Return a list of available DNS domains."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
 
         try:
             domains = self.network_api.get_dns_domains(context)
@@ -110,7 +110,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def update(self, req, id, body):
         """Add or modify domain entry."""
         context = req.environ['nova.context']
-        authorize(context, action="domain:update")
+        context.can(fid_policies.POLICY_ROOT % "domain:update")
         fqdomain = _unquote_domain(id)
         entry = body['domain_entry']
         scope = entry['scope']
@@ -145,7 +145,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
     def delete(self, req, id):
         """Delete the domain identified by id."""
         context = req.environ['nova.context']
-        authorize(context, action="domain:delete")
+        context.can(fid_policies.POLICY_ROOT % "domain:delete")
         domain = _unquote_domain(id)
 
         # Delete the whole domain
@@ -168,7 +168,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
     def show(self, req, domain_id, id):
         """Return the DNS entry that corresponds to domain_id and id."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
         domain = _unquote_domain(domain_id)
 
         floating_ip = None
@@ -206,7 +206,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
     def update(self, req, domain_id, id, body):
         """Add or modify dns entry."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
         domain = _unquote_domain(domain_id)
         name = id
         entry = body['dns_entry']
@@ -237,7 +237,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
     def delete(self, req, domain_id, id):
         """Delete the entry identified by req and id."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fid_policies.BASE_POLICY_NAME)
         domain = _unquote_domain(domain_id)
         name = id
 

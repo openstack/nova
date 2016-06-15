@@ -22,9 +22,9 @@ from nova.api import validation
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import fixed_ips as fi_policies
 
 ALIAS = 'os-fixed-ips'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FixedIPController(wsgi.Controller):
@@ -43,7 +43,7 @@ class FixedIPController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given fixed IP."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         attrs = ['network', 'instance']
         try:
@@ -79,7 +79,7 @@ class FixedIPController(wsgi.Controller):
     @wsgi.action('reserve')
     def reserve(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         return self._set_reserved(context, id, True)
 
@@ -89,7 +89,7 @@ class FixedIPController(wsgi.Controller):
     @wsgi.action('unreserve')
     def unreserve(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
         return self._set_reserved(context, id, False)
 
     def _set_reserved(self, context, address, reserved):
