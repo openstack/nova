@@ -466,6 +466,93 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertColumnExists(engine, 'resource_classes', 'id')
         self.assertColumnExists(engine, 'resource_classes', 'name')
 
+    def _check_027(self, engine, data):
+        # quota_classes
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'class_name',
+                       'resource',
+                       'hard_limit']:
+            self.assertColumnExists(engine, 'quota_classes', column)
+
+        self.assertIndexExists(engine, 'quota_classes',
+            'quota_classes_class_name_idx')
+
+        # quota_usages
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'project_id',
+                       'resource',
+                       'in_use',
+                       'reserved',
+                       'until_refresh',
+                       'user_id']:
+            self.assertColumnExists(engine, 'quota_usages', column)
+
+        self.assertIndexExists(engine, 'quota_usages',
+            'quota_usages_project_id_idx')
+        self.assertIndexExists(engine, 'quota_usages',
+            'quota_usages_user_id_idx')
+
+        # quotas
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'project_id',
+                       'resource',
+                       'hard_limit']:
+            self.assertColumnExists(engine, 'quotas', column)
+
+        self.assertUniqueConstraintExists(engine, 'quotas',
+                                        ['project_id', 'resource'])
+
+        # project_user_quotas
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'user_id',
+                       'project_id',
+                       'resource',
+                       'hard_limit']:
+            self.assertColumnExists(engine, 'project_user_quotas', column)
+
+        self.assertUniqueConstraintExists(engine, 'project_user_quotas',
+                                        ['user_id', 'project_id', 'resource'])
+        self.assertIndexExists(engine, 'project_user_quotas',
+            'project_user_quotas_project_id_idx')
+        self.assertIndexExists(engine, 'project_user_quotas',
+            'project_user_quotas_user_id_idx')
+
+        # reservations
+        for column in ['created_at',
+                       'updated_at',
+                       'id',
+                       'uuid',
+                       'usage_id',
+                       'project_id',
+                       'resource',
+                       'delta',
+                       'expire',
+                       'user_id']:
+            self.assertColumnExists(engine, 'reservations', column)
+
+        self.assertIndexExists(engine, 'reservations',
+                                       'reservations_project_id_idx')
+        self.assertIndexExists(engine, 'reservations',
+                                       'reservations_uuid_idx')
+        self.assertIndexExists(engine, 'reservations',
+                                       'reservations_expire_idx')
+        self.assertIndexExists(engine, 'reservations',
+                                       'reservations_user_id_idx')
+        # Ensure the foreign key still exists
+        inspector = reflection.Inspector.from_engine(engine)
+        # There should only be one foreign key here
+        fk = inspector.get_foreign_keys('reservations')[0]
+        self.assertEqual('quota_usages', fk['referred_table'])
+        self.assertEqual(['id'], fk['referred_columns'])
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
