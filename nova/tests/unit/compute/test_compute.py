@@ -1259,8 +1259,14 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         manager = compute_manager.ComputeManager()
         manager.use_legacy_block_device_info = False
-        block_device_info = manager._prep_block_device(self.context, instance,
-                                                       bdms)
+        mock_bdm_saves = [mock.patch.object(bdm, 'save') for bdm in bdms]
+        with test.nested(*mock_bdm_saves):
+            block_device_info = manager._prep_block_device(self.context,
+                                                           instance, bdms)
+
+            for bdm in bdms:
+                bdm.save.assert_called_once_with()
+                self.assertIsNotNone(bdm.device_name)
 
         convert_swap.assert_called_once_with(bdms)
         convert_ephemerals.assert_called_once_with(bdms)
@@ -8894,7 +8900,7 @@ class ComputeAPITestCase(BaseTestCase):
                 None,
                 '/invalid')
 
-    def test_check_dev_name_assign_dev_name(self):
+    def test_add_missing_dev_names_assign_dev_name(self):
         instance = self._create_fake_instance_obj()
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
@@ -8908,12 +8914,16 @@ class ComputeAPITestCase(BaseTestCase):
                  'disk_bus': None,
                  'device_type': None
                  }))]
-        self.compute._check_dev_name(bdms, instance)
+        with mock.patch.object(objects.BlockDeviceMapping,
+                               'save') as mock_save:
+            self.compute._add_missing_dev_names(bdms, instance)
+            mock_save.assert_called_once_with()
         self.assertIsNotNone(bdms[0].device_name)
 
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_device_name_for_instance')
-    def test_check_dev_name_skip_bdms_with_dev_name(self, mock_get_dev_name):
+    def test_add_missing_dev_names_skip_bdms_with_dev_name(self,
+                                                       mock_get_dev_name):
         instance = self._create_fake_instance_obj()
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
@@ -8927,7 +8937,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'disk_bus': None,
                  'device_type': None
                  }))]
-        self.compute._check_dev_name(bdms, instance)
+        self.compute._add_missing_dev_names(bdms, instance)
         self.assertFalse(mock_get_dev_name.called)
 
     def test_no_attach_volume_in_rescue_state(self):
