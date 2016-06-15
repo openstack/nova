@@ -25,6 +25,10 @@ from nova.tests.unit.api.openstack import fakes
 
 FAKE_UPDATED_DATE = extension_info.FAKE_UPDATED_DATE
 
+# NOTE(sdague): this whole test module is short term while we shift
+# the extensions into main path code. Some short cuts are taken in the
+# interim to keep these extension tests.
+
 
 class fake_extension(object):
     def __init__(self, name, alias, description, version):
@@ -76,8 +80,15 @@ class ExtensionInfoTest(test.NoDBTestCase):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce)
         req = fakes.HTTPRequestV21.blank('/extensions')
         res_dict = self.controller.index(req)
-        self.assertEqual(3, len(res_dict['extensions']))
-        for e in res_dict['extensions']:
+        # NOTE(sdague): because of hardcoded extensions the count is
+        # going to grow, and that's fine. We'll just check that it's
+        # greater than the 3 that we inserted.
+        self.assertGreaterEqual(len(res_dict['extensions']), 3)
+
+        # NOTE(sdague): filter the extension list by only ones that
+        # are the fake alias names, otherwise we get errors as we
+        # migrate extensions into the hardcoded list.
+        for e in [x for x in res_dict['extensions'] if '-alias' in x['alias']]:
             self.assertIn(e['alias'], fake_extensions)
             self.assertEqual(e['name'], fake_extensions[e['alias']].name)
             self.assertEqual(e['alias'], fake_extensions[e['alias']].alias)
@@ -106,8 +117,15 @@ class ExtensionInfoTest(test.NoDBTestCase):
         self.stubs.Set(policy, 'enforce', fake_policy_enforce_selective)
         req = fakes.HTTPRequestV21.blank('/extensions')
         res_dict = self.controller.index(req)
-        self.assertEqual(2, len(res_dict['extensions']))
-        for e in res_dict['extensions']:
+        # NOTE(sdague): because of hardcoded extensions the count is
+        # going to grow, and that's fine. We'll just check that it's
+        # greater than the 2 that we inserted.
+        self.assertGreaterEqual(len(res_dict['extensions']), 2)
+
+        # NOTE(sdague): filter the extension list by only ones that
+        # are the fake alias names, otherwise we get errors as we
+        # migrate extensions into the hardcoded list.
+        for e in [x for x in res_dict['extensions'] if '-alias' in x['alias']]:
             self.assertNotEqual('ext1-alias', e['alias'])
             self.assertIn(e['alias'], fake_extensions)
             self.assertEqual(e['name'], fake_extensions[e['alias']].name)
@@ -131,7 +149,10 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
     def test_extension_info_list(self):
         req = fakes.HTTPRequest.blank('/extensions')
         res_dict = self.controller.index(req)
-        self.assertEqual(12, len(res_dict['extensions']))
+        # NOTE(sdague): because of hardcoded extensions the count is
+        # going to grow, and that's fine. We'll just check that it's
+        # greater than the 12 that we inserted.
+        self.assertGreaterEqual(len(res_dict['extensions']), 12)
 
         expected_output = copy.deepcopy(simulated_extension_list)
         del expected_output['images']
@@ -155,7 +176,10 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
         expected_output['os-server-start-stop'] = fake_extension(
             'ServerStartStop', 'os-server-start-stop', '', -1)
 
-        for e in res_dict['extensions']:
+        # NOTE(sdague): filter the extension list by only ones that
+        # are the fake alias names, otherwise we get errors as we
+        # migrate extensions into the hardcoded list.
+        for e in [x for x in res_dict['extensions'] if '-alias' in x['alias']]:
             self.assertIn(e['alias'], expected_output)
             self.assertEqual(e['name'], expected_output[e['alias']].name)
             self.assertEqual(e['alias'], expected_output[e['alias']].alias)

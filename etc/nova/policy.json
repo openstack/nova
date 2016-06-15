@@ -65,8 +65,6 @@
     "os_compute_api:os-create-backup": "rule:admin_or_owner",
     "os_compute_api:os-deferred-delete": "rule:admin_or_owner",
     "os_compute_api:os-deferred-delete:discoverable": "@",
-    "os_compute_api:os-disk-config": "rule:admin_or_owner",
-    "os_compute_api:os-disk-config:discoverable": "@",
     "os_compute_api:os-evacuate": "rule:admin_api",
     "os_compute_api:os-evacuate:discoverable": "@",
     "os_compute_api:os-extended-server-attributes": "rule:admin_api",

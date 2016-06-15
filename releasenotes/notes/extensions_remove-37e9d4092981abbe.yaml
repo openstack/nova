@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+
+    The following policy enforcement points have been removed as part
+    of the restructuring of the Nova API code. The attributes that
+    could have been hidden with these policy points will now always be
+    shown / accepted.
+
+     * os_compute_api:os-disk-config - show / accept
+       ``OS-DCF:diskConfig`` parameter
+
+    The following entry points have been removed
+
+     * nova.api.v21.extensions.server.resize - allowed accepting
+       additional parameters on resize requests.
