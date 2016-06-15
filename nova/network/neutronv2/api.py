@@ -620,35 +620,18 @@ class API(base_api.NetworkAPI):
             See nova/virt/driver.py:dhcp_options_for_instance for an example.
         :param bind_host_id: the host ID to attach to the ports being created.
         """
-        # The neutron client and port_client (either the admin context or
-        # tenant context) are read here. The reason for this is that there are
-        # a number of different calls for the instance allocation.
-        # We do not want to create a new neutron session for each of these
-        # calls.
-        neutron = get_client(context)
-        # Requires admin creds to set port bindings
-        port_client = (neutron if not
-                       self._has_port_binding_extension(context,
-                           refresh_cache=True, neutron=neutron) else
-                       get_client(context, admin=True))
-        # Store the admin client - this is used later
-        admin_client = port_client if neutron != port_client else None
         LOG.debug('allocate_for_instance()', instance=instance)
         if not instance.project_id:
             msg = _('empty project id for instance %s')
             raise exception.InvalidInput(
                 reason=msg % instance.uuid)
 
-        dhcp_opts = kwargs.get('dhcp_options', None)
-        bind_host_id = kwargs.get('bind_host_id')
+        # We do not want to create a new neutron session for each call
+        neutron = get_client(context)
 
         requested_networks = kwargs.get('requested_networks')
         ports, ordered_networks = self._validate_requested_port_ids(
             context, instance, neutron, requested_networks)
-
-        hypervisor_macs = kwargs.get('macs', None)
-        available_macs = _filter_hypervisor_macs(instance, ports,
-                                                 hypervisor_macs)
 
         nets = self._validate_requested_network_ids(
             context, instance, neutron, requested_networks, ordered_networks)
@@ -660,6 +643,24 @@ class API(base_api.NetworkAPI):
             kwargs.get('security_groups', []))
         security_group_ids = self._process_security_groups(
                                     instance, neutron, security_groups)
+
+        dhcp_opts = kwargs.get('dhcp_options', None)
+        bind_host_id = kwargs.get('bind_host_id')
+
+        hypervisor_macs = kwargs.get('macs', None)
+        available_macs = _filter_hypervisor_macs(instance, ports,
+                                                 hypervisor_macs)
+
+        # The neutron client and port_client (either the admin context or
+        # tenant context) are read here. The reason for this is that there are
+        # a number of different calls for the instance allocation.
+        # We require admin creds to set port bindings.
+        port_client = (neutron if not
+                       self._has_port_binding_extension(context,
+                           refresh_cache=True, neutron=neutron) else
+                       get_client(context, admin=True))
+        # Store the admin client - this is used later
+        admin_client = port_client if neutron != port_client else None
 
         preexisting_port_ids = []
         created_port_ids = []
