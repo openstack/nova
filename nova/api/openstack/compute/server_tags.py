@@ -14,11 +14,14 @@ import jsonschema
 
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_tags as schema
 from nova.api.openstack.compute.views import server_tags
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import compute
+from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -34,6 +37,21 @@ def _get_tags_names(tags):
 
 class ServerTagsController(wsgi.Controller):
     _view_builder_class = server_tags.ViewBuilder
+
+    def __init__(self):
+        self.compute_api = compute.API()
+        super(ServerTagsController, self).__init__()
+
+    def _check_instance_in_valid_state(self, context, server_id, action):
+        instance = common.get_instance(self.compute_api, context, server_id)
+        if instance.vm_state not in (vm_states.ACTIVE, vm_states.PAUSED,
+                                     vm_states.SUSPENDED, vm_states.STOPPED):
+            exc = exception.InstanceInvalidState(attr='vm_state',
+                                                 instance_uuid=instance.uuid,
+                                                 state=instance.vm_state,
+                                                 method=action)
+            common.raise_http_conflict_for_instance_invalid_state(exc, action,
+                                                                  server_id)
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
@@ -66,11 +84,12 @@ class ServerTagsController(wsgi.Controller):
         return {'tags': _get_tags_names(tags)}
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 404, 409))
     @validation.schema(schema.update)
     def update(self, req, server_id, id, body):
         context = req.environ["nova.context"]
         authorize(context, action='update')
+        self._check_instance_in_valid_state(context, server_id, 'update tag')
 
         try:
             jsonschema.validate(id, schema.tag)
@@ -113,11 +132,12 @@ class ServerTagsController(wsgi.Controller):
         return response
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 404, 409))
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]
         authorize(context, action='update_all')
+        self._check_instance_in_valid_state(context, server_id, 'update tags')
 
         invalid_tags = []
         for tag in body['tags']:
@@ -155,10 +175,11 @@ class ServerTagsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((404, 409))
     def delete(self, req, server_id, id):
         context = req.environ["nova.context"]
         authorize(context, action='delete')
+        self._check_instance_in_valid_state(context, server_id, 'delete tag')
 
         try:
             objects.Tag.destroy(context, server_id, id)
@@ -169,10 +190,11 @@ class ServerTagsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((404, 409))
     def delete_all(self, req, server_id):
         context = req.environ["nova.context"]
         authorize(context, action='delete_all')
+        self._check_instance_in_valid_state(context, server_id, 'delete tags')
 
         try:
             objects.TagList.destroy(context, server_id)
