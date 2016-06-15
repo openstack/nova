@@ -178,30 +178,30 @@ def get_fake_device_info():
     return fake
 
 
-def stub_vm_utils_with_vdi_attached_here(function):
-    """vm_utils.with_vdi_attached_here needs to be stubbed out because it
+def stub_vm_utils_with_vdi_attached(function):
+    """vm_utils.with_vdi_attached needs to be stubbed out because it
     calls down to the filesystem to attach a vdi. This provides a
     decorator to handle that.
     """
     @functools.wraps(function)
     def decorated_function(self, *args, **kwargs):
         @contextlib.contextmanager
-        def fake_vdi_attached_here(*args, **kwargs):
+        def fake_vdi_attached(*args, **kwargs):
             fake_dev = 'fakedev'
             yield fake_dev
 
         def fake_image_download(*args, **kwargs):
             pass
 
-        orig_vdi_attached_here = vm_utils.vdi_attached_here
+        orig_vdi_attached = vm_utils.vdi_attached
         orig_image_download = fake_image._FakeImageService.download
         try:
-            vm_utils.vdi_attached_here = fake_vdi_attached_here
+            vm_utils.vdi_attached = fake_vdi_attached
             fake_image._FakeImageService.download = fake_image_download
             return function(self, *args, **kwargs)
         finally:
             fake_image._FakeImageService.download = orig_image_download
-            vm_utils.vdi_attached_here = orig_vdi_attached_here
+            vm_utils.vdi_attached = orig_vdi_attached
 
     return decorated_function
 
@@ -772,6 +772,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             'ipxe', 'inject', '/sr/path', mox.IgnoreArg(),
             'http://boot.example.com', '192.168.1.100', '255.255.255.0',
             '192.168.1.1', '192.168.1.3', '/root/mkisofs')
+        self.conn._session.call_plugin_serialized('partition_utils.py',
+                                                  'make_partition',
+                                                  'fakedev', '2048', '-')
 
         self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
@@ -781,8 +784,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                    ipxe_boot_menu_url='http://boot.example.com',
                    group='xenserver')
 
-        # call_plugin_serialized shouldn't be called
+        # ipxe inject shouldn't be called
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+        self.conn._session.call_plugin_serialized('partition_utils.py',
+                                                  'make_partition',
+                                                  'fakedev', '2048', '-')
 
         self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
@@ -792,8 +798,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                    ipxe_boot_menu_url=None,
                    group='xenserver')
 
-        # call_plugin_serialized shouldn't be called
+        # ipxe inject shouldn't be called
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+        self.conn._session.call_plugin_serialized('partition_utils.py',
+                                                  'make_partition',
+                                                  'fakedev', '2048', '-')
 
         self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
@@ -803,8 +812,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                    ipxe_boot_menu_url='http://boot.example.com',
                    group='xenserver')
 
-        # call_plugin_serialized shouldn't be called
+        # ipxe inject shouldn't be called
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
+        self.conn._session.call_plugin_serialized('partition_utils.py',
+                                                  'make_partition',
+                                                  'fakedev', '2048', '-')
 
         self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
@@ -1871,7 +1883,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                               dict(base_copy='hurr', cow='durr'),
                               network_info, image_meta, resize_instance=False)
 
-    @stub_vm_utils_with_vdi_attached_here
+    @stub_vm_utils_with_vdi_attached
     def test_migrate_too_many_partitions_no_resize_down(self):
         instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
@@ -1883,12 +1895,13 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
 
+        self.mox.ReplayAll()
         self.assertRaises(exception.InstanceFaultRollback,
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
                           '127.0.0.1', flavor, None)
 
-    @stub_vm_utils_with_vdi_attached_here
+    @stub_vm_utils_with_vdi_attached
     def test_migrate_bad_fs_type_no_resize_down(self):
         instance = self._create_instance()
         xenapi_fake.create_vm(instance['name'], 'Running')
@@ -1900,6 +1913,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
 
+        self.mox.ReplayAll()
         self.assertRaises(exception.InstanceFaultRollback,
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
@@ -2334,6 +2348,8 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
             {'id': uuids.image_id,
              'disk_format': 'vhd',
              'properties': {'vm_mode': 'xen'}})
+
+        self.mox.ReplayAll()
         self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
                 instance['name'], vdis, disk_image_type, "fake_nw_inf")
 
@@ -2346,7 +2362,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.instance_values['auto_disk_config'] = False
         self.assertIsPartitionCalled(False)
 
-    @stub_vm_utils_with_vdi_attached_here
+    @stub_vm_utils_with_vdi_attached
     def test_instance_auto_disk_config_fails_safe_two_partitions(self):
         # Should not partition unless fail safes pass.
         self.instance_values['auto_disk_config'] = True
@@ -2358,7 +2374,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         self.assertIsPartitionCalled(False)
 
-    @stub_vm_utils_with_vdi_attached_here
+    @stub_vm_utils_with_vdi_attached
     def test_instance_auto_disk_config_fails_safe_badly_numbered(self):
         # Should not partition unless fail safes pass.
         self.instance_values['auto_disk_config'] = True
@@ -2370,7 +2386,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         self.assertIsPartitionCalled(False)
 
-    @stub_vm_utils_with_vdi_attached_here
+    @stub_vm_utils_with_vdi_attached
     def test_instance_auto_disk_config_fails_safe_bad_fstype(self):
         # Should not partition unless fail safes pass.
         self.instance_values['auto_disk_config'] = True
@@ -2382,7 +2398,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
 
         self.assertIsPartitionCalled(False)
 
-    @stub_vm_utils_with_vdi_attached_here
+    @stub_vm_utils_with_vdi_attached
     def test_instance_auto_disk_config_passes_fail_safes(self):
         """Should partition if instance is marked as auto_disk_config=True and
         virt-layer specific fail-safe checks pass.

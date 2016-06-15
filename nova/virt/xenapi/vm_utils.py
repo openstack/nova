@@ -893,12 +893,15 @@ def _auto_configure_disk(session, vdi_ref, new_gb):
         2. The disk must have only one partition.
 
         3. The file-system on the one partition must be ext3 or ext4.
+
+        4. We are not running in independent_compute mode (checked by
+           vdi_attached)
     """
     if new_gb == 0:
         LOG.debug("Skipping auto_config_disk as destination size is 0GB")
         return
 
-    with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+    with vdi_attached(session, vdi_ref, read_only=False) as dev:
         partitions = _get_partitions(dev)
 
         if len(partitions) != 1:
@@ -963,13 +966,20 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    disk_type, size_mb, fs_type, fs_label=None):
     """Steps to programmatically generate a disk:
 
-        1. Create VDI of desired size
+    1. Create VDI of desired size
 
-        2. Attach VDI to compute worker
+    2. Attach VDI to Dom0
 
-        3. Create partition
+    3. Create partition
+    3.a. If the partition type is supported by dom0 (currently ext3,
+    swap) then create it while the VDI is attached to dom0.
+    3.b. If the partition type is not supported by dom0, attach the
+    VDI to the domU and create there.
+    This split between DomU/Dom0 ensures that we can create most
+    VM types in the "isolated compute" case.
 
-        4. Create VBD between instance VM and VDI
+    4. Create VBD between instance VM and VDI
+
     """
     # 1. Create VDI
     sr_ref = safe_find_sr(session)
@@ -979,16 +989,26 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
                          virtual_size)
 
     try:
-        # 2. Attach VDI to compute worker (VBD hotplug)
-        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+        # 2. Attach VDI to Dom0 (VBD hotplug)
+        mkfs_in_dom0 = fs_type in ('ext3', 'swap')
+        with vdi_attached(session, vdi_ref, read_only=False,
+                               dom0=True) as dev:
             # 3. Create partition
-            partition_start = "2048s"
-            partition_end = "-0"
+            partition_start = "2048"
+            partition_end = "-"
 
-            partition_path = _make_partition(session, dev,
-                                             partition_start, partition_end)
+            session.call_plugin_serialized('partition_utils.py',
+                                           'make_partition', dev,
+                                           partition_start, partition_end)
 
-            if fs_type is not None:
+            if mkfs_in_dom0:
+                session.call_plugin_serialized('partition_utils.py', 'mkfs',
+                                               dev, '1', fs_type, fs_label)
+
+        # 3.a. dom0 does not support nfs/ext4, so may have to mkfs in domU
+        if fs_type is not None and not mkfs_in_dom0:
+            with vdi_attached(session, vdi_ref, read_only=False) as dev:
+                partition_path = utils.make_dev_path(dev, partition=1)
                 utils.mkfs(fs_type, partition_path, fs_label,
                            run_as_root=True)
 
@@ -1084,7 +1104,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                          'configdrive', configdrive.CONFIGDRIVESIZE_BYTES)
 
     try:
-        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+        with vdi_attached(session, vdi_ref, read_only=False) as dev:
             extra_md = {}
             if admin_password:
                 extra_md['admin_pass'] = admin_password
@@ -1496,7 +1516,7 @@ def _fetch_disk_image(context, session, instance, name_label, image_id,
         filename = None
         vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
 
-        with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+        with vdi_attached(session, vdi_ref, read_only=False) as dev:
             _stream_disk(
                 session, image.stream_to, image_type, virtual_size, dev)
 
@@ -1658,7 +1678,7 @@ def preconfigure_instance(session, instance, vdi_ref, network_info):
     if not mount_required:
         return
 
-    with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
+    with vdi_attached(session, vdi_ref, read_only=False) as dev:
         _mounted_processing(dev, key, net, metadata)
 
 
@@ -2080,16 +2100,24 @@ def _remap_vbd_dev(dev):
     return remapped_dev
 
 
-def _wait_for_device(dev):
+def _wait_for_device(session, dev, dom0, max_seconds):
     """Wait for device node to appear."""
-    for i in range(0, CONF.xenserver.block_device_creation_timeout):
-        dev_path = utils.make_dev_path(dev)
-        if os.path.exists(dev_path):
-            return
-        time.sleep(1)
+    dev_path = utils.make_dev_path(dev)
+    found_path = None
+    if dom0:
+        found_path = session.call_plugin_serialized('partition_utils.py',
+                                                    'wait_for_dev',
+                                                    dev_path, max_seconds)
+    else:
+        for i in range(0, max_seconds):
+            if os.path.exists(dev_path):
+                found_path = dev_path
+                break
+            time.sleep(1)
 
-    raise exception.StorageError(
-        reason=_('Timeout waiting for device %s to be created') % dev)
+    if found_path is None:
+        raise exception.StorageError(
+            reason=_('Timeout waiting for device %s to be created') % dev)
 
 
 def cleanup_attached_vdis(session):
@@ -2116,8 +2144,13 @@ def cleanup_attached_vdis(session):
 
 
 @contextlib.contextmanager
-def vdi_attached_here(session, vdi_ref, read_only=False):
-    this_vm_ref = _get_this_vm_ref(session)
+def vdi_attached(session, vdi_ref, read_only=False, dom0=False):
+    if dom0:
+        this_vm_ref = _get_dom0_ref(session)
+    else:
+        # Make sure we are running as a domU.
+        ensure_correct_host(session)
+        this_vm_ref = _get_this_vm_ref(session)
 
     vbd_ref = create_vbd(session, this_vm_ref, vdi_ref, 'autodetect',
                          read_only=read_only, bootable=False)
@@ -2134,10 +2167,13 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
                 LOG.debug('VBD %(vbd_ref)s plugged into wrong dev, '
                           'remapping to %(dev)s',
                           {'vbd_ref': vbd_ref, 'dev': dev})
-            _wait_for_device(dev)
+            _wait_for_device(session, dev, dom0,
+                             CONF.xenserver.block_device_creation_timeout)
             yield dev
         finally:
-            utils.execute('sync', run_as_root=True)
+            # As we can not have filesystems mounted here (we cannot
+            # destroy the VBD with filesystems mounted), it is not
+            # useful to call sync.
             LOG.debug('Destroying VBD for VDI %s ... ', vdi_ref)
             unplug_vbd(session, vbd_ref, this_vm_ref)
     finally:
@@ -2154,11 +2190,19 @@ def _get_sys_hypervisor_uuid():
         return f.readline().strip()
 
 
+def _get_dom0_ref(session):
+    vms = session.call_xenapi("VM.get_all_records_where",
+                              'field "domid"="0" and '
+                              'field "resident_on"="%s"' %
+                              session.host_ref)
+    return list(vms.keys())[0]
+
+
 def get_this_vm_uuid(session):
     if session and session.is_local_connection:
         # UUID is the control domain running on this host
         vms = session.call_xenapi("VM.get_all_records_where",
-                                  'field "is_control_domain"="true" and '
+                                  'field "domid"="0" and '
                                   'field "resident_on"="%s"' %
                                   session.host_ref)
         return vms[list(vms.keys())[0]]['uuid']
@@ -2353,10 +2397,10 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
     # Part of disk taken up by MBR
     virtual_size -= MBR_SIZE_BYTES
 
-    with vdi_attached_here(session, src_ref, read_only=True) as src:
+    with vdi_attached(session, src_ref, read_only=True) as src:
         src_path = utils.make_dev_path(src, partition=partition)
 
-        with vdi_attached_here(session, dst_ref, read_only=False) as dst:
+        with vdi_attached(session, dst_ref, read_only=False) as dst:
             dst_path = utils.make_dev_path(dst, partition=partition)
 
             _write_partition(session, virtual_size, dst)
@@ -2421,12 +2465,17 @@ def _mounted_processing(device, key, net, metadata):
 
 def ensure_correct_host(session):
     """Ensure we're connected to the host we're running on. This is the
-    required configuration for anything that uses vdi_attached_here.
+    required configuration for anything that uses vdi_attached without
+    the dom0 flag.
     """
+    if session.host_checked:
+        return
+
     this_vm_uuid = get_this_vm_uuid(session)
 
     try:
         session.call_xenapi('VM.get_by_uuid', this_vm_uuid)
+        session.host_checked = True
     except session.XenAPI.Failure as exc:
         if exc.details[0] != 'UUID_INVALID':
             raise

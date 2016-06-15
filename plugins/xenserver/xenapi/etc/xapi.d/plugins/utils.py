@@ -486,6 +486,21 @@ def extract_tarball(fileobj, path, callback=None):
     finish_subprocess(tar_proc, tar_cmd)
 
 
+def make_dev_path(dev, partition=None, base='/dev'):
+    """Return a path to a particular device.
+
+    >>> make_dev_path('xvdc')
+    /dev/xvdc
+
+    >>> make_dev_path('xvdc', 1)
+    /dev/xvdc1
+    """
+    path = os.path.join(base, dev)
+    if partition:
+        path += str(partition)
+    return path
+
+
 def _handle_serialization(func):
     def wrapped(session, params):
         params = pickle.loads(params['params'])

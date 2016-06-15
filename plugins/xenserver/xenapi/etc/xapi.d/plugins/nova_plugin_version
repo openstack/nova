@@ -32,7 +32,8 @@ import utils
 # 1.4 - Add support of Glance v2 api
 # 1.5 - Added function for network configuration on ovs bridge
 # 1.6 - Add function for network configuration on Linux bridge
-PLUGIN_VERSION = "1.6"
+# 1.7 - Add Partition utilities plugin
+PLUGIN_VERSION = "1.7"
 
 
 def get_version(session):
