@@ -42,6 +42,7 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.virt.xenapi import stubs
 from nova.tests.unit.virt.xenapi import test_xenapi
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import hardware
 from nova.virt.xenapi.client import session as xenapi_session
@@ -1537,7 +1538,7 @@ class CreateVmTestCase(VMUtilsTestBase):
     def test_vss_provider(self, mock_extract):
         self.flags(vcpu_pin_set="2,3")
         session = _get_fake_session()
-        instance = objects.Instance(uuid="uuid",
+        instance = objects.Instance(uuid=uuids.nova_uuid,
                                     os_type="windows",
                                     system_metadata={})
 
@@ -1569,7 +1570,7 @@ class CreateVmTestCase(VMUtilsTestBase):
             'PV_ramdisk': '',
             'PV_bootloader_args': '',
             'PCI_bus': '',
-            'other_config': {'nova_uuid': 'uuid'},
+            'other_config': {'nova_uuid': uuids.nova_uuid},
             'name_label': 'label',
             'actions_after_reboot': 'restart',
             'VCPUs_at_startup': '4',
@@ -2196,13 +2197,13 @@ class DeviceIdTestCase(VMUtilsTestBase):
 class CreateVmRecordTestCase(VMUtilsTestBase):
     @mock.patch.object(flavors, 'extract_flavor')
     def test_create_vm_record_linux(self, mock_extract_flavor):
-        instance = objects.Instance(uuid="uuid123",
+        instance = objects.Instance(uuid=uuids.nova_uuid,
                                     os_type="linux")
         self._test_create_vm_record(mock_extract_flavor, instance, False)
 
     @mock.patch.object(flavors, 'extract_flavor')
     def test_create_vm_record_windows(self, mock_extract_flavor):
-        instance = objects.Instance(uuid="uuid123",
+        instance = objects.Instance(uuid=uuids.nova_uuid,
                                     os_type="windows")
         with mock.patch.object(instance, 'get_flavor') as get:
             get.return_value = objects.Flavor._from_db_object(
@@ -2247,7 +2248,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
             'PV_ramdisk': '',
             'PV_bootloader_args': '',
             'PCI_bus': '',
-            'other_config': {'nova_uuid': 'uuid123'},
+            'other_config': {'nova_uuid': uuids.nova_uuid},
             'name_label': 'name',
             'actions_after_reboot': 'restart',
             'VCPUs_at_startup': '1',

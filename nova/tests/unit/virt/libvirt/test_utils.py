@@ -29,6 +29,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
@@ -683,7 +684,7 @@ disk size: 4.4M
 
     def test_get_instance_path_at_destination(self):
         instance = fake_instance.fake_instance_obj(None, name='fake_inst',
-                                                   uuid='fake_uuid')
+                                                   uuid=uuids.instance)
 
         migrate_data = None
         inst_path_at_dest = libvirt_utils.get_instance_path_at_destination(

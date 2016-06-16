@@ -20,12 +20,13 @@ from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova.virt import imagecache
 
 CONF = nova.conf.CONF
 
 swap_bdm_128 = [block_device.BlockDeviceDict(
-        {'id': 1, 'instance_uuid': 'fake-instance',
+        {'id': 1, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sdb1',
          'source_type': 'blank',
          'destination_type': 'local',
@@ -36,7 +37,7 @@ swap_bdm_128 = [block_device.BlockDeviceDict(
          'boot_index': -1})]
 
 swap_bdm_256 = [block_device.BlockDeviceDict(
-        {'id': 1, 'instance_uuid': 'fake-instance',
+        {'id': 1, 'instance_uuid': uuids.instance,
          'device_name': '/dev/sdb1',
          'source_type': 'blank',
          'destination_type': 'local',
@@ -73,13 +74,13 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         instances = [{'image_ref': '1',
                       'host': CONF.host,
                       'id': '1',
-                      'uuid': '123',
+                      'uuid': uuids.instance_1,
                       'vm_state': '',
                       'task_state': ''},
                      {'image_ref': '2',
                       'host': CONF.host,
                       'id': '2',
-                      'uuid': '456',
+                      'uuid': uuids.instance_2,
                       'vm_state': '',
                       'task_state': ''},
                      {'image_ref': '2',
@@ -87,7 +88,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                       'ramdisk_id': '22',
                       'host': 'remotehost',
                       'id': '3',
-                      'uuid': '789',
+                      'uuid': uuids.instance_3,
                       'vm_state': '',
                       'task_state': ''}]
 
@@ -105,9 +106,10 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         swap_bdm_128_list = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_128)
         objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
-            ctxt, ['123', '456', '789']).AndReturn({'123': swap_bdm_256_list,
-                                                    '456': swap_bdm_128_list,
-                                                    '789': swap_bdm_128_list})
+            ctxt, [uuids.instance_1, uuids.instance_2, uuids.instance_3]
+            ).AndReturn({uuids.instance_1: swap_bdm_256_list,
+                         uuids.instance_2: swap_bdm_128_list,
+                         uuids.instance_3: swap_bdm_128_list})
         self.mox.ReplayAll()
 
         # The argument here should be a context, but it's mocked out
@@ -126,7 +128,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                          running['used_images']['22'])
 
         self.assertIn('instance-00000001', running['instance_names'])
-        self.assertIn('123', running['instance_names'])
+        self.assertIn(uuids.instance_1, running['instance_names'])
 
         self.assertEqual(len(running['used_swap_images']), 2)
         self.assertIn('swap_128', running['used_swap_images'])
@@ -136,7 +138,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         instances = [{'image_ref': '1',
                       'host': CONF.host,
                       'id': '1',
-                      'uuid': '123',
+                      'uuid': uuids.instance,
                       'vm_state': vm_states.RESIZED,
                       'task_state': None}]
 
@@ -151,7 +153,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         bdms = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_256)
         objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
-                ctxt, ['123']).AndReturn({'123': bdms})
+                ctxt, [uuids.instance]).AndReturn({uuids.instance: bdms})
 
         self.mox.ReplayAll()
         running = image_cache_manager._list_running_instances(ctxt,
@@ -160,6 +162,7 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertEqual(1, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),
                          running['used_images']['1'])
-        self.assertEqual(set(['instance-00000001', '123',
-                              'instance-00000001_resize', '123_resize']),
+        self.assertEqual(set(['instance-00000001', uuids.instance,
+                              'instance-00000001_resize',
+                              '%s_resize' % uuids.instance]),
                          running['instance_names'])

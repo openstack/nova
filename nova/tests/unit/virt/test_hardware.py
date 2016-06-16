@@ -26,6 +26,7 @@ from nova.objects import base as base_obj
 from nova.objects import fields
 from nova.pci import stats
 from nova import test
+from nova.tests import uuidsentinel as uuids
 from nova.virt import hardware as hw
 
 
@@ -1742,7 +1743,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
                              siblings=[], pinned_cpus=set([])),
         ])
         self.instancetopo = objects.InstanceNUMATopology(
-            instance_uuid='fake-uuid',
+            instance_uuid=uuids.instance,
             cells=[
                 objects.InstanceNUMACell(
                     id=0, cpuset=set([0, 1]), memory=256, pagesize=2048,

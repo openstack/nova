@@ -30,6 +30,7 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit.virt.libvirt import fakelibvirt
+from nova.tests import uuidsentinel as uuids
 from nova.virt.libvirt import firewall
 from nova.virt.libvirt import host
 from nova.virt import netutils
@@ -379,8 +380,8 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.fw.do_refresh_security_group_rules("fake")
 
     def test_do_refresh_security_group_rules_instance_gone(self):
-        instance1 = objects.Instance(None, id=1, uuid='fake-uuid1')
-        instance2 = objects.Instance(None, id=2, uuid='fake-uuid2')
+        instance1 = objects.Instance(None, id=1, uuid=uuids.instance_1)
+        instance2 = objects.Instance(None, id=2, uuid=uuids.instance_2)
         self.fw.instance_info = {1: (instance1, 'netinfo1'),
                                  2: (instance2, 'netinfo2')}
         mock_filter = mock.MagicMock()
