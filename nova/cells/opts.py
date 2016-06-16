@@ -26,7 +26,3 @@ def get_cell_type():
     if not CONF.cells.enable:
         return
     return CONF.cells.cell_type
-
-
-def list_opts():
-    return []
