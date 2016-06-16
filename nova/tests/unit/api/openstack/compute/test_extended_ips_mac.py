@@ -17,7 +17,6 @@ from oslo_serialization import jsonutils
 import six
 import webob
 
-from nova import compute
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -110,8 +109,8 @@ class ExtendedIpsMacTestV21(test.TestCase):
     def setUp(self):
         super(ExtendedIpsMacTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
 
     def _make_request(self, url):
         req = webob.Request.blank(url)
@@ -142,13 +141,13 @@ class ExtendedIpsMacTestV21(test.TestCase):
         url = '/v2/fake/servers/%s' % UUID3
         res = self._make_request(url)
 
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(200, res.status_int)
         self.assertServerStates(self._get_server(res.body))
 
     def test_detail(self):
         url = '/v2/fake/servers/detail'
         res = self._make_request(url)
 
-        self.assertEqual(res.status_int, 200)
+        self.assertEqual(200, res.status_int)
         for _i, server in enumerate(self._get_servers(res.body)):
             self.assertServerStates(server)
