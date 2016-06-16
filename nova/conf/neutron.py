@@ -24,19 +24,77 @@ neutron_group = cfg.OptGroup(NEUTRON_GROUP, title='Neutron Options')
 neutron_options = None
 
 neutron_opts = [
-    cfg.StrOpt('url',
-               default='http://127.0.0.1:9696',
-               help='URL for connecting to neutron'),
-    cfg.StrOpt('region_name',
-               help='Region name for connecting to neutron in admin context'),
-    cfg.StrOpt('ovs_bridge',
-               default='br-int',
-               help='Default OVS bridge name to use if not specified '
-                    'by Neutron'),
-    cfg.IntOpt('extension_sync_interval',
-                default=600,
-                help='Number of seconds before querying neutron for'
-                     ' extensions'),
+    cfg.StrOpt(
+        'url',
+        default='http://127.0.0.1:9696',
+        help="""
+This option specifies the URL for connecting to Neutron.
+
+Possible values:
+
+  * The default is 'http://127.0.0.1:9696' however any valid URL that
+    points to the Neutron API service is appropriate here. This typically
+    matches the URL returned for the 'network' service type from the
+    Keystone service catalog.
+
+Related options:
+
+  * None
+"""),
+    cfg.StrOpt(
+        'region_name',
+        default='RegionOne',
+        help="""
+Region name for connecting to Neutron in admin context.
+
+This option is used in multi-region setups. If there are two Neutron
+servers running in two regions in two different machines, then two
+services need to be created in Keystone with two different regions and
+associate corresponding endpoints to those services. When requests are made
+to Keystone, the Keystone service uses the region_name to determine the
+region the request is coming from.
+
+Possible values:
+
+  * Any string representing a region name.
+
+Related options:
+
+  * None
+"""),
+    cfg.StrOpt(
+        'ovs_bridge',
+         default='br-int',
+         help="""
+Specifies the name of an integration bridge interface used by OpenvSwitch.
+This option is used only if Neutron does not specify the OVS bridge name.
+
+Possible values:
+
+  * Any string representing OVS bridge name.
+  * default value is 'br-int'
+
+Related options:
+
+  * None
+"""),
+    cfg.IntOpt(
+        'extension_sync_interval',
+         default=600,
+         help="""
+Number of seconds to wait before querying Neutron for extensions.
+After this number of seconds the next time Nova needs to create a resource in
+Neutron it will requery Neutron for the extensions that it has loaded.
+
+Possible values:
+
+  * Any positive Integer value
+  * default value is 600
+
+Related options:
+
+  * None
+"""),
 ]
 
 metadata_proxy_opts = [
