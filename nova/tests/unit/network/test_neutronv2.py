@@ -41,6 +41,7 @@ from nova.network import model
 from nova.network.neutronv2 import api as neutronapi
 from nova.network.neutronv2 import constants
 from nova import objects
+from nova.objects import network_request as net_req_obj
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
@@ -4621,3 +4622,124 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
 
         mock_process_security_groups.assert_called_once_with(
             instance, mock.ANY, ['default', 'secgrp1', 'secgrp2'])
+
+
+class TestNeutronv2AutoAllocateNetwork(test.NoDBTestCase):
+    """Tests auto-allocation scenarios"""
+
+    def setUp(self):
+        super(TestNeutronv2AutoAllocateNetwork, self).setUp()
+        self.api = neutronapi.API()
+        self.context = context.RequestContext(uuids.user_id, uuids.project_id)
+
+    def test__has_auto_allocate_extension_empty(self):
+        # Tests that the extension is not available but we refresh the list.
+        self.api.extensions = {}
+        with mock.patch.object(self.api,
+                               '_refresh_neutron_extensions_cache') as refresh:
+            self.assertFalse(
+                self.api._has_auto_allocate_extension(self.context))
+        # refresh is called because the extensions dict is empty
+        refresh.assert_called_once_with(self.context, neutron=None)
+
+    def test__has_auto_allocate_extension_false(self):
+        # Tests that the extension is not available and don't refresh the list.
+        self.api.extensions = {'foo': 'bar'}
+        with mock.patch.object(self.api,
+                               '_refresh_neutron_extensions_cache') as refresh:
+            self.assertFalse(
+                self.api._has_auto_allocate_extension(self.context))
+        self.assertFalse(refresh.called)
+
+    def test__has_auto_allocate_extension_refresh_ok(self):
+        # Tests the happy path with refresh.
+        self.api.extensions = {constants.AUTO_ALLOCATE_TOPO_EXT: mock.Mock()}
+        with mock.patch.object(self.api,
+                               '_refresh_neutron_extensions_cache') as refresh:
+            self.assertTrue(
+                self.api._has_auto_allocate_extension(
+                    self.context, refresh_cache=True))
+        refresh.assert_called_once_with(self.context, neutron=None)
+
+    def test__can_auto_allocate_network_no_extension(self):
+        # Tests when the auto-allocated-topology extension is not available.
+        with mock.patch.object(self.api, '_has_auto_allocate_extension',
+                               return_value=False):
+            self.assertFalse(self.api._can_auto_allocate_network(
+                self.context, mock.sentinel.neutron))
+
+    def test__can_auto_allocate_network_validation_conflict(self):
+        # Tests that the dry-run validation with neutron fails (not ready).
+        ntrn = mock.Mock()
+        ntrn.validate_auto_allocated_topology_requirements.side_effect = \
+            exceptions.Conflict
+        with mock.patch.object(self.api, '_has_auto_allocate_extension',
+                               return_value=True):
+            self.assertFalse(self.api._can_auto_allocate_network(
+                self.context, ntrn))
+        validate = ntrn.validate_auto_allocated_topology_requirements
+        validate.assert_called_once_with(uuids.project_id)
+
+    def test__can_auto_allocate_network(self):
+        # Tests the happy path.
+        ntrn = mock.Mock()
+        with mock.patch.object(self.api, '_has_auto_allocate_extension',
+                               return_value=True):
+            self.assertTrue(self.api._can_auto_allocate_network(
+                self.context, ntrn))
+        validate = ntrn.validate_auto_allocated_topology_requirements
+        validate.assert_called_once_with(uuids.project_id)
+
+    def test__ports_needed_per_instance_no_reqs_no_nets(self):
+        # Tests no requested_networks and no available networks.
+        with mock.patch.object(self.api, '_get_available_networks',
+                               return_value=[]):
+            self.assertEqual(
+                1, self.api._ports_needed_per_instance(self.context,
+                                                       mock.sentinel.neutron,
+                                                       None))
+
+    def test__ports_needed_per_instance_empty_reqs_no_nets(self):
+        # Tests empty requested_networks and no available networks.
+        requested_networks = objects.NetworkRequestList()
+        with mock.patch.object(self.api, '_get_available_networks',
+                               return_value=[]):
+            self.assertEqual(
+                1, self.api._ports_needed_per_instance(self.context,
+                                                       mock.sentinel.neutron,
+                                                       requested_networks))
+
+    def test__ports_needed_per_instance_auto_reqs_no_nets_not_ready(self):
+        # Test for when there are no available networks and we're requested
+        # to auto-allocate the network but auto-allocation is not available.
+        net_req = objects.NetworkRequest(
+            network_id=net_req_obj.NETWORK_ID_AUTO)
+        requested_networks = objects.NetworkRequestList(objects=[net_req])
+        with mock.patch.object(self.api, '_get_available_networks',
+                               return_value=[]):
+            with mock.patch.object(self.api, '_can_auto_allocate_network',
+                                   spec=True, return_value=False) as can_alloc:
+                self.assertRaises(
+                    exception.UnableToAutoAllocateNetwork,
+                    self.api._ports_needed_per_instance,
+                    self.context, mock.sentinel.neutron, requested_networks)
+            can_alloc.assert_called_once_with(
+                self.context, mock.sentinel.neutron)
+
+    def test__ports_needed_per_instance_auto_reqs_no_nets_ok(self):
+        # Test for when there are no available networks and we're requested
+        # to auto-allocate the network and auto-allocation is available.
+        net_req = objects.NetworkRequest(
+            network_id=net_req_obj.NETWORK_ID_AUTO)
+        requested_networks = objects.NetworkRequestList(objects=[net_req])
+        with mock.patch.object(self.api, '_get_available_networks',
+                               return_value=[]):
+            with mock.patch.object(self.api, '_can_auto_allocate_network',
+                                   spec=True, return_value=True) as can_alloc:
+                self.assertEqual(
+                    1, self.api._ports_needed_per_instance(
+                        self.context,
+                        mock.sentinel.neutron,
+                        requested_networks))
+            can_alloc.assert_called_once_with(
+                self.context, mock.sentinel.neutron)

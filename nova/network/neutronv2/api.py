@@ -669,6 +669,12 @@ class API(base_api.NetworkAPI):
             self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.PORTBINDING_EXT in self.extensions
 
+    def _has_auto_allocate_extension(self, context, refresh_cache=False,
+                                     neutron=None):
+        if refresh_cache or not self.extensions:
+            self._refresh_neutron_extensions_cache(context, neutron=neutron)
+        return constants.AUTO_ALLOCATE_TOPO_EXT in self.extensions
+
     @staticmethod
     def _populate_neutron_binding_profile(instance, pci_request_id,
                                           port_req_body):
@@ -1087,9 +1093,42 @@ class API(base_api.NetworkAPI):
             # Add pci_request_id into the requested network
             request_net.pci_request_id = pci_request_id
 
+    def _can_auto_allocate_network(self, context, neutron):
+        """Helper method to determine if we can auto-allocate networks
+
+        :param context: nova request context
+        :param neutron: neutron client
+        :returns: True if it's possible to auto-allocate networks, False
+                  otherwise.
+        """
+        # check that the auto-allocated-topology extension is available
+        if self._has_auto_allocate_extension(context, neutron=neutron):
+            # run the dry-run validation, which will raise a 409 if not ready
+            try:
+                neutron.validate_auto_allocated_topology_requirements(
+                    context.project_id)
+                LOG.debug('Network auto-allocation is available for project '
+                          '%s', context.project_id)
+            except neutron_client_exc.Conflict as ex:
+                LOG.debug('Unable to auto-allocate networks. %s',
+                          six.text_type(ex))
+            else:
+                return True
+        else:
+            LOG.debug('Unable to auto-allocate networks. The neutron '
+                      'auto-allocated-topology extension is not available.')
+        return False
+
     def _ports_needed_per_instance(self, context, neutron, requested_networks):
+
+        # TODO(danms): Remove me when all callers pass an object
+        if requested_networks and isinstance(requested_networks[0], tuple):
+            requested_networks = objects.NetworkRequestList.from_tuples(
+                requested_networks)
+
         ports_needed_per_instance = 0
-        if requested_networks is None or len(requested_networks) == 0:
+        if (requested_networks is None or len(requested_networks) == 0 or
+                requested_networks.auto_allocate):
             nets = self._get_available_networks(context, context.project_id,
                                                 neutron=neutron)
             if len(nets) > 1:
@@ -1099,16 +1138,22 @@ class API(base_api.NetworkAPI):
                 msg = _("Multiple possible networks found, use a Network "
                          "ID to be more specific.")
                 raise exception.NetworkAmbiguous(msg)
-            else:
-                ports_needed_per_instance = 1
+
+            if not nets and (
+                requested_networks and requested_networks.auto_allocate):
+                # If there are no networks available to this project and we
+                # were asked to auto-allocate a network, check to see that we
+                # can do that first.
+                LOG.debug('No networks are available for project %s; checking '
+                          'to see if we can automatically allocate a network.',
+                          context.project_id)
+                if not self._can_auto_allocate_network(context, neutron):
+                    raise exception.UnableToAutoAllocateNetwork(
+                        project_id=context.project_id)
+
+            ports_needed_per_instance = 1
         else:
             net_ids_requested = []
-
-            # TODO(danms): Remove me when all callers pass an object
-            if isinstance(requested_networks[0], tuple):
-                requested_networks = objects.NetworkRequestList.from_tuples(
-                    requested_networks)
-
             for request in requested_networks:
                 if request.port_id:
                     port = self._show_port(context, request.port_id,
