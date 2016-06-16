@@ -2852,12 +2852,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         @mock.patch.object(self.compute, '_get_power_state',
                            return_value=power_state.SHUTDOWN)
+        @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch.object(self.compute, '_power_off_instance')
         @mock.patch.object(instance, 'save')
         @mock.patch.object(compute_utils, 'EventReporter')
         def do_test(event_mock, save_mock, power_off_mock, notify_mock,
-                    get_state_mock):
+                    notify_action_mock, get_state_mock):
             # run the code
             self.compute.stop_instance(self.context, instance, True)
             # assert the calls
@@ -2865,6 +2866,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             notify_mock.assert_has_calls([
                 mock.call(self.context, instance, 'power_off.start'),
                 mock.call(self.context, instance, 'power_off.end')
+            ])
+            notify_action_mock.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='power_off', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='power_off', phase='end'),
             ])
             power_off_mock.assert_called_once_with(
                 self.context, instance, True)
