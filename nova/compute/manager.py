@@ -3128,6 +3128,21 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.save(
                 expected_task_state=task_states.UPDATING_PASSWORD)
+        except exception.InstanceAgentNotEnabled:
+            with excutils.save_and_reraise_exception():
+                LOG.debug('Guest agent is not enabled for the instance.',
+                          instance=instance)
+                instance.task_state = None
+                instance.save(
+                    expected_task_state=task_states.UPDATING_PASSWORD)
+        except exception.SetAdminPasswdNotSupported:
+            with excutils.save_and_reraise_exception():
+                LOG.info(_LI('set_admin_password is not supported '
+                                'by this driver or guest instance.'),
+                            instance=instance)
+                instance.task_state = None
+                instance.save(
+                    expected_task_state=task_states.UPDATING_PASSWORD)
         except NotImplementedError:
             LOG.warning(_LW('set_admin_password is not implemented '
                             'by this driver or guest instance.'),
