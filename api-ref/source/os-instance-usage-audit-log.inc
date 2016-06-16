@@ -20,6 +20,26 @@ Error response codes: unauthorized(401), forbidden(403)
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - instance_usage_audit_logs: instance_usage_audit_logs
+  - hosts_not_run: host_not_run
+  - log: instance_usage_audit_log
+  - errors: errors
+  - instances: instances_usage_audit
+  - message: instance_usage_audit_log_message
+  - state: instance_usage_audit_task_state
+  - num_hosts: host_num
+  - num_hosts_done: host_done_num
+  - num_hosts_not_run: host_not_run_num
+  - num_hosts_running: host_running_num
+  - overall_status: overall_status
+  - period_beginning: period_beginning
+  - period_ending: period_ending
+  - total_errors: total_errors
+  - total_instances: total_instances
+
+
 **Example List Usage Audits For All Servers on tenant**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-usage-audit-log/inst-usage-audit-log-index-get-resp.json
@@ -45,6 +65,26 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - instance_usage_audit_logs: instance_usage_audit_logs
+  - hosts_not_run: host_not_run
+  - log: instance_usage_audit_log
+  - errors: errors
+  - instances: instances_usage_audit
+  - message: instance_usage_audit_log_message
+  - state: instance_usage_audit_task_state
+  - num_hosts: host_num
+  - num_hosts_done: host_done_num
+  - num_hosts_not_run: host_not_run_num
+  - num_hosts_running: host_running_num
+  - overall_status: overall_status
+  - period_beginning: period_beginning
+  - period_ending: period_ending
+  - total_errors: total_errors
+  - total_instances: total_instances
+
 
 **Example List Usage Audits Before Specified Time**
 
