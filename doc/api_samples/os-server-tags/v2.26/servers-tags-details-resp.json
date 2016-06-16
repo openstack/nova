@@ -55,7 +55,7 @@
             "updated": "2013-09-03T04:01:32Z",
             "user_id": "fake",
             "locked": false,
-            "tags": ["sometag"],
+            "tags": ["tag1", "tag2"],
             "description": null,
             "config_drive": "",
             "OS-DCF:diskConfig": "AUTO",

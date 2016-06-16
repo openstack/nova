@@ -1,8 +1,6 @@
 {
     "server": {
-        "tags": [
-            "%(tag)s"
-        ],
+        "tags": ["%(tag1)s", "%(tag2)s"],
         "accessIPv4": "%(access_ip_v4)s",
         "accessIPv6": "%(access_ip_v6)s",
         "addresses": {
