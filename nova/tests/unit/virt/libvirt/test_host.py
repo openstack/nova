@@ -684,13 +684,6 @@ class HostTestCase(test.NoDBTestCase):
             self.assertRaises(fakelibvirt.libvirtError,
                               self.host.get_capabilities)
 
-    def test_lxc_get_host_capabilities_failed(self):
-        with mock.patch.object(fakelibvirt.virConnect, 'baselineCPU',
-                               return_value=-1):
-            caps = self.host.get_capabilities()
-            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
-            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
-
     def test_get_capabilities_no_host_cpu_model(self):
         """Tests that cpu features are not retrieved when the host cpu model
         is not in the capabilities.
