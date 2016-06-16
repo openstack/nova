@@ -19,7 +19,6 @@ import uuid
 from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
 import mock
-from mox3 import mox
 import netaddr
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -3183,23 +3182,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_save.assert_called_once_with(expected_task_state=
                                               (task_states.SCHEDULING, None))
 
-    def _build_and_run_instance_update(self):
-        self.mox.StubOutWithMock(self.instance, 'save')
-        self._build_resources_instance_update(stub=False)
-        self.instance.save(expected_task_state=
-                task_states.BLOCK_DEVICE_MAPPING).AndReturn(self.instance)
-
     def _build_resources_instance_update(self, stub=True):
         if stub:
             self.mox.StubOutWithMock(self.instance, 'save')
         self.instance.save().AndReturn(self.instance)
-
-    def _notify_about_instance_usage(self, event, stub=True, **kwargs):
-        if stub:
-            self.mox.StubOutWithMock(self.compute,
-                    '_notify_about_instance_usage')
-        self.compute._notify_about_instance_usage(self.context, self.instance,
-                event, **kwargs)
 
     def _instance_action_events(self, mock_start, mock_finish):
         mock_start.assert_called_once_with(self.context, self.instance.uuid,
@@ -3374,41 +3360,43 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.admin_pass, self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping)
 
-    def test_rescheduled_exception_with_non_ascii_exception(self):
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(fake_driver.FakeDriver, 'spawn')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def test_rescheduled_exception_with_non_ascii_exception(self,
+            mock_notify, mock_save, mock_spawn, mock_build, mock_shutdown):
         exc = exception.NovaException(u's\xe9quence')
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self.compute._shutdown_instance(self.context, self.instance,
-                self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False)
-        self._notify_about_instance_usage('create.start',
-            extra_usage_info={'image_name': self.image.get('name')})
-        self.compute.driver.spawn(self.context, self.instance,
-                mox.IsA(objects.ImageMeta),
-                self.injected_files, self.admin_pass,
-                network_info=self.network_info,
-                block_device_info=self.block_device_info).AndRaise(exc)
-        self._notify_about_instance_usage('create.error',
-                fault=exc, stub=False)
-        self.mox.ReplayAll()
 
-        with mock.patch.object(self.instance, 'save') as mock_save:
-            self.assertRaises(exception.RescheduledException,
-                              self.compute._build_and_run_instance,
-                              self.context, self.instance, self.image,
-                              self.injected_files, self.admin_pass,
-                              self.requested_networks, self.security_groups,
-                              self.block_device_mapping, self.node,
-                              self.limits, self.filter_properties)
-            mock_save.assert_has_calls([
-                mock.call(),
-                mock.call(),
-                mock.call(expected_task_state='block_device_mapping'),
-            ])
+        mock_build.return_value = self.network_info
+        mock_spawn.side_effect = exc
+
+        self.assertRaises(exception.RescheduledException,
+                          self.compute._build_and_run_instance,
+                          self.context, self.instance, self.image,
+                          self.injected_files, self.admin_pass,
+                          self.requested_networks, self.security_groups,
+                          self.block_device_mapping, self.node,
+                          self.limits, self.filter_properties)
+        mock_save.assert_has_calls([
+            mock.call(),
+            mock.call(),
+            mock.call(expected_task_state='block_device_mapping'),
+        ])
+        mock_notify.assert_has_calls([
+            mock.call(self.context, self.instance, 'create.start',
+                extra_usage_info={'image_name': self.image.get('name')}),
+            mock.call(self.context, self.instance, 'create.error', fault=exc)])
+        mock_build.assert_called_once_with(self.context, self.instance,
+            self.requested_networks, self.security_groups)
+        mock_shutdown.assert_called_once_with(self.context, self.instance,
+            self.block_device_mapping, self.requested_networks,
+            try_deallocate_networks=False)
+        mock_spawn.assert_called_once_with(self.context, self.instance,
+            test.MatchType(objects.ImageMeta), self.injected_files,
+            self.admin_pass, network_info=self.network_info,
+            block_device_info=self.block_device_info)
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
@@ -3549,7 +3537,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_add.assert_called_once_with(self.context, self.instance,
-                mock.ANY, mock.ANY, fault_message = mock.ANY)
+                mock.ANY, mock.ANY, fault_message=mock.ANY)
         mock_nil.assert_called_once_with(self.instance)
         mock_set.assert_called_once_with(self.context, self.instance,
                 clean_task_state=True)
@@ -3725,77 +3713,81 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 set_error=True, cleanup_volumes=True,
                 nil_out_host_and_node=True)
 
-    def test_instance_not_found(self):
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(fake_driver.FakeDriver, 'spawn')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def test_instance_not_found(self, mock_notify, mock_save, mock_spawn,
+                                mock_build, mock_shutdown):
         exc = exception.InstanceNotFound(instance_id=1)
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self.compute._shutdown_instance(self.context, self.instance,
-                self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False)
-        self._notify_about_instance_usage('create.start',
-            extra_usage_info={'image_name': self.image.get('name')})
-        self.compute.driver.spawn(self.context, self.instance,
-                mox.IsA(objects.ImageMeta),
-                self.injected_files, self.admin_pass,
-                network_info=self.network_info,
-                block_device_info=self.block_device_info).AndRaise(exc)
-        self._notify_about_instance_usage('create.end',
-                fault=exc, stub=False)
-        self.mox.ReplayAll()
+        mock_build.return_value = self.network_info
+        mock_spawn.side_effect = exc
 
-        with mock.patch.object(self.instance, 'save') as mock_save:
-            self.assertRaises(exception.InstanceNotFound,
-                              self.compute._build_and_run_instance,
-                              self.context, self.instance, self.image,
-                              self.injected_files, self.admin_pass,
-                              self.requested_networks, self.security_groups,
-                              self.block_device_mapping, self.node,
-                              self.limits, self.filter_properties)
-            mock_save.assert_has_calls([
-                mock.call(),
-                mock.call(),
-                mock.call(expected_task_state='block_device_mapping'),
-                ])
+        self.assertRaises(exception.InstanceNotFound,
+                          self.compute._build_and_run_instance,
+                          self.context, self.instance, self.image,
+                          self.injected_files, self.admin_pass,
+                          self.requested_networks, self.security_groups,
+                          self.block_device_mapping, self.node,
+                          self.limits, self.filter_properties)
 
-    def test_reschedule_on_exception(self):
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
-        self.mox.StubOutWithMock(self.compute, '_shutdown_instance')
-        self.compute._build_networks_for_instance(self.context, self.instance,
-                self.requested_networks, self.security_groups).AndReturn(
-                        self.network_info)
-        self.compute._shutdown_instance(self.context, self.instance,
-                self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False)
-        self._notify_about_instance_usage('create.start',
-            extra_usage_info={'image_name': self.image.get('name')})
+        mock_save.assert_has_calls([
+            mock.call(),
+            mock.call(),
+            mock.call(expected_task_state='block_device_mapping')])
+        mock_notify.assert_has_calls([
+            mock.call(self.context, self.instance, 'create.start',
+                extra_usage_info={'image_name': self.image.get('name')}),
+            mock.call(self.context, self.instance, 'create.end',
+                fault=exc)])
+        mock_build.assert_called_once_with(self.context, self.instance,
+            self.requested_networks, self.security_groups)
+        mock_shutdown.assert_called_once_with(self.context, self.instance,
+            self.block_device_mapping, self.requested_networks,
+            try_deallocate_networks=False)
+        mock_spawn.assert_called_once_with(self.context, self.instance,
+            test.MatchType(objects.ImageMeta), self.injected_files,
+            self.admin_pass, network_info=self.network_info,
+            block_device_info=self.block_device_info)
+
+    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch.object(fake_driver.FakeDriver, 'spawn')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def test_reschedule_on_exception(self, mock_notify, mock_save,
+                                     mock_spawn, mock_build, mock_shutdown):
         exc = test.TestingException()
-        self.compute.driver.spawn(self.context, self.instance,
-                mox.IsA(objects.ImageMeta),
-                self.injected_files, self.admin_pass,
-                network_info=self.network_info,
-                block_device_info=self.block_device_info).AndRaise(exc)
-        self._notify_about_instance_usage('create.error',
-            fault=exc, stub=False)
-        self.mox.ReplayAll()
+        mock_build.return_value = self.network_info
+        mock_spawn.side_effect = exc
 
-        with mock.patch.object(self.instance, 'save') as mock_save:
-            self.assertRaises(exception.RescheduledException,
-                              self.compute._build_and_run_instance,
-                              self.context, self.instance, self.image,
-                              self.injected_files, self.admin_pass,
-                              self.requested_networks, self.security_groups,
-                              self.block_device_mapping, self.node,
-                              self.limits, self.filter_properties)
-            mock_save.assert_has_calls([
-                mock.call(),
-                mock.call(),
-                mock.call(expected_task_state='block_device_mapping'),
-            ])
+        self.assertRaises(exception.RescheduledException,
+                          self.compute._build_and_run_instance,
+                          self.context, self.instance, self.image,
+                          self.injected_files, self.admin_pass,
+                          self.requested_networks, self.security_groups,
+                          self.block_device_mapping, self.node,
+                          self.limits, self.filter_properties)
+
+        mock_save.assert_has_calls([
+            mock.call(),
+            mock.call(),
+            mock.call(expected_task_state='block_device_mapping')])
+        mock_notify.assert_has_calls([
+            mock.call(self.context, self.instance, 'create.start',
+                extra_usage_info={'image_name': self.image.get('name')}),
+            mock.call(self.context, self.instance, 'create.error',
+                fault=exc)])
+        mock_build.assert_called_once_with(self.context, self.instance,
+            self.requested_networks, self.security_groups)
+        mock_shutdown.assert_called_once_with(self.context, self.instance,
+            self.block_device_mapping, self.requested_networks,
+            try_deallocate_networks=False)
+        mock_spawn.assert_called_once_with(self.context, self.instance,
+            test.MatchType(objects.ImageMeta), self.injected_files,
+            self.admin_pass, network_info=self.network_info,
+            block_device_info=self.block_device_info)
 
     def test_spawn_network_alloc_failure(self):
         # Because network allocation is asynchronous, failures may not present
@@ -3930,28 +3922,32 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.compute.host)
 
-    def test_build_resources_buildabort_reraise(self):
+    @mock.patch.object(manager.ComputeManager, '_build_resources')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
+    def test_build_resources_buildabort_reraise(self, mock_notify, mock_save,
+                                                mock_build):
         exc = exception.BuildAbortException(
                 instance_uuid=self.instance.uuid, reason='')
-        self.mox.StubOutWithMock(self.compute, '_build_resources')
-        self._notify_about_instance_usage('create.start',
-            extra_usage_info={'image_name': self.image.get('name')})
-        self.compute._build_resources(self.context, self.instance,
-                self.requested_networks, self.security_groups,
-                mox.IsA(objects.ImageMeta),
-                self.block_device_mapping).AndRaise(exc)
-        self._notify_about_instance_usage('create.error',
-            fault=exc, stub=False)
-        self.mox.ReplayAll()
-        with mock.patch.object(self.instance, 'save') as mock_save:
-            self.assertRaises(exception.BuildAbortException,
-                              self.compute._build_and_run_instance,
-                              self.context,
-                              self.instance, self.image, self.injected_files,
-                              self.admin_pass, self.requested_networks,
-                              self.security_groups, self.block_device_mapping,
-                              self.node, self.limits, self.filter_properties)
-            mock_save.assert_called_once_with()
+        mock_build.side_effect = exc
+
+        self.assertRaises(exception.BuildAbortException,
+                          self.compute._build_and_run_instance,
+                          self.context,
+                          self.instance, self.image, self.injected_files,
+                          self.admin_pass, self.requested_networks,
+                          self.security_groups, self.block_device_mapping,
+                          self.node, self.limits, self.filter_properties)
+
+        mock_save.assert_called_once_with()
+        mock_notify.assert_has_calls([
+            mock.call(self.context, self.instance, 'create.start',
+                extra_usage_info={'image_name': self.image.get('name')}),
+            mock.call(self.context, self.instance, 'create.error',
+                fault=exc)])
+        mock_build.assert_called_once_with(self.context, self.instance,
+            self.requested_networks, self.security_groups,
+            test.MatchType(objects.ImageMeta), self.block_device_mapping)
 
     def test_build_resources_reraises_on_failed_bdm_prep(self):
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
