@@ -843,18 +843,30 @@ def _convert_to_v2(image_meta):
     for name, value in six.iteritems(image_meta):
         if name == 'properties':
             for prop_name, prop_value in six.iteritems(value):
-                output[prop_name] = str(prop_value)
+                # in v2 kernel_id and ramdisk_id must be uuid4 or None,
+                # therefore we convert every value with empty string and
+                # 'None' to just None.
+                if prop_name in ('kernel_id', 'ramdisk_id') and \
+                                prop_value is not None and \
+                                prop_value.strip().lower() in ('none', ''):
+                    output[prop_name] = None
+                # in glance only string and None property values are allowed,
+                # v1 client accepts any values and converts them to string,
+                # v2 doesn't - so we have to take care of it.
+                elif prop_value is None or isinstance(
+                        prop_value, six.string_types):
+                    output[prop_name] = prop_value
+                else:
+                    output[prop_name] = str(prop_value)
+
         elif name in ('min_ram', 'min_disk'):
             output[name] = int(value)
         elif name == 'is_public':
             output['visibility'] = 'public' if value else 'private'
-        elif name == 'size' or name == 'deleted':
+        elif name in ('size', 'deleted'):
             continue
-        elif name in ('kernel_id', 'ramdisk_id') and value == 'None':
-            output[name] = None
         else:
             output[name] = value
-
     return output
 
 

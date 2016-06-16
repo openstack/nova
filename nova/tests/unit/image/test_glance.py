@@ -2490,3 +2490,87 @@ class TestExtractQueryParams(test.NoDBTestCase):
                                             filters=expected_filters_v1,
                                             page_size=5,
                                             limit=10)
+
+
+class TestTranslateToGlance(test.NoDBTestCase):
+    """Test that image was translated correct to be accepted by Glance"""
+
+    def setUp(self):
+        self.fixture = {
+            'checksum': 'fb10c6486390bec8414be90a93dfff3b',
+            'container_format': 'bare',
+            'created_at': "",
+            'deleted': False,
+            'deleted_at': None,
+            'disk_format': 'raw',
+            'id': 'f8116538-309f-449c-8d49-df252a97a48d',
+            'is_public': True,
+            'min_disk': '0',
+            'min_ram': '0',
+            'name': 'tempest-image-1294122904',
+            'owner': 'd76b51cf8a44427ea404046f4c1d82ab',
+            'properties':
+                {'os_distro': 'value2', 'os_version': 'value1',
+                 'base_image_ref': 'ea36315c-e527-4643-a46a-9fd61d027cc1',
+                 'image_type': 'test',
+                 'instance_uuid': 'ec1ea9c7-8c5e-498d-a753-6ccc2464123c',
+                 'kernel_id': 'None',
+                 'ramdisk_id': '  ',
+                 'user_id': 'ca2ff78fd33042ceb45fbbe19012ef3f',
+                 'boolean_prop': True},
+            'size': 1024,
+            'status': 'active',
+            'updated_at': ""}
+        super(TestTranslateToGlance, self).setUp()
+
+    def test_convert_to_v1(self):
+        self.flags(use_glance_v1=True, group='glance')
+        expected_v1_image = {
+            'checksum': 'fb10c6486390bec8414be90a93dfff3b',
+            'container_format': 'bare',
+            'deleted': False,
+            'disk_format': 'raw',
+            'id': 'f8116538-309f-449c-8d49-df252a97a48d',
+            'is_public': True,
+            'min_disk': '0',
+            'min_ram': '0',
+            'name': 'tempest-image-1294122904',
+            'owner': 'd76b51cf8a44427ea404046f4c1d82ab',
+            'properties': {
+                'base_image_ref': 'ea36315c-e527-4643-a46a-9fd61d027cc1',
+                'image_type': 'test',
+                'instance_uuid': 'ec1ea9c7-8c5e-498d-a753-6ccc2464123c',
+                'kernel_id': 'None',
+                'os_distro': 'value2',
+                'os_version': 'value1',
+                'ramdisk_id': '  ',
+                'user_id': 'ca2ff78fd33042ceb45fbbe19012ef3f',
+                'boolean_prop': True},
+            'size': 1024}
+        nova_image_dict = self.fixture
+        image_v1_dict = glance._translate_to_glance(nova_image_dict)
+        self.assertEqual(expected_v1_image, image_v1_dict)
+
+    def test_convert_to_v2(self):
+        expected_v2_image = {
+            'base_image_ref': 'ea36315c-e527-4643-a46a-9fd61d027cc1',
+            'boolean_prop': 'True',
+            'checksum': 'fb10c6486390bec8414be90a93dfff3b',
+            'container_format': 'bare',
+            'disk_format': 'raw',
+            'id': 'f8116538-309f-449c-8d49-df252a97a48d',
+            'image_type': 'test',
+            'instance_uuid': 'ec1ea9c7-8c5e-498d-a753-6ccc2464123c',
+            'kernel_id': None,
+            'min_disk': 0,
+            'min_ram': 0,
+            'name': 'tempest-image-1294122904',
+            'os_distro': 'value2',
+            'os_version': 'value1',
+            'owner': 'd76b51cf8a44427ea404046f4c1d82ab',
+            'ramdisk_id': None,
+            'user_id': 'ca2ff78fd33042ceb45fbbe19012ef3f',
+            'visibility': 'public'}
+        nova_image_dict = self.fixture
+        image_v2_dict = glance._translate_to_glance(nova_image_dict)
+        self.assertEqual(expected_v2_image, image_v2_dict)
