@@ -1266,7 +1266,10 @@ def get_all_cluster_mors(session):
                                         "ClusterComputeResource", ["name"])
         session._call_method(vutil, 'cancel_retrieval',
                              results)
-        return results.objects
+        if results.objects is None:
+            return []
+        else:
+            return results.objects
 
     except Exception as excep:
         LOG.warning(_LW("Failed to get cluster references %s"), excep)
