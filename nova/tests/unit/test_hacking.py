@@ -531,10 +531,6 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.check_http_not_implemented,
                                 expected_errors=errors, filename=filename)
 
-        filename = "nova/api/openstack/compute/legacy_v2/test.py"
-        self._assert_has_no_errors(code, checks.check_http_not_implemented,
-                                   filename=filename)
-
     def test_check_contextlib_use(self):
         code = """
                with test.nested(

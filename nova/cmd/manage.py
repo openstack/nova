@@ -540,6 +540,16 @@ class NetworkCommands(object):
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed IPs for host by range."""
+
+        # NOTE(gmann): These checks are moved here as API layer does all these
+        # validation through JSON schema.
+        if not label:
+            raise exception.NetworkNotCreated(req="label")
+        if len(label) > 255:
+            raise exception.LabelTooLong()
+        if not (cidr or cidr_v6):
+            raise exception.NetworkNotCreated(req="cidr or cidr_v6")
+
         kwargs = {k: v for k, v in six.iteritems(locals())
                   if v and k != "self"}
         if multi_host is not None:
