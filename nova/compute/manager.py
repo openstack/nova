@@ -5345,8 +5345,8 @@ class ComputeManager(manager.Manager):
         """
         # NOTE(pkoniszewski): block migration specific params are set inside
         # migrate_data objects for drivers that expose block live migration
-        # information (i.e. Libvirt and Xenapi). For other drivers cleanup is
-        # not needed.
+        # information (i.e. Libvirt, Xenapi and HyperV). For other drivers
+        # cleanup is not needed.
         is_shared_block_storage = True
         is_shared_instance_path = True
         if isinstance(migrate_data, migrate_data_obj.LibvirtLiveMigrateData):
@@ -5355,6 +5355,9 @@ class ComputeManager(manager.Manager):
         elif isinstance(migrate_data, migrate_data_obj.XenapiLiveMigrateData):
             is_shared_block_storage = not migrate_data.block_migration
             is_shared_instance_path = not migrate_data.block_migration
+        elif isinstance(migrate_data, migrate_data_obj.HyperVLiveMigrateData):
+            is_shared_instance_path = migrate_data.is_shared_instance_path
+            is_shared_block_storage = migrate_data.is_shared_instance_path
 
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration

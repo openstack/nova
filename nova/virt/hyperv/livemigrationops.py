@@ -51,25 +51,39 @@ class LiveMigrationOps(object):
         LOG.debug("live_migration called", instance=instance_ref)
         instance_name = instance_ref["name"]
 
-        try:
-            self._vmops.copy_vm_dvd_disks(instance_name, dest)
+        if migrate_data and 'is_shared_instance_path' in migrate_data:
+            shared_storage = migrate_data.is_shared_instance_path
+        else:
+            shared_storage = (
+                self._pathutils.check_remote_instances_dir_shared(dest))
+            if migrate_data:
+                migrate_data.is_shared_instance_path = shared_storage
+            else:
+                migrate_data = migrate_data_obj.HyperVLiveMigrateData(
+                    is_shared_instance_path=shared_storage)
 
+        try:
             # We must make sure that the console log workers are stopped,
             # otherwise we won't be able to delete / move VM log files.
             self._serial_console_ops.stop_console_handler(instance_name)
 
-            self._pathutils.copy_vm_console_logs(instance_name, dest)
+            if not shared_storage:
+                self._pathutils.copy_vm_console_logs(instance_name, dest)
+                self._vmops.copy_vm_dvd_disks(instance_name, dest)
+
             self._livemigrutils.live_migrate_vm(instance_name,
                                                 dest)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.debug("Calling live migration recover_method "
                           "for instance: %s", instance_name)
-                recover_method(context, instance_ref, dest, block_migration)
+                recover_method(context, instance_ref, dest, block_migration,
+                               migrate_data)
 
         LOG.debug("Calling live migration post_method for instance: %s",
                   instance_name)
-        post_method(context, instance_ref, dest, block_migration)
+        post_method(context, instance_ref, dest,
+                    block_migration, migrate_data)
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info):
@@ -93,11 +107,14 @@ class LiveMigrationOps(object):
                                                   instance.host,
                                                   disk_path_mapping)
 
-    def post_live_migration(self, context, instance, block_device_info):
+    def post_live_migration(self, context, instance, block_device_info,
+                            migrate_data):
         self._volumeops.disconnect_volumes(block_device_info)
-        self._pathutils.get_instance_dir(instance.name,
-                                         create_dir=False,
-                                         remove_dir=True)
+
+        if not migrate_data.is_shared_instance_path:
+            self._pathutils.get_instance_dir(instance.name,
+                                             create_dir=False,
+                                             remove_dir=True)
 
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration):
@@ -108,8 +125,14 @@ class LiveMigrationOps(object):
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
-        LOG.debug("check_can_live_migrate_destination called", instance_ref)
-        return migrate_data_obj.HyperVLiveMigrateData()
+        LOG.debug("check_can_live_migrate_destination called",
+                  instance=instance_ref)
+
+        migrate_data = migrate_data_obj.HyperVLiveMigrateData()
+        migrate_data.is_shared_instance_path = (
+            self._pathutils.check_remote_instances_dir_shared(
+                instance_ref.host))
+        return migrate_data
 
     def cleanup_live_migration_destination_check(self, ctxt, dest_check_data):
         LOG.debug("cleanup_live_migration_destination_check called")

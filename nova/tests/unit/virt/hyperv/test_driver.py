@@ -292,14 +292,16 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
 
         mock_destroy.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
-            mock.sentinel.network_info, mock.sentinel.block_device_info)
+            mock.sentinel.network_info, mock.sentinel.block_device_info,
+            destroy_disks=mock.sentinel.destroy_disks)
 
     def test_pre_live_migration(self):
-        self.driver.pre_live_migration(
+        migrate_data = self.driver.pre_live_migration(
             mock.sentinel.context, mock.sentinel.instance,
             mock.sentinel.block_device_info, mock.sentinel.network_info,
             mock.sentinel.disk_info, mock.sentinel.migrate_data)
 
+        self.assertEqual(mock.sentinel.migrate_data, migrate_data)
         pre_live_migration = self.driver._livemigrationops.pre_live_migration
         pre_live_migration.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
@@ -313,7 +315,8 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         post_live_migration = self.driver._livemigrationops.post_live_migration
         post_live_migration.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.instance,
-            mock.sentinel.block_device_info)
+            mock.sentinel.block_device_info,
+            mock.sentinel.migrate_data)
 
     def test_post_live_migration_at_destination(self):
         self.driver.post_live_migration_at_destination(

@@ -176,3 +176,39 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
         self.assertEqual(42, actual_age)
         mock_time.time.assert_called_once_with()
         mock_getmtime.assert_called_once_with(mock.sentinel.filename)
+
+    @mock.patch('os.path.exists')
+    @mock.patch('tempfile.NamedTemporaryFile')
+    def test_check_dirs_shared_storage(self, mock_named_tempfile,
+                                       mock_exists):
+        fake_src_dir = 'fake_src_dir'
+        fake_dest_dir = 'fake_dest_dir'
+
+        mock_exists.return_value = True
+        mock_tmpfile = mock_named_tempfile.return_value.__enter__.return_value
+        mock_tmpfile.name = 'fake_tmp_fname'
+        expected_src_tmp_path = os.path.join(fake_src_dir,
+                                             mock_tmpfile.name)
+
+        self._pathutils.check_dirs_shared_storage(
+            fake_src_dir, fake_dest_dir)
+
+        mock_named_tempfile.assert_called_once_with(dir=fake_dest_dir)
+        mock_exists.assert_called_once_with(expected_src_tmp_path)
+
+    @mock.patch.object(pathutils.PathUtils, 'check_dirs_shared_storage')
+    @mock.patch.object(pathutils.PathUtils, 'get_instances_dir')
+    def test_check_remote_instances_shared(self, mock_get_instances_dir,
+                                           mock_check_dirs_shared_storage):
+        mock_get_instances_dir.side_effect = [mock.sentinel.local_inst_dir,
+                                              mock.sentinel.remote_inst_dir]
+
+        shared_storage = self._pathutils.check_remote_instances_dir_shared(
+            mock.sentinel.dest)
+
+        self.assertEqual(mock_check_dirs_shared_storage.return_value,
+                         shared_storage)
+        mock_get_instances_dir.assert_has_calls(
+            [mock.call(), mock.call(mock.sentinel.dest)])
+        mock_check_dirs_shared_storage.assert_called_once_with(
+            mock.sentinel.local_inst_dir, mock.sentinel.remote_inst_dir)
