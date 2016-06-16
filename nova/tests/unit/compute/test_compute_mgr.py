@@ -3214,6 +3214,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertIsNone(instance.task_state)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
+    def test_instance_restore_notification(self):
+        inst_obj = fake_instance.fake_instance_obj(self.context,
+            vm_state=vm_states.SOFT_DELETED)
+        with test.nested(
+            mock.patch.object(nova.compute.utils,
+                              'notify_about_instance_action'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute.driver, 'restore')
+        ) as (fake_notify, fake_notify_usage, fake_save, fake_restore):
+            self.compute.restore_instance(self.context, inst_obj)
+            fake_notify.assert_has_calls([
+                mock.call(self.context, inst_obj, 'fake-mini',
+                          action='restore', phase='start'),
+                mock.call(self.context, inst_obj, 'fake-mini',
+                          action='restore', phase='end')])
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
