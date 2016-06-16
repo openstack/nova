@@ -2148,3 +2148,8 @@ class InvalidReservedMemoryPagesOption(Invalid):
     msg_fmt = _("The format of the option 'reserved_huge_pages' is invalid. "
                 "(found '%(conf)s') Please refer to the nova "
                 "config-reference.")
+
+
+class ConcurrentUpdateDetected(NovaException):
+    msg_fmt = _("Another thread concurrently updated the data. "
+                "Please retry your update")

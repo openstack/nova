@@ -136,3 +136,88 @@ class ResourceProviderTestCase(test.NoDBTestCase):
             objects.InventoryList.get_all_by_resource_provider_uuid(
             self.context, resource_provider.uuid))
         self.assertEqual(33, reloaded_inventories[0].total)
+
+    def test_provider_set_inventory(self):
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=uuidsentinel.rp_uuid,
+                                      name=uuidsentinel.rp_name)
+        rp.create()
+        saved_generation = rp.generation
+
+        disk_inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.DISK_GB,
+                total=1024,
+                reserved=15,
+                min_unit=10,
+                max_unit=100,
+                step_size=10,
+                allocation_ratio=1.0)
+
+        vcpu_inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.VCPU,
+                total=12,
+                reserved=0,
+                min_unit=1,
+                max_unit=12,
+                step_size=1,
+                allocation_ratio=16.0)
+
+        # set to new list
+        inv_list = objects.InventoryList(objects=[disk_inv, vcpu_inv])
+        rp.set_inventory(inv_list)
+
+        # generation has bumped
+        self.assertEqual(saved_generation + 1, rp.generation)
+        saved_generation = rp.generation
+
+        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+                self.context, uuidsentinel.rp_uuid)
+        self.assertEqual(2, len(new_inv_list))
+        resource_classes = [inv.resource_class for inv in new_inv_list]
+        self.assertIn(fields.ResourceClass.VCPU, resource_classes)
+        self.assertIn(fields.ResourceClass.DISK_GB, resource_classes)
+
+        # reset list to just disk_inv
+        inv_list = objects.InventoryList(objects=[disk_inv])
+        rp.set_inventory(inv_list)
+
+        # generation has bumped
+        self.assertEqual(saved_generation + 1, rp.generation)
+        saved_generation = rp.generation
+
+        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+                self.context, uuidsentinel.rp_uuid)
+        self.assertEqual(1, len(new_inv_list))
+        resource_classes = [inv.resource_class for inv in new_inv_list]
+        self.assertNotIn(fields.ResourceClass.VCPU, resource_classes)
+        self.assertIn(fields.ResourceClass.DISK_GB, resource_classes)
+        self.assertEqual(1024, new_inv_list[0].total)
+
+        # update existing disk inv to new settings
+        disk_inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.DISK_GB,
+                total=2048,
+                reserved=15,
+                min_unit=10,
+                max_unit=100,
+                step_size=10,
+                allocation_ratio=1.0)
+        inv_list = objects.InventoryList(objects=[disk_inv])
+        rp.set_inventory(inv_list)
+
+        # generation has bumped
+        self.assertEqual(saved_generation + 1, rp.generation)
+        saved_generation = rp.generation
+
+        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+                self.context, uuidsentinel.rp_uuid)
+        self.assertEqual(1, len(new_inv_list))
+        self.assertEqual(2048, new_inv_list[0].total)
+
+        # fail when generation wrong
+        rp.generation = rp.generation - 1
+        self.assertRaises(exception.ConcurrentUpdateDetected,
+                          rp.set_inventory, inv_list)
