@@ -39,21 +39,6 @@ from nova import wsgi as base_wsgi
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
-# List of v21 API extensions which are considered to form
-# the core API and so must be present
-# TODO(cyeoh): Expand this list as the core APIs are ported to v21
-API_V21_CORE_EXTENSIONS = set(['os-consoles',
-                               'extensions',
-                               'os-flavor-extra-specs',
-                               'os-flavor-manage',
-                               'flavors',
-                               'ips',
-                               'os-keypairs',
-                               'os-flavor-access',
-                               'server-metadata',
-                               'servers',
-                               'versions'])
-
 
 class FaultWrapper(base_wsgi.Middleware):
     """Calls down the middleware stack, making exceptions into faults."""
@@ -284,12 +269,6 @@ class APIRouterV21(base_wsgi.Router):
 
         self._register_resources_list(ext_no_inherits, mapper)
         self._register_resources_list(ext_has_inherits, mapper)
-
-    @staticmethod
-    def get_missing_core_extensions(extensions_loaded):
-        extensions_loaded = set(extensions_loaded)
-        missing_extensions = API_V21_CORE_EXTENSIONS - extensions_loaded
-        return list(missing_extensions)
 
     @property
     def loaded_extension_info(self):
