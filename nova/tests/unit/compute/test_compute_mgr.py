@@ -54,7 +54,6 @@ from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
-from nova.tests.unit import fake_server_actions
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests import uuidsentinel as uuids
@@ -75,7 +74,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute = importutils.import_object(CONF.compute_manager)
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
-        fake_server_actions.stub_out_action_events(self.stubs)
 
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
@@ -1674,7 +1672,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                   'status': 'available',
                                   'size': 2}
 
-        def fake_vol_api_roll_detaching(context, volume_id):
+        def fake_vol_api_roll_detaching(cls, context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             if volumes[volume_id]['status'] == 'detaching':
                 volumes[volume_id]['status'] = 'in-use'
@@ -1685,20 +1683,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     'instance_uuid': uuids.instance,
                     'connection_info': '{"foo": "bar"}'})
 
-        def fake_vol_api_func(context, volume, *args):
+        def fake_vol_api_func(cls, context, volume, *args):
             self.assertTrue(uuidutils.is_uuid_like(volume))
             return {}
 
-        def fake_vol_get(context, volume_id):
+        def fake_vol_get(cls, context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             return volumes[volume_id]
 
-        def fake_vol_unreserve(context, volume_id):
+        def fake_vol_unreserve(cls, context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
             if volumes[volume_id]['status'] == 'attaching':
                 volumes[volume_id]['status'] = 'available'
 
-        def fake_vol_migrate_volume_completion(context, old_volume_id,
+        def fake_vol_migrate_volume_completion(cls, context, old_volume_id,
                                                new_volume_id, error=False):
             self.assertTrue(uuidutils.is_uuid_like(old_volume_id))
             self.assertTrue(uuidutils.is_uuid_like(new_volume_id))
@@ -1708,7 +1706,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def fake_func_exc(*args, **kwargs):
             raise AttributeError  # Random exception
 
-        def fake_swap_volume(old_connection_info, new_connection_info,
+        def fake_swap_volume(cls, old_connection_info, new_connection_info,
                              instance, mountpoint, resize_to):
             self.assertEqual(resize_to, 2)
 
@@ -1716,31 +1714,31 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(2, updates['volume_size'])
             return fake_bdm
 
-        self.stubs.Set(self.compute.volume_api, 'roll_detaching',
+        self.stub_out('nova.volume.cinder.API.roll_detaching',
                        fake_vol_api_roll_detaching)
-        self.stubs.Set(self.compute.volume_api, 'get', fake_vol_get)
-        self.stubs.Set(self.compute.volume_api, 'initialize_connection',
+        self.stub_out('nova.volume.cinder.API.get', fake_vol_get)
+        self.stub_out('nova.volume.cinder.API.initialize_connection',
                        fake_vol_api_func)
-        self.stubs.Set(self.compute.volume_api, 'unreserve_volume',
+        self.stub_out('nova.volume.cinder.API.unreserve_volume',
                        fake_vol_unreserve)
-        self.stubs.Set(self.compute.volume_api, 'terminate_connection',
+        self.stub_out('nova.volume.cinder.API.terminate_connection',
                        fake_vol_api_func)
         self.stub_out('nova.db.'
                       'block_device_mapping_get_by_instance_and_volume_id',
                       lambda x, y, z, v: fake_bdm)
-        self.stubs.Set(self.compute.driver, 'get_volume_connector',
+        self.stub_out('nova.virt.driver.ComputeDriver.get_volume_connector',
                        lambda x: {})
-        self.stubs.Set(self.compute.driver, 'swap_volume',
+        self.stub_out('nova.virt.driver.ComputeDriver.swap_volume',
                        fake_swap_volume)
-        self.stubs.Set(self.compute.volume_api, 'migrate_volume_completion',
+        self.stub_out('nova.volume.cinder.API.migrate_volume_completion',
                       fake_vol_migrate_volume_completion)
         self.stub_out('nova.db.block_device_mapping_update',
                       fake_block_device_mapping_update)
         self.stub_out('nova.db.instance_fault_create',
                       lambda x, y:
                            test_instance_fault.fake_faults['fake-uuid'][0])
-        self.stubs.Set(self.compute, '_instance_update',
-                       lambda c, u, **k: {})
+        self.stub_out('nova.compute.manager.ComputeManager.'
+                      '_instance_update', lambda c, u, **k: {})
 
         # Good path
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
@@ -1751,7 +1749,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Error paths
         volumes[old_volume_id]['status'] = 'detaching'
         volumes[new_volume_id]['status'] = 'attaching'
-        self.stubs.Set(self.compute.driver, 'swap_volume', fake_func_exc)
+        self.stub_out('nova.virt.fake.FakeDriver.swap_volume',
+                      fake_func_exc)
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
                           fake_instance.fake_instance_obj(
@@ -1761,7 +1760,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         volumes[old_volume_id]['status'] = 'detaching'
         volumes[new_volume_id]['status'] = 'attaching'
-        self.stubs.Set(self.compute.volume_api, 'initialize_connection',
+        self.stub_out('nova.volume.cinder.API.initialize_connection',
                        fake_func_exc)
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
@@ -3241,7 +3240,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.manager.ComputeManager._build_and_run_instance')
     def test_build_and_run_instance_with_icehouse_requested_network(
             self, mock_build_and_run, mock_save):
-        fake_server_actions.stub_out_action_events(self.stubs)
         mock_save.return_value = self.instance
         self.compute.build_and_run_instance(self.context, self.instance,
                 self.image, request_spec={},
@@ -4347,7 +4345,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.migration = objects.Migration(context=self.context.elevated(),
                                            new_instance_type_id=7)
         self.migration.status = 'migrating'
-        fake_server_actions.stub_out_action_events(self.stubs)
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
     @mock.patch.object(objects.Migration, 'save')
