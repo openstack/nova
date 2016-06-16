@@ -67,7 +67,7 @@ class FlavorsExtraSpecsTestV21(test.TestCase):
 
     def setUp(self):
         super(FlavorsExtraSpecsTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         self.controller = self.flavorextraspecs.FlavorExtraSpecsController()
 
     def test_index(self):

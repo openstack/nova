@@ -118,7 +118,7 @@ class ServerMetaDataTestV21(test.TestCase):
 
     def setUp(self):
         super(ServerMetaDataTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         self.stub_out('nova.db.instance_get', return_server)
         self.stub_out('nova.db.instance_get_by_uuid',
                       return_server_by_uuid)
@@ -671,7 +671,7 @@ class BadStateServerMetaDataTestV21(test.TestCase):
 
     def setUp(self):
         super(BadStateServerMetaDataTestV21, self).setUp()
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         self.stub_out('nova.db.instance_metadata_get',
                       return_server_metadata)
         self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',

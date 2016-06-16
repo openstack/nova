@@ -194,7 +194,7 @@ class ControllerTest(test.TestCase):
     def setUp(self):
         super(ControllerTest, self).setUp()
         self.flags(verbose=True, use_ipv6=False)
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         return_server = fakes.fake_compute_get()
         return_servers = fakes.fake_compute_get_all()
@@ -2414,7 +2414,7 @@ class ServersControllerCreateTest(test.TestCase):
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
-        fakes.stub_out_key_pair_funcs(self.stubs)
+        fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
         self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
         self.stub_out('nova.db.project_get_networks', project_get_networks)
@@ -2581,7 +2581,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self.req, body=self.body)
 
     def test_create_instance_no_key_pair(self):
-        fakes.stub_out_key_pair_funcs(self.stubs, have_key_pair=False)
+        fakes.stub_out_key_pair_funcs(self, have_key_pair=False)
         self._test_create_instance()
 
     def _test_create_extra(self, params, no_image=False):
