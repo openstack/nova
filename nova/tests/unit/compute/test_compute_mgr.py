@@ -4176,37 +4176,37 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.block_device_mapping, self.requested_networks,
                 try_deallocate_networks=False)
 
-    def test_build_networks_if_not_allocated(self):
+    @mock.patch.object(manager.ComputeManager, '_allocate_network')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    def test_build_networks_if_not_allocated(self, mock_get, mock_allocate):
         instance = fake_instance.fake_instance_obj(self.context,
                 system_metadata={},
                 expected_attrs=['system_metadata'])
 
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.compute._allocate_network(self.context, instance,
-                self.requested_networks, None, self.security_groups, None)
-        self.mox.ReplayAll()
-
         self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
 
-    def test_build_networks_if_allocated_false(self):
+        mock_allocate.assert_called_once_with(self.context, instance,
+                self.requested_networks, None, self.security_groups, None)
+
+    @mock.patch.object(manager.ComputeManager, '_allocate_network')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    def test_build_networks_if_allocated_false(self, mock_get, mock_allocate):
         instance = fake_instance.fake_instance_obj(self.context,
                 system_metadata=dict(network_allocated='False'),
                 expected_attrs=['system_metadata'])
 
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.compute._allocate_network(self.context, instance,
-                self.requested_networks, None, self.security_groups, None)
-        self.mox.ReplayAll()
-
         self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
 
-    def test_return_networks_if_found(self):
+        mock_allocate.assert_called_once_with(self.context, instance,
+                self.requested_networks, None, self.security_groups, None)
+
+    @mock.patch.object(network_api.API, 'setup_instance_network_on_host')
+    @mock.patch.object(manager.ComputeManager, '_allocate_network')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    def test_return_networks_if_found(self, mock_get, mock_allocate,
+                                      mock_setup):
         instance = fake_instance.fake_instance_obj(self.context,
                 system_metadata=dict(network_allocated='True'),
                 expected_attrs=['system_metadata'])
@@ -4214,20 +4214,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         def fake_network_info():
             return network_model.NetworkInfo([{'address': '123.123.123.123'}])
 
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_instance_network_on_host')
-        self.compute.network_api.setup_instance_network_on_host(
-            self.context, instance, instance.host)
-        self.compute.network_api.get_instance_nw_info(
-            self.context, instance).AndReturn(
-            network_model.NetworkInfoAsyncWrapper(fake_network_info))
-        self.mox.ReplayAll()
+        mock_get.return_value = network_model.NetworkInfoAsyncWrapper(
+                                                            fake_network_info)
 
         self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
+
+        mock_get.assert_called_once_with(self.context, instance)
+        mock_setup.assert_called_once_with(self.context, instance,
+                                           instance.host)
 
     def test_cleanup_allocated_networks_instance_not_found(self):
         with test.nested(
