@@ -69,6 +69,11 @@ class ViewBuilder(common.ViewBuilder):
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
+                # NOTE(sdague): historically this was the
+                # os-disk-config extension, but now that extensions
+                # are gone, we merge these attributes here.
+                "OS-DCF:diskConfig": (
+                    'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
 
@@ -127,6 +132,11 @@ class ViewBuilder(common.ViewBuilder):
                 "links": self._get_links(request,
                                          instance["uuid"],
                                          self._collection_name),
+                # NOTE(sdague): historically this was the
+                # os-disk-config extension, but now that extensions
+                # are gone, we merge these attributes here.
+                "OS-DCF:diskConfig": (
+                    'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
             },
         }
         if server["server"]["status"] in self._fault_statuses:
@@ -288,6 +298,11 @@ class ViewBuilderV21(ViewBuilder):
                 # V2.1.
                 "image": self._get_image(request, instance),
                 "flavor": self._get_flavor(request, instance),
+                # NOTE(sdague): historically this was the
+                # os-disk-config extension, but now that extensions
+                # are gone, we merge these attributes here.
+                "OS-DCF:diskConfig": (
+                    'AUTO' if instance.get('auto_disk_config') else 'MANUAL'),
                 "created": utils.isotime(instance["created_at"]),
                 "updated": utils.isotime(instance["updated_at"]),
                 "addresses": self._get_addresses(request, instance,

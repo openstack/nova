@@ -395,6 +395,7 @@ class ServersControllerTest(ControllerTest):
                         "href": "http://localhost/fake/servers/%s" % uuid,
                     },
                 ],
+                "OS-DCF:diskConfig": "MANUAL",
             }
         }
 
@@ -3686,6 +3687,7 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": self.bookmark_link,
                     },
                 ],
+                "OS-DCF:diskConfig": "MANUAL",
             }
         }
 
@@ -3762,6 +3764,7 @@ class ServersViewBuilderTest(test.TestCase):
                     "message": "HTTPNotFound",
                     "details": "Stock details for test",
                 },
+                "OS-DCF:diskConfig": "MANUAL",
             }
         }
 
@@ -3914,6 +3917,7 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": self.bookmark_link,
                     },
                 ],
+                "OS-DCF:diskConfig": "MANUAL",
             }
         }
 
@@ -3987,6 +3991,7 @@ class ServersViewBuilderTest(test.TestCase):
                         "href": self.bookmark_link,
                     },
                 ],
+                "OS-DCF:diskConfig": "MANUAL",
             }
         }
 
