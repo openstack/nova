@@ -267,4 +267,28 @@ class XenapiLiveMigrateData(LiveMigrateData):
 
 @obj_base.NovaObjectRegistry.register
 class HyperVLiveMigrateData(LiveMigrateData):
-    VERSION = '1.0'
+    # Version 1.0: Initial version
+    # Version 1.1: Added is_shared_instance_path
+    VERSION = '1.1'
+
+    fields = {'is_shared_instance_path': fields.BooleanField()}
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(HyperVLiveMigrateData, self).obj_make_compatible(
+            primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'is_shared_instance_path' in primitive:
+                del primitive['is_shared_instance_path']
+
+    def to_legacy_dict(self, pre_migration_result=False):
+        legacy = super(HyperVLiveMigrateData, self).to_legacy_dict()
+        if self.obj_attr_is_set('is_shared_instance_path'):
+            legacy['is_shared_instance_path'] = self.is_shared_instance_path
+
+        return legacy
+
+    def from_legacy_dict(self, legacy):
+        super(HyperVLiveMigrateData, self).from_legacy_dict(legacy)
+        if 'is_shared_instance_path' in legacy:
+            self.is_shared_instance_path = legacy['is_shared_instance_path']

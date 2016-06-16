@@ -317,3 +317,38 @@ class TestXenapiLiveMigrateData(test_objects._LocalTest,
 class TestRemoteXenapiLiveMigrateData(test_objects._RemoteTest,
                                       _TestXenapiLiveMigrateData):
     pass
+
+
+class _TestHyperVLiveMigrateData(object):
+    def test_obj_make_compatible(self):
+        obj = migrate_data.HyperVLiveMigrateData(
+            is_shared_instance_path=True)
+        primitive = obj.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('is_shared_instance_path', primitive)
+
+    def test_to_legacy_dict(self):
+        obj = migrate_data.HyperVLiveMigrateData(
+            is_shared_instance_path=False)
+        expected = {
+            'is_shared_instance_path': False,
+        }
+        self.assertEqual(expected, obj.to_legacy_dict())
+
+    def test_from_legacy_dict(self):
+        obj = migrate_data.HyperVLiveMigrateData(
+            is_shared_instance_path=False)
+        legacy = obj.to_legacy_dict()
+        obj2 = migrate_data.HyperVLiveMigrateData()
+        obj2.from_legacy_dict(legacy)
+        self.assertEqual(obj.is_shared_instance_path,
+                         obj2.is_shared_instance_path)
+
+
+class TestHyperVLiveMigrateData(test_objects._LocalTest,
+                                _TestHyperVLiveMigrateData):
+    pass
+
+
+class TestRemoteHyperVLiveMigrateData(test_objects._RemoteTest,
+                                      _TestHyperVLiveMigrateData):
+    pass
