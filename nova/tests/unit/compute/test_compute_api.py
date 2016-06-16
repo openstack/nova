@@ -3700,6 +3700,40 @@ class _ComputeAPIUnitTestMixIn(object):
                           instance,
                           migration.id)
 
+    def test_check_requested_networks_no_requested_networks(self):
+        # When there are no requested_networks we call validate_networks on
+        # the network API and return the results.
+        with mock.patch.object(self.compute_api.network_api,
+                               'validate_networks', return_value=3):
+            count = self.compute_api._check_requested_networks(
+                self.context, None, 5)
+        self.assertEqual(3, count)
+
+    def test_check_requested_networks_no_allocate(self):
+        # When requested_networks is the single 'none' case for no allocation,
+        # we don't validate networks and return the count passed in.
+        requested_networks = (
+            objects.NetworkRequestList(
+                objects=[objects.NetworkRequest(network_id='none')]))
+        with mock.patch.object(self.compute_api.network_api,
+                               'validate_networks') as validate:
+            count = self.compute_api._check_requested_networks(
+                self.context, requested_networks, 5)
+        self.assertEqual(5, count)
+        self.assertFalse(validate.called)
+
+    def test_check_requested_networks_auto_allocate(self):
+        # When requested_networks is the single 'auto' case for allocation,
+        # we validate networks and return the results.
+        requested_networks = (
+            objects.NetworkRequestList(
+                objects=[objects.NetworkRequest(network_id='auto')]))
+        with mock.patch.object(self.compute_api.network_api,
+                               'validate_networks', return_value=4):
+            count = self.compute_api._check_requested_networks(
+                self.context, requested_networks, 5)
+        self.assertEqual(4, count)
+
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
@@ -3759,6 +3793,23 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
 
     def test_attach_volume_reserve_fails(self):
         self.skipTest("Reserve is never done in the API cell.")
+
+    def test_check_requested_networks_no_requested_networks(self):
+        # The API cell just returns the number of instances passed in since the
+        # actual validation happens in the child (compute) cell.
+        self.assertEqual(
+            2, self.compute_api._check_requested_networks(
+                self.context, None, 2))
+
+    def test_check_requested_networks_auto_allocate(self):
+        # The API cell just returns the number of instances passed in since the
+        # actual validation happens in the child (compute) cell.
+        requested_networks = (
+            objects.NetworkRequestList(
+                objects=[objects.NetworkRequest(network_id='auto')]))
+        count = self.compute_api._check_requested_networks(
+            self.context, requested_networks, 5)
+        self.assertEqual(5, count)
 
 
 class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,
