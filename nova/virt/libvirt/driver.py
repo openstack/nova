@@ -259,6 +259,9 @@ MIN_LIBVIRT_PARALLELS_VERSION = (1, 2, 12)
 # Ability to set the user guest password with Qemu
 MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
 
+# Ability to set the user guest password with parallels
+MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD = (2, 0, 0)
+
 # s/390 & s/390x architectures with KVM
 MIN_LIBVIRT_KVM_S390_VERSION = (1, 2, 13)
 MIN_QEMU_S390_VERSION = (2, 3, 0)
@@ -1570,13 +1573,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._attach_sriov_ports(context, instance, guest)
 
     def _can_set_admin_password(self, image_meta):
-        if (CONF.libvirt.virt_type not in ('kvm', 'qemu') or
-            not self._host.has_min_version(MIN_LIBVIRT_SET_ADMIN_PASSWD)):
-            raise exception.SetAdminPasswdNotSupported()
 
-        hw_qga = image_meta.properties.get('hw_qemu_guest_agent', '')
-        if not strutils.bool_from_string(hw_qga):
-            raise exception.QemuGuestAgentNotEnabled()
+        if CONF.libvirt.virt_type == 'parallels':
+            if not self._host.has_min_version(
+                   MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD):
+                raise exception.SetAdminPasswdNotSupported()
+        elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
+            if not self._host.has_min_version(
+                   MIN_LIBVIRT_SET_ADMIN_PASSWD):
+                raise exception.SetAdminPasswdNotSupported()
+            hw_qga = image_meta.properties.get('hw_qemu_guest_agent', '')
+            if not strutils.bool_from_string(hw_qga):
+                raise exception.QemuGuestAgentNotEnabled()
+        else:
+            raise exception.SetAdminPasswdNotSupported()
 
     def set_admin_password(self, instance, new_pass):
         self._can_set_admin_password(instance.image_meta)
