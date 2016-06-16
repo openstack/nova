@@ -446,6 +446,23 @@ changes_since_instance_action:
   required: false
   type: string
   min_version: 2.58
+changes_since_migration:
+  description: |
+    Filters the response by a date and time stamp when the migration last
+    changed. Those changed after the specified date and time stamp are returned.
+
+    The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
+    ::
+
+       CCYY-MM-DDThh:mm:ss±hh:mm
+
+    The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
+    For example, ``2015-08-27T09:49:58-05:00``.
+    If you omit the time zone, the UTC time zone is assumed.
+  in: query
+  required: false
+  type: string
+  min_version: 2.59
 changes_since_server:
   description: |
     Filters the response by a date and time stamp when the server last
@@ -845,6 +862,25 @@ migration_instance_uuid:
   in: query
   required: false
   type: string
+migration_limit:
+  description: |
+    Requests a page size of items. Returns a number of items up to a limit value.
+    Use the ``limit`` parameter to make an initial limited request and use the
+    last-seen item from the response as the ``marker`` parameter value in a
+    subsequent limited request.
+  in: query
+  required: false
+  type: integer
+  min_version: 2.59
+migration_marker:
+  description: |
+    The UUID of the last-seen migration. Use the ``limit`` parameter to make an
+    initial limited request and use the last-seen item from the response as
+    the ``marker`` parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: string
+  min_version: 2.59
 migration_source_compute:
   description: |
     The source compute node of migration to filter.
@@ -4084,6 +4120,17 @@ migration_new_flavor_id:
   in: body
   required: true
   type: string
+migration_next_links_2_59:
+  description: |
+    Links pertaining to the migration.
+    This parameter is returned when paging and more data is available.
+    See `API Guide / Links and References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  required: false
+  type: array
+  min_version: 2.59
 migration_old_flavor_id:
   description: |
     The flavor ID of the server when the migration was started.
@@ -4098,6 +4145,13 @@ migration_type_2_23:
   required: true
   type: string
   min_version: 2.23
+migration_uuid:
+  description: |
+    The UUID of the migration.
+  in: body
+  required: true
+  type: string
+  min_version: 2.59
 migrations:
   description: |
     The list of server migration objects.

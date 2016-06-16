@@ -52,10 +52,11 @@ Response
   - source_node: migrate_source_node
   - status: migrate_status
   - updated_at: updated
+  - uuid: migration_uuid
 
-**Example List Migrations**
+**Example List Migrations (2.59)**
 
-.. literalinclude:: ../../doc/api_samples/server-migrations/v2.23/migrations-index.json
+.. literalinclude:: ../../doc/api_samples/server-migrations/v2.59/migrations-index.json
    :language: javascript
 
 Show Migration Details
@@ -105,10 +106,11 @@ Response
   - source_node: migrate_source_node
   - status: migrate_status
   - updated_at: updated
+  - uuid: migration_uuid
 
-**Example Show Migration Details**
+**Example Show Migration Details (2.59)**
 
-.. literalinclude:: ../../doc/api_samples/server-migrations/v2.23/migrations-get.json
+.. literalinclude:: ../../doc/api_samples/server-migrations/v2.59/migrations-get.json
    :language: javascript
 
 Force Migration Complete Action (force_complete Action)
