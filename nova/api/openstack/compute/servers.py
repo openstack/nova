@@ -439,6 +439,8 @@ class ServersController(wsgi.Controller):
         """
         expected_attrs = ['flavor', 'pci_devices', 'numa_topology']
         if is_detail:
+            if api_version_request.is_supported(req, '2.26'):
+                expected_attrs.append("tags")
             expected_attrs = self._view_builder.get_show_expected_attrs(
                                                             expected_attrs)
         instance = common.get_instance(self.compute_api, context,

@@ -1468,17 +1468,21 @@ class ServersControllerTestV226(ControllerTest):
         req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID,
                                       version=self.wsgi_api_version)
         ctxt = req.environ['nova.context']
-
-        fake_server = fakes.stub_instance_obj(
-            ctxt, id=2, vm_state=vm_states.ACTIVE, progress=100)
-
         tags = ['tag1', 'tag2']
-        tag_list = objects.TagList(objects=[
-            objects.Tag(resource_id=FAKE_UUID, tag=tag)
-            for tag in tags])
 
-        fake_server.tags = tag_list
-        mock_get.return_value = fake_server
+        def fake_get(_self, *args, **kwargs):
+            self.assertIn('tags', kwargs['expected_attrs'])
+            fake_server = fakes.stub_instance_obj(
+                ctxt, id=2, vm_state=vm_states.ACTIVE, progress=100)
+
+            tag_list = objects.TagList(objects=[
+                objects.Tag(resource_id=FAKE_UUID, tag=tag)
+                for tag in tags])
+
+            fake_server.tags = tag_list
+            return fake_server
+
+        mock_get.side_effect = fake_get
 
         res_dict = self.controller.show(req, FAKE_UUID)
 
