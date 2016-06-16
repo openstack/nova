@@ -25,6 +25,7 @@ import sys
 import time
 
 import cryptography
+from eventlet import greenthread
 import glanceclient
 import glanceclient.exc
 from glanceclient.v2 import schemas
@@ -344,6 +345,7 @@ class GlanceImageService(object):
                 try:
                     for chunk in image_chunks:
                         verifier.update(chunk)
+                        greenthread.sleep(0)
                     verifier.verify()
 
                     LOG.info(_LI('Image signature verification succeeded '
