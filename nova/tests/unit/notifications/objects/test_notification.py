@@ -255,7 +255,7 @@ class TestNotificationBase(test.NoDBTestCase):
 
 
 notification_object_data = {
-    'EventType': '1.2-b81c9f80d9344a24df0b1ecce376b515',
+    'EventType': '1.3-6ef678bfe9a4ebfd669c96d2d2c124a5',
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-4516ae282a55fe2fd5c754967ee6248b',
     'FlavorPayload': '1.0-8ad962ab0bafc7270f474c7dda0b7c20',
