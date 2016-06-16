@@ -196,6 +196,20 @@ class API(base_api.NetworkAPI):
         return self.floating_manager.disassociate_floating_ip(context, address,
                 affect_auto_assigned)
 
+    @staticmethod
+    def _requested_nets_as_obj_list(requested_networks):
+        """Helper method to convert a list of requested network tuples into an
+        objects.NetworkRequestList.
+
+        :param requested_networks: List of requested networks.
+        :return: objects.NetworkRequestList instance
+        """
+        if requested_networks and not isinstance(requested_networks,
+                                                 objects.NetworkRequestList):
+            requested_networks = objects.NetworkRequestList.from_tuples(
+                requested_networks)
+        return requested_networks
+
     @base_api.refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
@@ -207,8 +221,8 @@ class API(base_api.NetworkAPI):
         :param context: The request context.
         :param instance: nova.objects.instance.Instance object.
         :param vpn: A boolean, if True, indicate a vpn to access the instance.
-        :param requested_networks: A dictionary of requested_networks,
-            Optional value containing network_id, fixed_ip, and port_id.
+        :param requested_networks: A list of requested_network tuples
+            containing network_id and fixed_ip
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
@@ -236,9 +250,30 @@ class API(base_api.NetworkAPI):
         args['rxtx_factor'] = flavor['rxtx_factor']
         args['macs'] = macs
         args['dhcp_options'] = dhcp_options
+
+        # Check to see if we're asked to 'auto' allocate networks because if
+        # so we need to just null out the requested_networks value so the
+        # network manager doesn't try to get networks with uuid 'auto' which
+        # doesn't exist.
+        if requested_networks:
+            requested_networks = self._requested_nets_as_obj_list(
+                requested_networks)
+
+            if requested_networks.auto_allocate:
+                args['requested_networks'] = None
+
         nw_info = self.network_rpcapi.allocate_for_instance(context, **args)
 
-        return network_model.NetworkInfo.hydrate(nw_info)
+        nw_info = network_model.NetworkInfo.hydrate(nw_info)
+
+        # check to see if nothing was allocated and we were requested to
+        # auto-allocate
+        if (not nw_info and requested_networks and
+                requested_networks.auto_allocate):
+            raise exception.UnableToAutoAllocateNetwork(
+                project_id=instance.project_id)
+
+        return nw_info
 
     def deallocate_for_instance(self, context, instance,
                                 requested_networks=None):
@@ -250,6 +285,14 @@ class API(base_api.NetworkAPI):
         if not isinstance(instance, obj_base.NovaObject):
             instance = objects.Instance._from_db_object(context,
                     objects.Instance(), instance)
+
+        # In the case of 'auto' allocation for networks, just pass None for
+        # requested_networks since 'auto' isn't an actual network.
+        requested_networks = self._requested_nets_as_obj_list(
+            requested_networks)
+        if requested_networks and requested_networks.auto_allocate:
+            requested_networks = None
+
         self.network_rpcapi.deallocate_for_instance(context, instance=instance,
                 requested_networks=requested_networks)
 
