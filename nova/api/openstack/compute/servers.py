@@ -587,7 +587,7 @@ class ServersController(wsgi.Controller):
             'availability_zone': availability_zone}
         authorize(context, target, 'create')
 
-        # TODO(Shao He, Feng) move this policy check to os-availabilty-zone
+        # TODO(Shao He, Feng) move this policy check to os-availability-zone
         # extension after refactor it.
         parse_az = self.compute_api.parse_availability_zone
         try:
