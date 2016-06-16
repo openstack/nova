@@ -55,7 +55,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
             self.assertEqual(kwargs['scheduler_hints'], {})
             return ([self.fake_instance], '')
 
-        self.stubs.Set(nova.compute.api.API, 'create', fake_create)
+        self.stub_out('nova.compute.api.API.create', fake_create)
 
         req = self._get_request()
         req.method = 'POST'
@@ -76,7 +76,7 @@ class SchedulerHintsTestCaseV21(test.TestCase):
             self.assertEqual(kwargs['scheduler_hints'], hint)
             return ([self.fake_instance], '')
 
-        self.stubs.Set(nova.compute.api.API, 'create', fake_create)
+        self.stub_out('nova.compute.api.API.create', fake_create)
 
         req = self._get_request()
         req.method = 'POST'
@@ -213,5 +213,5 @@ class ServersControllerCreateTestV21(test.TestCase):
             self._verify_availability_zone(**kwargs)
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(nova.compute.api.API, 'create', create)
+        self.stub_out('nova.compute.api.API.create', create)
         self._test_create_extra(params)
