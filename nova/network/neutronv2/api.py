@@ -597,12 +597,18 @@ class API(base_api.NetworkAPI):
                 if not network.get('subnets'):
                     # Neutron can't apply security groups to a port
                     # for a network without L3 assignments.
+                    LOG.debug('Network with port security enabled does not '
+                              'have subnets so security groups cannot be '
+                              'applied: %s', network, instance=instance)
                     raise exception.SecurityGroupCannotBeApplied()
             else:
                 if security_group_ids:
                     # We don't want to apply security groups on port
                     # for a network defined with
                     # 'port_security_enabled=False'.
+                    LOG.debug('Network has port security disabled so security '
+                              'groups cannot be applied: %s', network,
+                              instance=instance)
                     raise exception.SecurityGroupCannotBeApplied()
 
             zone = 'compute:%s' % instance.availability_zone
