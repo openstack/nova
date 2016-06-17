@@ -1845,34 +1845,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                            {'block_device_mapping': 'fake'})
         mock_volume.assert_called_once_with(self.context, instance)
         mock_get_inst.assert_called_once_with(self.context, instance,
-                                              refresh_conn_info=True)
+                                              refresh_conn_info=False)
 
         self.assertTrue(dest_check_data.is_volume_backed)
-
-    def test_can_live_migrate_source_for_cinder_client_exception(self):
-
-        is_volume_backed = 'volume_backed'
-        dest_check_data = migrate_data_obj.LiveMigrateData()
-        db_instance = fake_instance.fake_db_instance()
-        instance = objects.Instance._from_db_object(
-                self.context, objects.Instance(), db_instance)
-
-        @mock.patch.object(compute_utils, 'EventReporter')
-        @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
-        @mock.patch.object(compute_utils, 'is_volume_backed_instance')
-        @mock.patch.object(self.compute,
-                           '_get_instance_block_device_info')
-        def do_test(mock_block_info, mock_volume_backed,
-                    mock_inst_fault, mock_event):
-            mock_volume_backed.return_value = is_volume_backed
-            mock_block_info.side_effect = cinder_exception.ClientException(
-                                          'test', 'test')
-
-            self.assertRaises(exception.MigrationPreCheckClientException,
-                              self.compute.check_can_live_migrate_source,
-                              self.context, instance,
-                              dest_check_data)
-        do_test()
 
     def _test_check_can_live_migrate_destination(self, do_raise=False):
         db_instance = fake_instance.fake_db_instance(host='fake-host')
