@@ -2091,9 +2091,10 @@ class ComputeManager(manager.Manager):
         try:
             # tear down allocated network structure
             self._deallocate_network(context, instance, requested_networks)
-        except Exception:
+        except Exception as ex:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Failed to deallocate network for instance.'),
+                LOG.error(_LE('Failed to deallocate network for instance. '
+                              'Error: %s'), ex,
                           instance=instance)
                 self._set_instance_obj_error_state(context, instance)
 
