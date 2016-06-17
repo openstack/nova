@@ -7195,27 +7195,6 @@ class LibvirtDriver(driver.ComputeDriver):
             raise loopingcall.LoopingCallDone()
 
     @staticmethod
-    def _disk_size_from_instance(instance, disk_name):
-        """Determines the disk size from instance properties
-
-        Returns the disk size by using the disk name to determine whether it
-        is a root or an ephemeral disk, then by checking properties of the
-        instance returns the size converted to bytes.
-
-        Returns 0 if the disk name not match (disk, disk.local).
-        """
-        if disk_name == 'disk':
-            size = instance.flavor.root_gb
-        elif disk_name == 'disk.local':
-            size = instance.flavor.ephemeral_gb
-        # N.B. We don't handle ephemeral disks named disk.ephN here,
-        # which is almost certainly a bug. It's not clear what this function
-        # should return if an instance has multiple ephemeral disks.
-        else:
-            size = 0
-        return size * units.Gi
-
-    @staticmethod
     def _disk_raw_to_qcow2(path):
         """Converts a raw disk to qcow2."""
         path_qcow = path + '_qcow'
@@ -7230,41 +7209,6 @@ class LibvirtDriver(driver.ComputeDriver):
         utils.execute('qemu-img', 'convert', '-f', 'qcow2',
                       '-O', 'raw', path, path_raw)
         utils.execute('mv', path_raw, path)
-
-    def _disk_resize(self, image, size):
-        """Attempts to resize a disk to size
-
-        :param image: an instance of nova.virt.image.model.Image
-
-        Attempts to resize a disk by checking the capabilities and
-        preparing the format, then calling disk.api.extend.
-
-        Note: Currently only support disk extend.
-        """
-
-        if not isinstance(image, imgmodel.LocalFileImage):
-            LOG.debug("Skipping resize of non-local image")
-            return
-
-        # If we have a non partitioned image that we can extend
-        # then ensure we're in 'raw' format so we can extend file system.
-        converted = False
-        if (size and
-            image.format == imgmodel.FORMAT_QCOW2 and
-            disk_api.can_resize_image(image.path, size) and
-            disk_api.is_image_extendable(image)):
-            self._disk_qcow2_to_raw(image.path)
-            converted = True
-            image = imgmodel.LocalFileImage(image.path,
-                                            imgmodel.FORMAT_RAW)
-
-        if size:
-            disk_api.extend(image, size)
-
-        if converted:
-            # back to qcow2 (no backing_file though) so that snapshot
-            # will be available
-            self._disk_raw_to_qcow2(image.path)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
@@ -7291,20 +7235,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                           context, instance,
                                           network_info=network_info)
 
-        # Resize root disk and a single ephemeral disk called disk.local
-        # Also convert raw disks to qcow2 if migrating to host which uses
+        # Convert raw disks to qcow2 if migrating to host which uses
         # qcow2 from host which uses raw.
-        # TODO(mbooth): Handle resize of multiple ephemeral disks, and
-        #               ephemeral disks not called disk.local.
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
             path = info['path']
             disk_name = os.path.basename(path)
-
-            size = self._disk_size_from_instance(instance, disk_name)
-            if resize_instance:
-                image = imgmodel.LocalFileImage(path, info['type'])
-                self._disk_resize(image, size)
 
             # NOTE(mdbooth): The code below looks wrong, but is actually
             # required to prevent a security hole when migrating from a host
