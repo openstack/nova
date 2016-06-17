@@ -377,6 +377,10 @@ libvirt_volume_opts = [
                 default=[],
                 help='Protocols listed here will be accessed directly '
                      'from QEMU. Currently supported protocols: [gluster]'),
+    cfg.BoolOpt('volume_use_multipath',
+                default=False,
+                help='Use multipath connection of the iSCSI or FC volume',
+                deprecated_name='iscsi_use_multipath'),
 ]
 
 libvirt_volume_aoe_opts = [
@@ -396,9 +400,6 @@ libvirt_volume_iscsi_opts = [
     cfg.IntOpt('num_iscsi_scan_tries',
                default=5,
                help='Number of times to rescan iSCSI target to find volume'),
-    cfg.BoolOpt('iscsi_use_multipath',
-                default=False,
-                help='Use multipath connection of the iSCSI or FC volume'),
     cfg.StrOpt('iscsi_iface',
                deprecated_name='iscsi_transport',
                help='The iSCSI transport iface to use to connect to target in '

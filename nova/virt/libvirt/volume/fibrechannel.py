@@ -33,7 +33,7 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
             'FIBRE_CHANNEL', utils.get_root_helper(),
-            use_multipath=CONF.libvirt.iscsi_use_multipath,
+            use_multipath=CONF.libvirt.volume_use_multipath,
             device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries)
 
     def get_config(self, connection_info, disk_info):

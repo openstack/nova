@@ -36,7 +36,7 @@ class LibvirtISCSIVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
             'ISCSI', utils.get_root_helper(),
-            use_multipath=CONF.libvirt.iscsi_use_multipath,
+            use_multipath=CONF.libvirt.volume_use_multipath,
             device_scan_attempts=CONF.libvirt.num_iscsi_scan_tries,
             transport=self._get_transport())
 
