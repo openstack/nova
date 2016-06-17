@@ -283,12 +283,21 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
     def test_get_dom_id_raises_not_found(self):
         instance = {"name": "dummy"}
         self.create_vm("not-dummy")
-        self.assertRaises(exception.NotFound, self.vmops._get_dom_id, instance)
+        self.assertRaises(exception.InstanceNotFound,
+                          self.vmops._get_dom_id, instance)
 
     def test_get_dom_id_works_with_vmref(self):
         vm, vm_ref = self.create_vm("dummy")
+        instance = {'name': 'dummy'}
         self.assertEqual(vm["domid"],
-                         self.vmops._get_dom_id(vm_ref=vm_ref))
+                         self.vmops._get_dom_id(instance, vm_ref=vm_ref))
+
+    def test_get_dom_id_fails_if_shutdown(self):
+        vm, vm_ref = self.create_vm("dummy")
+        instance = {'name': 'dummy'}
+        self._session.VM.hard_shutdown(vm_ref)
+        self.assertRaises(exception.InstanceNotFound,
+                          self.vmops._get_dom_id, instance, vm_ref=vm_ref)
 
 
 class SpawnTestCase(VMOpsTestBase):

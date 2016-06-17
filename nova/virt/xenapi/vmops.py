@@ -2042,14 +2042,14 @@ class VMOps(object):
                           instance=instance)
                 return {'returncode': 'error', 'message': err_msg}
 
-    def _get_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+    def _get_dom_id(self, instance, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
         domid = self._session.call_xenapi("VM.get_domid", vm_ref)
-        if not domid or domid == -1:
+        if not domid or domid == "-1":
             raise exception.InstanceNotFound(instance_id=instance['name'])
         return domid
 
-    def _get_last_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
+    def _get_last_dom_id(self, instance, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
         other_config = self._session.call_xenapi("VM.get_other_config", vm_ref)
         if 'last_dom_id' not in other_config:

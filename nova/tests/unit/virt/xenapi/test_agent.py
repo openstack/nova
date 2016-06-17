@@ -244,9 +244,9 @@ class RebootRetryTestCase(AgentTestCaseBase):
         self.flags(agent_timeout=3, group="xenserver")
         mock_time.return_value = 0
         mock_session = mock.Mock()
-        old = 40
-        new = 42
-        mock_session.VM.get_domid.side_effect = [old, -1, new]
+        old = "40"
+        new = "42"
+        mock_session.VM.get_domid.side_effect = [old, "-1", new]
 
         agent._wait_for_new_dom_id(mock_session, "vm_ref", old, "method")
 
@@ -372,7 +372,7 @@ class CallAgentTestCase(AgentTestCaseBase):
         session.XenAPI.Failure = xenapi_fake.Failure
         instance = {"uuid": "fake"}
 
-        session.VM.get_domid.return_value = 42
+        session.VM.get_domid.return_value = "42"
         mock_uuid.return_value = 1
         if exception:
             session.call_plugin.side_effect = exception
