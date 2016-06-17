@@ -63,7 +63,9 @@ libvirt_general_opts = [
                     '0 => not partitioned, >0 => partition number'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
-                help='Sync virtual and real mouse cursors in Windows VMs'),
+                deprecated_for_removal=True,
+                help='(Deprecated, please see pointer_model) Sync virtual and '
+                     'real mouse cursors in Windows VMs'),
     cfg.StrOpt('live_migration_inbound_addr',
                help='Live migration target ip or hostname '
                     '(if this option is set to None, which is the default, '
