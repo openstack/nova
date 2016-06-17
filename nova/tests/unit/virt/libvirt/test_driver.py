@@ -1206,9 +1206,120 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
                          libvirt_driver.libvirt.VIR_MIGRATE_POSTCOPY))
 
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_live_migration_permit_auto_converge_true(self, host):
+        self.flags(live_migration_permit_auto_converge=True, group='libvirt')
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            bm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED, '
+                       'VIR_MIGRATE_NON_SHARED_INC'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
+                         libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE))
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_live_migration_permit_auto_converge_and_post_copy_true(self,
+                                                                    host):
+        self.flags(live_migration_permit_auto_converge=True, group='libvirt')
+        self.flags(live_migration_permit_post_copy=True, group='libvirt')
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            bm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED, '
+                       'VIR_MIGRATE_NON_SHARED_INC'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_POSTCOPY),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
+                         libvirt_driver.libvirt.VIR_MIGRATE_POSTCOPY))
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    def test_live_migration_auto_converge_and_post_copy_true_old_libvirt(
+            self, mock_host):
+        self.flags(live_migration_permit_auto_converge=True, group='libvirt')
+        self.flags(live_migration_permit_post_copy=True, group='libvirt')
+
+        def fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if (lv_ver == libvirt_driver.MIN_LIBVIRT_POSTCOPY_VERSION and
+                    hv_ver == libvirt_driver.MIN_QEMU_POSTCOPY_VERSION):
+                return False
+            return True
+        mock_host.side_effect = fake_has_min_version
+
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            bm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED, '
+                       'VIR_MIGRATE_NON_SHARED_INC'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
+                         libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE))
+
     @mock.patch.object(host.Host, 'has_min_version', return_value=False)
     def test_live_migration_permit_postcopy_true_old_libvirt(self, host):
         self.flags(live_migration_permit_post_copy=True, group='libvirt')
+
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            bm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED, '
+                       'VIR_MIGRATE_NON_SHARED_INC'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
+
+    @mock.patch.object(host.Host, 'has_min_version', return_value=False)
+    def test_live_migration_permit_auto_converge_true_old_libvirt(self, host):
+        self.flags(live_migration_permit_auto_converge=True, group='libvirt')
         self._do_test_parse_migration_flags(
             lm_config=('VIR_MIGRATE_PERSIST_DEST, '
                        'VIR_MIGRATE_PEER2PEER, '
@@ -1230,6 +1341,27 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
 
     def test_live_migration_permit_postcopy_false(self):
+        self._do_test_parse_migration_flags(
+            lm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED'),
+            bm_config=('VIR_MIGRATE_PERSIST_DEST, '
+                       'VIR_MIGRATE_PEER2PEER, '
+                       'VIR_MIGRATE_LIVE, '
+                       'VIR_MIGRATE_TUNNELLED, '
+                       'VIR_MIGRATE_NON_SHARED_INC'),
+            lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED),
+            bm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_PEER2PEER |
+                         libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
+                         libvirt_driver.libvirt.VIR_MIGRATE_TUNNELLED |
+                         libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC))
+
+    def test_live_migration_permit_autoconverge_false(self):
         self._do_test_parse_migration_flags(
             lm_config=('VIR_MIGRATE_PERSIST_DEST, '
                        'VIR_MIGRATE_PEER2PEER, '

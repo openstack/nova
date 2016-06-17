@@ -272,6 +272,10 @@ MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION = (1, 3, 0)
 MIN_LIBVIRT_KVM_PPC64_VERSION = (1, 2, 12)
 MIN_QEMU_PPC64_VERSION = (2, 1, 0)
 
+# Auto converge support
+MIN_LIBVIRT_AUTO_CONVERGE_VERSION = (1, 2, 3)
+MIN_QEMU_AUTO_CONVERGE = (1, 6, 0)
+
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
 
@@ -611,6 +615,25 @@ class LibvirtDriver(driver.ComputeDriver):
             migration_flags &= ~libvirt.VIR_MIGRATE_POSTCOPY
         return migration_flags
 
+    def _handle_live_migration_auto_converge(self, migration_flags,
+                                             config_name):
+        if self._host.has_min_version(lv_ver=MIN_LIBVIRT_AUTO_CONVERGE_VERSION,
+                                      hv_ver=MIN_QEMU_AUTO_CONVERGE):
+            if (self._is_post_copy_available() and
+                    (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0):
+                migration_flags &= ~libvirt.VIR_MIGRATE_AUTO_CONVERGE
+                LOG.info(_LI('The live_migration_permit_post_copy is set to '
+                             'True and post copy live migration is available '
+                             'so auto-converge will not be in use.'))
+            elif not CONF.libvirt.live_migration_permit_auto_converge:
+                migration_flags &= ~libvirt.VIR_MIGRATE_AUTO_CONVERGE
+            else:
+                migration_flags |= libvirt.VIR_MIGRATE_AUTO_CONVERGE
+        elif CONF.libvirt.live_migration_permit_auto_converge:
+            LOG.info(_LI('The live_migration_permit_auto_converge is set '
+                            'to True, but it is not supported.'))
+        return migration_flags
+
     def _parse_migration_flags(self):
         def str2sum(str_val):
             logical_sum = 0
@@ -645,6 +668,11 @@ class LibvirtDriver(driver.ComputeDriver):
         live_migration_flags = self._handle_live_migration_post_copy(
             live_migration_flags, live_config_name)
         block_migration_flags = self._handle_live_migration_post_copy(
+            block_migration_flags, block_config_name)
+
+        live_migration_flags = self._handle_live_migration_auto_converge(
+            live_migration_flags, live_config_name)
+        block_migration_flags = self._handle_live_migration_auto_converge(
             block_migration_flags, block_config_name)
 
         self._live_migration_flags = live_migration_flags
