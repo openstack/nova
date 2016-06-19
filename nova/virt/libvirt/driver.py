@@ -210,7 +210,7 @@ NEXT_MIN_QEMU_VERSION = (1, 5, 3)
 # Relative block commit & rebase (feature is detected,
 # this version is only used for messaging)
 MIN_LIBVIRT_BLOCKJOB_RELATIVE_VERSION = (1, 2, 7)
-# Libvirt version 1.2.17 is required for successfull block live migration
+# Libvirt version 1.2.17 is required for successful block live migration
 # of vm booted from image with attached devices
 MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
 # libvirt discard feature
@@ -281,7 +281,7 @@ QEMU_MAX_SERIAL_PORTS = 4
 # Qemu supports 4 serial consoles, we remove 1 because of the PTY one defined
 ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
-# realtime suppport
+# realtime support
 MIN_LIBVIRT_REALTIME_VERSION = (1, 2, 13)
 
 MIN_LIBVIRT_OTHER_ARCH = {arch.S390: MIN_LIBVIRT_KVM_S390_VERSION,
@@ -4964,7 +4964,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         Refer to the objects/pci_device.py for more idea of these keys.
 
-        :returns: a JSON string containaing a list of the assignable PCI
+        :returns: a JSON string containing a list of the assignable PCI
                   devices information
         """
         # Bail early if we know we can't support `listDevices` to avoid
