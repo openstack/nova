@@ -45,6 +45,12 @@ tests:
 - name: 405 on bad method on app
   DELETE: /resource_providers
   status: 405
+  response_headers:
+      allow: /(GET|POST), (POST|GET)/
+  response_json_paths:
+      $.errors[0].title: Method Not Allowed
+  response_strings:
+    - The method DELETE is not allowed for this resource.
 
 - name: bad accept resource providers
   GET: /resource_providers
@@ -114,3 +120,13 @@ tests:
     content-type: text/plain
   data: Why U no provide?
   status: 415
+
+- name: non inventory sub resource provider path
+  GET: /resource_providers/7850178f-1807-4512-b135-0b174985405b/cows
+  request_headers:
+      accept: application/json
+  status: 404
+  response_json_paths:
+      $.errors[0].title:  Not Found
+  response_strings:
+      - The resource could not be found.
