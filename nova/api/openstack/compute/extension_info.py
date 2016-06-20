@@ -108,7 +108,10 @@ v21_to_v2_alias_mapping = {
 hardcoded_extensions = [
     {'name': 'DiskConfig',
      'alias': 'os-disk-config',
-     'description': 'Disk Management Extension.'}
+     'description': 'Disk Management Extension.'},
+    {'name': 'AccessIPs',
+     'description': 'Access IPs support.',
+     'alias': 'os-access-ips'},
 ]
 
 # V2.1 does not support XML but we need to keep an entry in the

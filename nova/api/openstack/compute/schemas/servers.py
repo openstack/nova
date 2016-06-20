@@ -44,6 +44,8 @@ base_create = {
                     }
                 },
                 'OS-DCF:diskConfig': parameter_types.disk_config,
+                'accessIPv4': parameter_types.accessIPv4,
+                'accessIPv6': parameter_types.accessIPv6,
             },
             'required': ['name', 'flavorRef'],
             'additionalProperties': False,
@@ -72,6 +74,8 @@ base_update = {
             'properties': {
                 'name': parameter_types.name,
                 'OS-DCF:diskConfig': parameter_types.disk_config,
+                'accessIPv4': parameter_types.accessIPv4,
+                'accessIPv6': parameter_types.accessIPv6,
             },
             'additionalProperties': False,
         },
@@ -100,7 +104,9 @@ base_rebuild = {
                 'adminPass': parameter_types.admin_password,
                 'metadata': parameter_types.metadata,
                 'preserve_ephemeral': parameter_types.boolean,
-                'OS-DCF:diskConfig': parameter_types.disk_config
+                'OS-DCF:diskConfig': parameter_types.disk_config,
+                'accessIPv4': parameter_types.accessIPv4,
+                'accessIPv6': parameter_types.accessIPv6,
             },
             'required': ['imageRef'],
             'additionalProperties': False,

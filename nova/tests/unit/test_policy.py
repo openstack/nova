@@ -364,7 +364,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:show",
 "os_compute_api:servers:update",
 "os_compute_api:servers:create_image:allow_volume_backed",
-"os_compute_api:os-access-ips",
 "os_compute_api:os-admin-password",
 "os_compute_api:os-attach-interfaces",
 "os_compute_api:os-certificates:create",
@@ -417,7 +416,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.allow_all_rules = (
 "os_compute_api:os-quota-sets:defaults",
 "os_compute_api:extensions:discoverable",
-"os_compute_api:os-access-ips:discoverable",
 "os_compute_api:os-admin-actions:discoverable",
 "os_compute_api:os-admin-password:discoverable",
 "os_compute_api:os-aggregates:discoverable",

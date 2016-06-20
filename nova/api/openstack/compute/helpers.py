@@ -17,6 +17,8 @@ from webob import exc
 from nova.i18n import _
 
 API_DISK_CONFIG = "OS-DCF:diskConfig"
+API_ACCESS_V4 = "accessIPv4"
+API_ACCESS_V6 = "accessIPv6"
 
 
 def disk_config_from_api(value):
@@ -59,3 +61,8 @@ def translate_attributes(server_dict, operation_kwargs):
     if auto_disk_config_raw is not None:
         auto_disk_config = disk_config_from_api(auto_disk_config_raw)
         operation_kwargs['auto_disk_config'] = auto_disk_config
+
+    if API_ACCESS_V4 in server_dict:
+        operation_kwargs['access_ip_v4'] = server_dict.pop(API_ACCESS_V4)
+    if API_ACCESS_V6 in server_dict:
+        operation_kwargs['access_ip_v6'] = server_dict.pop(API_ACCESS_V6)
