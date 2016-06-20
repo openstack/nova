@@ -105,7 +105,7 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
     """Updates existing inventory records for the supplied resource provider.
 
     :param conn: DB connection to use.
-    :param rp: Resource provider to add inventory to.
+    :param rp: Resource provider on which to update inventory.
     :param inv_list: InventoryList object
     :param to_update: set() containing resource class IDs to search inv_list
                       for updating in resource provider.
@@ -130,7 +130,11 @@ def _increment_provider_generation(conn, rp):
 
     :param conn: DB connection to use.
     :param rp: `ResourceProvider` whose generation should be updated.
-    :returns True if the generation was incremented, False otherwise.
+    :returns: The new resource provider generation value if successful.
+    :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
+            the same resource provider's view of its inventory or allocations
+            in between the time when this object was originally read
+            and the call to set the inventory.
     """
     rp_gen = rp.generation
     new_generation = rp_gen + 1
@@ -151,10 +155,11 @@ def _set_inventory(context, rp, inv_list):
     resource provider in a safe, atomic fashion using the resource
     provider's generation as a consistent view marker.
 
+    :param context: Nova RequestContext.
     :param rp: `ResourceProvider` object upon which to set inventory.
     :param inv_list: `InventoryList` object to save to backend storage.
-    :raises `ConcurrentUpdateDetected` if another thread updated the
-            same resource provider's view of its inventory or allocations
+    :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
+            the same resource provider's view of its inventory or allocations
             in between the time when this object was originally read
             and the call to set the inventory.
     """
