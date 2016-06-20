@@ -10,6 +10,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
+from oslo_db import exception as db_exc
+
 from nova import context
 from nova import exception
 from nova import objects
@@ -137,7 +140,7 @@ class ResourceProviderTestCase(test.NoDBTestCase):
             self.context, resource_provider.uuid))
         self.assertEqual(33, reloaded_inventories[0].total)
 
-    def test_provider_set_inventory(self):
+    def test_provider_modify_inventory(self):
         rp = objects.ResourceProvider(context=self.context,
                                       uuid=uuidsentinel.rp_uuid,
                                       name=uuidsentinel.rp_name)
@@ -205,8 +208,7 @@ class ResourceProviderTestCase(test.NoDBTestCase):
                 max_unit=100,
                 step_size=10,
                 allocation_ratio=1.0)
-        inv_list = objects.InventoryList(objects=[disk_inv])
-        rp.set_inventory(inv_list)
+        rp.update_inventory(disk_inv)
 
         # generation has bumped
         self.assertEqual(saved_generation + 1, rp.generation)
@@ -217,7 +219,80 @@ class ResourceProviderTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
 
+        # fail when inventory bad
+        disk_inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.DISK_GB,
+                total=2048,
+                reserved=2048)
+        disk_inv.obj_set_defaults()
+        self.assertRaises(exception.ObjectActionError,
+                          rp.update_inventory, disk_inv)
+
+        # generation has not bumped
+        self.assertEqual(saved_generation, rp.generation)
+
+        # delete inventory
+        rp.delete_inventory(fields.ResourceClass.DISK_GB)
+
+        # generation has bumped
+        self.assertEqual(saved_generation + 1, rp.generation)
+        saved_generation = rp.generation
+
+        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+                self.context, uuidsentinel.rp_uuid)
+        result = new_inv_list.find(fields.ResourceClass.DISK_GB)
+        self.assertIsNone(result)
+        self.assertRaises(exception.NotFound, rp.delete_inventory,
+                          fields.ResourceClass.DISK_GB)
+
+        # check inventory list is empty
+        inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+                self.context, uuidsentinel.rp_uuid)
+        self.assertEqual(0, len(inv_list))
+
+        # add some inventory
+        rp.add_inventory(vcpu_inv)
+        inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+                self.context, uuidsentinel.rp_uuid)
+        self.assertEqual(1, len(inv_list))
+
+        # generation has bumped
+        self.assertEqual(saved_generation + 1, rp.generation)
+        saved_generation = rp.generation
+
+        # add same inventory again
+        self.assertRaises(db_exc.DBDuplicateEntry,
+                          rp.add_inventory, vcpu_inv)
+
+        # generation has not bumped
+        self.assertEqual(saved_generation, rp.generation)
+
         # fail when generation wrong
         rp.generation = rp.generation - 1
         self.assertRaises(exception.ConcurrentUpdateDetected,
                           rp.set_inventory, inv_list)
+
+    def test_delete_inventory_not_found(self):
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=uuidsentinel.rp_uuid,
+                                      name=uuidsentinel.rp_name)
+        rp.create()
+        error = self.assertRaises(exception.NotFound, rp.delete_inventory,
+                                  'DISK_GB')
+        self.assertIn('No inventory of class DISK_GB found for delete',
+                      str(error))
+
+    def test_update_inventory_not_found(self):
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=uuidsentinel.rp_uuid,
+                                      name=uuidsentinel.rp_name)
+        rp.create()
+        disk_inv = objects.Inventory(resource_provider=rp,
+                                     resource_class='DISK_GB',
+                                     total=2048)
+        disk_inv.obj_set_defaults()
+        error = self.assertRaises(exception.NotFound, rp.update_inventory,
+                                  disk_inv)
+        self.assertIn('No inventory of class DISK_GB found for update',
+                      str(error))

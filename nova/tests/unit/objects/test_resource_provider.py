@@ -205,6 +205,22 @@ class _TestInventoryNoDB(object):
         self.assertEqual(1, inv.step_size)
         self.assertEqual(1.0, inv.allocation_ratio)
 
+    def test_capacity(self):
+        rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                      uuid=_RESOURCE_PROVIDER_UUID)
+        kwargs = dict(resource_provider=rp,
+                      resource_class=_RESOURCE_CLASS_NAME,
+                      total=16,
+                      reserved=16)
+        inv = objects.Inventory(self.context, **kwargs)
+        inv.obj_set_defaults()
+
+        self.assertEqual(0, inv.capacity)
+        inv.reserved = 15
+        self.assertEqual(1, inv.capacity)
+        inv.allocation_ratio = 2.0
+        self.assertEqual(2, inv.capacity)
+
 
 class TestInventoryNoDB(test_objects._LocalTest,
                         _TestInventoryNoDB):
