@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import collections
 import contextlib
 import copy
 import datetime
@@ -32,7 +31,6 @@ import six
 
 from nova import context
 from nova import exception
-from nova.notifications.objects import base as notification
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -1120,7 +1118,6 @@ object_data = {
     'EC2InstanceMapping': '1.0-a4556eb5c5e94c045fe84f49cf71644f',
     'EC2SnapshotMapping': '1.0-47e7ddabe1af966dce0cfd0ed6cd7cd1',
     'EC2VolumeMapping': '1.0-5b713751d6f97bad620f3378a521020d',
-    'EventType': '1.0-21dc35de314fc5fc0a7965211c0c00f7',
     'FixedIP': '1.14-53e1c10b539f1a82fe83b1af4720efae',
     'FixedIPList': '1.14-87a39361c8f08f059004d6b15103cdfd',
     'Flavor': '1.1-b6bb7a730a79d720344accefafacf7ee',
@@ -1162,7 +1159,6 @@ object_data = {
     'MigrationList': '1.3-55595bfc1a299a5962614d0821a3567e',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
-    'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
     'NUMACell': '1.2-74fc993ac5c83005e76e34e8487f1c05',
     'NUMAPagesTopology': '1.1-edab9fa2dc43c117a38d600be54b4542',
     'NUMATopology': '1.2-c63fad38be73b6afd04715c9c1b29220',
@@ -1191,8 +1187,6 @@ object_data = {
     'SecurityGroupRuleList': '1.2-0005c47fcd0fb78dd6d7fd32a1409f5b',
     'Service': '1.20-0f9c0bf701e68640b78638fd09e2cddc',
     'ServiceList': '1.18-6c52cb616621c1af2415dcc11faf5c1a',
-    'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'ServiceStatusPayload': '1.0-a5e7b4fd6cc5581be45b31ff1f3a3f7f',
     'TaskLog': '1.0-78b0534366f29aa3eebb01860fbe18fe',
     'TaskLogList': '1.0-cc8cce1af8a283b9d28b55fcd682e777',
     'Tag': '1.1-8b8d7d5b48887651a0e01241672e2963',
@@ -1209,15 +1203,10 @@ object_data = {
 
 
 class TestObjectVersions(test.NoDBTestCase):
-
-    def setUp(self):
-        super(test.NoDBTestCase, self).setUp()
-        base.NovaObjectRegistry.register_notification_objects()
-
     def test_versions(self):
         checker = fixture.ObjectVersionChecker(
             base.NovaObjectRegistry.obj_classes())
-        fingerprints = checker.get_hashes(extra_data_func=get_extra_data)
+        fingerprints = checker.get_hashes()
 
         if os.getenv('GENERATE_HASHES'):
             open('object_hashes.txt', 'w').write(
@@ -1230,32 +1219,6 @@ class TestObjectVersions(test.NoDBTestCase):
                          'Some objects have changed; please make sure the '
                          'versions have been bumped, and then update their '
                          'hashes here.')
-
-    def test_notification_payload_version_depends_on_the_schema(self):
-        @base.NovaObjectRegistry.register_if(False)
-        class TestNotificationPayload(notification.NotificationPayloadBase):
-            VERSION = '1.0'
-
-            SCHEMA = {
-                'field_1': ('source_field', 'field_1'),
-                'field_2': ('source_field', 'field_2'),
-            }
-
-            fields = {
-                'extra_field': fields.StringField(),  # filled by ctor
-                'field_1': fields.StringField(),  # filled by the schema
-                'field_2': fields.IntegerField(),   # filled by the schema
-            }
-
-        checker = fixture.ObjectVersionChecker(
-            {'TestNotificationPayload': (TestNotificationPayload,)})
-
-        old_hash = checker.get_hashes(extra_data_func=get_extra_data)
-        TestNotificationPayload.SCHEMA['field_3'] = ('source_field',
-                                                     'field_3')
-        new_hash = checker.get_hashes(extra_data_func=get_extra_data)
-
-        self.assertNotEqual(old_hash, new_hash)
 
     def test_obj_make_compatible(self):
         # NOTE(danms): This is normally not registered because it is just a
@@ -1379,17 +1342,3 @@ class TestObjMethodOverrides(test.NoDBTestCase):
             obj_class = obj_classes[obj_name][0]
             self.assertEqual(args,
                     inspect.getargspec(obj_class.obj_reset_changes))
-
-
-def get_extra_data(obj_class):
-    extra_data = tuple()
-
-    # Get the SCHEMA items to add to the fingerprint
-    # if we are looking at a notification
-    if issubclass(obj_class, notification.NotificationPayloadBase):
-        schema_data = collections.OrderedDict(
-            sorted(obj_class.SCHEMA.items()))
-
-        extra_data += (schema_data,)
-
-    return extra_data
