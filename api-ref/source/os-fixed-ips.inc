@@ -1,7 +1,5 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
-.. needs:body_verification
 
 ==========================
  Fixed IPs (os-fixed-ips)
@@ -26,11 +24,19 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
-  - fixed_ip: fixed_ip
+  - fixed_ip: fixed_ip_path
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - fixed_ip: fixed_ip_obj
+  - address: ip_address
+  - cidr: cidr
+  - host: fixed_ip_host
+  - hostname: fixed_ip_hostname
+
 
 **Example Show Fixed Ip Details: JSON response**
 
@@ -44,7 +50,8 @@ Reserve Or Release A Fixed Ip
 
 Reserves or releases a fixed IP.
 
-To reserve a fixed IP address, specify ``reserve`` in the request body. To release a fixed IP address, specify ``unreserve`` in the request body.
+To reserve a fixed IP address, specify ``reserve`` in the request body.
+To release a fixed IP address, specify ``unreserve`` in the request body.
 
 Normal response codes: 202
 
@@ -55,8 +62,10 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
+  - fixed_ip: fixed_ip_path
+  - reserve: action_reserve
+  - unreserve: action_unreserve
 
-  - fixed_ip: fixed_ip
 
 **Example Reserve Or Release A Fixed Ip: JSON request**
 
@@ -66,3 +75,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful POST query

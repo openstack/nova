@@ -96,7 +96,7 @@ domain:
   in: path
   required: true
   type: string
-fixed_ip_1:
+fixed_ip_path:
   description: |
     The fixed IP of interest to you.
   in: path
@@ -643,6 +643,18 @@ accessIPv6_in:
   type: string
   description: |
     IPv6 address that should be used to access this server.
+action_reserve:
+  description: |
+    The attribute to reserve an IP with a value of ``null``.
+  in: body
+  required: false
+  type: string
+action_unreserve:
+  description: |
+    The attribute to release an IP with a value of ``null``.
+  in: body
+  required: false
+  type: string
 addFixedIp:
   description: |
     The action.
@@ -1320,6 +1332,25 @@ fixed_ip:
   in: body
   required: false
   type: string
+fixed_ip_host:
+  description: |
+    The hostname of the host that manages the server that is associated with
+    this fixed IP address.
+  in: body
+  required: true
+  type: string
+fixed_ip_hostname:
+  description: |
+    The hostname of the server that is associated with this fixed IP address.
+  in: body
+  required: true
+  type: string
+fixed_ip_obj:
+  description: |
+    A fixed IP address object.
+  in: body
+  required: true
+  type: object
 fixed_ips:
   description: |
     Fixed IP addresses.  If you request a specific fixed IP address without
@@ -2050,6 +2081,12 @@ ip_address:
 ip_address_req:
   description: |
     The IP address. It is required when ``fixed_ips`` is specified.
+  in: body
+  required: true
+  type: string
+ip_host:
+  description: |
+    The name or ID of the host associated to the IP.
   in: body
   required: true
   type: string
