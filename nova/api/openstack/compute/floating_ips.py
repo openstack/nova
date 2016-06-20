@@ -15,8 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import netaddr
 from oslo_log import log as logging
+from oslo_utils import netutils
 from oslo_utils import uuidutils
 import webob
 
@@ -241,7 +241,7 @@ class FloatingIPActionController(wsgi.Controller):
         if not fixed_address:
             try:
                 fixed_address = next(ip['address'] for ip in fixed_ips
-                                     if netaddr.valid_ipv4(ip['address']))
+                                     if netutils.is_valid_ipv4(ip['address']))
             except StopIteration:
                 msg = _('Unable to associate floating IP %(address)s '
                         'to any fixed IPs for instance %(id)s. '
