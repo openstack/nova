@@ -318,3 +318,9 @@ user documentation.
   Also changes the live-migrate action behaviour when providing a ``host``
   string field by calling the nova scheduler to verify the provided host unless
   the ``force`` attribute is set.
+
+2.31
+----
+
+  Fix os-console-auth-tokens to return connection info for all types of tokens,
+  not just RDP.
