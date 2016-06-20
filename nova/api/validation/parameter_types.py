@@ -357,6 +357,10 @@ volume_size = {
     'maximum': db.MAX_INT
 }
 
+disk_config = {
+    'type': 'string',
+    'enum': ['AUTO', 'MANUAL']
+}
 
 flavor_param_positive = copy.deepcopy(volume_size)
 

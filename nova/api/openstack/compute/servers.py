@@ -29,6 +29,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute import disk_config
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
@@ -54,6 +55,16 @@ LOG = logging.getLogger(__name__)
 authorize = extensions.os_compute_authorizer(ALIAS)
 
 
+def translate_attributes(server_dict, server_kwargs):
+    # Disk config
+    # Translate create kwargs to internal representation
+    auto_disk_config_raw = server_dict.pop("OS-DCF:diskConfig", None)
+    if auto_disk_config_raw is not None:
+        auto_disk_config = disk_config.disk_config_from_api(
+            auto_disk_config_raw)
+        server_kwargs['auto_disk_config'] = auto_disk_config
+
+
 class ServersController(wsgi.Controller):
     """The Server API base controller class for the OpenStack API."""
 
@@ -62,8 +73,6 @@ class ServersController(wsgi.Controller):
     EXTENSION_REBUILD_NAMESPACE = 'nova.api.v21.extensions.server.rebuild'
 
     EXTENSION_UPDATE_NAMESPACE = 'nova.api.v21.extensions.server.update'
-
-    EXTENSION_RESIZE_NAMESPACE = 'nova.api.v21.extensions.server.resize'
 
     _view_builder_class = views_servers.ViewBuilderV21
 
@@ -184,17 +193,6 @@ class ServersController(wsgi.Controller):
         if not list(self.update_extension_manager):
             LOG.debug("Did not find any server update extensions")
 
-        # Look for implementation of extension point of server resize
-        self.resize_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_RESIZE_NAMESPACE,
-                check_func=_check_load_extension('server_resize'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.resize_extension_manager):
-            LOG.debug("Did not find any server resize extensions")
-
         # Look for API schema of server create extension
         self.create_schema_manager = \
             stevedore.enabled.EnabledExtensionManager(
@@ -254,20 +252,6 @@ class ServersController(wsgi.Controller):
                                             '2.0')
         else:
             LOG.debug("Did not find any server rebuild schemas")
-
-        # Look for API schema of server resize extension
-        self.resize_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_RESIZE_NAMESPACE,
-                check_func=_check_load_extension('get_server_resize_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.resize_schema_manager):
-            self.resize_schema_manager.map(self._resize_extension_schema,
-                                           self.schema_server_resize, '2.1')
-        else:
-            LOG.debug("Did not find any server resize schemas")
 
     @extensions.expected_errors((400, 403))
     def index(self, req):
@@ -583,6 +567,8 @@ class ServersController(wsgi.Controller):
 
         availability_zone = create_kwargs.pop("availability_zone", None)
 
+        translate_attributes(server_dict, create_kwargs)
+
         target = {
             'project_id': context.project_id,
             'user_id': context.user_id,
@@ -758,12 +744,6 @@ class ServersController(wsgi.Controller):
 
         handler.server_rebuild(rebuild_dict, rebuild_kwargs)
 
-    def _resize_extension_point(self, ext, resize_dict, resize_kwargs):
-        handler = ext.obj
-        LOG.debug("Running _resize_extension_point for %s", ext.obj)
-
-        handler.server_resize(resize_dict, resize_kwargs)
-
     def _update_extension_point(self, ext, update_dict, update_kwargs):
         handler = ext.obj
         LOG.debug("Running _update_extension_point for %s", ext.obj)
@@ -795,13 +775,6 @@ class ServersController(wsgi.Controller):
 
         schema = handler.get_server_rebuild_schema(version)
         rebuild_schema['properties']['rebuild']['properties'].update(schema)
-
-    def _resize_extension_schema(self, ext, resize_schema, version):
-        handler = ext.obj
-        LOG.debug("Running _resize_extension_schema for %s", ext.obj)
-
-        schema = handler.get_server_resize_schema(version)
-        resize_schema['properties']['resize']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
         authorize(context, action='delete')
@@ -839,6 +812,8 @@ class ServersController(wsgi.Controller):
         if list(self.update_extension_manager):
             self.update_extension_manager.map(self._update_extension_point,
                                               body['server'], update_dict)
+
+        translate_attributes(body['server'], update_dict)
 
         instance = self._get_server(ctxt, req, id, is_detail=True)
         try:
@@ -1003,10 +978,7 @@ class ServersController(wsgi.Controller):
         flavor_ref = str(resize_dict["flavorRef"])
 
         resize_kwargs = {}
-
-        if list(self.resize_extension_manager):
-            self.resize_extension_manager.map(self._resize_extension_point,
-                                              resize_dict, resize_kwargs)
+        translate_attributes(resize_dict, resize_kwargs)
 
         self._resize(req, id, flavor_ref, **resize_kwargs)
 
@@ -1040,6 +1012,8 @@ class ServersController(wsgi.Controller):
         if list(self.rebuild_extension_manager):
             self.rebuild_extension_manager.map(self._rebuild_extension_point,
                                                rebuild_dict, rebuild_kwargs)
+
+        translate_attributes(rebuild_dict, rebuild_kwargs)
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
