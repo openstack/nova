@@ -39,7 +39,7 @@ class LegacyV2CompatibleTestBase(test_servers.ServersTestBase):
         self.assertNotIn('Vary', response.headers)
         self.assertNotIn('type', response.body["keypair"])
 
-    def test_request_without_addtional_properties_check(self):
+    def test_request_without_additional_properties_check(self):
         self.api.microversion = '2.100'
         response = self.api.api_post('os-keypairs',
             {"keypair": {"name": "test", "foooooo": "barrrrrr"}})

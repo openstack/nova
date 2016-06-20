@@ -4228,7 +4228,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.patch.object(self.instance, 'save',
                     side_effect=exception.InstanceNotFound(instance_id=''))
         ) as (_deallocate_network, save):
-            # Testing that this doesn't raise an exeption
+            # Testing that this doesn't raise an exception
             self.compute._cleanup_allocated_networks(self.context,
                     self.instance, self.requested_networks)
             save.assert_called_once_with()

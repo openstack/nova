@@ -133,7 +133,7 @@ class _TestBlockDeviceMappingObject(object):
                           self.context, 'fake-volume-id')
 
     @mock.patch.object(db, 'block_device_mapping_get_all_by_volume_id')
-    def test_get_by_volume_instance_uuid_missmatch(self, get_by_vol_id):
+    def test_get_by_volume_instance_uuid_mismatch(self, get_by_vol_id):
         fake_bdm_vol = self.fake_bdm(instance={'uuid': 'other-fake-instance'})
         get_by_vol_id.return_value = [fake_bdm_vol]
 

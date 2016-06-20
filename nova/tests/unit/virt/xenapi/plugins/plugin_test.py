@@ -35,7 +35,7 @@ class PluginTestBase(test.NoDBTestCase):
         session.apply_session_helpers(self.session)
 
     def mock_patch_object(self, target, attribute, return_val=None):
-        # utilility function to mock object's attribute
+        # utility function to mock object's attribute
         patcher = mock.patch.object(target, attribute, return_value=return_val)
         mock_one = patcher.start()
         self.addCleanup(patcher.stop)

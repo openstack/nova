@@ -3096,7 +3096,7 @@ class API(base.Base):
         """Detach a volume from an instance in shelved offloaded state.
 
         If the instance is shelved offloaded we just need to cleanup volume
-        calling the volume api detach, the volume api terminte_connection
+        calling the volume api detach, the volume api terminate_connection
         and delete the bdm record.
         If the volume has delete_on_termination option set then we call the
         volume api delete as well.

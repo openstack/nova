@@ -218,7 +218,7 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
                           self.attachments.delete,
                           self.req,
                           FAKE_UUID1,
-                          'invaid-port-id')
+                          'invalid-port-id')
 
     def test_attach_interface_instance_locked(self):
         def fake_attach_interface_to_locked_server(self, context,

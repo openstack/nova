@@ -40,7 +40,7 @@ class InstancePCIRequest(base.NovaObject,
 
     # NOTE(danms): The dict that this object replaces uses a key of 'new'
     # so we translate it here to our more appropropriately-named 'is_new'.
-    # This is not something that affects the obect version, so we could
+    # This is not something that affects the object version, so we could
     # remove this later when all dependent code is fixed.
     @property
     def new(self):

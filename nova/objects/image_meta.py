@@ -359,7 +359,7 @@ class ImageMetaProps(base.NovaObject):
 
         # Image mappings - related to Block device mapping data - mapping
         # of virtual image names to device names. This could be represented
-        # as a formatl data type, but is left as dict for same reason as
+        # as a formal data type, but is left as dict for same reason as
         # img_block_device_mapping field. It would arguably make sense for
         # the two to be combined into a single field and data type in the
         # future.

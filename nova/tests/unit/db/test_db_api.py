@@ -4323,7 +4323,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                 flavor['flavorid'], read_deleted='yes')
         self.assertEqual(flavor['id'], flavor_by_fid['id'])
 
-    def test_flavor_get_by_flavor_id_deleted_and_recreat(self):
+    def test_flavor_get_by_flavor_id_deleted_and_recreate(self):
         # NOTE(wingwj): Aims to test difference between mysql and postgresql
         # for bug 1288636
         param_dict = {'name': 'abc', 'flavorid': '123'}

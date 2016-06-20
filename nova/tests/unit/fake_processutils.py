@@ -54,7 +54,7 @@ def fake_execute_default_reply_handler(*ignore_args, **ignore_kwargs):
 def fake_execute(*cmd_parts, **kwargs):
     """This function stubs out execute.
 
-    It optionally executes a preconfigued function to return expected data.
+    It optionally executes a preconfigured function to return expected data.
 
     """
     global _fake_execute_repliers

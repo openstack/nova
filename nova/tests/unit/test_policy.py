@@ -45,7 +45,7 @@ class PolicyFileTestCase(test.NoDBTestCase):
 
             self.flags(policy_file=tmpfilename, group='oslo_policy')
 
-            # NOTE(uni): context construction invokes policy check to determin
+            # NOTE(uni): context construction invokes policy check to determine
             # is_admin or not. As a side-effect, policy reset is needed here
             # to flush existing policy cache.
             policy.reset()

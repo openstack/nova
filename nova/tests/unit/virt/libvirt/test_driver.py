@@ -15542,7 +15542,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                 configdrive_path))]
         mock_make.assert_has_calls(expected_call)
 
-        # cache() should habe been called on the 3 non-config disk backends
+        # cache() should have been called on the 3 non-config disk backends
         for backend in (mock_backend.kernel, mock_backend.ramdisk,
                         mock_backend.root):
             self.assertTrue(backend.cache.called)

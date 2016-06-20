@@ -955,7 +955,7 @@ msgid "Unable to introduce VDI on SR"
 msgstr "Impossible d'introduire VDI sur SR"
 
 msgid "Unable to load the virtualization driver"
-msgstr "Incapable de charger le pilote de virtualisation"
+msgstr "Incapable de charger le pilote de virtualization"
 
 #, python-format
 msgid "Unable to migrate VM %(vm_ref)s from %(host)s"

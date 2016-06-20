@@ -59,7 +59,7 @@ class HostController(wsgi.Controller):
         |    {'host_name': 'network1.host.com',
         |     'service': 'network',
         |     'zone': 'internal'},
-        |    {'host_name': 'netwwork2.host.com',
+        |    {'host_name': 'network2.host.com',
         |     'service': 'network',
         |     'zone': 'internal'},
         |    {'host_name': 'compute1.host.com',

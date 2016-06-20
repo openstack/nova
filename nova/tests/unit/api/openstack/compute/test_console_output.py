@@ -150,10 +150,10 @@ class ConsoleOutputExtensionTestV21(test.NoDBTestCase):
         self._check_console_output_failure(webob.exc.HTTPNotFound, body)
 
 
-class ConsoleOutpuPolicyEnforcementV21(test.NoDBTestCase):
+class ConsoleOutputPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
-        super(ConsoleOutpuPolicyEnforcementV21, self).setUp()
+        super(ConsoleOutputPolicyEnforcementV21, self).setUp()
         self.controller = console_output_v21.ConsoleOutputController()
 
     def test_get_console_output_policy_failed(self):

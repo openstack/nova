@@ -2291,7 +2291,7 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
+"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
 "count: %(vif_count)d, Pif count: %(pif_count)d)"
 msgstr ""
 "Узел Ironic %(id)s: несоответствие числа виртуальных и физических "

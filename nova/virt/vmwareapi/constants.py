@@ -65,7 +65,7 @@ SUPPORTED_FLAT_VARIANTS = ["thin", "preallocated", "thick", "eagerZeroedThick"]
 EXTENSION_KEY = 'org.openstack.compute'
 EXTENSION_TYPE_INSTANCE = 'instance'
 
-# The max number of devices that can be connnected to one adapter
+# The max number of devices that can be connected to one adapter
 # One adapter has 16 slots but one reserved for controller
 SCSI_MAX_CONNECT_NUMBER = 15
 

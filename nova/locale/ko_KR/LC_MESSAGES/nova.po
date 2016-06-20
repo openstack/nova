@@ -2204,7 +2204,7 @@ msgstr ""
 
 #, python-format
 msgid ""
-"Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
+"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
 "count: %(vif_count)d, Pif count: %(pif_count)d)"
 msgstr ""
 "아이로닉 노드: 실제 인터페이스 개수에 대한 %(id)s 가상 불일치(Vif 개수: "

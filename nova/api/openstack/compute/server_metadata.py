@@ -39,7 +39,7 @@ class ServerMetadataController(wsgi.Controller):
     def _get_metadata(self, context, server_id):
         server = common.get_instance(self.compute_api, context, server_id)
         try:
-            # NOTE(mikal): get_instanc_metadata sometimes returns
+            # NOTE(mikal): get_instance_metadata sometimes returns
             # InstanceNotFound in unit tests, even though the instance is
             # fetched on the line above. I blame mocking.
             meta = self.compute_api.get_instance_metadata(context, server)

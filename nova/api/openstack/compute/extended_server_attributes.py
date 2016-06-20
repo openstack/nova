@@ -39,7 +39,7 @@ class ExtendedServerAttributesController(wsgi.Controller):
             # NOTE(mriedem): These will use the OS-EXT-SRV-ATTR prefix below
             # and that's OK for microversion 2.3 which is being compatible
             # with v2.0 for the ec2 API split out from Nova. After this,
-            # however, new microversoins should not be using the
+            # however, new microversions should not be using the
             # OS-EXT-SRV-ATTR prefix.
             properties += ['reservation_id', 'launch_index',
                            'hostname', 'kernel_id', 'ramdisk_id',

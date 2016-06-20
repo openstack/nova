@@ -666,7 +666,7 @@ class CellCommandsTestCase(test.NoDBTestCase):
 
     def test_create_transport_hosts_wrong_val(self):
         """Test the _create_transport_hosts method when broker_hosts
-        is wrongly sepcified
+        is wrongly specified
         """
         self.assertRaises(ValueError,
                           self.commands._create_transport_hosts,
@@ -675,7 +675,7 @@ class CellCommandsTestCase(test.NoDBTestCase):
 
     def test_create_transport_hosts_wrong_port_val(self):
         """Test the _create_transport_hosts method when port in
-        broker_hosts is wrongly sepcified
+        broker_hosts is wrongly specified
         """
         self.assertRaises(ValueError,
                           self.commands._create_transport_hosts,
@@ -684,7 +684,7 @@ class CellCommandsTestCase(test.NoDBTestCase):
 
     def test_create_transport_hosts_wrong_port_arg(self):
         """Test the _create_transport_hosts method when port
-        argument is wrongly sepcified
+        argument is wrongly specified
         """
         self.assertRaises(ValueError,
                           self.commands._create_transport_hosts,

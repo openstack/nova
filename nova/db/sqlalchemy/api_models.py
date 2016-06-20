@@ -334,7 +334,7 @@ class Allocation(API_BASE):
 
 
 class ResourceProviderAggregate(API_BASE):
-    """Assocate a resource provider with an aggregate."""
+    """Associate a resource provider with an aggregate."""
 
     __tablename__ = 'resource_provider_aggregates'
     __table_args__ = (

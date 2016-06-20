@@ -95,7 +95,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         self.no_config_drive_controller = servers_v21.ServersController(
             extension_info=ext_info)
 
-    def _verfiy_config_drive(self, **kwargs):
+    def _verify_config_drive(self, **kwargs):
         self.assertNotIn('config_drive', kwargs)
 
     def _initialize_extension(self):
@@ -157,7 +157,7 @@ class ServersControllerCreateTestV21(test.TestCase):
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
-            self._verfiy_config_drive(**kwargs)
+            self._verify_config_drive(**kwargs)
             return old_create(*args, **kwargs)
 
         self.stub_out('nova.compute.api.API.create', create)

@@ -1005,7 +1005,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         if len(network_info) > len(ports):
             raise exception.VirtualInterfacePlugException(_(
                 "Ironic node: %(id)s virtual to physical interface count"
-                "  missmatch"
+                "  mismatch"
                 " (Vif count: %(vif_count)d, Pif count: %(pif_count)d)")
                 % {'id': node.uuid,
                    'vif_count': len(network_info),

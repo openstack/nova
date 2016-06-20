@@ -1500,7 +1500,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True,
                      check_exit_code=[0, 2, 254])
         # NOTE(vish): set mtu every time to ensure that changes to mtu get
-        #             propogated
+        #             propagated
         _set_device_mtu(interface, mtu)
         return interface
 

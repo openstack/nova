@@ -181,7 +181,7 @@ class KeypairsTestV21(test.TestCase):
             },
         }
         res_dict = self.controller.create(self.req, body=body)
-        # FIXME(ja): sholud we check that public_key was sent to create?
+        # FIXME(ja): Should we check that public_key was sent to create?
         self.assertGreater(len(res_dict['keypair']['fingerprint']), 0)
         self.assertNotIn('private_key', res_dict['keypair'])
         self._assert_keypair_type(res_dict)
