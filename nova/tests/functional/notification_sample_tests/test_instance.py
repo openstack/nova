@@ -243,8 +243,7 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-
-def test_create_suspend_server(self):
+    def test_create_suspend_server(self):
         server = self._boot_a_server(
                 extra_params={'networks':
                                   [{'port': self.neutron.port_1['id']}]})
@@ -262,6 +261,29 @@ def test_create_suspend_server(self):
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-suspend-end',
+            replacements={
+                'reservation_id':
+                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def test_create_pause_server(self):
+        server = self._boot_a_server(
+                extra_params={'networks':
+                                  [{'port': self.neutron.port_1['id']}]})
+        self.api.post_server_action(server['id'], {'pause': {}})
+        self._wait_for_state_change(self.api, server, 'PAUSED')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-pause-start',
+            replacements={
+                'reservation_id':
+                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-pause-end',
             replacements={
                 'reservation_id':
                     notification_sample_base.NotificationSampleTestBase.ANY,

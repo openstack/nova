@@ -3983,12 +3983,18 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         LOG.info(_LI('Pausing'), context=context, instance=instance)
         self._notify_about_instance_usage(context, instance, 'pause.start')
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.PAUSE,
+               phase=fields.NotificationPhase.START)
         self.driver.pause(instance)
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.PAUSED
         instance.task_state = None
         instance.save(expected_task_state=task_states.PAUSING)
         self._notify_about_instance_usage(context, instance, 'pause.end')
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.PAUSE,
+               phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state
