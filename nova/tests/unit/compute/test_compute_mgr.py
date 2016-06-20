@@ -260,7 +260,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(instance, 'save'),
             mock.patch.object(instance, 'destroy')
         ) as (
-            compute_notify_about_instance_usage, comupte_shutdown_instance,
+            compute_notify_about_instance_usage, compute_shutdown_instance,
             instance_obj_load_attr, instance_save, instance_destroy
         ):
             instance.info_cache = None
