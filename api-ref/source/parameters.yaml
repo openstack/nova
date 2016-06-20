@@ -1072,8 +1072,12 @@ cores_quota_optional:
   type: integer
 cpu_info:
   description: |
-    The cpu information object. The content of this field is hypervisor
-    specific.
+    A dictionary that contains cpu information like ``arch``, ``model``,
+    ``vendor``, ``features`` and ``topology``. The content of this field is
+    hypervisor specific.
+
+    NOTE: Since version 2.28 ``cpu_info`` field is returned as a dictionary
+    instead of string.
   in: body
   required: true
   type: object

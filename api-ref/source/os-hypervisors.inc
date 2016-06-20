@@ -84,7 +84,11 @@ Response
 
 **Example List Hypervisors Details: JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-detail-resp.json
+.. note::
+
+   This API sample is actual since microversion v2.28
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.28/hypervisors-detail-resp.json
    :language: javascript
 
 Show Hypervisor Statistics
@@ -177,7 +181,11 @@ Response
 
 **Example Show Hypervisor Details: JSON response**
 
-.. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-show-resp.json
+.. note::
+
+   This API sample is actual since microversion v2.28
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.28/hypervisors-show-resp.json
    :language: javascript
 
 Show Hypervisor Uptime
