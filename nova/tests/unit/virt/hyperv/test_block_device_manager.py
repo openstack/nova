@@ -28,6 +28,66 @@ class BlockDeviceManagerTestCase(test_base.HyperVBaseTestCase):
         super(BlockDeviceManagerTestCase, self).setUp()
         self._bdman = block_device_manager.BlockDeviceInfoManager()
 
+    def test_get_device_bus_scsi(self):
+        bdm = {'disk_bus': constants.CTRL_TYPE_SCSI,
+               'drive_addr': 0, 'ctrl_disk_addr': 2}
+
+        bus = self._bdman._get_device_bus(bdm)
+        self.assertEqual('0:0:0:2', bus.address)
+
+    def test_get_device_bus_ide(self):
+        bdm = {'disk_bus': constants.CTRL_TYPE_IDE,
+               'drive_addr': 0, 'ctrl_disk_addr': 1}
+
+        bus = self._bdman._get_device_bus(bdm)
+        self.assertEqual('0:1', bus.address)
+
+    @staticmethod
+    def _bdm_mock(**kwargs):
+        bdm = mock.MagicMock(**kwargs)
+        bdm.__contains__.side_effect = (
+            lambda attr: getattr(bdm, attr, None) is not None)
+        return bdm
+
+    @mock.patch.object(block_device_manager.objects, 'DiskMetadata')
+    @mock.patch.object(block_device_manager.BlockDeviceInfoManager,
+                       '_get_device_bus')
+    @mock.patch.object(block_device_manager.objects.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_get_bdm_metadata(self, mock_get_by_inst_uuid, mock_get_device_bus,
+                              mock_DiskMetadata):
+        mock_instance = mock.MagicMock()
+        root_disk = {'mount_device': mock.sentinel.dev0}
+        ephemeral = {'device_name': mock.sentinel.dev1}
+        block_device_info = {
+            'root_disk': root_disk,
+            'block_device_mapping': [
+                {'mount_device': mock.sentinel.dev2},
+                {'mount_device': mock.sentinel.dev3},
+            ],
+            'ephemerals': [ephemeral],
+        }
+
+        bdm = self._bdm_mock(device_name=mock.sentinel.dev0, tag='taggy')
+        eph = self._bdm_mock(device_name=mock.sentinel.dev1, tag='ephy')
+        mock_get_by_inst_uuid.return_value = [
+            bdm, eph, self._bdm_mock(device_name=mock.sentinel.dev2, tag=None),
+        ]
+
+        bdm_metadata = self._bdman.get_bdm_metadata(mock.sentinel.context,
+                                                    mock_instance,
+                                                    block_device_info)
+
+        mock_get_by_inst_uuid.assert_called_once_with(mock.sentinel.context,
+                                                      mock_instance.uuid)
+        mock_get_device_bus.assert_has_calls(
+          [mock.call(root_disk), mock.call(ephemeral)], any_order=True)
+        mock_DiskMetadata.assert_has_calls(
+            [mock.call(bus=mock_get_device_bus.return_value, tags=[bdm.tag]),
+             mock.call(bus=mock_get_device_bus.return_value, tags=[eph.tag])],
+            any_order=True)
+        self.assertEqual([mock_DiskMetadata.return_value] * 2, bdm_metadata)
+
     @mock.patch('nova.virt.configdrive.required_by')
     def test_init_controller_slot_counter_gen1_no_configdrive(
             self, mock_cfg_drive_req):

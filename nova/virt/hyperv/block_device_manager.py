@@ -18,11 +18,14 @@ Handling of block device information and mapping
 Module contains helper methods for dealing with block device information
 """
 
+import itertools
+
 from os_win import constants as os_win_const
 
 from nova import block_device
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.hyperv import constants
@@ -44,6 +47,47 @@ class BlockDeviceInfoManager(object):
 
     def __init__(self):
         self._volops = volumeops.VolumeOps()
+
+    @staticmethod
+    def _get_device_bus(bdm):
+        """Determines the device bus and it's hypervisor assigned address.
+        """
+        if bdm['disk_bus'] == constants.CTRL_TYPE_SCSI:
+            address = ':'.join(['0', '0', str(bdm['drive_addr']),
+                                str(bdm['ctrl_disk_addr'])])
+            return objects.SCSIDeviceBus(address=address)
+        elif bdm['disk_bus'] == constants.CTRL_TYPE_IDE:
+            address = ':'.join([str(bdm['drive_addr']),
+                                str(bdm['ctrl_disk_addr'])])
+            return objects.IDEDeviceBus(address=address)
+
+    def get_bdm_metadata(self, context, instance, block_device_info):
+        """Builds a metadata object for instance devices, that maps the user
+           provided tag to the hypervisor assigned device address.
+        """
+        # block_device_info does not contain tags information.
+        bdm_obj_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+
+        # create a map between BDM object and its device name.
+        bdm_obj_map = {bdm.device_name: bdm for bdm in bdm_obj_list}
+
+        bdm_metadata = []
+        for bdm in itertools.chain(block_device_info['block_device_mapping'],
+                                   block_device_info['ephemerals'],
+                                   [block_device_info['root_disk']]):
+            # NOTE(claudiub): ephemerals have device_name instead of
+            # mount_device.
+            device_name = bdm.get('mount_device') or bdm.get('device_name')
+            bdm_obj = bdm_obj_map.get(device_name)
+
+            if bdm_obj and 'tag' in bdm_obj and bdm_obj.tag:
+                bus = self._get_device_bus(bdm)
+                device = objects.DiskMetadata(bus=bus,
+                                              tags=[bdm_obj.tag])
+                bdm_metadata.append(device)
+
+        return bdm_metadata
 
     def _initialize_controller_slot_counter(self, instance, vm_gen):
         # we have 2 IDE controllers, for a total of 4 slots
