@@ -1,8 +1,4 @@
-# needs:fix_opt_description
 # needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-
 
 # Copyright 2015 Huawei Technology corp.
 # Copyright 2015 OpenStack Foundation
@@ -395,61 +391,221 @@ Possible values:
 
 interval_opts = [
     cfg.IntOpt('bandwidth_poll_interval',
-               default=600,
-               help='Interval to pull network bandwidth usage info. Not '
-                    'supported on all hypervisors. Set to -1 to disable. '
-                    'Setting this to 0 will run at the default rate.'),
+        default=600,
+        help="""
+Interval to pull network bandwidth usage info.
+
+Not supported on all hypervisors. If a hypervisor doesn't support bandwidth
+usage, it will not get the info in the usage events.
+
+Possible values:
+
+* 0: Will run at the default periodic interval.
+* Any value < 0: Disables the option.
+* Any positive integer in seconds.
+"""),
     cfg.IntOpt('sync_power_state_interval',
-               default=600,
-               help='Interval to sync power states between the database and '
-                    'the hypervisor. Set to -1 to disable. '
-                    'Setting this to 0 will run at the default rate.'),
-    cfg.IntOpt("heal_instance_info_cache_interval",
-               default=60,
-               help="Number of seconds between instance network information "
-                    "cache updates"),
+        default=600,
+        help="""
+Interval to sync power states between the database and the hypervisor.
+
+The interval that Nova checks the actual virtual machine power state
+and the power state that Nova has in its database. If a user powers
+down their VM, Nova updates the API to report the VM has been
+powered down. Should something turn on the VM unexpectedly,
+Nova will turn the VM back off to keep the system in the expected
+state.
+
+Possible values:
+
+* 0: Will run at the default periodic interval.
+* Any value < 0: Disables the option.
+* Any positive integer in seconds.
+
+Related options:
+
+* If ``handle_virt_lifecycle_events`` in workarounds_group is
+  false and this option is negative, then instances that get out
+  of sync between the hypervisor and the Nova database will have
+  to be synchronized manually.
+"""),
+    cfg.IntOpt('heal_instance_info_cache_interval',
+        default=60,
+        help="""
+Interval between instance network information cache updates.
+
+Number of seconds after which each compute node runs the task of
+querying Neutron for all of its instances networking information,
+then updates the Nova db with that information. Nova will never
+update it's cache if this option is set to 0. If we don't update the
+cache, the metadata service and nova-api endpoints will be proxying
+incorrect network data about the instance. So, it is not recommended
+to set this option to 0.
+
+Possible values:
+
+* Any positive integer in seconds.
+* Any value <=0 will disable the sync. This is not recommended.
+"""),
     cfg.IntOpt('reclaim_instance_interval',
-               min=0,
-               default=0,
-               help='Interval in seconds for reclaiming deleted instances. '
-                    'It takes effect only when value is greater than 0.'),
+        default=0,
+        help="""
+Interval for reclaiming deleted instances.
+
+A value greater than 0 will enable SOFT_DELETE of instances.
+This option decides whether the server to be deleted will still be in
+the SOFT_DELETED state. If this value is greater than 0, the deleted
+server will not be deleted immediately, instead it will be put into
+a queue until it's too old (deleted time greater than the value of
+reclaim_instance_interval). The server can be recovered from the
+delete queue by using recover action. If the deleted server remains
+longer than the value of reclaim_instance_interval, it will be
+deleted by compute service automatically.
+
+Possible values:
+
+* Any positive integer(in seconds) greater than 0 will enable
+  this option.
+* Any value <=0 will disable the option.
+"""),
     cfg.IntOpt('volume_usage_poll_interval',
-               default=0,
-               help='Interval in seconds for gathering volume usages'),
+        default=0,
+        help="""
+Interval for gathering volume usages.
+
+This option updates the volume usage cache for every
+volume_usage_poll_interval number of seconds.
+
+Possible values:
+
+* Any positive integer(in seconds) greater than 0 will enable
+  this option.
+* Any value <=0 will disable the option.
+"""),
     cfg.IntOpt('shelved_poll_interval',
-               default=3600,
-               help='Interval in seconds for polling shelved instances to '
-                    'offload. Set to -1 to disable.'
-                    'Setting this to 0 will run at the default rate.'),
+        default=3600,
+        help="""
+Interval for polling shelved instances to offload.
+
+The periodic task runs for every shelved_poll_interval number
+of seconds and checks if there are any shelved instances. If it
+finds a shelved instance, based on the 'shelved_offload_time' config
+value it offloads the shelved instances. Check 'shelved_offload_time'
+config option description for details.
+
+Possible values:
+
+* Any value <= 0: Disables the option.
+* Any positive integer in seconds.
+
+Related options:
+
+* ``shelved_offload_time``
+"""),
     cfg.IntOpt('shelved_offload_time',
-               default=0,
-               help='Time in seconds before a shelved instance is eligible '
-                    'for removing from a host. -1 never offload, 0 offload '
-                    'immediately when shelved'),
+        default=0,
+        help="""
+Time before a shelved instance is eligible for removal from a host.
+
+By default this option is set to 0 and the shelved instance will be
+removed from the hypervisor immediately after shelve operation.
+Otherwise, the instance will be kept for the value of
+shelved_offload_time(in seconds) so that during the time period the
+unshelve action will be faster, then the periodic task will remove
+the instance from hypervisor after shelved_offload_time passes.
+
+Possible values:
+
+* 0: Instance will be immediately offloaded after being
+     shelved.
+* Any value < 0: An instance will never offload.
+* Any positive integer in seconds: The instance will exist for
+  the specified number of seconds before being offloaded.
+"""),
     cfg.IntOpt('instance_delete_interval',
-               default=300,
-               help='Interval in seconds for retrying failed instance file '
-                    'deletes. Set to -1 to disable. '
-                    'Setting this to 0 will run at the default rate.'),
+        default=300,
+        help="""
+Interval for retrying failed instance file deletes.
+
+This option depends on 'maximum_instance_delete_attempts'.
+This option specifies how often to retry deletes whereas
+'maximum_instance_delete_attempts' specifies the maximum number
+of retry attempts that can be made.
+
+Possible values:
+
+* 0: Will run at the default periodic interval.
+* Any value < 0: Disables the option.
+* Any positive integer in seconds.
+
+Related options:
+
+* ``maximum_instance_delete_attempts`` from instance_cleaning_opts
+  group.
+"""),
     cfg.IntOpt('block_device_allocate_retries_interval',
-               default=3,
-               help='Waiting time interval (seconds) between block'
-                    ' device allocation retries on failures'),
+        default=3,
+        min=0,
+        help="""
+Interval (in seconds) between block device allocation retries on failures.
+
+This option allows the user to specify the time interval between
+consecutive retries. 'block_device_allocate_retries' option specifies
+the maximum number of retries.
+
+Possible values:
+
+* 0: Disables the option.
+* Any positive integer in seconds enables the option.
+
+Related options:
+
+* ``block_device_allocate_retries'' in compute_manager_opts
+      group.
+"""),
     cfg.IntOpt('scheduler_instance_sync_interval',
-               default=120,
-               help='Waiting time interval (seconds) between sending the '
-                    'scheduler a list of current instance UUIDs to verify '
-                    'that its view of instances is in sync with nova. If the '
-                    'CONF option `filter_scheduler.track_instance_changes` is '
-                    'False, changing this option will have no effect.'),
+        default=120,
+        help="""
+Interval between sending the scheduler a list of current instance UUIDs to
+verify that its view of instances is in sync with nova.
+
+If the CONF option 'scheduler_tracks_instance_changes' is
+False, the sync calls will not be made. So, changing this option will
+have no effect.
+
+If the out of sync situations are not very common, this interval
+can be increased to lower the number of RPC messages being sent.
+Likewise, if sync issues turn out to be a problem, the interval
+can be lowered to check more frequently.
+
+Possible values:
+
+* 0: Will run at the default periodic interval.
+* Any value < 0: Disables the option.
+* Any positive integer in seconds.
+
+Related options:
+
+* This option has no impact if ``scheduler_tracks_instance_changes``
+  is set to False.
+"""),
     cfg.IntOpt('update_resources_interval',
-               default=0,
-               help='Interval in seconds for updating compute resources. A '
-                    'number less than 0 means to disable the task completely. '
-                    'Leaving this at the default of 0 will cause this to run '
-                    'at the default periodic interval. Setting it to any '
-                    'positive value will cause it to run at approximately '
-                    'that number of seconds.'),
+        default=0,
+        help="""
+Interval for updating compute resources.
+
+This option specifies how often the update_available_resources
+periodic task should run. A number less than 0 means to disable the
+task completely. Leaving this at the default of 0 will cause this to
+run at the default periodic interval. Setting it to any positive
+value will cause it to run at approximately that number of seconds.
+
+Possible values:
+
+* 0: Will run at the default periodic interval.
+* Any value < 0: Disables the option.
+* Any positive integer in seconds.
+""")
 ]
 
 timeout_opts = [
@@ -595,11 +751,26 @@ Related options:
 """),
 ]
 
+# TODO(johngarbutt) add a warning in code so we can eventually add min=1
 instance_cleaning_opts = [
     cfg.IntOpt('maximum_instance_delete_attempts',
         default=5,
-        help='The number of times to attempt to reap an instance\'s '
-             'files.'),
+        help="""
+The number of times to attempt to reap an instance's files.
+
+This option specifies the maximum number of retry attempts
+that can be made.
+
+Possible values:
+
+* Any positive integer defines how many attempts are made.
+* Any value <=0 means no delete attempts occur, but you should use
+  ``instance_delete_interval`` to disable the delete attempts.
+
+Related options:
+* ``instance_delete_interval`` in interval_opts group can be used to disable
+  this option.
+""")
 ]
 
 rpcapi_opts = [
