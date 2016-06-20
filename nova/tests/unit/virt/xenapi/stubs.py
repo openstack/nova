@@ -13,6 +13,7 @@
 
 """Stubouts, mocks and fixtures for the test suite."""
 
+import mock
 import pickle
 import random
 import sys
@@ -367,6 +368,20 @@ class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
     def VM_migrate_send(self, session, vmref, migrate_data, islive, vdi_map,
                         vif_map, options):
         raise fake.Failure("XenAPI VM.migrate_send failed")
+
+
+def get_fake_session(error=None):
+    fake_session = mock.MagicMock()
+    session.apply_session_helpers(fake_session)
+
+    if error is not None:
+        class FakeException(Exception):
+            details = [error, "a", "b", "c"]
+
+        fake_session.XenAPI.Failure = FakeException
+        fake_session.call_xenapi.side_effect = FakeException
+
+    return fake_session
 
 
 # FIXME(sirp): XenAPITestBase is deprecated, all tests should be converted

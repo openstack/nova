@@ -17,7 +17,6 @@ import contextlib
 import uuid
 
 from eventlet import greenthread
-import fixtures
 import mock
 from mox3 import mox
 from oslo_concurrency import lockutils
@@ -44,7 +43,6 @@ from nova.tests.unit.virt.xenapi import stubs
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import hardware
-from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
@@ -71,20 +69,6 @@ def get_fake_connection_data(sr_type):
                           'target_portal': u'localhost:3260',
                           'target_discovered': False}, }
     return fakes[sr_type]
-
-
-def _get_fake_session(error=None):
-    session = mock.Mock()
-    xenapi_session.apply_session_helpers(session)
-
-    if error is not None:
-        class FakeException(Exception):
-            details = [error, "a", "b", "c"]
-
-        session.XenAPI.Failure = FakeException
-        session.call_xenapi.side_effect = FakeException
-
-    return session
 
 
 @contextlib.contextmanager
@@ -156,68 +140,47 @@ class LookupTestCase(VMUtilsTestBase):
 
 
 class GenerateConfigDriveTestCase(VMUtilsTestBase):
-    def test_no_admin_pass(self):
-        instance = {}
+    @mock.patch.object(vm_utils, 'safe_find_sr')
+    @mock.patch.object(vm_utils, "create_vdi", return_value='vdi_ref')
+    @mock.patch.object(vm_utils.instance_metadata, "InstanceMetadata")
+    @mock.patch.object(vm_utils.configdrive, 'ConfigDriveBuilder')
+    @mock.patch.object(vm_utils.utils, 'execute')
+    @mock.patch.object(vm_utils.volume_utils, 'stream_to_vdi')
+    @mock.patch.object(vm_utils.os.path, 'getsize', return_value=100)
+    @mock.patch.object(vm_utils, 'create_vbd', return_value='vbd_ref')
+    @mock.patch.object(vm_utils.utils, 'tempdir')
+    def test_no_admin_pass(self, mock_tmpdir, mock_create_vbd, mock_size,
+                           mock_stream, mock_execute, mock_builder,
+                           mock_instance_metadata, mock_create_vdi,
+                           mock_find_sr):
 
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
-        vm_utils.safe_find_sr('session').AndReturn('sr_ref')
+        mock_tmpdir.return_value.__enter__.return_value = '/mock'
 
-        self.mox.StubOutWithMock(vm_utils, 'create_vdi')
-        vm_utils.create_vdi('session', 'sr_ref', instance, 'config-2',
-                            'configdrive',
-                            64 * units.Mi).AndReturn('vdi_ref')
+        with mock.patch.object(six.moves.builtins, 'open') as mock_open:
+            mock_open.return_value.__enter__.return_value = 'open_fd'
+            vm_utils.generate_configdrive('session', 'instance', 'vm_ref',
+                                          'userdevice', 'network_info')
 
-        self.mox.StubOutWithMock(vm_utils, 'vdi_attached')
-        vm_utils.vdi_attached(
-            'session', 'vdi_ref', read_only=False).AndReturn(
-                contextified('mounted_dev'))
-
-        class FakeInstanceMetadata(object):
-            def __init__(_self, instance, content=None, extra_md=None,
-                         network_info=None):
-                self.assertEqual(network_info, "nw_info")
-
-            def metadata_for_config_drive(_self):
-                return []
-
-        self.useFixture(fixtures.MonkeyPatch(
-                'nova.api.metadata.base.InstanceMetadata',
-                FakeInstanceMetadata))
-
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('genisoimage', '-o', mox.IgnoreArg(), '-ldots',
-                      '-allow-lowercase', '-allow-multidot', '-l',
-                      '-publisher', mox.IgnoreArg(), '-quiet',
-                      '-J', '-r', '-V', 'config-2', mox.IgnoreArg(),
-                      attempts=1, run_as_root=False).AndReturn(None)
-        utils.execute('dd', mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
-                      mox.IgnoreArg(), run_as_root=True).AndReturn(None)
-
-        self.mox.StubOutWithMock(vm_utils, 'create_vbd')
-        vm_utils.create_vbd('session', 'vm_ref', 'vdi_ref', mox.IgnoreArg(),
-                            bootable=False, read_only=True).AndReturn(None)
-
-        self.mox.ReplayAll()
-
-        # And the actual call we're testing
-        vm_utils.generate_configdrive('session', instance, 'vm_ref',
-                                      'userdevice', "nw_info")
+            mock_size.assert_called_with('/mock/configdrive.vhd')
+            mock_open.assert_called_with('/mock/configdrive.vhd')
+            mock_execute.assert_called_with('qemu-img', 'convert', '-Ovpc',
+                                            '/mock/configdrive',
+                                            '/mock/configdrive.vhd')
+            mock_instance_metadata.assert_called_with(
+                'instance', content=None, extra_md={},
+                network_info='network_info')
+            mock_stream.assert_called_with('session', 'instance', 'vhd',
+                                           'open_fd', 100, 'vdi_ref')
 
     @mock.patch.object(vm_utils, "destroy_vdi")
-    @mock.patch.object(vm_utils, "vdi_attached")
-    @mock.patch.object(vm_utils, "create_vdi")
-    @mock.patch.object(vm_utils, "safe_find_sr")
-    def test_vdi_cleaned_up(self, mock_find, mock_create_vdi, mock_attached,
-                            mock_destroy):
-        mock_create_vdi.return_value = 'vdi_ref'
-        mock_attached.side_effect = test.TestingException
-        mock_destroy.side_effect = exception.StorageError(reason="")
-
-        instance = {"uuid": "asdf"}
-        self.assertRaises(test.TestingException,
-                          vm_utils.generate_configdrive,
-                          'session', instance, 'vm_ref', 'userdevice',
-                          'nw_info')
+    @mock.patch.object(vm_utils, 'safe_find_sr')
+    @mock.patch.object(vm_utils, "create_vdi", return_value='vdi_ref')
+    @mock.patch.object(vm_utils.instance_metadata, "InstanceMetadata",
+                       side_effect=test.TestingException)
+    def test_vdi_cleaned_up(self, mock_instance_metadata, mock_create,
+                            mock_find_sr, mock_destroy):
+        self.assertRaises(test.TestingException, vm_utils.generate_configdrive,
+                          'session', None, None, None, None)
         mock_destroy.assert_called_once_with('session', 'vdi_ref')
 
 
@@ -714,7 +677,7 @@ class VMRefOrRaiseVMNotFoundTestCase(VMUtilsTestBase):
 class CreateCachedImageTestCase(VMUtilsTestBase):
     def setUp(self):
         super(CreateCachedImageTestCase, self).setUp()
-        self.session = _get_fake_session()
+        self.session = stubs.get_fake_session()
 
     @mock.patch.object(vm_utils, '_clone_vdi', return_value='new_vdi_ref')
     def test_cached(self, mock_clone_vdi, mock_safe_find_sr):
@@ -904,7 +867,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
 class UnplugVbdTestCase(VMUtilsTestBase):
     @mock.patch.object(greenthread, 'sleep')
     def test_unplug_vbd_works(self, mock_sleep):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -914,7 +877,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(0, mock_sleep.call_count)
 
     def test_unplug_vbd_raises_unexpected_error(self):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
         session.call_xenapi.side_effect = test.TestingException()
@@ -925,7 +888,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
 
     def test_unplug_vbd_already_detached_works(self):
         error = "DEVICE_ALREADY_DETACHED"
-        session = _get_fake_session(error)
+        session = stubs.get_fake_session(error)
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -933,7 +896,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(1, session.call_xenapi.call_count)
 
     def test_unplug_vbd_already_raises_unexpected_xenapi_error(self):
-        session = _get_fake_session("")
+        session = stubs.get_fake_session("")
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -942,7 +905,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(1, session.call_xenapi.call_count)
 
     def _test_uplug_vbd_retries(self, mock_sleep, error):
-        session = _get_fake_session(error)
+        session = stubs.get_fake_session(error)
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -953,7 +916,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(10, mock_sleep.call_count)
 
     def _test_uplug_vbd_retries_with_neg_val(self):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         self.flags(num_vbd_unplug_retries=-1, group='xenserver')
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
@@ -1076,7 +1039,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                             mock_create_vdi, mock_findsr,
                                             mock_dom0ref, mock_mkfs,
                                             mock_attached_here):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         vdi_ref = mock.MagicMock()
         mock_attached_here.return_value = vdi_ref
 
@@ -1103,7 +1066,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                 mock_create_vdi,
                                 mock_findsr, mock_dom0ref, mock_mkfs,
                                 mock_attached_here):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         vdi_dev = mock.MagicMock()
         mock_attached_here.return_value = vdi_dev
         vdi_dev.__enter__.return_value = 'fakedev'
@@ -1136,7 +1099,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                      mock_create_vdi, mock_findsr,
                                      mock_dom0ref, mock_mkfs,
                                      mock_attached_here):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         vdi_ref = mock.MagicMock()
         mock_attached_here.return_value = vdi_ref
         instance = {'uuid': 'fake_uuid'}
@@ -1167,7 +1130,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                                  mock_dom0ref,
                                                  mock_create_vdi,
                                                  mock_findsr):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         instance = {'uuid': 'fake_uuid'}
 
         self.assertRaises(test.TestingException, vm_utils._generate_disk,
@@ -1186,7 +1149,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                               mock_attached_here,
                                               mock_create_vdi,
                                               mock_findsr):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         vdi_ref = mock.MagicMock()
         mock_attached_here.return_value = vdi_ref
         instance = {'uuid': 'fake_uuid'}
@@ -1557,7 +1520,7 @@ class ScanSrTestCase(VMUtilsTestBase):
 class CreateVmTestCase(VMUtilsTestBase):
     def test_vss_provider(self, mock_extract):
         self.flags(vcpu_pin_set="2,3")
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         instance = objects.Instance(uuid=uuids.nova_uuid,
                                     os_type="windows",
                                     system_metadata={})
@@ -2216,7 +2179,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
 
     def _test_create_vm_record(self, mock_extract_flavor, instance,
                                is_viridian):
-        session = _get_fake_session()
+        session = stubs.get_fake_session()
         flavor = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
         mock_extract_flavor.return_value = flavor
 
