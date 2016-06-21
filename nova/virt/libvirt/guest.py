@@ -529,7 +529,7 @@ class Guest(object):
                     flags=flags, bandwidth=bandwidth)
 
     def abort_job(self):
-        """Requests to abort current backgroud job"""
+        """Requests to abort current background job"""
         self._domain.abortJob()
 
     def migrate_configure_max_downtime(self, mstime):

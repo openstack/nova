@@ -532,7 +532,7 @@ def get_disk_mapping(virt_type, instance,
      if get_device_name(bdm)]
 
     # NOTE (ndipanov): root_bdm can be None when we boot from image
-    # as there is no driver represenation of local targeted images
+    # as there is no driver representation of local targeted images
     # and they will not be in block_device_info list.
     root_bdm = block_device.get_root_bdm(
         driver.block_device_info_get_mapping(block_device_info))
