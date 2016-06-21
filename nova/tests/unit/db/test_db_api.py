@@ -8570,8 +8570,10 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             # ('resource_providers', 'allocations' and 'inventories')
             # with no shadow table and it's OK, so skip.
             # 318 adds one more: 'resource_provider_aggregates'.
+            # NOTE(PaulMurray): migration 333 adds 'console_auth_tokens'
             if table_name in ['tags', 'resource_providers', 'allocations',
-                              'inventories', 'resource_provider_aggregates']:
+                              'inventories', 'resource_provider_aggregates',
+                              'console_auth_tokens']:
                 continue
 
             if table_name.startswith("shadow_"):
