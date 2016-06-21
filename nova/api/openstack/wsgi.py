@@ -15,7 +15,6 @@
 #    under the License.
 
 import functools
-import inspect
 import math
 import time
 
@@ -545,90 +544,25 @@ class Resource(wsgi.Application):
     def deserialize(self, body):
         return JSONDeserializer().deserialize(body)
 
-    # NOTE(sdague): I didn't start the fire, however here is what all
-    # of this is about.
-    #
-    # In the legacy v2 code stack, extensions could extend actions
-    # with a generator that let 1 method be split into a top and
-    # bottom half. The top half gets executed before the main
-    # processing of the request (so effectively gets to modify the
-    # request before it gets to the main method).
-    #
-    # Returning a response triggers a shortcut to fail out. The
-    # response will nearly always be a failure condition, as it ends
-    # up skipping further processing one level up from here.
-    #
-    # This then passes on the list of extensions, in reverse order,
-    # on. post_process will run through all those, again with same
-    # basic logic.
-    #
-    # In tree this is only used in the legacy v2 stack, and only in
-    # the DiskConfig and SchedulerHints from what I can see.
-    #
-    # pre_process_extensions can be removed when the legacyv2 code
-    # goes away. post_process_extensions can be massively simplified
-    # at that point.
-    def pre_process_extensions(self, extensions, request, action_args):
-        # List of callables for post-processing extensions
-        post = []
-
-        for ext in extensions:
-            if inspect.isgeneratorfunction(ext):
-                response = None
-
-                # If it's a generator function, the part before the
-                # yield is the preprocessing stage
-                try:
-                    with ResourceExceptionHandler():
-                        gen = ext(req=request, **action_args)
-                        response = next(gen)
-                except Fault as ex:
-                    response = ex
-
-                # We had a response...
-                if response:
-                    return response, []
-
-                # No response, queue up generator for post-processing
-                post.append(gen)
-            else:
-                # Regular functions only perform post-processing
-                post.append(ext)
-
-        # None is response, it means we keep going. We reverse the
-        # extension list for post-processing.
-        return None, reversed(post)
-
-    def post_process_extensions(self, extensions, resp_obj, request,
-                                action_args):
+    def process_extensions(self, extensions, resp_obj, request,
+                           action_args):
         for ext in extensions:
             response = None
-            if inspect.isgenerator(ext):
-                # If it's a generator, run the second half of
-                # processing
-                try:
-                    with ResourceExceptionHandler():
-                        response = ext.send(resp_obj)
-                except StopIteration:
-                    # Normal exit of generator
-                    continue
-                except Fault as ex:
-                    response = ex
-            else:
-                # Regular functions get post-processing...
-                try:
-                    with ResourceExceptionHandler():
-                        response = ext(req=request, resp_obj=resp_obj,
-                                       **action_args)
-                except exception.VersionNotFoundForAPIMethod:
-                    # If an attached extension (@wsgi.extends) for the
-                    # method has no version match its not an error. We
-                    # just don't run the extends code
-                    continue
-                except Fault as ex:
-                    response = ex
+            # Regular functions get post-processing...
+            try:
+                with ResourceExceptionHandler():
+                    response = ext(req=request, resp_obj=resp_obj,
+                                   **action_args)
+            except exception.VersionNotFoundForAPIMethod:
+                # If an attached extension (@wsgi.extends) for the
+                # method has no version match its not an error. We
+                # just don't run the extends code
+                continue
+            except Fault as ex:
+                response = ex
 
-            # We had a response...
+            # We had a response return it, to exit early. This is
+            # actually a failure mode. None is success.
             if response:
                 return response
 
@@ -727,16 +661,12 @@ class Resource(wsgi.Application):
                      'context_project_id': context.project_id}
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
 
-        # Run pre-processing extensions
-        response, post = self.pre_process_extensions(extensions,
-                                                     request, action_args)
-
-        if not response:
-            try:
-                with ResourceExceptionHandler():
-                    action_result = self.dispatch(meth, request, action_args)
-            except Fault as ex:
-                response = ex
+        response = None
+        try:
+            with ResourceExceptionHandler():
+                action_result = self.dispatch(meth, request, action_args)
+        except Fault as ex:
+            response = ex
 
         if not response:
             # No exceptions; convert action_result into a
@@ -754,8 +684,8 @@ class Resource(wsgi.Application):
                 # Do a preserialize to set up the response object
                 if hasattr(meth, 'wsgi_code'):
                     resp_obj._default_code = meth.wsgi_code
-                # Process post-processing extensions
-                response = self.post_process_extensions(post, resp_obj,
+                # Process extensions
+                response = self.process_extensions(extensions, resp_obj,
                                                         request, action_args)
 
             if resp_obj and not response:

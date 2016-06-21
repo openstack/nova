@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import inspect
-
 import mock
 import six
 import testscenarios
@@ -785,7 +783,7 @@ class ResourceTest(MicroversionedTest):
         self.assertEqual(method, extended._delete)
         self.assertEqual(extensions, [])
 
-    def test_pre_process_extensions_regular(self):
+    def test_process_extensions_regular(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants
@@ -803,96 +801,12 @@ class ResourceTest(MicroversionedTest):
             called.append(2)
             return None
 
-        extensions = [extension1, extension2]
-        response, post = resource.pre_process_extensions(extensions, None, {})
-        self.assertEqual(called, [])
-        self.assertIsNone(response)
-        self.assertEqual(list(post), [extension2, extension1])
-
-    def test_pre_process_extensions_generator(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            called.append('pre1')
-            yield
-            called.append('post1')
-
-        def extension2(req):
-            called.append('pre2')
-            yield
-            called.append('post2')
-
-        extensions = [extension1, extension2]
-        response, post = resource.pre_process_extensions(extensions, None, {})
-        post = list(post)
-        self.assertEqual(called, ['pre1', 'pre2'])
-        self.assertIsNone(response)
-        self.assertEqual(len(post), 2)
-        self.assertTrue(inspect.isgenerator(post[0]))
-        self.assertTrue(inspect.isgenerator(post[1]))
-
-        for gen in post:
-            try:
-                gen.send(None)
-            except StopIteration:
-                continue
-
-        self.assertEqual(called, ['pre1', 'pre2', 'post2', 'post1'])
-
-    def test_pre_process_extensions_generator_response(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            called.append('pre1')
-            yield 'foo'
-
-        def extension2(req):
-            called.append('pre2')
-
-        extensions = [extension1, extension2]
-        response, post = resource.pre_process_extensions(extensions, None, {})
-        self.assertEqual(called, ['pre1'])
-        self.assertEqual(response, 'foo')
-        self.assertEqual(post, [])
-
-    def test_post_process_extensions_regular(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req, resp_obj):
-            called.append(1)
-            return None
-
-        def extension2(req, resp_obj):
-            called.append(2)
-            return None
-
-        response = resource.post_process_extensions([extension2, extension1],
+        response = resource.process_extensions([extension2, extension1],
                                                     None, None, {})
         self.assertEqual(called, [2, 1])
         self.assertIsNone(response)
 
-    def test_post_process_extensions_regular_response(self):
+    def test_process_extensions_regular_response(self):
         class Controller(object):
             def index(self, req, pants=None):
                 return pants
@@ -910,67 +824,8 @@ class ResourceTest(MicroversionedTest):
             called.append(2)
             return 'foo'
 
-        response = resource.post_process_extensions([extension2, extension1],
+        response = resource.process_extensions([extension2, extension1],
                                                     None, None, {})
-        self.assertEqual(called, [2])
-        self.assertEqual(response, 'foo')
-
-    def test_post_process_extensions_generator(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            yield
-            called.append(1)
-
-        def extension2(req):
-            yield
-            called.append(2)
-
-        ext1 = extension1(None)
-        next(ext1)
-        ext2 = extension2(None)
-        next(ext2)
-
-        response = resource.post_process_extensions([ext2, ext1],
-                                                    None, None, {})
-
-        self.assertEqual(called, [2, 1])
-        self.assertIsNone(response)
-
-    def test_post_process_extensions_generator_response(self):
-        class Controller(object):
-            def index(self, req, pants=None):
-                return pants
-
-        controller = Controller()
-        resource = wsgi.Resource(controller)
-
-        called = []
-
-        def extension1(req):
-            yield
-            called.append(1)
-
-        def extension2(req):
-            yield
-            called.append(2)
-            yield 'foo'
-
-        ext1 = extension1(None)
-        next(ext1)
-        ext2 = extension2(None)
-        next(ext2)
-
-        response = resource.post_process_extensions([ext2, ext1],
-                                                    None, None, {})
-
         self.assertEqual(called, [2])
         self.assertEqual(response, 'foo')
 
