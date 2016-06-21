@@ -3,12 +3,12 @@
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
+# Linda <duleish@cn.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.0.1.dev83\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:50+0000\n"
+"POT-Creation-Date: 2016-06-11 00:11+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -22,4 +22,4 @@ msgstr ""
 
 #, python-format
 msgid "Missing core API extensions: %s"
-msgstr "核心API扩展未找到：%s"
+msgstr "缺少核心 API 扩展未：%s"

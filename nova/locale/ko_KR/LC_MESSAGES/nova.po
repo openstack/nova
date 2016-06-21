@@ -7,22 +7,18 @@
 # Seunghyo Chun <seunghyo.chun@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
 # Sungjin Kang <potopro@gmail.com>, 2013
-# Ian Y. Choi <ianyrchoi@gmail.com>, 2015. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2015. #zanata
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Sungjin Kang <gang.sungjin@gmail.com>, 2015. #zanata
-# Lucas Palm <lapalm@us.ibm.com>, 2016. #zanata
-# SeYeon Lee <sy_lee@kr.ibm.com>, 2016. #zanata
+# Sungjin Kang <gang.sungjin@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.0.1.dev83\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:49+0000\n"
+"POT-Creation-Date: 2016-06-11 00:10+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-18 08:32+0000\n"
-"Last-Translator: SeYeon Lee <sy_lee@kr.ibm.com>\n"
+"PO-Revision-Date: 2016-04-26 12:10+0000\n"
+"Last-Translator: Sungjin Kang <gang.sungjin@gmail.com>\n"
 "Language: ko-KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -257,7 +253,7 @@ msgid "API version %(version)s is not supported on this method."
 msgstr "API 버전 %(version)s에서는 이 메소드를 지원하지 않습니다.."
 
 msgid "Access list not available for public flavors."
-msgstr "액세스 목록이 공용 플레이버에 사용할 수 없습니다. "
+msgstr "액세스 목록이 공용 flavor에 사용할 수 없습니다. "
 
 #, python-format
 msgid "Action %s not found"
@@ -380,8 +376,8 @@ msgid ""
 "Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
 "nodes in image or flavor"
 msgstr ""
-"비대칭 NUMA 토폴로지의 경우 이미지 또는 플레이버에서 노드에 CPU 및 메모리를 "
-"명시적으로 지정해야 함"
+"비대칭 NUMA 토폴로지의 경우 이미지 또는 flavor에서 노드에 CPU 및 메모리를 명"
+"시적으로 지정해야 함"
 
 #, python-format
 msgid ""
@@ -447,7 +443,7 @@ msgid "Bad volumeId format: volumeId is not in proper format (%s)"
 msgstr "잘못된 volumeId 형식: volumeId가 적절한 형식(%s)이 아님"
 
 msgid "Binary"
-msgstr "2진"
+msgstr "Binary"
 
 #, python-format
 msgid ""
@@ -583,7 +579,7 @@ msgstr ""
 "서브세트여야 함"
 
 msgid "Can not add access to a public flavor."
-msgstr "공용 플레이버에 대한 액세스를 추가할 수 없습니다. "
+msgstr "공용 flavor에 대한 액세스를 추가할 수 없습니다. "
 
 msgid "Can not find requested image"
 msgstr "요청된 이미지를 찾을 수 없음"
@@ -656,7 +652,7 @@ msgstr ""
 
 #, python-format
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
-msgstr "고아 %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
+msgstr "Orphaned %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
 
 msgid ""
 "Cannot create default bittorrent URL without xenserver.torrent_base_url "
@@ -674,7 +670,7 @@ msgstr ""
 "습니다."
 
 msgid "Cannot disassociate auto assigned floating IP"
-msgstr "자동 할당된 Floating IP의 연관을 해제할 수 없음"
+msgstr "자동 할당된 floating IP의 연관을 해제할 수 없음"
 
 msgid "Cannot execute /sbin/mount.sofs"
 msgstr "/sbin/mount.sofs를 실행할 수 없음"
@@ -1378,7 +1374,7 @@ msgid "Failed to mount filesystem: %s"
 msgstr "파일 시스템 마운트 실패: %s"
 
 msgid "Failed to parse information about a pci device for passthrough"
-msgstr "패스스루용 pci 디바이스에 대한 정책을 구문 분석하지 못함"
+msgstr "Passthrough용 pci 디바이스에 대한 정책을 구문 분석하지 못함"
 
 #, python-format
 msgid "Failed to power off instance: %(reason)s"
@@ -1488,45 +1484,45 @@ msgstr "Fixed IP %(address)s이(가) 이미 있습니다."
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
 msgstr ""
-"고정 IP %(ip)s이(가) 네트워크 %(network_id)s에 대해 올바른 IP 주소가 아닙니"
+"Fixed IP %(ip)s이(가) 네트워크 %(network_id)s에 대해 올바른 IP 주소가 아닙니"
 "다. "
 
 #, python-format
 msgid "Fixed IP %s has been deleted"
-msgstr "고정 IP %s이(가) 삭제되었음"
+msgstr "Fixed IP %s이(가) 삭제되었음"
 
 #, python-format
 msgid "Fixed IP %s is already in use."
-msgstr "고정 IP %s을(를) 이미 사용하고 있습니다."
+msgstr "Fixed IP %s을(를) 이미 사용하고 있습니다."
 
 #, python-format
 msgid "Fixed IP %s not found"
-msgstr "고정 IP %s을(를) 찾을 수 없음"
+msgstr "Fixed IP %s을(를) 찾을 수 없음"
 
 #, python-format
 msgid "Fixed IP %s not valid"
-msgstr "고정 IP %s이(가) 올바르지 않음"
+msgstr "Fixed IP %s이(가) 올바르지 않음"
 
 #, python-format
 msgid ""
 "Fixed IP address %(address)s is already in use on instance %(instance_uuid)s."
 msgstr ""
-"고정 IP 주소 %(address)s이(가) 이미 %(instance_uuid)s 인스턴스에서 사용되고 "
+"Fixed IP 주소 %(address)s이(가) 이미 %(instance_uuid)s 인스턴스에서 사용되고 "
 "있습니다."
 
 #, python-format
 msgid "Fixed IP address %(address)s is invalid."
-msgstr "고정 IP 주소 %(address)s이(가) 올바르지 않습니다. "
+msgstr "Fixed IP 주소 %(address)s이(가) 올바르지 않습니다. "
 
 #, python-format
 msgid ""
 "Fixed IP address (%(address)s) does not exist in network (%(network_uuid)s)."
 msgstr ""
-"고정 IP 주소(%(address)s)가 (%(network_uuid)s) 네트워크에 존재하지 않습니다."
+"Fixed IP 주소(%(address)s)가 (%(network_uuid)s) 네트워크에 존재하지 않습니다."
 
 #, python-format
 msgid "Fixed IP associate failed for network: %(net)s."
-msgstr "네트워크에 대한 고정 IP 연관 실패: %(net)s."
+msgstr "네트워크에 대한 fixed IP 연관 실패: %(net)s."
 
 #, python-format
 msgid "Fixed IP not found for address %(address)s."
@@ -1534,7 +1530,7 @@ msgstr "%(address)s 주소의 Fixed IP를 찾을 수 없습니다."
 
 #, python-format
 msgid "Flavor %(flavor_id)s could not be found."
-msgstr "%(flavor_id)s 플레이버를 찾을 수 없습니다. "
+msgstr "%(flavor_id)s flavor를 찾을 수 없습니다. "
 
 #, python-format
 msgid "Flavor %(flavor_id)s has no extra specs with key %(extra_specs_key)s."
@@ -1543,7 +1539,7 @@ msgstr ""
 
 #, python-format
 msgid "Flavor %(flavor_id)s has no extra specs with key %(key)s."
-msgstr "플레이버 %(flavor_id)s에 %(key)s 키가 있는 추가 스펙이 없습니다."
+msgstr "Flavor %(flavor_id)s에 %(key)s 키가 있는 추가 스펙이 없습니다."
 
 #, python-format
 msgid ""
@@ -1558,14 +1554,13 @@ msgid ""
 "Flavor access already exists for flavor %(flavor_id)s and project "
 "%(project_id)s combination."
 msgstr ""
-"플레이버 %(flavor_id)s 및 %(project_id)s 프로젝트 조합에 대한 플레이버 액세스"
-"가 이미 존재합니다. "
+"Flavor %(flavor_id)s 및 %(project_id)s 프로젝트 조합에 대한 flavor 접근이 이"
+"미 존재합니다. "
 
 #, python-format
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
-"%(flavor_id)s / %(project_id)s 조합에 대한 플레이버 액세스를 찾을 수 없습니"
-"다. "
+"%(flavor_id)s / %(project_id)s 조합에 대한 flavor 접근을 찾을 수 없습니다. "
 
 msgid "Flavor for vpn instances"
 msgstr "vpn 인스턴스에 대한 플레이버"
@@ -1574,28 +1569,27 @@ msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
 msgstr ""
-"플레이버 ID는 A-Z(대소문자) 문자, 마침표, 대시, 밑줄 및 공백만 포함할 수 있습"
-"니다."
+"Flavor ID는 A-Z(대소문자) 문자, 마침표, 대시, 밑줄 및 공백만 포함할 수 있습니"
+"다."
 
 msgid ""
 "Flavor names can only contain printable characters and horizontal spaces."
-msgstr ""
-"플레이버 이름에는 인쇄할 수 있는 문자와 가로 간격만 포함할 수 있습니다."
+msgstr "Flavor 이름에는 인쇄할 수 있는 문자와 가로 간격만 포함할 수 있습니다."
 
 msgid "Flavor used by the instance could not be found."
-msgstr "인스턴스가 사용한 플레이버를 찾을 수 없습니다. "
+msgstr "인스턴스가 사용한 flavor를 찾을 수 없습니다. "
 
 #, python-format
 msgid "Flavor with ID %(flavor_id)s already exists."
-msgstr "ID가 %(flavor_id)s인 플레이버가 이미 있습니다."
+msgstr "ID가 %(flavor_id)s인 flavor가 이미 있습니다."
 
 #, python-format
 msgid "Flavor with name %(flavor_name)s could not be found."
-msgstr "이름이 %(flavor_name)s인 플레이버를 찾을 수 없습니다."
+msgstr "이름이 %(flavor_name)s인 flavor를 찾을 수 없습니다."
 
 #, python-format
 msgid "Flavor with name %(name)s already exists."
-msgstr "이름이 %(name)s인 플레이버가 이미 있습니다."
+msgstr "이름이 %(name)s인 flavor가 이미 있습니다."
 
 #, python-format
 msgid ""
@@ -1603,20 +1597,20 @@ msgid ""
 "Flavor disk is %(flavor_size)i bytes, minimum size is %(image_min_disk)i "
 "bytes."
 msgstr ""
-"플레이버의 디스크가 이미지 메타데이터에서 지정된 최소 크기보다 작습니다. 플레"
-"이버 디스크는 %(flavor_size)i바이트이고 최소 크기는 %(image_min_disk)i바이트"
-"입니다. "
+"Flavor 디스크가 이미지 메타데이터에서 지정된 최소 크기보다 작습니다. Flavor "
+"디스크는 %(flavor_size)i바이트이고 최소 크기는 %(image_min_disk)i바이트입니"
+"다. "
 
 #, python-format
 msgid ""
 "Flavor's disk is too small for requested image. Flavor disk is "
 "%(flavor_size)i bytes, image is %(image_size)i bytes."
 msgstr ""
-"플레이버의 디스크가 요청된 이미지에 비해 너무 작습니다. 플레이버 디스크는 "
+"Flavor 디스크가 요청된 이미지에 비해 너무 작습니다. Flavor 디스크는 "
 "%(flavor_size)i바이트이고 이미지는 %(image_size)i바이트입니다. "
 
 msgid "Flavor's memory is too small for requested image."
-msgstr "플레이버의 메모리가 요청된 이미지에 대해 너무 작습니다."
+msgstr "Flavor 메모리가 요청된 이미지에 대해 너무 작습니다."
 
 #, python-format
 msgid "Floating IP %(address)s already exists."
@@ -1624,7 +1618,7 @@ msgstr "Floating IP %(address)s이(가) 이미 있습니다. "
 
 #, python-format
 msgid "Floating IP %(address)s association has failed."
-msgstr "부동 IP %(address)s 연관에 실패했습니다. "
+msgstr "Floating IP %(address)s 연관에 실패했습니다. "
 
 #, python-format
 msgid "Floating IP %(address)s is associated."
@@ -1639,7 +1633,7 @@ msgid "Floating IP %(address)s is not associated."
 msgstr "Floating IP %(address)s이(가) 연관되어 있지 않습니다."
 
 msgid "Floating IP allocate failed."
-msgstr "부동 IP 할당에 실패했습니다."
+msgstr "Floating IP 할당에 실패했습니다."
 
 msgid "Floating IP is not associated"
 msgstr "Floating IP가 연관되지 않음"
@@ -1654,11 +1648,11 @@ msgstr "ID %s의 Floating IP를 찾을 수 없음"
 
 #, python-format
 msgid "Floating IP not found for address %(address)s."
-msgstr "%(address)s 주소의 Floating IP를 찾을 수 없습니다."
+msgstr "%(address)s 주소의 floating IP를 찾을 수 없습니다."
 
 #, python-format
 msgid "Floating IP not found for host %(host)s."
-msgstr "%(host)s 호스트의 Floating IP를 찾을 수 없습니다."
+msgstr "%(host)s 호스트의 floating IP를 찾을 수 없습니다."
 
 msgid "Floating IP pool not found."
 msgstr "Floating IP 풀을 찾을 수 없습니다."
@@ -1667,7 +1661,7 @@ msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
 msgstr ""
-"이미지 메타에 패스된 직렬 포트 수의 플레이버 값 초과가 금지되어 있습니다."
+"이미지 메타에 패스된 직렬 포트 수의 flavor 값 초과가 금지되어 있습니다."
 
 #, python-format
 msgid "Found no PIF for device %s"
@@ -1694,11 +1688,11 @@ msgstr "여유 %(type)s %(free).02f %(unit)s < 요청된 %(requested)d %(unit)s"
 
 #, python-format
 msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "글랜스 이미지 %(image_id)s이(가) 알 수 없는 상태에 있음 - %(state)s"
+msgstr "Glance 이미지 %(image_id)s이(가) 알 수 없는 상태에 있음 - %(state)s"
 
 #, python-format
 msgid "Glance image %s is in killed state"
-msgstr "글랜스 이미지 %s이(가) 강제 종료 상태에 있음"
+msgstr "Glance 이미지 %s이(가) 강제 종료 상태에 있음"
 
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
@@ -1845,8 +1839,7 @@ msgid ""
 "Image property '%(name)s' is not permitted to override NUMA configuration "
 "set against the flavor"
 msgstr ""
-"이미지 특성 '%(name)s'은(는) 플레이버에 대해 설정된 NUMA 구성을 대체할 수 없"
-"음"
+"이미지 특성 '%(name)s'은(는) flavor에 대해 설정된 NUMA 구성을 대체할 수 없음"
 
 msgid ""
 "Image property 'hw_cpu_policy' is not permitted to override CPU pinning "
@@ -1973,11 +1966,11 @@ msgstr ""
 
 #, python-format
 msgid "Instance %(instance_uuid)s doesn't have fixed IP '%(ip)s'."
-msgstr "%(instance_uuid)s 인스턴스에 Fixed IP '%(ip)s'이(가) 없습니다. "
+msgstr "%(instance_uuid)s 인스턴스에 fixed IP '%(ip)s'이(가) 없습니다. "
 
 #, python-format
 msgid "Instance %(instance_uuid)s has zero fixed IPs."
-msgstr "%(instance_uuid)s 인스턴스에 Fixed IP가 0개 있습니다."
+msgstr "%(instance_uuid)s 인스턴스에 fixed IP가 0개 있습니다."
 
 #, python-format
 msgid ""
@@ -2224,7 +2217,7 @@ msgstr "요청에서 올바르지 않은 고정 IP 주소 %s"
 
 #, python-format
 msgid "Invalid fixed IP address (%s)"
-msgstr "올바르지 않은 고정 IP 주소(%s)"
+msgstr "올바르지 않은 fixed IP 주소(%s)"
 
 msgid "Invalid flavorRef provided."
 msgstr "올바르지 않은 flavorRef가 제공되었습니다. "
@@ -2460,14 +2453,14 @@ msgstr "아이로닉 클라이언트를 사용할 수 없음, 아이로닉에 �
 
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
-msgstr "아이로닉 노드 uuid가 인스턴스 %s의 드라이버에 제공되지 않습니다."
+msgstr "Ironic 노드 uuid가 인스턴스 %s의 드라이버에 제공되지 않습니다."
 
 #, python-format
 msgid ""
 "Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
 "%(power)s)"
 msgstr ""
-"아이로닉 노드: %(id)s이(가) 유효성을 검증하는 데 실패했습니다.(배치: "
+"Ironic 노드: %(id)s이(가) 유효성을 검증하는 데 실패했습니다.(배치: "
 "%(deploy)s, 전원: %(power)s)"
 
 #, python-format
@@ -2475,7 +2468,7 @@ msgid ""
 "Ironic node: %(id)s virtual to physical interface count  missmatch (Vif "
 "count: %(vif_count)d, Pif count: %(pif_count)d)"
 msgstr ""
-"아이로닉 노드: 실제 인터페이스 개수에 대한 %(id)s 가상 불일치(Vif 개수: "
+"Ironic 노드: 실제 인터페이스 개수에 대한 %(id)s 가상 불일치(Vif 개수: "
 "%(vif_count)d, Pif 개수: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
@@ -2623,7 +2616,7 @@ msgid "Marker %(marker)s could not be found."
 msgstr "%(marker)s 마커를 찾을 수 없습니다. "
 
 msgid "Maximum allowed length for 'label' is 255."
-msgstr "'레이블'의 최대 허용 길이는 255입니다. "
+msgstr "'label' 최대 길이는 255입니다. "
 
 msgid "Maximum number of fixed IPs exceeded"
 msgstr "Fixed IP의 최소수 초과"
@@ -2743,7 +2736,7 @@ msgid "Missing forced_down field"
 msgstr "forced_down 필드 누락"
 
 msgid "Missing imageRef attribute"
-msgstr "imageRef 속성 누락"
+msgstr "ImageRef 속성 누락"
 
 #, python-format
 msgid "Missing keys: %s"
@@ -2760,7 +2753,7 @@ msgid "Missing parameter dict"
 msgstr "매개변수 사전 누락"
 
 msgid "Missing tenant parameter"
-msgstr "테넌트 매개변수 누락"
+msgstr "Tenant 매개변수 누락"
 
 #, python-format
 msgid ""
@@ -2790,11 +2783,11 @@ msgstr "요청 내에 다중 ltiple X-Tenant-ID 헤더가 있습니다."
 
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
-msgstr "'%s' 이름에 대해 다중 부동 IP 풀 일치가 발견됨"
+msgstr "'%s' 이름에 대해 다중 floating IP 풀 일치가 발견됨"
 
 #, python-format
 msgid "Multiple floating IPs are found for address %(address)s."
-msgstr "%(address)s 주소의  Floating IP가 여러 개 있습니다."
+msgstr "%(address)s 주소의  floating IP가 여러 개 있습니다."
 
 msgid ""
 "Multiple hosts may be managed by the VMWare vCenter driver; therefore we do "
@@ -2897,7 +2890,7 @@ msgstr "네트워크 드라이버가 이 기능을 지원하지 않습니다."
 #, python-format
 msgid "Network host %(host)s has zero fixed IPs in network %(network_id)s."
 msgstr ""
-"%(host)s 네트워크 호스트는 %(network_id)s 네트워크에 0개의 Fixed IP가 있습니"
+"%(host)s 네트워크 호스트는 %(network_id)s 네트워크에 0개의 fixed IP가 있습니"
 "다. "
 
 msgid "Network label is required"
@@ -2998,14 +2991,14 @@ msgstr "로그 파일에 오류가 없습니다!"
 
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
-msgstr "네트워크에 사용 가능한 고정 IP 주소가 없음: %(net)s"
+msgstr "네트워크에 사용 가능한 fixed IP 주소가 없음: %(net)s"
 
 #, python-format
 msgid "No fixed IP associated with id %(id)s."
 msgstr "ID %(id)s과(와) 연관된 고정 IP가 없습니다. "
 
 msgid "No fixed IP found."
-msgstr "고정 IP를 찾을 수 없음."
+msgstr "Fixed IP를 찾을 수 없음."
 
 msgid "No fixed IPs associated to instance"
 msgstr "인스턴스와 연관된 Fixed IP가 없음"
@@ -3056,11 +3049,11 @@ msgid "No more available networks."
 msgstr "더 이상 사용 가능한 네트워크가 없습니다."
 
 msgid "No more floating IPs available."
-msgstr "더 이상 사용할 수 있는 Floating IP가 없습니다."
+msgstr "더 이상 사용할 수 있는 floating IP가 없습니다."
 
 #, python-format
 msgid "No more floating IPs in pool %s."
-msgstr "%s 풀에 추가 Floating IP가 없습니다."
+msgstr "%s 풀에 추가 floating IP가 없습니다."
 
 #, python-format
 msgid "No mount points found in %(root)s of %(image)s"
@@ -3632,10 +3625,10 @@ msgid "Resize requests require 'flavorRef' attribute."
 msgstr "크기 조정 요청은 'flavorRef' 속성이 필요합니다. "
 
 msgid "Resize requires a flavor change."
-msgstr "크기 조정은 플레이버 변경이 필요합니다. "
+msgstr "크기 조정은 flavor 변경이 필요합니다. "
 
 msgid "Resize to zero disk flavor is not allowed."
-msgstr "0 디스크 플레이버로의 크기 조정은 허용되지 않습니다."
+msgstr "0 디스크 flavor로 크기 조정은 허용되지 않습니다."
 
 msgid "Resource could not be found."
 msgstr "자원을 찾을 수 없습니다. "
@@ -3895,11 +3888,11 @@ msgid ""
 "Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
 "already has a Fixed IP allocated."
 msgstr ""
-"지정된 고정 IP '%(addr)s'을(를) '%(port)s' 포트와 함께 사용할 수 없음: 포트"
-"에 이미 고정 IP가 할당되어 있습니다."
+"지정된 fixed IP '%(addr)s'을(를) '%(port)s' 포트와 함께 사용할 수 없음: 포트"
+"에 이미 fixed IP가 할당되어 있습니다."
 
 msgid "Specified fixed address not assigned to instance"
-msgstr "지정된 고정 주소가 인스턴스에 연관되지 않음"
+msgstr "지정된 fixed 주소가 인스턴스에 연관되지 않음"
 
 msgid "Specify `table_name` or `table` param"
 msgstr "`table_name` 또는 `table` 매개변수를 지정하십시오. "
@@ -4001,7 +3994,7 @@ msgid "The created instance's disk would be too small."
 msgstr "작성된 인스턴스의 디스크가 너무 작습니다. "
 
 msgid "The current driver does not support preserving ephemeral partitions."
-msgstr "현재 드라이버는 임시 파티션 유지를 지원하지 않습니다."
+msgstr "현재 드라이버는 enhemeral 파티션 유지를 지원하지 않습니다."
 
 msgid "The default PBM policy doesn't exist on the backend."
 msgstr "백엔드에 기본 PBM 정책이 없습니다."
@@ -4011,7 +4004,7 @@ msgid "The firewall filter for %s does not exist"
 msgstr "%s의 방화벽 필터가 없음"
 
 msgid "The floating IP request failed with a BadRequest"
-msgstr "부동 IP 요청이 실패하여 BadRequest가 생성됨"
+msgstr "Floating IP 요청이 실패하여 BadRequest가 생성됨"
 
 #, python-format
 msgid "The group %(group_name)s must be configured with an id."
@@ -4301,8 +4294,8 @@ msgid ""
 "Unable to associate floating IP %(address)s to any fixed IPs for instance "
 "%(id)s. Instance has no fixed IPv4 addresses to associate."
 msgstr ""
-"Floating IP %(address)s을(를) %(id)s 인스턴스의 Fixed IP와 연관시킬 수 없습니"
-"다. 인스턴스에 연관시킬 Fixed IPv4 주소가 없습니다."
+"Floating IP %(address)s을(를) %(id)s 인스턴스의 fixed IP와 연관시킬 수 없습니"
+"다. 인스턴스에 연관시킬 fixed IPv4 주소가 없습니다."
 
 #, python-format
 msgid ""
@@ -4485,11 +4478,11 @@ msgid ""
 "Unable to launch multiple instances with a single configured port ID. Please "
 "launch your instance one by one with different ports."
 msgstr ""
-"단일 포트 ID가 구성된 다중 인스턴스를 실행할 수 없습니다.인스턴스를 다른 포트"
-"와 함께 하나씩 실행하십시오."
+"단일 포트 ID가 구성된 다중 인스턴스를 실행할 수 없습니다. 인스턴스를 다른 포"
+"트와 함께 하나씩 실행하십시오."
 
 msgid "Unable to locate requested flavor."
-msgstr "요청된 플레이버를 찾을 수 없습니다. "
+msgstr "요청된 flavor를 찾을 수 없습니다. "
 
 msgid "Unable to log in to XenAPI (is the Dom0 disk full?)"
 msgstr "XenAPI에 로그인할 수 없음(Dom0 디스크가 가득 찼습니까?)"
@@ -4577,7 +4570,8 @@ msgid ""
 "%s"
 msgstr ""
 "API Error가 발생했습니다. http://bugs.launchpad.net/nova/ 에 상세 내용을 보내"
-"주십시오.  가능하면 Nova API 로그를 포함하여 보내주십시오. %s"
+"주십시오.  가능하면 Nova API 로그를 포함하여 보내주십시오.\n"
+"%s"
 
 #, python-format
 msgid "Unexpected aggregate action %s"
@@ -4634,7 +4628,7 @@ msgstr "알 수 없는 image_type=%s"
 
 #, python-format
 msgid "Unknown method '%(method)s' in compute API"
-msgstr "계산 API의 알 수 없는 메소드 '%(method)s'"
+msgstr "Compute API에서 알 수 없는 메소드 '%(method)s'"
 
 #, python-format
 msgid ""
@@ -4722,7 +4716,7 @@ msgid ""
 "VDI %(vdi_ref)s is %(virtual_size)d bytes which is larger than flavor size "
 "of %(new_disk_size)d bytes."
 msgstr ""
-"VDI %(vdi_ref)s은(는) %(virtual_size)d바이트이며 이는 플레이버 크기인 "
+"VDI %(vdi_ref)s은(는) %(virtual_size)d바이트이며 이는 flavor 크기인 "
 "%(new_disk_size)d바이트보다 큽니다."
 
 #, python-format
@@ -4879,7 +4873,7 @@ msgstr ""
 
 #, python-format
 msgid "WARNING: fixed IP %s allocated to missing instance"
-msgstr "경고: 누락된 인스턴스에 할당된 Fixed IP %s"
+msgstr "경고: 누락된 인스턴스에 할당된 fixed IP %s"
 
 #, python-format
 msgid ""
@@ -4889,7 +4883,7 @@ msgstr ""
 "를 사용하십시오."
 
 msgid "When resizing, instances must change flavor!"
-msgstr "크기를 조정할 때 인스턴스는 플레이버를 변경해야 합니다!"
+msgstr "크기를 조정할 때 인스턴스는 flavor를 변경해야 합니다!"
 
 msgid ""
 "When running server in SSL mode, you must specify both a cert_file and "
@@ -4970,10 +4964,10 @@ msgstr ""
 "다."
 
 msgid "Zero fixed IPs could be found."
-msgstr "0개의 Fixed IP를 찾을 수 있습니다. "
+msgstr "0개의 fixed IP를 찾을 수 있습니다. "
 
 msgid "Zero floating IPs available."
-msgstr "사용할 수 있는 Floating IP가 0개입니다."
+msgstr "사용할 수 있는 floating IP가 0개입니다."
 
 msgid "Zero floating IPs exist."
 msgstr "Floating IP가 0개 있습니다."
@@ -5050,7 +5044,7 @@ msgid "direct_snapshot() is not implemented"
 msgstr "direct_snapshot()이 구현되지 않음"
 
 msgid "disk"
-msgstr "디스크"
+msgstr "disk"
 
 #, python-format
 msgid "disk type '%s' not supported"
@@ -5128,13 +5122,13 @@ msgid "id cannot contain leading and/or trailing whitespace(s)"
 msgstr "id에는 선행 및/또는 후행 공백이 포함될 수 없음"
 
 msgid "image"
-msgstr "이미지"
+msgstr "image"
 
 msgid "image already mounted"
 msgstr "이미지가 이미 마운트되었음"
 
 msgid "index"
-msgstr "인덱스"
+msgstr "index"
 
 msgid "instance"
 msgstr "인스턴스"
@@ -5170,7 +5164,7 @@ msgid "is_public must be a boolean"
 msgstr "is_public은 부울이어야 함"
 
 msgid "kernel"
-msgstr "커널"
+msgstr "kernel"
 
 msgid "keymgr.fixed_key not defined"
 msgstr "keymgr.fixed_key가 정의되지 않음"
@@ -5213,7 +5207,7 @@ msgid "memcached_servers not defined"
 msgstr "memcached_servers가 정의되지 않음"
 
 msgid "memory"
-msgstr "메모리"
+msgstr "memory"
 
 msgid "min_count must be <= max_count"
 msgstr "min_count는 max_count 이하여야 함"
@@ -5299,7 +5293,7 @@ msgid "printable characters. Can not start or end with whitespace."
 msgstr "인쇄 가능한 문자입니다. 공백으로 시작하거나 종료할 수 없습니다."
 
 msgid "project"
-msgstr "프로젝트"
+msgstr "project"
 
 #, python-format
 msgid "qemu-img failed to execute on %(path)s : %(exp)s"
@@ -5316,7 +5310,7 @@ msgid "quota_set not specified"
 msgstr "quota_set가 지정되지 않음"
 
 msgid "ramdisk"
-msgstr "램디스크"
+msgstr "ramdisk"
 
 msgid "rbd python libraries not found"
 msgstr "rbd python 라이브러리를 찾을 수 없음"
@@ -5364,7 +5358,7 @@ msgid "start address"
 msgstr "시작 주소"
 
 msgid "state"
-msgstr "상태"
+msgstr "state"
 
 msgid "sudo failed, continuing as if nothing happened"
 msgstr "sudo에 실패, 무시하고 계속합니다. "
@@ -5475,4 +5469,4 @@ msgid "you can not pass project if the scope is private"
 msgstr "개인용 범위인 경우 프로젝트를 전달할 수 없음"
 
 msgid "zone"
-msgstr "영역"
+msgstr "zone"

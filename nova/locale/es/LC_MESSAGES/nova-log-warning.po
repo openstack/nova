@@ -8,16 +8,17 @@
 # Pablo Sanchez <furybeat@gmail.com>, 2015
 # OpenStack Infra <zanata@openstack.org>, 2015. #zanata
 # Travis Nguyen <travisn@us.ibm.com>, 2015. #zanata
+# Eugènia Torrella <tester03@es.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.0.1.dev83\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:49+0000\n"
+"POT-Creation-Date: 2016-06-11 00:11+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2015-10-07 05:39+0000\n"
-"Last-Translator: Travis Nguyen <travisn@us.ibm.com>\n"
+"PO-Revision-Date: 2016-05-10 08:41+0000\n"
+"Last-Translator: Eugènia Torrella <tester03@es.ibm.com>\n"
 "Language: es\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -230,7 +231,7 @@ msgstr "Se ha llamado una destrucción en una instancia no existente %s"
 #, python-format
 msgid "Detach interface failed, port_id=%(port_id)s, reason: %(msg)s"
 msgstr ""
-"Ha fallado la desconexión de interfaz, port_id=%(port_id)s, razón: %(msg)s"
+"Ha fallado la desconexión de interfaz, port_id=%(port_id)s, motivo: %(msg)s"
 
 #, python-format
 msgid "Detaching from erroneous nbd device returned error: %s"
@@ -500,7 +501,7 @@ msgstr "Ignorando función incorrecta '%s'. El formato debe ser 'key:val'."
 
 #, python-format
 msgid "Ignoring the invalid elements of the option %(name)s: %(options)s"
-msgstr "Ignorando los elementos inválidos de la opción %(name)s: %(options)s"
+msgstr "Ignorando los elementos no válidos de la opción %(name)s: %(options)s"
 
 #, python-format
 msgid "Ignoring volume cleanup failure due to %s"
@@ -623,7 +624,7 @@ msgid ""
 "not be synchronized automatically since the _sync_power_states periodic task "
 "is also disabled."
 msgstr ""
-"Se han inhabilitado los eventos de ciclo de vida dela instancia del "
+"Se han inhabilitado los sucesos de ciclo de vida dela instancia del "
 "controlador de cómputo. Tenga en cuenta que no se sincronizarán "
 "automáticamente  los cambios de ciclo de vida en una instancia fuera del "
 "servicio de cómputo ya que la tarea periódica  _sync_power_states también "
@@ -652,7 +653,8 @@ msgstr " Instancia: %(instance_uuid)s no se ha podido guardar en memcached."
 
 msgid "Invalid 'agent_present' value. Falling back to the default."
 msgstr ""
-"Valor inválido 'agent_present'. Regresado hacia configuración predeterminada."
+"Valor no válido 'agent_present'. Regresado hacia configuración "
+"predeterminada."
 
 #, python-format
 msgid "Invalid cachemode %(cache_mode)s specified for disk type %(disk_type)s."
@@ -662,15 +664,15 @@ msgstr ""
 
 #, python-format
 msgid "Invalid value '%d' for image_compression_level"
-msgstr "Valor inválido '%d' para image_compression_level"
+msgstr "Valor no válido '%d' para image_compression_level"
 
 #, python-format
 msgid "Invalid value '%s' for torrent_images"
-msgstr "valor inválido '%s' para torrent_images"
+msgstr "valor no válido '%s' para torrent_images"
 
 #, python-format
 msgid "Invalid value for id mapping %s"
-msgstr "Valor para mapeo de identificación no válido %s"
+msgstr "Valor para correlación de ID no válido %s"
 
 #, python-format
 msgid "Key '%(key)s' not in instances '%(inst)s'"
@@ -695,7 +697,7 @@ msgid ""
 "value %(default)s."
 msgstr ""
 "Valor de metadatos %(value)s para %(key)s no es de tipo %(type)s. Utilizando "
-"valor por defecto %(default)s."
+"valor predeterminado %(default)s."
 
 msgid "Migration operation was cancelled"
 msgstr "Se ha cancelado la operación de migración"
@@ -1070,11 +1072,11 @@ msgstr ""
 
 #, python-format
 msgid "URI %(uri)s does not support connection events: %(error)s"
-msgstr "URI %(uri)s no soporta eventos de conexión: %(error)s"
+msgstr "URI %(uri)s no soporta sucesos de conexión: %(error)s"
 
 #, python-format
 msgid "URI %(uri)s does not support events: %(error)s"
-msgstr "URI %(uri)s no soporta eventos: %(error)s"
+msgstr "URI %(uri)s no soporta sucesos: %(error)s"
 
 #, python-format
 msgid "URI %(uri)s does not support full set of host capabilities: %(error)s"
@@ -1249,7 +1251,7 @@ msgid ""
 "attach interface failed , try to deallocate port %(port_id)s, reason: %(msg)s"
 msgstr ""
 "Ha fallado la conexión de interfaz, intente desasignar puerto  %(port_id)s, "
-"razón: %(msg)s"
+"motivo: %(msg)s"
 
 #, python-format
 msgid "couldn't obtain the memory from domain: %(uuid)s, exception: %(ex)s"
@@ -1342,7 +1344,7 @@ msgid ""
 "could not be parsed. Taking the default port range %(default)s."
 msgstr ""
 "serial_console.port_range debe ser <num>:<num>. El valor dado %(port_range)s "
-"no se puede analizar. Tomando el rango de puerto por defecto %(default)s."
+"no se puede analizar. Tomando el rango de puertos predeterminado %(default)s."
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr ""

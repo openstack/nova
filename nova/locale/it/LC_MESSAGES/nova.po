@@ -8,21 +8,17 @@
 # Loris Strozzini, 2012
 # ls, 2012
 # Mariano Iumiento <miumiento@gmail.com>, 2013
-# OpenStack Infra <zanata@openstack.org>, 2015. #zanata
-# Tom Cocozzello <tjcocozz@us.ibm.com>, 2015. #zanata
-# Alessandra <alessandra@translated.net>, 2016. #zanata
 # Remo Mattei <remo@rm.ht>, 2016. #zanata
-# Tom Cocozzello <tjcocozz@us.ibm.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.0.1.dev83\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:49+0000\n"
+"POT-Creation-Date: 2016-06-11 00:10+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-04 10:10+0000\n"
-"Last-Translator: Remo Mattei <remo@rm.ht>\n"
+"PO-Revision-Date: 2016-04-26 06:16+0000\n"
+"Last-Translator: Alessandra <alessandra@translated.net>\n"
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
@@ -197,7 +193,7 @@ msgstr "%s non è supportato."
 msgid "%s must be either 'MANUAL' or 'AUTO'."
 msgstr "%s deve essere 'MANUAL' o 'AUTO'."
 
-#, python-format
+#, fuzzy, python-format
 msgid "'%(other)s' should be an instance of '%(cls)s'"
 msgstr "'%(other)s' deve essere un'istanza di '%(cls)s'"
 
@@ -600,7 +596,7 @@ msgstr "Il numero CPU %(cpunum)d è superiore a quello massimo %(cpumax)d"
 
 #, python-format
 msgid "CPU number %(cpuset)s is not assigned to any node"
-msgstr "Il numero CPU %(cpuset)s non è assegnato a nessun nodo"
+msgstr " Il numero CPU %(cpuset)s non è assegnato a nessun nodo"
 
 #, python-format
 msgid "CPU pinning is not supported by the host: %(reason)s"
@@ -2672,8 +2668,8 @@ msgid ""
 "List of file systems that are configured in this file in the image_file_url:"
 "<list entry name> sections"
 msgstr ""
-"Elenco di file system configurati in questo file nelle sezioni "
-"image_file_url:<nome voce di elenco>"
+"Elenco del file system configurati in questo  file nella relative sezioni  "
+"image_file_url:<list entry name>"
 
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr "L'elenco di interfacce virtuali non è supportato da questo cloud."
@@ -2950,6 +2946,7 @@ msgstr "È necessario immettere network_id quando è richiesto l'indirizzo IP"
 msgid "Must not input both network_id and port_id"
 msgstr "Non si deve immettere entrambi network_id e port_id"
 
+#, fuzzy
 msgid "Must specify an ExtensionManager class"
 msgstr "È necessario specificare una classe ExtensionManager"
 
@@ -3691,6 +3688,7 @@ msgstr "Il corpo della richiesta e l'URI non corrispondono"
 msgid "Request body contains too many items"
 msgstr "Il corpo della richiesta contiene troppi elementi"
 
+#, fuzzy
 msgid "Request is too large."
 msgstr "La richiesta è troppo grande."
 
