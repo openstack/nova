@@ -1470,7 +1470,7 @@ class API(base.Base):
 
         Returns a tuple of (instances, reservation_id)
         """
-        if requested_networks and max_count > 1:
+        if requested_networks and max_count is not None and max_count > 1:
             self._check_multiple_instances_with_specified_ip(
                 requested_networks)
             if utils.is_neutron():
