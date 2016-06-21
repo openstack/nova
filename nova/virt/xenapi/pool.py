@@ -63,6 +63,11 @@ class ResourcePool(object):
         if not pool_states.is_hv_pool(aggregate.metadata):
             return
 
+        if CONF.xenserver.independent_compute:
+            raise exception.NotSupportedWithOption(
+                operation='adding to a XenServer pool',
+                option='CONF.xenserver.independent_compute')
+
         invalid = {pool_states.CHANGING: _('setup in progress'),
                    pool_states.DISMISSED: _('aggregate deleted'),
                    pool_states.ERROR: _('aggregate in error')}

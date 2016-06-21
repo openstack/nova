@@ -34,6 +34,7 @@ import six.moves.urllib.parse as urlparse
 
 import nova.conf
 from nova.i18n import _, _LE, _LW
+from nova import exception
 from nova.virt import driver
 from nova.virt.xenapi.client import session
 from nova.virt.xenapi import host
@@ -82,13 +83,35 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
+        if CONF.xenserver.independent_compute:
+            def invalid_option(option_name, recommended_value):
+                LOG.exception(_LE('Current value of '
+                       'CONF.xenserver.%(option)s option incompatible with '
+                       'CONF.xenserver.independent_compute=True.  '
+                       'Consider using "%(recommended)s"') % {
+                           'option': option_name,
+                           'recommended': recommended_value})
+                raise exception.NotSupportedWithOption(
+                    operation=option_name,
+                    option='CONF.xenserver.independent_compute')
+
+            # Check various options are in the correct state:
+            if CONF.xenserver.check_host:
+                invalid_option('CONF.xenserver.check_host', False)
+            if CONF.flat_injected:
+                invalid_option('CONF.flat_injected', False)
+            if CONF.default_ephemeral_format and \
+               CONF.default_ephemeral_format != 'ext3':
+                invalid_option('CONF.default_ephemeral_format', 'ext3')
+
         if CONF.xenserver.check_host:
             vm_utils.ensure_correct_host(self._session)
 
-        try:
-            vm_utils.cleanup_attached_vdis(self._session)
-        except Exception:
-            LOG.exception(_LE('Failure while cleaning up attached VDIs'))
+        if not CONF.xenserver.independent_compute:
+            try:
+                vm_utils.cleanup_attached_vdis(self._session)
+            except Exception:
+                LOG.exception(_LE('Failure while cleaning up attached VDIs'))
 
     def instance_exists(self, instance):
         """Checks existence of an instance on the host.

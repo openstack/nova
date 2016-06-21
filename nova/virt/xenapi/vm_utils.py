@@ -924,6 +924,10 @@ def _auto_configure_disk(session, vdi_ref, new_gb):
 
 
 def try_auto_configure_disk(session, vdi_ref, new_gb):
+    if CONF.xenserver.independent_compute:
+        raise exception.NotSupportedWithOption(
+            operation='auto_configure_disk',
+            option='CONF.xenserver.independent_compute')
     try:
         _auto_configure_disk(session, vdi_ref, new_gb)
     except exception.CannotResizeDisk as e:
@@ -1030,6 +1034,11 @@ def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
     # partition because that is what parted supports.
     is_windows = instance['os_type'] == "windows"
     fs_type = "vfat" if is_windows else "swap"
+
+    if CONF.xenserver.independent_compute and fs_type != "swap":
+        raise exception.NotSupportedWithOption(
+            operation='swap drives for Windows',
+            option='CONF.xenserver.independent_compute')
 
     _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    'swap', swap_mb, fs_type)
@@ -1139,6 +1148,11 @@ def _create_kernel_image(context, session, instance, name_label, image_id,
 
     Returns: A list of dictionaries that describe VDIs
     """
+    if CONF.xenserver.independent_compute:
+        raise exception.NotSupportedWithOption(
+            operation='Non-VHD images',
+            option='CONF.xenserver.independent_compute')
+
     filename = ""
     if CONF.xenserver.cache_images != 'none':
         args = {}
@@ -1308,6 +1322,10 @@ def _fetch_image(context, session, instance, name_label, image_id, image_type):
     if image_type == ImageType.DISK_VHD:
         vdis = _fetch_vhd_image(context, session, instance, image_id)
     else:
+        if CONF.xenserver.independent_compute:
+            raise exception.NotSupportedWithOption(
+                operation='Non-VHD images',
+                option='CONF.xenserver.independent_compute')
         vdis = _fetch_disk_image(context, session, instance, name_label,
                                  image_id, image_type)
 
@@ -2198,6 +2216,16 @@ def _get_dom0_ref(session):
 
 
 def get_this_vm_uuid(session):
+    if CONF.xenserver.independent_compute:
+        msg = _LE("This host has been configured with the independent "
+                  "compute flag.  An operation has been attempted which is "
+                  "incompatible with this flag, but should have been "
+                  "caught earlier.  Please raise a bug against the "
+                  "OpenStack Nova project")
+        LOG.error(msg)
+        raise exception.NotSupportedWithOption(
+            operation='uncaught operation',
+            option='CONF.xenserver.independent_compute')
     if session and session.is_local_connection:
         # UUID is the control domain running on this host
         vms = session.call_xenapi("VM.get_all_records_where",
