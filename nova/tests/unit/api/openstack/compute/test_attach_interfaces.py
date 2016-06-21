@@ -350,7 +350,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -370,7 +369,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -391,7 +389,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -408,7 +405,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     @mock.patch.object(compute_api.API, 'get')
@@ -428,7 +424,6 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         attach_mock.assert_called_once_with(ctxt, fake_instance, None,
                                             None, None)
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
-                                         want_objects=True,
                                          expected_attrs=None)
 
     def _test_attach_interface_with_invalid_parameter(self, param):

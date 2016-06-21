@@ -694,7 +694,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
@@ -712,7 +712,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('image', search_opts)
@@ -855,7 +855,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('flavor', search_opts)
@@ -892,7 +892,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('vm_state', search_opts)
@@ -913,7 +913,7 @@ class ServersControllerTest(ControllerTest):
         task_state = task_states.REBOOTING
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('task_state', search_opts)
@@ -938,7 +938,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'],
@@ -972,7 +972,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIn('vm_state', search_opts)
             self.assertEqual(search_opts['vm_state'], ['deleted'])
@@ -1011,8 +1011,7 @@ class ServersControllerTest(ControllerTest):
         mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
             expected_attrs=['flavor', 'info_cache', 'metadata', 'pci_devices'],
-            marker=mock.ANY, want_objects=mock.ANY,
-            sort_keys=mock.ANY, sort_dirs=mock.ANY)
+            marker=mock.ANY, sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_deleted_filter_invalid_str(self, mock_get_all):
@@ -1035,14 +1034,13 @@ class ServersControllerTest(ControllerTest):
         mock_get_all.assert_called_once_with(
             mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
             expected_attrs=['flavor', 'info_cache', 'metadata', 'pci_devices'],
-            marker=mock.ANY, want_objects=mock.ANY,
-            sort_keys=mock.ANY, sort_dirs=mock.ANY)
+            marker=mock.ANY, sort_keys=mock.ANY, sort_dirs=mock.ANY)
 
     def test_get_servers_allows_name(self):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('name', search_opts)
@@ -1072,7 +1070,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('changes-since', search_opts)
@@ -1105,7 +1103,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             # Allowed by user
@@ -1135,7 +1133,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             # Allowed by user
@@ -1164,7 +1162,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip', search_opts)
@@ -1187,7 +1185,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
@@ -1211,7 +1209,7 @@ class ServersControllerTest(ControllerTest):
         server_uuid = str(uuid.uuid4())
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertIsNotNone(search_opts)
             self.assertIn('ip6', search_opts)
@@ -1294,7 +1292,7 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_joins_pci_devices(self):
 
         def fake_get_all(compute_self, context, search_opts=None,
-                         limit=None, marker=None, want_objects=False,
+                         limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
             self.assertEqual(['pci_devices'], expected_attrs)
             return []

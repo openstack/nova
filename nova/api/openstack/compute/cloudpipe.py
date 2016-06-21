@@ -57,8 +57,7 @@ class CloudpipeController(wsgi.Controller):
     def _get_all_cloudpipes(self, context):
         """Get all cloudpipes."""
         instances = self.compute_api.get_all(context,
-                                             search_opts={'deleted': False},
-                                             want_objects=True)
+                                             search_opts={'deleted': False})
         return [instance for instance in instances
                 if pipelib.is_vpn_image(instance.image_ref)
                 and instance.vm_state != vm_states.DELETED]

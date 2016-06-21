@@ -55,8 +55,8 @@ class ResetStateTestsV21(test.NoDBTestCase):
     def test_no_instance(self):
         self.mox.StubOutWithMock(self.compute_api, 'get')
         exc = exception.InstanceNotFound(instance_id='inst_ud')
-        self.compute_api.get(self.context, self.uuid, expected_attrs=None,
-                             want_objects=True).AndRaise(exc)
+        self.compute_api.get(
+            self.context, self.uuid, expected_attrs=None).AndRaise(exc)
         self.mox.ReplayAll()
 
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -82,8 +82,8 @@ class ResetStateTestsV21(test.NoDBTestCase):
                                  "Instance.%s doesn't match" % k)
             instance.obj_reset_changes()
 
-        self.compute_api.get(self.context, instance.uuid, expected_attrs=None,
-                             want_objects=True).AndReturn(instance)
+        self.compute_api.get(self.context, instance.uuid,
+                             expected_attrs=None).AndReturn(instance)
         instance.save(admin_state_reset=True).WithSideEffects(check_state)
 
     def test_reset_active(self):

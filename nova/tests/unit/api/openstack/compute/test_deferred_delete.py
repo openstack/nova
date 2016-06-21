@@ -47,8 +47,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         fake_instance = 'fake_instance'
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None,
-                            want_objects=True).AndReturn(fake_instance)
+                            expected_attrs=None).AndReturn(fake_instance)
         compute_api.API.force_delete(self.fake_context, fake_instance)
 
         self.mox.ReplayAll()
@@ -66,8 +65,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         self.mox.StubOutWithMock(compute_api.API, 'get')
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None,
-                            want_objects=True).AndRaise(
+                            expected_attrs=None).AndRaise(
             exception.InstanceNotFound(instance_id='instance-0000'))
 
         self.mox.ReplayAll()
@@ -95,8 +93,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         fake_instance = 'fake_instance'
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None,
-                            want_objects=True).AndReturn(fake_instance)
+                            expected_attrs=None).AndReturn(fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance)
 
         self.mox.ReplayAll()
@@ -114,7 +111,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         self.mox.StubOutWithMock(compute_api.API, 'get')
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None, want_objects=True).AndRaise(
+                            expected_attrs=None).AndRaise(
             exception.InstanceNotFound(instance_id='instance-0000'))
 
         self.mox.ReplayAll()
@@ -132,8 +129,7 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
                 instance_uuid='fake')
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None,
-                            want_objects=True).AndReturn(fake_instance)
+                            expected_attrs=None).AndReturn(fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance).AndRaise(
                 exc)
 

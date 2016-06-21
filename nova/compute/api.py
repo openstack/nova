@@ -1939,8 +1939,7 @@ class API(base.Base):
 
         self.compute_rpcapi.trigger_crash_dump(context, instance)
 
-    def get(self, context, instance_id, want_objects=False,
-            expected_attrs=None):
+    def get(self, context, instance_id, expected_attrs=None):
         """Get a single instance with the given instance_id."""
         if not expected_attrs:
             expected_attrs = []
@@ -1960,13 +1959,10 @@ class API(base.Base):
             LOG.debug("Invalid instance id %s", instance_id)
             raise exception.InstanceNotFound(instance_id=instance_id)
 
-        if not want_objects:
-            instance = obj_base.obj_to_primitive(instance)
         return instance
 
     def get_all(self, context, search_opts=None, limit=None, marker=None,
-                want_objects=False, expected_attrs=None, sort_keys=None,
-                sort_dirs=None):
+                expected_attrs=None, sort_keys=None, sort_dirs=None):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -2036,10 +2032,7 @@ class API(base.Base):
                     # We already know we can't match the filter, so
                     # return an empty list
                     except ValueError:
-                        if want_objects:
-                            return objects.InstanceList()
-                        else:
-                            return []
+                        return objects.InstanceList()
 
         # IP address filtering cannot be applied at the DB layer, remove any DB
         # limit so that it can be applied after the IP filter.
@@ -2049,20 +2042,12 @@ class API(base.Base):
             LOG.debug('Removing limit for DB query due to IP filter')
             limit = None
 
-        inst_models = self._get_instances_by_filters(context, filters,
+        instances = self._get_instances_by_filters(context, filters,
                 limit=limit, marker=marker, expected_attrs=expected_attrs,
                 sort_keys=sort_keys, sort_dirs=sort_dirs)
 
         if filter_ip:
-            inst_models = self._ip_filter(inst_models, filters, orig_limit)
-
-        if want_objects:
-            return inst_models
-
-        # Convert the models to dictionaries
-        instances = []
-        for inst_model in inst_models:
-            instances.append(obj_base.obj_to_primitive(inst_model))
+            instances = self._ip_filter(instances, filters, orig_limit)
 
         return instances
 

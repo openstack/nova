@@ -94,7 +94,7 @@ class FpingController(wsgi.Controller):
                 exclude = set()
 
         instance_list = self.compute_api.get_all(
-            context, search_opts=search_opts, want_objects=True)
+            context, search_opts=search_opts)
         ip_list = []
         instance_ips = {}
         instance_projects = {}

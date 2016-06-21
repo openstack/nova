@@ -329,8 +329,7 @@ def fake_instance_get(**kwargs):
 
 
 def fake_compute_get(**kwargs):
-    def _return_server_obj(context, uuid, want_objects=False,
-                           expected_attrs=None):
+    def _return_server_obj(context, uuid, expected_attrs=None):
         return stub_instance_obj(context, **kwargs)
     return _return_server_obj
 
@@ -380,8 +379,7 @@ def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
 
 def fake_compute_get_all(num_servers=5, **kwargs):
     def _return_servers_objs(context, search_opts=None, limit=None,
-                             marker=None, want_objects=False,
-                             expected_attrs=None, sort_keys=None,
+                             marker=None, expected_attrs=None, sort_keys=None,
                              sort_dirs=None):
         db_insts = fake_instance_get_all_by_filters()(None,
                                                       limit=limit,

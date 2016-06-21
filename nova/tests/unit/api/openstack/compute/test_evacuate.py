@@ -35,8 +35,7 @@ def fake_compute_api(*args, **kwargs):
     return True
 
 
-def fake_compute_api_get(self, context, instance_id, want_objects=False,
-                         **kwargs):
+def fake_compute_api_get(self, context, instance_id, **kwargs):
     # BAD_UUID is something that does not exist
     if instance_id == 'BAD_UUID':
         raise exception.InstanceNotFound(instance_id=instance_id)

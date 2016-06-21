@@ -393,7 +393,7 @@ class ServersController(wsgi.Controller):
         try:
             instance_list = self.compute_api.get_all(elevated or context,
                     search_opts=search_opts, limit=limit, marker=marker,
-                    want_objects=True, expected_attrs=expected_attrs,
+                    expected_attrs=expected_attrs,
                     sort_keys=sort_keys, sort_dirs=sort_dirs)
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
