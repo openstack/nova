@@ -867,9 +867,9 @@ class ResourceTest(MicroversionedTest):
         for val in six.itervalues(response.headers):
             # All headers must be utf8
             self.assertThat(val, matchers.EncodedByUTF8())
-        self.assertEqual(b'1', response.headers['x-header1'])
-        self.assertEqual(b'header2', response.headers['x-header2'])
-        self.assertEqual(b'header3', response.headers['x-header3'])
+        self.assertEqual('1', response.headers['x-header1'])
+        self.assertEqual('header2', response.headers['x-header2'])
+        self.assertEqual('header3', response.headers['x-header3'])
 
     def test_resource_valid_utf8_body(self):
         class Controller(object):

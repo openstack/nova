@@ -18,6 +18,7 @@ import datetime
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 from six.moves import urllib
 import webob
 from webob import exc
@@ -319,7 +320,8 @@ class VolumeApiTestV21(test.NoDBTestCase):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
         resp = req.get_response(self.app)
         self.assertEqual(404, resp.status_int)
-        self.assertIn('Volume 456 could not be found.', resp.body)
+        self.assertIn('Volume 456 could not be found.',
+                      encodeutils.safe_decode(resp.body))
 
     def test_volume_delete(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/123')
@@ -334,7 +336,8 @@ class VolumeApiTestV21(test.NoDBTestCase):
         req.method = 'DELETE'
         resp = req.get_response(self.app)
         self.assertEqual(404, resp.status_int)
-        self.assertIn('Volume 456 could not be found.', resp.body)
+        self.assertIn('Volume 456 could not be found.',
+                      encodeutils.safe_decode(resp.body))
 
 
 class VolumeAttachTestsV21(test.NoDBTestCase):
