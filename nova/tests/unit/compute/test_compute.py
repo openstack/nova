@@ -8115,16 +8115,14 @@ class ComputeAPITestCase(BaseTestCase):
     def test_get(self):
         # Test get instance.
         exp_instance = self._create_fake_instance_obj()
-        instance = self.compute_api.get(self.context, exp_instance.uuid,
-                                        want_objects=True)
+        instance = self.compute_api.get(self.context, exp_instance.uuid)
         self.assertEqual(exp_instance.id, instance.id)
 
     def test_get_with_admin_context(self):
         # Test get instance.
         c = context.get_admin_context()
         exp_instance = self._create_fake_instance_obj()
-        instance = self.compute_api.get(c, exp_instance['uuid'],
-                                        want_objects=True)
+        instance = self.compute_api.get(c, exp_instance['uuid'])
         self.assertEqual(exp_instance.id, instance.id)
 
     def test_get_all_by_name_regexp(self):
@@ -9867,16 +9865,14 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params={'host': CONF.host})
         self.compute.build_and_run_instance(self.context,
                 instance, {}, {}, {}, block_device_mapping=[])
-        instance = self.compute_api.get(self.context, instance['uuid'],
-                                        want_objects=True)
+        instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.inject_network_info(self.context, instance)
 
     def test_reset_network(self):
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context,
                 instance, {}, {}, {}, block_device_mapping=[])
-        instance = self.compute_api.get(self.context, instance['uuid'],
-                                        want_objects=True)
+        instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.reset_network(self.context, instance)
 
     def test_lock(self):
@@ -9896,8 +9892,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute.build_and_run_instance(self.context,
                 instance, {}, {}, {}, block_device_mapping=[])
-        instance = self.compute_api.get(self.context, instance.uuid,
-                                        want_objects=True)
+        instance = self.compute_api.get(self.context, instance.uuid)
         security_group_name = self._create_group()['name']
 
         self.security_group_api.add_to_instance(self.context,

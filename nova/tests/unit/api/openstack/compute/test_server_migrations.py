@@ -175,8 +175,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
         self.assertEqual(migrations_in_progress, response)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get')
     def test_index_invalid_instance(self, m_get_instance):
@@ -186,8 +185,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           self.req, SERVER_UUID)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -199,8 +197,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
         self.assertEqual(migrations[0], response['migration'])
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -214,8 +211,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           non_progress_mig.id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -230,8 +226,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           non_progress_mig.id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get_migration_by_id_and_instance')
     @mock.patch('nova.compute.api.API.get')
@@ -245,8 +240,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           migrations_obj[0].id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
     @mock.patch('nova.compute.api.API.get')
     def test_show_migration_invalid_instance(self, m_get_instance):
@@ -257,8 +251,7 @@ class ServerMigrationsTestsV223(ServerMigrationsTestsV21):
                           migrations_obj[0].id)
 
         m_get_instance.assert_called_once_with(self.context, SERVER_UUID,
-                                               expected_attrs=None,
-                                               want_objects=True)
+                                               expected_attrs=None)
 
 
 class ServerMigrationsTestsV224(ServerMigrationsTestsV21):

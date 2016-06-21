@@ -499,7 +499,6 @@ def get_instance(compute_api, context, instance_id, expected_attrs=None):
     """Fetch an instance from the compute API, handling error checking."""
     try:
         return compute_api.get(context, instance_id,
-                               want_objects=True,
                                expected_attrs=expected_attrs)
     except exception.InstanceNotFound as e:
         raise exc.HTTPNotFound(explanation=e.format_message())

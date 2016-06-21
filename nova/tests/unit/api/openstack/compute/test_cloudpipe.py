@@ -43,11 +43,11 @@ def fake_vpn_instance():
         uuid=uuid, project_id=project_id)
 
 
-def compute_api_get_all_empty(context, search_opts=None, want_objects=True):
+def compute_api_get_all_empty(context, search_opts=None):
     return []
 
 
-def compute_api_get_all(context, search_opts=None, want_objects=True):
+def compute_api_get_all(context, search_opts=None):
         return [fake_vpn_instance()]
 
 

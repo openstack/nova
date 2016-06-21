@@ -3516,16 +3516,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_metadata_invalid_return_empty_object(self):
         api = compute_api.API()
-        ret = api.get_all(self.context, want_objects=True,
-                          search_opts={'metadata': 'foo'})
+        ret = api.get_all(self.context, search_opts={'metadata': 'foo'})
         self.assertIsInstance(ret, objects.InstanceList)
-        self.assertEqual(0, len(ret))
-
-    def test_metadata_invalid_return_empty_list(self):
-        api = compute_api.API()
-        ret = api.get_all(self.context, want_objects=False,
-                          search_opts={'metadata': 'foo'})
-        self.assertIsInstance(ret, list)
         self.assertEqual(0, len(ret))
 
     def test_populate_instance_names_host_name(self):

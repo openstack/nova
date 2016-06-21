@@ -22,7 +22,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 
 
-def fake_get(self, context, id, expected_attrs=None, want_objects=False):
+def fake_get(self, context, id, expected_attrs=None):
     return {'uuid': id}
 
 

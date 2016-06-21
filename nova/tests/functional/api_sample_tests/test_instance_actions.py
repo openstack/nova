@@ -35,8 +35,7 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance(obj=True)
 
-        def _fake_get(stub_self, context, instance_uuid, expected_attrs=None,
-                      want_objects=True):
+        def _fake_get(stub_self, context, instance_uuid, expected_attrs=None):
             return fake_instance.fake_instance_obj(
                 None, **{'uuid': instance_uuid})
 

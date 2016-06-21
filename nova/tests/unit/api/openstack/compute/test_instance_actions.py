@@ -110,8 +110,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
     instance_actions = instance_actions_v21
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
 
-    def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
+    def fake_get(self, context, instance_uuid, expected_attrs=None):
         return objects.Instance(uuid=instance_uuid)
 
     def setUp(self):
@@ -201,8 +200,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                           FAKE_UUID, FAKE_REQUEST_ID)
 
     def test_index_instance_not_found(self):
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
+        def fake_get(self, context, instance_uuid, expected_attrs=None):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = self._get_http_req('os-instance-actions')
@@ -210,8 +208,7 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                           FAKE_UUID)
 
     def test_show_instance_not_found(self):
-        def fake_get(self, context, instance_uuid, expected_attrs=None,
-                     want_objects=False):
+        def fake_get(self, context, instance_uuid, expected_attrs=None):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = self._get_http_req('os-instance-actions/fake')
@@ -222,7 +219,6 @@ class InstanceActionsTestV21(test.NoDBTestCase):
 class InstanceActionsTestV221(InstanceActionsTestV21):
     wsgi_api_version = "2.21"
 
-    def fake_get(self, context, instance_uuid, expected_attrs=None,
-                 want_objects=False):
+    def fake_get(self, context, instance_uuid, expected_attrs=None):
         self.assertEqual('yes', context.read_deleted)
         return objects.Instance(uuid=instance_uuid)

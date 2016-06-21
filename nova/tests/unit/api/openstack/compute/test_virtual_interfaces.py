@@ -31,8 +31,7 @@ from nova.tests import uuidsentinel as uuids
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
-def compute_api_get(self, context, instance_id, expected_attrs=None,
-                    want_objects=False):
+def compute_api_get(self, context, instance_id, expected_attrs=None):
     return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 
@@ -93,8 +92,7 @@ class ServerVirtualInterfaceTestV21(test.NoDBTestCase):
         fake_req.api_version_request = api_version_request.APIVersionRequest(
                                         self.wsgi_api_version)
         compute_api.API.get(fake_context, 'fake_uuid',
-                            expected_attrs=None,
-                            want_objects=True).AndRaise(
+                            expected_attrs=None).AndRaise(
             exception.InstanceNotFound(instance_id='instance-0000'))
 
         self.mox.ReplayAll()

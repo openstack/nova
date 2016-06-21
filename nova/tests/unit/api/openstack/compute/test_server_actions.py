@@ -123,8 +123,8 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         self.compute_api.get(self.context, uuid,
                              expected_attrs=['flavor', 'pci_devices',
-                                             'numa_topology'],
-                             want_objects=True).AndReturn(instance)
+                                             'numa_topology']
+                             ).AndReturn(instance)
         return instance
 
     def _test_locked_instance(self, action, method=None, body_map=None,

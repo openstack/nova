@@ -217,12 +217,9 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
     def _stub_compute_api_get(self):
 
         def fake_compute_api_get(self, context, instance_id,
-                                 want_objects=False, expected_attrs=None):
-            if want_objects:
-                return fake_instance.fake_instance_obj(
-                        context, **{'uuid': instance_id})
-            else:
-                return {'uuid': instance_id}
+                                 expected_attrs=None):
+            return fake_instance.fake_instance_obj(
+                    context, **{'uuid': instance_id})
 
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
 

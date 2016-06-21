@@ -64,8 +64,7 @@ def network_api_get_floating_ips_by_project(self, context):
              'fixed_ip': None}]
 
 
-def compute_api_get(self, context, instance_id, expected_attrs=None,
-                    want_objects=False):
+def compute_api_get(self, context, instance_id, expected_attrs=None):
     return objects.Instance(uuid=FAKE_UUID, id=instance_id,
                             instance_type_id=1, host='bob')
 
@@ -599,8 +598,7 @@ class FloatingIpTestV21(test.TestCase):
 
     def test_floating_ip_associate_invalid_instance(self):
 
-        def fake_get(self, context, id, expected_attrs=None,
-                     want_objects=False):
+        def fake_get(self, context, id, expected_attrs=None):
             raise exception.InstanceNotFound(instance_id=id)
 
         self.stubs.Set(compute.api.API, "get", fake_get)
