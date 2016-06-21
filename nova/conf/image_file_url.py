@@ -22,7 +22,6 @@
 
 from oslo_config import cfg
 
-from nova.i18n import _
 
 image_file_url_group = cfg.OptGroup(
     'image_file_url',
@@ -30,35 +29,41 @@ image_file_url_group = cfg.OptGroup(
 
 filesystems = cfg.ListOpt(
     name='filesystems',
-    deprecated_for_removal=True,
-    deprecated_reason='The feature to download images from glance via '
-                      'filesystem is not used and will be removed in the '
-                      'future.',
     default=[],
-    help=_('List of file systems that are configured '
-           'in this file in the '
-           'image_file_url:<list entry name> '
-           'sections'))
+    deprecated_for_removal=True,
+    deprecated_reason="""
+The feature to download images from glance via filesystem is not used and will
+be removed in the future.
+""",
+    help="""
+List of file systems that are configured in this file in the
+image_file_url:<list entry name> sections
+""")
 
 # NOTE(jbresnah) because the group under which these options are added is
 # dynamically determined these options need to stay out of global space
 # or they will confuse generate_sample.sh
 filesystem_opts = [
      cfg.StrOpt('id',
-                help=_('A unique ID given to each file system.  This is '
-                       'value is set in Glance and agreed upon here so '
-                       'that the operator knowns they are dealing with '
-                       'the same file system.'),
                 deprecated_for_removal=True,
-                deprecated_reason='The feature to download images from glance '
-                                  'via filesystem is not used and will be '
-                                  'removed in the future.'),
+                deprecated_reason="""
+The feature to download images from glance via filesystem is not used and will
+be removed in the future.
+""",
+                help="""
+A unique ID given to each file system.  This is value is set in Glance and
+agreed upon here so that the operator knowns they are dealing with the same
+file system.
+"""),
      cfg.StrOpt('mountpoint',
-                help=_('The path at which the file system is mounted.'),
                 deprecated_for_removal=True,
-                deprecated_reason='The feature to download images from glance '
-                                  'via filesystem is not used and will be '
-                                  'removed in the future.'),
+                deprecated_reason="""
+The feature to download images from glance via filesystem is not used and will
+be removed in the future.
+""",
+                help="""
+The path at which the file system is mounted.
+"""),
 ]
 
 ALL_OPTS = [filesystems]
