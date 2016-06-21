@@ -117,7 +117,7 @@ are ignored.
 This is an advanced feature which allows the hypervisor to signal to the
 compute service that an unexpected state change has occurred in an instance
 and that the instance can be shutdown automatically. Unfortunately, this can
-race in some conditions, for exmaple in reboot operations or when the compute
+race in some conditions, for example in reboot operations or when the compute
 service or when host is rebooted (planned or due to an outage). If such races
 are common, then it is advisable to disable this feature.
 

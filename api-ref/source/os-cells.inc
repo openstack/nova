@@ -103,7 +103,7 @@ Normal response code: 200
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 NotImplemented(501)
 
-.. TODO(cdent): this is weird, data is stuctured entirely differently.
+.. TODO(cdent): this is weird, data is structured entirely differently.
 
 Show Cell Data
 ==============
