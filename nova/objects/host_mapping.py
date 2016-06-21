@@ -26,6 +26,17 @@ def _cell_id_in_updates(updates):
         updates["cell_id"] = cell_mapping_obj.id
 
 
+def _apply_updates(context, db_mapping, updates):
+    db_mapping.update(updates)
+    db_mapping.save(context.session)
+    # NOTE: This is done because a later access will trigger a lazy load
+    # outside of the db session so it will fail. We don't lazy load
+    # cell_mapping on the object later because we never need a HostMapping
+    # without the CellMapping.
+    db_mapping.cell_mapping
+    return db_mapping
+
+
 @base.NovaObjectRegistry.register
 class HostMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
@@ -61,7 +72,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
             if key == "cell_mapping":
                 # NOTE(dheeraj): If cell_mapping is stashed in db object
                 # we load it here. Otherwise, lazy loading will happen
-                # when .cell_mapping is accessd later
+                # when .cell_mapping is accessed later
                 if not db_value:
                     continue
                 db_value = cell_mapping.CellMapping._from_db_object(
@@ -91,14 +102,7 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
     @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
         db_mapping = api_models.HostMapping()
-        db_mapping.update(updates)
-        db_mapping.save(context.session)
-        # NOTE: This is done because a later access will trigger a lazy load
-        # outside of the db session so it will fail. We don't lazy load
-        # cell_mapping on the object later because we never need a HostMapping
-        # without the CellMapping.
-        db_mapping.cell_mapping
-        return db_mapping
+        return _apply_updates(context, db_mapping, updates)
 
     @base.remotable
     def create(self):
@@ -115,16 +119,14 @@ class HostMapping(base.NovaTimestampObject, base.NovaObject):
             id=obj.id).first()
         if not db_mapping:
             raise exception.HostMappingNotFound(name=obj.host)
-
-        db_mapping.update(updates)
-        return db_mapping
+        return _apply_updates(context, db_mapping, updates)
 
     @base.remotable
     def save(self):
         changes = self.obj_get_changes()
         # cell_mapping must be mapped to cell_id for updates
         _cell_id_in_updates(changes)
-        db_mapping = self._save_in_db(self._context, self.host, changes)
+        db_mapping = self._save_in_db(self._context, self, changes)
         self._from_db_object(self._context, self, db_mapping)
         self.obj_reset_changes()
 

@@ -13,6 +13,8 @@
 import mock
 
 from nova import objects
+from nova import test
+
 from nova.objects import host_mapping
 from nova.tests.unit.objects import test_cell_mapping
 from nova.tests.unit.objects import test_objects
@@ -109,6 +111,7 @@ class _TestHostMappingObject(object):
         host = db_mapping['host']
         mapping_obj = objects.HostMapping(self.context)
         mapping_obj.host = host
+        mapping_obj.id = db_mapping['id']
         new_fake_cell = test_cell_mapping.get_db_mapping(id=10)
         fake_cell_obj = objects.CellMapping(self.context, **new_fake_cell)
         mapping_obj.cell_mapping = fake_cell_obj
@@ -117,9 +120,10 @@ class _TestHostMappingObject(object):
 
         mapping_obj.save()
         save_in_db.assert_called_once_with(self.context,
-                db_mapping['host'],
+                test.MatchType(host_mapping.HostMapping),
                 {'cell_id': new_fake_cell["id"],
-                 'host': host})
+                 'host': host,
+                 'id': db_mapping['id']})
         self.compare_obj(mapping_obj, db_mapping,
                          subs={'cell_mapping': 'cell_id'},
                          comparators={

@@ -85,19 +85,26 @@ class HostMappingTestCase(test.NoDBTestCase):
                 self.mapping_obj._get_by_host_from_db, self.context,
                 'fake-host2')
 
-    def test_save_in_db(self):
-        mapping = create_mapping()
-        new_cell = create_cell_mapping(id=42)
-        self.mapping_obj._save_in_db(self.context, mapping,
-                {'cell_id': new_cell["id"]})
-        db_mapping = self.mapping_obj._get_by_host_from_db(
-                self.context, mapping['host'])
-        self.assertNotEqual(db_mapping['cell_id'], mapping['cell_id'])
-        for key in [key for key in self.mapping_obj.fields.keys()
-                    if key not in ('updated_at', 'cell_id')]:
-            if key == "cell_mapping":
+    def test_update_cell_mapping(self):
+        db_hm = create_mapping()
+        db_cell = create_cell_mapping(id=42)
+        cell = cell_mapping.CellMapping.get_by_uuid(
+            self.context, db_cell['uuid'])
+        hm = host_mapping.HostMapping(self.context)
+        hm.id = db_hm['id']
+        hm.cell_mapping = cell
+        hm.save()
+        self.assertNotEqual(db_hm['cell_id'], hm.cell_mapping.id)
+        for key in hm.fields.keys():
+            if key in ('updated_at', 'cell_mapping'):
                 continue
-            self.assertEqual(db_mapping[key], mapping[key])
+            model_field = getattr(hm, key)
+            if key == 'created_at':
+                model_field = model_field.replace(tzinfo=None)
+            self.assertEqual(db_hm[key], model_field, 'field %s' % key)
+        db_hm_new = host_mapping.HostMapping._get_by_host_from_db(
+            self.context, db_hm['host'])
+        self.assertNotEqual(db_hm['cell_id'], db_hm_new['cell_id'])
 
     def test_destroy_in_db(self):
         mapping = create_mapping()
