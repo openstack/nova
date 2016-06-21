@@ -558,6 +558,8 @@ class TestNeutronv2Base(test.TestCase):
                     neutron=self.moxed_client)
             if macs:
                 port_req_body['port']['mac_address'] = macs.pop()
+            if has_extra_dhcp_opts:
+                port_req_body['port']['extra_dhcp_opts'] = dhcp_options
             if request.port_id:
                 port = ports[request.port_id]
                 self.moxed_client.update_port(request.port_id,
@@ -579,8 +581,6 @@ class TestNeutronv2Base(test.TestCase):
                     port_req_body['port']['binding:host_id'] = (
                         self.instance.get('host'))
                 res_port = {'port': {'id': 'fake'}}
-                if has_extra_dhcp_opts:
-                    port_req_body['port']['extra_dhcp_opts'] = dhcp_options
                 if kwargs.get('_break') == 'mac' + request.network_id:
                     self.mox.ReplayAll()
                     return api
@@ -4225,6 +4225,20 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
 
         self._allocate_for_instance(1, dhcp_options=dhcp_opts)
 
+    def test_allocate_for_instance_extradhcpopts_update(self):
+        dhcp_opts = [{'opt_name': 'bootfile-name',
+                          'opt_value': 'pxelinux.0'},
+                         {'opt_name': 'tftp-server',
+                          'opt_value': '123.123.123.123'},
+                         {'opt_name': 'server-ip-address',
+                          'opt_value': '123.123.123.456'}]
+
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
+        self._allocate_for_instance(net_idx=1,
+                                    requested_networks=requested_networks,
+                                    dhcp_options=dhcp_opts)
+
 
 class TestAllocateForInstanceHelpers(test.NoDBTestCase):
     def test_populate_mac_address_skip_if_none(self):
@@ -4482,13 +4496,13 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                 u'net1', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None),
+                None, []),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None)])
+                None, [])])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
@@ -4543,15 +4557,13 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                 u'net1', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'],
-                None),
+                None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2']),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'],
-                None)])
+                None, ['default-uuid', 'secgrp-uuid1', 'secgrp-uuid2'])])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
@@ -4604,13 +4616,13 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
                 u'net1', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None),
+                None, []),
             mock.call(
                 mock.ANY, instance,
                 u'net2', {'port':
                           {'device_owner': u'compute:nova',
                            'device_id': uuids.instance}},
-                None, [], None)])
+                None, [])])
 
     @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
     @mock.patch.object(neutronapi.API, '_update_port_dns_name')
