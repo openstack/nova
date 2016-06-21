@@ -4235,8 +4235,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Quota exceeded, too many security group rules.")
             self.raise_over_quota(msg)
 
-        msg = _("Security group %(name)s added %(protocol)s ingress "
-                "(%(from_port)s:%(to_port)s)")
+        msg = _LI("Security group %(name)s added %(protocol)s ingress "
+                  "(%(from_port)s:%(to_port)s)")
         rules = []
         for v in vals:
             rule = self.db.security_group_rule_create(context, v)
@@ -4250,8 +4250,8 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         return rules
 
     def remove_rules(self, context, security_group, rule_ids):
-        msg = _("Security group %(name)s removed %(protocol)s ingress "
-                "(%(from_port)s:%(to_port)s)")
+        msg = _LI("Security group %(name)s removed %(protocol)s ingress "
+                  "(%(from_port)s:%(to_port)s)")
         for rule_id in rule_ids:
             rule = self.get_rule(context, rule_id)
             LOG.info(msg, {'name': security_group['name'],

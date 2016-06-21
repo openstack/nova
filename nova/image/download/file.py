@@ -97,8 +97,7 @@ class FileTransfer(xfer_base.TransferBase):
                     module=str(self), reason=msg)
         id = metadata['id']
         if id not in self.filesystems:
-            msg = _('The ID %(id)s is unknown.') % {'id': id}
-            LOG.info(msg)
+            LOG.info(_LI('The ID %(id)s is unknown.'), {'id': id})
             return
         fs_descriptor = self.filesystems[id]
         return fs_descriptor
