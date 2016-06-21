@@ -82,7 +82,8 @@ SERVICE_VERSION_HISTORY = (
     # Version 11: Compute RPC version 4.12
     {'compute_rpc': '4.12'},
     # Version 12: The network APIs and compute manager support a NetworkRequest
-    # object where the network_id value is 'auto' or 'none'.
+    # object where the network_id value is 'auto' or 'none'. BuildRequest
+    # objects are populated by nova-api during instance boot.
     {'compute_rpc': '4.12'},
     # Version 13: Compute RPC version 4.13
     {'compute_rpc': '4.13'},
