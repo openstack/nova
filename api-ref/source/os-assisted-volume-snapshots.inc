@@ -34,7 +34,7 @@ Request
   - volume_id: volume_id
   - create_info: create_info
   - snapshot_id: snapshot_id
-  - type: type
+  - type: type-os-assisted-volume-snapshot
   - new_file: new_file
 
 **Example Create Assisted Volume Snapshots: JSON request**
@@ -88,4 +88,3 @@ Query Parameters
 
 Response
 --------
-
