@@ -68,7 +68,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - instance_usage_audit_logs: instance_usage_audit_logs
+  - instance_usage_audit_log: instance_usage_audit_logs
   - hosts_not_run: host_not_run
   - log: instance_usage_audit_log
   - errors: errors
