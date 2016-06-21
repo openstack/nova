@@ -193,6 +193,32 @@ backing file: /var/lib/nova/a328c7998805951a_2
                          image_info.backing_file)
 
     @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('os.path.isdir', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_qemu_info_ploop(self, mock_execute, mock_isdir, mock_exists):
+        path = "/var/lib/nova"
+        example_output = """image: root.hds
+file format: parallels
+virtual size: 3.0G (3221225472 bytes)
+disk size: 706M
+"""
+        mock_execute.return_value = (example_output, '')
+        image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info',
+                                             os.path.join(path, 'root.hds'),
+                                             prlimit=images.QEMU_IMG_LIMITS)
+        mock_isdir.assert_called_once_with(path)
+        self.assertEqual(2, mock_exists.call_count)
+        self.assertEqual(path, mock_exists.call_args_list[0][0][0])
+        self.assertEqual(os.path.join(path, 'DiskDescriptor.xml'),
+                             mock_exists.call_args_list[1][0][0])
+        self.assertEqual('root.hds', image_info.image)
+        self.assertEqual('parallels', image_info.file_format)
+        self.assertEqual(3221225472, image_info.virtual_size)
+        self.assertEqual(740294656, image_info.disk_size)
+
+    @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
     def test_qemu_backing_file_actual(self,
                                       mock_execute, mock_exists):

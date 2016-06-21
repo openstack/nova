@@ -51,6 +51,12 @@ def qemu_img_info(path, format=None):
         raise exception.DiskNotFound(location=path)
 
     try:
+        # The following check is about ploop images that reside within
+        # directories and always have DiskDescriptor.xml file beside them
+        if (os.path.isdir(path) and
+            os.path.exists(os.path.join(path, "DiskDescriptor.xml"))):
+            path = os.path.join(path, "root.hds")
+
         cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
         if format is not None:
             cmd = cmd + ('-f', format)
