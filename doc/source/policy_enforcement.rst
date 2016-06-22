@@ -176,3 +176,12 @@ the policy rule more permissive. If the Operator make the API to be restricted
 that make break the existed API user or application. That's kind of
 back-incompatible. SO Operator can free to add additional permission to the
 existed API.
+
+Policy Enforcement by user_id
+-----------------------------
+
+In the legacy v2 API, the policy enforces with target object, and some operators
+implement user-based authorization based on that. Actually only project-based
+authorization is well tested, the user based authorization is untested and
+isn't supported by Nova. In the future, the nova will remove all the supports
+for user-based authorization.
