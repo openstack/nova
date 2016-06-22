@@ -346,12 +346,12 @@ class LegacyValidatingNotifier(object):
                     functools.partial(self._notify, priority))
 
     def _is_wrap_exception_notification(self, payload):
-        # nova.exception.wrap_exception decorator emits notification where the
-        # event_type is the name of the decorated function. This is used in
-        # many places but it will be converted to versioned notification in one
-        # run by updating the decorator so it is pointless to white list all
-        # the function names here we white list the notification itself
-        # detected by the special payload keys.
+        # nova.exception_wrapper.wrap_exception decorator emits notification
+        # where the event_type is the name of the decorated function. This
+        # is used in many places but it will be converted to versioned
+        # notification in one run by updating the decorator so it is pointless
+        # to white list all the function names here we white list the
+        # notification itself detected by the special payload keys.
         return {'exception', 'args'} == set(payload.keys())
 
     def _notify(self, priority, ctxt, event_type, payload):

@@ -70,6 +70,7 @@ import nova.conf
 from nova import consoleauth
 import nova.context
 from nova import exception
+from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
 from nova.i18n import _LE
@@ -104,8 +105,9 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 get_notifier = functools.partial(rpc.get_notifier, service='compute')
-wrap_exception = functools.partial(exception.wrap_exception,
-                                   get_notifier=get_notifier)
+wrap_exception = functools.partial(exception_wrapper.wrap_exception,
+                                   get_notifier=get_notifier,
+                                   binary='nova-compute')
 
 
 @utils.expects_func_args('migration')

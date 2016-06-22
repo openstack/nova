@@ -22,19 +22,15 @@ SHOULD include dedicated exception logging.
 
 """
 
-import functools
-import inspect
 import sys
 
 from oslo_log import log as logging
-from oslo_utils import excutils
 import six
 import webob.exc
 from webob import util as woutil
 
 import nova.conf
 from nova.i18n import _, _LE
-from nova import safe_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -63,48 +59,6 @@ class ConvertedException(webob.exc.WSGIHTTPException):
                 self.title = woutil.status_generic_reasons[self.code // 100]
         self.explanation = explanation
         super(ConvertedException, self).__init__()
-
-
-def _cleanse_dict(original):
-    """Strip all admin_password, new_pass, rescue_pass keys from a dict."""
-    return {k: v for k, v in six.iteritems(original) if "_pass" not in k}
-
-
-def wrap_exception(notifier=None, get_notifier=None):
-    """This decorator wraps a method to catch any exceptions that may
-    get thrown. It also optionally sends the exception to the notification
-    system.
-    """
-    def inner(f):
-        def wrapped(self, context, *args, **kw):
-            # Don't store self or context in the payload, it now seems to
-            # contain confidential information.
-            try:
-                return f(self, context, *args, **kw)
-            except Exception as e:
-                with excutils.save_and_reraise_exception():
-                    if notifier or get_notifier:
-                        payload = dict(exception=e)
-                        wrapped_func = safe_utils.get_wrapped_function(f)
-                        call_dict = inspect.getcallargs(wrapped_func, self,
-                                                        context, *args, **kw)
-                        # self can't be serialized and shouldn't be in the
-                        # payload
-                        call_dict.pop('self', None)
-                        cleansed = _cleanse_dict(call_dict)
-                        payload.update({'args': cleansed})
-
-                        # If f has multiple decorators, they must use
-                        # functools.wraps to ensure the name is
-                        # propagated.
-                        event_type = f.__name__
-
-                        (notifier or get_notifier()).error(context,
-                                                           event_type,
-                                                           payload)
-
-        return functools.wraps(f)(wrapped)
-    return inner
 
 
 class NovaException(Exception):
