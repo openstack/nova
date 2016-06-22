@@ -16,7 +16,6 @@
 
 import abc
 import functools
-import os
 
 from oslo_log import log as logging
 from oslo_utils import importutils
@@ -264,74 +263,6 @@ class ResourceExtension(object):
         self.custom_routes_fn = custom_routes_fn
         self.inherits = inherits
         self.member_name = member_name
-
-
-def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
-    """Registers all standard API extensions."""
-
-    # Walk through all the modules in our directory...
-    our_dir = path[0]
-    for dirpath, dirnames, filenames in os.walk(our_dir):
-        # Compute the relative package name from the dirpath
-        relpath = os.path.relpath(dirpath, our_dir)
-        if relpath == '.':
-            relpkg = ''
-        else:
-            relpkg = '.%s' % '.'.join(relpath.split(os.sep))
-
-        # Now, consider each file in turn, only considering .py files
-        for fname in filenames:
-            root, ext = os.path.splitext(fname)
-
-            # Skip __init__ and anything that's not .py
-            if ext != '.py' or root == '__init__':
-                continue
-
-            # Try loading it
-            classname = "%s%s" % (root[0].upper(), root[1:])
-            classpath = ("%s%s.%s.%s" %
-                         (package, relpkg, root, classname))
-
-            if ext_list is not None and classname not in ext_list:
-                logger.debug("Skipping extension: %s" % classpath)
-                continue
-
-            try:
-                ext_mgr.load_extension(classpath)
-            except Exception as exc:
-                logger.warn(_LW('Failed to load extension %(classpath)s: '
-                                '%(exc)s'),
-                            {'classpath': classpath, 'exc': exc})
-
-        # Now, let's consider any subdirectories we may have...
-        subdirs = []
-        for dname in dirnames:
-            # Skip it if it does not have __init__.py
-            if not os.path.exists(os.path.join(dirpath, dname, '__init__.py')):
-                continue
-
-            # If it has extension(), delegate...
-            ext_name = "%s%s.%s.extension" % (package, relpkg, dname)
-            try:
-                ext = importutils.import_class(ext_name)
-            except ImportError:
-                # extension() doesn't exist on it, so we'll explore
-                # the directory for ourselves
-                subdirs.append(dname)
-            else:
-                try:
-                    ext(ext_mgr)
-                except Exception as exc:
-                    logger.warn(_LW('Failed to load extension %(ext_name)s:'
-                                    '%(exc)s'),
-                                {'ext_name': ext_name, 'exc': exc})
-
-        # Update the list of directories we'll explore...
-        # using os.walk 'the caller can modify the dirnames list in-place,
-        # and walk() will only recurse into the subdirectories whose names
-        # remain in dirnames'
-        # https://docs.python.org/2/library/os.html#os.walk
-        dirnames[:] = subdirs
 
 
 # This will be deprecated after policy cleanup finished
