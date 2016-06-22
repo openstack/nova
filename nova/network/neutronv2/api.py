@@ -613,8 +613,8 @@ class API(base_api.NetworkAPI):
                     context, instance, request.pci_request_id, port_req_body,
                     network=network, neutron=neutron,
                     bind_host_id=bind_host_id)
-                self._populate_mac_address(instance, request.pci_request_id,
-                                           port_req_body)
+                self._populate_pci_mac_address(instance,
+                    request.pci_request_id, port_req_body)
                 if not request.port_id:
                     created_port_id = self._create_port(
                             port_client, instance, request.network_id,
@@ -696,7 +696,7 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['binding:profile'] = profile
 
     @staticmethod
-    def _populate_mac_address(instance, pci_request_id, port_req_body):
+    def _populate_pci_mac_address(instance, pci_request_id, port_req_body):
         """Add the updated MAC address value to the update_port request body.
 
         Currently this is done only for PF passthrough.

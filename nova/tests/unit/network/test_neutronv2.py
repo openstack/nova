@@ -4024,7 +4024,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
 
         self.assertEqual(profile, port_req_body['port']['binding:profile'])
 
-    def _populate_mac_address_fakes(self):
+    def _populate_pci_mac_address_fakes(self):
         instance = fake_instance.fake_instance_obj(self.context)
         pci_dev = {'vendor_id': '1377',
                    'product_id': '0047',
@@ -4040,56 +4040,58 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     @mock.patch.object(pci_utils, 'get_mac_by_pci_address')
-    def test_populate_mac_address_pf(self, mock_get_mac_by_pci_address,
-                                     mock_get_instance_pci_devs):
+    def test_populate_pci_mac_address_pf(self, mock_get_mac_by_pci_address,
+                                         mock_get_instance_pci_devs):
         api = neutronapi.API()
-        instance, pf, vf = self._populate_mac_address_fakes()
+        instance, pf, vf = self._populate_pci_mac_address_fakes()
 
         port_req_body = {'port': {}}
         mock_get_instance_pci_devs.return_value = [pf]
         mock_get_mac_by_pci_address.return_value = 'fake-mac-address'
         expected_port_req_body = {'port': {'mac_address': 'fake-mac-address'}}
         req = port_req_body.copy()
-        api._populate_mac_address(instance, 0, req)
+        api._populate_pci_mac_address(instance, 0, req)
         self.assertEqual(expected_port_req_body, req)
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     @mock.patch.object(pci_utils, 'get_mac_by_pci_address')
-    def test_populate_mac_address_vf(self, mock_get_mac_by_pci_address,
-                                     mock_get_instance_pci_devs):
+    def test_populate_pci_mac_address_vf(self, mock_get_mac_by_pci_address,
+                                         mock_get_instance_pci_devs):
         api = neutronapi.API()
-        instance, pf, vf = self._populate_mac_address_fakes()
+        instance, pf, vf = self._populate_pci_mac_address_fakes()
 
         port_req_body = {'port': {}}
         mock_get_instance_pci_devs.return_value = [vf]
         req = port_req_body.copy()
-        api._populate_mac_address(instance, 42, port_req_body)
+        api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     @mock.patch.object(pci_utils, 'get_mac_by_pci_address')
-    def test_populate_mac_address_vf_fail(self, mock_get_mac_by_pci_address,
-                                          mock_get_instance_pci_devs):
+    def test_populate_pci_mac_address_vf_fail(self,
+                                              mock_get_mac_by_pci_address,
+                                              mock_get_instance_pci_devs):
         api = neutronapi.API()
-        instance, pf, vf = self._populate_mac_address_fakes()
+        instance, pf, vf = self._populate_pci_mac_address_fakes()
 
         port_req_body = {'port': {}}
         mock_get_instance_pci_devs.return_value = [vf]
         mock_get_mac_by_pci_address.side_effect = (
             exception.PciDeviceNotFoundById)
         req = port_req_body.copy()
-        api._populate_mac_address(instance, 42, port_req_body)
+        api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
 
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
-    def test_populate_mac_address_no_device(self, mock_get_instance_pci_devs):
+    def test_populate_pci_mac_address_no_device(self,
+                                                mock_get_instance_pci_devs):
         api = neutronapi.API()
-        instance, pf, vf = self._populate_mac_address_fakes()
+        instance, pf, vf = self._populate_pci_mac_address_fakes()
 
         port_req_body = {'port': {}}
         mock_get_instance_pci_devs.return_value = []
         req = port_req_body.copy()
-        api._populate_mac_address(instance, 42, port_req_body)
+        api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
 
     def _test_update_port_binding_false(self, func_name, *args):
