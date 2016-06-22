@@ -487,14 +487,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         conf.add_device(nic)
         return conf.to_xml()
 
-    def test_virtio_multiqueue(self):
+    def _test_virtio_multiqueue(self, vcpus, want_queues):
         self.flags(use_virtio_for_bridges=True,
                    virt_type='kvm',
                    group='libvirt')
 
         flavor = objects.Flavor(name='m1.small',
                     memory_mb=128,
-                    vcpus=4,
+                    vcpus=vcpus,
                     root_gb=0,
                     ephemeral_gb=0,
                     swap=0,
@@ -515,7 +515,22 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         driver = node.find("driver").get("name")
         self.assertEqual(driver, 'vhost')
         queues = node.find("driver").get("queues")
-        self.assertEqual(queues, '4')
+        self.assertEqual(queues, want_queues)
+
+    def test_virtio_multiqueue(self):
+        self._test_virtio_multiqueue(4, '4')
+
+    @mock.patch('os.uname', return_value=('Linux', '', '2.6.32-21-generic'))
+    def test_virtio_multiqueue_in_kernel_2(self, mock_uname):
+        self._test_virtio_multiqueue(10, '1')
+
+    @mock.patch('os.uname', return_value=('Linux', '', '3.19.0-47-generic'))
+    def test_virtio_multiqueue_in_kernel_3(self, mock_uname):
+        self._test_virtio_multiqueue(10, '8')
+
+    @mock.patch('os.uname', return_value=('Linux', '', '4.2.0-35-generic'))
+    def test_virtio_multiqueue_in_kernel_4(self, mock_uname):
+        self._test_virtio_multiqueue(10, '10')
 
     def test_multiple_nics(self):
         conf = self._get_conf()
