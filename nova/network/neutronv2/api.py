@@ -615,18 +615,19 @@ class API(base_api.NetworkAPI):
                     bind_host_id=bind_host_id)
                 self._populate_mac_address(instance, request.pci_request_id,
                                            port_req_body)
-                if request.port_id:
-                    port = ports[request.port_id]
-                    port_client.update_port(port['id'], port_req_body)
-                    preexisting_port_ids.append(port['id'])
-                    ports_in_requested_order.append(port['id'])
-                else:
+                if not request.port_id:
                     created_port = self._create_port(
                             port_client, instance, request.network_id,
                             port_req_body, request.address,
                             security_group_ids, available_macs, dhcp_opts)
                     created_port_ids.append(created_port)
                     ports_in_requested_order.append(created_port)
+                else:
+                    port = ports[request.port_id]
+                    port_client.update_port(port['id'], port_req_body)
+                    preexisting_port_ids.append(port['id'])
+                    ports_in_requested_order.append(port['id'])
+
                 self._update_port_dns_name(context, instance, network,
                                            ports_in_requested_order[-1],
                                            neutron)
