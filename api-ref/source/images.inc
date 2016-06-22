@@ -3,9 +3,17 @@
 .. needs:example_verification
 .. needs:body_verification
 
-========
- Images
-========
+====================
+ Images (DEPRECATED)
+====================
+
+.. warning::
+
+   These APIs are proxy calls to the Image service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
+   See: `Relevant Image APIs
+   <http://developer.openstack.org/api-ref-image-v2.html#images-images-v2>`__.
 
 Lists, shows details for, and deletes images. Also sets, lists, shows
 details for, and deletes image metadata.

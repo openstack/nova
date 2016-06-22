@@ -3,9 +3,17 @@
 .. needs:example_verification
 .. needs:body_verification
 
-================================
- Floating IPs (os-floating-ips)
-================================
+============================================
+ Floating IPs (os-floating-ips) (DEPRECATED)
+============================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html#layer3-ext>`__.
 
 Lists floating IP addresses for a project. Also, creates (allocates) a
 floating IP address for a project, shows floating IP address details,

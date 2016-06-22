@@ -1,9 +1,15 @@
 .. -*- rst -*-
 .. needs:example_verification
 
-==========================
- Fixed IPs (os-fixed-ips)
-==========================
+======================================
+ Fixed IPs (os-fixed-ips) (DEPRECATED)
+======================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
 
 Shows data for a fixed IP, such as host name, CIDR, and address. Also,
 reserves and releases a fixed IP address.

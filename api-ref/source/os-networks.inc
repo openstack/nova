@@ -6,9 +6,9 @@
    deprecated methods in this file. Let's not spend a ton of brain
    power on the associate/disassociate that's going away.
 
-========================
- Networks (os-networks)
-========================
+=====================================
+ Networks (os-networks)  (DEPRECATED)
+=====================================
 
 .. warning:: The networks API was designed to work with
              ``nova-network``. Some features are proxied to
@@ -16,6 +16,9 @@
              proxies, this is far from perfect compatibility. These
              APIs should be avoided in new applications in favor of
              using ``neutron`` directly.
+             See: `Relevant Network APIs
+             <http://developer.openstack.org/api-ref-networking-v2.html#networks>`__.
+
 
 Creates, lists, shows information for, and deletes networks.
 

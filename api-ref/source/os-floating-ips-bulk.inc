@@ -3,9 +3,17 @@
 .. needs:example_verification
 .. needs:body_verification
 
-==========================================
- Floating IPs bulk (os-floating-ips-bulk)
-==========================================
+======================================================
+ Floating IPs bulk (os-floating-ips-bulk) (DEPRECATED)
+======================================================
+
+.. warning::
+
+   These APIs are proxy calls to the Network service. Nova has
+   deprecated all the proxy APIs and users should use the native APIs
+   instead.
+   See: `Relevant Network APIs
+   <http://developer.openstack.org/api-ref-networking-v2-ext.html>`__.
 
 (nova-network only) Bulk-creates, deletes, and lists floating IPs.
 Default pool name is ``nova``.
