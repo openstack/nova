@@ -115,7 +115,10 @@ hardcoded_extensions = [
     {'name': 'PreserveEphemeralOnRebuild',
      'description': ('Allow preservation of the '
                      'ephemeral partition on rebuild.'),
-     'alias': 'os-preserve-ephemeral-rebuild'}
+     'alias': 'os-preserve-ephemeral-rebuild'},
+    {'name': 'Personality',
+     'description': 'Personality support.',
+     'alias': 'os-personality'},
 ]
 
 # V2.1 does not support XML but we need to keep an entry in the
