@@ -333,6 +333,9 @@ pointer_model = cfg.StrOpt(
 Input devices allow interaction with a graphical framebuffer. For
 example to provide a graphic tablet for absolute cursor movement.
 
+If set, the 'hw_pointer_model' image property takes precedence over
+this configuration option.
+
 Possible values:
 
 * None: Uses relative movement. Mouse connected by PS2

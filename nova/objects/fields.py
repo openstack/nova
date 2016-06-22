@@ -567,6 +567,17 @@ class DiskFormat(Enum):
             valid_values=DiskFormat.ALL)
 
 
+class PointerModelType(Enum):
+
+    USBTABLET = "usbtablet"
+
+    ALL = (USBTABLET)
+
+    def __init__(self):
+        super(PointerModelType, self).__init__(
+            valid_values=PointerModelType.ALL)
+
+
 class NotificationPriority(Enum):
     AUDIT = 'audit'
     CRITICAL = 'critical'
@@ -834,6 +845,10 @@ class PciDeviceTypeField(BaseEnumField):
 
 class DiskFormatField(BaseEnumField):
     AUTO_TYPE = DiskFormat()
+
+
+class PointerModelField(BaseEnumField):
+    AUTO_TYPE = PointerModelType()
 
 
 class NotificationPriorityField(BaseEnumField):

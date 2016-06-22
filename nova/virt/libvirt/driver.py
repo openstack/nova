@@ -4374,7 +4374,7 @@ class LibvirtDriver(driver.ComputeDriver):
             consolepty.type = "pty"
             guest.add_device(consolepty)
 
-        pointer = self._get_guest_pointer_model(guest.os_type)
+        pointer = self._get_guest_pointer_model(guest.os_type, image_meta)
         if pointer:
             guest.add_device(pointer)
 
@@ -4457,8 +4457,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guest
 
-    def _get_guest_pointer_model(self, os_type):
-        pointer_model = CONF.pointer_model
+    def _get_guest_pointer_model(self, os_type, image_meta):
+        pointer_model = image_meta.properties.get(
+            'hw_pointer_model', CONF.pointer_model)
         if pointer_model is None and CONF.libvirt.use_usb_tablet:
             # TODO(sahid): We set pointer_model to keep compatibility
             # until the next release O*. It means operators can continue
@@ -4479,14 +4480,18 @@ class LibvirtDriver(driver.ComputeDriver):
                     CONF.spice.enabled and not CONF.spice.agent_enabled):
                 return self._get_guest_usb_tablet(os_type)
             else:
-                # For backward compatibility We don't want to break
-                # process of booting an instance if host is configured
-                # to use USB tablet without VNC or SPICE and SPICE
-                # agent disable.
-                LOG.warning(_LW('USB tablet requested for guests by host '
-                                'configuration. In order to accept this '
-                                'request VNC should be enabled or SPICE '
-                                'and SPICE agent disabled on host.'))
+                if CONF.pointer_model or CONF.libvirt.use_usb_tablet:
+                    # For backward compatibility We don't want to break
+                    # process of booting an instance if host is configured
+                    # to use USB tablet without VNC or SPICE and SPICE
+                    # agent disable.
+                    LOG.warning(_LW('USB tablet requested for guests by host '
+                                    'configuration. In order to accept this '
+                                    'request VNC should be enabled or SPICE '
+                                    'and SPICE agent disabled on host.'))
+                else:
+                    raise exception.UnsupportedPointerModelRequested(
+                        model="usbtablet")
 
     def _get_guest_usb_tablet(self, os_type):
         tablet = None
@@ -4495,12 +4500,17 @@ class LibvirtDriver(driver.ComputeDriver):
             tablet.type = "tablet"
             tablet.bus = "usb"
         else:
-            # For backward compatibility We don't want to break
-            # process of booting an instance if virtual machine mode
-            # is not configured as HVM.
-            LOG.warning(_LW('USB tablet requested for guests by host '
-                            'configuration. In order to accept this request '
-                            'the machine mode should be configured as HVM.'))
+            if CONF.pointer_model or CONF.libvirt.use_usb_tablet:
+                # For backward compatibility We don't want to break
+                # process of booting an instance if virtual machine mode
+                # is not configured as HVM.
+                LOG.warning(_LW('USB tablet requested for guests by host '
+                                'configuration. In order to accept this '
+                                'request the machine mode should be '
+                                'configured as HVM.'))
+            else:
+                raise exception.UnsupportedPointerModelRequested(
+                    model="usbtablet")
         return tablet
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
