@@ -1095,22 +1095,28 @@ class Backend(object):
             raise RuntimeError(_('Unknown image_type=%s') % image_type)
         return image
 
-    def image(self, instance, disk_name, image_type=None):
-        """Constructs image for selected backend
+    def by_name(self, instance, name, image_type=None):
+        """Return an Image object for a disk with the given name.
 
-        :instance: Instance name.
-        :name: Image name.
-        :image_type: Image type.
-                     Optional, is CONF.libvirt.images_type by default.
+        :param instance: the instance which owns this disk
+        :param name: The name of the disk
+        :param image_type: (Optional) Image type.
+                           Default is CONF.libvirt.images_type.
+        :return: An Image object for the disk with given name and instance.
+        :rtype: Image
         """
         backend = self.backend(image_type)
-        return backend(instance=instance, disk_name=disk_name)
+        return backend(instance=instance, disk_name=name)
 
-    def snapshot(self, instance, disk_path, image_type=None):
-        """Returns snapshot for given image
+    def by_libvirt_path(self, instance, path, image_type=None):
+        """Return an Image object for a disk with the given libvirt path.
 
-        :path: path to image
-        :image_type: type of image
+        :param instance: The instance which owns this disk.
+        :param path: The libvirt representation of the image's path.
+        :param image_type: (Optional) Image type.
+                           Default is CONF.libvirt.images_type.
+        :return: An Image object for the given libvirt path.
+        :rtype: Image
         """
         backend = self.backend(image_type)
-        return backend(instance=instance, path=disk_path)
+        return backend(instance=instance, path=path)
