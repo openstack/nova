@@ -277,7 +277,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        self.context, expected_attrs=['system_metadata'])
 
         is_vpn = 'fake-is-vpn'
-        req_networks = 'fake-req-networks'
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
@@ -310,7 +311,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         instance = {}
         is_vpn = 'fake-is-vpn'
-        req_networks = 'fake-req-networks'
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         dhcp_options = None
@@ -336,7 +338,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         instance = {}
         is_vpn = 'fake-is-vpn'
-        req_networks = 'fake-req-networks'
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         dhcp_options = None
@@ -363,7 +366,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(
             self.context, expected_attrs=['system_metadata'])
         is_vpn = 'fake-is-vpn'
-        req_networks = 'fake-req-networks'
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         dhcp_options = None
@@ -379,6 +383,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                    dhcp_options)
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
+
+    def test_allocate_network_skip_for_no_allocate(self):
+        # Ensures that we don't do anything if requested_networks has 'none'
+        # for the network_id.
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='none')])
+        nwinfo = self.compute._allocate_network_async(
+            self.context, mock.sentinel.instance, req_networks, macs=None,
+            security_groups=['default'], is_vpn=False, dhcp_options=None)
+        self.assertEqual(0, len(nwinfo))
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_build_and_run_instance')
@@ -4234,6 +4248,31 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             save.assert_called_once_with()
             self.assertEqual('False',
                     self.instance.system_metadata['network_allocated'])
+
+    def test_deallocate_network_none_requested(self):
+        # Tests that we don't deallocate networks if 'none' were
+        # specifically requested.
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='none')])
+        with mock.patch.object(self.compute.network_api,
+                               'deallocate_for_instance') as deallocate:
+            self.compute._deallocate_network(
+                self.context, mock.sentinel.instance, req_networks)
+        self.assertFalse(deallocate.called)
+
+    def test_deallocate_network_auto_requested_or_none_provided(self):
+        # Tests that we deallocate networks if we were requested to
+        # auto-allocate networks or requested_networks=None.
+        req_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='auto')])
+        for requested_networks in (req_networks, None):
+            with mock.patch.object(self.compute.network_api,
+                                   'deallocate_for_instance') as deallocate:
+                self.compute._deallocate_network(
+                    self.context, mock.sentinel.instance, requested_networks)
+            deallocate.assert_called_once_with(
+                self.context, mock.sentinel.instance,
+                requested_networks=requested_networks)
 
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     def test_launched_at_in_create_end_notification(self,

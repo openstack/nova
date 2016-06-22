@@ -1352,6 +1352,13 @@ class ComputeManager(manager.Manager):
 
         Broken out for testing.
         """
+        # First check to see if we're specifically not supposed to allocate
+        # networks because if so, we can exit early.
+        if requested_networks and requested_networks.no_allocate:
+            LOG.debug("Not allocating networking since 'none' was specified.",
+                      instance=instance)
+            return network_model.NetworkInfo([])
+
         LOG.debug("Allocating IP information in the background.",
                   instance=instance)
         retries = CONF.network_allocate_retries
@@ -1625,6 +1632,13 @@ class ComputeManager(manager.Manager):
 
     def _deallocate_network(self, context, instance,
                             requested_networks=None):
+        # If we were told not to allocate networks let's save ourselves
+        # the trouble of calling the network API.
+        if requested_networks and requested_networks.no_allocate:
+            LOG.debug("Skipping network deallocation for instance since "
+                      "networking was not requested.", instance=instance)
+            return
+
         LOG.debug('Deallocating network for instance', instance=instance)
         with timeutils.StopWatch() as timer:
             self.network_api.deallocate_for_instance(
