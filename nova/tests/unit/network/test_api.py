@@ -67,7 +67,7 @@ class ApiTestCase(test.TestCase):
 
     @mock.patch('nova.objects.NetworkList.get_all')
     def test_get_all_liberal(self, mock_get_all):
-        self.flags(network_manager='nova.network.manager.FlatDHCPManaager')
+        self.flags(network_manager='nova.network.manager.FlatDHCPManager')
         mock_get_all.return_value = mock.sentinel.get_all
         self.assertEqual(mock.sentinel.get_all,
                          self.network_api.get_all(self.context))
