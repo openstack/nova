@@ -16,7 +16,6 @@
 
 """Tests for metadata service."""
 
-import base64
 import copy
 import hashlib
 import hmac
@@ -31,7 +30,9 @@ except ImportError:
 
 import mock
 from oslo_config import cfg
+from oslo_serialization import base64
 from oslo_serialization import jsonutils
+from oslo_utils import encodeutils
 import six
 import webob
 
@@ -61,7 +62,7 @@ from nova.virt import netutils
 CONF = cfg.CONF
 
 USER_DATA_STRING = (b"This is an encoded string")
-ENCODE_USER_DATA_STRING = base64.b64encode(USER_DATA_STRING)
+ENCODE_USER_DATA_STRING = base64.encode_as_text(USER_DATA_STRING)
 FAKE_SEED = '7qtD24mpMR2'
 
 
@@ -263,10 +264,10 @@ class MetadataTestCase(test.TestCase):
 
     def test_user_data(self):
         inst = self.instance.obj_clone()
-        inst['user_data'] = base64.b64encode("happy")
+        inst['user_data'] = base64.encode_as_text("happy")
         md = fake_InstanceMetadata(self, inst)
         self.assertEqual(
-            md.get_ec2_metadata(version='2009-04-04')['user-data'], "happy")
+            md.get_ec2_metadata(version='2009-04-04')['user-data'], b"happy")
 
     def test_no_user_data(self):
         inst = self.instance.obj_clone()
@@ -492,11 +493,12 @@ class MetadataTestCase(test.TestCase):
         data = md.get_ec2_metadata(version='2009-04-04')
         self.assertEqual(data['meta-data']['local-ipv4'], expected_local)
 
-    @mock.patch.object(base64, 'b64encode', lambda data: FAKE_SEED)
+    @mock.patch('oslo_serialization.base64.encode_as_text',
+                return_value=FAKE_SEED)
     @mock.patch('nova.cells.rpcapi.CellsAPI.get_keypair_at_top')
     @mock.patch.object(jsonutils, 'dump_as_bytes')
     def _test_as_json_with_options(self, mock_json_dump_as_bytes,
-                          mock_cells_keypair,
+                          mock_cells_keypair, mock_base64,
                           is_cells=False, os_version=base.GRIZZLY):
         if is_cells:
             self.flags(enable=True, group='cells')
@@ -753,7 +755,8 @@ class OpenStackMetadataTestCase(test.TestCase):
         mddict = jsonutils.loads(mdjson)
 
         self.assertIn("random_seed", mddict)
-        self.assertEqual(len(base64.b64decode(mddict["random_seed"])), 512)
+        self.assertEqual(len(base64.decode_as_bytes(mddict["random_seed"])),
+                         512)
 
         # verify that older version do not have it
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
@@ -1015,15 +1018,15 @@ class MetadataHandlerTestCase(test.TestCase):
 
         response = fake_request(self, CallableMD(), "/bar")
         self.assertEqual(response.status_int, 200)
-        self.assertEqual(response.body, "foo")
+        self.assertEqual(response.text, "foo")
 
     def test_root(self):
         expected = "\n".join(base.VERSIONS) + "\nlatest"
         response = fake_request(self, self.mdinst, "/")
-        self.assertEqual(response.body, expected)
+        self.assertEqual(response.text, expected)
 
         response = fake_request(self, self.mdinst, "/foo/../")
-        self.assertEqual(response.body, expected)
+        self.assertEqual(response.text, expected)
 
     def test_root_metadata_proxy_enabled(self):
         self.flags(service_metadata_proxy=True,
@@ -1031,16 +1034,16 @@ class MetadataHandlerTestCase(test.TestCase):
 
         expected = "\n".join(base.VERSIONS) + "\nlatest"
         response = fake_request(self, self.mdinst, "/")
-        self.assertEqual(response.body, expected)
+        self.assertEqual(response.text, expected)
 
         response = fake_request(self, self.mdinst, "/foo/../")
-        self.assertEqual(response.body, expected)
+        self.assertEqual(response.text, expected)
 
     def test_version_root(self):
         response = fake_request(self, self.mdinst, "/2009-04-04")
         response_ctype = response.headers['Content-Type']
         self.assertTrue(response_ctype.startswith("text/plain"))
-        self.assertEqual(response.body, 'meta-data/\nuser-data')
+        self.assertEqual(response.text, 'meta-data/\nuser-data')
 
         response = fake_request(self, self.mdinst, "/9999-99-99")
         self.assertEqual(response.status_int, 404)
@@ -1095,7 +1098,7 @@ class MetadataHandlerTestCase(test.TestCase):
         response_ctype = response.headers['Content-Type']
         self.assertTrue(response_ctype.startswith("text/plain"))
         self.assertEqual(response.body,
-                         base64.b64decode(self.instance['user_data']))
+                         base64.decode_as_bytes(self.instance['user_data']))
 
         response = fake_request(self, self.mdinst,
                                 relpath="/2009-04-04/user-data",
@@ -1123,18 +1126,19 @@ class MetadataHandlerTestCase(test.TestCase):
     def _fake_x_get_metadata(self, self_app, instance_id, remote_address):
         if remote_address is None:
             raise Exception('Expected X-Forwared-For header')
-        elif instance_id == self.expected_instance_id:
+
+        if encodeutils.to_utf8(instance_id) == self.expected_instance_id:
             return self.mdinst
-        else:
-            # raise the exception to aid with 500 response code test
-            raise Exception("Expected instance_id of %s, got %s" %
-                            (self.expected_instance_id, instance_id))
+
+        # raise the exception to aid with 500 response code test
+        raise Exception("Expected instance_id of %r, got %r" %
+                        (self.expected_instance_id, instance_id))
 
     def test_user_data_with_neutron_instance_id(self):
-        self.expected_instance_id = 'a-b-c-d'
+        self.expected_instance_id = b'a-b-c-d'
 
         signed = hmac.new(
-            CONF.neutron.metadata_proxy_shared_secret,
+            encodeutils.to_utf8(CONF.neutron.metadata_proxy_shared_secret),
             self.expected_instance_id,
             hashlib.sha256).hexdigest()
 
@@ -1165,7 +1169,7 @@ class MetadataHandlerTestCase(test.TestCase):
         response_ctype = response.headers['Content-Type']
         self.assertTrue(response_ctype.startswith("text/plain"))
         self.assertEqual(response.body,
-                         base64.b64decode(self.instance['user_data']))
+                         base64.decode_as_bytes(self.instance['user_data']))
 
         # mismatched signature
         response = fake_request(
@@ -1219,8 +1223,8 @@ class MetadataHandlerTestCase(test.TestCase):
 
         # unexpected Instance-ID
         signed = hmac.new(
-            CONF.neutron.metadata_proxy_shared_secret,
-           'z-z-z-z',
+            encodeutils.to_utf8(CONF.neutron.metadata_proxy_shared_secret),
+           b'z-z-z-z',
            hashlib.sha256).hexdigest()
 
         response = fake_request(
@@ -1240,7 +1244,7 @@ class MetadataHandlerTestCase(test.TestCase):
             # available at relpath.
             response = fake_request(self, self.mdinst,
                                     relpath=relpath)
-            for item in response.body.split('\n'):
+            for item in response.text.split('\n'):
                 if 'public-keys' in relpath:
                     # meta-data/public-keys/0=keyname refers to
                     # meta-data/public-keys/0
@@ -1257,10 +1261,10 @@ class MetadataHandlerTestCase(test.TestCase):
         _test_metadata_path('/2009-04-04/meta-data')
 
     def _metadata_handler_with_instance_id(self, hnd):
-        expected_instance_id = 'a-b-c-d'
+        expected_instance_id = b'a-b-c-d'
 
         signed = hmac.new(
-            CONF.neutron.metadata_proxy_shared_secret,
+            encodeutils.to_utf8(CONF.neutron.metadata_proxy_shared_secret),
             expected_instance_id,
             hashlib.sha256).hexdigest()
 
@@ -1277,7 +1281,7 @@ class MetadataHandlerTestCase(test.TestCase):
                      'X-Instance-ID-Signature': signed})
 
         self.assertEqual(200, response.status_int)
-        self.assertEqual(base64.b64decode(self.instance['user_data']),
+        self.assertEqual(base64.decode_as_bytes(self.instance['user_data']),
                          response.body)
 
     @mock.patch.object(base, 'get_metadata_by_instance_id')
@@ -1308,7 +1312,7 @@ class MetadataHandlerTestCase(test.TestCase):
             relpath="/2009-04-04/user-data",
             address="192.192.192.2")
         self.assertEqual(200, response.status_int)
-        self.assertEqual(base64.b64decode(self.instance.user_data),
+        self.assertEqual(base64.decode_as_bytes(self.instance.user_data),
                          response.body)
 
     @mock.patch.object(base, 'get_metadata_by_address')
@@ -1336,7 +1340,7 @@ class MetadataHandlerTestCase(test.TestCase):
 
         self.flags(service_metadata_proxy=True, group='neutron')
 
-        self.expected_instance_id = 'a-b-c-d'
+        self.expected_instance_id = b'a-b-c-d'
 
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
@@ -1362,7 +1366,7 @@ class MetadataHandlerTestCase(test.TestCase):
 
         self.flags(service_metadata_proxy=True, group='neutron')
 
-        self.expected_instance_id = 'a-b-c-d'
+        self.expected_instance_id = b'a-b-c-d'
 
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
@@ -1400,14 +1404,14 @@ class MetadataHandlerTestCase(test.TestCase):
             metadata_proxy_shared_secret=shared_secret,
             service_metadata_proxy=True, group='neutron')
 
-        self.expected_instance_id = 'a-b-c-d'
+        self.expected_instance_id = b'a-b-c-d'
 
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
 
         signature = hmac.new(
-            shared_secret,
-            proxy_lb_id,
+            encodeutils.to_utf8(shared_secret),
+            encodeutils.to_utf8(proxy_lb_id),
             hashlib.sha256).hexdigest()
 
         mock_client = mock_get_client()
@@ -1436,14 +1440,14 @@ class MetadataHandlerTestCase(test.TestCase):
             metadata_proxy_shared_secret=shared_secret,
             service_metadata_proxy=True, group='neutron')
 
-        self.expected_instance_id = 'a-b-c-d'
+        self.expected_instance_id = b'a-b-c-d'
 
         # with X-Metadata-Provider
         proxy_lb_id = 'edge-x'
 
         signature = hmac.new(
-            bad_secret,
-            proxy_lb_id,
+            encodeutils.to_utf8(bad_secret),
+            encodeutils.to_utf8(proxy_lb_id),
             hashlib.sha256).hexdigest()
 
         mock_client = mock_get_client()
@@ -1537,7 +1541,7 @@ class MetadataPasswordTestCase(test.TestCase):
                           password.handle_password, request, self.mdinst)
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
-    def _try_set_password(self, get_by_uuid, val='bar'):
+    def _try_set_password(self, get_by_uuid, val=b'bar'):
         request = webob.Request.blank('')
         request.method = 'POST'
         request.body = val
@@ -1562,4 +1566,4 @@ class MetadataPasswordTestCase(test.TestCase):
         self.mdinst.password = ''
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._try_set_password,
-                          val=('a' * (password.MAX_SIZE + 1)))
+                          val=(b'a' * (password.MAX_SIZE + 1)))
