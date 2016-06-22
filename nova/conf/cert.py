@@ -1,9 +1,4 @@
-# needs:fix_opt_description
 # needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
 
 # Copyright 2016 IBM Corp.
 # Copyright 2016 OpenStack Foundation
@@ -23,29 +18,19 @@
 
 from oslo_config import cfg
 
-cert_topic_opt = cfg.StrOpt("cert_topic",
+cert_opts = [
+    cfg.StrOpt("cert_topic",
         default="cert",
         help="""
-Determines the RPC topic that the cert nodes listen on. The default is 'cert',
-and for most deployments there is no need to ever change it.
-
-Possible values:
-
-Any string.
-
-* Services which consume this:
-
-    ``nova-cert``
-
-* Related options:
-
-    None
-""")
+Determines the RPC topic that the cert nodes listen on. For most deployments
+there is no need to ever change it.
+"""),
+]
 
 
 def register_opts(conf):
-    conf.register_opts([cert_topic_opt])
+    conf.register_opts(cert_opts)
 
 
 def list_opts():
-    return {"DEFAULT": [cert_topic_opt]}
+    return {"DEFAULT": cert_opts}
