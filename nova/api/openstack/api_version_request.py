@@ -99,6 +99,10 @@ _MIN_API_VERSION = "2.1"
 _MAX_API_VERSION = "2.35"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
+# All the proxy APIs which related network, images and baremetal
+# were deprecated after this version.
+MAX_PROXY_API_SUPPORT_VERSION = '2.35'
+
 
 # NOTE(cyeoh): min and max versions declared as functions so we can
 # mock them for unittests. Do not use the constants directly anywhere
