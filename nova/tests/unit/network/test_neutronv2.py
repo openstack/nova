@@ -4217,6 +4217,34 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
         self._allocate_for_instance(1, dhcp_options=dhcp_opts)
 
 
+class TestAllocateForInstanceHelpers(test.NoDBTestCase):
+    def test_populate_mac_address_skip_if_none(self):
+        api = neutronapi.API()
+        port_req_body = {}
+
+        api._populate_mac_address(None, port_req_body, None)
+
+        self.assertEqual({}, port_req_body)
+
+    def test_populate_mac_address_raise_if_empty(self):
+        api = neutronapi.API()
+        port_req_body = {}
+        instance = objects.Instance(uuid=uuids.instance)
+
+        self.assertRaises(exception.PortNotFree,
+                          api._populate_mac_address,
+                          instance, port_req_body, [])
+
+    def test_populate_mac_address_adds_last(self):
+        api = neutronapi.API()
+        port_req_body = {'port': {"foo": "bar"}}
+
+        api._populate_mac_address(None, port_req_body, ["a", "b"])
+
+        expected_port = {"foo": "bar", "mac_address": "b"}
+        self.assertEqual(expected_port, port_req_body["port"])
+
+
 class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
     def setUp(self):
         super(TestNeutronv2NeutronHostnameDNS, self).setUp()

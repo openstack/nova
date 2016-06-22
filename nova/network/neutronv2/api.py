@@ -196,12 +196,8 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['tenant_id'] = instance.project_id
             if security_group_ids:
                 port_req_body['port']['security_groups'] = security_group_ids
-            if available_macs is not None:
-                if not available_macs:
-                    raise exception.PortNotFree(
-                        instance=instance.uuid)
-                mac_address = available_macs.pop()
-                port_req_body['port']['mac_address'] = mac_address
+            mac_address = self._populate_mac_address(
+                instance, port_req_body, available_macs)
             if dhcp_opts is not None:
                 port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
             port = port_client.create_port(port_req_body)
@@ -246,6 +242,16 @@ class API(base_api.NetworkAPI):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Neutron error creating port on network %s'),
                               network_id, instance=instance)
+
+    @staticmethod
+    def _populate_mac_address(instance, port_req_body, available_macs):
+        if available_macs is not None:
+            if not available_macs:
+                raise exception.PortNotFree(
+                    instance=instance.uuid)
+            mac_address = available_macs.pop()
+            port_req_body['port']['mac_address'] = mac_address
+            return mac_address
 
     def _check_external_network_attach(self, context, nets):
         """Check if attaching to external network is permitted."""
