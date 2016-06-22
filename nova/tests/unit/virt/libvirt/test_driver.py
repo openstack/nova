@@ -9322,17 +9322,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_images_and_backing_images_not_exist_no_fallback(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info = [
-            {u'backing_file': u'fake_image_backing_file',
-             u'disk_size': 10747904,
-             u'path': u'disk_path',
-             u'type': u'qcow2',
-             u'virt_disk_size': 25165824}]
-
         self.test_instance.update({'user_id': 'fake-user',
                                    'os_type': None,
                                    'project_id': 'fake-project'})
         instance = objects.Instance(**self.test_instance)
+
+        backing_file = imagecache.get_cache_fname(instance.image_ref)
+        disk_info = [
+            {u'backing_file': backing_file,
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824}]
 
         with mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
                                side_effect=exception.ImageNotFound(
@@ -9344,32 +9345,34 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_images_and_backing_images_not_exist_fallback(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info = [
-            {u'backing_file': u'fake_image_backing_file',
-             u'disk_size': 10747904,
-             u'path': u'disk_path',
-             u'type': u'qcow2',
-             u'virt_disk_size': 25165824}]
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
         self.test_instance.update({'user_id': 'fake-user',
                                    'os_type': None,
-                                   'kernel_id': 'fake_kernel_id',
-                                   'ramdisk_id': 'fake_ramdisk_id',
+                                   'kernel_id': uuids.kernel_id,
+                                   'ramdisk_id': uuids.ramdisk_id,
                                    'project_id': 'fake-project'})
         instance = objects.Instance(**self.test_instance)
+
+        backing_file = imagecache.get_cache_fname(instance.image_ref)
+        disk_info = [
+            {u'backing_file': backing_file,
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824}]
 
         with test.nested(
             mock.patch.object(libvirt_driver.libvirt_utils, 'copy_image'),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
                               side_effect=exception.ImageNotFound(
-                                  image_id="fake_id")),
+                                  image_id=uuids.fake_id)),
         ) as (copy_image_mock, fetch_image_mock):
             conn._create_images_and_backing(self.context, instance,
                                             "/fake/instance/dir", disk_info,
                                             fallback_from_host="fake_host")
-            backfile_path = os.path.join(base_dir, 'fake_image_backing_file')
+            backfile_path = os.path.join(base_dir, backing_file)
             kernel_path = os.path.join(CONF.instances_path,
                                        self.test_instance['uuid'],
                                        'kernel')
@@ -9388,31 +9391,31 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 mock.call(context=self.context,
                           target=backfile_path,
                           image_id=self.test_instance['image_ref']),
-                mock.call(self.context, kernel_path,
-                          self.test_instance['kernel_id']),
-                mock.call(self.context, ramdisk_path,
-                          self.test_instance['ramdisk_id']),
+                mock.call(self.context, kernel_path, instance.kernel_id),
+                mock.call(self.context, ramdisk_path, instance.ramdisk_id)
             ])
 
     @mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image')
-    @mock.patch.object(os.path, 'exists', return_value=True)
-    def test_create_images_and_backing_images_exist(self, mock_exists,
-                                                    mock_fetch_image):
+    def test_create_images_and_backing_images_exist(self, mock_fetch_image):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info = [
-            {u'backing_file': u'fake_image_backing_file',
-             u'disk_size': 10747904,
-             u'path': u'disk_path',
-             u'type': u'qcow2',
-             u'virt_disk_size': 25165824}]
-
         self.test_instance.update({'user_id': 'fake-user',
                                    'os_type': None,
                                    'kernel_id': 'fake_kernel_id',
                                    'ramdisk_id': 'fake_ramdisk_id',
                                    'project_id': 'fake-project'})
         instance = objects.Instance(**self.test_instance)
-        with mock.patch.object(imagebackend.Image, 'get_disk_size'):
+
+        disk_info = [
+            {u'backing_file': imagecache.get_cache_fname(instance.image_ref),
+             u'disk_size': 10747904,
+             u'path': u'disk_path',
+             u'type': u'qcow2',
+             u'virt_disk_size': 25165824}]
+
+        with test.nested(
+                mock.patch.object(imagebackend.Image, 'get_disk_size'),
+                mock.patch.object(os.path, 'exists', return_value=True)
+        ):
             conn._create_images_and_backing(self.context, instance,
                                             '/fake/instance/dir', disk_info)
         self.assertFalse(mock_fetch_image.called)
@@ -10516,15 +10519,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       filename=ephemeral_file_name,
                                       mkfs=True)
 
-    @mock.patch('nova.virt.libvirt.driver.imagecache')
-    def test_create_image_initrd(self, mock_imagecache):
-        INITRD = self._EPHEMERAL_20_DEFAULT + '.initrd'
-        KERNEL = 'vmlinuz.' + self._EPHEMERAL_20_DEFAULT
+    def test_create_image_initrd(self):
+        kernel_id = uuids.kernel_id
+        ramdisk_id = uuids.ramdisk_id
 
-        mock_imagecache.get_cache_fname.side_effect = \
-                [KERNEL,
-                 INITRD,
-                 self._EPHEMERAL_20_DEFAULT + '.img']
+        kernel_fname = imagecache.get_cache_fname(kernel_id)
+        ramdisk_fname = imagecache.get_cache_fname(ramdisk_id)
+
         filename = self._EPHEMERAL_20_DEFAULT
 
         gotFiles = []
@@ -10545,10 +10546,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           *args, **kwargs):
                     gotFiles.append({'filename': filename,
                                      'size': size})
-                    if filename == INITRD:
-                        outer.assertEqual(fetch_func,
-                                fake_libvirt_utils.fetch_raw_image)
-                    if filename == KERNEL:
+                    if filename in (kernel_fname, ramdisk_fname):
                         outer.assertEqual(fetch_func,
                                 fake_libvirt_utils.fetch_raw_image)
 
@@ -10561,9 +10559,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             return FakeImage(instance, name)
 
         instance_ref = self.test_instance
-        instance_ref['image_ref'] = 1
-        instance_ref['kernel_id'] = 2
-        instance_ref['ramdisk_id'] = 3
+        instance_ref['image_ref'] = uuids.instance_id
+        instance_ref['kernel_id'] = uuids.kernel_id
+        instance_ref['ramdisk_id'] = uuids.ramdisk_id
         instance_ref['os_type'] = 'test'
         instance = objects.Instance(**instance_ref)
 
@@ -10584,11 +10582,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             driver._create_image(context, instance, disk_info['mapping'])
 
         wantFiles = [
-            {'filename': KERNEL,
+            {'filename': kernel_fname,
              'size': None},
-            {'filename': INITRD,
+            {'filename': ramdisk_fname,
              'size': None},
-            {'filename': self._EPHEMERAL_20_DEFAULT + '.img',
+            {'filename': imagecache.get_cache_fname(uuids.instance_id),
              'size': 10 * units.Gi},
             {'filename': filename,
              'size': 20 * units.Gi},
