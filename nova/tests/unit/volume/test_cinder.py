@@ -71,8 +71,10 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     def test_get_failed(self):
         volume_id = 'volume_id'
-        cinder.cinderclient(self.ctx).AndRaise(cinder_exception.NotFound(''))
-        cinder.cinderclient(self.ctx).AndRaise(cinder_exception.BadRequest(''))
+        cinder.cinderclient(self.ctx).AndRaise(
+                cinder_exception.NotFound(404, '404'))
+        cinder.cinderclient(self.ctx).AndRaise(
+                cinder_exception.BadRequest(400, '400'))
         cinder.cinderclient(self.ctx).AndRaise(
                                         cinder_exception.ConnectionError(''))
         self.mox.ReplayAll()
@@ -94,7 +96,7 @@ class CinderApiTestCase(test.NoDBTestCase):
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_create_failed(self, mock_cinderclient):
         mock_cinderclient.return_value.volumes.create.side_effect = (
-            cinder_exception.BadRequest(''))
+            cinder_exception.BadRequest(400, '400'))
 
         self.assertRaises(exception.InvalidInput,
                           self.api.create, self.ctx, 1, '', '')
@@ -486,7 +488,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     def test_translate_cinder_exception_cinder_bad_request(self):
         self._do_translate_cinder_exception_test(
-            cinder_exception.BadRequest(''),
+            cinder_exception.BadRequest(400, '400'),
             exception.InvalidInput)
 
     def test_translate_cinder_exception_keystone_bad_request(self):
@@ -496,7 +498,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     def test_translate_cinder_exception_cinder_forbidden(self):
         self._do_translate_cinder_exception_test(
-            cinder_exception.Forbidden(''),
+            cinder_exception.Forbidden(403, '403'),
             exception.Forbidden)
 
     def test_translate_cinder_exception_keystone_forbidden(self):

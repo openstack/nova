@@ -58,8 +58,6 @@ nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsWithTagsTestCase
 nova.tests.unit.test_api_validation.Base64TestCase
 nova.tests.unit.test_bdm.BlockDeviceMappingEc2CloudTestCase
-nova.tests.unit.test_cinder.CinderTestCase
-nova.tests.unit.test_cinder.CinderV2TestCase
 nova.tests.unit.test_configdrive2.ConfigDriveTestCase
 nova.tests.unit.test_hacking.HackingTestCase
 nova.tests.unit.test_ipv6.IPv6AccountIdentiferTestCase
@@ -107,7 +105,6 @@ nova.tests.unit.virt.xenapi.test_xenapi.HypervisorPoolTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIDiffieHellmanTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIDom0IptablesFirewallTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIVMTestCase
-nova.tests.unit.volume.test_cinder.CinderApiTestCase
 
 ##########################################################################
 # NOTE(dims): The following tests randomly fail in the gate. Please be
