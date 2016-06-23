@@ -217,6 +217,65 @@ def iptables_config(session, args):
         raise pluginlib.PluginError(_("Invalid iptables command"))
 
 
+def _ovs_add_patch_port(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    port_name = pluginlib.exists(args, 'port_name')
+    peer_port_name = pluginlib.exists(args, 'peer_port_name')
+    cmd_args = ['ovs-vsctl', '--', '--if-exists', 'del-port',
+                port_name, '--', 'add-port', bridge_name, port_name,
+                '--', 'set', 'interface', port_name,
+                'type=patch', 'options:peer=%s' % peer_port_name]
+    return _run_command(cmd_args)
+
+
+def _ovs_del_port(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    port_name = pluginlib.exists(args, 'port_name')
+    cmd_args = ['ovs-vsctl', '--', '--if-exists', 'del-port',
+                bridge_name, port_name]
+    return _run_command(cmd_args)
+
+
+def _ovs_del_br(args):
+    bridge_name = pluginlib.exists(args, 'bridge_name')
+    cmd_args = ['ovs-vsctl', '--', '--if-exists',
+                'del-br', bridge_name]
+    return _run_command(cmd_args)
+
+
+def _ovs_set_if_external_id(args):
+    interface = pluginlib.exists(args, 'interface')
+    extneral_id = pluginlib.exists(args, 'extneral_id')
+    value = pluginlib.exists(args, 'value')
+    cmd_args = ['ovs-vsctl', 'set', 'Interface', interface,
+                'external-ids:%s=%s' % (extneral_id, value)]
+    return _run_command(cmd_args)
+
+
+ALLOWED_NETWORK_CMDS = {
+    # allowed cmds to config OVS bridge
+    'ovs_add_patch_port': _ovs_add_patch_port,
+    'ovs_del_port': _ovs_del_port,
+    'ovs_del_br': _ovs_del_br,
+    'ovs_set_if_external_id': _ovs_set_if_external_id
+    }
+
+
+def network_config(session, args):
+    """network config functions"""
+    cmd = pluginlib.exists(args, 'cmd')
+    if not isinstance(cmd, basestring):
+        msg = _("invalid command '%s'") % str(cmd)
+        raise pluginlib.PluginError(msg)
+        return
+    if cmd not in ALLOWED_NETWORK_CMDS:
+        msg = _("Dom0 execution of '%s' is not permitted") % cmd
+        raise pluginlib.PluginError(msg)
+        return
+    cmd_args = pluginlib.exists(args, 'args')
+    return ALLOWED_NETWORK_CMDS[cmd](cmd_args)
+
+
 def _power_action(action, arg_dict):
     # Host must be disabled first
     host_uuid = arg_dict['host_uuid']
@@ -453,10 +512,12 @@ def get_pci_type(session, pci_device):
 if __name__ == "__main__":
     # Support both serialized and non-serialized plugin approaches
     _, methodname = xmlrpclib.loads(sys.argv[1])
-    if methodname in ['query_gc', 'get_pci_device_details', 'get_pci_type']:
+    if methodname in ['query_gc', 'get_pci_device_details', 'get_pci_type',
+                      'network_config']:
         utils.register_plugin_calls(query_gc,
                                     get_pci_device_details,
-                                    get_pci_type)
+                                    get_pci_type,
+                                    network_config)
 
     XenAPIPlugin.dispatch(
             {"host_data": host_data,

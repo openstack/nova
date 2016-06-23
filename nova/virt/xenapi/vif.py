@@ -23,6 +23,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
+from nova.network import model as network_model
 from nova.virt.xenapi import network_utils
 from nova.virt.xenapi import vm_utils
 
@@ -180,11 +181,18 @@ class XenAPIBridgeDriver(XenVIFDriver):
     def unplug(self, instance, vif, vm_ref):
         super(XenAPIBridgeDriver, self).unplug(instance, vif, vm_ref)
 
+    def post_start_actions(self, instance, vif_ref):
+        """no further actions needed for this driver type"""
+        pass
+
 
 class XenAPIOpenVswitchDriver(XenVIFDriver):
     """VIF driver for Open vSwitch with XenAPI."""
 
     def plug(self, instance, vif, vm_ref=None, device=None):
+        """create an interim network for this vif; and build
+        the vif_rec which will be used by xapi to create VM vif
+        """
         if not vm_ref:
             vm_ref = vm_utils.lookup(self._session, instance['name'])
 
@@ -198,10 +206,10 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         if not device:
             device = 0
 
-        # with OVS model, always plug into an OVS integration bridge
-        # that is already created
-        network_ref = network_utils.find_network_with_bridge(
-                self._session, CONF.xenserver.ovs_integration_bridge)
+        # Create an interim network for each VIF, so dom0 has a single
+        # bridge for each device (the emulated and PV ethernet devices
+        # will both be on this bridge.
+        network_ref = self.create_vif_interim_network(vif)
         vif_rec = {}
         vif_rec['device'] = str(device)
         vif_rec['network'] = network_ref
@@ -216,4 +224,157 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         return self._create_vif(vif, vif_rec, vm_ref)
 
     def unplug(self, instance, vif, vm_ref):
+        """unplug vif:
+        1. unplug and destroy vif.
+        2. delete the patch port pair between the integration bridge and
+           the interim network.
+        3. destroy the interim network
+        4. delete the OVS bridge service for the interim network
+        """
         super(XenAPIOpenVswitchDriver, self).unplug(instance, vif, vm_ref)
+
+        net_name = self.get_vif_interim_net_name(vif)
+        network = network_utils.find_network_with_name_label(
+            self._session, net_name)
+        if network is None:
+            return
+        vifs = self._session.network.get_VIFs(network)
+        if vifs:
+            # only remove the interim network when it's empty.
+            # for resize/migrate on local host, vifs on both of the
+            # source and target VM will be connected to the same
+            # interim network.
+            return
+        LOG.debug('destroying patch port pair for vif: vif_id=%(vif_id)s',
+                  {'vif_id': vif['id']})
+        bridge_name = self._session.network.get_bridge(network)
+        patch_port1, patch_port2 = self._get_patch_port_pair_names(vif['id'])
+        try:
+            # delete the patch port pair
+            self._ovs_del_port(bridge_name, patch_port1)
+            self._ovs_del_port(CONF.xenserver.ovs_integration_bridge,
+                               patch_port2)
+        except Exception as e:
+            LOG.warn(_LW("Failed to delete patch port pair for vif %(if)s,"
+                         " exception:%(exception)s"),
+                     {'if': vif, 'exception': e}, instance=instance)
+            raise exception.VirtualInterfaceUnplugException(
+                reason=_("Failed to delete patch port pair"))
+
+        LOG.debug('destroying network: network=%(network)s,'
+                  'bridge=%(br)s',
+                  {'network': network, 'br': bridge_name})
+        try:
+            self._session.network.destroy(network)
+            # delete bridge if it still exists.
+            # As there is patch port existing on this bridge when destroying
+            # the VM vif (which happens when shutdown the VM), the bridge
+            # won't be destroyed automatically by XAPI. So let's destroy it
+            # at here.
+            self._ovs_del_br(bridge_name)
+        except Exception as e:
+            LOG.warn(_LW("Failed to delete bridge for vif %(if)s, "
+                         "exception:%(exception)s"),
+                     {'if': vif, 'exception': e}, instance=instance)
+            raise exception.VirtualInterfaceUnplugException(
+                reason=_("Failed to delete bridge"))
+
+    def post_start_actions(self, instance, vif_ref):
+        """Do needed actions post vif start:
+        plug the interim ovs bridge to the integration bridge;
+        set external_ids to the int-br port which will service
+        for this vif.
+        """
+        vif_rec = self._session.VIF.get_record(vif_ref)
+        network_ref = vif_rec['network']
+        bridge_name = self._session.network.get_bridge(network_ref)
+        network_uuid = self._session.network.get_uuid(network_ref)
+        iface_id = vif_rec['other_config']['nicira-iface-id']
+        patch_port1, patch_port2 = self._get_patch_port_pair_names(iface_id)
+        LOG.debug('plug_ovs_bridge: port1=%(port1)s, port2=%(port2)s,'
+                  'network_uuid=%(uuid)s, bridge_name=%(bridge_name)s',
+                  {'port1': patch_port1, 'port2': patch_port2,
+                   'uuid': network_uuid, 'bridge_name': bridge_name})
+        if bridge_name is None:
+            raise exception.VirtualInterfacePlugException(
+                      _("Failed to find bridge for vif"))
+
+        self._ovs_add_patch_port(bridge_name, patch_port1, patch_port2)
+        self._ovs_add_patch_port(CONF.xenserver.ovs_integration_bridge,
+                                 patch_port2, patch_port1)
+        self._ovs_map_external_ids(patch_port2, vif_rec)
+
+    def get_vif_interim_net_name(self, vif):
+        return ("net-" + vif['id'])[:network_model.NIC_NAME_LEN]
+
+    def create_vif_interim_network(self, vif):
+        net_name = self.get_vif_interim_net_name(vif)
+        network_rec = {'name_label': net_name,
+                   'name_description': "interim network for vif",
+                   'other_config': {}}
+        network_ref = network_utils.find_network_with_name_label(
+            self._session, net_name)
+        if network_ref:
+            # already exist, just return
+            # in some scenarios: e..g resize/migrate, it won't create new
+            # interim network.
+            return network_ref
+        try:
+            network_ref = self._session.network.create(network_rec)
+        except Exception as e:
+            LOG.warn(_LW("Failed to create interim network for vif %(if)s, "
+                         "exception:%(exception)s"),
+                     {'if': vif, 'exception': e})
+            raise exception.VirtualInterfacePlugException(
+                _("Failed to create the interim network for vif"))
+        return network_ref
+
+    def _get_patch_port_pair_names(self, iface_id):
+        return (("pp1-%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                ("pp2-%s" % iface_id)[:network_model.NIC_NAME_LEN])
+
+    def _ovs_add_patch_port(self, bridge_name, port_name, peer_port_name):
+        cmd = 'ovs_add_patch_port'
+        args = {'bridge_name': bridge_name,
+                'port_name': port_name,
+                'peer_port_name': peer_port_name
+               }
+        self._exec_dom0_cmd(cmd, args)
+
+    def _ovs_del_port(self, bridge_name, port_name):
+        cmd = 'ovs_del_port'
+        args = {'bridge_name': bridge_name,
+                'port_name': port_name
+               }
+        self._exec_dom0_cmd(cmd, args)
+
+    def _ovs_del_br(self, bridge_name):
+        cmd = 'ovs_del_br'
+        args = {'bridge_name': bridge_name}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _ovs_set_if_external_id(self, interface, extneral_id, value):
+        cmd = 'ovs_set_if_external_id'
+        args = {'interface': interface,
+                'extneral_id': extneral_id,
+                'value': value}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _ovs_map_external_ids(self, interface, vif_rec):
+        '''set external ids on the integration bridge vif
+        '''
+        mac = vif_rec['MAC']
+        iface_id = vif_rec['other_config']['nicira-iface-id']
+        vif_uuid = vif_rec['uuid']
+        status = 'active'
+
+        self._ovs_set_if_external_id(interface, 'attached-mac', mac)
+        self._ovs_set_if_external_id(interface, 'iface-id', iface_id)
+        self._ovs_set_if_external_id(interface, 'xs-vif-uuid', vif_uuid)
+        self._ovs_set_if_external_id(interface, 'iface-status', status)
+
+    def _exec_dom0_cmd(self, cmd, cmd_args):
+        args = {'cmd': cmd,
+                'args': cmd_args
+               }
+        self._session.call_plugin_serialized('xenhost', 'network_config', args)

@@ -333,6 +333,18 @@ class VMOps(object):
         if bad_volumes_callback and bad_devices:
             bad_volumes_callback(bad_devices)
 
+        # Do some operations which have to be done after start:
+        #   e.g. The vif's interim bridge won't be created until VM starts.
+        #        So the operations on the interim bridge have be done after
+        #        start.
+        self._post_start_actions(instance)
+
+    def _post_start_actions(self, instance):
+        vm_ref = vm_utils.lookup(self._session, instance['name'])
+        vif_refs = self._session.call_xenapi("VM.get_VIFs", vm_ref)
+        for vif_ref in vif_refs:
+            self.vif_driver.post_start_actions(instance, vif_ref)
+
     def _get_vdis_for_instance(self, context, instance, name_label,
                                image_meta, image_type, block_device_info):
         """Create or connect to all virtual disks for this instance."""
@@ -1920,13 +1932,20 @@ class VMOps(object):
         """Creates vifs for an instance."""
 
         LOG.debug("Creating vifs", instance=instance)
+        vif_refs = []
 
         # this function raises if vm_ref is not a vm_opaque_ref
         self._session.call_xenapi("VM.get_domid", vm_ref)
 
         for device, vif in enumerate(network_info):
             LOG.debug('Create VIF %s', vif, instance=instance)
-            self.vif_driver.plug(instance, vif, vm_ref=vm_ref, device=device)
+            vif_ref = self.vif_driver.plug(instance, vif,
+                                           vm_ref=vm_ref, device=device)
+            vif_refs.append(vif_ref)
+
+        LOG.debug('Created the vif_refs: %(vifs)s for VM name: %(name)s',
+                  {'vifs': vif_refs, 'name': instance['name']},
+                  instance=instance)
 
     def plug_vifs(self, instance, network_info):
         """Set up VIF networking on the host."""
