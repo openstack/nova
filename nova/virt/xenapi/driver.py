@@ -433,7 +433,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                                               block_migration,
                                                               disk_over_commit)
 
-    def check_can_live_migrate_destination_cleanup(self, context,
+    def cleanup_live_migration_destination_check(self, context,
                                                    dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 

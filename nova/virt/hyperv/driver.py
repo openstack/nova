@@ -259,9 +259,9 @@ class HyperVDriver(driver.ComputeDriver):
             context, instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
 
-    def check_can_live_migrate_destination_cleanup(self, context,
+    def cleanup_live_migration_destination_check(self, context,
                                                    dest_check_data):
-        self._livemigrationops.check_can_live_migrate_destination_cleanup(
+        self._livemigrationops.cleanup_live_migration_destination_check(
             context, dest_check_data)
 
     def check_can_live_migrate_source(self, context, instance,
