@@ -3073,7 +3073,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # device (hdd). Since power only support scsi, the last device
         # is sdz
 
-        expect = {"ppc": "sdz", "ppc64": "sdz", "ppc64le": "sdz"}
+        expect = {"ppc": "sdz", "ppc64": "sdz",
+                    "ppc64le": "sdz", "aarch64": "sdz"}
         disk = expect.get(blockinfo.libvirt_utils.get_arch({}), "hdd")
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestDisk)
@@ -5423,7 +5424,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         expected = {arch.PPC: ("cdrom", "scsi", "sda"),
                     arch.PPC64: ("cdrom", "scsi", "sda"),
-                    arch.PPC64LE: ("cdrom", "scsi", "sda")}
+                    arch.PPC64LE: ("cdrom", "scsi", "sda"),
+                    arch.AARCH64: ("cdrom", "scsi", "sda")}
 
         expec_val = expected.get(blockinfo.libvirt_utils.get_arch({}),
                                   ("cdrom", "ide", "hda"))
@@ -5440,7 +5442,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         expected = {arch.PPC: ("cdrom", "scsi", "sda"),
                     arch.PPC64: ("cdrom", "scsi", "sda"),
-                    arch.PPC64LE: ("cdrom", "scsi", "sda")}
+                    arch.PPC64LE: ("cdrom", "scsi", "sda"),
+                    arch.AARCH64: ("cdrom", "scsi", "sda")}
 
         swap = {'device_name': '/dev/vdc',
                 'swap_size': 1}
