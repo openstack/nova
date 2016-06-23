@@ -9,7 +9,6 @@
 .. include:: versions.inc
 .. include:: urls.inc
 .. include:: servers.inc
-.. include:: servers-multiple-create.inc
 .. include:: servers-actions.inc
 .. include:: servers-action-fixed-ip.inc
 .. include:: servers-action-evacuate.inc
