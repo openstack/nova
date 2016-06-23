@@ -1912,7 +1912,8 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
         except (exception.VirtualInterfaceCreateException,
-                exception.VirtualInterfaceMacAddressException) as e:
+                exception.VirtualInterfaceMacAddressException,
+                exception.UnableToAutoAllocateNetwork) as e:
             LOG.exception(_LE('Failed to allocate network(s)'),
                           instance=instance)
             self._notify_about_instance_usage(context, instance,

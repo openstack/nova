@@ -3801,6 +3801,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         # themselves until the virt spawn method is called.
         self._test_build_and_run_spawn_exceptions(exception.NoMoreNetworks())
 
+    def test_spawn_network_auto_alloc_failure(self):
+        # This isn't really a driver.spawn failure, it's a failure from
+        # network_api.allocate_for_instance, but testing it here is convenient.
+        self._test_build_and_run_spawn_exceptions(
+            exception.UnableToAutoAllocateNetwork(
+                project_id=self.context.project_id))
+
     def test_build_and_run_no_more_fixedips_exception(self):
         self._test_build_and_run_spawn_exceptions(
             exception.NoMoreFixedIps("error messge"))
