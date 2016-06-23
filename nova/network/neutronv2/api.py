@@ -166,8 +166,7 @@ class API(base_api.NetworkAPI):
         return nets
 
     def _create_port(self, port_client, instance, network_id, port_req_body,
-                     fixed_ip=None, security_group_ids=None,
-                     available_macs=None, dhcp_opts=None):
+                     fixed_ip=None, security_group_ids=None, dhcp_opts=None):
         """Attempts to create a port for the instance on the given network.
 
         :param port_client: The client to use to create the port.
@@ -178,8 +177,6 @@ class API(base_api.NetworkAPI):
         :param fixed_ip: Optional fixed IP to use from the given network.
         :param security_group_ids: Optional list of security group IDs to
             apply to the port.
-        :param available_macs: Optional set of available MAC addresses,
-            from which one will be used at random.
         :param dhcp_opts: Optional DHCP options.
         :returns: ID of the created port.
         :raises PortLimitExceeded: If neutron fails with an OverQuota error.
@@ -196,8 +193,6 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['tenant_id'] = instance.project_id
             if security_group_ids:
                 port_req_body['port']['security_groups'] = security_group_ids
-            mac_address = self._populate_mac_address(
-                instance, port_req_body, available_macs)
             if dhcp_opts is not None:
                 port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
             port = port_client.create_port(port_req_body)
@@ -233,6 +228,7 @@ class API(base_api.NetworkAPI):
                         network_id, instance=instance)
             raise exception.NoMoreFixedIps(net=network_id)
         except neutron_client_exc.MacAddressInUseClient:
+            mac_address = port_req_body['port']['mac_address']
             LOG.warning(_LW('Neutron error: MAC address %(mac)s is already '
                             'in use on network %(network)s.'),
                         {'mac': mac_address, 'network': network_id},
@@ -245,12 +241,23 @@ class API(base_api.NetworkAPI):
 
     def _update_port(self, port_client, instance, port_id,
                      port_req_body):
-        port_client.update_port(port_id, port_req_body)
-        LOG.debug('Successfully updated port: %s', port_id,
-                  instance=instance)
+        try:
+            port_client.update_port(port_id, port_req_body)
+            LOG.debug('Successfully updated port: %s', port_id,
+                      instance=instance)
+        except neutron_client_exc.MacAddressInUseClient:
+            mac_address = port_req_body['port']['mac_address']
+            network_id = port_req_body['port']['network_id']
+            LOG.warning(_LW('Neutron error: MAC address %(mac)s is already '
+                            'in use on network %(network)s.'),
+                        {'mac': mac_address, 'network': network_id},
+                        instance=instance)
+            raise exception.PortInUse(port_id=mac_address)
 
     @staticmethod
     def _populate_mac_address(instance, port_req_body, available_macs):
+        # NOTE(johngarbutt) On port_update, this will cause us to override
+        # any previous mac address the port may have had.
         if available_macs is not None:
             if not available_macs:
                 raise exception.PortNotFree(
@@ -396,19 +403,18 @@ class API(base_api.NetworkAPI):
                         if port['mac_address'] not in hypervisor_macs:
                             LOG.debug("Port %(port)s mac address %(mac)s is "
                                       "not in the set of hypervisor macs: "
-                                      "%(hyper_macs)s",
+                                      "%(hyper_macs)s. Nova will overwrite "
+                                      "this with a new mac address.",
                                       {'port': request.port_id,
                                        'mac': port['mac_address'],
                                        'hyper_macs': hypervisor_macs},
                                       instance=instance)
-                            raise exception.PortNotUsable(
-                                port_id=request.port_id,
-                                instance=instance.uuid)
-                        # Don't try to use this MAC if we need to create a
-                        # port on the fly later. Identical MACs may be
-                        # configured by users into multiple ports so we
-                        # discard rather than popping.
-                        available_macs.discard(port['mac_address'])
+                        else:
+                            # Don't try to use this MAC if we need to create a
+                            # port on the fly later. Identical MACs may be
+                            # configured by users into multiple ports so we
+                            # discard rather than popping.
+                            available_macs.discard(port['mac_address'])
 
                     # If requesting a specific port, automatically process
                     # the network for that port as if it were explicitly
@@ -627,11 +633,14 @@ class API(base_api.NetworkAPI):
                     bind_host_id=bind_host_id)
                 self._populate_pci_mac_address(instance,
                     request.pci_request_id, port_req_body)
+                self._populate_mac_address(
+                    instance, port_req_body, available_macs)
+
                 if not request.port_id:
                     created_port_id = self._create_port(
                             port_client, instance, request.network_id,
                             port_req_body, request.address,
-                            security_group_ids, available_macs, dhcp_opts)
+                            security_group_ids, dhcp_opts)
                     created_port_ids.append(created_port_id)
                     ports_in_requested_order.append(created_port_id)
                 else:
