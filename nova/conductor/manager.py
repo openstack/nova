@@ -145,7 +145,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.14')
+    target = messaging.Target(namespace='compute_task', version='1.15')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -161,6 +161,8 @@ class ComputeTaskManager(base.Base):
         compute_rpcapi.LAST_VERSION = None
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
+    # TODO(tdurakov): remove `live` parameter here on compute task api RPC
+    # version bump to 2.x
     @messaging.expected_exceptions(
         exception.NoValidHost,
         exception.ComputeServiceUnavailable,
@@ -287,6 +289,12 @@ class ComputeTaskManager(base.Base):
             # because the instance was deleted.  If that's the case then this
             # exception will be raised by instance.save()
             pass
+
+    @wrap_instance_event(prefix='conductor')
+    def live_migrate_instance(self, context, instance, scheduler_hint,
+                              block_migration, disk_over_commit, request_spec):
+        self._live_migrate(context, instance, scheduler_hint,
+                           block_migration, disk_over_commit, request_spec)
 
     def _live_migrate(self, context, instance, scheduler_hint,
                       block_migration, disk_over_commit, request_spec):
