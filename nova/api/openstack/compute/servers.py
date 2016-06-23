@@ -29,7 +29,7 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute import disk_config
+from nova.api.openstack.compute import helpers
 from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
@@ -53,16 +53,6 @@ TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
-
-
-def translate_attributes(server_dict, server_kwargs):
-    # Disk config
-    # Translate create kwargs to internal representation
-    auto_disk_config_raw = server_dict.pop("OS-DCF:diskConfig", None)
-    if auto_disk_config_raw is not None:
-        auto_disk_config = disk_config.disk_config_from_api(
-            auto_disk_config_raw)
-        server_kwargs['auto_disk_config'] = auto_disk_config
 
 
 class ServersController(wsgi.Controller):
@@ -567,7 +557,7 @@ class ServersController(wsgi.Controller):
 
         availability_zone = create_kwargs.pop("availability_zone", None)
 
-        translate_attributes(server_dict, create_kwargs)
+        helpers.translate_attributes(server_dict, create_kwargs)
 
         target = {
             'project_id': context.project_id,
@@ -815,7 +805,7 @@ class ServersController(wsgi.Controller):
             self.update_extension_manager.map(self._update_extension_point,
                                               body['server'], update_dict)
 
-        translate_attributes(body['server'], update_dict)
+        helpers.translate_attributes(body['server'], update_dict)
 
         instance = self._get_server(ctxt, req, id, is_detail=True)
         try:
@@ -980,7 +970,7 @@ class ServersController(wsgi.Controller):
         flavor_ref = str(resize_dict["flavorRef"])
 
         resize_kwargs = {}
-        translate_attributes(resize_dict, resize_kwargs)
+        helpers.translate_attributes(resize_dict, resize_kwargs)
 
         self._resize(req, id, flavor_ref, **resize_kwargs)
 
@@ -1015,7 +1005,7 @@ class ServersController(wsgi.Controller):
             self.rebuild_extension_manager.map(self._rebuild_extension_point,
                                                rebuild_dict, rebuild_kwargs)
 
-        translate_attributes(rebuild_dict, rebuild_kwargs)
+        helpers.translate_attributes(rebuild_dict, rebuild_kwargs)
 
         for request_attribute, instance_attribute in attr_map.items():
             try:

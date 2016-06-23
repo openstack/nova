@@ -59,7 +59,6 @@ policy_data = """
     "os_compute_api:os-consoles:show": "",
     "os_compute_api:os-create-backup": "",
     "os_compute_api:os-deferred-delete": "",
-    "os_compute_api:os-disk-config": "",
     "os_compute_api:os-evacuate": "is_admin:True",
     "os_compute_api:os-extended-server-attributes": "",
     "os_compute_api:os-extended-status": "",

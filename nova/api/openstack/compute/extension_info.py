@@ -99,6 +99,18 @@ v21_to_v2_alias_mapping = {
     'os-instance-usage-audit-log': 'os-instance_usage_audit_log',
 }
 
+# NOTE(sdague): this is the list of extension metadata that we display
+# to the user for features that we provide. This exists for legacy
+# purposes because applications were once asked to look for these
+# things to decide if a feature is enabled. As we remove extensions
+# completely from the code we're going to have a static list here to
+# keep the surface metadata the same.
+hardcoded_extensions = [
+    {'name': 'DiskConfig',
+     'alias': 'os-disk-config',
+     'description': 'Disk Management Extension.'}
+]
+
 # V2.1 does not support XML but we need to keep an entry in the
 # /extensions information returned to the user for backwards
 # compatibility
@@ -107,10 +119,10 @@ FAKE_UPDATED_DATE = "2014-12-03T00:00:00Z"
 
 
 class FakeExtension(object):
-    def __init__(self, name, alias):
+    def __init__(self, name, alias, description=""):
         self.name = name
         self.alias = alias
-        self.__doc__ = ""
+        self.__doc__ = description
         self.version = -1
 
 
@@ -129,8 +141,8 @@ class ExtensionInfoController(wsgi.Controller):
         ext_data["links"] = []
         return ext_data
 
-    def _create_fake_ext(self, alias, name):
-        return FakeExtension(alias, name)
+    def _create_fake_ext(self, name, alias, description=""):
+        return FakeExtension(name, alias, description)
 
     def _add_vif_extension(self, discoverable_extensions):
         vif_extension = {}
@@ -144,6 +156,14 @@ class ExtensionInfoController(wsgi.Controller):
         """Filter extensions list based on policy."""
 
         discoverable_extensions = dict()
+
+        for item in hardcoded_extensions:
+            discoverable_extensions[item['alias']] = self._create_fake_ext(
+                item['name'],
+                item['alias'],
+                item['description']
+            )
+
         for alias, ext in six.iteritems(self.extension_info.get_extensions()):
             authorize = extensions.os_compute_soft_authorizer(alias)
             if authorize(context, action='discoverable'):
