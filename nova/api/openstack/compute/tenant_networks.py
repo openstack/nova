@@ -20,6 +20,8 @@ from oslo_log import log as logging
 import six
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import tenant_networks as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -73,6 +75,7 @@ class TenantNetworkController(wsgi.Controller):
             networks[n['id']] = n['label']
         return [{'id': k, 'label': v} for k, v in six.iteritems(networks)]
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
@@ -83,6 +86,7 @@ class TenantNetworkController(wsgi.Controller):
         networks.extend(self._default_networks)
         return {'networks': [network_dict(n) for n in networks]}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -94,6 +98,7 @@ class TenantNetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         return {'network': network_dict(network)}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((403, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):
@@ -129,6 +134,7 @@ class TenantNetworkController(wsgi.Controller):
         if CONF.enable_network_quota and reservation:
             QUOTAS.commit(context, reservation)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 403, 409, 503))
     @validation.schema(schema.create)
     def create(self, req, body):
