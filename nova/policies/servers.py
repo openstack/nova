@@ -15,37 +15,31 @@ from oslo_policy import policy
 
 
 RULE_AOO = 'rule:admin_or_owner'
-
-
-def get_name(action=None):
-    name = 'os_compute_api:servers'
-    if action:
-        name = name + ':%s' % action
-    return name
+SERVERS = 'os_compute_api:servers:%s'
 
 rules = [
-    policy.RuleDefault(get_name('index'), RULE_AOO),
-    policy.RuleDefault(get_name('detail'), RULE_AOO),
-    policy.RuleDefault(get_name('detail:get_all_tenants'), RULE_AOO),
-    policy.RuleDefault(get_name('index:get_all_tenants'), RULE_AOO),
-    policy.RuleDefault(get_name('show'), RULE_AOO),
-    policy.RuleDefault(get_name('create'), RULE_AOO),
-    policy.RuleDefault(get_name('create:forced_host'), RULE_AOO),
-    policy.RuleDefault(get_name('create:attach_volume'), RULE_AOO),
-    policy.RuleDefault(get_name('create:attach_network'), RULE_AOO),
-    policy.RuleDefault(get_name('delete'), RULE_AOO),
-    policy.RuleDefault(get_name('update'), RULE_AOO),
-    policy.RuleDefault(get_name('confirm_resize'), RULE_AOO),
-    policy.RuleDefault(get_name('revert_resize'), RULE_AOO),
-    policy.RuleDefault(get_name('reboot'), RULE_AOO),
-    policy.RuleDefault(get_name('resize'), RULE_AOO),
-    policy.RuleDefault(get_name('rebuild'), RULE_AOO),
-    policy.RuleDefault(get_name('create_image'), RULE_AOO),
-    policy.RuleDefault(get_name('create_image:allow_volume_backed'),
+    policy.RuleDefault(SERVERS % 'index', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'detail', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'detail:get_all_tenants', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'index:get_all_tenants', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'show', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create:forced_host', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create:attach_volume', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create:attach_network', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'delete', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'update', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'confirm_resize', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'revert_resize', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'reboot', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'resize', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'rebuild', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create_image', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create_image:allow_volume_backed',
                        RULE_AOO),
-    policy.RuleDefault(get_name('start'), RULE_AOO),
-    policy.RuleDefault(get_name('stop'), RULE_AOO),
-    policy.RuleDefault(get_name('trigger_crash_dump'), RULE_AOO),
+    policy.RuleDefault(SERVERS % 'start', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'stop', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'trigger_crash_dump', RULE_AOO),
 ]
 
 
