@@ -166,7 +166,7 @@ class API(base_api.NetworkAPI):
         return nets
 
     def _create_port(self, port_client, instance, network_id, port_req_body,
-                     fixed_ip=None, security_group_ids=None, dhcp_opts=None):
+                     fixed_ip=None, security_group_ids=None):
         """Attempts to create a port for the instance on the given network.
 
         :param port_client: The client to use to create the port.
@@ -177,7 +177,6 @@ class API(base_api.NetworkAPI):
         :param fixed_ip: Optional fixed IP to use from the given network.
         :param security_group_ids: Optional list of security group IDs to
             apply to the port.
-        :param dhcp_opts: Optional DHCP options.
         :returns: ID of the created port.
         :raises PortLimitExceeded: If neutron fails with an OverQuota error.
         :raises NoMoreFixedIps: If neutron fails with
@@ -193,8 +192,6 @@ class API(base_api.NetworkAPI):
             port_req_body['port']['tenant_id'] = instance.project_id
             if security_group_ids:
                 port_req_body['port']['security_groups'] = security_group_ids
-            if dhcp_opts is not None:
-                port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
             port = port_client.create_port(port_req_body)
             port_id = port['port']['id']
             if (port['port'].get('binding:vif_type') ==
@@ -635,12 +632,14 @@ class API(base_api.NetworkAPI):
                     request.pci_request_id, port_req_body)
                 self._populate_mac_address(
                     instance, port_req_body, available_macs)
+                if dhcp_opts is not None:
+                    port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
 
                 if not request.port_id:
                     created_port_id = self._create_port(
                             port_client, instance, request.network_id,
                             port_req_body, request.address,
-                            security_group_ids, dhcp_opts)
+                            security_group_ids)
                     created_port_ids.append(created_port_id)
                     ports_in_requested_order.append(created_port_id)
                 else:
