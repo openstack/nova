@@ -1,3 +1,6 @@
+# Copyright 2016 Cloudbase Solutions Srl
+# All Rights Reserved.
+#
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -12,17 +15,24 @@
 
 from oslo_policy import policy
 
-RULE_ADMIN_OR_OWNER = 'rule:admin_or_owner'
-RULE_ADMIN_API = 'rule:admin_api'
-RULE_ANY = '@'
+from nova.policies import base
 
-rules = [
-    policy.RuleDefault('context_is_admin', 'role:admin'),
-    policy.RuleDefault('admin_or_owner',
-                       'is_admin:True or project_id:%(project_id)s'),
-    policy.RuleDefault('admin_api', 'is_admin:True'),
+
+POLICY_ROOT = 'os_compute_api:os-availability-zone:%s'
+
+
+availability_zone_policies = [
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'list',
+        check_str=base.RULE_ADMIN_OR_OWNER),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'discoverable',
+        check_str=base.RULE_ANY),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'detail',
+        check_str=base.RULE_ADMIN_API),
 ]
 
 
 def list_rules():
-    return rules
+    return availability_zone_policies
