@@ -16,6 +16,7 @@ import six
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import used_limits as ul_policies
 from nova import quota
 
 
@@ -23,7 +24,6 @@ QUOTAS = quota.QUOTAS
 
 
 ALIAS = "os-used-limits"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class UsedLimitsController(wsgi.Controller):
@@ -65,7 +65,7 @@ class UsedLimitsController(wsgi.Controller):
                 'project_id': tenant_id,
                 'user_id': context.user_id
                 }
-            authorize(context, target=target)
+            context.can(ul_policies.BASE_POLICY_NAME, target)
             return tenant_id
         return context.project_id
 

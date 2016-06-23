@@ -25,10 +25,10 @@ from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import server_tags as st_policies
 
 
 ALIAS = "os-server-tags"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _get_tags_names(tags):
@@ -58,7 +58,7 @@ class ServerTagsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        authorize(context, action='show')
+        context.can(st_policies.POLICY_ROOT % 'show')
 
         try:
             exists = objects.Tag.exists(context, server_id, id)
@@ -74,7 +74,7 @@ class ServerTagsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        authorize(context, action='index')
+        context.can(st_policies.POLICY_ROOT % 'index')
 
         try:
             tags = objects.TagList.get_by_resource_id(context, server_id)
@@ -88,7 +88,7 @@ class ServerTagsController(wsgi.Controller):
     @validation.schema(schema.update)
     def update(self, req, server_id, id, body):
         context = req.environ["nova.context"]
-        authorize(context, action='update')
+        context.can(st_policies.POLICY_ROOT % 'update')
         self._check_instance_in_valid_state(context, server_id, 'update tag')
 
         try:
@@ -136,7 +136,7 @@ class ServerTagsController(wsgi.Controller):
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]
-        authorize(context, action='update_all')
+        context.can(st_policies.POLICY_ROOT % 'update_all')
         self._check_instance_in_valid_state(context, server_id, 'update tags')
 
         invalid_tags = []
@@ -178,7 +178,7 @@ class ServerTagsController(wsgi.Controller):
     @extensions.expected_errors((404, 409))
     def delete(self, req, server_id, id):
         context = req.environ["nova.context"]
-        authorize(context, action='delete')
+        context.can(st_policies.POLICY_ROOT % 'delete')
         self._check_instance_in_valid_state(context, server_id, 'delete tag')
 
         try:
@@ -193,7 +193,7 @@ class ServerTagsController(wsgi.Controller):
     @extensions.expected_errors((404, 409))
     def delete_all(self, req, server_id):
         context = req.environ["nova.context"]
-        authorize(context, action='delete_all')
+        context.can(st_policies.POLICY_ROOT % 'delete_all')
         self._check_instance_in_valid_state(context, server_id, 'delete tags')
 
         try:

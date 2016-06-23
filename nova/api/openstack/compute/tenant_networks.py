@@ -30,6 +30,7 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 import nova.network
+from nova.policies import tenant_networks as tn_policies
 from nova import quota
 
 
@@ -39,7 +40,6 @@ ALIAS = 'os-tenant-networks'
 
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def network_dict(network):
@@ -76,7 +76,7 @@ class TenantNetworkController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
         networks = list(self.network_api.get_all(context))
         if not self._default_networks:
             self._refresh_default_networks()
@@ -86,7 +86,7 @@ class TenantNetworkController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
@@ -98,7 +98,7 @@ class TenantNetworkController(wsgi.Controller):
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
         reservation = None
         try:
             if CONF.enable_network_quota:
@@ -133,7 +133,7 @@ class TenantNetworkController(wsgi.Controller):
     @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(tn_policies.BASE_POLICY_NAME)
 
         network = body["network"]
         keys = ["cidr", "cidr_v6", "ipam", "vlan_start", "network_size",

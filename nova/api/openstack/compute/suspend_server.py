@@ -19,11 +19,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.policies import suspend_server as ss_policies
 
 ALIAS = "os-suspend-server"
-
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class SuspendServerController(wsgi.Controller):
@@ -37,7 +35,7 @@ class SuspendServerController(wsgi.Controller):
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server."""
         context = req.environ['nova.context']
-        authorize(context, action='suspend')
+        context.can(ss_policies.POLICY_ROOT % 'suspend')
         try:
             server = common.get_instance(self.compute_api, context, id)
             self.compute_api.suspend(context, server)
@@ -55,7 +53,7 @@ class SuspendServerController(wsgi.Controller):
     def _resume(self, req, id, body):
         """Permit admins to resume the server from suspend."""
         context = req.environ['nova.context']
-        authorize(context, action='resume')
+        context.can(ss_policies.POLICY_ROOT % 'resume')
         try:
             server = common.get_instance(self.compute_api, context, id)
             self.compute_api.resume(context, server)

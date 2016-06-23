@@ -24,10 +24,10 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova.i18n import _
 from nova import network
+from nova.policies import virtual_interfaces as vif_policies
 
 
 ALIAS = 'os-virtual-interfaces'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_vif_summary_view(req, vif):
@@ -56,7 +56,7 @@ class ServerVirtualInterfaceController(wsgi.Controller):
     def _items(self, req, server_id, entity_maker):
         """Returns a list of VIFs, transformed through entity_maker."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vif_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, server_id)
 
         try:

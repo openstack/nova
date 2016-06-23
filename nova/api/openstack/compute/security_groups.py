@@ -28,19 +28,18 @@ from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
+from nova.policies import security_groups as sg_policies
 from nova.virt import netutils
 
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-security-groups'
 ATTRIBUTE_NAME = 'security_groups'
-authorize = extensions.os_compute_authorizer(ALIAS)
-softauth = extensions.os_compute_soft_authorizer(ALIAS)
 
 
 def _authorize_context(req):
     context = req.environ['nova.context']
-    authorize(context)
+    context.can(sg_policies.BASE_POLICY_NAME)
     return context
 
 
@@ -386,7 +385,7 @@ class SecurityGroupActionController(wsgi.Controller):
     @wsgi.action('addSecurityGroup')
     def _addSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sg_policies.BASE_POLICY_NAME)
 
         group_name = self._parse(body, 'addSecurityGroup')
         try:
@@ -406,7 +405,7 @@ class SecurityGroupActionController(wsgi.Controller):
     @wsgi.action('removeSecurityGroup')
     def _removeSecurityGroup(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sg_policies.BASE_POLICY_NAME)
 
         group_name = self._parse(body, 'removeSecurityGroup')
 
@@ -436,7 +435,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
             return
         key = "security_groups"
         context = req.environ['nova.context']
-        if not softauth(context):
+        if not context.can(sg_policies.BASE_POLICY_NAME, fatal=False):
             return
 
         if not openstack_driver.is_neutron_security_groups():
