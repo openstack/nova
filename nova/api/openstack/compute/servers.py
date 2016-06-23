@@ -60,7 +60,7 @@ class ServersController(wsgi.Controller):
 
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v21.extensions.server.create'
 
-    _view_builder_class = views_servers.ViewBuilderV21
+    _view_builder_class = views_servers.ViewBuilder
 
     schema_server_create = schema_servers.base_create
     schema_server_update = schema_servers.base_update
