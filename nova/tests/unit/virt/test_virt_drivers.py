@@ -164,7 +164,7 @@ class _FakeDriverBackendTestCase(object):
                        '_get_instance_disk_info',
                        fake_get_instance_disk_info)
 
-        self.stubs.Set(nova.virt.libvirt.driver.disk,
+        self.stubs.Set(nova.virt.libvirt.driver.disk_api,
                        'extend', fake_extend)
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
