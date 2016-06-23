@@ -95,9 +95,7 @@ class _FakeDriverBackendTestCase(object):
         import nova.virt.libvirt.firewall
         import nova.virt.libvirt.host
 
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.virt.libvirt.driver.imagebackend',
-            fake_imagebackend))
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.driver.libvirt',
             fakelibvirt))

@@ -13,51 +13,169 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import collections
+import fixtures
+import functools
+import mock
 import os
+import six
 
 from nova.virt.libvirt import config
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import utils as libvirt_utils
 
 
-class Backend(object):
-    def __init__(self, use_cow):
-        pass
+class ImageBackendFixture(fixtures.Fixture):
+    def __init__(self, got_files=None, imported_files=None, exists=None):
+        """This fixture mocks imagebackend.Backend.backend, which is the
+        only entry point to libvirt.imagebackend from libvirt.driver.
 
-    def image(self, instance, name, image_type=''):
-        class FakeImage(imagebackend.Image):
-            def __init__(self, instance, name):
-                self.path = os.path.join(instance['name'], name)
+        :param got_files: A list of {'filename': path, 'size': size} for every
+                         file which was created.
+        :param imported_files: A list of (local_filename, remote_filename) for
+                               every invocation of import_file().
+        :param exists: An optional lambda which takes the disk name as an
+                       argument, and returns True if the disk exists,
+                       False otherwise.
+        """
+        self.got_files = got_files
+        self.imported_files = imported_files
 
-            def create_image(self, prepare_template, base,
-                              size, *args, **kwargs):
-                pass
+        self.disks = collections.defaultdict(self._mock_disk)
+        """A dict of name -> Mock image object. This is a defaultdict,
+        so tests may access it directly before a disk has been created."""
 
-            def resize_image(self, size):
-                pass
+        self._exists = exists
 
-            def cache(self, fetch_func, filename, size=None, *args, **kwargs):
-                pass
+    def setUp(self):
+        super(ImageBackendFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.virt.libvirt.imagebackend.Backend.backend',
+            self._mock_backend))
 
-            def snapshot(self, name):
-                pass
+    @property
+    def created_disks(self):
+        """disks, filtered to contain only disks which were actually created
+        by calling a relevant method.
+        """
 
-            def libvirt_info(self, disk_bus, disk_dev, device_type,
-                             cache_mode, extra_specs, hypervisor_version):
-                info = config.LibvirtConfigGuestDisk()
-                info.source_type = 'file'
-                info.source_device = device_type
-                info.target_bus = disk_bus
-                info.target_dev = disk_dev
-                info.driver_cache = cache_mode
-                info.driver_format = 'raw'
-                info.source_path = self.path
-                return info
+        # A disk was created iff either cache() or import_file() was called.
+        return {name: disk for name, disk in six.iteritems(self.disks)
+                if any([disk.cache.called, disk.import_file.called])}
 
-        return FakeImage(instance, name)
+    def _mock_disk(self):
+        # This is the generator passed to the disks defaultdict. It returns
+        # a mocked Image object, but note that the returned object has not
+        # yet been 'constructed'. We don't know at this stage what arguments
+        # will be passed to the constructor, so we don't know, eg, its type
+        # or path.
+        #
+        # The reason for this 2 phase construction is to allow tests to
+        # manipulate mocks for disks before they have been created. eg a
+        # test can do the following before executing the method under test:
+        #
+        #  disks['disk'].cache.side_effect = ImageNotFound...
+        #
+        # When the 'constructor' (image_init in _mock_backend) later runs,
+        # it will return the same object we created here, and when the
+        # caller calls cache() it will raise the requested exception.
 
-    def snapshot(self, instance, disk_path, image_type=''):
-        # NOTE(bfilippov): this is done in favor for
-        # snapshot tests in test_libvirt.LibvirtConnTestCase
-        return imagebackend.Backend(True).snapshot(instance,
-            disk_path,
-            image_type=image_type)
+        disk = mock.create_autospec(imagebackend.Image)
+
+        # NOTE(mdbooth): fake_cache and fake_import_file are for compatiblity
+        # with existing tests which test got_files and imported_files. They
+        # should be removed when they have no remaining users.
+        disk.cache.side_effect = self._fake_cache
+        disk.import_file.side_effect = self._fake_import_file
+
+        # NOTE(mdbooth): test_virt_drivers assumes libvirt_info has functional
+        # output
+        disk.libvirt_info.side_effect = \
+            functools.partial(self._fake_libvirt_info, disk)
+
+        return disk
+
+    def _mock_backend(self, backend_self, image_type=None):
+        # This method mocks Backend.backend, which returns a subclass of Image
+        # (it returns a class, not an instance). This mocked method doesn't
+        # return a class; it returns a function which returns a Mock. IOW,
+        # instead of the getting a QCow2, the caller gets image_init,
+        # so instead of:
+        #
+        #  QCow2(instance, disk_name='disk')
+        #
+        # the caller effectively does:
+        #
+        #  image_init(instance, disk_name='disk')
+        #
+        # Therefore image_init() must have the same signature as an Image
+        # subclass constructor, and return a mocked Image object.
+        #
+        # The returned mocked Image object has the following additional
+        # properties which are useful for testing:
+        #
+        # * Calls with the same disk_name return the same object from
+        #   self.disks. This means tests can assert on multiple calls for
+        #   the same disk without worrying about whether they were also on
+        #   the same object.
+        #
+        # * Mocked objects have an additional image_type attribute set to
+        #   the image_type originally passed to Backend.backend() during
+        #   their construction. Tests can use this to assert that disks were
+        #   created of the expected type.
+
+        def image_init(instance=None, disk_name=None, path=None):
+            # There's nothing special about this path except that it's
+            # predictable and unique for (instance, disk).
+            if path is None:
+                path = os.path.join(
+                    libvirt_utils.get_instance_path(instance), disk_name)
+            else:
+                disk_name = os.path.basename(path)
+
+            disk = self.disks[disk_name]
+
+            # Used directly by callers. These would have been set if called
+            # the real constructor.
+            setattr(disk, 'path', path)
+            setattr(disk, 'is_block_dev', False)
+
+            # Used by tests. Note that image_init is a closure over image_type.
+            setattr(disk, 'image_type', image_type)
+
+            # Used by tests to manipulate which disks exist.
+            if self._exists is not None:
+                # We don't just cache the return value here because the
+                # caller may want, eg, a test where the disk initially does not
+                # exist and later exists.
+                disk.exists.side_effect = lambda: self._exists(disk_name)
+            else:
+                disk.exists.return_value = True
+
+            return disk
+
+        return image_init
+
+    def _fake_cache(self, fetch_func, filename, size=None, *args, **kwargs):
+        # For legacy tests which use got_files
+        if self.got_files is not None:
+            self.got_files.append({'filename': filename, 'size': size})
+
+    def _fake_import_file(self, instance, local_filename, remote_filename):
+        # For legacy tests which use imported_files
+        if self.imported_files is not None:
+            self.imported_files.append((local_filename, remote_filename))
+
+    def _fake_libvirt_info(self, mock_disk, disk_bus, disk_dev, device_type,
+                     cache_mode, extra_specs, hypervisor_version):
+        # For tests in test_virt_drivers which expect libvirt_info to be
+        # functional
+        info = config.LibvirtConfigGuestDisk()
+        info.source_type = 'file'
+        info.source_device = device_type
+        info.target_bus = disk_bus
+        info.target_dev = disk_dev
+        info.driver_cache = cache_mode
+        info.driver_format = 'raw'
+        info.source_path = mock_disk.path
+        return info
