@@ -14,7 +14,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import strutils
+
 from nova.api.openstack import common
+from nova.api.openstack.compute import disk_config
 from nova.image import glance
 from nova import utils
 
@@ -69,6 +72,12 @@ class ViewBuilder(common.ViewBuilder):
                                                     'servers'),
                 }],
             }
+
+        auto_disk_config = image_dict['metadata'].get("auto_disk_config", None)
+        if auto_disk_config is not None:
+            value = strutils.bool_from_string(auto_disk_config)
+            image_dict["OS-DCF:diskConfig"] = \
+                    disk_config.disk_config_to_api(value)
 
         return dict(image=image_dict)
 
