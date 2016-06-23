@@ -247,3 +247,19 @@ class FixedIpTestV24(FixedIpTestV21):
             if address == fixed_ip['address']:
                 return {'reserved': fixed_ip['reserved']}
         self.fail('Invalid address: %s' % address)
+
+
+class FixedIpDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FixedIpDeprecationTest, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+        self.controller = fixed_ips_v21.FixedIPController()
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.reserve, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.unreserve, self.req, fakes.FAKE_UUID, {})
