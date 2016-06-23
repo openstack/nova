@@ -162,6 +162,34 @@ class _ComputeAPIUnitTestMixIn(object):
         list_obj.obj_reset_changes()
         return list_obj
 
+    @mock.patch('nova.conductor.conductor_api.ComputeTaskAPI.build_instances')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch('nova.compute.api.API._check_requested_networks')
+    @mock.patch('nova.compute.api.API._get_image')
+    @mock.patch('nova.compute.api.API._provision_instances')
+    def test_create_with_networks_max_count_none(self, provision_instances,
+                                                 get_image,
+                                                 check_requested_networks,
+                                                 record_action_start,
+                                                 build_instances):
+        # Make sure max_count is checked for None, as Python3 doesn't allow
+        # comparison between NoneType and Integer, something that's allowed in
+        # Python 2.
+        get_image.return_value = (None, {})
+        check_requested_networks.return_value = 1
+
+        instance_type = self._create_flavor()
+
+        port = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        address = '10.0.0.1'
+        requested_networks = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(address=address,
+                                            port_id=port)])
+
+        self.compute_api.create(self.context, instance_type, 'image_id',
+                                requested_networks=requested_networks,
+                                max_count=None)
+
     def test_create_quota_exceeded_messages(self):
         image_href = "image_href"
         image_id = 0
@@ -3783,6 +3811,9 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
             mock_attach.assert_called_once_with(self.context, instance,
                                                 'attach_volume', volume['id'],
                                                 None, None, None)
+
+    def test_create_with_networks_max_count_none(self):
+        self.skipTest("This test does not test any rpcapi.")
 
     def test_attach_volume_reserve_fails(self):
         self.skipTest("Reserve is never done in the API cell.")
