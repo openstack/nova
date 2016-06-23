@@ -9295,6 +9295,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             migrate_data, AnyEventletEvent(), disks_to_copy[0])
 
     def _do_test_create_images_and_backing(self, disk_type):
+        instance = objects.Instance(**self.test_instance)
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(drvr, '_fetch_instance_kernel_ramdisk')
         self.mox.StubOutWithMock(libvirt_driver.libvirt_utils, 'create_image')
@@ -9306,12 +9308,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         libvirt_driver.libvirt_utils.create_image(
             disk_info['type'], mox.IgnoreArg(), disk_info['virt_disk_size'])
-        drvr._fetch_instance_kernel_ramdisk(self.context, self.test_instance,
+        drvr._fetch_instance_kernel_ramdisk(self.context, instance,
                                             fallback_from_host=None)
         self.mox.ReplayAll()
 
         self.stub_out('os.path.exists', lambda *args: False)
-        drvr._create_images_and_backing(self.context, self.test_instance,
+        drvr._create_images_and_backing(self.context, instance,
                                         "/fake/instance/dir", [disk_info])
 
     def test_create_images_and_backing_qcow2(self):
