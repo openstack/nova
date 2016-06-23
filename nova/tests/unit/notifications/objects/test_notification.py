@@ -64,6 +64,8 @@ class TestNotificationBase(test.NoDBTestCase):
             'extra_field': fields.StringField(),  # filled by ctor
         }
 
+    @notification.notification_sample('test-update-1.json')
+    @notification.notification_sample('test-update-2.json')
     @base.NovaObjectRegistry.register_if(False)
     class TestNotification(notification.NotificationBase):
         VERSION = '1.0'
@@ -245,6 +247,11 @@ class TestNotificationBase(test.NoDBTestCase):
              'nova_object.data': {'extra_field': u'test string'},
              'nova_object.version': '1.0',
              'nova_object.namespace': 'nova'})
+
+    def test_sample_decorator(self):
+        self.assertEqual(2, len(self.TestNotification.samples))
+        self.assertIn('test-update-1.json', self.TestNotification.samples)
+        self.assertIn('test-update-2.json', self.TestNotification.samples)
 
 
 notification_object_data = {

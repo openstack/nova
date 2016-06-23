@@ -51,9 +51,10 @@ class VersionedNotificationDirective(Directive):
 
                 payload_name = cls.fields['payload'].objname
                 payload_cls = ovos[payload_name][0]
-
-                notifications.append((full_name(cls), full_name(payload_cls),
-                                      cls.sample))
+                for sample in cls.samples:
+                    notifications.append((full_name(cls),
+                                          full_name(payload_cls),
+                                          sample))
         return notifications
 
     def _build_markup(self, notifications):
