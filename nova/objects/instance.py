@@ -980,6 +980,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # filters on instances.deleted == 0, so if the instance is deleted
             # don't attempt to even load services since we'll fail.
             self.services = objects.ServiceList(self._context)
+        elif attrname == 'tags' and self.deleted:
+            # NOTE(mriedem): Same story as services, the DB API query
+            # in instance_tag_get_by_instance_uuid will fail if the instance
+            # has been deleted so just return an empty tag list here.
+            self.tags = objects.TagList(self._context)
         else:
             # FIXME(comstud): This should be optimized to only load the attr.
             self._load_generic(attrname)

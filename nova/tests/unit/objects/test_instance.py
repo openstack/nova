@@ -208,6 +208,13 @@ class _TestInstanceObject(object):
                                     deleted=True)
         self.assertEqual(0, len(instance.services))
 
+    def test_lazy_load_tags_on_deleted_instance(self):
+        # We should avoid trying to hit the database to reload the instance
+        # and just set the tags attribute to an empty list.
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    deleted=True)
+        self.assertEqual(0, len(instance.tags))
+
     @mock.patch.object(db, 'instance_get')
     def test_get_by_id(self, mock_get):
         mock_get.return_value = self.fake_instance
