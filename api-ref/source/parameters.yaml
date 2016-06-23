@@ -2837,6 +2837,12 @@ preserve_ephemeral:
   description: |
     Indicates whether the server is rebuilt with the preservation of the ephemeral
     partition (``true``).
+
+    .. note::
+
+      This only works with baremetal servers provided by
+      Ironic. Passing it to any other server instance results in a
+      fault and will prevent the rebuild from happening.
   in: body
   required: false
   type: boolean
