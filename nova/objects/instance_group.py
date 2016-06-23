@@ -24,6 +24,7 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
+from nova.db.sqlalchemy import models as main_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -372,8 +373,10 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                 self[field] = current[field]
         self.obj_reset_changes()
 
-    @base.remotable
-    def create(self):
+    def _create(self, skipcheck=False):
+        # NOTE(danms): This is just for the migration routine, and
+        # can be removed once we're no longer supporting the migration
+        # of instance groups from the main to api database.
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
@@ -387,13 +390,14 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
             self.uuid = uuidutils.generate_uuid()
             updates['uuid'] = self.uuid
 
-        try:
-            db.instance_group_get(self._context, self.uuid)
-            raise exception.ObjectActionError(
-                action='create',
-                reason='already created in main')
-        except exception.InstanceGroupNotFound:
-            pass
+        if not skipcheck:
+            try:
+                db.instance_group_get(self._context, self.uuid)
+                raise exception.ObjectActionError(
+                    action='create',
+                    reason='already created in main')
+            except exception.InstanceGroupNotFound:
+                pass
         db_group = self._create_in_db(self._context, updates,
                                       policies=policies,
                                       members=members)
@@ -401,6 +405,10 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         payload['server_group_id'] = self.uuid
         compute_utils.notify_about_server_group_update(self._context,
                                                        "create", payload)
+
+    @base.remotable
+    def create(self):
+        self._create()
 
     @base.remotable
     def destroy(self):
@@ -502,3 +510,35 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         main_db_groups = db.instance_group_get_all(context)
         return base.obj_make_list(context, cls(context), objects.InstanceGroup,
                                   api_db_groups + main_db_groups)
+
+
+@db_api.main_context_manager.reader
+def _get_main_instance_groups(context, limit):
+    return context.session.query(main_models.InstanceGroup).\
+        options(joinedload('_policies')).\
+        options(joinedload('_members')).\
+        filter_by(deleted=0).\
+        limit(limit).\
+        all()
+
+
+def migrate_instance_groups_to_api_db(context, count):
+    main_groups = _get_main_instance_groups(context, count)
+    done = 0
+    for db_group in main_groups:
+        group = objects.InstanceGroup(context=context,
+                                      user_id=db_group.user_id,
+                                      project_id=db_group.project_id,
+                                      uuid=db_group.uuid,
+                                      name=db_group.name,
+                                      policies=db_group.policies,
+                                      members=db_group.members)
+        try:
+            group._create(skipcheck=True)
+        except exception.InstanceGroupIdExists:
+            # NOTE(melwitt): This might happen if there's a failure right after
+            # the InstanceGroup was created and the migration is re-run.
+            pass
+        db_api.instance_group_delete(context, db_group.uuid)
+        done += 1
+    return len(main_groups), done
