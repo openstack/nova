@@ -19,6 +19,8 @@
 from oslo_utils import importutils
 import webob
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -80,6 +82,7 @@ class BareMetalNodeController(wsgi.Controller):
             d[f] = node_ref.get(f)
         return d
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
@@ -100,6 +103,7 @@ class BareMetalNodeController(wsgi.Controller):
             nodes.append(node)
         return {'nodes': nodes}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 501))
     def show(self, req, id):
         context = req.environ['nova.context']
@@ -125,19 +129,23 @@ class BareMetalNodeController(wsgi.Controller):
             node['interfaces'].append({'address': port.address})
         return {'node': node}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(400)
     def create(self, req, body):
         _no_ironic_proxy("node-create")
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(400)
     def delete(self, req, id):
         _no_ironic_proxy("node-delete")
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action('add_interface')
     @extensions.expected_errors(400)
     def _add_interface(self, req, id, body):
         _no_ironic_proxy("port-create")
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action('remove_interface')
     @extensions.expected_errors(400)
     def _remove_interface(self, req, id, body):
