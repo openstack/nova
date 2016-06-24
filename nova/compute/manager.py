@@ -4990,7 +4990,7 @@ class ComputeManager(manager.Manager):
                                 check_can_live_migrate_source(ctxt, instance,
                                                               dest_check_data)
         finally:
-            self.driver.check_can_live_migrate_destination_cleanup(ctxt,
+            self.driver.cleanup_live_migration_destination_check(ctxt,
                     dest_check_data)
         return migrate_data
 

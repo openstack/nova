@@ -6573,7 +6573,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._cleanup_shared_storage_test_file("file")
 
         self.mox.ReplayAll()
-        drvr.check_can_live_migrate_destination_cleanup(self.context,
+        drvr.cleanup_live_migration_destination_check(self.context,
                                                         dest_check_data)
 
     def _mock_can_live_migrate_source(self, block_migration=False,

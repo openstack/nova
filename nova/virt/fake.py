@@ -474,7 +474,7 @@ class FakeDriver(driver.ComputeDriver):
     def live_migration_abort(self, instance):
         return
 
-    def check_can_live_migrate_destination_cleanup(self, context,
+    def cleanup_live_migration_destination_check(self, context,
                                                    dest_check_data):
         return
 

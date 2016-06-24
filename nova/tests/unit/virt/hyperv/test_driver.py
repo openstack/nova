@@ -338,12 +338,12 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
             mock.sentinel.src_compute_info, mock.sentinel.dst_compute_info,
             mock.sentinel.block_migration, mock.sentinel.disk_over_commit)
 
-    def test_check_can_live_migrate_destination_cleanup(self):
-        self.driver.check_can_live_migrate_destination_cleanup(
+    def test_cleanup_live_migration_destination_check(self):
+        self.driver.cleanup_live_migration_destination_check(
             mock.sentinel.context, mock.sentinel.dest_check_data)
 
         _livemigrops = self.driver._livemigrationops
-        method = _livemigrops.check_can_live_migrate_destination_cleanup
+        method = _livemigrops.cleanup_live_migration_destination_check
         method.assert_called_once_with(
             mock.sentinel.context, mock.sentinel.dest_check_data)
 

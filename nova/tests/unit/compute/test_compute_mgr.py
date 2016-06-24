@@ -1907,7 +1907,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.compute_rpcapi,
                               'check_can_live_migrate_source'),
             mock.patch.object(self.compute.driver,
-                              'check_can_live_migrate_destination_cleanup'),
+                              'cleanup_live_migration_destination_check'),
             mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(compute_utils, 'EventReporter')
         ) as (mock_get, mock_check_dest, mock_check_src, mock_check_clean,

@@ -5300,7 +5300,7 @@ class LibvirtDriver(driver.ComputeDriver):
         data.disk_available_mb = disk_available_mb
         return data
 
-    def check_can_live_migrate_destination_cleanup(self, context,
+    def cleanup_live_migration_destination_check(self, context,
                                                    dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
