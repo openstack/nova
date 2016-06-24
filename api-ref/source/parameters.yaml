@@ -373,6 +373,40 @@ deleted_query:
     be accessible via the backend database, however there is no
     contract on how long, so this parameter should be used with
     caution. It is typically only available to administrators.
+detailed_simple_tenant_usage:
+  description: |
+    Specify the ``detailed=1`` query parameter to get detail information
+    ('server_usages' information).
+  in: query
+  required: false
+  type: integer
+end_simple_tenant_usage:
+  description: |
+    The ending time to calculate usage statistics on compute and
+    storage resources. The date and time stamp format is any of
+    the following ones:
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss
+
+    For example, ``2015-08-27T09:49:58``.
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+
+    ::
+
+       CCYY-MM-DD hh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27 09:49:58.123456``.
+    If you omit this parameter, the current time is used.
+  in: query
+  required: false
+  type: string
 exclude:
   description: |
     Specify ``exclude=uuid[,uuid...]`` to exclude the instances from the results.
@@ -632,6 +666,33 @@ sort_key:
     multiple pairs of sort key and sort direction query parameters. If you omit the
     sort direction in a pair, the API uses the natural sorting direction of the server
     ``sort_key`` attribute.
+  in: query
+  required: false
+  type: string
+start_simple_tenant_usage:
+  description: |
+    The beginning time to calculate usage statistics on compute and
+    storage resources. The date and time stamp format is any of the
+    following ones:
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss
+
+    For example, ``2015-08-27T09:49:58``.
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+
+    ::
+
+       CCYY-MM-DD hh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27 09:49:58.123456``.
+    If you omit this parameter, the current time is used.
   in: query
   required: false
   type: string
@@ -1437,6 +1498,36 @@ display_name_optional:
   in: body
   required: false
   type: string
+ended_at:
+  description: |
+    The date and time when the server was deleted.
+
+    The date and time stamp format is as follows:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+    If the server hasn't been deleted yet, its value is ``null``.
+  in: body
+  required: true
+  type: string
+ended_at_optional:
+  description: |
+    The date and time when the server was deleted.
+
+    The date and time stamp format is as follows:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+    If the server hasn't been deleted yet, its value is ``null``.
+  in: body
+  required: false
+  type: string
 errors:
   description: |
     The number of errors.
@@ -1738,6 +1829,12 @@ flavor_name:
     The display name of a flavor.
   in: body
   required: true
+  type: string
+flavor_name_optional:
+  description: |
+    The display name of a flavor.
+  in: body
+  required: false
   type: string
 flavor_ram:
   description: |
@@ -2076,6 +2173,18 @@ hosts.availability_zone:
   in: body
   required: true
   type: object
+hours:
+  description: |
+   The duration that the server exists (in hours).
+  in: body
+  required: true
+  type: float
+hours_optional:
+  description: |
+   The duration that the server exists (in hours).
+  in: body
+  required: false
+  type: float
 hypervisor:
   description: |
     The hypervisor object.
@@ -2650,6 +2759,20 @@ local_gb:
   in: body
   required: true
   type: integer
+local_gb_simple_tenant_usage:
+  description: |
+    The sum of the root disk size of the server and
+    the ephemeral disk size of it (in GiB).
+  in: body
+  required: true
+  type: integer
+local_gb_simple_tenant_usage_optional:
+  description: |
+    The sum of the root disk size of the server and
+    the ephemeral disk size of it (in GiB).
+  in: body
+  required: false
+  type: integer
 local_gb_used:
   description: |
     The disk used in this hypervisor(in GB).
@@ -2691,6 +2814,18 @@ memory_mb:
     The memory of this hypervisor(in MB).
   in: body
   required: true
+  type: integer
+memory_mb_simple_tenant_usage:
+  description: |
+    The memory size of the server (in MB).
+  in: body
+  required: true
+  type: integer
+memory_mb_simple_tenant_usage_optional:
+  description: |
+    The memory size of the server (in MB).
+  in: body
+  required: false
   type: integer
 memory_mb_used:
   description: |
@@ -3659,6 +3794,12 @@ server_id:
   in: body
   required: true
   type: string
+server_id_optional:
+  description: |
+    The UUID of the server.
+  in: body
+  required: false
+  type: string
 server_kernel_id:
   in: body
   required: true
@@ -3679,6 +3820,12 @@ server_name:
     The server name.
   in: body
   required: true
+  type: string
+server_name_optional:
+  description: |
+    The server name.
+  in: body
+  required: false
   type: string
 server_ramdisk_id:
   in: body
@@ -3709,6 +3856,18 @@ server_status:
   in: body
   required: true
   type: string
+server_usages:
+  description: |
+    A list of the server usage objects.
+  in: body
+  required: true
+  type: array
+server_usages_optional:
+  description: |
+    A list of the server usage objects.
+  in: body
+  required: false
+  type: array
 server_user_data:
   in: body
   required: true
@@ -3854,6 +4013,19 @@ source_type:
   in: body
   required: true
   type: string
+start_simple_tenant_usage_body:
+  description: |
+    The beginning time to calculate usage statistics on compute and
+    storage resources. The date and time stamp format is as follows:
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+  in: body
+  required: true
+  type: string
 start_time:
   description: |
     The date and time when the action was started. The date and time
@@ -3866,6 +4038,47 @@ start_time:
     For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
     value, if included, is the time zone as an offset from UTC.  In
     the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+started_at:
+  description: |
+    The date and time when the server was launched.
+
+    The date and time stamp format is as follows:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+  in: body
+  required: true
+  type: string
+started_at_optional:
+  description: |
+    The date and time when the server was launched.
+
+    The date and time stamp format is as follows:
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
+  in: body
+  required: false
+  type: string
+stop_simple_tenant_usage:
+  description: |
+    The ending time to calculate usage statistics on compute and
+    storage resources. The date and time stamp format is as follows:
+
+    ::
+
+       CCYY-MM-DDThh:mm:ss.NNNNNN
+
+    For example, ``2015-08-27T09:49:58.123456``.
   in: body
   required: true
   type: string
@@ -3894,6 +4107,24 @@ tenant_id_body:
   in: body
   required: true
   type: string
+tenant_id_optional:
+  description: |
+    The UUID of the tenant in a multi-tenancy cloud.
+  in: body
+  required: false
+  type: string
+tenant_usage:
+  description: |
+    The tenant usage object.
+  in: body
+  required: true
+  type: object
+tenant_usages:
+  description: |
+    A list of the tenant usage objects.
+  in: body
+  required: true
+  type: array
 to_port:
   description: |
     The port at end of range.
@@ -3906,12 +4137,39 @@ total_errors:
   in: body
   required: true
   type: integer
+total_hours:
+  description: |
+    The total duration that servers exist (in hours).
+  in: body
+  required: true
+  type: float
 total_instances:
   description: |
     The total number of VM instances in the period.
   in: body
   required: true
   type: integer
+total_local_gb_usage:
+  description: |
+    Multiplying the server disk size (in GiB) by hours the server exists,
+    and then adding that all together for each server.
+  in: body
+  required: true
+  type: float
+total_memory_mb_usage:
+  description: |
+    Multiplying the server memory size (in MB) by hours the server exists,
+    and then adding that all together for each server.
+  in: body
+  required: true
+  type: float
+total_vcpus_usage:
+  description: |
+    Multiplying the number of virtual CPUs of the server by hours the server exists,
+    and then adding that all together for each server.
+  in: body
+  required: true
+  type: float
 trigger_crash_dump:
   in: body
   required: true
@@ -3986,6 +4244,18 @@ uptime:
   in: body
   required: true
   type: string
+uptime_simple_tenant_usage:
+  description: |
+    The uptime of the server.
+  in: body
+  required: true
+  type: integer
+uptime_simple_tenant_usage_optional:
+  description: |
+    The uptime of the server.
+  in: body
+  required: false
+  type: integer
 url:
   description: |
     The URL associated with the agent.
@@ -4007,6 +4277,18 @@ user_id:
   in: body
   required: true
   type: string
+vcpus:
+  description: |
+    The number of virtual CPUs that the server uses.
+  in: body
+  required: true
+  type: integer
+vcpus_optional:
+  description: |
+    The number of virtual CPUs that the server uses.
+  in: body
+  required: false
+  type: integer
 version:
   description: |
     The version.
@@ -4076,6 +4358,12 @@ virtual_interfaces:
   in: body
   required: true
   type: array
+vm_state_optional:
+  description: |
+    The VM state.
+  in: body
+  required: false
+  type: string
 volume:
   description: |
     The ``volume`` object.
