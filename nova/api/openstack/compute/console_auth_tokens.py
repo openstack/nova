@@ -29,8 +29,7 @@ class ConsoleAuthTokensController(wsgi.Controller):
         self._consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
         super(ConsoleAuthTokensController, self).__init__(*args, **kwargs)
 
-    @extensions.expected_errors((400, 401, 404))
-    def show(self, req, id):
+    def _show(self, req, id, rdp_only):
         """Checks a console auth token and returns the related connect info."""
         context = req.environ['nova.context']
         authorize(context)
@@ -45,8 +44,8 @@ class ConsoleAuthTokensController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=_("Token not found"))
 
         console_type = connect_info.get('console_type')
-        # This is currently required only for RDP consoles
-        if console_type != "rdp-html5":
+
+        if rdp_only and console_type != "rdp-html5":
             raise webob.exc.HTTPUnauthorized(
                 explanation=_("The requested console type details are not "
                               "accessible"))
@@ -56,6 +55,16 @@ class ConsoleAuthTokensController(wsgi.Controller):
                  for i in ['instance_uuid', 'host', 'port',
                            'internal_access_path']
                  if i in connect_info}}
+
+    @wsgi.Controller.api_version("2.1", "2.30")
+    @extensions.expected_errors((400, 401, 404))
+    def show(self, req, id):
+        return self._show(req, id, True)
+
+    @wsgi.Controller.api_version("2.31")  # noqa
+    @extensions.expected_errors((400, 404))
+    def show(self, req, id):
+        return self._show(req, id, False)
 
 
 class ConsoleAuthTokens(extensions.V21APIExtensionBase):

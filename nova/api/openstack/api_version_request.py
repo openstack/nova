@@ -79,6 +79,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              behaviour for the host flag by calling the scheduler.
     * 2.30 - Add a force flag in live-migrate request body and change the
              behaviour for the host flag by calling the scheduler.
+    * 2.31 - Fix os-console-auth-tokens to work for all console types.
 """
 
 # The minimum and maximum versions of the API supported
@@ -87,7 +88,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.30"
+_MAX_API_VERSION = "2.31"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

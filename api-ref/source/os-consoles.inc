@@ -146,7 +146,8 @@ Show Console Authentication Token
 Given the console authentication token for a server instance,
 shows the related connection information.
 
-This method is available for ``rdp-html5`` console type only.
+This method used to be available just for the ``rdp-html5`` console type prior
+microversion 2.31. Now it's available for all console types.
 
 Normal response codes: 200
 
