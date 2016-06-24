@@ -18,6 +18,7 @@ import mock
 import webob
 
 from nova.api.openstack.compute import quota_sets as quotas_v21
+from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack import extensions
 from nova import db
 from nova import exception
@@ -82,7 +83,8 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
 
     def test_format_quota_set(self):
         quota_set = self.controller._format_quota_set('1234',
-                                                      self.default_quotas)
+                                                      self.default_quotas,
+                                                      [])
         qs = quota_set['quota_set']
 
         self.assertEqual(qs['id'], '1234')
@@ -519,3 +521,57 @@ class QuotaSetsPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class QuotaSetsTestV236(test.NoDBTestCase):
+
+    def setUp(self):
+        super(QuotaSetsTestV236, self).setUp()
+        self.flags(enable_network_quota=True)
+        tenant_networks._register_network_quota()
+        self.old_req = fakes.HTTPRequest.blank('', version='2.1')
+        self.filtered_quotas = ['fixed_ips', 'floating_ips', 'networks',
+            'security_group_rules', 'security_groups']
+        self.controller = quotas_v21.QuotaSetsController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+        self.addCleanup(self._remove_network_quota)
+
+    def _remove_network_quota(self):
+        del quota.QUOTAS._resources['networks']
+
+    def _ensure_filtered_quotas_existed_in_old_api(self):
+        res_dict = self.controller.show(self.old_req, 1234)
+        for filtered in self.filtered_quotas:
+            self.assertIn(filtered, res_dict['quota_set'])
+
+    def test_quotas_show_filtered(self):
+        self._ensure_filtered_quotas_existed_in_old_api()
+        res_dict = self.controller.show(self.req, 1234)
+        for filtered in self.filtered_quotas:
+            self.assertNotIn(filtered, res_dict['quota_set'])
+
+    def test_quotas_default_filtered(self):
+        self._ensure_filtered_quotas_existed_in_old_api()
+        res_dict = self.controller.defaults(self.req, 1234)
+        for filtered in self.filtered_quotas:
+            self.assertNotIn(filtered, res_dict['quota_set'])
+
+    def test_quotas_detail_filtered(self):
+        self._ensure_filtered_quotas_existed_in_old_api()
+        res_dict = self.controller.detail(self.req, 1234)
+        for filtered in self.filtered_quotas:
+            self.assertNotIn(filtered, res_dict['quota_set'])
+
+    def test_quotas_update_input_filtered(self):
+        self._ensure_filtered_quotas_existed_in_old_api()
+        for filtered in self.filtered_quotas:
+            self.assertRaises(exception.ValidationError,
+                self.controller.update, self.req, 1234,
+                body={'quota_set': {filtered: 100}})
+
+    def test_quotas_update_output_filtered(self):
+        self._ensure_filtered_quotas_existed_in_old_api()
+        res_dict = self.controller.update(self.req, 1234,
+             body={'quota_set': {'cores': 100}})
+        for filtered in self.filtered_quotas:
+            self.assertNotIn(filtered, res_dict['quota_set'])

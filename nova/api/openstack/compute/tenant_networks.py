@@ -208,7 +208,9 @@ def _sync_networks(context, project_id, session):
     return dict(networks=len(networks))
 
 
-if CONF.enable_network_quota:
-    QUOTAS.register_resource(quota.ReservableResource('networks',
-                                                      _sync_networks,
-                                                      'quota_networks'))
+def _register_network_quota():
+    if CONF.enable_network_quota:
+        QUOTAS.register_resource(quota.ReservableResource('networks',
+                                                          _sync_networks,
+                                                         'quota_networks'))
+_register_network_quota()
