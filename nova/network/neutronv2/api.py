@@ -136,7 +136,8 @@ class API(base_api.NetworkAPI):
         """Setup or teardown the network structures."""
 
     def _get_available_networks(self, context, project_id,
-                                net_ids=None, neutron=None):
+                                net_ids=None, neutron=None,
+                                auto_allocate=False):
         """Return a network list available for the tenant.
         The list contains networks owned by the tenant and public networks.
         If net_ids specified, it searches networks with requested IDs only.
@@ -153,6 +154,14 @@ class API(base_api.NetworkAPI):
         else:
             # (1) Retrieve non-public network list owned by the tenant.
             search_opts = {'tenant_id': project_id, 'shared': False}
+            if auto_allocate:
+                # The auto-allocated-topology extension may create complex
+                # network topologies and it does so in a non-transactional
+                # fashion. Therefore API users may be exposed to resources that
+                # are transient or partially built. A client should use
+                # resources that are meant to be ready and this can be done by
+                # checking their admin_state_up flag.
+                search_opts['admin_state_up'] = True
             nets = neutron.list_networks(**search_opts).get('networks', [])
             # (2) Retrieve public network list.
             search_opts = {'shared': True}
@@ -362,7 +371,10 @@ class API(base_api.NetworkAPI):
         ports = {}
         net_ids = []
         ordered_networks = []
-        if requested_networks:
+        # If we're asked to auto-allocate the network then there won't be any
+        # ports or real neutron networks to lookup, so just return empty
+        # results.
+        if requested_networks and not requested_networks.auto_allocate:
             for request in requested_networks:
 
                 # Process a request to use a pre-existing neutron port.
@@ -545,16 +557,28 @@ class API(base_api.NetworkAPI):
             self._process_requested_networks(context,
                 instance, neutron, requested_networks, hypervisor_macs))
 
+        auto_allocate = requested_networks and requested_networks.auto_allocate
         nets = self._get_available_networks(context, instance.project_id,
-                                            net_ids, neutron=neutron)
+                                            net_ids, neutron=neutron,
+                                            auto_allocate=auto_allocate)
         if not nets:
-            # NOTE(chaochin): If user specifies a network id and the network
-            # can not be found, raise NetworkNotFound error.
+
             if requested_networks:
-                for request in requested_networks:
-                    if not request.port_id and request.network_id:
-                        raise exception.NetworkNotFound(
-                            network_id=request.network_id)
+                # There are no networks available for the project to use and
+                # none specifically requested, so check to see if we're asked
+                # to auto-allocate the network.
+                if auto_allocate:
+                    # During validate_networks we checked to see if
+                    # auto-allocation is available so we don't need to do that
+                    # again here.
+                    nets = [self._auto_allocate_network(instance, neutron)]
+                else:
+                    # NOTE(chaochin): If user specifies a network id and the
+                    # network can not be found, raise NetworkNotFound error.
+                    for request in requested_networks:
+                        if not request.port_id and request.network_id:
+                            raise exception.NetworkNotFound(
+                                network_id=request.network_id)
             else:
                 LOG.debug("No network configured", instance=instance)
                 return network_model.NetworkInfo([])
@@ -564,7 +588,8 @@ class API(base_api.NetworkAPI):
         # with None params=(network_id=None, requested_ip=None, port_id=None,
         # pci_request_id=None):
         if (not requested_networks
-            or requested_networks.is_single_unspecified):
+            or requested_networks.is_single_unspecified
+            or requested_networks.auto_allocate):
             # If no networks were requested and none are available, consider
             # it a bad request.
             if not nets:
@@ -1139,6 +1164,39 @@ class API(base_api.NetworkAPI):
             LOG.debug('Unable to auto-allocate networks. The neutron '
                       'auto-allocated-topology extension is not available.')
         return False
+
+    def _auto_allocate_network(self, instance, neutron):
+        """Automatically allocates a network for the given project.
+
+        :param instance: create the network for the project that owns this
+            instance
+        :param neutron: neutron client
+        :returns: Details of the network that was created.
+        :raises: nova.exception.UnableToAutoAllocateNetwork
+        :raises: nova.exception.NetworkNotFound
+        """
+        project_id = instance.project_id
+        LOG.debug('Automatically allocating a network for project %s.',
+                  project_id, instance=instance)
+        try:
+            topology = neutron.get_auto_allocated_topology(
+                project_id)['auto_allocated_topology']
+        except neutron_client_exc.Conflict:
+            raise exception.UnableToAutoAllocateNetwork(project_id=project_id)
+
+        try:
+            network = neutron.show_network(topology['id'])['network']
+        except neutron_client_exc.NetworkNotFoundClient:
+            # This shouldn't happen since we just created the network, but
+            # handle it anyway.
+            LOG.error(_LE('Automatically allocated network %(network_id)s '
+                          'was not found.'), {'network_id': topology['id']},
+                      instance=instance)
+            raise exception.UnableToAutoAllocateNetwork(project_id=project_id)
+
+        LOG.debug('Automatically allocated network: %s', network,
+                  instance=instance)
+        return network
 
     def _ports_needed_per_instance(self, context, neutron, requested_networks):
 

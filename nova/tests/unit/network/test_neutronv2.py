@@ -1280,7 +1280,8 @@ class TestNeutronv2(TestNeutronv2Base):
         # of the function
         api._get_available_networks(self.context, self.instance.project_id,
                                     [],
-                                    neutron=self.moxed_client).\
+                                    neutron=self.moxed_client,
+                                    auto_allocate=False).\
                                     AndRaise(BailOutEarly)
         self.mox.ReplayAll()
         requested_networks = objects.NetworkRequestList(
@@ -4795,3 +4796,129 @@ class TestNeutronv2AutoAllocateNetwork(test.NoDBTestCase):
                         requested_networks))
             can_alloc.assert_called_once_with(
                 self.context, mock.sentinel.neutron)
+
+    def test__process_requested_networks_auto_allocate(self):
+        # Tests that _process_requested_networks doesn't really do anything
+        # if there is an auto-allocate network request.
+        net_req = objects.NetworkRequest(
+            network_id=net_req_obj.NETWORK_ID_AUTO)
+        requested_networks = objects.NetworkRequestList(objects=[net_req])
+        self.assertEqual(({}, [], [], None),
+                         self.api._process_requested_networks(
+                             self.context, mock.sentinel.instance,
+                             mock.sentinel.neutron_client, requested_networks))
+
+    def test__auto_allocate_network_conflict(self):
+        # Tests that we handle a 409 from Neutron when auto-allocating topology
+        instance = mock.Mock(project_id=self.context.project_id)
+        ntrn = mock.Mock()
+        ntrn.get_auto_allocated_topology = mock.Mock(
+            side_effect=exceptions.Conflict)
+        self.assertRaises(exception.UnableToAutoAllocateNetwork,
+                          self.api._auto_allocate_network, instance, ntrn)
+        ntrn.get_auto_allocated_topology.assert_called_once_with(
+            instance.project_id)
+
+    def test__auto_allocate_network_network_not_found(self):
+        # Tests that we handle a 404 from Neutron when auto-allocating topology
+        instance = mock.Mock(project_id=self.context.project_id)
+        ntrn = mock.Mock()
+        ntrn.get_auto_allocated_topology.return_value = {
+            'auto_allocated_topology': {
+                'id': uuids.network_id
+            }
+        }
+        ntrn.show_network = mock.Mock(
+            side_effect=exceptions.NetworkNotFoundClient)
+        self.assertRaises(exception.UnableToAutoAllocateNetwork,
+                          self.api._auto_allocate_network, instance, ntrn)
+        ntrn.show_network.assert_called_once_with(uuids.network_id)
+
+    def test__auto_allocate_network(self):
+        # Tests the happy path.
+        instance = mock.Mock(project_id=self.context.project_id)
+        ntrn = mock.Mock()
+        ntrn.get_auto_allocated_topology.return_value = {
+            'auto_allocated_topology': {
+                'id': uuids.network_id
+            }
+        }
+        ntrn.show_network.return_value = {'network': mock.sentinel.network}
+        self.assertEqual(mock.sentinel.network,
+                         self.api._auto_allocate_network(instance, ntrn))
+
+    def test_allocate_for_instance_auto_allocate(self):
+        # Tests the happy path.
+        ntrn = mock.Mock()
+        # mock neutron.list_networks which is called from
+        # _get_available_networks when net_ids is empty, which it will be
+        # because _process_requested_networks will return an empty list since
+        # we requested 'auto' allocation.
+        ntrn.list_networks.return_value = {}
+
+        fake_network = {
+            'id': uuids.network_id,
+            'subnets': [
+                uuids.subnet_id,
+            ]
+        }
+
+        def fake_get_instance_nw_info(context, instance, **kwargs):
+            # assert the network and port are what was used in the test
+            self.assertIn('networks', kwargs)
+            self.assertEqual(1, len(kwargs['networks']))
+            self.assertEqual(uuids.network_id,
+                             kwargs['networks'][0]['id'])
+            self.assertIn('port_ids', kwargs)
+            self.assertEqual(1, len(kwargs['port_ids']))
+            self.assertEqual(uuids.port_id, kwargs['port_ids'][0])
+            # return a fake vif
+            return [model.VIF(id=uuids.port_id)]
+
+        @mock.patch('nova.network.neutronv2.api.get_client', return_value=ntrn)
+        @mock.patch.object(self.api, '_has_port_binding_extension',
+                           return_value=True)
+        @mock.patch.object(self.api, '_auto_allocate_network',
+                           return_value=fake_network)
+        @mock.patch.object(self.api, '_check_external_network_attach')
+        @mock.patch.object(self.api, '_populate_neutron_extension_values')
+        @mock.patch.object(self.api, '_populate_mac_address')
+        @mock.patch.object(self.api, '_create_port', spec=True,
+                           return_value=uuids.port_id)
+        @mock.patch.object(self.api, '_update_port_dns_name')
+        @mock.patch.object(self.api, 'get_instance_nw_info',
+                           fake_get_instance_nw_info)
+        def do_test(self,
+                    update_port_dsn_name_mock,
+                    create_port_mock,
+                    populate_mac_addr_mock,
+                    populate_ext_values_mock,
+                    check_external_net_attach_mock,
+                    auto_allocate_mock,
+                    has_port_binding_mock,
+                    get_client_mock):
+            instance = fake_instance.fake_instance_obj(self.context)
+            net_req = objects.NetworkRequest(
+                network_id=net_req_obj.NETWORK_ID_AUTO)
+            requested_networks = objects.NetworkRequestList(objects=[net_req])
+
+            nw_info = self.api.allocate_for_instance(
+                self.context, instance, requested_networks=requested_networks)
+            self.assertEqual(1, len(nw_info))
+            self.assertEqual(uuids.port_id, nw_info[0]['id'])
+            # assert that we filtered available networks on admin_state_up=True
+            ntrn.list_networks.assert_has_calls([
+                mock.call(tenant_id=instance.project_id, shared=False,
+                          admin_state_up=True),
+                mock.call(shared=True)])
+
+            # assert the calls to create the port are using the network that
+            # was auto-allocated
+            port_req_body = mock.ANY
+            create_port_mock.assert_called_once_with(
+                ntrn, instance, uuids.network_id, port_req_body,
+                None,   # request.address (fixed IP)
+                [],     # security_group_ids - we didn't request any
+            )
+
+        do_test(self)
