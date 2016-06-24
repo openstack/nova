@@ -83,6 +83,22 @@ class _TestVirtualInterface(object):
         vif._context = None
         self._compare(self, fake_vif, vif)
 
+    def test_save(self):
+        vif = vif_obj.VirtualInterface(context=self.context)
+        vif.address = '00:00:00:00:00:00'
+        vif.network_id = 123
+        vif.instance_uuid = uuids.instance_uuid
+        vif.uuid = uuids.vif_uuid
+        vif.tag = 'foo'
+        vif.create()
+
+        with mock.patch.object(db, 'virtual_interface_update') as update:
+            update.return_value = fake_vif
+            vif.tag = 'bar'
+            vif.save()
+            update.assert_called_once_with(self.context, '00:00:00:00:00:00',
+                                          {'tag': 'bar'})
+
     def test_delete_by_instance_uuid(self):
         with mock.patch.object(db,
                 'virtual_interface_delete_by_instance') as delete:
