@@ -9435,13 +9435,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info_byname['disk.local']['backing_file'] = 'ephemeral_foo'
 
         with test.nested(
-            mock.patch.object(drvr, '_fetch_instance_kernel_ramdisk'),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
             mock.patch.object(drvr, '_create_ephemeral'),
             mock.patch.object(imagebackend.Image, 'verify_base_size'),
             mock.patch.object(imagebackend.Image, 'get_disk_size')
-        ) as (fetch_kernel_ramdisk_mock, fetch_image_mock,
-                create_ephemeral_mock, verify_base_size_mock, disk_size_mock):
+        ) as (fetch_image_mock, create_ephemeral_mock, verify_base_size_mock,
+              disk_size_mock):
             drvr._create_images_and_backing(self.context, instance,
                                             CONF.instances_path, disk_info)
             self.assertEqual(len(create_ephemeral_mock.call_args_list), 1)
@@ -9611,10 +9610,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.virt.driver.block_device_info_get_mapping',
                 return_value=())
-    @mock.patch('nova.virt.configdrive.required_by',
-                return_value=True)
     def test_pre_live_migration_block_with_config_drive_mocked_with_vfat(
-            self, mock_required_by, block_device_info_get_mapping):
+            self, block_device_info_get_mapping):
         self.flags(config_drive_format='vfat')
         # Creating testdata
         vol = {'block_device_mapping': [
@@ -9623,6 +9620,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         instance = objects.Instance(**self.test_instance)
+        instance.config_drive = 'True'
 
         res_data = drvr.pre_live_migration(
             self.context, instance, vol, [], None,
@@ -10117,9 +10115,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(info[0]['backing_file'], "")
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
 
-    @mock.patch('nova.virt.configdrive.required_by',
-                return_value=False)
-    def test_spawn_with_network_info(self, config_mock):
+    def test_spawn_with_network_info(self):
         # Preparing mocks
         def fake_none(*args, **kwargs):
             return
@@ -10163,6 +10159,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
         instance = objects.Instance(**instance_ref)
+        instance.config_drive = ''
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
@@ -10366,7 +10363,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         with test.nested(
-            mock.patch.object(drvr, '_create_images_and_backing'),
             mock.patch.object(drvr, 'plug_vifs'),
             mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
@@ -13560,7 +13556,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             state=power_state.RUNNING)
 
         with test.nested(
-            mock.patch.object(drvr, '_create_images_and_backing'),
             mock.patch.object(drvr, '_is_booted_from_volume',
                               return_value=False),
             mock.patch.object(drvr, '_create_domain'),
@@ -13624,7 +13619,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             state=power_state.RUNNING)
 
         with test.nested(
-            mock.patch.object(drvr, '_create_images_and_backing'),
             mock.patch.object(drvr, '_is_booted_from_volume',
                               return_value=False),
             mock.patch.object(drvr, '_create_domain'),
@@ -13633,9 +13627,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')
         ) as (
-            mock_create_images_and_backing, mock_is_booted_from_volume,
-            mock_create_domain, mock_plug_vifs, mock_setup_basic_filtering,
-            mock_prepare_instance_filter, mock_apply_instance_filter
+            mock_is_booted_from_volume, mock_create_domain, mock_plug_vifs,
+            mock_setup_basic_filtering, mock_prepare_instance_filter,
+            mock_apply_instance_filter
         ):
             drvr._create_domain_and_network(self.context, 'xml',
                                             mock_instance, [], None)
@@ -13680,7 +13674,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             state=power_state.SHUTDOWN)
 
         with test.nested(
-            mock.patch.object(drvr, '_create_images_and_backing'),
             mock.patch.object(drvr, '_is_booted_from_volume',
                               return_value=False),
             mock.patch.object(drvr, '_create_domain'),
