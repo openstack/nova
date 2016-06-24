@@ -6075,6 +6075,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 abort = False
 
                 if ((progress_watermark is None) or
+                    (progress_watermark == 0) or
                     (progress_watermark > info.data_remaining)):
                     progress_watermark = info.data_remaining
                     progress_time = now
