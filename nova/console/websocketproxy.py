@@ -28,11 +28,13 @@ from six.moves import http_cookies as Cookie
 import six.moves.urllib.parse as urlparse
 import websockify
 
+from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
+from nova import objects
 
 LOG = logging.getLogger(__name__)
 
@@ -111,6 +113,86 @@ class NovaProxyRequestHandlerBase(object):
 
         return origin_proto in expected_protos
 
+    @staticmethod
+    def _console_auth_token_obj_to_dict(obj):
+        """Convert to a dict representation."""
+        # NOTE(PaulMurray) For compatibility while there is code that
+        # expects the dict representation returned by consoleauth.
+        # TODO(PaulMurray) Remove this function when the code no
+        # longer expects the consoleauth dict representation
+        connect_info = {}
+        connect_info['token'] = obj.token,
+        connect_info['instance_uuid'] = obj.instance_uuid
+        connect_info['console_type'] = obj.console_type
+        connect_info['host'] = obj.host
+        connect_info['port'] = obj.port
+        if 'internal_access_path' in obj:
+            connect_info['internal_access_path'] = obj.internal_access_path
+        if 'access_url_base' in obj:
+            connect_info['access_url'] = obj.access_url
+        return connect_info
+
+    def _check_console_port(self, ctxt, instance_uuid, port, console_type):
+
+        try:
+            instance = objects.Instance.get_by_uuid(ctxt, instance_uuid)
+        except exception.InstanceNotFound:
+            return
+
+        # NOTE(melwitt): The port is expected to be a str for validation.
+        return self.compute_rpcapi.validate_console_port(ctxt, instance,
+                                                         str(port),
+                                                         console_type)
+
+    def _get_connect_info_consoleauth(self, ctxt, token):
+        # NOTE(PaulMurray) consoleauth check_token() validates the token
+        # and does an rpc to compute manager to check the console port
+        # is correct.
+        rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
+        return rpcapi.check_token(ctxt, token=token)
+
+    def _get_connect_info_database(self, ctxt, token):
+        # NOTE(PaulMurray) ConsoleAuthToken.validate validates the token.
+        # We call the compute manager directly to check the console port
+        # is correct.
+        connect_info = self._console_auth_token_obj_to_dict(
+            objects.ConsoleAuthToken.validate(ctxt, token))
+
+        valid_port = self._check_console_port(
+            ctxt, connect_info['instance_uuid'], connect_info['port'],
+            connect_info['console_type'])
+
+        if not valid_port:
+            raise exception.InvalidToken(token='***')
+
+        return connect_info
+
+    def _get_connect_info(self, ctxt, token):
+        """Validate the token and get the connect info."""
+        connect_info = None
+        # NOTE(PaulMurray) if we are using cells v1, we use the old consoleauth
+        # way of doing things. The database backend is not supported for cells
+        # v1.
+        if CONF.cells.enable:
+            connect_info = self._get_connect_info_consoleauth(ctxt, token)
+            if not connect_info:
+                raise exception.InvalidToken(token='***')
+        else:
+            # NOTE(melwitt): If consoleauth is enabled to aid in transitioning
+            # to the database backend, check it first before falling back to
+            # the database. Tokens that existed pre-database-backend will
+            # reside in the consoleauth service storage.
+            if CONF.workarounds.enable_consoleauth:
+                connect_info = self._get_connect_info_consoleauth(ctxt, token)
+            # If consoleauth is enabled to aid in transitioning to the database
+            # backend and we didn't find a token in the consoleauth service
+            # storage, check the database for a token because it's probably a
+            # post-database-backend token, which are stored in the database.
+            if not connect_info:
+                connect_info = self._get_connect_info_database(ctxt, token)
+
+        return connect_info
+
     def new_websocket_client(self):
         """Called after a new WebSocket connection has been established."""
         # Reopen the eventlet hub to make sure we don't share an epoll
@@ -151,11 +233,7 @@ class NovaProxyRequestHandlerBase(object):
                             token = cookie['token'].value
 
         ctxt = context.get_admin_context()
-        rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
-        connect_info = rpcapi.check_token(ctxt, token=token)
-
-        if not connect_info:
-            raise exception.InvalidToken(token=token)
+        connect_info = self._get_connect_info(ctxt, token)
 
         # Verify Origin
         expected_origin_hostname = self.headers.get('Host')
@@ -239,6 +317,10 @@ class NovaProxyRequestHandlerBase(object):
 class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
                               websockify.ProxyRequestHandler):
     def __init__(self, *args, **kwargs):
+        # Order matters here. ProxyRequestHandler.__init__() will eventually
+        # call new_websocket_client() and we need self.compute_rpcapi set
+        # before then.
+        self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         websockify.ProxyRequestHandler.__init__(self, *args, **kwargs)
 
     def socket(self, *args, **kwargs):

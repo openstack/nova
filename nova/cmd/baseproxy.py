@@ -27,12 +27,14 @@ from oslo_reports import opts as gmr_opts
 import nova.conf
 from nova.conf import novnc
 from nova.console import websocketproxy
+from nova import objects
 from nova import version
 
 
 CONF = nova.conf.CONF
 novnc.register_cli_opts(CONF)
 gmr_opts.set_defaults(CONF)
+objects.register_all()
 
 
 def exit_with_error(msg, errno=-1):
