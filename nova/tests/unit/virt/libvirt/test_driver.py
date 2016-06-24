@@ -5332,6 +5332,95 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 break
         self.assertTrue(no_exist)
 
+    @mock.patch('nova.virt.libvirt.driver.LOG.warning')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(host.Host, "get_capabilities")
+    def test_get_supported_perf_events_foo(self, mock_get_caps,
+                                           mock_min_version,
+                                           mock_warn):
+        self.flags(enabled_perf_events=['foo'], group='libvirt')
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        mock_get_caps.return_value = caps
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        events = drvr._get_supported_perf_events()
+
+        self.assertTrue(mock_warn.called)
+        self.assertEqual([], events)
+
+    @mock.patch.object(host.Host, "get_capabilities")
+    def _test_get_guest_with_perf(self, caps, events, mock_get_caps):
+        self.flags(enabled_perf_events=['cmt'], group='libvirt')
+        mock_get_caps.return_value = caps
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host('test_perf')
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                        instance_ref,
+                                        image_meta)
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                 image_meta, disk_info)
+
+        self.assertEqual(events, cfg.perf_events)
+
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_CMT', True,
+                       create=True)
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_get_guest_with_perf_supported(self,
+                                 mock_min_version):
+        self.flags(enabled_perf_events=['cmt'], group='libvirt')
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+        feature = vconfig.LibvirtConfigGuestCPUFeature()
+        feature.name = 'cqm'
+        feature.policy = cpumodel.POLICY_REQUIRE
+        caps.host.cpu.features = set([feature])
+
+        self._test_get_guest_with_perf(caps, ['cmt'])
+
+    @mock.patch.object(host.Host, 'has_min_version')
+    def test_get_guest_with_perf_libvirt_unsupported(self, mock_min_version):
+
+        def fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
+            if lv_ver == libvirt_driver.MIN_LIBVIRT_PERF_VERSION:
+                return False
+            return True
+
+        mock_min_version.side_effect = fake_has_min_version
+        self.flags(enabled_perf_events=['cmt'], group='libvirt')
+
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+
+        self._test_get_guest_with_perf(caps, [])
+
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_CMT', True,
+                       create=True)
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    def test_get_guest_with_perf_host_unsupported(self,
+                                             mock_min_version):
+        self.flags(enabled_perf_events=['cmt'], group='libvirt')
+        caps = vconfig.LibvirtConfigCaps()
+        caps.host = vconfig.LibvirtConfigCapsHost()
+        caps.host.cpu = vconfig.LibvirtConfigCPU()
+        caps.host.cpu.arch = "x86_64"
+        caps.host.topology = self._fake_caps_numa_topology()
+
+        self._test_get_guest_with_perf(caps, [])
+
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
         instance_data = dict(self.test_instance)
         self._check_xml_and_uri(instance_data,
@@ -10226,7 +10315,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, "_do_quality_warnings",
                               return_value=None),
             mock.patch.object(objects.Service, "get_by_compute_host",
-                              return_value=service_mock)):
+                              return_value=service_mock),
+            mock.patch.object(host.Host, "get_capabilities")):
 
             drvr.init_host("wibble")
             self.assertRaises(exception.HypervisorUnavailable,
@@ -10248,7 +10338,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             mock.patch.object(drvr, "_do_quality_warnings",
                               return_value=None),
             mock.patch.object(objects.Service, "get_by_compute_host",
-                              return_value=service_mock)):
+                              return_value=service_mock),
+            mock.patch.object(host.Host, "get_capabilities")):
 
             drvr.init_host("wibble")
             drvr.get_num_instances()

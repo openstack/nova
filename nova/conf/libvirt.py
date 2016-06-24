@@ -223,7 +223,32 @@ libvirt_general_opts = [
                default=1,
                help='In a realtime host context vCPUs for guest will run in '
                     'that scheduling priority. Priority depends on the host '
-                    'kernel (usually 1-99)')
+                    'kernel (usually 1-99)'),
+    cfg.ListOpt('enabled_perf_events',
+               default=[],
+               help= """
+This is a performance event list which could be used as monitor. These events
+will be passed to libvirt domain xml while creating a new instances.
+Then event statistics data can be collected from libvirt.  The minimum
+libvirt version is 1.3.3.
+
+* Possible values:
+    A string list.
+    For example:
+    ``enabled_perf_events = cmt, mbml, mbmt``
+
+    The supported events list can be found in
+    https://libvirt.org/html/libvirt-libvirt-domain.html , which
+    you may need to search key words ``VIR_PERF_PARAM_*``
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+    None
+
+"""),
 ]
 
 libvirt_imagebackend_opts = [
