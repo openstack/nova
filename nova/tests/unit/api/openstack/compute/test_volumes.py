@@ -979,3 +979,23 @@ class TestVolumeAttachPolicyEnforcementV21(test.NoDBTestCase):
                  rule_name: "project:non_fake"}
         self._common_policy_check(rules, rule_name, self.controller.delete,
                                   self.req, FAKE_UUID, FAKE_UUID_A)
+
+
+class TestVolumesAPIDeprecation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestVolumesAPIDeprecation, self).setUp()
+        self.controller = volumes_v21.VolumeController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.detail, self.req)
