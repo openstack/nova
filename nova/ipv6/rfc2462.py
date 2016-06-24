@@ -24,15 +24,15 @@ from nova.i18n import _
 
 def to_global(prefix, mac, project_id):
     try:
-        mac64 = netaddr.EUI(mac).eui64().words
-        int_addr = int(''.join(['%02x' % i for i in mac64]), 16)
-        mac64_addr = netaddr.IPAddress(int_addr)
-        maskIP = netaddr.IPNetwork(prefix).ip
-        return (mac64_addr ^ netaddr.IPAddress('::0200:0:0:0') |
-                maskIP).format()
+        mac64 = netaddr.EUI(mac).modified_eui64().value
+        mac64_addr = netaddr.IPAddress(mac64)
     except netaddr.AddrFormatError:
         raise TypeError(_('Bad mac for to_global_ipv6: %s') % mac)
-    except TypeError:
+
+    try:
+        maskIP = netaddr.IPNetwork(prefix).ip
+        return (mac64_addr | maskIP).format()
+    except netaddr.AddrFormatError:
         raise TypeError(_('Bad prefix for to_global_ipv6: %s') % prefix)
 
 
