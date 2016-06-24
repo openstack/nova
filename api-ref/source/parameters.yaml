@@ -386,6 +386,12 @@ host_query:
   in: query
   required: false
   type: string
+hypervisor_query:
+  description: |
+    Filters the response by a hypervisor type.
+  in: query
+  required: false
+  type: string
 image_query:
   description: |
     Filters the response by an image, as a UUID.
@@ -728,6 +734,12 @@ adminPass_rescue:
   in: body
   required: false
   type: string
+agent:
+  description: |
+    The guest agent object.
+  in: body
+  required: true
+  type: object
 agent_id:
   description: |
     The agent ID.
@@ -741,6 +753,12 @@ agent_id_str:
   in: body
   required: true
   type: string
+agents:
+  description: |
+    A list of guest agent objects.
+  in: body
+  required: true
+  type: array
 aggregate:
   description: |
     The host aggregate object.
@@ -2768,6 +2786,12 @@ overall_status:
   in: body
   required: true
   type: string
+para:
+  description: |
+    The parameter object.
+  in: body
+  required: true
+  type: object
 parent_group_id:
   description: |
     Security group ID.
