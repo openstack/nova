@@ -79,7 +79,7 @@ def main():
         # Parse out UUID
         instance_uuid = name_label.replace('instance-', '')[:36]
         if not uuidutils.is_uuid_like(instance_uuid):
-            print "error: name label '%s' wasn't UUID-like" % name_label
+            print("error: name label '%s' wasn't UUID-like" % name_label)
             continue
 
         vdi_type = vdi_rec['name_description']
@@ -92,11 +92,11 @@ def main():
                                    vdi_type, instance)
 
         if CONF.verbose:
-            print "Setting other_config for instance_uuid=%s vdi_uuid=%s" % (
-                    instance_uuid, vdi_rec['uuid'])
+            print("Setting other_config for instance_uuid=%s vdi_uuid=%s" % (
+                    instance_uuid, vdi_rec['uuid']))
 
         if CONF.dry_run:
-            print "Dry run completed"
+            print("Dry run completed")
 
 
 if __name__ == "__main__":

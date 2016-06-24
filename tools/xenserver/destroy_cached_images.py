@@ -60,9 +60,9 @@ def main():
         dry_run=CONF.dry_run)
 
     if '--verbose' in sys.argv:
-        print '\n'.join(destroyed)
+        print('\n'.join(destroyed))
 
-    print "Destroyed %d cached VDIs" % len(destroyed)
+    print("Destroyed %d cached VDIs" % len(destroyed))
 
 
 if __name__ == "__main__":

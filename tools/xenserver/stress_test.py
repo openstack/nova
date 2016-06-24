@@ -26,7 +26,7 @@ DOM0_CLEANUP_SCRIPT = "/tmp/destroy_cache_vdis"
 def run(cmd):
     ret = subprocess.call(cmd, shell=True)
     if ret != 0:
-        print >> sys.stderr, "Command exited non-zero: %s" % cmd
+        sys.stderr.write("Command exited non-zero: %s" % cmd)
 
 
 @contextlib.contextmanager
@@ -59,8 +59,8 @@ def migrate_server(server_name):
     stdout, stderr = proc.communicate()
     status = stdout.strip()
     if status.upper() != 'VERIFY_RESIZE':
-        print >> sys.stderr, "Server %(server_name)s failed to rebuild"\
-                             % locals()
+        sys.stderr.write("Server %(server_name)s failed to rebuild"\
+                          % locals())
         return False
 
     # Confirm the resize
@@ -90,8 +90,8 @@ def rebuild_server(server_name, snapshot_name):
     stdout, stderr = proc.communicate()
     status = stdout.strip()
     if status != 'ACTIVE':
-        print >> sys.stderr, "Server %(server_name)s failed to rebuild"\
-                             % locals()
+        sys.stderr.write("Server %(server_name)s failed to rebuild"\
+                         % locals())
         return False
 
     return True
@@ -146,7 +146,7 @@ def main():
     for test in args.tests:
         test_func = globals().get("test_%s" % test)
         if not test_func:
-            print >> sys.stderr, "test '%s' not found" % test
+            sys.stderr.write("test '%s' not found" % test)
             sys.exit(1)
 
         contexts = [(x, args) for x in range(args.num_runs)]
@@ -163,7 +163,7 @@ def main():
     result = "SUCCESS" if success else "FAILED"
 
     duration = time.time() - start_time
-    print "%s, finished in %.2f secs" % (result, duration)
+    print("%s, finished in %.2f secs" % (result, duration))
 
     sys.exit(0 if success else 1)
 
