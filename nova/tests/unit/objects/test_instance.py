@@ -215,6 +215,17 @@ class _TestInstanceObject(object):
                                     deleted=True)
         self.assertEqual(0, len(instance.tags))
 
+    def test_lazy_load_tags(self):
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        instance.create()
+        tag = objects.Tag(self.context, resource_id=instance.uuid, tag='foo')
+        tag.create()
+        self.assertNotIn('tags', instance)
+        self.assertEqual(1, len(instance.tags))
+        self.assertEqual('foo', instance.tags[0].tag)
+
     @mock.patch.object(db, 'instance_get')
     def test_get_by_id(self, mock_get):
         mock_get.return_value = self.fake_instance

@@ -882,6 +882,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 jsonutils.loads(db_keypairs))
             self.obj_reset_changes(['keypairs'])
 
+    def _load_tags(self):
+        self.tags = objects.TagList.get_by_resource_id(
+            self._context, self.uuid)
+
     def apply_migration_context(self):
         if self.migration_context:
             self._set_migration_context_to_instance(prefix='new_')
@@ -980,11 +984,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # filters on instances.deleted == 0, so if the instance is deleted
             # don't attempt to even load services since we'll fail.
             self.services = objects.ServiceList(self._context)
-        elif attrname == 'tags' and self.deleted:
-            # NOTE(mriedem): Same story as services, the DB API query
-            # in instance_tag_get_by_instance_uuid will fail if the instance
-            # has been deleted so just return an empty tag list here.
-            self.tags = objects.TagList(self._context)
+        elif attrname == 'tags':
+            if self.deleted:
+                # NOTE(mriedem): Same story as services, the DB API query
+                # in instance_tag_get_by_instance_uuid will fail if the
+                # instance has been deleted so just return an empty tag list.
+                self.tags = objects.TagList(self._context)
+            else:
+                self._load_tags()
         else:
             # FIXME(comstud): This should be optimized to only load the attr.
             self._load_generic(attrname)
