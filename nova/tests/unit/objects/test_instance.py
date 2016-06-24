@@ -37,6 +37,7 @@ from nova.objects import pci_device
 from nova.objects import security_group
 from nova import test
 from nova.tests.unit import fake_instance
+from nova.tests.unit.objects import test_instance_device_metadata
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests.unit.objects import test_instance_numa_topology
@@ -143,15 +144,19 @@ class _TestInstanceObject(object):
         exp_cols.remove('ec2_ids')
         exp_cols.remove('migration_context')
         exp_cols.remove('keypairs')
+        exp_cols.remove('device_metadata')
         exp_cols = list(filter(lambda x: 'flavor' not in x, exp_cols))
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model',
-                         'extra.migration_context', 'extra.keypairs'])
+                         'extra.migration_context', 'extra.keypairs',
+                         'extra.device_metadata'])
 
         fake_topology = (test_instance_numa_topology.
                          fake_db_topology['numa_topology'])
         fake_requests = jsonutils.dumps(test_instance_pci_requests.
                                         fake_pci_requests)
+        fake_devices_metadata = \
+                            test_instance_device_metadata.fake_devices_metadata
         fake_flavor = jsonutils.dumps(
             {'cur': objects.Flavor().obj_to_primitive(),
              'old': None, 'new': None})
@@ -176,6 +181,7 @@ class _TestInstanceObject(object):
                              extra={
                                  'numa_topology': fake_topology,
                                  'pci_requests': fake_requests,
+                                 'device_metadata': fake_devices_metadata,
                                  'flavor': fake_flavor,
                                  'vcpu_model': fake_vcpu_model,
                                  'migration_context': fake_mig_context,
@@ -987,6 +993,7 @@ class _TestInstanceObject(object):
                     'vcpu_model': None,
                     'numa_topology': None,
                     'pci_requests': None,
+                    'device_metadata': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1014,6 +1021,7 @@ class _TestInstanceObject(object):
                     'vcpu_model': None,
                     'numa_topology': None,
                     'pci_requests': None,
+                    'device_metadata': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1028,11 +1036,12 @@ class _TestInstanceObject(object):
     def test_create(self, mock_create):
         extras = {'vcpu_model': None,
                   'numa_topology': None,
-                  'pci_requests': None}
+                  'pci_requests': None,
+                  'device_metadata': None}
         mock_create.return_value = self.fake_instance
-
         inst = objects.Instance(context=self.context)
         inst.create()
+
         self.assertEqual(self.fake_instance['id'], inst.id)
         self.assertIsNotNone(inst.ec2_ids)
         mock_create.assert_called_once_with(self.context, {'extra': extras})
@@ -1107,6 +1116,7 @@ class _TestInstanceObject(object):
                                 'vcpu_model': None,
                                 'numa_topology': None,
                                 'pci_requests': None,
+                                'device_metadata': None,
                             },
                             })
 

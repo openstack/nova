@@ -84,7 +84,7 @@ class BuildRequestTestCase(test.NoDBTestCase):
                             'pci_devices', 'security_groups', 'info_cache',
                             'ec2_ids', 'migration_context', 'metadata',
                             'vcpu_model', 'services', 'system_metadata',
-                            'tags', 'fault'],
+                            'tags', 'fault', 'device_metadata'],
                         comparators={'flavor': obj_comp,
                                      'created_at': date_comp,
                                      'keypairs': obj_comp})
