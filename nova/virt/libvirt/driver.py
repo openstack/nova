@@ -312,6 +312,7 @@ class LibvirtDriver(driver.ComputeDriver):
         global libvirt
         if libvirt is None:
             libvirt = importutils.import_module('libvirt')
+            libvirt_migrate.libvirt = libvirt
 
         self._host = host.Host(self._uri(), read_only,
                                lifecycle_event_handler=self.emit_event,
@@ -6018,44 +6019,13 @@ class LibvirtDriver(driver.ComputeDriver):
             info = guest.get_job_info()
 
             if info.type == libvirt.VIR_DOMAIN_JOB_NONE:
-                # Annoyingly this could indicate many possible
-                # states, so we must fix the mess:
-                #
-                #   1. Migration has not yet begun
-                #   2. Migration has stopped due to failure
-                #   3. Migration has stopped due to completion
-                #
-                # We can detect option 1 by seeing if thread is still
-                # running. We can distinguish 2 vs 3 by seeing if the
-                # VM still exists & running on the current host
-                #
+                # Either still running, or failed or completed,
+                # lets untangle the mess
                 if not finish_event.ready():
                     LOG.debug("Operation thread is still running",
                               instance=instance)
-                    # Leave type untouched
                 else:
-                    try:
-                        if guest.is_active():
-                            LOG.debug("VM running on src, migration failed",
-                                      instance=instance)
-                            info.type = libvirt.VIR_DOMAIN_JOB_FAILED
-                        else:
-                            LOG.debug("VM is shutoff, migration finished",
-                                      instance=instance)
-                            info.type = libvirt.VIR_DOMAIN_JOB_COMPLETED
-                    except libvirt.libvirtError as ex:
-                        LOG.debug("Error checking domain status %(ex)s",
-                                  ex, instance=instance)
-                        if ex.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
-                            LOG.debug("VM is missing, migration finished",
-                                      instance=instance)
-                            info.type = libvirt.VIR_DOMAIN_JOB_COMPLETED
-                        else:
-                            LOG.info(_LI("Error %(ex)s, migration failed"),
-                                     instance=instance)
-                            info.type = libvirt.VIR_DOMAIN_JOB_FAILED
-
-                if info.type != libvirt.VIR_DOMAIN_JOB_NONE:
+                    info.type = libvirt_migrate.find_job_type(guest, instance)
                     LOG.debug("Fixed incorrect job type to be %d",
                               info.type, instance=instance)
 

@@ -109,6 +109,7 @@ from nova.virt.libvirt.volume import volume as volume_drivers
 libvirt_driver.libvirt = fakelibvirt
 host.libvirt = fakelibvirt
 libvirt_guest.libvirt = fakelibvirt
+libvirt_migrate.libvirt = fakelibvirt
 
 
 CONF = nova.conf.CONF

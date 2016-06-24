@@ -20,7 +20,14 @@
 from lxml import etree
 from oslo_log import log as logging
 
+from nova.i18n import _LI
+
 LOG = logging.getLogger(__name__)
+
+# TODO(berrange): hack to avoid a "import libvirt" in this file.
+# Remove this and similar hacks in guest.py, driver.py, host.py
+# etc in Ocata.
+libvirt = None
 
 
 def graphics_listen_addrs(migrate_data):
@@ -120,3 +127,39 @@ def _update_volume_xml(xml_doc, migrate_data, get_volume_config):
                 item_dst.tail = None
                 disk_dev.insert(cnt, item_dst)
     return xml_doc
+
+
+def find_job_type(guest, instance):
+    """Determine the (likely) current migration job type
+
+    :param guest: a nova.virt.libvirt.guest.Guest
+    :param instance: a nova.objects.Instance
+
+    Annoyingly when job type == NONE and migration is
+    no longer running, we don't know whether we stopped
+    because of failure or completion. We can distinguish
+    these cases by seeing if the VM still exists & is
+    running on the current host
+
+    :returns: a libvirt job type constant
+    """
+    try:
+        if guest.is_active():
+            LOG.debug("VM running on src, migration failed",
+                      instance=instance)
+            return libvirt.VIR_DOMAIN_JOB_FAILED
+        else:
+            LOG.debug("VM is shutoff, migration finished",
+                      instance=instance)
+            return libvirt.VIR_DOMAIN_JOB_COMPLETED
+    except libvirt.libvirtError as ex:
+        LOG.debug("Error checking domain status %(ex)s",
+                  {"ex": ex}, instance=instance)
+        if ex.get_error_code() == libvirt.VIR_ERR_NO_DOMAIN:
+            LOG.debug("VM is missing, migration finished",
+                      instance=instance)
+            return libvirt.VIR_DOMAIN_JOB_COMPLETED
+        else:
+            LOG.info(_LI("Error %(ex)s, migration failed"),
+                     {"ex": ex}, instance=instance)
+            return libvirt.VIR_DOMAIN_JOB_FAILED
