@@ -23,13 +23,11 @@ import six
 import webob.dec
 import webob.exc
 
-import nova.api.openstack
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LW
-import nova.policy
 
 LOG = logging.getLogger(__name__)
 
@@ -263,50 +261,6 @@ class ResourceExtension(object):
         self.custom_routes_fn = custom_routes_fn
         self.inherits = inherits
         self.member_name = member_name
-
-
-# This will be deprecated after policy cleanup finished
-def core_authorizer(api_name, extension_name):
-    def authorize(context, target=None, action=None):
-        if target is None:
-            target = {'project_id': context.project_id,
-                      'user_id': context.user_id}
-        if action is None:
-            act = '%s:%s' % (api_name, extension_name)
-        else:
-            act = '%s:%s:%s' % (api_name, extension_name, action)
-        nova.policy.enforce(context, act, target)
-    return authorize
-
-
-def _soft_authorizer(hard_authorizer, api_name, extension_name):
-    hard_authorize = hard_authorizer(api_name, extension_name)
-
-    def authorize(context, target=None, action=None):
-        try:
-            hard_authorize(context, target=target, action=action)
-            return True
-        except exception.Forbidden:
-            return False
-    return authorize
-
-
-# This will be deprecated after policy cleanup finished
-def soft_core_authorizer(api_name, extension_name):
-    return _soft_authorizer(core_authorizer, api_name, extension_name)
-
-
-# NOTE(alex_xu): The functions os_compute_authorizer and
-# os_compute_soft_authorizer are used to policy enforcement for OpenStack
-# Compute API, now Nova V2.1 REST API will invoke it.
-#
-
-def os_compute_authorizer(extension_name):
-    return core_authorizer('os_compute_api', extension_name)
-
-
-def os_compute_soft_authorizer(extension_name):
-    return soft_core_authorizer('os_compute_api', extension_name)
 
 
 @six.add_metaclass(abc.ABCMeta)

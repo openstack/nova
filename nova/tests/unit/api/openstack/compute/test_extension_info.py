@@ -14,6 +14,7 @@
 
 import copy
 
+import mock
 import webob
 
 from nova.api.openstack.compute import extension_info
@@ -57,15 +58,8 @@ simulated_extension_list = {
 }
 
 
-def fake_policy_enforce(context, action, target, do_raise=True):
-    return True
-
-
-def fake_policy_enforce_selective(context, action, target, do_raise=True):
-    if action == 'os_compute_api:ext1-alias:discoverable':
-        raise exception.Forbidden
-    else:
-        return True
+def fake_policy_authorize_selective(context, action, target):
+    return action != 'os_compute_api:ext1-alias:discoverable'
 
 
 class ExtensionInfoTest(test.NoDBTestCase):
@@ -76,8 +70,8 @@ class ExtensionInfoTest(test.NoDBTestCase):
         ext_info.extensions = fake_extensions
         self.controller = extension_info.ExtensionInfoController(ext_info)
 
+    @mock.patch.object(policy, 'authorize', mock.Mock(return_value=True))
     def test_extension_info_list(self):
-        self.stubs.Set(policy, 'enforce', fake_policy_enforce)
         req = fakes.HTTPRequestV21.blank('/extensions')
         res_dict = self.controller.index(req)
         # NOTE(sdague): because of hardcoded extensions the count is
@@ -98,8 +92,8 @@ class ExtensionInfoTest(test.NoDBTestCase):
             self.assertEqual(e['links'], [])
             self.assertEqual(6, len(e))
 
+    @mock.patch.object(policy, 'authorize', mock.Mock(return_value=True))
     def test_extension_info_show(self):
-        self.stubs.Set(policy, 'enforce', fake_policy_enforce)
         req = fakes.HTTPRequestV21.blank('/extensions/ext1-alias')
         res_dict = self.controller.show(req, 'ext1-alias')
         self.assertEqual(1, len(res_dict))
@@ -113,8 +107,9 @@ class ExtensionInfoTest(test.NoDBTestCase):
         self.assertEqual(res_dict['extension']['links'], [])
         self.assertEqual(6, len(res_dict['extension']))
 
-    def test_extension_info_list_not_all_discoverable(self):
-        self.stubs.Set(policy, 'enforce', fake_policy_enforce_selective)
+    @mock.patch.object(policy, 'authorize')
+    def test_extension_info_list_not_all_discoverable(self, mock_authorize):
+        mock_authorize.side_effect = fake_policy_authorize_selective
         req = fakes.HTTPRequestV21.blank('/extensions')
         res_dict = self.controller.index(req)
         # NOTE(sdague): because of hardcoded extensions the count is
@@ -144,7 +139,9 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
         ext_info = extension_info.LoadedExtensionInfo()
         ext_info.extensions = simulated_extension_list
         self.controller = extension_info.ExtensionInfoController(ext_info)
-        self.stubs.Set(policy, 'enforce', fake_policy_enforce)
+        patcher = mock.patch.object(policy, 'authorize', return_value=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_extension_info_list(self):
         req = fakes.HTTPRequest.blank('/extensions')
@@ -210,7 +207,6 @@ class ExtensionInfoV21Test(test.NoDBTestCase):
 
 
 class ExtensionInfoPolicyEnforcementV21(test.NoDBTestCase):
-
     def setUp(self):
         super(ExtensionInfoPolicyEnforcementV21, self).setUp()
         ext_info = extension_info.LoadedExtensionInfo()

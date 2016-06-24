@@ -32,7 +32,7 @@ shelve_policies = [
         name=POLICY_ROOT % 'shelve_offload',
         check_str=base.RULE_ADMIN_API),
     policy.RuleDefault(
-        name=POLICY_ROOT % 'shelve:discoverable',
+        name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
 ]
 
