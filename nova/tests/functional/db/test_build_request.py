@@ -89,6 +89,17 @@ class BuildRequestTestCase(test.NoDBTestCase):
                                      'created_at': date_comp,
                                      'keypairs': obj_comp})
                 continue
+            elif key == 'block_device_mappings':
+                db_bdms = objects.BlockDeviceMappingList.obj_from_primitive(
+                    jsonutils.loads(db_value))
+                self.assertEqual(1, len(db_bdms))
+                # Can't compare list objects directly, just compare the single
+                # item they contain.
+                test_objects.compare_obj(self, expected[0], db_bdms[0],
+                                         allow_missing=['instance'],
+                                         comparators={'created_at': date_comp,
+                                                      'updated_at': date_comp})
+                continue
             self.assertEqual(expected, db_value)
 
     def test_destroy(self):

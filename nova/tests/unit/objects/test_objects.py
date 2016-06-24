@@ -1106,7 +1106,7 @@ object_data = {
     'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',
     'BlockDeviceMapping': '1.17-5e094927f1251770dcada6ab05adfcdb',
     'BlockDeviceMappingList': '1.17-1e568eecb91d06d4112db9fd656de235',
-    'BuildRequest': '1.0-c6cd434db5cbdb4d1ebb935424261377',
+    'BuildRequest': '1.1-5a5ce31c2f4dcd67088342a9164d13b4',
     'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
     'CellMappingList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'ComputeNode': '1.16-2436e5b836fa0306a3c4e6d9e5ddacec',

@@ -13,6 +13,7 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import versionutils
 from oslo_versionedobjects import exception as ovoo_exc
 import six
 
@@ -31,19 +32,28 @@ LOG = logging.getLogger(__name__)
 @base.NovaObjectRegistry.register
 class BuildRequest(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added block_device_mappings
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
         'project_id': fields.StringField(),
         'instance': fields.ObjectField('Instance'),
+        'block_device_mappings': fields.ObjectField('BlockDeviceMappingList'),
         # NOTE(alaski): Normally these would come from the NovaPersistentObject
         # mixin but they're being set explicitly because we only need
         # created_at/updated_at. There is no soft delete for this object.
         'created_at': fields.DateTimeField(nullable=True),
         'updated_at': fields.DateTimeField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(BuildRequest, self).obj_make_compatible(primitive,
+                                                      target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1) and 'block_device_mappings' in primitive:
+            del primitive['block_device_mappings']
 
     def _load_instance(self, db_instance):
         # NOTE(alaski): Be very careful with instance loading because it
@@ -68,6 +78,22 @@ class BuildRequest(base.NovaObject):
             LOG.exception(_LE('Could not deserialize instance in '
                               'BuildRequest'))
             raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
+
+    def _load_block_device_mappings(self, db_bdms):
+        # 'db_bdms' is a serialized BlockDeviceMappingList object. If it's None
+        # we're in a mixed version nova-api scenario and can't retrieve the
+        # actual list. Set it to an empty list here which will cause a
+        # temporary API inconsistency that will be resolved as soon as the
+        # instance is scheduled and on a compute.
+        if db_bdms is None:
+            LOG.debug('Failed to load block_device_mappings from BuildRequest '
+                      'for instance %s because it is None', self.instance_uuid)
+            self.block_device_mappings = objects.BlockDeviceMappingList()
+            return
+
+        self.block_device_mappings = (
+            objects.BlockDeviceMappingList.obj_from_primitive(
+                jsonutils.loads(db_bdms)))
 
     @staticmethod
     def _from_db_object(context, req, db_req):

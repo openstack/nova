@@ -3143,14 +3143,15 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
-        @mock.patch.object(self.compute_api, '_validate_bdm')
+        @mock.patch.object(self.compute_api,
+                           '_bdm_validate_set_size_and_instance')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects, 'BuildRequest')
         @mock.patch.object(objects.InstanceMapping, 'create')
         def do_test(_mock_inst_mapping_create, mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
-                _mock_validate_bdm, _mock_ensure_default, mock_inst,
+                mock_bdm_validate, _mock_ensure_default, mock_inst,
                 mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
 
@@ -3163,6 +3164,8 @@ class _ComputeAPIUnitTestMixIn(object):
             for inst_mock in inst_mocks:
                 inst_mock.project_id = 'fake-project'
             mock_inst.side_effect = inst_mocks
+            bdm_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_bdm_validate.side_effect = bdm_mocks
             build_req_mocks = [mock.MagicMock() for i in range(max_count)]
             mock_build_req.side_effect = build_req_mocks
 
@@ -3222,11 +3225,13 @@ class _ComputeAPIUnitTestMixIn(object):
                     mock.call(ctxt,
                               instance=instances[0],
                               instance_uuid=instances[0].uuid,
-                              project_id=instances[0].project_id),
+                              project_id=instances[0].project_id,
+                              block_device_mappings=bdm_mocks[0]),
                     mock.call(ctxt,
                               instance=instances[1],
                               instance_uuid=instances[1].uuid,
-                              project_id=instances[1].project_id),
+                              project_id=instances[1].project_id,
+                              block_device_mappings=bdm_mocks[1]),
                     ]
             mock_build_req.assert_has_calls(build_req_calls)
             for build_req_mock in build_req_mocks:

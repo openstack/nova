@@ -234,6 +234,7 @@ class BuildRequest(API_BASE):
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
     instance = Column(Text)
+    block_device_mappings = Column(Text)
     # TODO(alaski): Drop these from the db in Ocata
     # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',
     #         'instance_metadata', 'progress', 'vm_state', 'task_state',
