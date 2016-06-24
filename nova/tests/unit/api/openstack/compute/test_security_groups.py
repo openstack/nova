@@ -1511,3 +1511,37 @@ class SecurityGroupActionPolicyEnforcementV21(PolicyEnforcementV21):
     def test_remove_security_group_policy_failed(self):
         self._common_policy_check(
             self.controller._removeSecurityGroup, self.req, FAKE_UUID1, {})
+
+
+class TestSecurityGroupsDeprecation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestSecurityGroupsDeprecation, self).setUp()
+        self.controller = secgroups_v21.SecurityGroupController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+
+
+class TestSecurityGroupRulesDeprecation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestSecurityGroupRulesDeprecation, self).setUp()
+        self.controller = secgroups_v21.SecurityGroupRulesController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
