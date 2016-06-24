@@ -403,6 +403,8 @@ class InstanceMetadata(object):
                         bus = 'scsi'
                     elif isinstance(device.bus, metadata_obj.IDEDeviceBus):
                         bus = 'ide'
+                    elif isinstance(device.bus, metadata_obj.XenDeviceBus):
+                        bus = 'xen'
                     else:
                         LOG.debug('Metadata for device with unknown bus %s '
                                   'has not been included in the '

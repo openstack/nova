@@ -707,6 +707,20 @@ class TestIDEAddress(TestField):
         self.from_primitive_values = self.coerce_good_values
 
 
+class TestXenAddress(TestField):
+    def setUp(self):
+        super(TestXenAddress, self).setUp()
+        self.field = fields.Field(fields.XenAddressField())
+        self.coerce_good_values = [('000100', '000100'),
+                                   ('768', '768')]
+        self.coerce_bad_values = [
+            '1',
+            '00100',
+        ]
+        self.to_primitive_values = self.coerce_good_values
+        self.from_primitive_values = self.coerce_good_values
+
+
 class TestSecureBoot(TestField):
     def setUp(self):
         super(TestSecureBoot, self).setUp()

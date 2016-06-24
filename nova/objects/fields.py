@@ -1032,6 +1032,14 @@ class IDEAddress(AddressBase):
         return AddressBase.coerce(IDEAddress, attr, value)
 
 
+class XenAddress(AddressBase):
+    PATTERN = '(00[0-9]{2}00)|[1-9][0-9]+'
+
+    @staticmethod
+    def coerce(obj, attr, value):
+        return AddressBase.coerce(XenAddress, attr, value)
+
+
 class PCIAddressField(AutoTypedField):
     AUTO_TYPE = PCIAddress()
 
@@ -1046,6 +1054,10 @@ class SCSIAddressField(AutoTypedField):
 
 class IDEAddressField(AutoTypedField):
     AUTO_TYPE = IDEAddress()
+
+
+class XenAddressField(AutoTypedField):
+    AUTO_TYPE = XenAddress()
 
 
 class ArchitectureField(BaseEnumField):

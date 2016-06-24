@@ -302,6 +302,8 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_create_vm_record')
         self.mox.StubOutWithMock(self.vmops, '_destroy')
         self.mox.StubOutWithMock(self.vmops, '_attach_disks')
+        self.mox.StubOutWithMock(self.vmops, '_save_device_metadata')
+        self.mox.StubOutWithMock(self.vmops, '_prepare_disk_metadata')
         self.mox.StubOutWithMock(pci_manager, 'get_instance_pci_devs')
         self.mox.StubOutWithMock(vm_utils, 'set_other_config_pci')
         self.mox.StubOutWithMock(self.vmops, '_attach_orig_disks')
@@ -325,13 +327,22 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_update_last_dom_id')
         self.mox.StubOutWithMock(self.vmops._session, 'call_xenapi')
 
+    @staticmethod
+    def _new_instance(obj):
+        class _Instance(dict):
+            __getattr__ = dict.__getitem__
+            __setattr__ = dict.__setitem__
+        return _Instance(**obj)
+
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
                     rescue=False, include_root_vdi=True, throw_exception=None,
                     attach_pci_dev=False, neutron_exception=False,
                     network_info=None):
         self._stub_out_common()
 
-        instance = {"name": "dummy", "uuid": "fake_uuid"}
+        instance = self._new_instance({"name": "dummy", "uuid": "fake_uuid",
+                                    "device_metadata": None})
+
         name_label = name_label_param
         if name_label is None:
             name_label = "dummy"
@@ -383,6 +394,7 @@ class SpawnTestCase(VMOpsTestBase):
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
+        self.vmops._save_device_metadata(context, instance, block_device_info)
         self.vmops._attach_disks(context, instance, image_meta, vm_ref,
                             name_label, vdis, di_type, network_info, rescue,
                             admin_password, injected_files)
@@ -508,6 +520,103 @@ class SpawnTestCase(VMOpsTestBase):
                                  '_neutron_failed_callback')
         self._test_spawn(network_info=network_info)
 
+    @staticmethod
+    def _dev_mock(obj):
+        dev = mock.MagicMock(**obj)
+        dev.__contains__.side_effect = (
+            lambda attr: getattr(dev, attr, None) is not None)
+        return dev
+
+    @mock.patch.object(objects, 'XenDeviceBus')
+    @mock.patch.object(objects, 'IDEDeviceBus')
+    @mock.patch.object(objects, 'DiskMetadata')
+    def test_prepare_disk_metadata(self, mock_DiskMetadata,
+        mock_IDEDeviceBus, mock_XenDeviceBus):
+        mock_IDEDeviceBus.side_effect = \
+            lambda **kw: \
+                self._dev_mock({"address": kw.get("address"), "bus": "ide"})
+        mock_XenDeviceBus.side_effect = \
+            lambda **kw: \
+                self._dev_mock({"address": kw.get("address"), "bus": "xen"})
+        mock_DiskMetadata.side_effect = \
+            lambda **kw: self._dev_mock(dict(**kw))
+
+        bdm = self._dev_mock({"device_name": "/dev/xvda", "tag": "disk_a"})
+        disk_metadata = self.vmops._prepare_disk_metadata(bdm)
+
+        self.assertEqual(disk_metadata[0].tags, ["disk_a"])
+        self.assertEqual(disk_metadata[0].bus.bus, "ide")
+        self.assertEqual(disk_metadata[0].bus.address, "0:0")
+        self.assertEqual(disk_metadata[1].tags, ["disk_a"])
+        self.assertEqual(disk_metadata[1].bus.bus, "xen")
+        self.assertEqual(disk_metadata[1].bus.address, "000000")
+        self.assertEqual(disk_metadata[2].tags, ["disk_a"])
+        self.assertEqual(disk_metadata[2].bus.bus, "xen")
+        self.assertEqual(disk_metadata[2].bus.address, "51712")
+        self.assertEqual(disk_metadata[3].tags, ["disk_a"])
+        self.assertEqual(disk_metadata[3].bus.bus, "xen")
+        self.assertEqual(disk_metadata[3].bus.address, "768")
+
+        bdm = self._dev_mock({"device_name": "/dev/xvdc", "tag": "disk_c"})
+        disk_metadata = self.vmops._prepare_disk_metadata(bdm)
+
+        self.assertEqual(disk_metadata[0].tags, ["disk_c"])
+        self.assertEqual(disk_metadata[0].bus.bus, "ide")
+        self.assertEqual(disk_metadata[0].bus.address, "1:0")
+        self.assertEqual(disk_metadata[1].tags, ["disk_c"])
+        self.assertEqual(disk_metadata[1].bus.bus, "xen")
+        self.assertEqual(disk_metadata[1].bus.address, "000200")
+        self.assertEqual(disk_metadata[2].tags, ["disk_c"])
+        self.assertEqual(disk_metadata[2].bus.bus, "xen")
+        self.assertEqual(disk_metadata[2].bus.address, "51744")
+        self.assertEqual(disk_metadata[3].tags, ["disk_c"])
+        self.assertEqual(disk_metadata[3].bus.bus, "xen")
+        self.assertEqual(disk_metadata[3].bus.address, "5632")
+
+        bdm = self._dev_mock({"device_name": "/dev/xvde", "tag": "disk_e"})
+        disk_metadata = self.vmops._prepare_disk_metadata(bdm)
+
+        self.assertEqual(disk_metadata[0].tags, ["disk_e"])
+        self.assertEqual(disk_metadata[0].bus.bus, "xen")
+        self.assertEqual(disk_metadata[0].bus.address, "000400")
+        self.assertEqual(disk_metadata[1].tags, ["disk_e"])
+        self.assertEqual(disk_metadata[1].bus.bus, "xen")
+        self.assertEqual(disk_metadata[1].bus.address, "51776")
+
+    @mock.patch.object(objects.VirtualInterfaceList, 'get_by_instance_uuid')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(objects, 'NetworkInterfaceMetadata')
+    @mock.patch.object(objects, 'InstanceDeviceMetadata')
+    @mock.patch.object(objects, 'PCIDeviceBus')
+    @mock.patch.object(vmops.VMOps, '_prepare_disk_metadata')
+    def test_save_device_metadata(self, mock_prepare_disk_metadata,
+        mock_PCIDeviceBus, mock_InstanceDeviceMetadata,
+        mock_NetworkInterfaceMetadata, mock_get_bdms, mock_get_vifs):
+        context = {}
+        instance = {"uuid": "fake_uuid"}
+        block_device_info = {'block_device_mapping': []}
+        vif = self._dev_mock({"address": "fake_address", "tag": "vif_tag"})
+        bdm = self._dev_mock({"device_name": "/dev/xvdx", "tag": "bdm_tag"})
+
+        mock_get_vifs.return_value = [vif]
+        mock_get_bdms.return_value = [bdm]
+        mock_InstanceDeviceMetadata.side_effect = \
+            lambda **kw: {"devices": kw.get("devices")}
+        mock_NetworkInterfaceMetadata.return_value = mock.sentinel.vif_metadata
+        mock_prepare_disk_metadata.return_value = [mock.sentinel.bdm_metadata]
+
+        dev_meta = self.vmops._save_device_metadata(context, instance,
+            block_device_info)
+
+        mock_get_vifs.assert_called_once_with(context, instance["uuid"])
+
+        mock_NetworkInterfaceMetadata.assert_called_once_with(mac=vif.address,
+                                            bus=mock_PCIDeviceBus.return_value,
+                                            tags=[vif.tag])
+        mock_prepare_disk_metadata.assert_called_once_with(bdm)
+        self.assertEqual(dev_meta["devices"],
+            [mock.sentinel.vif_metadata, mock.sentinel.bdm_metadata])
+
     def test_spawn_with_neutron_exception(self):
         self.mox.StubOutWithMock(self.vmops, '_get_neutron_events')
         self.assertRaises(exception.VirtualInterfaceCreateException,
@@ -523,8 +632,8 @@ class SpawnTestCase(VMOpsTestBase):
         context = "context"
         migration = {}
         name_label = "dummy"
-        instance = {"name": name_label, "uuid": "fake_uuid",
-                "root_device_name": "/dev/xvda"}
+        instance = self._new_instance({"name": name_label, "uuid": "fake_uuid",
+                "root_device_name": "/dev/xvda", "device_metadata": None})
         disk_info = "disk_info"
         network_info = "net_info"
         image_meta = objects.ImageMeta.from_dict({"id": uuids.image_id})
@@ -566,6 +675,7 @@ class SpawnTestCase(VMOpsTestBase):
 
         if resize_instance:
             self.vmops._resize_up_vdis(instance, vdis)
+        self.vmops._save_device_metadata(context, instance, block_device_info)
         self.vmops._attach_disks(context, instance, image_meta, vm_ref,
                             name_label, vdis, di_type, network_info, False,
                             None, None)
