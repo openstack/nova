@@ -938,7 +938,12 @@ class API(base.Base):
                         instance_type, boot_meta, instance, security_groups,
                         block_device_mapping, num_instances, i,
                         shutdown_terminate, create_instance=False)
+                block_device_mapping = (
+                    self._bdm_validate_set_size_and_instance(context,
+                        instance, instance_type, block_device_mapping))
 
+                # TODO(alaski): Pass block_device_mapping here when the object
+                # supports it.
                 build_request = objects.BuildRequest(context,
                         instance=instance, instance_uuid=instance.uuid,
                         project_id=instance.project_id)
@@ -963,8 +968,7 @@ class API(base.Base):
                 instance.create()
                 instances.append(instance)
 
-                self._create_block_device_mapping(
-                        instance_type, instance.uuid, block_device_mapping)
+                self._create_block_device_mapping(block_device_mapping)
 
                 if instance_group:
                     if check_server_group_quota:
@@ -1206,22 +1210,36 @@ class API(base.Base):
 
         return prepared_mappings
 
-    def _create_block_device_mapping(self, instance_type, instance_uuid,
-                                     block_device_mapping):
-        """Create the BlockDeviceMapping objects in the db.
+    def _bdm_validate_set_size_and_instance(self, context, instance,
+                                            instance_type,
+                                            block_device_mapping):
+        """Ensure the bdms are valid, then set size and associate with instance
 
-        This method makes a copy of the list in order to avoid using the same
-        id field in case this is called for multiple instances.
+        Because this method can be called multiple times when more than one
+        instance is booted in a single request it makes a copy of the bdm list.
         """
         LOG.debug("block_device_mapping %s", list(block_device_mapping),
-                  instance_uuid=instance_uuid)
-        instance_block_device_mapping = copy.deepcopy(block_device_mapping)
+                  instance_uuid=instance.uuid)
+        self._validate_bdm(
+            context, instance, instance_type, block_device_mapping)
+        instance_block_device_mapping = block_device_mapping.obj_clone()
         for bdm in instance_block_device_mapping:
             bdm.volume_size = self._volume_size(instance_type, bdm)
+            bdm.instance_uuid = instance.uuid
+        return instance_block_device_mapping
+
+    def _create_block_device_mapping(self, block_device_mapping):
+        # Copy the block_device_mapping because this method can be called
+        # multiple times when more than one instance is booted in a single
+        # request. This avoids 'id' being set and triggering the object dupe
+        # detection
+        db_block_device_mapping = copy.deepcopy(block_device_mapping)
+        # Create the BlockDeviceMapping objects in the db.
+        for bdm in db_block_device_mapping:
+            # TODO(alaski): Why is this done?
             if bdm.volume_size == 0:
                 continue
 
-            bdm.instance_uuid = instance_uuid
             bdm.update_or_create()
 
     def _validate_bdm(self, context, instance, instance_type,
@@ -1417,24 +1435,6 @@ class API(base.Base):
 
         if create_instance:
             instance.create()
-
-        # NOTE (ndipanov): This can now raise exceptions but the instance
-        #                  has been created, so delete it and re-raise so
-        #                  that other cleanup can happen.
-        try:
-            self._validate_bdm(
-                context, instance, instance_type, block_device_mapping)
-        except (exception.CinderConnectionFailed, exception.InvalidBDM,
-                exception.InvalidVolume):
-            with excutils.save_and_reraise_exception():
-                if create_instance:
-                    instance.destroy()
-
-        if create_instance:
-            # Because of the foreign key the bdm can't be created unless the
-            # instance is.
-            self._create_block_device_mapping(
-                    instance_type, instance.uuid, block_device_mapping)
 
         return instance
 
