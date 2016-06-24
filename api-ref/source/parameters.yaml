@@ -1,4 +1,12 @@
 # variables in header
+tag_location:
+  description: |
+    The location of the tag. It's individual tag URL which can be used for
+    checking the existence of the tag on the server or deleting the tag from the server.
+  in: header
+  required: true
+  type: string
+  min_version: 2.26
 x-openstack-request-id:
   description: >
     A unique ID for tracking the request. The request ID associated with the request
@@ -252,6 +260,13 @@ snapshot_id_2:
   in: path
   required: true
   type: string
+tag:
+  description: |
+    The tag as a string.
+  in: path
+  required: true
+  type: string
+  min_version: 2.26
 tenant_id:
   description: |
     The UUID of the tenant in a multi-tenancy cloud.
@@ -501,7 +516,8 @@ not_tags_any_query:
   type: string
   description: |
     A list of tags to filter the server list by. Servers that don't
-    match any tags in this list will be returned.
+    match any tags in this list will be returned. Boolean expression in this
+    case is 'NOT (t1 OR t2)'. Tags in query must be separated by comma.
   min_version: 2.26
 not_tags_query:
   in: query
@@ -509,7 +525,8 @@ not_tags_query:
   type: string
   description: |
     A list of tags to filter the server list by. Servers that don't
-    match all tags in this list will be returned.
+    match all tags in this list will be returned. Boolean expression in this
+    case is 'NOT (t1 AND t2)'. Tags in query must be separated by comma.
   min_version: 2.26
 reservation_id_query:
   in: query
@@ -573,7 +590,8 @@ tags_any_query:
   type: string
   description: |
     A list of tags to filter the server list by. Servers that match
-    any tag in this list will be returned.
+    any tag in this list will be returned. Boolean expression in this
+    case is 't1 OR t2'. Tags in query must be separated by comma.
   min_version: 2.26
 tags_query:
   in: query
@@ -581,7 +599,8 @@ tags_query:
   type: string
   description: |
     A list of tags to filter the server list by. Servers that match
-    all tags in this list will be returned.
+    all tags in this list will be returned. Boolean expression in this
+    case is 't1 AND t2'. Tags in query must be separated by comma.
   min_version: 2.26
 type_1:
   description: |
@@ -3443,6 +3462,13 @@ suspend:
   in: body
   required: true
   type: string
+tags:
+  description: |
+    A list of tags. The maximum count of tags in this list is 50.
+  in: body
+  required: true
+  type: array
+  min_version: 2.26
 tenant_id_body:
   description: |
     The UUID of the tenant in a multi-tenancy cloud.
