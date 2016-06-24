@@ -198,3 +198,21 @@ class FloatingIPBulkPolicyEnforcementV21(test.NoDBTestCase):
         body = {'ip_range': ip_range}
         self._common_policy_check(self.controller.update, self.req,
                                   "delete", body=body)
+
+
+class FloatingIPBulkDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIPBulkDeprecationTest, self).setUp()
+        self.controller = fipbulk_v21.FloatingIPBulkController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, {})

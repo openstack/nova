@@ -71,3 +71,15 @@ class FloatingIPPoolsPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." %
             rule_name, exc.format_message())
+
+
+class FloatingIpPoolDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpPoolDeprecationTest, self).setUp()
+        self.controller = fipp_v21.FloatingIPPoolsController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_not_found_for_fip_pool_api(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
