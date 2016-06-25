@@ -6086,7 +6086,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 _check_scheduled_migration_task()
                 now = time.time()
                 elapsed = now - start
-                abort = False
 
                 if ((progress_watermark is None) or
                     (progress_watermark == 0) or
@@ -6094,20 +6093,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     progress_watermark = info.data_remaining
                     progress_time = now
 
-                if (progress_timeout != 0 and
-                    (now - progress_time) > progress_timeout):
-                    LOG.warning(_LW("Live migration stuck for %d sec"),
-                             (now - progress_time), instance=instance)
-                    abort = True
-
-                if (completion_timeout != 0 and
-                    elapsed > completion_timeout):
-                    LOG.warning(
-                        _LW("Live migration not completed after %d sec"),
-                        completion_timeout, instance=instance)
-                    abort = True
-
-                if abort:
+                if libvirt_migrate.should_abort(instance, now, progress_time,
+                                                progress_timeout, elapsed,
+                                                completion_timeout):
                     try:
                         guest.abort_job()
                     except libvirt.libvirtError as e:

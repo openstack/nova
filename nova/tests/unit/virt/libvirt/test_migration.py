@@ -270,3 +270,45 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
 
         self.assertEqual(migration.find_job_type(self.guest, self.instance),
                          fakelibvirt.VIR_DOMAIN_JOB_FAILED)
+
+    def test_live_migration_abort_stuck(self):
+        # Progress time exceeds progress timeout
+        self.assertTrue(migration.should_abort(self.instance,
+                                               5000,
+                                               1000, 2000,
+                                               4500, 9000))
+
+    def test_live_migration_abort_no_prog_timeout(self):
+        # Progress timeout is disabled
+        self.assertFalse(migration.should_abort(self.instance,
+                                                5000,
+                                                1000, 0,
+                                                4500, 9000))
+
+    def test_live_migration_abort_not_stuck(self):
+        # Progress time is less than progress timeout
+        self.assertFalse(migration.should_abort(self.instance,
+                                                5000,
+                                                4500, 2000,
+                                                4500, 9000))
+
+    def test_live_migration_abort_too_long(self):
+        # Elapsed time is over completion timeout
+        self.assertTrue(migration.should_abort(self.instance,
+                                               5000,
+                                               4500, 2000,
+                                               4500, 2000))
+
+    def test_live_migration_abort_no_comp_timeout(self):
+        # Completion timeout is disabled
+        self.assertFalse(migration.should_abort(self.instance,
+                                                5000,
+                                                4500, 2000,
+                                                4500, 0))
+
+    def test_live_migration_abort_still_working(self):
+        # Elapsed time is less than completion timeout
+        self.assertFalse(migration.should_abort(self.instance,
+                                                5000,
+                                                4500, 2000,
+                                                4500, 9000))
