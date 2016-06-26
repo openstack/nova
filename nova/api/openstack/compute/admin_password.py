@@ -22,10 +22,10 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import admin_password as ap_policies
 
 
 ALIAS = "os-admin-password"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AdminPasswordController(wsgi.Controller):
@@ -43,7 +43,7 @@ class AdminPasswordController(wsgi.Controller):
     @validation.schema(admin_password.change_password)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ap_policies.BASE_POLICY_NAME)
 
         password = body['changePassword']['adminPass']
         instance = common.get_instance(self.compute_api, context, id)

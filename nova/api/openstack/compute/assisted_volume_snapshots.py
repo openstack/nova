@@ -26,10 +26,10 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.policies import assisted_volume_snapshots as avs_policies
 
 
 ALIAS = 'os-assisted-volume-snapshots'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class AssistedVolumeSnapshotsController(wsgi.Controller):
@@ -44,7 +44,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
-        authorize(context, action='create')
+        context.can(avs_policies.POLICY_ROOT % 'create')
 
         snapshot = body['snapshot']
         create_info = snapshot['create_info']
@@ -62,7 +62,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
-        authorize(context, action='delete')
+        context.can(avs_policies.POLICY_ROOT % 'delete')
 
         delete_metadata = {}
         delete_metadata.update(req.GET)
