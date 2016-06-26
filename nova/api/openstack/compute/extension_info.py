@@ -112,6 +112,10 @@ hardcoded_extensions = [
     {'name': 'AccessIPs',
      'description': 'Access IPs support.',
      'alias': 'os-access-ips'},
+    {'name': 'PreserveEphemeralOnRebuild',
+     'description': ('Allow preservation of the '
+                     'ephemeral partition on rebuild.'),
+     'alias': 'os-preserve-ephemeral-rebuild'}
 ]
 
 # V2.1 does not support XML but we need to keep an entry in the

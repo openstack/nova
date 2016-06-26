@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+
+from oslo_utils import strutils
 from webob import exc
 
 from nova.i18n import _
@@ -66,3 +68,11 @@ def translate_attributes(server_dict, operation_kwargs):
         operation_kwargs['access_ip_v4'] = server_dict.pop(API_ACCESS_V4)
     if API_ACCESS_V6 in server_dict:
         operation_kwargs['access_ip_v6'] = server_dict.pop(API_ACCESS_V6)
+
+    # This is only ever expected during rebuild operations, and only
+    # does anything with Ironic driver. It also demonstrates the lack
+    # of understanding of the word ephemeral.
+    if 'preserve_ephemeral' in server_dict:
+        preserve = strutils.bool_from_string(
+            server_dict.pop('preserve_ephemeral'), strict=True)
+        operation_kwargs['preserve_ephemeral'] = preserve
