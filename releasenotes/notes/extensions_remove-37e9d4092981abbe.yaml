@@ -20,3 +20,6 @@ upgrade:
 
      * nova.api.v21.extensions.server.update - allowed accepting
        additional parameters on server update requests.
+
+     * nova.api.v21.extensions.server.rebuild - allowed accepting
+       additional parameters on server rebuild requests.

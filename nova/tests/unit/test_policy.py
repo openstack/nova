@@ -466,7 +466,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-networks-associate:discoverable",
 "os_compute_api:os-pause-server:discoverable",
 "os_compute_api:os-pci:discoverable",
-"os_compute_api:os-personality:discoverable",
 "os_compute_api:os-quota-sets:discoverable",
 "os_compute_api:os-quota-class-sets:discoverable",
 "os_compute_api:os-rescue:discoverable",

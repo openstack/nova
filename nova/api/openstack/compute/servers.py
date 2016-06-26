@@ -60,8 +60,6 @@ class ServersController(wsgi.Controller):
 
     EXTENSION_CREATE_NAMESPACE = 'nova.api.v21.extensions.server.create'
 
-    EXTENSION_REBUILD_NAMESPACE = 'nova.api.v21.extensions.server.rebuild'
-
     _view_builder_class = views_servers.ViewBuilderV21
 
     schema_server_create = schema_servers.base_create
@@ -159,17 +157,6 @@ class ServersController(wsgi.Controller):
         if not list(self.create_extension_manager):
             LOG.debug("Did not find any server create extensions")
 
-        # Look for implementation of extension point of server rebuild
-        self.rebuild_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_REBUILD_NAMESPACE,
-                check_func=_check_load_extension('server_rebuild'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.rebuild_extension_manager):
-            LOG.debug("Did not find any server rebuild extensions")
-
         # Look for API schema of server create extension
         self.create_schema_manager = \
             stevedore.enabled.EnabledExtensionManager(
@@ -189,26 +176,6 @@ class ServersController(wsgi.Controller):
                                            '2.0')
         else:
             LOG.debug("Did not find any server create schemas")
-
-        # Look for API schema of server rebuild extension
-        self.rebuild_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_REBUILD_NAMESPACE,
-                check_func=_check_load_extension('get_server_rebuild_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.rebuild_schema_manager):
-            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild_v219,
-                                            '2.19')
-            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild, '2.1')
-            self.rebuild_schema_manager.map(self._rebuild_extension_schema,
-                                            self.schema_server_rebuild_v20,
-                                            '2.0')
-        else:
-            LOG.debug("Did not find any server rebuild schemas")
 
     @extensions.expected_errors((400, 403))
     def index(self, req):
@@ -524,7 +491,8 @@ class ServersController(wsgi.Controller):
 
         availability_zone = create_kwargs.pop("availability_zone", None)
 
-        helpers.translate_attributes(server_dict, create_kwargs)
+        helpers.translate_attributes(helpers.CREATE,
+                                     server_dict, create_kwargs)
 
         target = {
             'project_id': context.project_id,
@@ -748,15 +716,17 @@ class ServersController(wsgi.Controller):
         update_dict = {}
         ctxt.can(server_policies.SERVERS % 'update')
 
-        if 'name' in body['server']:
+        server = body['server']
+
+        if 'name' in server:
             update_dict['display_name'] = common.normalize_name(
-                body['server']['name'])
+                server['name'])
 
-        if 'description' in body['server']:
+        if 'description' in server:
             # This is allowed to be None (remove description)
-            update_dict['display_description'] = body['server']['description']
+            update_dict['display_description'] = server['description']
 
-        helpers.translate_attributes(body['server'], update_dict)
+        helpers.translate_attributes(helpers.UPDATE, server, update_dict)
 
         instance = self._get_server(ctxt, req, id, is_detail=True)
         try:
@@ -920,10 +890,10 @@ class ServersController(wsgi.Controller):
         resize_dict = body['resize']
         flavor_ref = str(resize_dict["flavorRef"])
 
-        resize_kwargs = {}
-        helpers.translate_attributes(resize_dict, resize_kwargs)
+        kwargs = {}
+        helpers.translate_attributes(helpers.RESIZE, resize_dict, kwargs)
 
-        self._resize(req, id, flavor_ref, **resize_kwargs)
+        self._resize(req, id, flavor_ref, **kwargs)
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
@@ -950,21 +920,17 @@ class ServersController(wsgi.Controller):
             'metadata': 'metadata',
         }
 
-        rebuild_kwargs = {}
+        kwargs = {}
 
-        if list(self.rebuild_extension_manager):
-            self.rebuild_extension_manager.map(self._rebuild_extension_point,
-                                               rebuild_dict, rebuild_kwargs)
-
-        helpers.translate_attributes(rebuild_dict, rebuild_kwargs)
+        helpers.translate_attributes(helpers.REBUILD, rebuild_dict, kwargs)
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
                 if request_attribute == 'name':
-                    rebuild_kwargs[instance_attribute] = common.normalize_name(
+                    kwargs[instance_attribute] = common.normalize_name(
                         rebuild_dict[request_attribute])
                 else:
-                    rebuild_kwargs[instance_attribute] = rebuild_dict[
+                    kwargs[instance_attribute] = rebuild_dict[
                         request_attribute]
             except (KeyError, TypeError):
                 pass
@@ -974,7 +940,7 @@ class ServersController(wsgi.Controller):
                                      instance,
                                      image_href,
                                      password,
-                                     **rebuild_kwargs)
+                                     **kwargs)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
