@@ -62,8 +62,6 @@ class ServersController(wsgi.Controller):
 
     EXTENSION_REBUILD_NAMESPACE = 'nova.api.v21.extensions.server.rebuild'
 
-    EXTENSION_UPDATE_NAMESPACE = 'nova.api.v21.extensions.server.update'
-
     _view_builder_class = views_servers.ViewBuilderV21
 
     schema_server_create = schema_servers.base_create
@@ -172,17 +170,6 @@ class ServersController(wsgi.Controller):
         if not list(self.rebuild_extension_manager):
             LOG.debug("Did not find any server rebuild extensions")
 
-        # Look for implementation of extension point of server update
-        self.update_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_UPDATE_NAMESPACE,
-                check_func=_check_load_extension('server_update'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.update_extension_manager):
-            LOG.debug("Did not find any server update extensions")
-
         # Look for API schema of server create extension
         self.create_schema_manager = \
             stevedore.enabled.EnabledExtensionManager(
@@ -202,26 +189,6 @@ class ServersController(wsgi.Controller):
                                            '2.0')
         else:
             LOG.debug("Did not find any server create schemas")
-
-        # Look for API schema of server update extension
-        self.update_schema_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_UPDATE_NAMESPACE,
-                check_func=_check_load_extension('get_server_update_schema'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if list(self.update_schema_manager):
-            self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update_v219,
-                                           '2.19')
-            self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update, '2.1')
-            self.update_schema_manager.map(self._update_extension_schema,
-                                           self.schema_server_update_v20,
-                                           '2.0')
-        else:
-            LOG.debug("Did not find any server update schemas")
 
         # Look for API schema of server rebuild extension
         self.rebuild_schema_manager = \
@@ -736,11 +703,6 @@ class ServersController(wsgi.Controller):
 
         handler.server_rebuild(rebuild_dict, rebuild_kwargs)
 
-    def _update_extension_point(self, ext, update_dict, update_kwargs):
-        handler = ext.obj
-        LOG.debug("Running _update_extension_point for %s", ext.obj)
-        handler.server_update(update_dict, update_kwargs)
-
     def _create_extension_schema(self, ext, create_schema, version):
         handler = ext.obj
         LOG.debug("Running _create_extension_schema for %s", ext.obj)
@@ -753,13 +715,6 @@ class ServersController(wsgi.Controller):
             create_schema['properties'].update(schema)
         else:
             create_schema['properties']['server']['properties'].update(schema)
-
-    def _update_extension_schema(self, ext, update_schema, version):
-        handler = ext.obj
-        LOG.debug("Running _update_extension_schema for %s", ext.obj)
-
-        schema = handler.get_server_update_schema(version)
-        update_schema['properties']['server']['properties'].update(schema)
 
     def _rebuild_extension_schema(self, ext, rebuild_schema, version):
         handler = ext.obj
@@ -800,10 +755,6 @@ class ServersController(wsgi.Controller):
         if 'description' in body['server']:
             # This is allowed to be None (remove description)
             update_dict['display_description'] = body['server']['description']
-
-        if list(self.update_extension_manager):
-            self.update_extension_manager.map(self._update_extension_point,
-                                              body['server'], update_dict)
 
         helpers.translate_attributes(body['server'], update_dict)
 

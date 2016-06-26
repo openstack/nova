@@ -393,6 +393,8 @@ class ServersControllerTest(ControllerTest):
                     },
                 ],
                 "OS-DCF:diskConfig": "MANUAL",
+                "accessIPv4": '',
+                "accessIPv6": '',
             }
         }
 
@@ -3697,6 +3699,8 @@ class ServersViewBuilderTest(test.TestCase):
                     },
                 ],
                 "OS-DCF:diskConfig": "MANUAL",
+                "accessIPv4": '',
+                "accessIPv6": '',
             }
         }
 
@@ -3774,6 +3778,8 @@ class ServersViewBuilderTest(test.TestCase):
                     "details": "Stock details for test",
                 },
                 "OS-DCF:diskConfig": "MANUAL",
+                "accessIPv4": '',
+                "accessIPv6": '',
             }
         }
 
@@ -3927,6 +3933,8 @@ class ServersViewBuilderTest(test.TestCase):
                     },
                 ],
                 "OS-DCF:diskConfig": "MANUAL",
+                "accessIPv4": '',
+                "accessIPv6": '',
             }
         }
 
@@ -4001,6 +4009,8 @@ class ServersViewBuilderTest(test.TestCase):
                     },
                 ],
                 "OS-DCF:diskConfig": "MANUAL",
+                "accessIPv4": '',
+                "accessIPv6": '',
             }
         }
 

@@ -362,6 +362,16 @@ disk_config = {
     'enum': ['AUTO', 'MANUAL']
 }
 
+accessIPv4 = {
+    'type': 'string',
+    'format': 'ipv4',
+}
+
+accessIPv6 = {
+    'type': 'string',
+    'format': 'ipv6',
+}
+
 flavor_param_positive = copy.deepcopy(volume_size)
 
 

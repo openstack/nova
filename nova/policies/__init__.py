@@ -13,7 +13,6 @@
 
 import itertools
 
-from nova.policies import access_ips
 from nova.policies import admin_actions
 from nova.policies import admin_password
 from nova.policies import agents
@@ -101,7 +100,6 @@ from nova.policies import volumes_attachments
 
 def list_rules():
     return itertools.chain(
-        access_ips.list_rules(),
         admin_actions.list_rules(),
         admin_password.list_rules(),
         agents.list_rules(),

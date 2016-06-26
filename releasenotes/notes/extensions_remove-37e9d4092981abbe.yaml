@@ -8,9 +8,15 @@ upgrade:
     shown / accepted.
 
      * os_compute_api:os-disk-config - show / accept
-       ``OS-DCF:diskConfig`` parameter
+       ``OS-DCF:diskConfig`` parameter on servers
+
+     * os-access-ips - show / accept ``accessIPv4`` and ``accessIPv6``
+       parameters on servers
 
     The following entry points have been removed
 
      * nova.api.v21.extensions.server.resize - allowed accepting
-       additional parameters on resize requests.
+       additional parameters on server resize requests.
+
+     * nova.api.v21.extensions.server.update - allowed accepting
+       additional parameters on server update requests.

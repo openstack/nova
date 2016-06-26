@@ -26,7 +26,6 @@ policy_data = """
     "os_compute_api:servers:migrations:force_complete": "",
     "os_compute_api:servers:migrations:index": "rule:admin_api",
     "os_compute_api:servers:migrations:show": "rule:admin_api",
-    "os_compute_api:os-access-ips": "",
     "os_compute_api:os-admin-actions:inject_network_info": "",
     "os_compute_api:os-admin-actions:reset_network": "",
     "os_compute_api:os-admin-actions:reset_state": "",
