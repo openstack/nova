@@ -43,16 +43,32 @@ NUMA_TOPOLOGY = objects.NUMATopology(
                                                            total=512, used=0)],
                                siblings=[], pinned_cpus=set([]))])
 
-NUMA_TOPOLOGY_W_HT = objects.NUMATopology(cells=[
-    objects.NUMACell(
-        id=0, cpuset=set([1, 2, 5, 6]), memory=512,
-        cpu_usage=0, memory_usage=0, mempages=[],
-        siblings=[set([1, 5]), set([2, 6])], pinned_cpus=set([])),
-    objects.NUMACell(
-        id=1, cpuset=set([3, 4, 7, 8]), memory=512,
-        cpu_usage=0, memory_usage=0, mempages=[],
-        siblings=[set([3, 4]), set([7, 8])], pinned_cpus=set([]))
-])
+NUMA_TOPOLOGIES_W_HT = [
+    objects.NUMATopology(cells=[
+        objects.NUMACell(
+            id=0, cpuset=set([1, 2, 5, 6]), memory=512,
+            cpu_usage=0, memory_usage=0, mempages=[],
+            siblings=[set([1, 5]), set([2, 6])], pinned_cpus=set([])),
+        objects.NUMACell(
+            id=1, cpuset=set([3, 4, 7, 8]), memory=512,
+            cpu_usage=0, memory_usage=0, mempages=[],
+            siblings=[set([3, 4]), set([7, 8])], pinned_cpus=set([]))
+    ]),
+    objects.NUMATopology(cells=[
+        objects.NUMACell(
+            id=0, cpuset=set([]), memory=512,
+            cpu_usage=0, memory_usage=0, mempages=[],
+            siblings=[], pinned_cpus=set([])),
+        objects.NUMACell(
+            id=1, cpuset=set([1, 2, 5, 6]), memory=512,
+            cpu_usage=0, memory_usage=0, mempages=[],
+            siblings=[set([1, 5]), set([2, 6])], pinned_cpus=set([])),
+        objects.NUMACell(
+            id=2, cpuset=set([3, 4, 7, 8]), memory=512,
+            cpu_usage=0, memory_usage=0, mempages=[],
+            siblings=[set([3, 4]), set([7, 8])], pinned_cpus=set([])),
+    ]),
+]
 
 COMPUTE_NODES = [
         objects.ComputeNode(
