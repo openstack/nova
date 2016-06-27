@@ -163,12 +163,16 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.12: Added properties for image signature verification
     # Version 1.13: added os_secure_boot field
     # Version 1.14: Added 'hw_pointer_model' field
-    VERSION = '1.14'
+    # Version 1.15: Added hw_rescue_bus and hw_rescue_device.
+    VERSION = '1.15'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 15):
+            primitive.pop('hw_rescue_bus', None)
+            primitive.pop('hw_rescue_device', None)
         if target_version < (1, 14):
             primitive.pop('hw_pointer_model', None)
         if target_version < (1, 13):
@@ -295,6 +299,12 @@ class ImageMetaProps(base.NovaObject):
 
         # boolean 'yes' or 'no' to enable QEMU guest agent
         'hw_qemu_guest_agent': fields.FlexibleBooleanField(),
+
+        # name of the rescue bus to use with the associated rescue device.
+        'hw_rescue_bus': fields.DiskBusField(),
+
+        # name of rescue device to use.
+        'hw_rescue_device': fields.BlockDeviceTypeField(),
 
         # name of the RNG device type eg virtio
         'hw_rng_model': fields.RNGModelField(),
