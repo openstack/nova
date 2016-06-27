@@ -1,6 +1,6 @@
 {
     "agent": {
-        "hypervisor": "hypervisor",
+        "hypervisor": "xen",
         "os": "os",
         "architecture": "x86",
         "version": "8.0",

@@ -25,7 +25,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV21):
         super(AgentsJsonTest, self).setUp()
 
         fake_agents_list = [{'url': 'http://example.com/path/to/resource',
-                             'hypervisor': 'hypervisor',
+                             'hypervisor': 'xen',
                              'architecture': 'x86',
                              'os': 'os',
                              'version': '8.0',
@@ -62,7 +62,7 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def test_agent_create(self):
         # Creates a new agent build.
         project = {'url': 'http://example.com/path/to/resource',
-                'hypervisor': 'hypervisor',
+                'hypervisor': 'xen',
                 'architecture': 'x86',
                 'os': 'os',
                 'version': '8.0',
