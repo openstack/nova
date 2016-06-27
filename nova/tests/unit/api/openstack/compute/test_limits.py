@@ -208,8 +208,7 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
                              "maxPersonality": 5,
                              "maxPersonalitySize": 5}}}
 
-        output = self.view_builder.build(self.rate_limits,
-                                         self.absolute_limits)
+        output = self.view_builder.build(self.absolute_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
     def test_build_limits_empty_limits(self):
@@ -217,8 +216,7 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
                            "absolute": {}}}
 
         abs_limits = {}
-        rate_limits = []
-        output = self.view_builder.build(rate_limits, abs_limits)
+        output = self.view_builder.build(abs_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
 
