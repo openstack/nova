@@ -17,14 +17,12 @@
 The VMware API utility module.
 """
 
-from oslo_log import log as logging
 from oslo_vmware import vim_util as vutil
 import six
 
 import nova.conf
 
 CONF = nova.conf.CONF
-LOG = logging.getLogger(__name__)
 
 
 def object_to_dict(obj, list_depth=1):

@@ -26,7 +26,6 @@ helpers for populating up config object instances.
 import time
 
 from lxml import etree
-from oslo_log import log as logging
 from oslo_utils import units
 import six
 
@@ -35,8 +34,6 @@ from nova.i18n import _
 from nova.pci import utils as pci_utils
 from nova.virt import hardware
 
-
-LOG = logging.getLogger(__name__)
 
 # Namespace to use for Nova specific metadata items in XML
 NOVA_NS = "http://openstack.org/xmlns/libvirt/nova/1.0"
