@@ -237,7 +237,7 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(self.compute, 'compute_task_api', fake_taskapi)
 
         fake_network.set_stub_network_methods(self)
-        fake_server_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self)
 
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             return network_model.NetworkInfo()

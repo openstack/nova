@@ -412,7 +412,7 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(nova.tests.unit.image.fake._FakeImageService,
                        'show', fake_show)
         fake_network.set_stub_network_methods(self)
-        fake_server_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self)
 
     def test_notify_usage_exists(self):
         # Ensure 'exists' notification generates appropriate usage data.

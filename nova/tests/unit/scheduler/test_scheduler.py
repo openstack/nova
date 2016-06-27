@@ -107,7 +107,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)
         self.fake_kwargs = {'cat': 'meow', 'dog': 'woof'}
-        fake_server_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self)
 
     def test_1_correct_init(self):
         # Correct scheduler driver
