@@ -136,8 +136,7 @@ class VirtualInterfacePlugException(NovaException):
 
 
 class VirtualInterfaceUnplugException(NovaException):
-    msg_fmt = _("Virtual interface unplugin failed: "
-        "%(reason)s")
+    msg_fmt = _("Failed to unplug virtual interface: %(reason)s")
 
 
 class GlanceConnectionFailed(NovaException):
