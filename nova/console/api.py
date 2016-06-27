@@ -27,10 +27,6 @@ CONF = nova.conf.CONF
 
 class API(base.Base):
     """API for spinning up or down console proxy connections."""
-
-    def __init__(self, **kwargs):
-        super(API, self).__init__(**kwargs)
-
     def get_consoles(self, context, instance_uuid):
         return self.db.console_get_all_by_instance(context, instance_uuid,
                                                    columns_to_join=['pool'])

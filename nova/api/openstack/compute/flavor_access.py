@@ -43,10 +43,6 @@ def _marshall_flavor_access(flavor):
 
 class FlavorAccessController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
-
-    def __init__(self):
-        super(FlavorAccessController, self).__init__()
-
     @extensions.expected_errors(404)
     def index(self, req, flavor_id):
         context = req.environ['nova.context']
