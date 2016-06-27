@@ -148,9 +148,30 @@ class LibvirtGenericVIFDriver(object):
         img_props = image_meta.properties
         if img_props.get('hw_vif_multiqueue_enabled'):
             driver = 'vhost'
-            vhost_queues = flavor.vcpus
+            max_tap_queues = self._get_max_tap_queues()
+            if max_tap_queues:
+                vhost_queues = (max_tap_queues if flavor.vcpus > max_tap_queues
+                    else flavor.vcpus)
+            else:
+                vhost_queues = flavor.vcpus
 
         return (driver, vhost_queues)
+
+    def _get_max_tap_queues(self):
+        # NOTE(kengo.sakai): In kernels prior to 3.0,
+        # multiple queues on a tap interface is not supported.
+        # In kernels 3.x, the number of queues on a tap interface
+        # is limited to 8. From 4.0, the number is 256.
+        # See: https://bugs.launchpad.net/nova/+bug/1570631
+        kernel_version = int(os.uname()[2].split(".")[0])
+        if kernel_version <= 2:
+            return 1
+        elif kernel_version == 3:
+            return 8
+        elif kernel_version == 4:
+            return 256
+        else:
+            return None
 
     def get_bridge_name(self, vif):
         return vif['network']['bridge']
