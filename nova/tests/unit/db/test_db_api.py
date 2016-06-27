@@ -65,6 +65,7 @@ from nova import objects
 from nova.objects import fields
 from nova import quota
 from nova import test
+from nova.tests.unit import fake_console_auth_token
 from nova.tests.unit import matchers
 from nova.tests import uuidsentinel
 from nova import utils
@@ -10003,3 +10004,135 @@ class TestInstanceTagsFiltering(test.TestCase):
                                                'not-tags': [u't5', u't6'],
                                                'not-tags-any': [u't7', u't8']})
         self._assertEqualInstanceUUIDs([uuids[3], uuids[5], uuids[6]], result)
+
+
+class ConsoleAuthTokenTestCase(test.TestCase):
+
+    def _create_instances(self, uuids):
+        for uuid in uuids:
+            db.instance_create(self.context,
+                               {'uuid': uuid,
+                                'project_id': self.context.project_id})
+
+    def _create(self, token_hash, instance_uuid, expire_offset, host=None):
+        t = copy.deepcopy(fake_console_auth_token.fake_token_dict)
+        del t['id']
+        t['token_hash'] = token_hash
+        t['instance_uuid'] = instance_uuid
+        t['expires'] = timeutils.utcnow_ts() + expire_offset
+        if host:
+            t['host'] = host
+        db.console_auth_token_create(self.context, t)
+
+    def setUp(self):
+        super(ConsoleAuthTokenTestCase, self).setUp()
+        self.context = context.RequestContext('fake', 'fake')
+
+    def test_console_auth_token_create_no_instance(self):
+        t = copy.deepcopy(fake_console_auth_token.fake_token_dict)
+        del t['id']
+        self.assertRaises(exception.InstanceNotFound,
+                          db.console_auth_token_create,
+                          self.context, t)
+
+    def test_console_auth_token_get_valid_deleted_instance(self):
+        uuid1 = uuidsentinel.uuid1
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        self._create_instances([uuid1])
+        self._create(hash1, uuid1, 100)
+
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        self.assertIsNotNone(db_obj1, "a valid token should be in database")
+
+        db.instance_destroy(self.context, uuid1)
+        self.assertRaises(exception.InstanceNotFound,
+                          db.console_auth_token_get_valid,
+                          self.context, hash1, uuid1)
+
+    def test_console_auth_token_destroy_all_by_instance(self):
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        hash2 = utils.get_sha256_str(uuidsentinel.token2)
+        hash3 = utils.get_sha256_str(uuidsentinel.token3)
+        self._create_instances([uuid1, uuid2])
+        self._create(hash1, uuid1, 100)
+        self._create(hash2, uuid1, 100)
+        self._create(hash3, uuid2, 100)
+
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        db_obj2 = db.console_auth_token_get_valid(self.context, hash2, uuid1)
+        db_obj3 = db.console_auth_token_get_valid(self.context, hash3, uuid2)
+        self.assertIsNotNone(db_obj1, "a valid token should be in database")
+        self.assertIsNotNone(db_obj2, "a valid token should be in database")
+        self.assertIsNotNone(db_obj3, "a valid token should be in database")
+
+        db.console_auth_token_destroy_all_by_instance(self.context, uuid1)
+
+        db_obj4 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        db_obj5 = db.console_auth_token_get_valid(self.context, hash2, uuid1)
+        db_obj6 = db.console_auth_token_get_valid(self.context, hash3, uuid2)
+        self.assertIsNone(db_obj4, "no valid token should be in database")
+        self.assertIsNone(db_obj5, "no valid token should be in database")
+        self.assertIsNotNone(db_obj6, "a valid token should be in database")
+
+    def test_console_auth_token_get_valid_by_expiry(self):
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        hash2 = utils.get_sha256_str(uuidsentinel.token2)
+        self.addCleanup(timeutils.clear_time_override)
+        timeutils.set_time_override(timeutils.utcnow())
+        self._create_instances([uuid1, uuid2])
+
+        self._create(hash1, uuid1, 10)
+        timeutils.advance_time_seconds(100)
+        self._create(hash2, uuid2, 10)
+
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        db_obj2 = db.console_auth_token_get_valid(self.context, hash2, uuid2)
+        self.assertIsNone(db_obj1, "the token should have expired")
+        self.assertIsNotNone(db_obj2, "a valid token should be found here")
+
+    def test_console_auth_token_get_valid_by_uuid(self):
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        self._create_instances([uuid1, uuid2])
+
+        self._create(hash1, uuid1, 10)
+
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        db_obj2 = db.console_auth_token_get_valid(self.context, hash1, uuid2)
+        self.assertIsNotNone(db_obj1, "a valid token should be found here")
+        self.assertIsNone(db_obj2, "the token uuid should not match")
+
+    def test_console_auth_token_destroy_expired_by_host(self):
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
+        uuid3 = uuidsentinel.uuid3
+        hash1 = utils.get_sha256_str(uuidsentinel.token1)
+        hash2 = utils.get_sha256_str(uuidsentinel.token2)
+        hash3 = utils.get_sha256_str(uuidsentinel.token3)
+        self.addCleanup(timeutils.clear_time_override)
+        timeutils.set_time_override(timeutils.utcnow())
+        self._create_instances([uuid1, uuid2, uuid3])
+
+        self._create(hash1, uuid1, 10)
+        self._create(hash2, uuid2, 10, host='other-host')
+        timeutils.advance_time_seconds(100)
+        self._create(hash3, uuid3, 10)
+
+        db.console_auth_token_destroy_expired_by_host(
+            self.context, 'fake-host')
+
+        # the api only supports getting unexpired tokens
+        # but by rolling back time we can see if a token that
+        # should be deleted is still there
+        timeutils.advance_time_seconds(-100)
+        db_obj1 = db.console_auth_token_get_valid(self.context, hash1, uuid1)
+        db_obj2 = db.console_auth_token_get_valid(self.context, hash2, uuid2)
+        db_obj3 = db.console_auth_token_get_valid(self.context, hash3, uuid3)
+        self.assertIsNone(db_obj1, "the token should have been deleted")
+        self.assertIsNotNone(db_obj2, "a valid token should be found here")
+        self.assertIsNotNone(db_obj3, "a valid token should be found here")
