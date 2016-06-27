@@ -320,7 +320,8 @@ changes-since:
     than re-downloading and re-parsing the full status at each polling interval.
     If data has changed, the call returns only the items changed since the ``changes-since``
     time. If data has not changed since the ``changes-since`` time, the call returns an
-    empty list.\nTo enable you to keep track of changes, this filter also displays images
+    empty list.
+    To enable you to keep track of changes, this filter also displays images
     that were deleted if the ``changes-since`` value specifies a date in the last 30 days.
     Items deleted more than 30 days ago might be returned, but it is not guaranteed.
     The date and time stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_:
@@ -407,9 +408,34 @@ hypervisor_query:
   in: query
   required: false
   type: string
+image_name_query:
+  description: |
+    Filters the response by an image name, as a string.
+  in: query
+  required: false
+  type: string
 image_query:
   description: |
     Filters the response by an image, as a UUID.
+  in: query
+  required: false
+  type: string
+image_server_query:
+  description: |
+    Filters the response by a server, as a URL.
+  format: uri
+  in: query
+  required: false
+  type: string
+image_status_query:
+  description: |
+    Filters the response by an image status, as a string. For example, ``ACTIVE``.
+  in: query
+  required: false
+  type: string
+image_type_query:
+  description: |
+    Filters the response by an image type. For example, ``snapshot`` or ``backup``.
   in: query
   required: false
   type: string
@@ -504,12 +530,6 @@ minRam:
   in: query
   required: false
   type: integer
-name_7:
-  description: |
-    Filters the response by an image name, as a string.
-  in: query
-  required: false
-  type: string
 not_tags_any_query:
   in: query
   required: false
@@ -534,13 +554,6 @@ reservation_id_query:
   type: string
   description: |
     A reservation id as returned by a servers multiple create call.
-server_1:
-  description: |
-    Filters the response by a server, as a URL.
-  format: uri
-  in: query
-  required: false
-  type: string
 server_name_query:
   description: |
     Filters the response by a server name, as a string.  You can use regular expressions
@@ -576,12 +589,6 @@ sort_key:
   in: query
   required: false
   type: string
-status_1:
-  description: |
-    Filters the response by an image status, as a string. For example, ``ACTIVE``.
-  in: query
-  required: false
-  type: string
 # TODO(sdague): when server-tags actually get documented, these should
 # be updated.
 tags_any_query:
@@ -602,12 +609,6 @@ tags_query:
     all tags in this list will be returned. Boolean expression in this
     case is 't1 AND t2'. Tags in query must be separated by comma.
   min_version: 2.26
-type_1:
-  description: |
-    Filters the response by an image type. For example, ``snapshot`` or ``backup``.
-  in: query
-  required: false
-  type: string
 user_id_1:
   description: |
     Filters the response by a user, by ID.
@@ -1983,6 +1984,51 @@ image:
   in: body
   required: true
   type: object
+image_id_body:
+  description: |
+    The ID of the Image.
+  in: body
+  required: true
+  type: string
+image_name:
+  description: |
+    The display name of an Image.
+  in: body
+  required: true
+  type: string
+image_progress:
+  description: |
+    A percentage value of the image save progress. This can be one of:
+
+    - ``ACTIVE``: 100
+    - ``SAVING``: 25 or 50
+  in: body
+  required: true
+  type: integer
+image_server:
+  description: |
+    The server booted from image.
+  in: body
+  required: false
+  type: object
+image_size:
+  description: |
+    The size of the image.
+  in: body
+  required: true
+  type: integer
+image_status:
+  description: |
+    The status of image, as a string. This can be one of:
+
+    - ``ACTIVE``: image is in active state
+    - ``SAVING``: image is in queued or in saving process
+    - ``DELETED``: image is deleted or in progress of deletion
+    - ``ERROR``: image is in error state
+    - ``UNKNOWN``: image is in unknown state
+  in: body
+  required: true
+  type: string
 imageRef:
   description: |
     The image reference, as a UUID or full URL, for the image to use for your server
@@ -1999,10 +2045,10 @@ imageRef_1:
   type: string
 images:
   description: |
-    Image information.
+    An array of Image objects.
   in: body
   required: true
-  type: string
+  type: array
 in_use:
   description: |
     The in-use quota value.
@@ -2396,6 +2442,12 @@ memory_mb_used:
   in: body
   required: true
   type: integer
+meta:
+  description: |
+    The object of detailed key metadata items.
+  in: body
+  required: true
+  type: object
 metadata:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
@@ -2421,7 +2473,7 @@ metadata_image:
     Metadata key and value pairs. The maximum size for each metadata key and value
     pair is 255 bytes.
   in: body
-  required: false
+  required: true
   type: object
 metadata_items:
   description: |
@@ -2470,6 +2522,18 @@ migrate:
   in: body
   required: true
   type: string
+minDisk_body:
+  description: |
+    The minimum amount of disk space an image requires to boot, in GiB. For example, ``100``.
+  in: body
+  required: true
+  type: integer
+minRam_body:
+  description: |
+    The minimum amount of RAM an image requires to function, in MB. For example, ``512``.
+  in: body
+  required: true
+  type: integer
 name:
   description: |
     The security group name.
