@@ -705,7 +705,7 @@ class ComputeAPI(object):
         else:
             return result
 
-    def prep_resize(self, ctxt, image, instance, instance_type, host,
+    def prep_resize(self, ctxt, instance, image, instance_type, host,
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None,
                     clean_shutdown=True):
@@ -789,7 +789,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
                    instance=instance, address=address)
 
-    def remove_volume_connection(self, ctxt, volume_id, instance, host):
+    def remove_volume_connection(self, ctxt, instance, volume_id, host):
         version = '4.0'
         cctxt = self.get_cell_client(ctxt).prepare(
                 server=host, version=version)
@@ -1062,7 +1062,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
-    def refresh_instance_security_rules(self, ctxt, host, instance):
+    def refresh_instance_security_rules(self, ctxt, instance, host):
         version = '4.4'
         cell_client = self.get_cell_client(ctxt)
         if not cell_client.can_send_version(version):

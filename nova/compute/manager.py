@@ -5493,7 +5493,7 @@ class ComputeManager(manager.Manager):
         for bdm in bdms:
             if bdm.is_volume:
                 self.compute_rpcapi.remove_volume_connection(
-                        context, bdm.volume_id, instance, dest)
+                        context, instance, bdm.volume_id, dest)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")

@@ -5506,9 +5506,9 @@ class ComputeTestCase(BaseTestCase):
         objects.BlockDeviceMappingList.get_by_instance_uuid(c,
                 instance.uuid).MultipleTimes().AndReturn(fake_bdms)
         self.compute.compute_rpcapi.remove_volume_connection(
-                c, uuids.volume_id_1, instance, dest_host)
+                c, instance, uuids.volume_id_1, dest_host)
         self.compute.compute_rpcapi.remove_volume_connection(
-                c, uuids.volume_id_2, instance, dest_host)
+                c, instance, uuids.volume_id_2, dest_host)
         self.compute.compute_rpcapi.rollback_live_migration_at_destination(
                 c, instance, dest_host, destroy_disks=True,
                 migrate_data=mox.IsA(migrate_data_obj.LiveMigrateData))
@@ -9881,7 +9881,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.security_group_api._refresh_instance_security_rules(
             self.context, [inst1, inst2])
-        mock_refresh.assert_called_once_with(self.context, inst1.host, inst1)
+        mock_refresh.assert_called_once_with(self.context, inst1, inst1.host)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'refresh_instance_security_rules')

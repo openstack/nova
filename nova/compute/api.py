@@ -4195,7 +4195,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                                             security_group['id'])
         if instance.host:
             self.compute_rpcapi.refresh_instance_security_rules(
-                    context, instance.host, instance)
+                    context, instance, instance.host)
 
     def remove_from_instance(self, context, instance, security_group_name):
         """Remove the security group associated with the instance."""
@@ -4216,7 +4216,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
                                                security_group['id'])
         if instance.host:
             self.compute_rpcapi.refresh_instance_security_rules(
-                    context, instance.host, instance)
+                    context, instance, instance.host)
 
     def get_rule(self, context, id):
         self.ensure_default(context)
@@ -4316,7 +4316,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         for instance in instances:
             if instance.host is not None:
                 self.compute_rpcapi.refresh_instance_security_rules(
-                        context, instance.host, instance)
+                        context, instance, instance.host)
 
     def trigger_rules_refresh(self, context, id):
         """Called when a rule is added to or removed from a security_group."""
