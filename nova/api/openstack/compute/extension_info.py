@@ -22,10 +22,10 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _LE
+from nova.policies import extensions as ext_policies
 
 ALIAS = 'extensions'
 LOG = logging.getLogger(__name__)
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 # NOTE(cyeoh): The following mappings are currently incomplete
 # Having a v2.1 extension loaded can imply that several v2 extensions
@@ -212,7 +212,7 @@ class ExtensionInfoController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ext_policies.BASE_POLICY_NAME)
         discoverable_extensions = self._get_extensions(context)
         # NOTE(gmann): This is for v2.1 compatible mode where
         # extension list should show all extensions as shown by v2.
@@ -231,7 +231,7 @@ class ExtensionInfoController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(ext_policies.BASE_POLICY_NAME)
         try:
             # NOTE(dprince): the extensions alias is used as the 'id' for show
             ext = self._get_extensions(context)[id]

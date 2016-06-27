@@ -19,9 +19,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova.i18n import _
+from nova.policies import console_auth_tokens as cat_policies
 
 ALIAS = "os-console-auth-tokens"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ConsoleAuthTokensController(wsgi.Controller):
@@ -32,7 +32,7 @@ class ConsoleAuthTokensController(wsgi.Controller):
     def _show(self, req, id, rdp_only):
         """Checks a console auth token and returns the related connect info."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(cat_policies.BASE_POLICY_NAME)
 
         token = id
         if not token:

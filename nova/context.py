@@ -218,11 +218,34 @@ class RequestContext(context.RequestContext):
 
         return context
 
-    def can(self, rule, target=None):
+    def can(self, rule, target=None, fatal=True):
+        """Verifies that the given rule is valid on the target in this context.
+
+        :param action: string representing the action to be checked.
+        :param target: dictionary representing the object of the action
+            for object creation this should be a dictionary representing the
+            location of the object e.g. ``{'project_id': context.project_id}``.
+            If None, then this default target will be considered:
+            {'project_id': self.project_id, 'user_id': self.user_id}
+        :param fatal: if False, will return False when an exception.Forbidden
+           occurs.
+
+        :raises nova.exception.Forbidden: if verification fails and fatal is
+            True.
+
+        :return: returns a non-False value (not necessarily "True") if
+            authorized and False if not authorized and fatal is False.
+        """
         if target is None:
             target = {'project_id': self.project_id,
                       'user_id': self.user_id}
-        return policy.authorize(self, rule, target)
+
+        try:
+            return policy.authorize(self, rule, target)
+        except exception.Forbidden:
+            if fatal:
+                raise
+            return False
 
     def __str__(self):
         return "<Context %s>" % self.to_dict()

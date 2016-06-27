@@ -17,6 +17,7 @@ from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 
 from nova import context
+from nova import exception
 from nova import objects
 from nova import test
 
@@ -227,6 +228,38 @@ class ContextTestCase(test.NoDBTestCase):
         self.assertEqual('222', ctx.project_id)
         values2 = ctx.to_dict()
         self.assertEqual(values, values2)
+
+    @mock.patch.object(context.policy, 'authorize')
+    def test_can(self, mock_authorize):
+        mock_authorize.return_value = True
+        ctxt = context.RequestContext('111', '222')
+
+        result = ctxt.can(mock.sentinel.rule)
+
+        self.assertTrue(result)
+        mock_authorize.assert_called_once_with(
+          ctxt, mock.sentinel.rule,
+          {'project_id': ctxt.project_id, 'user_id': ctxt.user_id})
+
+    @mock.patch.object(context.policy, 'authorize')
+    def test_can_fatal(self, mock_authorize):
+        mock_authorize.side_effect = exception.Forbidden
+        ctxt = context.RequestContext('111', '222')
+
+        self.assertRaises(exception.Forbidden,
+                          ctxt.can, mock.sentinel.rule)
+
+    @mock.patch.object(context.policy, 'authorize')
+    def test_can_non_fatal(self, mock_authorize):
+        mock_authorize.side_effect = exception.Forbidden
+        ctxt = context.RequestContext('111', '222')
+
+        result = ctxt.can(mock.sentinel.rule, mock.sentinel.target,
+                          fatal=False)
+
+        self.assertFalse(result)
+        mock_authorize.assert_called_once_with(ctxt, mock.sentinel.rule,
+                                               mock.sentinel.target)
 
     @mock.patch('nova.db.create_context_manager')
     @mock.patch('nova.rpc.create_transport')

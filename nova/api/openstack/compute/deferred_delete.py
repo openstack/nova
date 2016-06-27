@@ -22,9 +22,9 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.policies import deferred_delete as dd_policies
 
 ALIAS = 'os-deferred-delete'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class DeferredDeleteController(wsgi.Controller):
@@ -38,7 +38,7 @@ class DeferredDeleteController(wsgi.Controller):
     def _restore(self, req, id, body):
         """Restore a previously deleted instance."""
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(dd_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.restore(context, instance)
@@ -56,7 +56,7 @@ class DeferredDeleteController(wsgi.Controller):
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(dd_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.force_delete(context, instance)
