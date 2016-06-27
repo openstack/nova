@@ -54,26 +54,6 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-server-tags/v2.26/server-tags-index-resp.json
    :language: javascript
 
-Check Tag Existence
-===================
-
-.. rest_method:: GET /servers/{server_id}/tags/{tag}
-
-Checks tag existence on the server. If tag exists response with 204 status code
-will be returned. Otherwise returns 404.
-
-Normal response codes: 204
-
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - server_id: server_id_path
-  - tag: tag
-
 Replace Tags
 ============
 
@@ -109,6 +89,49 @@ Response
 
 .. literalinclude:: ../../doc/api_samples/os-server-tags/v2.26/server-tags-put-all-resp.json
    :language: javascript
+
+Delete All Tags
+===============
+
+.. rest_method:: DELETE /servers/{server_id}/tags
+
+Deletes all tags from the specified server.
+
+Normal response codes: 204
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - server_id: server_id_path
+
+Response
+--------
+
+There is no body content for the response of a successful DELETE query
+
+Check Tag Existence
+===================
+
+.. rest_method:: GET /servers/{server_id}/tags/{tag}
+
+Checks tag existence on the server. If tag exists response with 204 status code
+will be returned. Otherwise returns 404.
+
+Normal response codes: 204
+
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - server_id: server_id_path
+  - tag: tag
 
 Add a Single Tag
 ================
@@ -157,29 +180,6 @@ Request
 
   - server_id: server_id_path
   - tag: tag
-
-Response
---------
-
-There is no body content for the response of a successful DELETE query
-
-Delete All Tags
-===============
-
-.. rest_method:: DELETE /servers/{server_id}/tags
-
-Deletes all tags from the specified server.
-
-Normal response codes: 204
-
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
-
-Request
--------
-
-.. rest_parameters:: parameters.yaml
-
-  - server_id: server_id_path
 
 Response
 --------
