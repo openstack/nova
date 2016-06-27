@@ -103,3 +103,23 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
     @base.remotable
     def destroy(self):
         self._destroy_in_db(self._context, self.uuid)
+
+
+@base.NovaObjectRegistry.register
+class CellMappingList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('CellMapping'),
+    }
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_from_db(context):
+        return context.session.query(api_models.CellMapping).all()
+
+    @base.remotable_classmethod
+    def get_all(cls, context):
+        db_mappings = cls._get_all_from_db(context)
+        return base.obj_make_list(context, cls(), CellMapping, db_mappings)

@@ -106,3 +106,25 @@ class TestCellMappingObject(test_objects._LocalTest,
 class TestRemoteCellMappingObject(test_objects._RemoteTest,
                                   _TestCellMappingObject):
     pass
+
+
+class _TestCellMappingListObject(object):
+    @mock.patch.object(cell_mapping.CellMappingList, '_get_all_from_db')
+    def test_get_all(self, get_all_from_db):
+        db_mapping = get_db_mapping()
+        get_all_from_db.return_value = [db_mapping]
+
+        mapping_obj = objects.CellMappingList.get_all(self.context)
+
+        get_all_from_db.assert_called_once_with(self.context)
+        self.compare_obj(mapping_obj.objects[0], db_mapping)
+
+
+class TestCellMappingListObject(test_objects._LocalTest,
+                                _TestCellMappingListObject):
+    pass
+
+
+class TestRemoteCellMappingListObject(test_objects._RemoteTest,
+                                      _TestCellMappingListObject):
+    pass
