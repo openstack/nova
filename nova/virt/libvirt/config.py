@@ -1608,6 +1608,7 @@ class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
         self.source_path = None
         self.listen_port = None
         self.listen_host = None
+        self.log = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestCharBase, self).format_dom()
@@ -1623,6 +1624,9 @@ class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
             dev.append(etree.Element("source", mode="bind",
                                      host=self.listen_host,
                                      service=str(self.listen_port)))
+
+        if self.log:
+            dev.append(self.log.format_dom())
 
         return dev
 
@@ -1647,6 +1651,27 @@ class LibvirtConfigGuestChar(LibvirtConfigGuestCharBase):
             dev.append(target)
 
         return dev
+
+
+class LibvirtConfigGuestCharDeviceLog(LibvirtConfigObject):
+    """Represents a sub-element to a character device."""
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestCharDeviceLog, self).__init__(root_name="log",
+                                                              **kwargs)
+        self.file = None
+        self.append = "off"
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestCharDeviceLog, self).parse_dom(xmldoc)
+        self.file = xmldoc.get("file")
+        self.append = xmldoc.get("append")
+
+    def format_dom(self):
+        log = super(LibvirtConfigGuestCharDeviceLog, self).format_dom()
+        log.set("file", self.file)
+        log.set("append", self.append)
+        return log
 
 
 class LibvirtConfigGuestSerial(LibvirtConfigGuestChar):

@@ -1239,6 +1239,23 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
         self.assertEqual(obj.type, 'usb')
 
 
+class LibvirtConfigGuestCharDeviceLog(LibvirtConfigBaseTest):
+
+    def test_config_log(self):
+        obj = config.LibvirtConfigGuestCharDeviceLog()
+        obj.file = "/tmp/guestname-logd.log"
+        obj.append = "on"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <log file="/tmp/guestname-logd.log" append="on"/>""")
+
+        # create a new object from the XML and check it again
+        obj2 = config.LibvirtConfigGuestCharDeviceLog()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
+
 class LibvirtConfigGuestSerialTest(LibvirtConfigBaseTest):
 
     def test_config_file(self):
@@ -1262,6 +1279,24 @@ class LibvirtConfigGuestSerialTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
             <serial type="tcp">
               <source host="0.0.0.0" service="11111" mode="bind"/>
+            </serial>""")
+
+    def test_config_log(self):
+        log = config.LibvirtConfigGuestCharDeviceLog()
+        log.file = "/tmp/guestname-logd.log"
+        log.append = "off"
+
+        device = config.LibvirtConfigGuestSerial()
+        device.type = "tcp"
+        device.listen_port = 11111
+        device.listen_host = "0.0.0.0"
+        device.log = log
+
+        xml = device.to_xml()
+        self.assertXmlEqual(xml, """
+            <serial type="tcp">
+              <source host="0.0.0.0" service="11111" mode="bind"/>
+              <log file="/tmp/guestname-logd.log" append="off"/>
             </serial>""")
 
 
@@ -1310,6 +1345,24 @@ class LibvirtConfigGuestConsoleTest(LibvirtConfigBaseTest):
                 <target port="0"/>
             </console>
             """)
+
+    def test_config_log(self):
+        log = config.LibvirtConfigGuestCharDeviceLog()
+        log.file = "/tmp/guestname-logd.log"
+        log.append = "off"
+
+        device = config.LibvirtConfigGuestConsole()
+        device.type = "tcp"
+        device.listen_port = 11111
+        device.listen_host = "0.0.0.0"
+        device.log = log
+
+        xml = device.to_xml()
+        self.assertXmlEqual(xml, """
+            <console type="tcp">
+              <source host="0.0.0.0" service="11111" mode="bind"/>
+              <log file="/tmp/guestname-logd.log" append="off"/>
+            </console>""")
 
 
 class LibvirtConfigGuestChannelTest(LibvirtConfigBaseTest):
