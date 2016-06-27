@@ -29,6 +29,7 @@ from cinderclient.v1 import client as v1_client
 from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
+from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 import six
@@ -186,18 +187,17 @@ def translate_cinder_exception(method):
         try:
             res = method(self, ctx, *args, **kwargs)
         except (cinder_exception.ConnectionError,
-                keystone_exception.ConnectionError):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            _reraise(exception.CinderConnectionFailed(
-                reason=six.text_type(exc_value)))
+                keystone_exception.ConnectionError) as exc:
+            err_msg = encodeutils.exception_to_unicode(exc)
+            _reraise(exception.CinderConnectionFailed(reason=err_msg))
         except (keystone_exception.BadRequest,
-                cinder_exception.BadRequest):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            _reraise(exception.InvalidInput(reason=six.text_type(exc_value)))
+                cinder_exception.BadRequest) as exc:
+            err_msg = encodeutils.exception_to_unicode(exc)
+            _reraise(exception.InvalidInput(reason=err_msg))
         except (keystone_exception.Forbidden,
-                cinder_exception.Forbidden):
-            exc_type, exc_value, exc_trace = sys.exc_info()
-            _reraise(exception.Forbidden(six.text_type(exc_value)))
+                cinder_exception.Forbidden) as exc:
+            err_msg = encodeutils.exception_to_unicode(exc)
+            _reraise(exception.Forbidden(err_msg))
         return res
     return wrapper
 
@@ -243,9 +243,7 @@ def translate_mixed_exceptions(method):
 
 
 def _reraise(desired_exc):
-    exc_type, exc_value, exc_trace = sys.exc_info()
-    exc_value = desired_exc
-    six.reraise(exc_value, None, exc_trace)
+    six.reraise(type(desired_exc), desired_exc, sys.exc_info()[2])
 
 
 class API(object):
