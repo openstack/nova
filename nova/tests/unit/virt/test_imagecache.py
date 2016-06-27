@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import block_device
 from nova.compute import vm_states
 import nova.conf
@@ -70,7 +72,9 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                           cache_manager._age_and_verify_cached_images,
                           None, [], None)
 
-    def test_list_running_instances(self):
+    @mock.patch.object(objects.BlockDeviceMappingList,
+                       'bdms_by_instance_uuid')
+    def test_list_running_instances(self, mock_bdms_by_uuid):
         instances = [{'image_ref': '1',
                       'host': CONF.host,
                       'id': '1',
@@ -97,25 +101,20 @@ class ImageCacheManagerTests(test.NoDBTestCase):
 
         image_cache_manager = imagecache.ImageCacheManager()
 
-        self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
-                   'bdms_by_instance_uuid')
-
         ctxt = context.get_admin_context()
         swap_bdm_256_list = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_256)
         swap_bdm_128_list = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_128)
-        objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
-            ctxt, [uuids.instance_1, uuids.instance_2, uuids.instance_3]
-            ).AndReturn({uuids.instance_1: swap_bdm_256_list,
-                         uuids.instance_2: swap_bdm_128_list,
-                         uuids.instance_3: swap_bdm_128_list})
-        self.mox.ReplayAll()
-
+        mock_bdms_by_uuid.return_value = {uuids.instance_1: swap_bdm_256_list,
+                                          uuids.instance_2: swap_bdm_128_list,
+                                          uuids.instance_3: swap_bdm_128_list}
         # The argument here should be a context, but it's mocked out
         running = image_cache_manager._list_running_instances(ctxt,
             all_instances)
 
+        mock_bdms_by_uuid.assert_called_once_with(ctxt,
+                     [uuids.instance_1, uuids.instance_2, uuids.instance_3])
         self.assertEqual(4, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),
                          running['used_images']['1'])
@@ -134,7 +133,9 @@ class ImageCacheManagerTests(test.NoDBTestCase):
         self.assertIn('swap_128', running['used_swap_images'])
         self.assertIn('swap_256', running['used_swap_images'])
 
-    def test_list_resizing_instances(self):
+    @mock.patch.object(objects.BlockDeviceMappingList,
+                       'bdms_by_instance_uuid')
+    def test_list_resizing_instances(self, mock_bdms_by_uuid):
         instances = [{'image_ref': '1',
                       'host': CONF.host,
                       'id': '1',
@@ -146,19 +147,16 @@ class ImageCacheManagerTests(test.NoDBTestCase):
                          for instance in instances]
 
         image_cache_manager = imagecache.ImageCacheManager()
-        self.mox.StubOutWithMock(objects.block_device.BlockDeviceMappingList,
-                   'bdms_by_instance_uuid')
 
         ctxt = context.get_admin_context()
         bdms = block_device_obj.block_device_make_list_from_dicts(
             ctxt, swap_bdm_256)
-        objects.block_device.BlockDeviceMappingList.bdms_by_instance_uuid(
-                ctxt, [uuids.instance]).AndReturn({uuids.instance: bdms})
+        mock_bdms_by_uuid.return_value = {uuids.instance: bdms}
 
-        self.mox.ReplayAll()
         running = image_cache_manager._list_running_instances(ctxt,
             all_instances)
 
+        mock_bdms_by_uuid.assert_called_once_with(ctxt, [uuids.instance])
         self.assertEqual(1, len(running['used_images']))
         self.assertEqual((1, 0, ['instance-00000001']),
                          running['used_images']['1'])
