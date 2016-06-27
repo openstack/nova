@@ -14,7 +14,6 @@ import abc
 
 import six
 
-from nova import objects
 from nova.objects import fields
 
 
@@ -44,9 +43,10 @@ class MonitorBase(object):
         raise NotImplementedError('get_metric_names')
 
     @abc.abstractmethod
-    def get_metrics(self):
-        """Returns a list of tuples containing information for all metrics
-        tracked by the monitor.
+    def populate_metrics(self, metric_list):
+        """Monitors are responsible for populating this metric_list object
+        with nova.objects.MonitorMetric objects with values collected via
+        the respective compute drivers.
 
         Note that if the monitor class is responsible for tracking a *related*
         set of metrics -- e.g. a set of percentages of CPU time allocated to
@@ -54,26 +54,9 @@ class MonitorBase(object):
         implementation to do a single sampling call to the underlying monitor
         to ensure that related metric values make logical sense.
 
-        :returns: list of (metric_name, value, timestamp) tuples
+        :param metric_list: A mutable reference of the metric list object
         """
-        raise NotImplementedError('get_metrics')
-
-    def add_metrics_to_list(self, metrics_list):
-        """Adds metric objects to a supplied list object.
-
-        :param metric_list: nova.objects.MonitorMetricList that the monitor
-                            plugin should append nova.objects.MonitorMetric
-                            objects to.
-        """
-        metric_data = self.get_metrics()
-        metrics = []
-        for (name, value, timestamp) in metric_data:
-            metric = objects.MonitorMetric(name=name,
-                                           value=value,
-                                           timestamp=timestamp,
-                                           source=self.source)
-            metrics.append(metric)
-        metrics_list.objects.extend(metrics)
+        raise NotImplementedError('populate_metrics')
 
 
 class CPUMonitorBase(MonitorBase):

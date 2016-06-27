@@ -1,0 +1,10 @@
+---
+upgrade:
+  - The get_metrics API has been replaced by
+    populate_metrics in nova.compute.monitors.base
+    module. This change is introduced to allow each
+    monitor plugin to have the flexibility of setting
+    it's own metric value types. The in-tree metrics
+    plugins are modified as a part of this change.
+    However, the out-of-tree plugins would have to
+    adapt to the new API in order to work with nova.
