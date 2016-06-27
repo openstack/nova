@@ -4389,6 +4389,87 @@ class TestAllocateForInstanceHelpers(test.NoDBTestCase):
             exception.PortBindingFailed,
             {"binding:vif_type": model.VIF_TYPE_BINDING_FAILED})
 
+    def test_validate_requested_network_ids_success_auto_net(self):
+        requested_networks = []
+        ordered_networks = []
+        api = neutronapi.API()
+        mock_client = mock.Mock()
+        nets = [{'id': "net1"}]
+        mock_client.list_networks.side_effect = [{}, {"networks": nets}]
+
+        result = api._validate_requested_network_ids(self.context,
+            self.instance, mock_client, requested_networks, ordered_networks)
+
+        self.assertEqual(nets, result)
+        expected_call_list = [
+            mock.call(shared=False, tenant_id=uuids.tenant_id),
+            mock.call(shared=True)
+        ]
+        self.assertEqual(expected_call_list,
+            mock_client.list_networks.call_args_list)
+
+    def test_validate_requested_network_ids_success_found_net(self):
+        ordered_networks = [objects.NetworkRequest(network_id="net1")]
+        requested_networks = objects.NetworkRequestList(ordered_networks)
+        api = neutronapi.API()
+        mock_client = mock.Mock()
+        nets = [{'id': "net1"}]
+        mock_client.list_networks.return_value = {"networks": nets}
+
+        result = api._validate_requested_network_ids(self.context,
+            self.instance, mock_client, requested_networks, ordered_networks)
+
+        self.assertEqual(nets, result)
+        mock_client.list_networks.assert_called_once_with(id=['net1'])
+
+    def test_validate_requested_network_ids_success_no_nets(self):
+        requested_networks = []
+        ordered_networks = []
+        api = neutronapi.API()
+        mock_client = mock.Mock()
+        mock_client.list_networks.side_effect = [{}, {"networks": []}]
+
+        result = api._validate_requested_network_ids(self.context,
+            self.instance, mock_client, requested_networks, ordered_networks)
+
+        self.assertEqual([], result)
+        expected_call_list = [
+            mock.call(shared=False, tenant_id=uuids.tenant_id),
+            mock.call(shared=True)
+        ]
+        self.assertEqual(expected_call_list,
+            mock_client.list_networks.call_args_list)
+
+    def _assert_validate_requested_network_ids_raises(self, exception, nets,
+            requested_networks=None):
+        ordered_networks = []
+        if requested_networks is None:
+            requested_networks = objects.NetworkRequestList()
+        api = neutronapi.API()
+        mock_client = mock.Mock()
+        mock_client.list_networks.side_effect = [{}, {"networks": nets}]
+
+        self.assertRaises(exception, api._validate_requested_network_ids,
+            self.context, self.instance, mock_client,
+            requested_networks, ordered_networks)
+
+    def test_validate_requested_network_ids_raises_forbidden(self):
+        self._assert_validate_requested_network_ids_raises(
+            exception.ExternalNetworkAttachForbidden,
+            [{'id': "net1", 'router:external': True, 'shared': False}])
+
+    def test_validate_requested_network_ids_raises_net_not_found(self):
+        requested_networks = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id="1")])
+        self._assert_validate_requested_network_ids_raises(
+            exception.NetworkNotFound,
+            [], requested_networks=requested_networks)
+
+    def test_validate_requested_network_ids_raises_too_many_nets(self):
+        self._assert_validate_requested_network_ids_raises(
+            exception.NetworkAmbiguous,
+            [{'id': "net1"}, {'id': "net2"}])
+
 
 class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
     def setUp(self):
