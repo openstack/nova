@@ -22,9 +22,6 @@ ALIAS = "os-extended-status"
 
 
 class ExtendedStatusController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ExtendedStatusController, self).__init__(*args, **kwargs)
-
     def _extend_server(self, server, instance):
         # Note(gmann): Removed 'locked_by' from extended status
         # to make it same as V2. If needed it can be added with

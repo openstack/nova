@@ -23,9 +23,6 @@ ALIAS = "os-extended-volumes"
 
 
 class ExtendedVolumesController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
-        super(ExtendedVolumesController, self).__init__(*args, **kwargs)
-
     def _extend_server(self, context, server, req, bdms):
         volumes_attached = []
         for bdm in bdms:

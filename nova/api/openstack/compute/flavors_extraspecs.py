@@ -31,10 +31,6 @@ authorize = extensions.os_compute_authorizer(ALIAS)
 
 class FlavorExtraSpecsController(wsgi.Controller):
     """The flavor extra specs API controller for the OpenStack API."""
-
-    def __init__(self, *args, **kwargs):
-        super(FlavorExtraSpecsController, self).__init__(*args, **kwargs)
-
     def _get_extra_specs(self, context, flavor_id):
         flavor = common.get_flavor(context, flavor_id)
         return dict(extra_specs=flavor.extra_specs)
