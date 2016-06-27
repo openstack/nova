@@ -3815,6 +3815,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._test_build_and_run_spawn_exceptions(
             exception.InvalidDiskInfo(reason=""))
 
+    def test_build_and_run_signature_verification_error(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.SignatureVerificationError(reason=""))
+
     def _test_build_and_run_spawn_exceptions(self, exc):
         with test.nested(
                 mock.patch.object(self.compute.driver, 'spawn',
