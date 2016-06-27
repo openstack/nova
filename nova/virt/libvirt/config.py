@@ -739,6 +739,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.snapshot = None
         self.backing_store = None
         self.device_addr = None
+        self.boot_order = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -843,6 +844,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.shareable:
             dev.append(etree.Element("shareable"))
 
+        if self.boot_order:
+            dev.append(etree.Element("boot", order=self.boot_order))
+
         return dev
 
     def parse_dom(self, xmldoc):
@@ -894,6 +898,8 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 obj = LibvirtConfigGuestDeviceAddress.factory(c)
                 obj.parse_dom(c)
                 self.device_addr = obj
+            elif c.tag == 'boot':
+                self.boot_order = c.get('order')
 
 
 class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):

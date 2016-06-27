@@ -742,6 +742,43 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
 
         self.assertEqual('native', obj.driver_io)
 
+    def test_config_boot_order(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.driver_name = "qemu"
+        obj.driver_format = "qcow2"
+        obj.driver_cache = "none"
+        obj.driver_io = "native"
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello.qcow2"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "ide"
+        obj.serial = "7a97c4a3-6f59-41d4-bf47-191d7f97f8e9"
+        obj.boot_order = "1"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual("""
+            <disk type="file" device="disk">
+              <driver name="qemu" type="qcow2" cache="none" io="native"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+              <boot order="1"/>
+            </disk>""", xml)
+
+    def test_config_boot_order_parse(self):
+        xml = """
+            <disk type="file" device="disk">
+              <driver name="qemu" type="qcow2" cache="none" discard="unmap"/>
+              <source file="/tmp/hello.qcow2"/>
+              <target bus="ide" dev="/dev/hda"/>
+              <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+              <boot order="1"/>
+            </disk>"""
+        xmldoc = etree.fromstring(xml)
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+        self.assertEqual(obj.boot_order, "1")
+
     def test_config_block(self):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "block"
