@@ -18,10 +18,7 @@
 Unit Tests for remote procedure calls using queue
 """
 
-import sys
-
 import mock
-from mox3 import mox
 from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_service import service as _service
@@ -34,7 +31,6 @@ from nova import rpc
 from nova import service
 from nova import test
 from nova.tests.unit import utils
-from nova import wsgi
 
 test_service_opts = [
     cfg.StrOpt("test_service_listen",
@@ -117,42 +113,30 @@ class ServiceTestCase(test.NoDBTestCase):
               "manager_class_name=nova.tests.unit.test_service.FakeManager>"
         self.assertEqual(exp, repr(serv))
 
-    def _service_start_mocks(self):
-        self.mox.StubOutWithMock(objects.Service, 'create')
-        self.mox.StubOutWithMock(objects.Service, 'get_by_host_and_binary')
-        objects.Service.get_by_host_and_binary(mox.IgnoreArg(), self.host,
-                                               self.binary)
-        objects.Service.create()
-
-    def test_init_and_start_hooks(self):
-        self.manager_mock = self.mox.CreateMock(FakeManager)
-        self.mox.StubOutWithMock(sys.modules[__name__],
-                'FakeManager', use_mock_anything=True)
-        self.mox.StubOutWithMock(self.manager_mock, 'init_host')
-        self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
-        self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
-
-        FakeManager(host=self.host).AndReturn(self.manager_mock)
-
-        self.manager_mock.service_name = self.topic
-        self.manager_mock.additional_endpoints = []
-
-        # init_host is called before any service record is created
-        self.manager_mock.init_host()
-        self._service_start_mocks()
-        # pre_start_hook is called after service record is created,
-        # but before RPC consumer is created
-        self.manager_mock.pre_start_hook()
-        # post_start_hook is called after RPC consumer is created.
-        self.manager_mock.post_start_hook()
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(objects.Service, 'create')
+    @mock.patch.object(objects.Service, 'get_by_host_and_binary')
+    def test_init_and_start_hooks(self, mock_get_by_host_and_binary,
+                                                        mock_create):
+        mock_get_by_host_and_binary.return_value = None
+        mock_manager = mock.Mock()
         serv = service.Service(self.host,
                                self.binary,
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
+        serv.manager = mock_manager
+        serv.manager.service_name = self.topic
+        serv.manager.additional_endpoints = []
         serv.start()
+        # init_host is called before any service record is created
+        serv.manager.init_host.assert_called_once_with()
+        mock_get_by_host_and_binary.assert_called_once_with(mock.ANY,
+                                                       self.host, self.binary)
+        mock_create.assert_called_once_with()
+        # pre_start_hook is called after service record is created,
+        # but before RPC consumer is created
+        serv.manager.pre_start_hook.assert_called_once_with()
+        # post_start_hook is called after RPC consumer is created.
+        serv.manager.post_start_hook.assert_called_once_with()
 
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
     def test_start_updates_version(self, mock_get_by_host_and_binary):
@@ -171,38 +155,30 @@ class ServiceTestCase(test.NoDBTestCase):
         self.assertEqual(1, service_obj.save.call_count)
         self.assertEqual(objects.service.SERVICE_VERSION, service_obj.version)
 
-    def _test_service_check_create_race(self, ex):
-        self.manager_mock = self.mox.CreateMock(FakeManager)
-        self.mox.StubOutWithMock(sys.modules[__name__], 'FakeManager',
-                                 use_mock_anything=True)
-        self.mox.StubOutWithMock(self.manager_mock, 'init_host')
-        self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
-        self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
-        self.mox.StubOutWithMock(objects.Service, 'create')
-        self.mox.StubOutWithMock(objects.Service, 'get_by_host_and_binary')
+    @mock.patch.object(objects.Service, 'create')
+    @mock.patch.object(objects.Service, 'get_by_host_and_binary')
+    def _test_service_check_create_race(self, ex,
+                                         mock_get_by_host_and_binary,
+                                         mock_create):
 
-        FakeManager(host=self.host).AndReturn(self.manager_mock)
-
-        # init_host is called before any service record is created
-        self.manager_mock.init_host()
-
-        objects.Service.get_by_host_and_binary(mox.IgnoreArg(), self.host,
-                                               self.binary)
-        objects.Service.create().AndRaise(ex)
-
-        class TestException(Exception):
-            pass
-
-        objects.Service.get_by_host_and_binary(
-            mox.IgnoreArg(), self.host, self.binary).AndRaise(TestException())
-
-        self.mox.ReplayAll()
-
+        mock_manager = mock.Mock()
         serv = service.Service(self.host,
                                self.binary,
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
+
+        class TestException(Exception):
+            pass
+
+        mock_get_by_host_and_binary.side_effect = [None, TestException()]
+        mock_create.side_effect = ex
+        serv.manager = mock_manager
         self.assertRaises(TestException, serv.start)
+        serv.manager.init_host.assert_called_with()
+        mock_get_by_host_and_binary.assert_has_calls([
+                mock.call(mock.ANY, self.host, self.binary),
+                mock.call(mock.ANY, self.host, self.binary)])
+        mock_create.assert_called_once_with()
 
     def test_service_check_create_race_topic_exists(self):
         ex = exception.ServiceTopicExists(host='foo', topic='bar')
@@ -212,41 +188,31 @@ class ServiceTestCase(test.NoDBTestCase):
         ex = exception.ServiceBinaryExists(host='foo', binary='bar')
         self._test_service_check_create_race(ex)
 
-    def test_parent_graceful_shutdown(self):
-        self.manager_mock = self.mox.CreateMock(FakeManager)
-        self.mox.StubOutWithMock(sys.modules[__name__],
-                'FakeManager', use_mock_anything=True)
-        self.mox.StubOutWithMock(self.manager_mock, 'init_host')
-        self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
-        self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
-
-        self.mox.StubOutWithMock(_service.Service, 'stop')
-
-        FakeManager(host=self.host).AndReturn(self.manager_mock)
-
-        self.manager_mock.service_name = self.topic
-        self.manager_mock.additional_endpoints = []
-
-        # init_host is called before any service record is created
-        self.manager_mock.init_host()
-        self._service_start_mocks()
-        # pre_start_hook is called after service record is created,
-        # but before RPC consumer is created
-        self.manager_mock.pre_start_hook()
-        # post_start_hook is called after RPC consumer is created.
-        self.manager_mock.post_start_hook()
-
-        _service.Service.stop()
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(objects.Service, 'create')
+    @mock.patch.object(objects.Service, 'get_by_host_and_binary')
+    @mock.patch.object(_service.Service, 'stop')
+    def test_parent_graceful_shutdown(self, mock_stop,
+                                      mock_get_by_host_and_binary,
+                                      mock_create):
+        mock_get_by_host_and_binary.return_value = None
+        mock_manager = mock.Mock()
         serv = service.Service(self.host,
                                self.binary,
                                self.topic,
                                'nova.tests.unit.test_service.FakeManager')
+        serv.manager = mock_manager
+        serv.manager.service_name = self.topic
+        serv.manager.additional_endpoints = []
         serv.start()
-
+        serv.manager.init_host.assert_called_once_with()
+        mock_get_by_host_and_binary.assert_called_once_with(mock.ANY,
+                                                            self.host,
+                                                            self.binary)
+        mock_create.assert_called_once_with()
+        serv.manager.pre_start_hook.assert_called_once_with()
+        serv.manager.post_start_hook.assert_called_once_with()
         serv.stop()
+        mock_stop.assert_called_once_with()
 
     @mock.patch('nova.servicegroup.API')
     @mock.patch('nova.objects.service.Service.get_by_host_and_binary')
@@ -297,7 +263,8 @@ class TestWSGIService(test.NoDBTestCase):
 
     def setUp(self):
         super(TestWSGIService, self).setUp()
-        self.stubs.Set(wsgi.Loader, "load_app", mox.MockAnything())
+        self.stub_out('nova.wsgi.Loader.load_app',
+                      lambda *a, **kw: mock.MagicMock())
 
     @mock.patch('nova.objects.Service.get_by_host_and_binary')
     @mock.patch('nova.objects.Service.create')
