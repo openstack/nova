@@ -225,11 +225,11 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
 
     def unplug(self, instance, vif, vm_ref):
         """unplug vif:
-        1. unplug and destroy vif.
-        2. delete the patch port pair between the integration bridge and
-           the interim network.
-        3. destroy the interim network
-        4. delete the OVS bridge service for the interim network
+        1. delete the patch port pair between the integration bridge and
+           the qbr linux bridge(if exist) and the interim network.
+        2. destroy the interim network
+        3. delete the OVS bridge service for the interim network
+        4. delete linux bridge qbr and related ports if exist
         """
         super(XenAPIOpenVswitchDriver, self).unplug(instance, vif, vm_ref)
 
@@ -248,12 +248,10 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         LOG.debug('destroying patch port pair for vif: vif_id=%(vif_id)s',
                   {'vif_id': vif['id']})
         bridge_name = self._session.network.get_bridge(network)
-        patch_port1, patch_port2 = self._get_patch_port_pair_names(vif['id'])
+        patch_port1, tap_name = self._get_patch_port_pair_names(vif['id'])
         try:
             # delete the patch port pair
             self._ovs_del_port(bridge_name, patch_port1)
-            self._ovs_del_port(CONF.xenserver.ovs_integration_bridge,
-                               patch_port2)
         except Exception as e:
             LOG.warn(_LW("Failed to delete patch port pair for vif %(if)s,"
                          " exception:%(exception)s"),
@@ -272,12 +270,106 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
             # won't be destroyed automatically by XAPI. So let's destroy it
             # at here.
             self._ovs_del_br(bridge_name)
+
+            qbr_name = self._get_qbr_name(vif['id'])
+            qvb_name, qvo_name = self._get_veth_pair_names(vif['id'])
+            if self._device_exists(qbr_name):
+                # delete tap port, qvb port and qbr
+                LOG.debug(
+                    "destroy linux bridge %(qbr)s when unplug vif %(vif)s",
+                    {'qbr': qbr_name, 'vif': vif['id']})
+                self._delete_linux_port(qbr_name, tap_name)
+                self._delete_linux_port(qbr_name, qvb_name)
+                self._delete_linux_bridge(qbr_name)
+            self._ovs_del_port(CONF.xenserver.ovs_integration_bridge, qvo_name)
         except Exception as e:
             LOG.warn(_LW("Failed to delete bridge for vif %(if)s, "
                          "exception:%(exception)s"),
                      {'if': vif, 'exception': e}, instance=instance)
             raise exception.VirtualInterfaceUnplugException(
                 reason=_("Failed to delete bridge"))
+
+    def _get_qbr_name(self, iface_id):
+        return ("qbr" + iface_id)[:network_model.NIC_NAME_LEN]
+
+    def _get_veth_pair_names(self, iface_id):
+        return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
+
+    def _device_exists(self, device):
+        """Check if ethernet device exists."""
+        try:
+            cmd = 'ip_link_get_dev'
+            args = {'device_name': device}
+            self._exec_dom0_cmd(cmd, args)
+            return True
+        except Exception:
+            # Swallow exception from plugin, since this indicates the device
+            # doesn't exist
+            return False
+
+    def _delete_net_dev(self, dev):
+        """Delete a network device only if it exists."""
+        if self._device_exists(dev):
+            LOG.debug("delete network device '%s'", dev)
+            args = {'device_name': dev}
+            self._exec_dom0_cmd('ip_link_del_dev', args)
+
+    def _create_veth_pair(self, dev1_name, dev2_name):
+        """Create a pair of veth devices with the specified names,
+        deleting any previous devices with those names.
+        """
+        LOG.debug("Create veth pair, port1:%(qvb)s, port2:%(qvo)s",
+                  {'qvb': dev1_name, 'qvo': dev2_name})
+        for dev in [dev1_name, dev2_name]:
+            self._delete_net_dev(dev)
+        args = {'dev1_name': dev1_name, 'dev2_name': dev2_name}
+        self._exec_dom0_cmd('ip_link_add_veth_pair', args)
+        for dev in [dev1_name, dev2_name]:
+            args = {'device_name': dev, 'option': 'up'}
+            self._exec_dom0_cmd('ip_link_set_dev', args)
+            args = {'device_name': dev, 'option': 'on'}
+            self._exec_dom0_cmd('ip_link_set_promisc', args)
+
+    def _create_linux_bridge(self, vif_rec):
+        """create a qbr linux bridge for neutron security group
+        """
+        iface_id = vif_rec['other_config']['nicira-iface-id']
+        linux_br_name = self._get_qbr_name(iface_id)
+        if not self._device_exists(linux_br_name):
+            LOG.debug("Create linux bridge %s", linux_br_name)
+            self._brctl_add_br(linux_br_name)
+            self._brctl_set_fd(linux_br_name, '0')
+            self._brctl_set_stp(linux_br_name, 'off')
+            args = {'device_name': linux_br_name, 'option': 'up'}
+            self._exec_dom0_cmd('ip_link_set_dev', args)
+
+        qvb_name, qvo_name = self._get_veth_pair_names(iface_id)
+        if not self._device_exists(qvo_name):
+            self._create_veth_pair(qvb_name, qvo_name)
+            self._brctl_add_if(linux_br_name, qvb_name)
+            self._ovs_add_port(CONF.xenserver.ovs_integration_bridge, qvo_name)
+            self._ovs_map_external_ids(qvo_name, vif_rec)
+        return linux_br_name
+
+    def _delete_linux_port(self, qbr_name, port_name):
+        try:
+            # delete port in linux bridge
+            self._brctl_del_if(qbr_name, port_name)
+            self._delete_net_dev(port_name)
+        except Exception:
+            LOG.debug("Fail to delete linux port %(port_name)s on bridge"
+                      "%(qbr_name)s",
+                      {'port_name': port_name, 'qbr_name': qbr_name})
+
+    def _delete_linux_bridge(self, qbr_name):
+        try:
+            # delete linux bridge qbrxxx
+            args = {'device_name': qbr_name, 'option': 'down'}
+            self._exec_dom0_cmd('ip_link_set_dev', args)
+            self._brctl_del_br(qbr_name)
+        except Exception:
+            LOG.debug("Fail to delete linux bridge %s", qbr_name)
 
     def post_start_actions(self, instance, vif_ref):
         """Do needed actions post vif start:
@@ -290,19 +382,25 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         bridge_name = self._session.network.get_bridge(network_ref)
         network_uuid = self._session.network.get_uuid(network_ref)
         iface_id = vif_rec['other_config']['nicira-iface-id']
-        patch_port1, patch_port2 = self._get_patch_port_pair_names(iface_id)
+        patch_port1, tap_name = self._get_patch_port_pair_names(iface_id)
         LOG.debug('plug_ovs_bridge: port1=%(port1)s, port2=%(port2)s,'
                   'network_uuid=%(uuid)s, bridge_name=%(bridge_name)s',
-                  {'port1': patch_port1, 'port2': patch_port2,
+                  {'port1': patch_port1, 'port2': tap_name,
                    'uuid': network_uuid, 'bridge_name': bridge_name})
         if bridge_name is None:
             raise exception.VirtualInterfacePlugException(
                       _("Failed to find bridge for vif"))
 
-        self._ovs_add_patch_port(bridge_name, patch_port1, patch_port2)
-        self._ovs_add_patch_port(CONF.xenserver.ovs_integration_bridge,
-                                 patch_port2, patch_port1)
-        self._ovs_map_external_ids(patch_port2, vif_rec)
+        # Create Linux bridge qbrXXX
+        linux_br_name = self._create_linux_bridge(vif_rec)
+        LOG.debug("create veth pair for interim bridge %(interim_bridge)s and "
+                  "linux bridge %(linux_bridge)s",
+                  {'interim_bridge': bridge_name,
+                   'linux_bridge': linux_br_name})
+        self._create_veth_pair(tap_name, patch_port1)
+        self._brctl_add_if(linux_br_name, tap_name)
+        # Add port to interim bridge
+        self._ovs_add_port(bridge_name, patch_port1)
 
     def get_vif_interim_net_name(self, vif):
         return ("net-" + vif['id'])[:network_model.NIC_NAME_LEN]
@@ -330,14 +428,13 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         return network_ref
 
     def _get_patch_port_pair_names(self, iface_id):
-        return (("pp1-%s" % iface_id)[:network_model.NIC_NAME_LEN],
-                ("pp2-%s" % iface_id)[:network_model.NIC_NAME_LEN])
+        return (("vif%s" % iface_id)[:network_model.NIC_NAME_LEN],
+                ("tap%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
-    def _ovs_add_patch_port(self, bridge_name, port_name, peer_port_name):
-        cmd = 'ovs_add_patch_port'
+    def _ovs_add_port(self, bridge_name, port_name):
+        cmd = 'ovs_add_port'
         args = {'bridge_name': bridge_name,
-                'port_name': port_name,
-                'peer_port_name': peer_port_name
+                'port_name': port_name
                }
         self._exec_dom0_cmd(cmd, args)
 
@@ -372,6 +469,40 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         self._ovs_set_if_external_id(interface, 'iface-id', iface_id)
         self._ovs_set_if_external_id(interface, 'xs-vif-uuid', vif_uuid)
         self._ovs_set_if_external_id(interface, 'iface-status', status)
+
+    def _brctl_add_if(self, bridge_name, interface_name):
+        cmd = 'brctl_add_if'
+        args = {'bridge_name': bridge_name,
+                'interface_name': interface_name}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _brctl_del_if(self, bridge_name, interface_name):
+        cmd = 'brctl_del_if'
+        args = {'bridge_name': bridge_name,
+                'interface_name': interface_name}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _brctl_del_br(self, bridge_name):
+        cmd = 'brctl_del_br'
+        args = {'bridge_name': bridge_name}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _brctl_add_br(self, bridge_name):
+        cmd = 'brctl_add_br'
+        args = {'bridge_name': bridge_name}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _brctl_set_fd(self, bridge_name, fd):
+        cmd = 'brctl_set_fd'
+        args = {'bridge_name': bridge_name,
+                'fd': fd}
+        self._exec_dom0_cmd(cmd, args)
+
+    def _brctl_set_stp(self, bridge_name, stp_opt):
+        cmd = 'brctl_set_stp'
+        args = {'bridge_name': bridge_name,
+                'option': stp_opt}
+        self._exec_dom0_cmd(cmd, args)
 
     def _exec_dom0_cmd(self, cmd, cmd_args):
         args = {'cmd': cmd,

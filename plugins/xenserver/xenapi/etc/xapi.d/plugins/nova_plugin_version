@@ -31,7 +31,8 @@ import utils
 # 1.3 - Add vhd2 functions for doing glance operations by url
 # 1.4 - Add support of Glance v2 api
 # 1.5 - Added function for network configuration on ovs bridge
-PLUGIN_VERSION = "1.5"
+# 1.6 - Add function for network configuration on Linux bridge
+PLUGIN_VERSION = "1.6"
 
 
 def get_version(session):
