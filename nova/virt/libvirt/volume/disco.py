@@ -16,13 +16,10 @@
 """Libvirt volume driver for DISCO."""
 
 from os_brick.initiator import connector
-from oslo_log import log as logging
 
 import nova.conf
 from nova import utils
 from nova.virt.libvirt.volume import volume as libvirt_volume
-
-LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
