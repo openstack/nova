@@ -6047,23 +6047,6 @@ class LibvirtDriver(driver.ComputeDriver):
         migration = migrate_data.migration
         curdowntime = None
 
-        def _recover_scheduled_migration_task():
-            while on_migration_failure:
-                task = on_migration_failure.popleft()
-                # NOTE(tdurakov): there is still possibility to leave
-                # instance paused in case of live-migration failure.
-                # This check guarantee that instance will be resumed
-                # in this case
-                if task == 'unpause':
-                    try:
-                        state = guest.get_power_state(self._host)
-                        if state == power_state.PAUSED:
-                            guest.resume()
-                    except Exception as e:
-                        LOG.warning(_LW("Failed to resume paused instance "
-                                        "before live-migration rollback %s"),
-                                    e, instance=instance)
-
         n = 0
         start = time.time()
         progress_time = start
@@ -6178,7 +6161,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Migration did not succeed
                 LOG.error(_LE("Migration operation has aborted"),
                           instance=instance)
-                _recover_scheduled_migration_task()
+                libvirt_migrate.run_recover_tasks(self._host, guest, instance,
+                                                  on_migration_failure)
                 recover_method(context, instance, dest, block_migration,
                                migrate_data)
                 break
@@ -6186,7 +6170,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # Migration was stopped by admin
                 LOG.warning(_LW("Migration operation was cancelled"),
                          instance=instance)
-                _recover_scheduled_migration_task()
+                libvirt_migrate.run_recover_tasks(self._host, guest, instance,
+                                                  on_migration_failure)
                 recover_method(context, instance, dest, block_migration,
                                migrate_data, migration_status='cancelled')
                 break
