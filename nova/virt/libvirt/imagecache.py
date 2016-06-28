@@ -209,8 +209,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
     def _find_base_file(self, base_dir, fingerprint):
         """Find the base file matching this fingerprint.
 
-        Yields the name of the base file, a boolean which is True if the image
-        is "small", and a boolean which indicates if this is a resized image.
+        Yields the name of a base file which exists.
         Note that it is possible for more than one yield to result from this
         check.
 
@@ -219,19 +218,19 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         # The original file from glance
         base_file = os.path.join(base_dir, fingerprint)
         if os.path.exists(base_file):
-            yield base_file, False, False
+            yield base_file
 
         # An older naming style which can be removed sometime after Folsom
         base_file = os.path.join(base_dir, fingerprint + '_sm')
         if os.path.exists(base_file):
-            yield base_file, True, False
+            yield base_file
 
-        # Resized images
+        # Resized images (also legacy)
         resize_re = re.compile('.*/%s_[0-9]+$' % fingerprint)
         for img in self.unexplained_images:
             m = resize_re.match(img)
             if m:
-                yield img, False, True
+                yield img
 
     @staticmethod
     def _get_age_of_file(base_file):
@@ -358,12 +357,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             LOG.debug('Image id %(id)s yields fingerprint %(fingerprint)s',
                       {'id': img,
                        'fingerprint': fingerprint})
-            for result in self._find_base_file(base_dir, fingerprint):
-                base_file, image_small, image_resized = result
+            for base_file in self._find_base_file(base_dir, fingerprint):
                 self._mark_in_use(img, base_file)
-
-                if not image_small and not image_resized:
-                    self.originals.append(base_file)
 
         # Elements remaining in unexplained_images might be in use
         inuse_backing_images = self._list_backing_images()

@@ -258,7 +258,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
 
         base_file = os.path.join(base_dir, fingerprint + '_sm')
-        self.assertEqual(res, [(base_file, True, False)])
+        self.assertEqual([base_file], res)
 
     def test_find_base_file_resized(self):
         fingerprint = '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a'
@@ -278,7 +278,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         res = list(image_cache_manager._find_base_file(base_dir, fingerprint))
 
         base_file = os.path.join(base_dir, fingerprint + '_10737418240')
-        self.assertEqual(res, [(base_file, False, True)])
+        self.assertEqual([base_file], res)
 
     def test_find_base_file_all(self):
         fingerprint = '968dd6cc49e01aaa044ed11c0cce733e0fa44a6a'
@@ -300,9 +300,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         base_file1 = os.path.join(base_dir, fingerprint)
         base_file2 = os.path.join(base_dir, fingerprint + '_sm')
         base_file3 = os.path.join(base_dir, fingerprint + '_10737418240')
-        self.assertEqual(res, [(base_file1, False, False),
-                               (base_file2, True, False),
-                               (base_file3, False, True)])
+        self.assertEqual([base_file1, base_file2, base_file3], res)
 
     @contextlib.contextmanager
     def _make_base_file(self, lock=True, info=False):
