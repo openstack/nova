@@ -343,6 +343,20 @@ xenapi_opts = [
                default='sd',
                help='Specify prefix to remap VBD dev to '
                     '(ex. /dev/xvdb -> /dev/sdb)'),
+    cfg.BoolOpt('independent_compute',
+                default=False,
+                help="""
+                Used to prevent attempts to attach VBDs locally, so Nova can
+                be run in a VM on a different host.
+
+                This setting is incompatible with:
+                * ``CONF.flat_injected`` (Must be False)
+                * ``CONF.xenserver.check_host`` (Must be False)
+                * ``CONF.default_ephemeral_format`` (Must be unset or 'ext3')
+                * Joining host aggregates (will error if attempted)
+                * Swap disks for Windows VMs (will error if attempted)
+                * Nova-based auto_configure_disk (will error if attempted)
+                """),
 ]
 
 xenapi_vmops_opts = [
