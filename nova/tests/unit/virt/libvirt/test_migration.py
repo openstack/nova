@@ -265,7 +265,7 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
     def test_live_migration_find_type_bad_err(self, mock_active):
         mock_active.side_effect = fakelibvirt.make_libvirtError(
             fakelibvirt.libvirtError,
-            "Something wierd happened",
+            "Something weird happened",
             error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
 
         self.assertEqual(migration.find_job_type(self.guest, self.instance),

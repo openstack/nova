@@ -888,8 +888,8 @@ class _BaseTaskTestCase(object):
             reset_forced_destinations.assert_called_once_with()
             sched_instances.assert_called_once_with(self.context, request_spec,
                                                     filter_properties)
-            # NOTE(sbauza): Since the instance is dehydrated when passing thru
-            # the RPC API, we can only assert mock.ANY for it
+            # NOTE(sbauza): Since the instance is dehydrated when passing
+            # through the RPC API, we can only assert mock.ANY for it
             unshelve_instance.assert_called_once_with(
                 self.context, mock.ANY, host['host'], image=mock.ANY,
                 filter_properties=filter_properties, node=host['nodename']
