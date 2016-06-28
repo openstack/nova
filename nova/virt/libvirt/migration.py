@@ -197,3 +197,59 @@ def should_abort(instance, now,
         return True
 
     return False
+
+
+def update_downtime(guest, instance,
+                    olddowntime,
+                    downtime_steps, elapsed):
+    """Update max downtime if needed
+
+    :param guest: a nova.virt.libvirt.guest.Guest to set downtime for
+    :param instance: a nova.objects.Instance
+    :param olddowntime: current set downtime, or None
+    :param downtime_steps: list of downtime steps
+    :param elapsed: total time of migration in secs
+
+    Determine if the maximum downtime needs to be increased
+    based on the downtime steps. Each element in the downtime
+    steps list should be a 2 element tuple. The first element
+    contains a time marker and the second element contains
+    the downtime value to set when the marker is hit.
+
+    The guest object will be used to change the current
+    downtime value on the instance.
+
+    Any errors hit when updating downtime will be ignored
+
+    :returns: the new downtime value
+    """
+    LOG.debug("Current %(dt)s elapsed %(elapsed)d steps %(steps)s",
+              {"dt": olddowntime, "elapsed": elapsed,
+               "steps": downtime_steps}, instance=instance)
+    thisstep = None
+    for step in downtime_steps:
+        if elapsed > step[0]:
+            thisstep = step
+
+    if thisstep is None:
+        LOG.debug("No current step", instance=instance)
+        return olddowntime
+
+    if thisstep[1] == olddowntime:
+        LOG.debug("Downtime does not need to change",
+                  instance=instance)
+        return olddowntime
+
+    LOG.info(_LI("Increasing downtime to %(downtime)d ms "
+                 "after %(waittime)d sec elapsed time"),
+             {"downtime": thisstep[1],
+              "waittime": thisstep[0]},
+             instance=instance)
+
+    try:
+        guest.migrate_configure_max_downtime(thisstep[1])
+    except libvirt.libvirtError as e:
+        LOG.warning(_LW("Unable to increase max downtime to %(time)d"
+                        "ms: %(e)s"),
+                    {"time": thisstep[1], "e": e}, instance=instance)
+    return thisstep[1]
