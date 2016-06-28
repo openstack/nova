@@ -322,6 +322,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
     def _handle_base_image(self, img_id, base_file):
         """Handle the checks for a single base image."""
 
+        # NOTE(mdbooth): image_in_use is always True (see conditionals below
+        # which are always True)
         image_in_use = False
 
         LOG.info(_LI('image %(id)s at (%(base_file)s): checking'),
@@ -331,9 +333,17 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         if base_file in self.unexplained_images:
             self.unexplained_images.remove(base_file)
 
+        # NOTE(mdbooth): This is always True, because we're currently in a
+        # loop in _age_and_verify_cached_images over images in used_images,
+        # one of which was passed to this function.
         if img_id in self.used_images:
             local, remote, instances = self.used_images[img_id]
 
+            # NOTE(mdbooth): This conditional is always True
+            # (see ImageCacheManager._list_running_instances)
+            # NOTE(mdbooth): Consequently, local and remote are never used,
+            # and instances is only used for a log message which is never
+            # generated.
             if local > 0 or remote > 0:
                 image_in_use = True
                 LOG.info(_LI('image %(id)s at (%(base_file)s): '
@@ -347,6 +357,10 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
                 self.active_base_files.append(base_file)
 
+                # NOTE(mdbooth): This is never True, as _find_base_file does
+                # not return empty base_files. An exists check doesn't work
+                # here, either, because if it didn't exist it wouldn't have
+                # been returned by _find_base_file.
                 if not base_file:
                     LOG.warning(_LW('image %(id)s at (%(base_file)s): warning '
                                  '-- an absent base file is in use! '
@@ -355,7 +369,11 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                                  'base_file': base_file,
                                  'instance_list': ' '.join(instances)})
 
+        # NOTE(mdbooth): This is always True (see above), and this file
+        # always exists.
         if base_file:
+            # NOTE(mdbooth): This is never True, because the image is always
+            # in use (see above).
             if not image_in_use:
                 LOG.debug('image %(id)s at (%(base_file)s): image is not in '
                           'use',
@@ -368,6 +386,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                           'use',
                           {'id': img_id,
                            'base_file': base_file})
+                # NOTE(mdbooth): This file is already guaranteed to exist.
                 if os.path.exists(base_file):
                     libvirt_utils.update_mtime(base_file)
 
