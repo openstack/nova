@@ -253,3 +253,6 @@ xend: CommandFilter, xend, root
 
 # nova/virt/libvirt/utils.py:
 touch: CommandFilter, touch, root
+
+# nova/virt/libvirt/volume/vzstorage.py
+pstorage-mount: CommandFilter, pstorage-mount, root

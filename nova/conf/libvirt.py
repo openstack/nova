@@ -438,6 +438,143 @@ libvirt_remotefs_opts = [
                     'removing files on the remote host.'),
 ]
 
+libvirt_volume_vzstorage_opts = [
+    cfg.StrOpt('vzstorage_mount_point_base',
+               default=paths.state_path_def('mnt'),
+               help="""
+Directory where the Virtuozzo Storage clusters are mounted on the compute node.
+
+This option defines non-standard mountpoint for Vzstorage cluster.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    vzstorage_mount_* group of parameters
+"""
+              ),
+    cfg.StrOpt('vzstorage_mount_user',
+               default='stack',
+               help="""
+Mount owner user name.
+
+This option defines the owner user of Vzstorage cluster mountpoint.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    vzstorage_mount_* group of parameters
+"""
+              ),
+    cfg.StrOpt('vzstorage_mount_group',
+               default='qemu',
+               help="""
+Mount owner group name.
+
+This option defines the owner group of Vzstorage cluster mountpoint.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    vzstorage_mount_* group of parameters
+"""
+              ),
+    cfg.StrOpt('vzstorage_mount_perms',
+               default='0770',
+               help="""
+Mount access mode.
+
+This option defines the access bits of Vzstorage cluster mountpoint,
+in the format similar to one of chmod(1) utility, like this: 0770.
+It consists of one to four digits ranging from 0 to 7, with missing
+lead digits assumed to be 0's.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    vzstorage_mount_* group of parameters
+"""
+              ),
+    cfg.StrOpt('vzstorage_log_path',
+               default='/var/log/pstorage/%(cluster_name)s/nova.log.gz',
+               help="""
+Path to vzstorage client log.
+
+This option defines the log of cluster operations,
+it should include "%(cluster_name)s" template to separate
+logs from multiple shares.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    vzstorage_mount_opts may include more detailed logging options.
+"""
+              ),
+    cfg.StrOpt('vzstorage_cache_path',
+               default=None,
+               help="""
+Path to the SSD cache file.
+
+You can attach an SSD drive to a client and configure the drive to store
+a local cache of frequently accessed data. By having a local cache on a
+client's SSD drive, you can increase the overall cluster performance by
+up to 10 and more times.
+WARNING! There is a lot of SSD models which are not server grade and
+may loose arbitrary set of data changes on power loss.
+Such SSDs should not be used in Vstorage and are dangerous as may lead
+to data corruptions and inconsistencies. Please consult with the manual
+on which SSD models are known to be safe or verify it using
+vstorage-hwflush-check(1) utility.
+
+This option defines the path which should include "%(cluster_name)s"
+template to separate caches from multiple shares.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    vzstorage_mount_opts may include more detailed cache options.
+"""
+              ),
+    cfg.ListOpt('vzstorage_mount_opts',
+                default=[],
+               help="""
+Extra mount options for pstorage-mount
+
+For full description of them, see
+https://static.openvz.org/vz-man/man1/pstorage-mount.1.gz.html
+Format is a python string representation of arguments list, like:
+"[\'-v\', \'-R\', \'500\']"
+Shouldn\'t include -c, -l, -C, -u, -g and -m as those have
+explicit vzstorage_* options.
+
+* Services that use this:
+
+    ``nova-compute``
+
+* Related options:
+
+    All other vzstorage_* options
+"""
+              ),
+]
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -455,7 +592,8 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_quobyte_opts,
     libvirt_volume_scality_opts,
     libvirt_volume_smbfs_opts,
-    libvirt_remotefs_opts
+    libvirt_remotefs_opts,
+    libvirt_volume_vzstorage_opts,
 ))
 
 
