@@ -125,9 +125,9 @@ class _FakeDriverBackendTestCase(object):
         def fake_make_drive(_self, _path):
             pass
 
-        def fake_get_instance_disk_info(_self, instance, xml=None,
-                                        block_device_info=None):
-            return '[]'
+        def fake_get_instance_disk_info_from_xml(_self, instance, xml,
+                                                 block_device_info):
+            return []
 
         def fake_delete_instance_files(_self, _instance):
             pass
@@ -151,8 +151,8 @@ class _FakeDriverBackendTestCase(object):
         import nova.virt.libvirt.driver
 
         self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
-                       '_get_instance_disk_info',
-                       fake_get_instance_disk_info)
+                       '_get_instance_disk_info_from_xml',
+                       fake_get_instance_disk_info_from_xml)
 
         self.stubs.Set(nova.virt.libvirt.driver.disk_api,
                        'extend', fake_extend)

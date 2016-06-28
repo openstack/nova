@@ -7272,10 +7272,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.context, instance, dest_check_data)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
-                'get_instance_disk_info')
+                '_get_instance_disk_info')
     def test_check_can_live_migrate_source_with_dest_not_enough_disk(
             self, mock_get_bdi):
-        mock_get_bdi.return_value = '[{"virt_disk_size":2}]'
+        mock_get_bdi.return_value = [{"virt_disk_size": 2}]
 
         instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
                 block_migration=True,
@@ -7285,7 +7285,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.MigrationError,
                           drvr.check_can_live_migrate_source,
                           self.context, instance, dest_check_data)
-        mock_get_bdi.assert_called_once_with(instance, block_device_info=None)
+        mock_get_bdi.assert_called_once_with(instance, None)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=False)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
@@ -7455,7 +7455,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_get_instance_disk_info = mock.Mock()
         data = objects.LibvirtLiveMigrateData(image_type='rbd')
-        with mock.patch.object(drvr, 'get_instance_disk_info',
+        with mock.patch.object(drvr, '_get_instance_disk_info',
                                mock_get_instance_disk_info):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertTrue(drvr._is_shared_block_storage(instance, data,
@@ -7472,7 +7472,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         data = objects.LibvirtLiveMigrateData(image_type='lvm',
                                               is_volume_backed=False,
                                               is_shared_instance_path=False)
-        with mock.patch.object(drvr, 'get_instance_disk_info',
+        with mock.patch.object(drvr, '_get_instance_disk_info',
                                mock_get_instance_disk_info):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertFalse(drvr._is_shared_block_storage(
@@ -7489,7 +7489,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         data = objects.LibvirtLiveMigrateData(image_type='qcow2',
                                               is_volume_backed=False,
                                               is_shared_instance_path=False)
-        with mock.patch.object(drvr, 'get_instance_disk_info',
+        with mock.patch.object(drvr, '_get_instance_disk_info',
                                mock_get_instance_disk_info):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertFalse(drvr._is_shared_block_storage(
@@ -7505,7 +7505,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         data = objects.LibvirtLiveMigrateData(is_shared_instance_path=False,
                                               is_volume_backed=False)
-        with mock.patch.object(drvr, 'get_instance_disk_info',
+        with mock.patch.object(drvr, '_get_instance_disk_info',
                                mock_get_instance_disk_info):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertFalse(drvr._is_shared_block_storage(
@@ -7521,7 +7521,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         data = objects.LibvirtLiveMigrateData(image_type='rbd',
                                               is_volume_backed=False,
                                               is_shared_instance_path=False)
-        with mock.patch.object(drvr, 'get_instance_disk_info',
+        with mock.patch.object(drvr, '_get_instance_disk_info',
                                mock_get_instance_disk_info):
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertFalse(drvr._is_shared_block_storage(
@@ -7588,7 +7588,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=True,
             image_type='foo')
-        with mock.patch.object(drvr, 'get_instance_disk_info',
+        with mock.patch.object(drvr, '_get_instance_disk_info',
                                mock_get_instance_disk_info):
             self.assertTrue(drvr._is_shared_block_storage(
                 'instance', data, block_device_info=bdi))
@@ -11510,7 +11510,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.'
+                '_get_instance_disk_info_from_xml')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
     def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
                          mock_get_guest_xml, mock_create_domain_and_network,
@@ -11587,7 +11588,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._prepare_pci_devices_for_use')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_instance_disk_info')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.'
+                '_get_instance_disk_info_from_xml')
     @mock.patch('nova.virt.libvirt.utils.write_to_file')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_config')
@@ -11637,7 +11639,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         @mock.patch.object(dmcrypt, 'delete_volume')
-        @mock.patch.object(conn, '_get_instance_disk_info', return_value=[])
+        @mock.patch.object(conn, '_get_instance_disk_info_from_xml',
+                           return_value=[])
         @mock.patch.object(conn, '_detach_direct_passthrough_ports')
         @mock.patch.object(conn, '_detach_pci_devices')
         @mock.patch.object(pci_manager, 'get_instance_pci_devs',
@@ -12290,7 +12293,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'disk_size': '10737418240',
                         'over_committed_disk_size': '0'}]}
 
-        def get_info(instance_name, xml, **kwargs):
+        def get_info(instance_name, xml, block_device_info):
             return fake_disks.get(instance_name)
 
         instance_uuids = [dom.UUIDString() for dom in instance_domains]
@@ -12303,8 +12306,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ]
         mock_get.return_value = instances
 
-        with mock.patch.object(drvr,
-                               "_get_instance_disk_info") as mock_info:
+        with mock.patch.object(
+                drvr, "_get_instance_disk_info_from_xml") as mock_info:
             mock_info.side_effect = get_info
 
             result = drvr._get_disk_over_committed_size_total()
@@ -12393,7 +12396,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 return fake_disks.get(name)
         get_disk_info = mock.Mock()
         get_disk_info.side_effect = side_effect
-        drvr._get_instance_disk_info = get_disk_info
+        drvr._get_instance_disk_info_from_xml = get_disk_info
 
         instance_uuids = [dom.UUIDString() for dom in instance_domains]
         instances = [objects.Instance(
@@ -12428,7 +12431,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host.Host, "list_instance_domains",
                        return_value=[mock.MagicMock(name='foo')])
-    @mock.patch.object(libvirt_driver.LibvirtDriver, "_get_instance_disk_info",
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_get_instance_disk_info_from_xml",
                        side_effect=exception.VolumeBDMPathNotFound(path='bar'))
     @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
     @mock.patch.object(objects.InstanceList, "get_by_filters")
@@ -15471,9 +15475,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.counter = 0
         self.checked_shared_storage = False
 
-        def fake_get_instance_disk_info(instance,
-                                        block_device_info=None):
-            return '[]'
+        def fake_get_instance_disk_info(instance, block_device_info):
+            return []
 
         def fake_destroy(instance):
             pass
@@ -15493,7 +15496,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.checked_shared_storage = True
             return False
 
-        self.stubs.Set(self.drvr, 'get_instance_disk_info',
+        self.stubs.Set(self.drvr, '_get_instance_disk_info',
                        fake_get_instance_disk_info)
         self.stubs.Set(self.drvr, '_destroy', fake_destroy)
         self.stubs.Set(self.drvr, 'get_host_ip_addr',
@@ -15520,10 +15523,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         """
 
         instance = self._create_instance(params=params_for_instance)
-        disk_info = fake_disk_info_json(instance)
+        disk_info = list(fake_disk_info_byname(instance).values())
+        disk_info_text = jsonutils.dumps(disk_info)
 
-        def fake_get_instance_disk_info(instance,
-                                        block_device_info=None):
+        def fake_get_instance_disk_info(instance, block_device_info):
             return disk_info
 
         def fake_destroy(instance):
@@ -15541,7 +15544,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertIsNotNone(on_execute)
             self.assertIsNotNone(on_completion)
 
-        self.stubs.Set(self.drvr, 'get_instance_disk_info',
+        self.stubs.Set(self.drvr, '_get_instance_disk_info',
                        fake_get_instance_disk_info)
         self.stubs.Set(self.drvr, '_destroy', fake_destroy)
         self.stubs.Set(self.drvr, 'get_host_ip_addr',
@@ -15553,13 +15556,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         out = self.drvr.migrate_disk_and_power_off(
                context.get_admin_context(), instance, '10.0.0.2',
                flavor_obj, None, block_device_info=block_device_info)
-        self.assertEqual(out, disk_info)
+        self.assertEqual(out, disk_info_text)
 
         # dest is same host case
         out = self.drvr.migrate_disk_and_power_off(
                context.get_admin_context(), instance, '10.0.0.1',
                flavor_obj, None, block_device_info=block_device_info)
-        self.assertEqual(out, disk_info)
+        self.assertEqual(out, disk_info_text)
 
     def test_migrate_disk_and_power_off(self):
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
@@ -15622,7 +15625,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_swap(self, mock_get_disk_info,
                                              get_host_ip_addr,
                                              mock_destroy,
@@ -15637,7 +15640,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance = self._create_instance({'flavor': {'root_gb': 10,
                                                      'ephemeral_gb': 0}})
 
-        disk_info = fake_disk_info_json(instance)
+        disk_info = list(fake_disk_info_byname(instance).values())
         mock_get_disk_info.return_value = disk_info
         get_host_ip_addr.return_value = '10.0.0.1'
 
@@ -15665,19 +15668,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                               instance, '10.0.0.1',
                                               flavor_obj, None)
 
-        mock_get_disk_info.assert_called_once_with(instance,
-                                                   block_device_info=None)
+        mock_get_disk_info.assert_called_once_with(instance, None)
         self.assertTrue(get_host_ip_addr.called)
         mock_destroy.assert_called_once_with(instance)
         self.assertFalse(self.copy_or_move_swap_called)
-        self.assertEqual(disk_info, out)
+        disk_info_text = jsonutils.dumps(disk_info)
+        self.assertEqual(disk_info_text, out)
 
     def _test_migrate_disk_and_power_off_resize_check(self, expected_exc):
         """Test for nova.virt.libvirt.libvirt_driver.LibvirtConnection
         .migrate_disk_and_power_off.
         """
         instance = self._create_instance()
-        disk_info = fake_disk_info_json(instance)
+        disk_info = list(fake_disk_info_byname(instance).values())
 
         def fake_get_instance_disk_info(instance, xml=None,
                                         block_device_info=None):
@@ -15689,7 +15692,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         def fake_get_host_ip_addr():
             return '10.0.0.1'
 
-        self.stubs.Set(self.drvr, 'get_instance_disk_info',
+        self.stubs.Set(self.drvr, '_get_instance_disk_info',
                        fake_get_instance_disk_info)
         self.stubs.Set(self.drvr, '_destroy', fake_destroy)
         self.stubs.Set(self.drvr, 'get_host_ip_addr',
@@ -15706,7 +15709,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._is_storage_shared_with')
     def _test_migrate_disk_and_power_off_backing_file(self,
@@ -15722,8 +15725,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                       'virt_disk_size': '10737418240',
                       'backing_file': '/base/disk',
                       'disk_size': '83886080'}]
-        disk_info_text = jsonutils.dumps(disk_info)
-        mock_get_disk_info.return_value = disk_info_text
+        mock_get_disk_info.return_value = disk_info
         mock_is_shared_storage.return_value = shared_storage
 
         def fake_execute(*args, **kwargs):
@@ -15739,6 +15741,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.assertTrue(mock_is_shared_storage.called)
         mock_destroy.assert_called_once_with(instance)
+        disk_info_text = jsonutils.dumps(disk_info)
         self.assertEqual(out, disk_info_text)
 
     def test_migrate_disk_and_power_off_shared_storage(self):
@@ -15774,7 +15777,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self._test_migrate_disk_and_power_off_resize_check(expected_exc)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_error(self, mock_get_disk_info):
         instance = self._create_instance()
         flavor = {'root_gb': 5, 'ephemeral_gb': 10}
@@ -15787,7 +15790,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             'ctx', instance, '10.0.0.1', flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_error_rbd(self,
                                                          mock_get_disk_info):
         # Check error on resize root disk down for rbd.
@@ -15807,7 +15810,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             'ctx', instance, '10.0.0.1', flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_error_default_ephemeral(
             self, mock_get_disk_info):
         # Note(Mike_D): The size of this instance's ephemeral_gb is 20 gb.
@@ -15821,7 +15824,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                           'ctx', instance, '10.0.0.1', flavor_obj, None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     @mock.patch('nova.virt.driver.block_device_info_get_ephemerals')
     def test_migrate_disk_and_power_off_resize_error_eph(self, mock_get,
                                                          mock_get_disk_info):
@@ -15890,7 +15893,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._is_storage_shared_with')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
-                '.get_instance_disk_info')
+                '._get_instance_disk_info')
     def test_migrate_disk_and_power_off_resize_copy_disk_info(self,
                                                               mock_disk_info,
                                                               mock_shared,
@@ -15900,9 +15903,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                               mock_execuate):
 
         instance = self._create_instance()
-        disk_info = fake_disk_info_json(instance)
-        disk_info_text = jsonutils.loads(disk_info)
-        instance_base = os.path.dirname(disk_info_text[0]['path'])
+        disk_info = list(fake_disk_info_byname(instance).values())
+        instance_base = os.path.dirname(disk_info[0]['path'])
         flavor = {'root_gb': 10, 'ephemeral_gb': 25}
         flavor_obj = objects.Flavor(**flavor)
 
@@ -16023,7 +16025,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         # Source disks are raw to test conversion
-        disk_info = fake_disk_info_json(instance, type='raw')
+        disk_info = list(fake_disk_info_byname(instance, type='raw').values())
+        disk_info_text = jsonutils.dumps(disk_info)
 
         backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
         mock_create_domain_and_network.return_value = \
@@ -16031,7 +16034,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         self.drvr.finish_migration(
                       context.get_admin_context(), migration, instance,
-                      disk_info, [], image_meta,
+                      disk_info_text, [], image_meta,
                       resize_instance, bdi, power_on)
 
         # Assert that we converted the root, ephemeral, and swap disks
