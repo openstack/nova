@@ -24,24 +24,23 @@ updated, and should also be updated at the end of a task if the task is
 supposed to affect power_state.
 """
 
+from nova.objects import fields
+
 # NOTE(maoy): These are *not* virDomainState values from libvirt.
 # The hex value happens to match virDomainState for backward-compatibility
 # reasons.
-NOSTATE = 0x00
-RUNNING = 0x01
-PAUSED = 0x03
-SHUTDOWN = 0x04  # the VM is powered off
-CRASHED = 0x06
-SUSPENDED = 0x07
+NOSTATE = fields.InstancePowerState.index(fields.InstancePowerState.NOSTATE)
+RUNNING = fields.InstancePowerState.index(fields.InstancePowerState.RUNNING)
+PAUSED = fields.InstancePowerState.index(fields.InstancePowerState.PAUSED)
+# the VM is powered off
+SHUTDOWN = fields.InstancePowerState.index(fields.InstancePowerState.SHUTDOWN)
+CRASHED = fields.InstancePowerState.index(fields.InstancePowerState.CRASHED)
+SUSPENDED = fields.InstancePowerState.index(
+    fields.InstancePowerState.SUSPENDED)
 
 # TODO(justinsb): Power state really needs to be a proper class,
 # so that we're not locked into the libvirt status codes and can put mapping
 # logic here rather than spread throughout the code
-STATE_MAP = {
-    NOSTATE: 'pending',
-    RUNNING: 'running',
-    PAUSED: 'paused',
-    SHUTDOWN: 'shutdown',
-    CRASHED: 'crashed',
-    SUSPENDED: 'suspended',
-}
+STATE_MAP = {fields.InstancePowerState.index(state): state
+             for state in fields.InstancePowerState.ALL
+             if state != fields.InstancePowerState._UNUSED}
