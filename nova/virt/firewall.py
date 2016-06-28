@@ -85,7 +85,7 @@ class FirewallDriver(object):
 
         Gets called when an instance gets added to or removed from
         the security group the instance is a member of or if the
-        group gains or looses a rule.
+        group gains or loses a rule.
         """
         raise NotImplementedError()
 
