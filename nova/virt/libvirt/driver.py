@@ -6047,19 +6047,6 @@ class LibvirtDriver(driver.ComputeDriver):
         migration = migrate_data.migration
         curdowntime = None
 
-        def _check_scheduled_migration_task():
-            tasks = self.active_migrations.get(instance.uuid, deque())
-            while tasks:
-                task = tasks.popleft()
-                if task == 'pause':
-                    try:
-                        self.pause(instance)
-                        on_migration_failure.append("unpause")
-                    except Exception as e:
-                        LOG.warning(_LW("Failed to pause instance during "
-                                        "live-migration %s"),
-                                    e, instance=instance)
-
         def _recover_scheduled_migration_task():
             while on_migration_failure:
                 task = on_migration_failure.popleft()
@@ -6105,7 +6092,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 # This is where we wire up calls to change live
                 # migration status. eg change max downtime, cancel
                 # the operation, change max bandwidth
-                _check_scheduled_migration_task()
+                libvirt_migrate.run_tasks(guest, instance,
+                                          self.active_migrations,
+                                          on_migration_failure)
+
                 now = time.time()
                 elapsed = now - start
 
