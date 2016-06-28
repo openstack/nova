@@ -257,7 +257,7 @@ def stub_out_vm_methods(stubs):
     def fake_generate_ephemeral(*args):
         pass
 
-    def fake_wait_for_device(dev):
+    def fake_wait_for_device(session, dev, dom0, max_seconds):
         pass
 
     stubs.Set(vmops.VMOps, "_acquire_bootlock", fake_acquire_bootlock)

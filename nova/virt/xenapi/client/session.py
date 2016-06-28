@@ -70,7 +70,7 @@ class XenAPISession(object):
     # changed in development environments.
     # MAJOR VERSION: Incompatible changes with the plugins
     # MINOR VERSION: Compatible changes, new plguins, etc
-    PLUGIN_REQUIRED_VERSION = '1.6'
+    PLUGIN_REQUIRED_VERSION = '1.7'
 
     def __init__(self, url, user, pw):
         version_string = version.version_string_with_package()
@@ -82,6 +82,7 @@ class XenAPISession(object):
         self.XenAPI = XenAPI
         self._sessions = queue.Queue()
         self.is_slave = False
+        self.host_checked = False
         exception = self.XenAPI.Failure(_("Unable to log in to XenAPI "
                                           "(is the Dom0 disk full?)"))
         url = self._create_first_session(url, user, pw, exception)

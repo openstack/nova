@@ -41,7 +41,6 @@ from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.virt.xenapi import stubs
-from nova.tests.unit.virt.xenapi import test_xenapi
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import hardware
@@ -168,8 +167,8 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
                             'configdrive',
                             64 * units.Mi).AndReturn('vdi_ref')
 
-        self.mox.StubOutWithMock(vm_utils, 'vdi_attached_here')
-        vm_utils.vdi_attached_here(
+        self.mox.StubOutWithMock(vm_utils, 'vdi_attached')
+        vm_utils.vdi_attached(
             'session', 'vdi_ref', read_only=False).AndReturn(
                 contextified('mounted_dev'))
 
@@ -205,7 +204,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
                                       'userdevice', "nw_info")
 
     @mock.patch.object(vm_utils, "destroy_vdi")
-    @mock.patch.object(vm_utils, "vdi_attached_here")
+    @mock.patch.object(vm_utils, "vdi_attached")
     @mock.patch.object(vm_utils, "create_vdi")
     @mock.patch.object(vm_utils, "safe_find_sr")
     def test_vdi_cleaned_up(self, mock_find, mock_create_vdi, mock_attached,
@@ -1065,119 +1064,140 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
 
 
 class GenerateDiskTestCase(VMUtilsTestBase):
-    def setUp(self):
-        super(GenerateDiskTestCase, self).setUp()
-        self.fixture = self.useFixture(config_fixture.Config(lockutils.CONF))
-        self.fixture.config(disable_process_locking=True,
-                            group='oslo_concurrency')
-        self.flags(instance_name_template='%d',
-                   firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
-                   connection_password='test_pass',
-                   group='xenserver')
-        stubs.stubout_session(self.stubs, fake.SessionBase)
-        driver = xenapi_conn.XenAPIDriver(False)
-        self.session = driver._session
-        self.session.is_local_connection = False
-        self.vm_ref = fake.create_vm("foo", "Running")
 
-    def tearDown(self):
-        super(GenerateDiskTestCase, self).tearDown()
-        fake.destroy_vm(self.vm_ref)
+    @mock.patch.object(vm_utils, 'vdi_attached')
+    @mock.patch.object(vm_utils.utils, 'mkfs',
+                       side_effect = test.TestingException())
+    @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
+    @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_generate_disk_with_no_fs_given(self, mock_create_vbd,
+                                            mock_create_vdi, mock_findsr,
+                                            mock_dom0ref, mock_mkfs,
+                                            mock_attached_here):
+        session = _get_fake_session()
+        vdi_ref = mock.MagicMock()
+        mock_attached_here.return_value = vdi_ref
 
-    def _expect_parted_calls(self):
-        self.mox.StubOutWithMock(utils, "execute")
-        self.mox.StubOutWithMock(utils, "trycmd")
-        self.mox.StubOutWithMock(vm_utils, "destroy_vdi")
-        self.mox.StubOutWithMock(vm_utils.os.path, "exists")
-        if self.session.is_local_connection:
-            utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
-                          'msdos', check_exit_code=False, run_as_root=True)
-            utils.execute('parted', '--script', '/dev/fakedev', '--', 'mkpart',
-                          'primary', '2048s', '-0',
-                          check_exit_code=False, run_as_root=True)
-            vm_utils.os.path.exists('/dev/mapper/fakedev1').AndReturn(True)
-            utils.trycmd('kpartx', '-a', '/dev/fakedev',
-                         discard_warnings=True, run_as_root=True)
-        else:
-            utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
-                          'msdos', check_exit_code=True, run_as_root=True)
-            utils.execute('parted', '--script', '/dev/fakedev', '--', 'mkpart',
-                          'primary', '2048s', '-0',
-                          check_exit_code=True, run_as_root=True)
+        instance = {'uuid': 'fake_uuid'}
+        vm_utils._generate_disk(session, instance, 'vm_ref', '2',
+                                'name', 'user', 10, None, None)
 
-    def _check_vdi(self, vdi_ref, check_attached=True):
-        vdi_rec = self.session.call_xenapi("VDI.get_record", vdi_ref)
-        self.assertEqual(str(10 * units.Mi), vdi_rec["virtual_size"])
-        if check_attached:
-            vbd_ref = vdi_rec["VBDs"][0]
-            vbd_rec = self.session.call_xenapi("VBD.get_record", vbd_ref)
-            self.assertEqual(self.vm_ref, vbd_rec['VM'])
-        else:
-            self.assertEqual(0, len(vdi_rec["VBDs"]))
+        mock_attached_here.assert_called_once_with(session, 'vdi_ref',
+                                                   read_only=False,
+                                                   dom0=True)
 
-    @test_xenapi.stub_vm_utils_with_vdi_attached_here
-    def test_generate_disk_with_no_fs_given(self):
-        self._expect_parted_calls()
+        mock_create_vbd.assert_called_with(session, 'vm_ref', 'vdi_ref', '2',
+                                           bootable=False)
 
-        self.mox.ReplayAll()
+    @mock.patch.object(vm_utils, 'vdi_attached')
+    @mock.patch.object(vm_utils.utils, 'mkfs')
+    @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
+    @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
+    @mock.patch.object(vm_utils.utils, 'make_dev_path',
+                       return_value='/dev/fake_devp1')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_generate_disk_swap(self, mock_create_vbd, mock_make_path,
+                                mock_create_vdi,
+                                mock_findsr, mock_dom0ref, mock_mkfs,
+                                mock_attached_here):
+        session = _get_fake_session()
+        vdi_dev = mock.MagicMock()
+        mock_attached_here.return_value = vdi_dev
+        vdi_dev.__enter__.return_value = 'fakedev'
+        instance = {'uuid': 'fake_uuid'}
+
+        vm_utils._generate_disk(session, instance, 'vm_ref', '2',
+                                'name', 'user', 10, 'swap',
+                                'swap-1')
+
+        mock_attached_here.assert_any_call(session, 'vdi_ref',
+                                           read_only=False,
+                                           dom0=True)
+
+        # As swap is supported in dom0, mkfs will run there
+        session.call_plugin_serialized.assert_any_call(
+            'partition_utils.py', 'mkfs', 'fakedev', '1', 'swap', 'swap-1')
+
+        mock_create_vbd.assert_called_with(session, 'vm_ref', 'vdi_ref', '2',
+                                           bootable=False)
+
+    @mock.patch.object(vm_utils, 'vdi_attached')
+    @mock.patch.object(vm_utils.utils, 'mkfs')
+    @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
+    @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
+    @mock.patch.object(vm_utils.utils, 'make_dev_path',
+                       return_value='/dev/fake_devp1')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_generate_disk_ephemeral(self, mock_create_vbd, mock_make_path,
+                                     mock_create_vdi, mock_findsr,
+                                     mock_dom0ref, mock_mkfs,
+                                     mock_attached_here):
+        session = _get_fake_session()
+        vdi_ref = mock.MagicMock()
+        mock_attached_here.return_value = vdi_ref
+        instance = {'uuid': 'fake_uuid'}
+
+        vm_utils._generate_disk(session, instance, 'vm_ref', '2',
+                                'name', 'ephemeral', 10, 'ext4',
+                                'ephemeral-1')
+
+        mock_attached_here.assert_any_call(session, 'vdi_ref',
+                                           read_only=False,
+                                           dom0=True)
+
+        # As ext4 is not supported in dom0, mkfs will run in domU
+        mock_attached_here.assert_any_call(session, 'vdi_ref',
+                                           read_only=False)
+        mock_mkfs.assert_called_with('ext4', '/dev/fake_devp1',
+                                     'ephemeral-1', run_as_root=True)
+
+        mock_create_vbd.assert_called_with(session, 'vm_ref', 'vdi_ref', '2',
+                                           bootable=False)
+
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
+    @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
+    @mock.patch.object(vm_utils, '_get_dom0_ref',
+                       side_effect = test.TestingException())
+    @mock.patch.object(vm_utils, 'safe_destroy_vdis')
+    def test_generate_disk_ensure_cleanup_called(self, mock_destroy_vdis,
+                                                 mock_dom0ref,
+                                                 mock_create_vdi,
+                                                 mock_findsr):
+        session = _get_fake_session()
+        instance = {'uuid': 'fake_uuid'}
+
+        self.assertRaises(test.TestingException, vm_utils._generate_disk,
+                          session, instance, None, '2', 'name', 'user', 10,
+                          None, None)
+
+        mock_destroy_vdis.assert_called_once_with(session, ['vdi_ref'])
+
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
+    @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
+    @mock.patch.object(vm_utils, 'vdi_attached')
+    @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_generate_disk_ephemeral_no_vmref(self, mock_create_vbd,
+                                              mock_dom0_ref,
+                                              mock_attached_here,
+                                              mock_create_vdi,
+                                              mock_findsr):
+        session = _get_fake_session()
+        vdi_ref = mock.MagicMock()
+        mock_attached_here.return_value = vdi_ref
+        instance = {'uuid': 'fake_uuid'}
+
         vdi_ref = vm_utils._generate_disk(
-            self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "user", 10, None, None)
-        self._check_vdi(vdi_ref)
+            session, instance,
+            None, None, 'name', 'user', 10, None, None)
 
-    @test_xenapi.stub_vm_utils_with_vdi_attached_here
-    def test_generate_disk_swap(self):
-        self._expect_parted_calls()
-        utils.execute('mkswap', '/dev/fakedev1', run_as_root=True)
-
-        self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(
-            self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "swap", 10, "swap", None)
-        self._check_vdi(vdi_ref)
-
-    @test_xenapi.stub_vm_utils_with_vdi_attached_here
-    def test_generate_disk_ephemeral(self):
-        self._expect_parted_calls()
-        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'ephemeral',
-                      '/dev/fakedev1', run_as_root=True)
-
-        self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(
-            self.session, {"uuid": "fake_uuid"}, self.vm_ref,
-            "4", "name", "ephemeral", 10, "ext4", "ephemeral")
-        self._check_vdi(vdi_ref)
-
-    @test_xenapi.stub_vm_utils_with_vdi_attached_here
-    def test_generate_disk_ensure_cleanup_called(self):
-        self._expect_parted_calls()
-        utils.execute(
-            'mkfs', '-t', 'ext4', '-F', '-L', 'ephemeral', '/dev/fakedev1',
-            run_as_root=True).AndRaise(test.TestingException)
-        vm_utils.destroy_vdi(
-            self.session,
-            mox.IgnoreArg()).AndRaise(exception.StorageError(reason=""))
-
-        self.mox.ReplayAll()
-        self.assertRaises(
-            test.TestingException, vm_utils._generate_disk,
-            self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "4", "name", "ephemeral", 10, "ext4", "ephemeral")
-
-    @test_xenapi.stub_vm_utils_with_vdi_attached_here
-    def test_generate_disk_ephemeral_local_not_attached(self):
-        self.session.is_local_connection = True
-        self._expect_parted_calls()
-        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'ephemeral',
-                      '/dev/mapper/fakedev1', run_as_root=True)
-
-        self.mox.ReplayAll()
-        vdi_ref = vm_utils._generate_disk(
-            self.session, {"uuid": "fake_uuid"},
-            None, "4", "name", "ephemeral", 10, "ext4", "ephemeral")
-        self._check_vdi(vdi_ref, check_attached=False)
+        mock_attached_here.assert_called_once_with(session, 'vdi_ref',
+                                                   read_only=False, dom0=True)
+        self.assertFalse(mock_create_vbd.called)
 
 
 class GenerateEphemeralTestCase(VMUtilsTestBase):
@@ -1825,22 +1845,6 @@ class GetAllVdisTestCase(VMUtilsTestBase):
         self.assertEqual(actual, [('2', 'vdi_rec_2')])
 
         session.call_xenapi.assert_called_once_with("SR.get_VDIs", sr_ref)
-
-
-class VDIAttachedHere(VMUtilsTestBase):
-    @mock.patch.object(vm_utils, 'destroy_vbd')
-    @mock.patch.object(vm_utils, '_get_this_vm_ref')
-    @mock.patch.object(vm_utils, 'create_vbd')
-    @mock.patch.object(vm_utils, '_remap_vbd_dev')
-    @mock.patch.object(vm_utils, '_wait_for_device')
-    @mock.patch.object(utils, 'execute')
-    def test_sync_called(self, mock_execute, mock_wait_for_device,
-                         mock_remap_vbd_dev, mock_create_vbd,
-                         mock_get_this_vm_ref, mock_destroy_vbd):
-        session = _get_fake_session()
-        with vm_utils.vdi_attached_here(session, 'vdi_ref'):
-            pass
-        mock_execute.assert_called_with('sync', run_as_root=True)
 
 
 class SnapshotAttachedHereTestCase(VMUtilsTestBase):
