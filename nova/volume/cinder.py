@@ -254,19 +254,6 @@ class API(object):
                                               "status": volume['status']}
             raise exception.InvalidVolume(reason=msg)
 
-    def check_attach(self, context, volume, instance=None):
-        # TODO(vish): abstract status checking?
-        if volume['status'] != "available":
-            msg = _("volume '%(vol)s' status must be 'available'. Currently "
-                    "in '%(status)s'") % {'vol': volume['id'],
-                                          'status': volume['status']}
-            raise exception.InvalidVolume(reason=msg)
-        if volume['attach_status'] == "attached":
-            msg = _("volume %s already attached") % volume['id']
-            raise exception.InvalidVolume(reason=msg)
-
-        self.check_availability_zone(context, volume, instance)
-
     def check_availability_zone(self, context, volume, instance=None):
         """Ensure that the availability zone is the same."""
 

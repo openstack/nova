@@ -1572,8 +1572,7 @@ class ComputeManager(manager.Manager):
             bdm.update(values)
             bdm.save()
 
-    def _prep_block_device(self, context, instance, bdms,
-                           do_check_attach=True):
+    def _prep_block_device(self, context, instance, bdms):
         """Set up the block device for an instance with error logging."""
         try:
             self._add_missing_dev_names(bdms, instance)
@@ -1581,7 +1580,6 @@ class ComputeManager(manager.Manager):
             mapping = driver.block_device_info_get_mapping(block_device_info)
             driver_block_device.attach_block_devices(
                 mapping, context, instance, self.volume_api, self.driver,
-                do_check_attach=do_check_attach,
                 wait_func=self._await_block_device_map_created)
 
             self._block_device_info_to_legacy(block_device_info)
@@ -4431,8 +4429,7 @@ class ComputeManager(manager.Manager):
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        block_device_info = self._prep_block_device(context, instance, bdms,
-                                                    do_check_attach=False)
+        block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
 
         if node is None:
@@ -4786,7 +4783,7 @@ class ComputeManager(manager.Manager):
                  instance=instance)
         try:
             bdm.attach(context, instance, self.volume_api, self.driver,
-                       do_check_attach=False, do_driver_attach=True)
+                       do_driver_attach=True)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE("Failed to attach %(volume_id)s "

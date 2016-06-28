@@ -3308,12 +3308,15 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context,
                           bdms, legacy_bdm=True)
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
-    @mock.patch.object(cinder.API, 'check_attach',
-                       side_effect=exception.InvalidVolume(reason='error'))
-    def test_validate_bdm_with_error_volume(self, mock_check_attach, mock_get):
-        # Tests that an InvalidVolume exception raised from
-        # volume_api.check_attach due to the volume status not being
+    @mock.patch.object(cinder.API, 'reserve_volume',
+                       side_effect=exception.InvalidInput(reason='error'))
+    def test_validate_bdm_with_error_volume(self, mock_reserve_volume,
+                                            mock_get, mock_get_min_ver):
+        # Tests that an InvalidInput exception raised from
+        # volume_api.reserve_volume due to the volume status not being
         # 'available' results in _validate_bdm re-raising InvalidVolume.
         instance = self._create_instance_obj()
         instance_type = self._create_flavor()
@@ -3338,14 +3341,17 @@ class _ComputeAPIUnitTestMixIn(object):
                           instance, instance_type, bdms)
 
         mock_get.assert_called_once_with(self.context, volume_id)
-        mock_check_attach.assert_called_once_with(
-            self.context, volume_info, instance=instance)
+        mock_reserve_volume.assert_called_once_with(
+            self.context, volume_id)
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get_snapshot',
              side_effect=exception.CinderConnectionFailed(reason='error'))
     @mock.patch.object(cinder.API, 'get',
              side_effect=exception.CinderConnectionFailed(reason='error'))
-    def test_validate_bdm_with_cinder_down(self, mock_get, mock_get_snapshot):
+    def test_validate_bdm_with_cinder_down(self, mock_get, mock_get_snapshot,
+                                           mock_get_min_ver):
         instance = self._create_instance_obj()
         instance_type = self._create_flavor()
         bdm = [objects.BlockDeviceMapping(
@@ -3445,16 +3451,26 @@ class _ComputeAPIUnitTestMixIn(object):
 
         do_test()
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get',
              side_effect=exception.CinderConnectionFailed(reason='error'))
-    def test_provision_instances_with_cinder_down(self, mock_get):
+    def test_provision_instances_with_cinder_down(self, mock_get,
+                                                  mock_get_min_ver):
         self._test_provision_instances_with_cinder_error(
             expected_exception=exception.CinderConnectionFailed)
 
-    @mock.patch.object(cinder.API, 'get',
-                       return_value={'id': 1, 'status': 'error',
-                                     'attach_status': 'detached'})
-    def test_provision_instances_with_error_volume(self, mock_get):
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_availability_zone')
+    @mock.patch.object(cinder.API, 'reserve_volume',
+                       side_effect=exception.InvalidInput(reason='error'))
+    def test_provision_instances_with_error_volume(self,
+                                                   mock_cinder_check_av_zone,
+                                                   mock_reserve_volume,
+                                                   mock_get,
+                                                   mock_get_min_ver):
         self._test_provision_instances_with_cinder_error(
             expected_exception=exception.InvalidVolume)
 
@@ -3505,9 +3521,12 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects.BuildRequest, 'create')
         @mock.patch.object(objects.InstanceMapping, 'create')
-        def do_test(_mock_inst_mapping_create, mock_build_req,
-                mock_req_spec_from_components, _mock_ensure_default,
-                    mock_check_num_inst_quota, mock_volume, mock_inst_create):
+        @mock.patch.object(objects.Service, 'get_minimum_version',
+                return_value=17)
+        def do_test(mock_get_min_ver, _mock_inst_mapping_create,
+                    mock_build_req, mock_req_spec_from_components,
+                    _mock_ensure_default, mock_check_num_inst_quota,
+                    mock_volume, mock_inst_create):
 
             min_count = 1
             max_count = 2
@@ -3651,11 +3670,16 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(ctxt.project_id, inst_mapping_mock.project_id)
         do_test()
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
-    @mock.patch.object(cinder.API, 'check_attach',
-                   side_effect=(None, exception.InvalidVolume(reason='error')))
+    @mock.patch.object(cinder.API, 'check_availability_zone',)
+    @mock.patch.object(cinder.API, 'reserve_volume',
+                   side_effect=(None, exception.InvalidInput(reason='error')))
     def test_provision_instances_cleans_up_when_volume_invalid(self,
-            _mock_cinder_get, _mock_cinder_check_attach):
+            _mock_cinder_reserve_volume,
+            _mock_cinder_check_availability_zone, _mock_cinder_get,
+            _mock_get_min_ver):
         @mock.patch.object(self.compute_api, '_check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,

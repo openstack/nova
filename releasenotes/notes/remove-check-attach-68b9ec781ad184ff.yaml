@@ -1,0 +1,26 @@
+---
+fixes:
+  - |
+    Fixes `bug 1581230`_ by removing the internal ``check_attach`` call from
+    the Nova code as it can cause race conditions and the checks are handled by
+    ``reserve_volume`` in Cinder. ``reserve_volume`` is called in every volume
+    attach scenario to provide the necessary checks and volume state validation
+    on the Cinder side.
+other:
+  - |
+    By removing the ``check_attach`` internal call from Nova, small behavioral
+    changes were introduced.
+
+    ``reserve_volume`` call was added to the boot from volume scenario. In case
+    a failure occurs while building the instance, the instance goes into ERROR
+    state while the volume stays in ``attaching`` state. The volume state will
+    be set back to ``available`` when the instance gets deleted.
+
+    Additional availability zone check is added to the volume attach flow,
+    which results in an availability zone check when an instance gets
+    unshelved. In case the deployment is not sensitive to availability zones
+    and not using the AvailabilityZoneFilter scheduler filter the current
+    default settings (cross_az_attach=True) are allowing to perform unshelve
+    the same way as before this change without additional configuration.
+
+    .. _`bug 1581230`: https://bugs.launchpad.net/nova/+bug/1581230

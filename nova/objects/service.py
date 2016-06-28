@@ -30,7 +30,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 16
+SERVICE_VERSION = 17
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -94,6 +94,11 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.13'},
     # Version 16: Indicate that nova-compute will refuse to start if it doesn't
     # have a placement section configured.
+    {'compute_rpc': '4.13'},
+    # Version 17: Add 'reserve_volume' to the boot from volume flow and
+    # remove 'check_attach'. The service version bump is needed to fall back to
+    # the old check in the API as the old computes fail if the volume is moved
+    # to 'attaching' state by reserve.
     {'compute_rpc': '4.13'},
 )
 

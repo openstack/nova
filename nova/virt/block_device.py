@@ -244,10 +244,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
     @update_db
     def attach(self, context, instance, volume_api, virt_driver,
-               do_check_attach=True, do_driver_attach=False, **kwargs):
+               do_driver_attach=False, **kwargs):
         volume = volume_api.get(context, self.volume_id)
-        if do_check_attach:
-            volume_api.check_attach(context, volume, instance=instance)
+        volume_api.check_availability_zone(context, volume,
+                                           instance=instance)
 
         volume_id = volume['id']
         context = context.elevated()
@@ -367,7 +367,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
     _proxy_as_attr = set(['volume_size', 'volume_id', 'snapshot_id'])
 
     def attach(self, context, instance, volume_api,
-               virt_driver, wait_func=None, do_check_attach=True):
+               virt_driver, wait_func=None):
 
         if not self.volume_id:
             av_zone = _get_volume_create_az_value(instance)
@@ -382,8 +382,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 
         # Call the volume attach now
         super(DriverSnapshotBlockDevice, self).attach(
-            context, instance, volume_api, virt_driver,
-            do_check_attach=do_check_attach)
+            context, instance, volume_api, virt_driver)
 
 
 class DriverImageBlockDevice(DriverVolumeBlockDevice):
@@ -392,7 +391,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
     _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
 
     def attach(self, context, instance, volume_api,
-               virt_driver, wait_func=None, do_check_attach=True):
+               virt_driver, wait_func=None):
         if not self.volume_id:
             av_zone = _get_volume_create_az_value(instance)
             vol = volume_api.create(context, self.volume_size,
@@ -404,8 +403,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
             self.volume_id = vol['id']
 
         super(DriverImageBlockDevice, self).attach(
-            context, instance, volume_api, virt_driver,
-            do_check_attach=do_check_attach)
+            context, instance, volume_api, virt_driver)
 
 
 class DriverBlankBlockDevice(DriverVolumeBlockDevice):
@@ -414,7 +412,7 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
     _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
 
     def attach(self, context, instance, volume_api,
-               virt_driver, wait_func=None, do_check_attach=True):
+               virt_driver, wait_func=None):
         if not self.volume_id:
             vol_name = instance.uuid + '-blank-vol'
             av_zone = _get_volume_create_az_value(instance)
@@ -426,8 +424,7 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
             self.volume_id = vol['id']
 
         super(DriverBlankBlockDevice, self).attach(
-            context, instance, volume_api, virt_driver,
-            do_check_attach=do_check_attach)
+            context, instance, volume_api, virt_driver)
 
 
 def _convert_block_devices(device_type, block_device_mapping):

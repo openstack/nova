@@ -105,6 +105,7 @@ AGGREGATE_ACTION_UPDATE = 'Update'
 AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
+BFV_RESERVE_MIN_COMPUTE_VERSION = 17
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -1354,15 +1355,30 @@ class API(base.Base):
                         "destination_type 'volume' need to have a non-zero "
                         "size specified"))
             elif volume_id is not None:
+                min_compute_version = objects.Service.get_minimum_version(
+                    context, 'nova-compute')
                 try:
-                    volume = self.volume_api.get(context, volume_id)
-                    self.volume_api.check_attach(context,
-                                                 volume,
-                                                 instance=instance)
+                    # NOTE(ildikov): The boot from volume operation did not
+                    # reserve the volume before Pike and as the older computes
+                    # are running 'check_attach' which will fail if the volume
+                    # is in 'attaching' state; if the compute service version
+                    # is not high enough we will just perform the old check as
+                    # opposed to reserving the volume here.
+                    if (min_compute_version >=
+                        BFV_RESERVE_MIN_COMPUTE_VERSION):
+                        volume = self._check_attach_and_reserve_volume(
+                            context, volume_id, instance)
+                    else:
+                        # NOTE(ildikov): This call is here only for backward
+                        # compatibility can be removed after Ocata EOL.
+                        volume = self._check_attach(context, volume_id,
+                                                    instance)
                     bdm.volume_size = volume.get('size')
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume):
                     raise
+                except exception.InvalidInput as exc:
+                    raise exception.InvalidVolume(reason=exc.format_message())
                 except Exception:
                     raise exception.InvalidBDMVolume(id=volume_id)
             elif snapshot_id is not None:
@@ -1403,6 +1419,23 @@ class API(base.Base):
                              if bdm.destination_type == 'local'])
             if num_local > max_local:
                 raise exception.InvalidBDMLocalsLimit()
+
+    def _check_attach(self, context, volume_id, instance):
+        # TODO(ildikov): This check_attach code is kept only for backward
+        # compatibility and should be removed after Ocata EOL.
+        volume = self.volume_api.get(context, volume_id)
+        if volume['status'] != 'available':
+            msg = _("volume '%(vol)s' status must be 'available'. Currently "
+                    "in '%(status)s'") % {'vol': volume['id'],
+                                          'status': volume['status']}
+            raise exception.InvalidVolume(reason=msg)
+        if volume['attach_status'] == 'attached':
+            msg = _("volume %s already attached") % volume['id']
+            raise exception.InvalidVolume(reason=msg)
+        self.volume_api.check_availability_zone(context, volume,
+                                                instance=instance)
+
+        return volume
 
     def _populate_instance_names(self, instance, num_instances):
         """Populate instance display_name and hostname."""
@@ -3551,6 +3584,8 @@ class API(base.Base):
                                                 instance=instance)
         self.volume_api.reserve_volume(context, volume_id)
 
+        return volume
+
     def _attach_volume(self, context, instance, volume_id, device,
                        disk_bus, device_type):
         """Attach an existing volume to an existing instance.
@@ -3689,7 +3724,8 @@ class API(base.Base):
             msg = _("New volume must be the same size or larger.")
             raise exception.InvalidVolume(reason=msg)
         self.volume_api.check_detach(context, old_volume)
-        self.volume_api.check_attach(context, new_volume, instance=instance)
+        self.volume_api.check_availability_zone(context, new_volume,
+                                                instance=instance)
         self.volume_api.begin_detaching(context, old_volume['id'])
         self.volume_api.reserve_volume(context, new_volume['id'])
         try:

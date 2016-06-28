@@ -285,7 +285,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
         self.compute._prep_block_device(self.context, instance,
-                mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
+                mox.IgnoreArg()).AndReturn('fake_bdm')
         self.compute.network_api.setup_instance_network_on_host(
                 self.context, instance, self.compute.host)
         self.compute.driver.spawn(self.context, instance,
@@ -367,7 +367,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'unshelve.start')
 
         self.compute._prep_block_device(self.context, instance,
-                mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
+                mox.IgnoreArg()).AndReturn('fake_bdm')
         self.compute.network_api.setup_instance_network_on_host(
                 self.context, instance, self.compute.host)
         self.rt.instance_claim(self.context, instance, node, limits).AndReturn(

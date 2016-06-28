@@ -3106,7 +3106,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertTrue(mock_power_off.called)
             self.assertFalse(mock_destroy.called)
 
-        def _attach(context, instance, bdms, do_check_attach=True):
+        def _attach(context, instance, bdms):
             return {'block_device_mapping': 'shared_block_storage'}
 
         def _spawn(context, instance, image_meta, injected_files,

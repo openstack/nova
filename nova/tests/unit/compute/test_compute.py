@@ -372,6 +372,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                        lambda *a, **kw: None)
         self.stub_out('nova.volume.cinder.API.detach',
                        lambda *a, **kw: None)
+        self.stub_out('nova.volume.cinder.API.check_availability_zone',
+                       lambda *a, **kw: None)
         self.stub_out('eventlet.greenthread.sleep',
                        lambda *a, **kw: None)
 
@@ -864,17 +866,24 @@ class ComputeVolumeTestCase(BaseTestCase):
         for expected, got in zip(expected_result, preped_bdm):
             self.assertThat(expected, matchers.IsSubDictOf(got))
 
-    def test_validate_bdm(self):
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+        return_value=17)
+    def test_validate_bdm(self, mock_get_min_ver):
         def fake_get(self, context, res_id):
             return {'id': res_id, 'size': 4}
 
-        def fake_check_attach(*args, **kwargs):
+        def fake_check_availability_zone(*args, **kwargs):
+            pass
+
+        def fake_reserve_volume(*args, **kwargs):
             pass
 
         self.stub_out('nova.volume.cinder.API.get', fake_get)
         self.stub_out('nova.volume.cinder.API.get_snapshot', fake_get)
-        self.stub_out('nova.volume.cinder.API.check_attach',
-                       fake_check_attach)
+        self.stub_out('nova.volume.cinder.API.check_availability_zone',
+                       fake_check_availability_zone)
+        self.stub_out('nova.volume.cinder.API.reserve_volume',
+                       fake_reserve_volume)
 
         volume_id = '55555555-aaaa-bbbb-cccc-555555555555'
         snapshot_id = '66666666-aaaa-bbbb-cccc-555555555555'
@@ -1085,13 +1094,52 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, self.instance,
                           instance_type, all_mappings)
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+        return_value=16)
+    @mock.patch.object(nova.volume.cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_availability_zone')
+    def test_validate_bdm_volume_old_compute(self, mock_check_av_zone,
+                                             mock_get, mock_get_min_ver):
+        instance = self._create_fake_instance_obj()
+        instance_type = {'ephemeral_gb': 2}
+        volume_id = uuids.volume_id
+        mappings = [
+            fake_block_device.FakeDbBlockDeviceDict({
+                'device_name': '/dev/sda1',
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'device_type': 'disk',
+                'volume_id': volume_id,
+                'guest_format': None,
+                'boot_index': 0,
+            }, anon=True)
+        ]
+        mappings = block_device_obj.block_device_make_list_from_dicts(
+            self.context, mappings)
+
+        volume = {'id': volume_id,
+                  'size': 4,
+                  'status': 'available',
+                  'attach_status': 'detached',
+                  'multiattach': False}
+
+        mock_get.return_value = volume
+        self.compute_api._validate_bdm(self.context, instance,
+                                       instance_type, mappings)
+        self.assertEqual(4, mappings[0].volume_size)
+        mock_check_av_zone.assert_called_once_with(self.context, volume,
+                                                   instance=instance)
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'reserve_volume',
                        side_effect=exception.InvalidVolume(reason='error'))
     def test_validate_bdm_media_service_invalid_volume(self, mock_reserve_vol,
                                                        mock_check_av_zone,
-                                                       mock_get):
+                                                       mock_get,
+                                                       mock_get_min_ver):
         volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
@@ -1137,8 +1185,11 @@ class ComputeVolumeTestCase(BaseTestCase):
                               instance_type, bdms)
             mock_get.assert_called_with(self.context, volume_id)
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                   return_value=17)
     @mock.patch.object(cinder.API, 'get')
-    def test_validate_bdm_media_service_volume_not_found(self, mock_get):
+    def test_validate_bdm_media_service_volume_not_found(self, mock_get,
+                                                         mock_get_min_ver):
         volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
@@ -1160,10 +1211,15 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, self.instance,
                           instance_type, bdms)
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
-    def test_validate_bdm_media_service_valid(self, mock_check_av_zone,
-                                              mock_get):
+    @mock.patch.object(cinder.API, 'reserve_volume')
+    def test_validate_bdm_media_service_valid(self, mock_reserve_vol,
+                                              mock_check_av_zone,
+                                              mock_get,
+                                              mock_get_min_ver):
         volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
@@ -1188,7 +1244,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                                        instance_type, bdms)
         mock_get.assert_called_once_with(self.context, volume_id)
         mock_check_av_zone.assert_called_once_with(self.context, volume,
-                                                   self.instance)
+                                                   instance=self.instance)
+        mock_reserve_vol.assert_called_once_with(self.context, volume_id)
 
     def test_volume_snapshot_create(self):
         self.assertRaises(messaging.ExpectedException,
@@ -1926,7 +1983,7 @@ class ComputeTestCase(BaseTestCase):
         LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
 
-        def fake_check_attach(*args, **kwargs):
+        def fake_check_availability_zone(*args, **kwargs):
             pass
 
         def fake_reserve_volume(*args, **kwargs):
@@ -1963,7 +2020,8 @@ class ComputeTestCase(BaseTestCase):
             return bdm
 
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
-        self.stub_out('nova.volume.cinder.API.check_attach', fake_check_attach)
+        self.stub_out('nova.volume.cinder.API.check_availability_zone',
+                      fake_check_availability_zone)
         self.stub_out('nova.volume.cinder.API.reserve_volume',
                        fake_reserve_volume)
         self.stub_out('nova.volume.cinder.API.terminate_connection',
@@ -4653,10 +4711,11 @@ class ComputeTestCase(BaseTestCase):
             return volume
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
 
-        def fake_volume_check_attach(self, context, volume_id, instance):
+        def fake_volume_check_availability_zone(self, context,
+                                                volume_id, instance):
             pass
-        self.stub_out('nova.volume.cinder.API.check_attach',
-                      fake_volume_check_attach)
+        self.stub_out('nova.volume.cinder.API.check_availability_zone',
+                       fake_volume_check_availability_zone)
 
         def fake_get_volume_encryption_metadata(self, context, volume_id):
             return {}
@@ -9304,7 +9363,7 @@ class ComputeAPITestCase(BaseTestCase):
             return {'id': volume_id}
 
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
-        self.stub_out('nova.volume.cinder.API.check_attach', fake)
+        self.stub_out('nova.volume.cinder.API.check_availability_zone', fake)
         self.stub_out('nova.volume.cinder.API.reserve_volume', fake)
 
         instance = fake_instance.fake_instance_obj(None, **{

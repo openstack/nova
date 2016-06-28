@@ -181,17 +181,6 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_volumes.list.assert_called_once_with(detailed=True,
                                                   search_opts={'id': 'id1'})
 
-    def test_check_attach_volume_status_error(self):
-        volume = {'id': 'fake', 'status': 'error'}
-        self.assertRaises(exception.InvalidVolume,
-                          self.api.check_attach, self.ctx, volume)
-
-    def test_check_attach_volume_already_attached(self):
-        volume = {'id': 'fake', 'status': 'available'}
-        volume['attach_status'] = "attached"
-        self.assertRaises(exception.InvalidVolume,
-                          self.api.check_attach, self.ctx, volume)
-
     @mock.patch.object(cinder.az, 'get_instance_availability_zone',
                        return_value='zone1')
     def test_check_availability_zone_differs(self, mock_get_instance_az):
@@ -206,21 +195,6 @@ class CinderApiTestCase(test.NoDBTestCase):
                           self.api.check_availability_zone,
                           self.ctx, volume, instance)
         mock_get_instance_az.assert_called_once_with(self.ctx, instance)
-
-    def test_check_attach(self):
-        volume = {'status': 'available'}
-        volume['attach_status'] = "detached"
-        volume['availability_zone'] = 'zone1'
-        volume['multiattach'] = False
-        instance = {'availability_zone': 'zone1', 'host': 'fakehost'}
-        CONF.set_override('cross_az_attach', False, group='cinder')
-
-        with mock.patch.object(cinder.az, 'get_instance_availability_zone',
-                               side_effect=lambda context, instance: 'zone1'):
-            self.assertIsNone(self.api.check_attach(
-                self.ctx, volume, instance))
-
-        CONF.reset()
 
     def test_check_detach(self):
         volume = {'id': 'fake', 'status': 'in-use',
