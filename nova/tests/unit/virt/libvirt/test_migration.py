@@ -16,13 +16,13 @@ from collections import deque
 
 from lxml import etree
 import mock
-from oslo_utils import encodeutils
 from oslo_utils import units
-import six
+
 
 from nova.compute import power_state
 from nova import objects
 from nova import test
+from nova.tests.unit import matchers
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
@@ -107,7 +107,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 </domain>"""
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_serial_xml(doc, data))
-        self.assertIn('127.0.0.100', six.text_type(res))
+        new_xml = xml.replace("127.0.0.1", "127.0.0.100")
+        self.assertThat(res, matchers.XMLMatches(new_xml))
 
     def test_update_serial_xml_console(self):
         data = objects.LibvirtLiveMigrateData(
@@ -121,7 +122,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 </domain>"""
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_serial_xml(doc, data))
-        self.assertIn('127.0.0.100', six.text_type(res))
+        new_xml = xml.replace("127.0.0.1", "127.0.0.100")
+        self.assertThat(res, matchers.XMLMatches(new_xml))
 
     def test_update_graphics(self):
         data = objects.LibvirtLiveMigrateData(
@@ -139,8 +141,9 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
 </domain>"""
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_graphics_xml(doc, data))
-        self.assertIn('127.0.0.100', six.text_type(res))
-        self.assertIn('127.0.0.200', six.text_type(res))
+        new_xml = xml.replace("127.0.0.1", "127.0.0.100")
+        new_xml = new_xml.replace("127.0.0.2", "127.0.0.200")
+        self.assertThat(res, matchers.XMLMatches(new_xml))
 
     def test_update_volume_xml(self):
         connection_info = {
@@ -187,8 +190,9 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_volume_xml(
             doc, data, get_volume_config))
-        self.assertIn('ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z',
-                      six.text_type(res))
+        new_xml = xml.replace('ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X',
+                              'ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z')
+        self.assertThat(res, matchers.XMLMatches(new_xml))
 
     def test_update_perf_events_xml(self):
         data = objects.LibvirtLiveMigrateData(
@@ -202,10 +206,10 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_perf_events_xml(doc, data))
 
-        self.assertEqual("""<domain>
+        self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>
     <event enabled="yes" name="cmt"/></perf>
-</domain>""", encodeutils.safe_decode(res))
+</domain>"""))
 
     def test_update_perf_events_xml_add_new_events(self):
         data = objects.LibvirtLiveMigrateData(
@@ -215,9 +219,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_perf_events_xml(doc, data))
 
-        self.assertEqual("""<domain>
-<perf><event enabled="yes" name="cmt"/></perf></domain>""",
-                         encodeutils.safe_decode(res))
+        self.assertThat(res, matchers.XMLMatches("""<domain>
+<perf><event enabled="yes" name="cmt"/></perf></domain>"""))
 
     def test_update_perf_events_xml_add_new_events1(self):
         data = objects.LibvirtLiveMigrateData(
@@ -230,10 +233,10 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_perf_events_xml(doc, data))
 
-        self.assertEqual("""<domain>
+        self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>
     <event enabled="yes" name="cmt"/><event enabled="yes" name="mbml"/></perf>
-</domain>""", encodeutils.safe_decode(res))
+</domain>"""))
 
     def test_update_perf_events_xml_remove_all_events(self):
         data = objects.LibvirtLiveMigrateData(
@@ -246,14 +249,13 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_perf_events_xml(doc, data))
 
-        self.assertEqual("""<domain>
+        self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>
     </perf>
-</domain>""", encodeutils.safe_decode(res))
+</domain>"""))
 
 
 class MigrationMonitorTestCase(test.NoDBTestCase):
-
     def setUp(self):
         super(MigrationMonitorTestCase, self).setUp()
 
