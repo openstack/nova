@@ -39,6 +39,7 @@ from nova import compute
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
@@ -49,6 +50,7 @@ from nova import utils
 
 ALIAS = 'servers'
 TAG_SEARCH_FILTERS = ('tags', 'tags-any', 'not-tags', 'not-tags-any')
+DEVICE_TAGGING_MIN_COMPUTE_VERSION = 14
 
 CONF = nova.conf.CONF
 
@@ -74,6 +76,8 @@ class ServersController(wsgi.Controller):
     schema_server_create_v219 = schema_servers.base_create_v219
     schema_server_update_v219 = schema_servers.base_update_v219
     schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
+
+    schema_server_create_v232 = schema_servers.base_create_v232
 
     @staticmethod
     def _add_location(robj):
@@ -166,6 +170,9 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if list(self.create_schema_manager):
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v232,
+                                          '2.32')
             self.create_schema_manager.map(self._create_extension_schema,
                                            self.schema_server_create_v219,
                                           '2.19')
@@ -386,7 +393,8 @@ class ServersController(wsgi.Controller):
             expl = _("Duplicate networks (%s) are not allowed") % net_id
             raise exc.HTTPBadRequest(explanation=expl)
 
-    def _get_requested_networks(self, requested_networks):
+    def _get_requested_networks(self, requested_networks,
+                                supports_device_tagging=False):
         """Create a list of requested networks from the networks attribute."""
         networks = []
         network_uuids = []
@@ -398,6 +406,11 @@ class ServersController(wsgi.Controller):
                 # it will use one of the available IP address from the network
                 request.address = network.get('fixed_ip', None)
                 request.port_id = network.get('port', None)
+
+                request.tag = network.get('tag', None)
+                if request.tag and not supports_device_tagging:
+                    msg = _('Network interface tags are not yet supported.')
+                    raise exc.HTTPBadRequest(explanation=msg)
 
                 if request.port_id:
                     request.network_id = None
@@ -456,7 +469,8 @@ class ServersController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 409))
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
     @validation.schema(schema_server_create, '2.1', '2.18')
-    @validation.schema(schema_server_create_v219, '2.19')
+    @validation.schema(schema_server_create_v219, '2.19', '2.31')
+    @validation.schema(schema_server_create_v232, '2.32')
     def create(self, req, body):
         """Creates a new server for a given user."""
 
@@ -511,12 +525,21 @@ class ServersController(wsgi.Controller):
         if host or node:
             context.can(server_policies.SERVERS % 'create:forced_host', {})
 
+        min_compute_version = objects.Service.get_minimum_version(
+            nova_context.get_admin_context(), 'nova-compute')
+        supports_device_tagging = (min_compute_version >=
+                                   DEVICE_TAGGING_MIN_COMPUTE_VERSION)
+
         block_device_mapping = create_kwargs.get("block_device_mapping")
         # TODO(Shao He, Feng) move this policy check to os-block-device-mapping
         # extension after refactor it.
         if block_device_mapping:
             context.can(server_policies.SERVERS % 'create:attach_volume',
                         target)
+            for bdm in block_device_mapping:
+                if bdm.get('tag', None) and not supports_device_tagging:
+                    msg = _('Block device tags are not yet supported.')
+                    raise exc.HTTPBadRequest(explanation=msg)
 
         image_uuid = self._image_from_req_data(server_dict, create_kwargs)
 
@@ -537,7 +560,7 @@ class ServersController(wsgi.Controller):
 
         if requested_networks is not None:
             requested_networks = self._get_requested_networks(
-                requested_networks)
+                requested_networks, supports_device_tagging)
 
         if requested_networks and len(requested_networks):
             context.can(server_policies.SERVERS % 'create:attach_network',

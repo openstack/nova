@@ -15,6 +15,7 @@
 import copy
 
 from nova.api.openstack.compute.schemas import block_device_mapping_v1
+from nova.api.openstack.compute.schemas import server_tags
 from nova.api.validation import parameter_types
 from nova.objects import fields
 
@@ -69,5 +70,20 @@ server_create = {
     'block_device_mapping_v2': {
         'type': 'array',
         'items': [block_device_mapping]
+    }
+}
+
+block_device_mapping_v232_new_item = {
+    'tag': server_tags.tag
+}
+
+block_device_mapping_v232 = copy.deepcopy(block_device_mapping)
+block_device_mapping_v232['properties'].update(
+    block_device_mapping_v232_new_item)
+
+server_create_v232 = {
+    'block_device_mapping_v2': {
+        'type': 'array',
+        'items': [block_device_mapping_v232]
     }
 }

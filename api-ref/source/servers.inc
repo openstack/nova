@@ -293,6 +293,7 @@ Request
   - networks.uuid: network_uuid
   - networks.port: port
   - networks.fixed_ip: fixed_ip
+  - networks.tag: device_tag
   - personality: personality
   - block_device_mapping_v2: block_device_mapping_v2
   - block_device_mapping_v2.device_name: device_name
@@ -301,6 +302,7 @@ Request
   - block_device_mapping_v2.delete_on_termination: delete_on_termination
   - block_device_mapping_v2.guest_format: guest_format
   - block_device_mapping_v2.boot_index: boot_index
+  - block_device_mapping_v2.tag: device_tag
   - config_drive: config_drive
   - key_name: key_name
   - os:scheduler_hints: os:scheduler_hints
@@ -310,6 +312,11 @@ Request
 **Example Create Server: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/servers/server-create-req.json
+   :language: javascript
+
+**Example Create Server (v2.32)**
+
+.. literalinclude:: ../../doc/api_samples/servers/v2.32/server-create-req.json
    :language: javascript
 
 Response

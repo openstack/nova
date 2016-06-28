@@ -148,6 +148,15 @@ class ServersSampleJson219Test(ServersSampleJsonTest):
         self._verify_response('server-put-resp', subs, response, 200)
 
 
+class ServersSampleJson232Test(ServersSampleBase):
+    microversion = '2.32'
+    sample_dir = 'servers'
+    scenarios = [('v2_32', {'api_major_version': 'v2.1'})]
+
+    def test_servers_post(self):
+        self._post_server(use_common_server_api_samples=False)
+
+
 class ServersUpdateSampleJsonTest(ServersSampleBase):
 
     def test_update_server(self):

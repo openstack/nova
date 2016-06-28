@@ -3440,6 +3440,100 @@ class ServersControllerCreateTestV219(ServersControllerCreateTest):
                           self.req, body=self.body)
 
 
+class ServersControllerCreateTestV232(test.NoDBTestCase):
+    def setUp(self):
+        super(ServersControllerCreateTestV232, self).setUp()
+        self.flags(use_neutron=True)
+
+        ext_info = extension_info.LoadedExtensionInfo()
+        self.controller = servers.ServersController(extension_info=ext_info)
+
+        self.body = {
+            'server': {
+                'name': 'device-tagging-server',
+                'imageRef': '6b0edabb-8cde-4684-a3f4-978960a51378',
+                'flavorRef': '2',
+                'networks': [{
+                    'uuid': 'ff608d40-75e9-48cb-b745-77bb55b5eaf2'
+                }],
+                'block_device_mapping_v2': [{
+                    'uuid': '70a599e0-31e7-49b7-b260-868f441e862b',
+                    'source_type': 'image',
+                    'destination_type': 'volume',
+                    'boot_index': 0,
+                    'volume_size': '1'
+                }]
+            }
+        }
+
+        self.req = fakes.HTTPRequestV21.blank('/fake/servers', version='2.32')
+        self.req.method = 'POST'
+        self.req.headers['content-type'] = 'application/json'
+
+    def _create_server(self):
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.controller.create(self.req, body=self.body)
+
+    def test_create_server_no_tags_old_compute(self):
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=13),
+            mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
+                              return_value=objects.Flavor()),
+            mock.patch.object(
+                compute_api.API, 'create',
+                return_value=(
+                    [{'uuid': 'f60012d9-5ba4-4547-ab48-f94ff7e62d4e'}],
+                    1)),
+        ):
+            self._create_server()
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=13)
+    def test_create_server_tagged_nic_old_compute_fails(self, get_min_ver):
+        self.body['server']['networks'][0]['tag'] = 'foo'
+        self.assertRaises(webob.exc.HTTPBadRequest, self._create_server)
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=13)
+    def test_create_server_tagged_bdm_old_compute_fails(self, get_min_ver):
+        self.body['server']['block_device_mapping_v2'][0]['tag'] = 'foo'
+        self.assertRaises(webob.exc.HTTPBadRequest, self._create_server)
+
+    def test_create_server_tagged_nic_new_compute(self):
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=14),
+            mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
+                              return_value=objects.Flavor()),
+            mock.patch.object(
+                compute_api.API, 'create',
+                return_value=(
+                    [{'uuid': 'f60012d9-5ba4-4547-ab48-f94ff7e62d4e'}],
+                    1)),
+        ):
+            self.body['server']['networks'][0]['tag'] = 'foo'
+            self._create_server()
+
+    def test_create_server_tagged_bdm_new_compute(self):
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=14),
+            mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
+                              return_value=objects.Flavor()),
+            mock.patch.object(
+                compute_api.API, 'create',
+                return_value=(
+                    [{'uuid': 'f60012d9-5ba4-4547-ab48-f94ff7e62d4e'}],
+                    1)),
+            mock.patch.object(self.req, 'cache_db_instances'),
+            mock.patch.object(self.controller, '_add_location',
+                              return_value=None)
+        ):
+            self.body['server']['block_device_mapping_v2'][0]['tag'] = 'foo'
+            self._create_server()
+
+
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     flavor_ref = 'http://localhost/123/flavors/3'
@@ -4129,7 +4223,7 @@ class FakeExt(extensions.V21APIExtensionBase):
         pass
 
     def fake_schema_extension_point(self, version):
-        if version == '2.1' or version == '2.19':
+        if version in ('2.1', '2.19', '2.32'):
             return self.fake_schema
         elif version == '2.0':
             return {}

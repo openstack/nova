@@ -14,6 +14,7 @@
 
 import copy
 
+from nova.api.openstack.compute.schemas import server_tags
 from nova.api.validation import parameter_types
 
 
@@ -65,6 +66,12 @@ base_create_v20['properties']['server'][
 base_create_v219 = copy.deepcopy(base_create)
 base_create_v219['properties']['server'][
     'properties']['description'] = parameter_types.description
+
+
+base_create_v232 = copy.deepcopy(base_create_v219)
+base_create_v232['properties']['server'][
+    'properties']['networks']['items'][
+    'properties']['tag'] = server_tags.tag
 
 
 base_update = {

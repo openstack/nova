@@ -22,10 +22,12 @@ from nova import test
 
 # required because otherwise oslo early parse_args dies
 @mock.patch.object(config, 'parse_args', new=lambda *args, **kwargs: None)
+# required so we don't set the global service version cache
+@mock.patch('nova.objects.Service.enable_min_version_cache')
 class TestNovaAPI(test.NoDBTestCase):
 
     @mock.patch('nova.service.process_launcher')
-    def test_with_ec2(self, launcher):
+    def test_with_ec2(self, launcher, version_cache):
         """Ensure that we don't explode if enabled_apis is wrong.
 
         If the end user hasn't updated their config, an ec2 entry
@@ -40,8 +42,9 @@ class TestNovaAPI(test.NoDBTestCase):
         # collide on ports.
         self.flags(osapi_compute_listen_port=0)
         api.main()
+        version_cache.assert_called_once_with()
 
-    def test_continues_on_failure(self):
+    def test_continues_on_failure(self, version_cache):
         count = [1, 2]
 
         fake_server = mock.MagicMock()
@@ -65,9 +68,10 @@ class TestNovaAPI(test.NoDBTestCase):
             launcher = mock_service.process_launcher.return_value
             launcher.launch_service.assert_called_once_with(
                 fake_server, workers=123)
+        self.assertFalse(version_cache.called)
 
     @mock.patch('sys.exit')
-    def test_fails_if_none_started(self, mock_exit):
+    def test_fails_if_none_started(self, mock_exit, version_cache):
         mock_exit.side_effect = test.TestingException
         self.flags(enabled_apis=[])
         with mock.patch.object(api, 'service') as mock_service:
@@ -75,9 +79,10 @@ class TestNovaAPI(test.NoDBTestCase):
             mock_exit.assert_called_once_with(1)
             launcher = mock_service.process_launcher.return_value
             self.assertFalse(launcher.wait.called)
+        self.assertFalse(version_cache.called)
 
     @mock.patch('sys.exit')
-    def test_fails_if_all_failed(self, mock_exit):
+    def test_fails_if_all_failed(self, mock_exit, version_cache):
         mock_exit.side_effect = test.TestingException
         self.flags(enabled_apis=['foo', 'bar'])
         with mock.patch.object(api, 'service') as mock_service:
@@ -87,3 +92,4 @@ class TestNovaAPI(test.NoDBTestCase):
             mock_exit.assert_called_once_with(1)
             launcher = mock_service.process_launcher.return_value
             self.assertFalse(launcher.wait.called)
+        self.assertFalse(version_cache.called)
