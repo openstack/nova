@@ -1925,7 +1925,8 @@ class ComputeManager(manager.Manager):
                 exception.FlavorMemoryTooSmall,
                 exception.ImageNotActive,
                 exception.ImageUnacceptable,
-                exception.InvalidDiskInfo) as e:
+                exception.InvalidDiskInfo,
+                exception.SignatureVerificationError) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
