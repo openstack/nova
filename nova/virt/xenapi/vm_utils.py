@@ -58,6 +58,7 @@ from nova.virt.image import model as imgmodel
 from nova.virt import netutils
 from nova.virt.xenapi import agent
 from nova.virt.xenapi.image import utils as image_utils
+from nova.virt.xenapi import volume_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -1102,28 +1103,26 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
     sr_ref = safe_find_sr(session)
     vdi_ref = create_vdi(session, sr_ref, instance, 'config-2',
                          'configdrive', configdrive.CONFIGDRIVESIZE_BYTES)
-
     try:
-        with vdi_attached(session, vdi_ref, read_only=False) as dev:
-            extra_md = {}
-            if admin_password:
-                extra_md['admin_pass'] = admin_password
-            inst_md = instance_metadata.InstanceMetadata(instance,
-                    content=files, extra_md=extra_md,
-                    network_info=network_info)
-            with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
-                with utils.tempdir() as tmp_path:
-                    tmp_file = os.path.join(tmp_path, 'configdrive')
-                    cdb.make_drive(tmp_file)
-
-                    dev_path = utils.make_dev_path(dev)
-                    utils.execute('dd',
-                                  'if=%s' % tmp_file,
-                                  'of=%s' % dev_path,
-                                  'bs=%d' % DD_BLOCKSIZE,
-                                  'oflag=direct,sync',
-                                  run_as_root=True)
-
+        extra_md = {}
+        if admin_password:
+            extra_md['admin_pass'] = admin_password
+        inst_md = instance_metadata.InstanceMetadata(
+            instance, content=files, extra_md=extra_md,
+            network_info=network_info)
+        with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
+            with utils.tempdir() as tmp_path:
+                tmp_file = os.path.join(tmp_path, 'configdrive')
+                cdb.make_drive(tmp_file)
+                # XAPI can only import a VHD file, so convert to vhd format
+                vhd_file = '%s.vhd' % tmp_file
+                utils.execute('qemu-img', 'convert', '-Ovpc', tmp_file,
+                              vhd_file)
+                vhd_file_size = os.path.getsize(vhd_file)
+                with open(vhd_file) as file_obj:
+                    volume_utils.stream_to_vdi(
+                        session, instance, 'vhd', file_obj,
+                        vhd_file_size, vdi_ref)
         create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False,
                    read_only=True)
     except Exception:
