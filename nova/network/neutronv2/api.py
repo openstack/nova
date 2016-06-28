@@ -2352,9 +2352,9 @@ class API(base_api.NetworkAPI):
         if old_pci_devices and new_pci_devices:
             LOG.debug("Determining PCI devices mapping using migration"
                       "context: old_pci_devices: %(old)s, "
-                      "new_pci_devices: %(new)s" %
+                      "new_pci_devices: %(new)s",
                       {'old': [dev for dev in old_pci_devices],
-                      'new': [dev for dev in new_pci_devices]})
+                       'new': [dev for dev in new_pci_devices]})
             return {old.address: new
                     for old in old_pci_devices
                         for new in new_pci_devices

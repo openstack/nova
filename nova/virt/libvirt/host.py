@@ -762,7 +762,7 @@ class Host(object):
 
         xml = secret_conf.to_xml()
         try:
-            LOG.debug('Secret XML: %s' % xml)
+            LOG.debug('Secret XML: %s', xml)
             conn = self.get_connection()
             secret = conn.secretDefineXML(xml)
             if password is not None:

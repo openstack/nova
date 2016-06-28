@@ -63,7 +63,7 @@ class MemcachedDriver(base.Driver):
         key = "%(topic)s:%(host)s" % service_ref
         is_up = self.mc.get(str(key)) is not None
         if not is_up:
-            LOG.debug('Seems service %s is down' % key)
+            LOG.debug('Seems service %s is down', key)
 
         return is_up
 

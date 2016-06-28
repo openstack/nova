@@ -337,8 +337,8 @@ class SchedulerReportClient(object):
         new_gen = updated_inventories_result['resource_provider_generation']
 
         self._resource_providers[compute_node.uuid].generation = new_gen
-        LOG.debug('Updated inventory for %s at generation %i' % (
-            compute_node.uuid, new_gen))
+        LOG.debug('Updated inventory for %s at generation %i',
+                  compute_node.uuid, new_gen)
         return True
 
     @safe_connect

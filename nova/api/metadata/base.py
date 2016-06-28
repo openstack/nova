@@ -406,7 +406,7 @@ class InstanceMetadata(object):
                     else:
                         LOG.debug('Metadata for device with unknown bus %s '
                                   'has not been included in the '
-                                  'output' % device.bus.__class__.__name__)
+                                  'output', device.bus.__class__.__name__)
                         continue
                     if 'address' in device.bus:
                         address = device.bus.address
@@ -424,7 +424,7 @@ class InstanceMetadata(object):
                 else:
                     LOG.debug('Metadata for device of unknown type %s has not '
                               'been included in the '
-                              'output' % device.__class__.__name__)
+                              'output', device.__class__.__name__)
                     continue
 
                 device_metadata['bus'] = bus

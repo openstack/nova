@@ -494,7 +494,7 @@ class HostManager(object):
                 forced_hosts_str = ', '.join(hosts_to_force)
                 msg = _LI("No hosts matched due to not matching "
                           "'force_hosts' value of '%s'")
-            LOG.info(msg % forced_hosts_str)
+            LOG.info(msg, forced_hosts_str)
 
         def _match_forced_nodes(host_map, nodes_to_force):
             forced_nodes = []
@@ -510,7 +510,7 @@ class HostManager(object):
                 forced_nodes_str = ', '.join(nodes_to_force)
                 msg = _LI("No nodes matched due to not matching "
                           "'force_nodes' value of '%s'")
-            LOG.info(msg % forced_nodes_str)
+            LOG.info(msg, forced_nodes_str)
 
         def _get_hosts_matching_request(hosts, requested_destination):
             (host, node) = (requested_destination.host,
@@ -519,14 +519,14 @@ class HostManager(object):
                                if x.host == host and x.nodename == node]
             if requested_nodes:
                 LOG.info(_LI('Host filter only checking host %(host)s and '
-                             'node %(node)s') % {'host': host, 'node': node})
+                             'node %(node)s'), {'host': host, 'node': node})
             else:
                 # NOTE(sbauza): The API level should prevent the user from
                 # providing a wrong destination but let's make sure a wrong
                 # destination doesn't trample the scheduler still.
                 LOG.info(_LI('No hosts matched due to not matching requested '
-                             'destination (%(host)s, %(node)s)'
-                             ) % {'host': host, 'node': node})
+                             'destination (%(host)s, %(node)s)'),
+                         {'host': host, 'node': node})
             return iter(requested_nodes)
 
         ignore_hosts = spec_obj.ignore_hosts or []

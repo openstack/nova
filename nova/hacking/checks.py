@@ -105,6 +105,9 @@ doubled_words_re = re.compile(
     r"\b(then?|[iao]n|i[fst]|but|f?or|at|and|[dt]o)\s+\1\b")
 log_remove_context = re.compile(
     r"(.)*LOG\.(.*)\(.*(context=[_a-zA-Z0-9].*)+.*\)")
+log_string_interpolation = re.compile(r".*LOG\.(error|warning|info"
+                                      r"|critical|exception|debug)"
+                                      r"\([^,]*%[^,]*[,)]")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -794,6 +797,28 @@ def check_context_log(logical_line, physical_line, filename):
               "kwarg.")
 
 
+def check_delayed_string_interpolation(logical_line, physical_line, filename):
+    """Check whether string interpolation is delayed at logging calls
+
+    Not correct: LOG.debug('Example: %s' % 'bad')
+    Correct:     LOG.debug('Example: %s', 'good')
+
+    N354
+    """
+    if "nova/tests" in filename:
+        return
+
+    if pep8.noqa(physical_line):
+        return
+
+    if log_string_interpolation.match(logical_line):
+        yield(logical_line.index('%'),
+              "N354: String interpolation should be delayed to be "
+              "handled by the logging code, rather than being done "
+              "at the point of the logging call. "
+              "Use ',' instead of '%'.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -834,3 +859,4 @@ def factory(register):
     register(no_log_warn)
     register(CheckForUncalledTestClosure)
     register(check_context_log)
+    register(check_delayed_string_interpolation)

@@ -343,18 +343,18 @@ class XenAPISession(object):
         task_ref = self.call_xenapi("task.create", name,
                                        desc)
         try:
-            LOG.debug('Created task %s with ref %s' % (name, task_ref))
+            LOG.debug('Created task %s with ref %s', name, task_ref)
             yield task_ref
         finally:
             self.call_xenapi("task.destroy", task_ref)
-            LOG.debug('Destroyed task ref %s' % (task_ref))
+            LOG.debug('Destroyed task ref %s', task_ref)
 
     @contextlib.contextmanager
     def http_connection(session):
         conn = None
 
         xs_url = urllib.parse.urlparse(session.url)
-        LOG.debug("Creating http(s) connection to %s" % session.url)
+        LOG.debug("Creating http(s) connection to %s", session.url)
         if xs_url.scheme == 'http':
             conn = http_client.HTTPConnection(xs_url.netloc)
         elif xs_url.scheme == 'https':
