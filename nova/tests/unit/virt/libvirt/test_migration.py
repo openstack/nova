@@ -14,6 +14,7 @@
 
 from lxml import etree
 import mock
+from oslo_utils import units
 
 import six
 
@@ -22,9 +23,11 @@ from nova import test
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
+from nova.virt.libvirt import host
 from nova.virt.libvirt import migration
 
 libvirt_guest.libvirt = fakelibvirt
+host.libvirt = fakelibvirt
 migration.libvirt = fakelibvirt
 
 
@@ -395,3 +398,30 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
 
         self.assertEqual(newdt, 200)
         mock_dt.assert_called_once_with(200)
+
+    @mock.patch.object(objects.Instance, "save")
+    @mock.patch.object(objects.Migration, "save")
+    def test_live_migration_save_stats(self, mock_isave, mock_msave):
+        mig = objects.Migration()
+
+        info = libvirt_guest.JobInfo(
+            memory_total=1 * units.Gi,
+            memory_processed=5 * units.Gi,
+            memory_remaining=500 * units.Mi,
+            disk_total=15 * units.Gi,
+            disk_processed=10 * units.Gi,
+            disk_remaining=14 * units.Gi)
+
+        migration.save_stats(self.instance, mig, info, 75)
+
+        self.assertEqual(mig.memory_total, 1 * units.Gi)
+        self.assertEqual(mig.memory_processed, 5 * units.Gi)
+        self.assertEqual(mig.memory_remaining, 500 * units.Mi)
+        self.assertEqual(mig.disk_total, 15 * units.Gi)
+        self.assertEqual(mig.disk_processed, 10 * units.Gi)
+        self.assertEqual(mig.disk_remaining, 14 * units.Gi)
+
+        self.assertEqual(self.instance.progress, 25)
+
+        mock_msave.assert_called_once_with()
+        mock_isave.assert_called_once_with()

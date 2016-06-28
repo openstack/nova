@@ -253,3 +253,29 @@ def update_downtime(guest, instance,
                         "ms: %(e)s"),
                     {"time": thisstep[1], "e": e}, instance=instance)
     return thisstep[1]
+
+
+def save_stats(instance, migration, info, remaining):
+    """Save migration stats to the database
+
+    :param instance: a nova.objects.Instance
+    :param migration: a nova.objects.Migration
+    :param info: a nova.virt.libvirt.guest.JobInfo
+    :param remaining: percentage data remaining to transfer
+
+    Update the migration and instance objects with
+    the latest available migration stats
+    """
+
+    # The fully detailed stats
+    migration.memory_total = info.memory_total
+    migration.memory_processed = info.memory_processed
+    migration.memory_remaining = info.memory_remaining
+    migration.disk_total = info.disk_total
+    migration.disk_processed = info.disk_processed
+    migration.disk_remaining = info.disk_remaining
+    migration.save()
+
+    # The coarse % completion stats
+    instance.progress = 100 - remaining
+    instance.save()
