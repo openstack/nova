@@ -251,10 +251,10 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 instance=self.fake_instance_obj, version='4.0')
 
     def test_get_instance_diagnostics(self):
-        expected_args = {'instance': self.fake_instance}
+        expected_args = {'instance': self.fake_instance_obj}
         self._test_compute_api('get_instance_diagnostics', 'call',
                 expected_args, instance=self.fake_instance_obj,
-                version='4.0')
+                version='4.13')
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
