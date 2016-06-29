@@ -3795,6 +3795,7 @@ class TestNeutronv2WithMock(test.TestCase):
                               availability_zone='zone-1',
                               uuid='inst-1')
         mock_show_port.return_value = {
+                            'id': uuids.portid_1,
                             'tenant_id': mock_inst.project_id,
                             'binding:vif_type': 'binding_failed'}
         nw_req = objects.NetworkRequestList(
@@ -4268,6 +4269,19 @@ class TestAllocateForInstanceHelpers(test.NoDBTestCase):
 
         expected_port = {"foo": "bar", "mac_address": "b"}
         self.assertEqual(expected_port, port_req_body["port"])
+
+    def test_ensure_no_port_binding_failure_raises(self):
+        port = {
+            'id': uuids.port_id,
+            'binding:vif_type': model.VIF_TYPE_BINDING_FAILED
+        }
+
+        self.assertRaises(exception.PortBindingFailed,
+                          neutronapi._ensure_no_port_binding_failure, port)
+
+    def test_ensure_no_port_binding_failure_passes_if_no_binding(self):
+        port = {'id': uuids.port_id}
+        neutronapi._ensure_no_port_binding_failure(port)
 
 
 class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
