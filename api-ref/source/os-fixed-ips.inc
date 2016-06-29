@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 
 ======================================
  Fixed IPs (os-fixed-ips) (DEPRECATED)
@@ -81,4 +80,4 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST query
+There is no body content for the response of a successful POST operation.
