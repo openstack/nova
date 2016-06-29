@@ -118,6 +118,7 @@ Possible values:
 """),
     cfg.IntOpt("num_networks",
             default=1,
+            min=1,
             help="""
 This option represents the number of networks to create if not explicitly
 specified when the network is created. The only time this is used is if a CIDR
@@ -159,7 +160,7 @@ Related options:
 
     ``network_manager``, ``use_neutron``, ``vpn_start``
 """),
-    cfg.IntOpt("vpn_start",
+    cfg.PortOpt("vpn_start",
             default=1000,
             help="""
 This is the port number to use as the first VPN port for private networks.
@@ -180,6 +181,7 @@ Related options:
 """),
     cfg.IntOpt("network_size",
             default=256,
+            min=1,
             help="""
 This option determines the number of addresses in each private subnet.
 
@@ -244,6 +246,7 @@ Related options:
 """),
     cfg.IntOpt("cnt_vpn_clients",
             default=0,
+            min=0,
             help="""
 This option represents the number of IP addresses to reserve at the top of the
 address range for VPN clients. It also will be ignored if the configuration
@@ -260,6 +263,7 @@ Related options:
 """),
     cfg.IntOpt("fixed_ip_disassociate_timeout",
             default=600,
+            min=0,
             help="""
 This is the number of seconds to wait before disassociating a deallocated fixed
 IP address. This is only used with the nova-network service, and has no effect
@@ -275,6 +279,7 @@ Related options:
 """),
     cfg.IntOpt("create_unique_mac_address_attempts",
             default=5,
+            min=1,
             help="""
 This option determines how many times nova-network will attempt to create a
 unique MAC address before giving up and raising a
@@ -321,6 +326,7 @@ Related options:
 """),
     cfg.IntOpt("dns_update_periodic_interval",
             default=-1,
+            min=-1,
             help="""
 This option determines the time, in seconds, to wait between refreshing DNS
 entries for the network.
@@ -458,6 +464,7 @@ Related options:
 """),
     cfg.IntOpt('dhcp_lease_time',
             default=86400,
+            min=1,
             help="""
 The lifetime of a DHCP lease, in seconds. The default is 86400 (one day).
 
