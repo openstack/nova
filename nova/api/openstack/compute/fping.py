@@ -26,11 +26,10 @@ from nova.api.openstack import wsgi
 from nova import compute
 import nova.conf
 from nova.i18n import _
+from nova.policies import fping as fping_policies
 from nova import utils
 
 ALIAS = "os-fping"
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 CONF = nova.conf.CONF
 
@@ -73,9 +72,9 @@ class FpingController(wsgi.Controller):
         context = req.environ["nova.context"]
         search_opts = dict(deleted=False)
         if "all_tenants" in req.GET:
-            authorize(context, action='all_tenants')
+            context.can(fping_policies.POLICY_ROOT % 'all_tenants')
         else:
-            authorize(context)
+            context.can(fping_policies.BASE_POLICY_NAME)
             if context.project_id:
                 search_opts["project_id"] = context.project_id
             else:
@@ -121,7 +120,7 @@ class FpingController(wsgi.Controller):
     @extensions.expected_errors((404, 503))
     def show(self, req, id):
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(fping_policies.BASE_POLICY_NAME)
         self.check_fping()
         instance = common.get_instance(self.compute_api, context, id)
         ips = [str(ip) for ip in self._get_instance_ips(context, instance)]

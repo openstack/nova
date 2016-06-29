@@ -21,10 +21,9 @@ from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import flavor_manage as fm_policies
 
 ALIAS = "os-flavor-manage"
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class FlavorManageController(wsgi.Controller):
@@ -42,7 +41,7 @@ class FlavorManageController(wsgi.Controller):
     @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fm_policies.BASE_POLICY_NAME)
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:
@@ -58,7 +57,7 @@ class FlavorManageController(wsgi.Controller):
     @validation.schema(flavor_manage.create, '2.1')
     def _create(self, req, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fm_policies.BASE_POLICY_NAME)
 
         vals = body['flavor']
 

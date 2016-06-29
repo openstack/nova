@@ -21,9 +21,9 @@ from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
+from nova.policies import ips as ips_policies
 
 ALIAS = 'ips'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class IPsController(wsgi.Controller):
@@ -41,7 +41,7 @@ class IPsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
-        authorize(context, action='index')
+        context.can(ips_policies.POLICY_ROOT % 'index')
         instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
@@ -49,7 +49,7 @@ class IPsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
-        authorize(context, action='show')
+        context.can(ips_policies.POLICY_ROOT % 'show')
         instance = common.get_instance(self._compute_api, context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         if id not in networks:

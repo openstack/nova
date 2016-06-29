@@ -31,11 +31,11 @@ from nova import exception
 from nova.i18n import _
 from nova.i18n import _LW
 from nova import network
+from nova.policies import floating_ips as fi_policies
 
 
 LOG = logging.getLogger(__name__)
 ALIAS = 'os-floating-ips'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def _translate_floating_ip_view(floating_ip):
@@ -116,7 +116,7 @@ class FloatingIPController(object):
     def show(self, req, id):
         """Return data about the given floating IP."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         try:
             floating_ip = self.network_api.get_floating_ip(context, id)
@@ -132,7 +132,7 @@ class FloatingIPController(object):
     def index(self, req):
         """Return a list of floating IPs allocated to a project."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         floating_ips = self.network_api.get_floating_ips_by_project(context)
 
@@ -141,7 +141,7 @@ class FloatingIPController(object):
     @extensions.expected_errors((400, 403, 404))
     def create(self, req, body=None):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         pool = None
         if body and 'pool' in body:
@@ -172,7 +172,7 @@ class FloatingIPController(object):
     @extensions.expected_errors((400, 403, 404, 409))
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         # get the floating ip object
         try:
@@ -209,7 +209,7 @@ class FloatingIPActionController(wsgi.Controller):
     def _add_floating_ip(self, req, id, body):
         """Associate floating_ip to an instance."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         address = body['addFloatingIp']['address']
 
@@ -287,7 +287,7 @@ class FloatingIPActionController(wsgi.Controller):
     def _remove_floating_ip(self, req, id, body):
         """Dissociate floating_ip from an instance."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(fi_policies.BASE_POLICY_NAME)
 
         address = body['removeFloatingIp']['address']
 
