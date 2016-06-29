@@ -171,6 +171,24 @@ to ensure the live-migration operation will complete.
 When using post-copy mode, if the source and destination hosts loose network
 connectivity, the VM being live-migrated will need to be rebooted. For more
 details, please see the Administration guide.
+
+Related options:
+
+    * live_migration_permit_auto_converge
+"""),
+    cfg.BoolOpt('live_migration_permit_auto_converge',
+                default=False,
+                help="""
+This option allows nova to start live migration with auto converge on.
+Auto converge throttles down CPU if a progress of on-going live migration
+is slow. Auto converge will only be used if this flag is set to True and
+post copy is not permitted or post copy is unavailable due to the version
+of libvirt and QEMU in use. Auto converge requires libvirt>=1.2.3 and
+QEMU>=1.6.0.
+
+Related options:
+
+    * live_migration_permit_post_copy
 """),
     cfg.StrOpt('snapshot_image_format',
                choices=('raw', 'qcow2', 'vmdk', 'vdi'),
