@@ -243,6 +243,7 @@ def delete_image_on_error(function):
 
 
 # TODO(danms): Remove me after Icehouse
+# TODO(alaski): Actually remove this after Newton, assuming a major RPC bump
 # NOTE(mikal): if the method being decorated has more than one decorator, then
 # put this one first. Otherwise the various exception handling decorators do
 # not function correctly.
@@ -1179,6 +1180,7 @@ class ComputeManager(manager.Manager):
         """
         return self.driver.refresh_security_group_rules(security_group_id)
 
+    # TODO(alaski): Remove object_compat for RPC version 5.0
     @object_compat
     @wrap_exception()
     def refresh_instance_security_rules(self, context, instance):
@@ -4007,6 +4009,7 @@ class ComputeManager(manager.Manager):
                 state=instance.power_state,
                 method='get_diagnostics')
 
+    # TODO(alaski): Remove object_compat for RPC version 5.0
     @object_compat
     @wrap_exception()
     @wrap_instance_fault
