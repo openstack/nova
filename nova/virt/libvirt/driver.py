@@ -320,7 +320,8 @@ class LibvirtDriver(driver.ComputeDriver):
         "has_imagecache": True,
         "supports_recreate": True,
         "supports_migrate_to_same_host": False,
-        "supports_attach_interface": True
+        "supports_attach_interface": True,
+        "supports_device_tagging": True,
     }
 
     def __init__(self, virtapi, read_only=False):
@@ -3100,6 +3101,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_configdrive(self, context, instance, admin_pass=None,
                             files=None, network_info=None, suffix=''):
+        # As this method being called right after the definition of a
+        # domain, but before its actual launch, device metadata will be built
+        # and saved in the instance for it to be used by the config drive and
+        # the metadata service.
+        instance.device_metadata = self._build_device_metadata(context,
+                                                               instance)
         config_drive_image = None
         if configdrive.required_by(instance):
             LOG.info(_LI('Using config drive'), instance=instance)
@@ -7444,6 +7451,72 @@ class LibvirtDriver(driver.ComputeDriver):
             for index, node in enumerate(nodes):
                 diags.nic_details[index].mac_address = node.get('address')
         return diags
+
+    @staticmethod
+    def _prepare_device_bus(dev):
+        """Determins the device bus and it's hypervisor assigned address
+        """
+        address = (dev.device_addr.format_address() if
+                   dev.device_addr else None)
+        if isinstance(dev.device_addr,
+                      vconfig.LibvirtConfigGuestDeviceAddressPCI):
+            bus = objects.PCIDeviceBus()
+        elif dev.target_bus == 'scsi':
+            bus = objects.SCSIDeviceBus()
+        elif dev.target_bus == 'ide':
+            bus = objects.IDEDeviceBus()
+        elif dev.target_bus == 'usb':
+            bus = objects.USBDeviceBus()
+        if address is not None:
+            bus.address = address
+        return bus
+
+    def _build_device_metadata(self, context, instance):
+        """Builds a metadata object for instance devices, that maps the user
+           provided tag to the hypervisor assigned device address.
+        """
+        def _get_device_name(bdm):
+            return block_device.strip_dev(bdm.device_name)
+
+        vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
+                                                                 instance.uuid)
+        tagged_vifs = {vif.address: vif for vif in vifs if vif.tag}
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+        tagged_bdms = {_get_device_name(bdm): bdm for bdm in bdms if bdm.tag}
+
+        devices = []
+        guest = self._host.get_guest(instance)
+        xml = guest.get_xml_desc()
+        xml_dom = etree.fromstring(xml)
+        guest_config = vconfig.LibvirtConfigGuest()
+        guest_config.parse_dom(xml_dom)
+
+        for dev in guest_config.devices:
+            # Build network intefaces related metedata
+            if isinstance(dev, vconfig.LibvirtConfigGuestInterface):
+                vif = tagged_vifs.get(dev.mac_addr)
+                if not vif:
+                    continue
+                bus = self._prepare_device_bus(dev)
+                device = objects.NetworkInterfaceMetadata(
+                    mac=vif.address,
+                    bus=bus,
+                    tags=[vif.tag]
+                )
+                devices.append(device)
+
+            # Build disks related metedata
+            if isinstance(dev, vconfig.LibvirtConfigGuestDisk):
+                bdm = tagged_bdms.get(dev.target_dev)
+                if not bdm:
+                    continue
+                bus = self._prepare_device_bus(dev)
+                device = objects.DiskMetadata(bus=bus, tags=[bdm.tag])
+                devices.append(device)
+        if devices:
+            dev_meta = objects.InstanceDeviceMetadata(devices=devices)
+            return dev_meta
 
     def instance_on_disk(self, instance):
         # ensure directories exist and are writable

@@ -136,7 +136,8 @@ class ComputeDriver(object):
         "has_imagecache": False,
         "supports_recreate": False,
         "supports_migrate_to_same_host": False,
-        "supports_attach_interface": False
+        "supports_attach_interface": False,
+        "supports_device_tagging": False,
     }
 
     def __init__(self, virtapi):
