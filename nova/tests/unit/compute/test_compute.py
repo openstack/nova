@@ -102,6 +102,7 @@ CONF = nova.conf.CONF
 FAKE_IMAGE_REF = uuids.image_ref
 
 NODENAME = 'fakenode1'
+NODENAME2 = 'fakenode2'
 
 
 def fake_not_implemented(*args, **kwargs):
@@ -149,7 +150,7 @@ class BaseTestCase(test.TestCase):
     def setUp(self):
         super(BaseTestCase, self).setUp()
         self.flags(network_manager='nova.network.manager.FlatManager')
-        fake.set_nodes([NODENAME])
+        fake.set_nodes([NODENAME, NODENAME2])
 
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
@@ -5451,6 +5452,10 @@ class ComputeTestCase(BaseTestCase):
             self.context.elevated(), instance.uuid)
         self.assertIsInstance(migration_context.old_numa_topology,
                               numa_topology.__class__)
+        source_compute = migration.source_compute
+        migration.dest_compute = NODENAME2
+        migration.dest_node = NODENAME2
+        migration.save()
 
         # NOTE(mriedem): ensure prep_resize set old_vm_state in system_metadata
         sys_meta = instance.system_metadata
@@ -5491,6 +5496,12 @@ class ComputeTestCase(BaseTestCase):
             instance.system_metadata = sys_meta
             instance.save()
 
+        # NOTE(hanrong): Prove that we pass the right value to the
+        # "self.network_api.migrate_instance_finish".
+        def fake_migrate_instance_finish(cls, context, instance, migration):
+            self.assertEqual(source_compute, migration['dest_compute'])
+        self.stub_out('nova.network.api.API.migrate_instance_finish',
+                      fake_migrate_instance_finish)
         self.compute.finish_revert_resize(self.context,
                 migration=migration,
                 instance=instance, reservations=reservations)
@@ -5501,7 +5512,10 @@ class ComputeTestCase(BaseTestCase):
                                           instance['instance_type_id'])
         self.assertEqual(flavor.flavorid, '1')
         self.assertEqual(instance.host, migration.source_compute)
-        self.assertEqual(migration.dest_compute, migration.source_compute)
+        self.assertNotEqual(migration.dest_compute, migration.source_compute)
+        self.assertNotEqual(migration.dest_node, migration.source_node)
+        self.assertEqual(NODENAME2, migration.dest_compute)
+        self.assertEqual(NODENAME2, migration.dest_node)
         self.assertIsInstance(instance.numa_topology, numa_topology.__class__)
 
         if remove_old_vm_state:
