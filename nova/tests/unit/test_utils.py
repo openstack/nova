@@ -37,7 +37,10 @@ import six
 import nova
 from nova import context
 from nova import exception
+from nova.objects import base as obj_base
 from nova import test
+from nova.tests.unit.objects import test_objects
+from nova.tests.unit import utils as test_utils
 from nova import utils
 
 CONF = cfg.CONF
@@ -1348,3 +1351,66 @@ class UT8TestCase(test.NoDBTestCase):
     def test_text_type_with_encoding(self):
         some_value = 'test\u2026config'
         self.assertEqual(some_value, utils.utf8(some_value).decode("utf-8"))
+
+
+class TestObjectCallHelpers(test.NoDBTestCase):
+    def test_with_primitives(self):
+        tester = mock.Mock()
+        tester.foo(1, 'two', three='four')
+        self.assertTrue(
+            test_utils.obj_called_with(tester.foo, 1, 'two', three='four'))
+        self.assertFalse(
+            test_utils.obj_called_with(tester.foo, 42, 'two', three='four'))
+
+    def test_with_object(self):
+        obj_base.NovaObjectRegistry.register(test_objects.MyObj)
+        obj = test_objects.MyObj(foo=1, bar='baz')
+        tester = mock.Mock()
+        tester.foo(1, obj)
+        self.assertTrue(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=1, bar='baz')))
+        self.assertFalse(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=2, bar='baz')))
+
+    def test_with_object_multiple(self):
+        obj_base.NovaObjectRegistry.register(test_objects.MyObj)
+        obj1 = test_objects.MyObj(foo=1, bar='baz')
+        obj2 = test_objects.MyObj(foo=3, bar='baz')
+        tester = mock.Mock()
+        tester.foo(1, obj1)
+        tester.foo(1, obj1)
+        tester.foo(3, obj2)
+
+        # Called at all
+        self.assertTrue(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=1, bar='baz')))
+
+        # Called once (not true)
+        self.assertFalse(
+            test_utils.obj_called_once_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=1, bar='baz')))
+
+        # Not called with obj.foo=2
+        self.assertFalse(
+            test_utils.obj_called_with(
+                tester.foo, 1,
+                test_objects.MyObj(foo=2, bar='baz')))
+
+        # Called with obj.foo.3
+        self.assertTrue(
+            test_utils.obj_called_with(
+                tester.foo, 3,
+                test_objects.MyObj(foo=3, bar='baz')))
+
+        # Called once with obj.foo.3
+        self.assertTrue(
+            test_utils.obj_called_once_with(
+                tester.foo, 3,
+                test_objects.MyObj(foo=3, bar='baz')))
