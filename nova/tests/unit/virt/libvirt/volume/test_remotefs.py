@@ -166,7 +166,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
         remotefs.RsyncDriver().copy_file('1.2.3.4:/home/star_wars',
                                          '/home/favourite', None, None,
                                          compression=True)
-        mock_execute.assert_called_once_with('rsync', '--sparse',
+        mock_execute.assert_called_once_with('rsync', '-r', '--sparse',
                                              '1.2.3.4:/home/star_wars',
                                              '/home/favourite',
                                              '--compress',
@@ -178,7 +178,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
         remotefs.RsyncDriver().copy_file('1.2.3.4:/home/star_wars',
                                          '/home/favourite', None, None,
                                          compression=False)
-        mock_execute.assert_called_once_with('rsync', '--sparse',
+        mock_execute.assert_called_once_with('rsync', '-r', '--sparse',
                                              '1.2.3.4:/home/star_wars',
                                              '/home/favourite',
                                              on_completion=None,
@@ -188,7 +188,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
     def test_remote_copy_file_ssh(self, mock_execute):
         remotefs.SshDriver().copy_file('1.2.3.4:/home/SpaceOdyssey',
                                        '/home/favourite', None, None, True)
-        mock_execute.assert_called_once_with('scp',
+        mock_execute.assert_called_once_with('scp', '-r',
                                              '1.2.3.4:/home/SpaceOdyssey',
                                              '/home/favourite',
                                              on_completion=None,

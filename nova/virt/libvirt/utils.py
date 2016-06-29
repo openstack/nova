@@ -199,7 +199,8 @@ def copy_image(src, dest, host=None, receive=False,
         # sparse files.  I.E. holes will not be written to DEST,
         # rather recreated efficiently.  In addition, since
         # coreutils 8.11, holes can be read efficiently too.
-        execute('cp', src, dest)
+        # we add '-r' argument because ploop disks are directories
+        execute('cp', '-r', src, dest)
     else:
         if receive:
             src = "%s:%s" % (utils.safe_ip_format(host), src)

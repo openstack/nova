@@ -33,6 +33,7 @@ if os.name != 'nt':
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
+from oslo_utils import units
 
 import nova.conf
 from nova import exception
@@ -156,6 +157,16 @@ def extend(image, size):
 
     # Currently can only resize FS in local images
     if not isinstance(image, imgmodel.LocalImage):
+        return
+
+    if (image.format == imgmodel.FORMAT_PLOOP):
+        if not can_resize_image(image.path, size):
+            return
+
+        utils.execute('prl_disk_tool', 'resize',
+                      '--size', '%dM' % (size // units.Mi),
+                      '--resize_partition',
+                      '--hdd', image.path, run_as_root=True)
         return
 
     if not can_resize_image(image.path, size):
