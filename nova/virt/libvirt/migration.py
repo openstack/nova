@@ -170,7 +170,8 @@ def find_job_type(guest, instance):
 
 def should_abort(instance, now,
                  progress_time, progress_timeout,
-                 elapsed, completion_timeout):
+                 elapsed, completion_timeout,
+                 migration_status):
     """Determine if the migration should be aborted
 
     :param instance: a nova.objects.Instance
@@ -179,12 +180,18 @@ def should_abort(instance, now,
     :param progress_timeout: time in secs to allow for progress
     :param elapsed: total elapsed time of migration in secs
     :param completion_timeout: time in secs to allow for completion
+    :param migration_status: current status of the migration
 
     Check the progress and completion timeouts to determine if either
     of them have been hit, and should thus cause migration to be aborted
 
+    Avoid migration to be aborted if it is running in post-copy mode
+
     :returns: True if migration should be aborted, False otherwise
     """
+    if migration_status == 'running (post-copy)':
+        return False
+
     if (progress_timeout != 0 and
             (now - progress_time) > progress_timeout):
         LOG.warning(_LW("Live migration stuck for %d sec"),
@@ -198,6 +205,39 @@ def should_abort(instance, now,
             completion_timeout, instance=instance)
         return True
 
+    return False
+
+
+def should_switch_to_postcopy(memory_iteration, current_data_remaining,
+                              previous_data_remaining, migration_status):
+    """Determine if the migration should be switched to postcopy mode
+
+    :param memory_iteration: Number of memory iterations during the migration
+    :param current_data_remaining: amount of memory to be transferred
+    :param previous_data_remaining: previous memory to be transferred
+    :param migration_status: current status of the migration
+
+    Check the progress after the first memory iteration to determine if the
+    migration should be switched to post-copy mode
+
+    Avoid post-copy switch if already running in post-copy mode
+
+    :returns: True if migration should be switched to postcopy mode,
+    False otherwise
+    """
+    if (migration_status == 'running (post-copy)' or
+        previous_data_remaining <= 0):
+        return False
+
+    if memory_iteration > 1:
+        progress_percentage = round((previous_data_remaining -
+                                     current_data_remaining) *
+                                    100 / previous_data_remaining)
+        # If migration progress is less than 10% per iteration after the
+        # first memory page copying pass, the migration is switched to
+        # postcopy mode
+        if progress_percentage < 10:
+            return True
     return False
 
 

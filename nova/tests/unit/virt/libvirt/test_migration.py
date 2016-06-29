@@ -282,42 +282,68 @@ class MigrationMonitorTestCase(test.NoDBTestCase):
         self.assertTrue(migration.should_abort(self.instance,
                                                5000,
                                                1000, 2000,
-                                               4500, 9000))
+                                               4500, 9000,
+                                               "running"))
 
     def test_live_migration_abort_no_prog_timeout(self):
         # Progress timeout is disabled
         self.assertFalse(migration.should_abort(self.instance,
                                                 5000,
                                                 1000, 0,
-                                                4500, 9000))
+                                                4500, 9000,
+                                                "running"))
 
     def test_live_migration_abort_not_stuck(self):
         # Progress time is less than progress timeout
         self.assertFalse(migration.should_abort(self.instance,
                                                 5000,
                                                 4500, 2000,
-                                                4500, 9000))
+                                                4500, 9000,
+                                                "running"))
 
     def test_live_migration_abort_too_long(self):
         # Elapsed time is over completion timeout
         self.assertTrue(migration.should_abort(self.instance,
                                                5000,
                                                4500, 2000,
-                                               4500, 2000))
+                                               4500, 2000,
+                                               "running"))
 
     def test_live_migration_abort_no_comp_timeout(self):
         # Completion timeout is disabled
         self.assertFalse(migration.should_abort(self.instance,
                                                 5000,
                                                 4500, 2000,
-                                                4500, 0))
+                                                4500, 0,
+                                                "running"))
 
     def test_live_migration_abort_still_working(self):
         # Elapsed time is less than completion timeout
         self.assertFalse(migration.should_abort(self.instance,
                                                 5000,
                                                 4500, 2000,
-                                                4500, 9000))
+                                                4500, 9000,
+                                                "running"))
+
+    def test_live_migration_postcopy_switch(self):
+        # Migration progress is not fast enough
+        self.assertTrue(migration.should_switch_to_postcopy(
+                2, 100, 105, "running"))
+
+    def test_live_migration_postcopy_switch_already_switched(self):
+        # Migration already running in postcopy mode
+        self.assertFalse(migration.should_switch_to_postcopy(
+                2, 100, 105, "running (post-copy)"))
+
+    def test_live_migration_postcopy_switch_too_soon(self):
+        # First memory iteration not completed yet
+        self.assertFalse(migration.should_switch_to_postcopy(
+                1, 100, 105, "running"))
+
+    def test_live_migration_postcopy_switch_fast_progress(self):
+        # Migration progress is good
+        self.assertFalse(migration.should_switch_to_postcopy(
+                2, 100, 155, "running"))
 
     @mock.patch.object(libvirt_guest.Guest,
                        "migrate_configure_max_downtime")
