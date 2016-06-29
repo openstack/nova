@@ -22,6 +22,7 @@ import mock
 from mox3 import mox
 import oslo_messaging as messaging
 from oslo_utils import timeutils
+from oslo_versionedobjects import exception as ovo_exc
 import six
 
 from nova.compute import flavors
@@ -181,6 +182,55 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                 tuple(), {})
             m.return_value.obj_to_primitive.assert_called_once_with(
                 target_version='1.2', version_manifest=versions)
+
+    def test_object_class_action_versions_old_object(self):
+        # Make sure we return older than requested objects unmodified,
+        # see bug #1596119.
+        @obj_base.NovaObjectRegistry.register
+        class TestObject(obj_base.NovaObject):
+            VERSION = '1.10'
+
+            @classmethod
+            def foo(cls, context):
+                return cls()
+
+        versions = {
+            'TestObject': '1.10',
+            'OtherObj': '1.0',
+        }
+        with mock.patch.object(self.conductor_manager,
+                               '_object_dispatch') as m:
+            m.return_value = TestObject()
+            m.return_value.VERSION = '1.9'
+            m.return_value.obj_to_primitive = mock.MagicMock()
+            obj = self.conductor.object_class_action_versions(
+                self.context, TestObject.obj_name(), 'foo', versions,
+                tuple(), {})
+            self.assertFalse(m.return_value.obj_to_primitive.called)
+            self.assertEqual('1.9', obj.VERSION)
+
+    def test_object_class_action_versions_major_version_diff(self):
+        @obj_base.NovaObjectRegistry.register
+        class TestObject(obj_base.NovaObject):
+            VERSION = '2.10'
+
+            @classmethod
+            def foo(cls, context):
+                return cls()
+
+        versions = {
+            'TestObject': '2.10',
+            'OtherObj': '1.0',
+        }
+        with mock.patch.object(self.conductor_manager,
+                               '_object_dispatch') as m:
+            m.return_value = TestObject()
+            m.return_value.VERSION = '1.9'
+            self.assertRaises(
+                ovo_exc.InvalidTargetVersion,
+                self.conductor.object_class_action_versions,
+                self.context, TestObject.obj_name(), 'foo', versions,
+                tuple(), {})
 
     def test_reset(self):
         with mock.patch.object(objects.Service, 'clear_min_version_cache'
