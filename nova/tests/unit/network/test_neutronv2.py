@@ -3292,6 +3292,25 @@ class TestNeutronv2WithMock(test.TestCase):
                           instance, port_uuid, port_req_body)
         update_port_mock.assert_called_once_with(port_uuid, port_req_body)
 
+    @mock.patch.object(client.Client, 'update_port')
+    def test_update_port_for_instance_binding_failure(self,
+            update_port_mock):
+        port_uuid = uuids.port
+        instance = objects.Instance(uuid=uuids.instance)
+        port_req_body = {'port': {
+                            'id': port_uuid,
+                            'mac_address': 'XX:XX:XX:XX:XX:XX',
+                            'network_id': uuids.network_id}}
+        update_port_mock.return_value = {'port': {
+            'id': port_uuid,
+            'binding:vif_type': model.VIF_TYPE_BINDING_FAILED
+        }}
+
+        self.assertRaises(exception.PortBindingFailed,
+                          self.api._update_port,
+                          neutronapi.get_client(self.context),
+                          instance, port_uuid, port_req_body)
+
     @mock.patch.object(client.Client, 'create_port',
                        side_effect=exceptions.IpAddressInUseClient())
     def test_create_port_for_fixed_ip_in_use(self, create_port_mock):
@@ -3641,7 +3660,8 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_nc.show_port = show_port
 
         mock_ntrn.return_value = mock_nc
-        mock_nc.update_port.side_effect = [True, True, Exception]
+        up_return = {"port": {}}
+        mock_nc.update_port.side_effect = [up_return, up_return, Exception]
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')
