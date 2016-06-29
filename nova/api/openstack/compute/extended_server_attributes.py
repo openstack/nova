@@ -89,18 +89,21 @@ class ExtendedServerAttributesController(wsgi.Controller):
             authorize_host_status = True
         if authorize_extend or authorize_host_status:
             servers = list(resp_obj.obj['servers'])
-            instances = req.get_db_instances()
-            # Instances is guaranteed to be in the cache due to
-            # the core API adding it in its 'detail' method.
-            if authorize_host_status:
-                host_statuses = self.compute_api.get_instances_host_statuses(
-                                instances.values())
-            for server in servers:
-                if authorize_extend:
-                    instance = instances[server['id']]
-                    self._extend_server(context, server, instance, req)
+            # NOTE(dinesh-bhor): Skipping fetching of instances from cache as
+            # servers list can be empty if invalid status is provided to the
+            # core API 'detail' method.
+            if servers:
+                instances = req.get_db_instances()
                 if authorize_host_status:
-                    server['host_status'] = host_statuses[server['id']]
+                    host_statuses = (
+                        self.compute_api.get_instances_host_statuses(
+                                instances.values()))
+                for server in servers:
+                    if authorize_extend:
+                        instance = instances[server['id']]
+                        self._extend_server(context, server, instance, req)
+                    if authorize_host_status:
+                        server['host_status'] = host_statuses[server['id']]
 
 
 class ExtendedServerAttributes(extensions.V21APIExtensionBase):
