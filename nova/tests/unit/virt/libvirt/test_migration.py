@@ -19,6 +19,8 @@ from oslo_utils import units
 
 import six
 
+from oslo_utils import encodeutils
+
 from nova.compute import power_state
 from nova import objects
 from nova import test
@@ -188,6 +190,67 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
             doc, data, get_volume_config))
         self.assertIn('ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z',
                       six.text_type(res))
+
+    def test_update_perf_events_xml(self):
+        data = objects.LibvirtLiveMigrateData(
+            supported_perf_events=['cmt'])
+        xml = """<domain>
+  <perf>
+    <event enabled="yes" name="cmt"/>
+    <event enabled="yes" name="mbml"/>
+  </perf>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+
+        self.assertEqual("""<domain>
+  <perf>
+    <event enabled="yes" name="cmt"/></perf>
+</domain>""", encodeutils.safe_decode(res))
+
+    def test_update_perf_events_xml_add_new_events(self):
+        data = objects.LibvirtLiveMigrateData(
+            supported_perf_events=['cmt'])
+        xml = """<domain>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+
+        self.assertEqual("""<domain>
+<perf><event enabled="yes" name="cmt"/></perf></domain>""",
+                         encodeutils.safe_decode(res))
+
+    def test_update_perf_events_xml_add_new_events1(self):
+        data = objects.LibvirtLiveMigrateData(
+            supported_perf_events=['cmt', 'mbml'])
+        xml = """<domain>
+  <perf>
+    <event enabled="yes" name="cmt"/>
+  </perf>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+
+        self.assertEqual("""<domain>
+  <perf>
+    <event enabled="yes" name="cmt"/><event enabled="yes" name="mbml"/></perf>
+</domain>""", encodeutils.safe_decode(res))
+
+    def test_update_perf_events_xml_remove_all_events(self):
+        data = objects.LibvirtLiveMigrateData(
+            supported_perf_events=[])
+        xml = """<domain>
+  <perf>
+    <event enabled="yes" name="cmt"/>
+  </perf>
+</domain>"""
+        doc = etree.fromstring(xml)
+        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+
+        self.assertEqual("""<domain>
+  <perf>
+    </perf>
+</domain>""", encodeutils.safe_decode(res))
 
 
 class MigrationMonitorTestCase(test.NoDBTestCase):

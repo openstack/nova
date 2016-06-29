@@ -60,6 +60,7 @@ def get_updated_guest_xml(guest, migrate_data, get_volume_config):
     xml_doc = _update_graphics_xml(xml_doc, migrate_data)
     xml_doc = _update_serial_xml(xml_doc, migrate_data)
     xml_doc = _update_volume_xml(xml_doc, migrate_data, get_volume_config)
+    xml_doc = _update_perf_events_xml(xml_doc, migrate_data)
     return etree.tostring(xml_doc)
 
 
@@ -129,6 +130,40 @@ def _update_volume_xml(xml_doc, migrate_data, get_volume_config):
             for item_dst in list(xml_doc2):
                 item_dst.tail = None
                 disk_dev.insert(cnt, item_dst)
+    return xml_doc
+
+
+def _update_perf_events_xml(xml_doc, migrate_data):
+    """Update XML by the supported events of destination host."""
+
+    supported_perf_events = []
+    old_xml_has_perf = True
+
+    if 'supported_perf_events' in migrate_data:
+        supported_perf_events = migrate_data.supported_perf_events
+
+    perf_events = xml_doc.findall('./perf')
+
+    # remove perf events from xml
+    if not perf_events:
+        perf_events = etree.Element("perf")
+        old_xml_has_perf = False
+    else:
+        perf_events = perf_events[0]
+        for _, event in enumerate(perf_events):
+            perf_events.remove(event)
+
+    if not supported_perf_events:
+        return xml_doc
+
+    # add supported perf events
+    for e in supported_perf_events:
+        new_event = etree.Element("event", enabled="yes", name=e)
+        perf_events.append(new_event)
+
+    if not old_xml_has_perf:
+        xml_doc.append(perf_events)
+
     return xml_doc
 
 
