@@ -14,6 +14,7 @@
 #    under the License.
 
 """Policy Engine For Nova."""
+import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -155,3 +156,23 @@ def get_rules():
 
 def register_rules(enforcer):
     enforcer.register_defaults(policies.list_rules())
+
+
+def get_enforcer():
+    # This method is for use by oslopolicy CLI scripts. Those scripts need the
+    # 'output-file' and 'namespace' options, but having those in sys.argv means
+    # loading the Nova config options will fail as those are not expected to
+    # be present. So we pass in an arg list with those stripped out.
+    conf_args = []
+    # Start at 1 because cfg.CONF expects the equivalent of sys.argv[1:]
+    i = 1
+    while i < len(sys.argv):
+        if sys.argv[i].strip('-') in ['namespace', 'output-file']:
+            i += 2
+            continue
+        conf_args.append(sys.argv[i])
+        i += 1
+
+    cfg.CONF(conf_args, project='nova')
+    init()
+    return _ENFORCER
