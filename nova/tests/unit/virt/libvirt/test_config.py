@@ -2156,7 +2156,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.parse_str(xmldoc)
         self.assertEqual(len(obj.devices), 0)
 
-    def test_ConfigGuest_parese_cpu(self):
+    def test_ConfigGuest_parse_cpu(self):
         xmldoc = """ <domain>
                        <cpu mode='custom' match='exact'>
                          <model>kvm64</model>
