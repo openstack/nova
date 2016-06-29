@@ -16,12 +16,12 @@
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.policies import limits as limits_policies
 from nova import quota
 
 
 QUOTAS = quota.QUOTAS
 ALIAS = 'limits'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class LimitsController(wsgi.Controller):
@@ -31,7 +31,7 @@ class LimitsController(wsgi.Controller):
     def index(self, req):
         """Return all global limit information."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(limits_policies.BASE_POLICY_NAME)
         project_id = req.params.get('tenant_id', context.project_id)
         quotas = QUOTAS.get_project_quotas(context, project_id,
                                            usages=False)

@@ -24,13 +24,12 @@ from nova.api import validation
 from nova import compute
 import nova.conf
 from nova import exception
+from nova.policies import rescue as rescue_policies
 from nova import utils
 
 
 ALIAS = "os-rescue"
 CONF = nova.conf.CONF
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class RescueController(wsgi.Controller):
@@ -47,7 +46,7 @@ class RescueController(wsgi.Controller):
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(rescue_policies.BASE_POLICY_NAME)
 
         if body['rescue'] and 'adminPass' in body['rescue']:
             password = body['rescue']['adminPass']
@@ -88,7 +87,7 @@ class RescueController(wsgi.Controller):
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
-        authorize(context)
+        context.can(rescue_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.unrescue(context, instance)

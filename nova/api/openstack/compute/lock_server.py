@@ -17,10 +17,9 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.policies import lock_server as ls_policies
 
 ALIAS = "os-lock-server"
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class LockServerController(wsgi.Controller):
@@ -34,7 +33,7 @@ class LockServerController(wsgi.Controller):
     def _lock(self, req, id, body):
         """Lock a server instance."""
         context = req.environ['nova.context']
-        authorize(context, action='lock')
+        context.can(ls_policies.POLICY_ROOT % 'lock')
         instance = common.get_instance(self.compute_api, context, id)
         self.compute_api.lock(context, instance)
 
@@ -44,11 +43,11 @@ class LockServerController(wsgi.Controller):
     def _unlock(self, req, id, body):
         """Unlock a server instance."""
         context = req.environ['nova.context']
-        authorize(context, action='unlock')
+        context.can(ls_policies.POLICY_ROOT % 'unlock')
         instance = common.get_instance(self.compute_api, context, id)
         if not self.compute_api.is_expected_locked_by(context, instance):
-            authorize(context, target=instance,
-                      action='unlock:unlock_override')
+            context.can(ls_policies.POLICY_ROOT % 'unlock:unlock_override',
+                        instance)
 
         self.compute_api.unlock(context, instance)
 

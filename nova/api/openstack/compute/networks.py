@@ -27,9 +27,9 @@ from nova.i18n import _
 from nova import network
 from nova.objects import base as base_obj
 from nova.objects import fields as obj_fields
+from nova.policies import networks as net_policies
 
 ALIAS = 'os-networks'
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def network_dict(context, network):
@@ -85,7 +85,7 @@ class NetworkController(wsgi.Controller):
     @extensions.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context, action='view')
+        context.can(net_policies.POLICY_ROOT % 'view')
         networks = self.network_api.get_all(context)
         result = [network_dict(context, net_ref) for net_ref in networks]
         return {'networks': result}
@@ -95,7 +95,7 @@ class NetworkController(wsgi.Controller):
     @wsgi.action("disassociate")
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(net_policies.BASE_POLICY_NAME)
 
         try:
             self.network_api.associate(context, id, host=None, project=None)
@@ -108,7 +108,7 @@ class NetworkController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context, action='view')
+        context.can(net_policies.POLICY_ROOT % 'view')
 
         try:
             network = self.network_api.get(context, id)
@@ -121,7 +121,7 @@ class NetworkController(wsgi.Controller):
     @extensions.expected_errors((404, 409))
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(net_policies.BASE_POLICY_NAME)
 
         try:
             self.network_api.delete(context, id)
@@ -135,7 +135,7 @@ class NetworkController(wsgi.Controller):
     @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(net_policies.BASE_POLICY_NAME)
 
         params = body["network"]
 
@@ -160,7 +160,7 @@ class NetworkController(wsgi.Controller):
     @validation.schema(schema.add_network_to_project)
     def add(self, req, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(net_policies.BASE_POLICY_NAME)
 
         network_id = body['id']
         project_id = context.project_id

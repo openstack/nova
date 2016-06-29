@@ -25,11 +25,9 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import migrate_server as ms_policies
 
 ALIAS = "os-migrate-server"
-
-
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class MigrateServerController(wsgi.Controller):
@@ -43,7 +41,7 @@ class MigrateServerController(wsgi.Controller):
     def _migrate(self, req, id, body):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
-        authorize(context, action='migrate')
+        context.can(ms_policies.POLICY_ROOT % 'migrate')
 
         instance = common.get_instance(self.compute_api, context, id)
         try:
@@ -69,7 +67,7 @@ class MigrateServerController(wsgi.Controller):
     def _migrate_live(self, req, id, body):
         """Permit admins to (live) migrate a server to a new host."""
         context = req.environ["nova.context"]
-        authorize(context, action='migrate_live')
+        context.can(ms_policies.POLICY_ROOT % 'migrate_live')
 
         host = body["os-migrateLive"]["host"]
         block_migration = body["os-migrateLive"]["block_migration"]
