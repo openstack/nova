@@ -7481,6 +7481,9 @@ class LibvirtDriver(driver.ComputeDriver):
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
                                                                  instance.uuid)
         tagged_vifs = {vif.address: vif for vif in vifs if vif.tag}
+        # TODO(mriedem): We should be able to avoid the DB query here by using
+        # block_device_info['block_device_mapping'] which is passed into most
+        # methods that call this function.
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
         tagged_bdms = {_get_device_name(bdm): bdm for bdm in bdms if bdm.tag}
