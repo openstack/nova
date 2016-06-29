@@ -33,6 +33,7 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
 
     fields = {
         'id': fields.IntegerField(),
+        # This is a MAC address.
         'address': fields.StringField(nullable=True),
         'network_id': fields.IntegerField(),
         'instance_uuid': fields.UUIDField(),
