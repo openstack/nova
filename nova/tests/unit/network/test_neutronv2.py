@@ -398,6 +398,7 @@ class TestNeutronv2Base(test.TestCase):
 
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, 'get_instance_nw_info')
+
         has_extra_dhcp_opts = False
         dhcp_options = kwargs.get('dhcp_options')
         if dhcp_options is not None:
@@ -412,75 +413,19 @@ class TestNeutronv2Base(test.TestCase):
         nets = self.nets[net_idx - 1]
         ports = {}
         fixed_ips = {}
-        macs = kwargs.get('macs')
+        macs = kwargs.pop('macs', None)
         if macs:
             macs = set(macs)
         req_net_ids = []
         ordered_networks = []
-        if 'requested_networks' in kwargs:
-            for request in kwargs['requested_networks']:
-                if request.port_id:
-                    if request.port_id == uuids.portid_3:
-                        self.moxed_client.show_port(request.port_id
-                        ).AndReturn(
-                            {'port': {'id': uuids.portid_3,
-                                      'network_id': 'my_netid1',
-                                      'tenant_id': self.tenant_id,
-                                      'mac_address': 'my_mac1',
-                                      'device_id': kwargs.get('_device') and
-                                                   self.instance2.uuid or
-                                                   ''}})
-                        ports['my_netid1'] = [self.port_data1[0],
-                                            self.port_data3[0]]
-                        ports[request.port_id] = self.port_data3[0]
-                        request.network_id = 'my_netid1'
-                        if macs is not None:
-                            macs.discard('my_mac1')
-                    elif request.port_id == uuids.non_existent_uuid:
-                        PortNotFound = exceptions.PortNotFoundClient(
-                            status_code=404)
-                        self.moxed_client.show_port(request.port_id
-                        ).AndRaise(PortNotFound)
-                    else:
-                        self.moxed_client.show_port(request.port_id).AndReturn(
-                            {'port': {'id': uuids.portid_1,
-                                      'network_id': 'my_netid1',
-                                      'tenant_id': self.tenant_id,
-                                      'mac_address': 'my_mac1',
-                                      'device_id': kwargs.get('_device') and
-                                                   self.instance2.uuid or
-                                                   '',
-                                      'dns_name': kwargs.get('_dns_name') or
-                                                  ''}})
-                        ports[request.port_id] = self.port_data1[0]
-                        request.network_id = 'my_netid1'
-                        if macs is not None:
-                            macs.discard('my_mac1')
-                else:
-                    fixed_ips[request.network_id] = request.address
-                req_net_ids.append(request.network_id)
-                ordered_networks.append(request)
-        else:
-            for n in nets:
-                ordered_networks.append(
-                    objects.NetworkRequest(network_id=n['id']))
+        self._stub_allocate_for_instance_show_port(nets, ports, fixed_ips,
+            macs, req_net_ids, ordered_networks, **kwargs)
+
         if kwargs.get('_break') == 'pre_list_networks':
             self.mox.ReplayAll()
             return api
-        # search all req_net_ids as in api.py
-        search_ids = req_net_ids
-        if search_ids:
-            mox_list_params = {'id': mox.SameElementsAs(search_ids)}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': nets})
-        else:
-            mox_list_params = {'tenant_id': self.instance.project_id,
-                               'shared': False}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': nets})
-            mox_list_params = {'shared': True}
-            self.moxed_client.list_networks(
-                **mox_list_params).AndReturn({'networks': []})
+
+        self._stub_allocate_for_instance_list_networks(req_net_ids, nets)
 
         if kwargs.get('_break') == 'post_list_networks':
             self.mox.ReplayAll()
@@ -639,6 +584,72 @@ class TestNeutronv2Base(test.TestCase):
                 neutron=self.moxed_client)
             self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
         return has_portbinding
+
+    def _stub_allocate_for_instance_show_port(self, nets, ports, fixed_ips,
+            macs, req_net_ids, ordered_networks, **kwargs):
+        if 'requested_networks' in kwargs:
+            for request in kwargs['requested_networks']:
+                if request.port_id:
+                    if request.port_id == uuids.portid_3:
+                        self.moxed_client.show_port(request.port_id
+                        ).AndReturn(
+                            {'port': {'id': uuids.portid_3,
+                                      'network_id': 'my_netid1',
+                                      'tenant_id': self.tenant_id,
+                                      'mac_address': 'my_mac1',
+                                      'device_id': kwargs.get('_device') and
+                                                   self.instance2.uuid or
+                                                   ''}})
+                        ports['my_netid1'] = [self.port_data1[0],
+                                            self.port_data3[0]]
+                        ports[request.port_id] = self.port_data3[0]
+                        request.network_id = 'my_netid1'
+                        if macs is not None:
+                            macs.discard('my_mac1')
+                    elif request.port_id == uuids.non_existent_uuid:
+                        PortNotFound = exceptions.PortNotFoundClient(
+                            status_code=404)
+                        self.moxed_client.show_port(request.port_id
+                        ).AndRaise(PortNotFound)
+                    else:
+                        self.moxed_client.show_port(request.port_id).AndReturn(
+                            {'port': {'id': uuids.portid_1,
+                                      'network_id': 'my_netid1',
+                                      'tenant_id': self.tenant_id,
+                                      'mac_address': 'my_mac1',
+                                      'device_id': kwargs.get('_device') and
+                                                   self.instance2.uuid or
+                                                   '',
+                                      'dns_name': kwargs.get('_dns_name') or
+                                                  ''}})
+                        ports[request.port_id] = self.port_data1[0]
+                        request.network_id = 'my_netid1'
+                        if macs is not None:
+                            macs.discard('my_mac1')
+                else:
+                    fixed_ips[request.network_id] = request.address
+                req_net_ids.append(request.network_id)
+                ordered_networks.append(request)
+        else:
+            for n in nets:
+                ordered_networks.append(
+                    objects.NetworkRequest(network_id=n['id']))
+
+    def _stub_allocate_for_instance_list_networks(self, req_net_ids, nets):
+        # search all req_net_ids as in api.py
+        search_ids = req_net_ids
+        if search_ids:
+            mox_list_params = {'id': mox.SameElementsAs(search_ids)}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': nets})
+        else:
+            mox_list_params = {'tenant_id': self.instance.project_id,
+                               'shared': False}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': nets})
+            mox_list_params = {'shared': True}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': []})
 
     def _verify_nw_info(self, nw_inf, index=0):
         id_suffix = index + 1
