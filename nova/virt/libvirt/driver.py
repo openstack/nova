@@ -2628,7 +2628,10 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.file_delete(unrescue_xml_path)
         rescue_files = os.path.join(instance_dir, "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
-            libvirt_utils.file_delete(rescue_file)
+            if os.path.isdir(rescue_file):
+                shutil.rmtree(rescue_file)
+            else:
+                libvirt_utils.file_delete(rescue_file)
         # cleanup rescue volume
         lvm.remove_volumes([lvmdisk for lvmdisk in self._lvm_disks(instance)
                                 if lvmdisk.endswith('.rescue')])
@@ -3461,9 +3464,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 libvirt_utils.get_instance_path(instance), 'rootfs')
             devices.append(fs)
         elif os_type == vm_mode.EXE and CONF.libvirt.virt_type == "parallels":
-            if 'disk' in disk_mapping:
-                fs = self._get_guest_fs_config(instance, "disk")
-                devices.append(fs)
+            if rescue:
+                fsrescue = self._get_guest_fs_config(instance, "disk.rescue")
+                devices.append(fsrescue)
+
+                fsos = self._get_guest_fs_config(instance, "disk")
+                fsos.target_dir = "/mnt/rescue"
+                devices.append(fsos)
+            else:
+                if 'disk' in disk_mapping:
+                    fs = self._get_guest_fs_config(instance, "disk")
+                    devices.append(fs)
         else:
 
             if rescue:
