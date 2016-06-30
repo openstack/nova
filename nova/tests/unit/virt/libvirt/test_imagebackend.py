@@ -429,69 +429,69 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.QCOW2_BASE = (self.TEMPLATE_PATH +
                            '_%d' % (self.SIZE / units.Gi))
 
-    def test_cache(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(CONF.instances_path).AndReturn(True)
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        fn = self.mox.CreateMockAnything()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache(self, mock_exists):
+        mock_exists.side_effect = [False, True, False, True, False, False]
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(CONF.instances_path),
+                       mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.PATH),
+                       mock.call(self.TEMPLATE_PATH)]
+
         image.cache(fn, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_image_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_image_exists(self, mock_exists):
+        mock_exists.side_effect = [False, True, True, True, True]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH),
+                       mock.call(self.TEMPLATE_PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.cache(None, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_base_dir_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-        fn = self.mox.CreateMockAnything()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_base_dir_exists(self, mock_exists):
+        mock_exists.side_effect = [False, True, True, False, False]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH),
+                       mock.call(self.TEMPLATE_PATH)]
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+
         image.cache(fn, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_template_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
-        os.path.exists(self.INSTANCES_PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_template_exists(self, mock_exists):
+        mock_exists.side_effect = [False, True, True, False, True]
+        exist_calls = [mock.call(self.DISK_INFO_PATH),
+                       mock.call(self.INSTANCES_PATH),
+                       mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH),
+                       mock.call(self.TEMPLATE_PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+
         image.cache(None, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_exists.assert_has_calls(exist_calls)
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
@@ -707,35 +707,34 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         mock_execute.assert_called_once_with(*cmd, run_as_root=True)
         mock_resize.assert_called_once_with(self.PATH, run_as_root=True)
 
-    def test_cache(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
-        os.path.exists(self.PATH).AndReturn(False)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(False)
-
-        fn = self.mox.CreateMockAnything()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
-        imagebackend.fileutils.ensure_tree(self.TEMPLATE_DIR)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(imagebackend.fileutils, 'ensure_tree')
+    @mock.patch.object(os.path, 'exists')
+    def test_cache(self, mock_exists, mock_ensure):
+        mock_exists.side_effect = [False, False, False]
+        exist_calls = [mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH),
+                       mock.call(self.TEMPLATE_PATH)]
+        fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
         self.mock_create_image(image)
+
         image.cache(fn, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH)
+        mock_ensure.assert_called_once_with(self.TEMPLATE_DIR)
+        mock_exists.assert_has_calls(exist_calls)
 
-    def test_cache_image_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        os.path.exists(self.PATH).AndReturn(True)
-        os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        self.mox.ReplayAll()
-
+    @mock.patch.object(os.path, 'exists')
+    def test_cache_image_exists(self, mock_exists):
+        mock_exists.side_effect = [True, True, True]
+        exist_calls = [mock.call(self.TEMPLATE_DIR),
+                       mock.call(self.PATH),
+                       mock.call(self.TEMPLATE_PATH)]
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.cache(None, self.TEMPLATE)
 
-        self.mox.VerifyAll()
+        mock_exists.assert_has_calls(exist_calls)
 
     def test_cache_base_dir_exists(self):
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -1679,15 +1678,6 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
         super(PloopTestCase, self).setUp()
         self.utils = imagebackend.utils
 
-    def prepare_mocks(self):
-        fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend.utils.synchronized,
-                                 '__call__')
-        self.mox.StubOutWithMock(imagebackend.libvirt_utils, 'copy_image')
-        self.mox.StubOutWithMock(self.utils, 'execute')
-        self.mox.StubOutWithMock(imagebackend.disk, 'extend')
-        return fn
-
     def test_cache(self):
         self.mox.StubOutWithMock(os.path, 'exists')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
@@ -1705,23 +1695,30 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_create_image(self):
-        self.stubs.Set(imagebackend.Ploop, 'get_disk_size', lambda a, b: 2048)
-        fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH, image_id=None)
+    @mock.patch.object(imagebackend.Ploop, 'get_disk_size',
+                       return_value=2048)
+    @mock.patch.object(imagebackend.utils, 'synchronized')
+    @mock.patch.object(fake_libvirt_utils, 'copy_image')
+    @mock.patch.object(imagebackend.utils, 'execute')
+    @mock.patch.object(imagebackend.disk, 'extend')
+    def test_create_image(self, mock_extend, mock_execute,
+                          mock_copy, mock_sync, mock_get):
+        mock_sync.side_effect = lambda *a, **kw: self._fake_deco
+        fn = mock.MagicMock()
         img_path = os.path.join(self.PATH, "root.hds")
-        imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, img_path)
-        self.utils.execute("ploop", "restore-descriptor", "-f", "raw",
-                           self.PATH, img_path)
-        image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_PLOOP)
-        imagebackend.disk.extend(image, 2048)
-
-        self.mox.ReplayAll()
-
         image = self.image_class(self.INSTANCE, self.NAME)
+
         image.create_image(fn, self.TEMPLATE_PATH, 2048, image_id=None)
 
-        self.mox.VerifyAll()
+        mock_copy.assert_called_once_with(self.TEMPLATE_PATH, img_path)
+        mock_execute.assert_called_once_with("ploop", "restore-descriptor",
+                                             "-f", "raw",
+                                             self.PATH, img_path)
+        self.assertTrue(mock_sync.called)
+        fn.assert_called_once_with(target=self.TEMPLATE_PATH, image_id=None)
+        mock_extend.assert_called_once_with(
+            imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_PLOOP),
+            2048)
 
     def test_prealloc_image(self):
         self.flags(preallocate_images='space')
