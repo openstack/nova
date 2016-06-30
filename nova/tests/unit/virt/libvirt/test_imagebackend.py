@@ -134,16 +134,18 @@ class _ImageTestCase(object):
         def fake_fetch(target, *args, **kwargs):
             return
 
-        self.stubs.Set(image, 'exists', lambda: True)
-        self.stubs.Set(image, '_can_fallocate', lambda: True)
-        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
-        self.stub_out('os.path.exists', lambda _: True)
-        self.stub_out('os.access', lambda p, w: False)
+        with test.nested(
+            mock.patch.object(image, 'exists', lambda: True),
+            mock.patch.object(image, '_can_fallocate', lambda: True),
+            mock.patch.object(image, 'get_disk_size', lambda _: self.SIZE)
+        ) as (mock_exists, mock_can, mock_get):
+            self.stub_out('os.path.exists', lambda _: True)
+            self.stub_out('os.access', lambda p, w: False)
 
-        # Testing fallocate is only called when user has write access.
-        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
+            # Testing fallocate is only called when user has write access.
+            image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
-        self.assertEqual(fake_processutils.fake_execute_get_log(), [])
+            self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
     def test_libvirt_fs_info(self):
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -865,8 +867,10 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'exists', lambda: True)
-        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
+        self.stub_out('nova.virt.libvirt.imagebackend.Lvm.exists',
+                      lambda *a, **kw: True)
+        self.stub_out('nova.virt.libvirt.imagebackend.Lvm.get_disk_size',
+                      lambda *a, **kw: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -1234,8 +1238,10 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'exists', lambda: True)
-        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
+        self.stub_out('nova.virt.libvirt.imagebackend.Lvm.exists',
+                      lambda *a, **kw: True)
+        self.stub_out('nova.virt.libvirt.imagebackend.Lvm.get_disk_size',
+                      lambda *a, **kw: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -1415,8 +1421,10 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'exists', lambda: True)
-        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
+        self.stub_out('nova.virt.libvirt.imagebackend.Rbd.exists',
+                      lambda *a, **kw: True)
+        self.stub_out('nova.virt.libvirt.imagebackend.Rbd.get_disk_size',
+                      lambda *a, **kw: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -1726,8 +1734,10 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
             return
 
         self.stub_out('os.path.exists', lambda _: True)
-        self.stubs.Set(image, 'exists', lambda: True)
-        self.stubs.Set(image, 'get_disk_size', lambda _: self.SIZE)
+        self.stub_out('nova.virt.libvirt.imagebackend.Ploop.exists',
+                      lambda *a, **kw: True)
+        self.stub_out('nova.virt.libvirt.imagebackend.Ploop.get_disk_size',
+                      lambda *a, **kw: self.SIZE)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
