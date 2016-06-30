@@ -3476,9 +3476,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance.default_swap_device = (
                         block_device.prepend_dev(diskswap.target_dev))
 
-            if 'disk.config' in disk_mapping:
+            config_name = 'disk.config.rescue' if rescue else 'disk.config'
+            if config_name in disk_mapping:
                 diskconfig = self._get_guest_disk_config(
-                    instance, 'disk.config', disk_mapping, inst_type,
+                    instance, config_name, disk_mapping, inst_type,
                     self._get_disk_config_image_type())
                 devices.append(diskconfig)
 
