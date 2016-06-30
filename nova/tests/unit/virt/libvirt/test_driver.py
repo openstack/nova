@@ -14959,7 +14959,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                 ephemeral_gb=20,
                                 rxtx_factor=1.0,
                                 flavorid=u'1',
-                                vcpus=1)
+                                vcpus=1,
+                                extra_specs={})
         flavor.update(params.pop('flavor', {}))
 
         inst = {}
@@ -14985,9 +14986,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         inst.update(params)
 
-        return fake_instance.fake_instance_obj(
-            self.context, expected_attrs=['metadata', 'system_metadata'],
+        instance = fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['metadata', 'system_metadata',
+                                          'pci_devices'],
             flavor=flavor, **inst)
+
+        # Attributes which we need to be set so they don't touch the db,
+        # but it's not worth the effort to fake properly
+        for field in ['numa_topology', 'vcpu_model']:
+            setattr(instance, field, None)
+
+        return instance
 
     def test_migrate_disk_and_power_off_exception(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
@@ -16217,67 +16226,130 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertIn('the device is no longer found on the guest',
                       six.text_type(mock_log.warning.call_args[0]))
 
-    def test_rescue(self):
-        instance = self._create_instance({'config_drive': None})
-        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
-                    "<devices>"
-                    "<disk type='file'><driver name='qemu' type='raw'/>"
-                    "<source file='/test/disk'/>"
-                    "<target dev='vda' bus='virtio'/></disk>"
-                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
-                    "<source file='/test/disk.local'/>"
-                    "<target dev='vdb' bus='virtio'/></disk>"
-                    "</devices></domain>")
-        network_info = _fake_network_info(self, 1)
+    @mock.patch('nova.virt.libvirt.utils.write_to_file')
+    # NOTE(mdbooth): The following 4 mocks are required to execute
+    #                get_guest_xml().
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_supports_direct_io')
+    @mock.patch('nova.api.metadata.base.InstanceMetadata')
+    def _test_rescue(self, instance,
+                     mock_instance_metadata, mock_supports_direct_io,
+                     mock_build_device_metadata, mock_set_host_enabled,
+                     mock_write_to_file,
+                     exists=None):
+        mock_build_device_metadata.return_value = None
+        mock_supports_direct_io.return_value = True
 
-        self.mox.StubOutWithMock(self.drvr,
-                                     '_get_existing_domain_xml')
-        self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
-        self.mox.StubOutWithMock(self.drvr, '_get_guest_xml')
-        self.mox.StubOutWithMock(self.drvr, '_destroy')
-        self.mox.StubOutWithMock(self.drvr, '_create_domain')
-
-        self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
-                        mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
-        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        backend = self.useFixture(
+            fake_imagebackend.ImageBackendFixture(exists=exists))
 
         image_meta = objects.ImageMeta.from_dict(
             {'id': uuids.image_id, 'name': 'fake'})
-        self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
-                                 network_info, mox.IgnoreArg(),
-                                 image_meta,
-                                 rescue=mox.IgnoreArg(),
-                                 write_to_disk=mox.IgnoreArg()
-                             ).AndReturn(dummyxml)
-
-        self.drvr._destroy(instance)
-        self.drvr._create_domain(mox.IgnoreArg(),
-                                 post_xml_callback=mox.IgnoreArg())
-
-        self.mox.ReplayAll()
-
+        network_info = _fake_network_info(self, 1)
         rescue_password = 'fake_password'
 
-        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture(
-            exists=lambda name: name != 'disk.config.rescue'))
+        domain_xml = [None]
 
-        self.drvr.rescue(self.context, instance, network_info, image_meta,
-                         rescue_password)
-        self.mox.VerifyAll()
+        def fake_create_domain(xml=None, domain=None, power_on=True,
+                               pause=False, post_xml_callback=None):
+            domain_xml[0] = xml
+            if post_xml_callback is not None:
+                post_xml_callback()
 
-        disks = fake_backend.created_disks
-        self.assertEqual(3, len(disks))
-        expected_types = {
-            'kernel.rescue': 'raw',
-            'ramdisk.rescue': 'raw',
-            'disk.rescue': 'default'
-        }
-        # cache() should have been called on the 3 disk backends
-        for name in ('kernel', 'ramdisk', 'disk'):
-            name = name + '.rescue'
-            disk = disks[name]
-            self.assertTrue(disk.cache.called)
-            self.assertEqual(expected_types[name], disk.image_type)
+        with mock.patch.object(
+                self.drvr, '_create_domain',
+                side_effect=fake_create_domain) as mock_create_domain:
+            self.drvr.rescue(self.context, instance,
+                             network_info, image_meta, rescue_password)
+
+            self.assertTrue(mock_create_domain.called)
+
+            return backend, etree.fromstring(domain_xml[0])
+
+    def test_rescue(self):
+        instance = self._create_instance({'config_drive': None})
+        backend, doc = self._test_rescue(instance)
+
+        # Assert that we created the expected set of disks, and no others
+        self.assertEqual(['disk.rescue', 'kernel.rescue', 'ramdisk.rescue'],
+                         sorted(backend.created_disks.keys()))
+
+        disks = backend.disks
+
+        kernel_ramdisk = [disks[name + '.rescue']
+                          for name in ('kernel', 'ramdisk')]
+
+        # Assert that kernel and ramdisk were both created as raw
+        for disk in kernel_ramdisk:
+            self.assertEqual('raw', disk.image_type)
+
+        # Assert that the root rescue disk was created as the default type
+        self.assertIsNone(disks['disk.rescue'].image_type)
+
+        # We expect the generated domain to contain disk.rescue and
+        # disk, in that order
+        expected_domain_disk_paths = map(
+            lambda name: disks[name].path, ('disk.rescue', 'disk'))
+        domain_disk_paths = doc.xpath('devices/disk/source/@file')
+        self.assertEqual(expected_domain_disk_paths, domain_disk_paths)
+
+        # The generated domain xml should contain the rescue kernel
+        # and ramdisk
+        expected_kernel_ramdisk_paths = map(
+            lambda disk: os.path.join(CONF.instances_path, disk.path),
+            kernel_ramdisk)
+        kernel_ramdisk_paths = \
+            doc.xpath('os/*[self::initrd|self::kernel]/text()')
+        self.assertEqual(expected_kernel_ramdisk_paths,
+                         kernel_ramdisk_paths)
+
+    def test_rescue_config_drive(self):
+        instance = self._create_instance({'config_drive': str(True)})
+        backend, doc = self._test_rescue(
+            instance, exists=lambda name: name != 'disk.config.rescue')
+
+        # Assert that we created the expected set of disks, and no others
+        self.assertEqual(['disk.config.rescue', 'disk.rescue', 'kernel.rescue',
+                          'ramdisk.rescue'],
+                         sorted(backend.created_disks.keys()))
+
+        disks = backend.disks
+
+        config_disk = disks['disk.config.rescue']
+        kernel_ramdisk = [disks[name + '.rescue']
+                          for name in ('kernel', 'ramdisk')]
+
+        # Assert that we imported the config disk
+        self.assertTrue(config_disk.import_file.called)
+
+        # Assert that the config disk, kernel and ramdisk were created as raw
+        for disk in [config_disk] + kernel_ramdisk:
+            self.assertEqual('raw', disk.image_type)
+
+        # Assert that the root rescue disk was created as the default type
+        self.assertIsNone(disks['disk.rescue'].image_type)
+
+        # We expect the generated domain to contain disk.rescue, disk, and
+        # config disk in that order
+        # NOTE(mdbooth): But it doesn't! Config disk is missing.
+        #                See https://bugs.launchpad.net/nova/+bug/1597669
+        #                For now we assert the broken behaviour as a
+        #                placeholder until the fix lands.
+        expected_domain_disk_paths = map(
+            lambda name: disks[name].path, ('disk.rescue', 'disk'))
+        domain_disk_paths = doc.xpath('devices/disk/source/@file')
+        self.assertEqual(expected_domain_disk_paths, domain_disk_paths)
+
+        # The generated domain xml should contain the rescue kernel
+        # and ramdisk
+        expected_kernel_ramdisk_paths = map(
+            lambda disk: os.path.join(CONF.instances_path, disk.path),
+            kernel_ramdisk)
+        kernel_ramdisk_paths = \
+            doc.xpath('os/*[self::initrd|self::kernel]/text()')
+        self.assertEqual(expected_kernel_ramdisk_paths,
+                         kernel_ramdisk_paths)
 
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')
@@ -16336,91 +16408,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             self.assertEqual(rescue_dir, mock_rmtree.call_args_list[0][0][0])
             self.assertEqual(rescue_file, mock_del.call_args_list[1][0][0])
             mock_remove_volumes.assert_called_once_with(['lvm.rescue'])
-
-    @mock.patch(
-        'nova.virt.libvirt.driver.LibvirtDriver._build_device_metadata',
-        return_value=None)
-    @mock.patch(
-        'nova.virt.configdrive.ConfigDriveBuilder.add_instance_metadata')
-    @mock.patch('nova.virt.configdrive.ConfigDriveBuilder.make_drive')
-    @mock.patch('nova.virt.libvirt.guest.Guest')
-    def test_rescue_config_drive(self, mock_guest, mock_make, mock_add,
-                                 mock_save):
-        instance = self._create_instance({'config_drive': str(True)})
-        uuid = instance.uuid
-        configdrive_path = uuid + '/disk.config.rescue'
-        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
-                    "<devices>"
-                    "<disk type='file'><driver name='qemu' type='raw'/>"
-                    "<source file='/test/disk'/>"
-                    "<target dev='vda' bus='virtio'/></disk>"
-                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
-                    "<source file='/test/disk.local'/>"
-                    "<target dev='vdb' bus='virtio'/></disk>"
-                    "</devices></domain>")
-        network_info = _fake_network_info(self, 1)
-
-        self.mox.StubOutWithMock(self.drvr,
-                                    '_get_existing_domain_xml')
-        self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
-        self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
-                                                            '__init__')
-        self.mox.StubOutWithMock(self.drvr, '_get_guest_xml')
-        self.mox.StubOutWithMock(self.drvr, '_destroy')
-        self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
-                    mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
-        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-
-        instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
-                                            content=mox.IgnoreArg(),
-                                            extra_md=mox.IgnoreArg(),
-                                            network_info=mox.IgnoreArg(),
-                                            request_context=mox.IgnoreArg())
-        image_meta = objects.ImageMeta.from_dict(
-            {'id': uuids.image_id, 'name': 'fake'})
-        self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
-                                 network_info, mox.IgnoreArg(),
-                                 image_meta,
-                                 rescue=mox.IgnoreArg(),
-                                 write_to_disk=mox.IgnoreArg()
-                                ).AndReturn(dummyxml)
-        self.drvr._destroy(instance)
-
-        self.mox.ReplayAll()
-
-        rescue_password = 'fake_password'
-
-        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture(
-            exists=lambda name: name != 'disk.config.rescue'))
-
-        self.drvr.rescue(self.context, instance, network_info, image_meta,
-                         rescue_password)
-
-        self.mox.VerifyAll()
-
-        mock_add.assert_any_call(mock.ANY)
-        expected_call = [mock.call(os.path.join(CONF.instances_path,
-                                                configdrive_path))]
-        mock_make.assert_has_calls(expected_call)
-
-        disks = fake_backend.created_disks
-        self.assertEqual(4, len(disks))
-        expected_types = {
-            'kernel.rescue': 'raw',
-            'ramdisk.rescue': 'raw',
-            'disk.rescue': 'default'
-        }
-        # cache() should have been called on the 3 non-config disk backends
-        for name in ('kernel', 'ramdisk', 'disk'):
-            name = name + '.rescue'
-            disk = disks[name]
-            self.assertTrue(disk.cache.called)
-            self.assertEqual(expected_types[name], disk.image_type)
-
-        self.assertEqual('raw', disks['disk.config.rescue'].image_type)
-
-        # import_file() should have been called for the config disk
-        self.assertTrue(disks['disk.config.rescue'].import_file.called)
 
     @mock.patch('shutil.rmtree')
     @mock.patch('nova.utils.execute')
