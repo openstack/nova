@@ -610,8 +610,24 @@ class NotificationAction(Enum):
     UPDATE = 'update'
     EXCEPTION = 'exception'
     DELETE = 'delete'
+    PAUSE = 'pause'
+    UNPAUSE = 'unpause'
+    RESIZE = 'resize'
+    VOLUME_SWAP = 'volume_swap'
+    SUSPEND = 'suspend'
+    POWER_ON = 'power_on'
+    POWER_OFF = 'power_off'
+    REBOOT = 'reboot'
+    SHUTDOWN = 'shutdown'
+    SNAPSHOT = 'snapshot'
+    ADD_FIXED_IP = 'add_fixed_ip'
+    SHELVE = 'shelve'
+    RESUME = 'resume'
+    RESTORE = 'restore'
 
-    ALL = (UPDATE, EXCEPTION, DELETE)
+    ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
+           SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, ADD_FIXED_IP,
+           POWER_OFF, SHELVE, RESUME, RESTORE)
 
     def __init__(self):
         super(NotificationAction, self).__init__(

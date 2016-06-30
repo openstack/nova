@@ -38,7 +38,8 @@ class EventType(NotificationObject):
     # Version 1.1: New valid actions values are added to the
     #              NotificationActionField enum
     # Version 1.2: DELETE value is added to the NotificationActionField enum
-    VERSION = '1.2'
+    # Version 1.3: Set of new values are added to NotificationActionField enum
+    VERSION = '1.3'
 
     fields = {
         'object': fields.StringField(nullable=False),
