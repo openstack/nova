@@ -4002,9 +4002,9 @@ class ComputeManager(manager.Manager):
             return self.driver.get_diagnostics(instance)
         else:
             raise exception.InstanceInvalidState(
-                attr='power_state',
+                attr='power state',
                 instance_uuid=instance.uuid,
-                state=instance.power_state,
+                state=power_state.STATE_MAP[instance.power_state],
                 method='get_diagnostics')
 
     @object_compat
@@ -4020,9 +4020,9 @@ class ComputeManager(manager.Manager):
             return diags.serialize()
         else:
             raise exception.InstanceInvalidState(
-                attr='power_state',
+                attr='power state',
                 instance_uuid=instance.uuid,
-                state=instance.power_state,
+                state=power_state.STATE_MAP[instance.power_state],
                 method='get_diagnostics')
 
     @wrap_exception()
