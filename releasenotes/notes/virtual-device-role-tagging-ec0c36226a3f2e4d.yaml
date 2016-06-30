@@ -1,0 +1,24 @@
+---
+features:
+  - |
+    The 2.32 microverison adds support for virtual device
+    role tagging. Device role tagging is an answer to the
+    question 'Which device is which, inside the guest?' When
+    booting an instance, an optional arbitrary 'tag'
+    parameter can be set on virtual network interfaces
+    and/or block device mappings. This tag is exposed to the
+    instance through the metadata API and on the config
+    drive. Each tagged virtual network interface is listed
+    along with information about the virtual hardware, such
+    as bus type (ex: PCI), bus address (ex: 0000:00:02.0),
+    and MAC address. For tagged block devices, the exposed
+    hardware metadata includes the bus (ex: SCSI), bus
+    address (ex: 1:0:2:0) and serial number.
+issues:
+  - When using virtual device role tagging, the metadata on
+    the config drive lags behind the metadata obtained from
+    the metadata API. For example, if a tagged virtual
+    network interface is detached from the instance, its tag
+    remains in the metadata on the config drive. This is due
+    to the nature of the config drive, which, once written,
+    cannot be easily updated by Nova.

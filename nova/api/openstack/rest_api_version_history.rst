@@ -324,3 +324,14 @@ user documentation.
 
   Fix os-console-auth-tokens to return connection info for all types of tokens,
   not just RDP.
+
+2.32
+----
+
+  Adds an optional, arbitrary 'tag' item to the 'networks' item in the server
+  boot request body. In addition, every item in the block_device_mapping_v2
+  array can also have an optional, arbitrary 'tag' item. These tags are used to
+  identify virtual device metadata, as exposed in the metadata API and on the
+  config drive. For example, a network interface on the virtual PCI bus tagged
+  with 'nic1' will appear in the metadata along with its bus (PCI), bus address
+  (ex: 0000:00:02.0), MAC address, and tag ('nic1').

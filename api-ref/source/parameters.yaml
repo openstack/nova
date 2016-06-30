@@ -1006,7 +1006,14 @@ block_device_mapping_v2:
             "source_type": "image",
             "volume_size": "25",
             "destination_type": "volume",
-            "delete_on_termination": true }
+            "delete_on_termination": true,
+            "tag": "disk1" }
+
+    Starting in microversion 2.32, the tag is an optional, arbitrary attribute
+    that can be used to assign a tag to the block device. This tag is then
+    exposed to the guest in the metadata API and the config drive and is
+    associated to hardware metadata for that block device, such as bus (ex:
+    SCSI), bus address (ex: 1:0:2:0), and serial.
   in: body
   required: false
   type: object
@@ -1280,6 +1287,13 @@ device_resp:
   in: body
   required: true
   type: string
+device_tag:
+  description: |
+    An arbitrary tag.
+  in: body
+  required: false
+  type: string
+  min_version: 2.32
 disabled_reason_body:
   description: |
     The reason for disabling a service.
@@ -2627,6 +2641,13 @@ networks:
     a network, specify the UUID of the network in the ``uuid`` attribute in a ``networks``
     object.  To provision the server instance with a NIC for an already existing port,
     specify the port-id in the ``port`` attribute in a ``networks`` object.
+
+    Starting in microversion 2.32, it's possible to optionally assign an
+    arbitrary tag to a virtual network interface, specify the tag attribute in
+    the ``network`` object. An interface's tag is exposed to the guest in the
+    metadata API and the config drive and is associated to hardware metadata
+    for that network interface, such as bus (ex: PCI), bus address (ex:
+    0000:00:02.0), and MAC address.
   in: body
   required: false
   type: object

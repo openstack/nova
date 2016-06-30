@@ -314,12 +314,13 @@ class WSGIService(service.Service):
         self.backdoor_port = None
 
     def reset(self):
-        """Reset server greenpool size to default.
+        """Reset server greenpool size to default and service version cache.
 
         :returns: None
 
         """
         self.server.reset()
+        service_obj.Service.clear_min_version_cache()
 
     def _get_manager(self):
         """Initialize a Manager object appropriate for this service.
