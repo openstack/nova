@@ -180,15 +180,13 @@ class API(base_api.NetworkAPI):
 
         return nets
 
-    def _create_port(self, port_client, instance, network_id, port_req_body,
-                     fixed_ip=None, security_group_ids=None):
+    def _create_port_minimal(self, port_client, instance, network_id,
+                             fixed_ip=None, security_group_ids=None):
         """Attempts to create a port for the instance on the given network.
 
         :param port_client: The client to use to create the port.
         :param instance: Create the port for the given instance.
         :param network_id: Create the port on the given network.
-        :param port_req_body: Pre-populated port request. Should have the
-            device_id, device_owner, and any required neutron extension values.
         :param fixed_ip: Optional fixed IP to use from the given network.
         :param security_group_ids: Optional list of security group IDs to
             apply to the port.
@@ -198,6 +196,7 @@ class API(base_api.NetworkAPI):
             IpAddressGenerationFailure error.
         :raises: PortBindingFailed: If port binding failed.
         """
+        port_req_body = {'port': {}}
         try:
             if fixed_ip:
                 port_req_body['port']['fixed_ips'] = [
@@ -244,13 +243,6 @@ class API(base_api.NetworkAPI):
             LOG.warning(_LW('Neutron error: No more fixed IPs in network: %s'),
                         network_id, instance=instance)
             raise exception.NoMoreFixedIps(net=network_id)
-        except neutron_client_exc.MacAddressInUseClient:
-            mac_address = port_req_body['port']['mac_address']
-            LOG.warning(_LW('Neutron error: MAC address %(mac)s is already '
-                            'in use on network %(network)s.'),
-                        {'mac': mac_address, 'network': network_id},
-                        instance=instance)
-            raise exception.PortInUse(port_id=mac_address)
         except neutron_client_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Neutron error creating port on network %s'),
@@ -264,6 +256,7 @@ class API(base_api.NetworkAPI):
             _ensure_no_port_binding_failure(port)
             LOG.debug('Successfully updated port: %s', port_id,
                       instance=instance)
+            return port
         except neutron_client_exc.MacAddressInUseClient:
             mac_address = port_req_body['port']['mac_address']
             network_id = port_req_body['port']['network_id']
@@ -669,31 +662,37 @@ class API(base_api.NetworkAPI):
                     bind_host_id=bind_host_id)
                 self._populate_pci_mac_address(instance,
                     request.pci_request_id, port_req_body)
-                updated_mac = self._populate_mac_address(
+                self._populate_mac_address(
                     instance, port_req_body, available_macs)
                 if dhcp_opts is not None:
                     port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
 
                 if not request.port_id:
-                    created_port = self._create_port(
+                    # create minimal port, if port not already created by user
+                    # NOTE(johngarbutt) doing this extra hop so we can extract
+                    # this step later on
+                    created_port = self._create_port_minimal(
                             port_client, instance, request.network_id,
-                            port_req_body, request.address,
-                            security_group_ids)
+                            request.address, security_group_ids)
                     created_port_id = created_port['id']
                     created_port_ids.append(created_port_id)
                     ports_in_requested_order.append(created_port_id)
                     vifobj.uuid = created_port_id
-                    vifobj.address = created_port['mac_address']
                 else:
-                    self._update_port(
-                        port_client, instance, request.port_id, port_req_body)
-                    preexisting_port_ids.append(request.port_id)
                     ports_in_requested_order.append(request.port_id)
                     vifobj.uuid = request.port_id
-                    vifobj.address = (updated_mac or
-                                      ports[request.port_id]['mac_address'])
 
+                # After port is created, update other bits
+                updated_port = self._update_port(
+                    port_client, instance, vifobj.uuid, port_req_body)
+
+                vifobj.address = updated_port['mac_address']
                 vifobj.create()
+
+                # only add to preexisting_port_ids after update success
+                # we use request.port_id to check if is preexisting
+                if request.port_id:
+                    preexisting_port_ids.append(request.port_id)
 
                 self._update_port_dns_name(context, instance, network,
                                            ports_in_requested_order[-1],
