@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ==========================
