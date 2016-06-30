@@ -517,6 +517,86 @@ class API(base_api.NetworkAPI):
 
         return security_group_ids
 
+    def _validate_requested_network_ids(self, context, instance, neutron,
+            requested_networks, ordered_networks):
+        """Check requested networks using the Neutron API.
+
+        Check the user has access to the network they requested, and that
+        it is a suitable network to connect to. This includes getting the
+        network details for any ports that have been passed in, because the
+        request will have been updated with the request_id in
+        _validate_requested_port_ids.
+
+        If the user has not requested any ports or any networks, we get back
+        a full list of networks the user has access to, and if there is only
+        one network, we update ordered_networks so we will connect the
+        instance to that network.
+
+        :param context: The request context.
+        :param instance: nova.objects.instance.Instance object.
+        :param requested_networks: value containing
+            network_id, fixed_ip, and port_id
+        :param ordered_networks: output from _validate_requested_port_ids
+            that will be used to create and update ports
+        """
+
+        # Get networks from Neutron
+        # If net_ids is empty, this actually returns all available nets
+        auto_allocate = requested_networks and requested_networks.auto_allocate
+        net_ids = [request.network_id for request in ordered_networks]
+        nets = self._get_available_networks(context, instance.project_id,
+                                            net_ids, neutron=neutron,
+                                            auto_allocate=auto_allocate)
+        if not nets:
+
+            if requested_networks:
+                # There are no networks available for the project to use and
+                # none specifically requested, so check to see if we're asked
+                # to auto-allocate the network.
+                if auto_allocate:
+                    # During validate_networks we checked to see if
+                    # auto-allocation is available so we don't need to do that
+                    # again here.
+                    nets = [self._auto_allocate_network(instance, neutron)]
+                else:
+                    # NOTE(chaochin): If user specifies a network id and the
+                    # network can not be found, raise NetworkNotFound error.
+                    for request in requested_networks:
+                        if not request.port_id and request.network_id:
+                            raise exception.NetworkNotFound(
+                                network_id=request.network_id)
+            else:
+                # no requested nets and user has no available nets
+                return []
+
+        # if this function is directly called without a requested_network param
+        # or if it is indirectly called through allocate_port_for_instance()
+        # with None params=(network_id=None, requested_ip=None, port_id=None,
+        # pci_request_id=None):
+        if (not requested_networks
+            or requested_networks.is_single_unspecified
+            or requested_networks.auto_allocate):
+            # If no networks were requested and none are available, consider
+            # it a bad request.
+            if not nets:
+                raise exception.InterfaceAttachFailedNoNetwork(
+                    project_id=instance.project_id)
+            # bug/1267723 - if no network is requested and more
+            # than one is available then raise NetworkAmbiguous Exception
+            if len(nets) > 1:
+                msg = _("Multiple possible networks found, use a Network "
+                         "ID to be more specific.")
+                raise exception.NetworkAmbiguous(msg)
+            ordered_networks.append(
+                objects.NetworkRequest(network_id=nets[0]['id']))
+
+        # NOTE(melwitt): check external net attach permission after the
+        #                check for ambiguity, there could be another
+        #                available net which is permitted bug/1364344
+        self._check_external_network_attach(context, nets)
+
+        return nets
+
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
@@ -570,58 +650,11 @@ class API(base_api.NetworkAPI):
         available_macs = _filter_hypervisor_macs(instance, ports,
                                                  hypervisor_macs)
 
-        auto_allocate = requested_networks and requested_networks.auto_allocate
-        net_ids = [request.network_id for request in ordered_networks]
-        nets = self._get_available_networks(context, instance.project_id,
-                                            net_ids, neutron=neutron,
-                                            auto_allocate=auto_allocate)
+        nets = self._validate_requested_network_ids(
+            context, instance, neutron, requested_networks, ordered_networks)
         if not nets:
-
-            if requested_networks:
-                # There are no networks available for the project to use and
-                # none specifically requested, so check to see if we're asked
-                # to auto-allocate the network.
-                if auto_allocate:
-                    # During validate_networks we checked to see if
-                    # auto-allocation is available so we don't need to do that
-                    # again here.
-                    nets = [self._auto_allocate_network(instance, neutron)]
-                else:
-                    # NOTE(chaochin): If user specifies a network id and the
-                    # network can not be found, raise NetworkNotFound error.
-                    for request in requested_networks:
-                        if not request.port_id and request.network_id:
-                            raise exception.NetworkNotFound(
-                                network_id=request.network_id)
-            else:
-                LOG.debug("No network configured", instance=instance)
-                return network_model.NetworkInfo([])
-
-        # if this function is directly called without a requested_network param
-        # or if it is indirectly called through allocate_port_for_instance()
-        # with None params=(network_id=None, requested_ip=None, port_id=None,
-        # pci_request_id=None):
-        if (not requested_networks
-            or requested_networks.is_single_unspecified
-            or requested_networks.auto_allocate):
-            # If no networks were requested and none are available, consider
-            # it a bad request.
-            if not nets:
-                raise exception.InterfaceAttachFailedNoNetwork(
-                    project_id=instance.project_id)
-            # bug/1267723 - if no network is requested and more
-            # than one is available then raise NetworkAmbiguous Exception
-            if len(nets) > 1:
-                msg = _("Multiple possible networks found, use a Network "
-                         "ID to be more specific.")
-                raise exception.NetworkAmbiguous(msg)
-            ordered_networks.append(
-                objects.NetworkRequest(network_id=nets[0]['id']))
-
-        # NOTE(melwitt): check external net attach permission after the
-        #                check for ambiguity, there could be another
-        #                available net which is permitted bug/1364344
-        self._check_external_network_attach(context, nets)
+            LOG.debug("No network configured", instance=instance)
+            return network_model.NetworkInfo([])
 
         security_groups = self._clean_security_groups(
             kwargs.get('security_groups', []))
