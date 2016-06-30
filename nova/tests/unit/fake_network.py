@@ -469,7 +469,7 @@ def _create_instances_with_cached_ips(orig_func, *args, **kwargs):
     instances, reservation_id = orig_func(*args, **kwargs)
     fake_cache = _get_fake_cache()
     for instance in instances:
-        instance['info_cache']['network_info'] = fake_cache
+        instance['info_cache'].network_info = fake_cache
         db.instance_info_cache_update(args[1], instance['uuid'],
                                       {'network_info': fake_cache})
     return (instances, reservation_id)
