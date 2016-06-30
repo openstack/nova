@@ -800,17 +800,22 @@ class CinderFixture(fixtures.Fixture):
 
     SWAP_OLD_VOL = 'a07f71dc-8151-4e7d-a0cc-cd24a3f11113'
     SWAP_NEW_VOL = '227cc671-f30b-4488-96fd-7d0bf13648d8'
+    SWAP_ERR_OLD_VOL = '828419fa-3efb-4533-b458-4267ca5fe9b1'
+    SWAP_ERR_NEW_VOL = '9c6d9c2d-7a8f-4c80-938d-3bf062b8d489'
 
     def __init__(self, test):
         super(CinderFixture, self).__init__()
         self.test = test
+        self.swap_error = False
         self.swap_volume_instance_uuid = None
+        self.swap_volume_instance_error_uuid = None
 
     def setUp(self):
         super(CinderFixture, self).setUp()
 
         def fake_get(self_api, context, volume_id):
-            if volume_id == CinderFixture.SWAP_OLD_VOL:
+            if volume_id in (CinderFixture.SWAP_OLD_VOL,
+                             CinderFixture.SWAP_ERR_OLD_VOL):
                 volume = {
                              'status': 'available',
                              'display_name': 'TEST1',
@@ -818,9 +823,13 @@ class CinderFixture(fixtures.Fixture):
                              'id': volume_id,
                              'size': 1
                          }
-                if (self.swap_volume_instance_uuid and
-                     volume_id == CinderFixture.SWAP_OLD_VOL):
-                    instance_uuid = self.swap_volume_instance_uuid
+                if ((self.swap_volume_instance_uuid and
+                     volume_id == CinderFixture.SWAP_OLD_VOL) or
+                    (self.swap_volume_instance_error_uuid and
+                     volume_id == CinderFixture.SWAP_ERR_OLD_VOL)):
+                    instance_uuid = (self.swap_volume_instance_uuid
+                        if volume_id == CinderFixture.SWAP_OLD_VOL
+                        else self.swap_volume_instance_error_uuid)
 
                     volume.update({
                         'status': 'in-use',
@@ -843,11 +852,20 @@ class CinderFixture(fixtures.Fixture):
                        }
 
         def fake_initialize_connection(self, context, volume_id, connector):
+            if volume_id == CinderFixture.SWAP_ERR_NEW_VOL:
+                # Return a tuple in order to raise an exception.
+                return ()
             return {}
 
         def fake_migrate_volume_completion(self, context, old_volume_id,
                                            new_volume_id, error):
             return {'save_volume_id': new_volume_id}
+
+        def fake_unreserve_volume(self_api, context, volume_id):
+            # Signaling that swap_volume has encountered the error
+            # from initialize_connection and is working on rolling back
+            # the reservation on SWAP_ERR_NEW_VOL.
+            self.swap_error = True
 
         self.test.stub_out('nova.volume.cinder.API.attach',
                            lambda *args, **kwargs: None)
@@ -870,3 +888,5 @@ class CinderFixture(fixtures.Fixture):
                            lambda *args, **kwargs: None)
         self.test.stub_out('nova.volume.cinder.API.terminate_connection',
                            lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.unreserve_volume',
+                           fake_unreserve_volume)

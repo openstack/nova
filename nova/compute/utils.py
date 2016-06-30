@@ -33,6 +33,7 @@ from nova.i18n import _LW
 from nova.network import model as network_model
 from nova import notifications
 from nova.notifications.objects import base as notification_base
+from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova.objects import fields
@@ -371,7 +372,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
 
 
 def notify_about_volume_swap(context, instance, host, action, phase,
-                             old_volume_id, new_volume_id):
+                             old_volume_id, new_volume_id, exception=None):
     """Send versioned notification about the volume swap action
        on the instance
 
@@ -382,13 +383,23 @@ def notify_about_volume_swap(context, instance, host, action, phase,
     :param phase: the phase of the action
     :param old_volume_id: the ID of the volume that is copied from and detached
     :param new_volume_id: the ID of the volume that is copied to and attached
+    :param exception: an exception
     """
     ips = _get_instance_ips(instance)
 
     flavor = instance_notification.FlavorPayload(instance=instance)
+
+    if exception:
+        priority = fields.NotificationPriority.ERROR
+        fault = notification_exception.ExceptionPayload.from_exception(
+            exception)
+    else:
+        priority = fields.NotificationPriority.INFO
+        fault = None
+
     payload = instance_notification.InstanceActionVolumeSwapPayload(
         instance=instance,
-        fault=None,
+        fault=fault,
         ip_addresses=ips,
         flavor=flavor,
         old_volume_id=old_volume_id,
@@ -396,7 +407,7 @@ def notify_about_volume_swap(context, instance, host, action, phase,
 
     instance_notification.InstanceActionVolumeSwapNotification(
         context=context,
-        priority=fields.NotificationPriority.INFO,
+        priority=priority,
         publisher=notification_base.NotificationPublisher(
             context=context, host=host, binary='nova-compute'),
         event_type=notification_base.EventType(

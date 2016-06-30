@@ -6,3 +6,4 @@ features:
 
     * instance.volume_swap.start
     * instance.volume_swap.end
+    * instance.volume_swap.error

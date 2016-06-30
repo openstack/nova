@@ -4871,9 +4871,14 @@ class ComputeManager(manager.Manager):
                       instance=instance)
             self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
                                     resize_to)
-        except Exception:
+        except Exception as ex:
             failed = True
             with excutils.save_and_reraise_exception():
+                compute_utils.notify_about_volume_swap(
+                    context, instance, self.host,
+                    fields.NotificationAction.VOLUME_SWAP,
+                    fields.NotificationPhase.ERROR,
+                    old_volume_id, new_volume_id, ex)
                 if new_cinfo:
                     msg = _LE("Failed to swap volume %(old_volume_id)s "
                               "for %(new_volume_id)s")

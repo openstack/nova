@@ -20,8 +20,6 @@ from nova.tests.unit import fake_notifier
 
 class TestInstanceNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
-    EVENT_TYPE_SWAP_VOL_START = 'instance-volume_swap-start'
-    EVENT_TYPE_SWAP_VOL_END = 'instance-volume_swap-end'
 
     def setUp(self):
         self.flags(use_neutron=True)
@@ -40,6 +38,13 @@ class TestInstanceNotificationSample(
                         return
             time.sleep(0.5)
         self.fail('Volume swap operation failed.')
+
+    def _wait_until_swap_volume_error(self):
+        for i in range(50):
+            if self.cinder.swap_error:
+                return
+            time.sleep(0.5)
+        self.fail("Timed out waiting for volume swap error to occur.")
 
     def test_instance_action(self):
         # A single test case is used to test most of the instance action
@@ -388,13 +393,44 @@ class TestInstanceNotificationSample(
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
-            self.EVENT_TYPE_SWAP_VOL_START,
+            'instance-volume_swap-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
-            self.EVENT_TYPE_SWAP_VOL_END,
+            'instance-volume_swap-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def test_volume_swap_server_with_error(self):
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+
+        self._attach_volume_to_server(server, self.cinder.SWAP_ERR_OLD_VOL)
+        self.cinder.swap_volume_instance_error_uuid = server['id']
+
+        self._volume_swap_server(server, self.cinder.SWAP_ERR_OLD_VOL,
+                                 self.cinder.SWAP_ERR_NEW_VOL)
+        self._wait_until_swap_volume_error()
+
+        # Three versioned notifications are generated.
+        # 0. instance-volume_swap-start
+        # 1. instance-volume_swap-error
+        # 2. compute.exception
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-volume_swap-start',
+            replacements={
+                'new_volume_id': self.cinder.SWAP_ERR_NEW_VOL,
+                'old_volume_id': self.cinder.SWAP_ERR_OLD_VOL,
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-volume_swap-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
