@@ -81,9 +81,10 @@ inaccessible inside the container.
 
 
 import argparse
-from nova.i18n import _
 import os
 import sys
+
+from nova.i18n import _
 
 NOBODY_ID = 65534
 

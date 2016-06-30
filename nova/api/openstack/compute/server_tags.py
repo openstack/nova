@@ -11,7 +11,6 @@
 #    under the License.
 
 import jsonschema
-
 from webob import exc
 
 from nova.api.openstack import common

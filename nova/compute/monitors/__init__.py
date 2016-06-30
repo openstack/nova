@@ -17,10 +17,10 @@
 Resource monitor API specification.
 """
 
-import nova.conf
 from oslo_log import log as logging
 from stevedore import enabled
 
+import nova.conf
 from nova.i18n import _LW
 
 CONF = nova.conf.CONF
