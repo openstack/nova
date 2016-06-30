@@ -83,6 +83,24 @@ class _TestVirtualInterface(object):
         vif._context = None
         self._compare(self, fake_vif, vif)
 
+    def test_create_neutron_styyyyle(self):
+        vif = vif_obj.VirtualInterface(context=self.context)
+        vif.address = '00:00:00:00:00:00/%s' % uuids.port
+        vif.instance_uuid = uuids.instance
+        vif.uuid = uuids.uuid
+        vif.tag = 'fake-tag'
+
+        with mock.patch.object(db, 'virtual_interface_create') as create:
+            create.return_value = dict(fake_vif,
+                                       address=vif.address)
+            vif.create()
+
+        self.assertEqual(self.context, vif._context)
+        vif._context = None
+        # NOTE(danms): The actual vif should now have the namespace
+        # stripped out
+        self._compare(self, fake_vif, vif)
+
     def test_save(self):
         vif = vif_obj.VirtualInterface(context=self.context)
         vif.address = '00:00:00:00:00:00'
