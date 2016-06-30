@@ -52,6 +52,18 @@ OVERHEAD_PER_MB = 0.00781
 OVERHEAD_PER_VCPU = 1.5
 
 
+def invalid_option(option_name, recommended_value):
+    LOG.exception(_LE('Current value of '
+                      'CONF.xenserver.%(option)s option incompatible with '
+                      'CONF.xenserver.independent_compute=True.  '
+                      'Consider using "%(recommended)s"') % {
+                          'option': option_name,
+                          'recommended': recommended_value})
+    raise exception.NotSupportedWithOption(
+        operation=option_name,
+        option='CONF.xenserver.independent_compute')
+
+
 class XenAPIDriver(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform."""
 
@@ -84,17 +96,6 @@ class XenAPIDriver(driver.ComputeDriver):
 
     def init_host(self, host):
         if CONF.xenserver.independent_compute:
-            def invalid_option(option_name, recommended_value):
-                LOG.exception(_LE('Current value of '
-                       'CONF.xenserver.%(option)s option incompatible with '
-                       'CONF.xenserver.independent_compute=True.  '
-                       'Consider using "%(recommended)s"') % {
-                           'option': option_name,
-                           'recommended': recommended_value})
-                raise exception.NotSupportedWithOption(
-                    operation=option_name,
-                    option='CONF.xenserver.independent_compute')
-
             # Check various options are in the correct state:
             if CONF.xenserver.check_host:
                 invalid_option('CONF.xenserver.check_host', False)
