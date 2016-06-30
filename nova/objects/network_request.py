@@ -27,10 +27,8 @@ NETWORK_ID_NONE = 'none'
 NETWORK_ID_AUTO = 'auto'
 
 
-# TODO(berrange): Remove NovaObjectDictCompat
 @obj_base.NovaObjectRegistry.register
-class NetworkRequest(obj_base.NovaObject,
-                     obj_base.NovaObjectDictCompat):
+class NetworkRequest(obj_base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pci_request_id
     # Version 1.2: Added tag field
