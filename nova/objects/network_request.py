@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
+
 from nova.objects import base as obj_base
 from nova.objects import fields
 from nova import utils
@@ -31,13 +33,20 @@ class NetworkRequest(obj_base.NovaObject,
                      obj_base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Added pci_request_id
-    VERSION = '1.1'
+    # Version 1.2: Added tag field
+    VERSION = '1.2'
     fields = {
         'network_id': fields.StringField(nullable=True),
         'address': fields.IPAddressField(nullable=True),
         'port_id': fields.UUIDField(nullable=True),
         'pci_request_id': fields.UUIDField(nullable=True),
+        'tag': fields.StringField(nullable=True),
     }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'tag' in primitive:
+            del primitive['tag']
 
     def obj_load_attr(self, attr):
         setattr(self, attr, None)

@@ -1168,7 +1168,7 @@ object_data = {
     'Network': '1.2-a977ab383aa462a479b2fae8211a5dde',
     'NetworkInterfaceMetadata': '1.0-99a9574d086feb5ad45cd04a34855647',
     'NetworkList': '1.2-69eca910d8fa035dfecd8ba10877ee59',
-    'NetworkRequest': '1.1-7a3e4ca2ce1e7b62d8400488f2f2b756',
+    'NetworkRequest': '1.2-af1ff2d986999fbb79377712794d82aa',
     'NetworkRequestList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'PciDevice': '1.5-0d5abe5c91645b8469eb2a93fc53f932',
     'PCIDeviceBus': '1.0-2b891cb77e42961044689f3dc2718995',

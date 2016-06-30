@@ -2717,15 +2717,25 @@ class AllocateTestCase(test.TestCase):
         inst.uuid = FAKEUUID
         inst.create()
         networks = db.network_get_all(self.context)
+        reqnets = objects.NetworkRequestList(objects=[])
+        index = 0
+        project_id = self.user_context.project_id
         for network in networks:
             db.network_update(self.context, network['id'],
-                              {'host': HOST})
-        project_id = self.user_context.project_id
+                              {'host': HOST,
+                               'project_id': project_id})
+            if index == 0:
+                reqnets.objects.append(objects.NetworkRequest(
+                    network_id=network['uuid'],
+                    tag='mynic'))
+            index += 1
         nw_info = self.network.allocate_for_instance(self.user_context,
             instance_id=inst['id'], instance_uuid=inst['uuid'],
             host=inst['host'], vpn=None, rxtx_factor=3,
-            project_id=project_id, macs=None)
+            project_id=project_id, macs=None, requested_networks=reqnets)
         self.assertEqual(1, len(nw_info))
+        vifs = objects.VirtualInterfaceList.get_all(self.context)
+        self.assertEqual(['mynic'], [vif.tag for vif in vifs])
         fixed_ip = nw_info.fixed_ips()[0]['address']
         self.assertTrue(netutils.is_valid_ipv4(fixed_ip))
         self.network.deallocate_for_instance(self.context,

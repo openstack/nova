@@ -130,6 +130,12 @@ class _TestNetworkRequestObject(object):
                 network_id=network_request.NETWORK_ID_NONE)])
         self.assertTrue(requests.no_allocate)
 
+    def test_obj_make_compatible_pre_1_2(self):
+        net_req = objects.NetworkRequest()
+        net_req.tag = 'foo'
+        primitive = net_req.obj_to_primitive(target_version='1.1')
+        self.assertNotIn('tag', primitive)
+
 
 class TestNetworkRequestObject(test_objects._LocalTest,
                                _TestNetworkRequestObject):
