@@ -3526,9 +3526,6 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
                 return_value=(
                     [{'uuid': 'f60012d9-5ba4-4547-ab48-f94ff7e62d4e'}],
                     1)),
-            mock.patch.object(self.req, 'cache_db_instances'),
-            mock.patch.object(self.controller, '_add_location',
-                              return_value=None)
         ):
             self.body['server']['block_device_mapping_v2'][0]['tag'] = 'foo'
             self._create_server()
