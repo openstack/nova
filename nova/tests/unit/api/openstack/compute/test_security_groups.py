@@ -1398,11 +1398,11 @@ class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):
             'server': {'id': '0'},
             'servers': [{'id': '0'}, {'id': '2'}]})
 
-    @mock.patch.object(secgroups_v21, "softauth")
-    def test_show_policy_softauth_is_called(self, mock_softauth):
-        mock_softauth.return_value = False
+    @mock.patch('nova.policy.authorize')
+    def test_show_policy_softauth_is_called(self, mock_authorize):
+        mock_authorize.return_value = False
         self.controller.show(self.req, self.fake_res, FAKE_UUID1)
-        self.assertTrue(mock_softauth.called)
+        self.assertTrue(mock_authorize.called)
 
     @mock.patch.object(nova.network.security_group.openstack_driver,
         "is_neutron_security_groups")
@@ -1410,11 +1410,11 @@ class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):
         self.controller.show(self.req, self.fake_res, FAKE_UUID1)
         self.assertFalse(is_neutron_security_groups.called)
 
-    @mock.patch.object(secgroups_v21, "softauth")
-    def test_create_policy_softauth_is_called(self, mock_softauth):
-        mock_softauth.return_value = False
+    @mock.patch('nova.policy.authorize')
+    def test_create_policy_softauth_is_called(self, mock_authorize):
+        mock_authorize.return_value = False
         self.controller.show(self.req, self.fake_res, {})
-        self.assertTrue(mock_softauth.called)
+        self.assertTrue(mock_authorize.called)
 
     @mock.patch.object(nova.network.security_group.openstack_driver,
         "is_neutron_security_groups")
@@ -1422,11 +1422,11 @@ class SecurityGroupsOutputPolicyEnforcementV21(test.NoDBTestCase):
         self.controller.create(self.req, self.fake_res, {})
         self.assertFalse(is_neutron_security_groups.called)
 
-    @mock.patch.object(secgroups_v21, "softauth")
-    def test_detail_policy_softauth_is_called(self, mock_softauth):
-        mock_softauth.return_value = False
+    @mock.patch('nova.policy.authorize')
+    def test_detail_policy_softauth_is_called(self, mock_authorize):
+        mock_authorize.return_value = False
         self.controller.detail(self.req, self.fake_res)
-        self.assertTrue(mock_softauth.called)
+        self.assertTrue(mock_authorize.called)
 
     @mock.patch.object(nova.network.security_group.openstack_driver,
         "is_neutron_security_groups")

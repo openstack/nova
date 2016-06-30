@@ -29,18 +29,16 @@ import nova.exception
 from nova.i18n import _
 from nova.i18n import _LE
 from nova import objects
+from nova.policies import server_groups as sg_policies
 
 LOG = logging.getLogger(__name__)
 
 ALIAS = "os-server-groups"
 
 
-authorize = extensions.os_compute_authorizer(ALIAS)
-
-
 def _authorize_context(req):
     context = req.environ['nova.context']
-    authorize(context)
+    context.can(sg_policies.BASE_POLICY_NAME)
     return context
 
 

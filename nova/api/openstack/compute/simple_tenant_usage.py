@@ -26,9 +26,9 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import simple_tenant_usage as stu_policies
 
 ALIAS = "os-simple-tenant-usage"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 def parse_strtime(dstr, fmt):
@@ -220,7 +220,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         """Retrieve tenant_usage for all tenants."""
         context = req.environ['nova.context']
 
-        authorize(context, action='list')
+        context.can(stu_policies.POLICY_ROOT % 'list')
 
         try:
             (period_start, period_stop, detailed) = self._get_datetime_range(
@@ -243,7 +243,8 @@ class SimpleTenantUsageController(wsgi.Controller):
         tenant_id = id
         context = req.environ['nova.context']
 
-        authorize(context, action='show', target={'project_id': tenant_id})
+        context.can(stu_policies.POLICY_ROOT % 'show',
+                    {'project_id': tenant_id})
 
         try:
             (period_start, period_stop, ignore) = self._get_datetime_range(

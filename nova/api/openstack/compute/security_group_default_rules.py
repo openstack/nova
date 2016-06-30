@@ -20,10 +20,10 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
 from nova.network.security_group import openstack_driver
+from nova.policies import security_group_default_rules as sgdr_policies
 
 
 ALIAS = "os-security-group-default-rules"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
@@ -35,7 +35,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @extensions.expected_errors((400, 409, 501))
     def create(self, req, body):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         sg_rule = self._from_body(body, 'security_group_default_rule')
 
@@ -72,7 +72,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @extensions.expected_errors((400, 404, 501))
     def show(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         try:
             id = self.security_group_api.validate_id(id)
@@ -91,7 +91,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @wsgi.response(204)
     def delete(self, req, id):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         try:
             id = self.security_group_api.validate_id(id)
@@ -107,7 +107,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
     @extensions.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(sgdr_policies.BASE_POLICY_NAME)
 
         ret = {'security_group_default_rules': []}
         try:

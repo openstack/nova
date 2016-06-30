@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import six
 
 from nova.api.openstack.compute import used_limits \
@@ -20,6 +21,7 @@ from nova.api.openstack.compute import used_limits \
 from nova.api.openstack import wsgi
 import nova.context
 from nova import exception
+from nova.policies import used_limits as ul_policies
 from nova import quota
 from nova import test
 
@@ -44,8 +46,9 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
     def _set_up_controller(self):
         self.ext_mgr = None
         self.controller = used_limits_v21.UsedLimitsController()
-        self.mox.StubOutWithMock(used_limits_v21, 'authorize')
-        self.authorize = used_limits_v21.authorize
+        patcher = self.mock_can = mock.patch('nova.context.RequestContext.can')
+        self.mock_can = patcher.start()
+        self.addCleanup(patcher.stop)
 
     def _do_test_used_limits(self, reserved):
         fake_req = FakeRequest(self.fake_context, reserved=reserved)
@@ -120,13 +123,14 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
             self.ext_mgr.is_loaded('os-server-group-quotas').AndReturn(
                 self.include_server_group_quotas)
-        self.authorize(self.fake_context, target=target)
         self.mox.StubOutWithMock(quota.QUOTAS, 'get_project_quotas')
         quota.QUOTAS.get_project_quotas(self.fake_context, '%s' % tenant_id,
                                         usages=True).AndReturn({})
         self.mox.ReplayAll()
         res = wsgi.ResponseObject(obj)
         self.controller.index(fake_req, res)
+        self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
+                                              target)
 
     def test_admin_can_fetch_used_limits_for_own_project(self):
         project_id = "123456"
@@ -172,13 +176,14 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         fake_req.GET = {'tenant_id': tenant_id}
         if self.ext_mgr is not None:
             self.ext_mgr.is_loaded('os-used-limits-for-admin').AndReturn(True)
-        self.authorize(self.fake_context, target=target). \
-            AndRaise(exception.PolicyNotAuthorized(
-            action=self.used_limit_extension))
+        self.mock_can.side_effect = exception.PolicyNotAuthorized(
+            action=self.used_limit_extension)
         self.mox.ReplayAll()
         res = wsgi.ResponseObject(obj)
         self.assertRaises(exception.PolicyNotAuthorized, self.controller.index,
                           fake_req, res)
+        self.mock_can.assert_called_once_with(ul_policies.BASE_POLICY_NAME,
+                                              target)
 
     def test_used_limits_fetched_for_context_project_id(self):
         project_id = "123456"

@@ -22,11 +22,11 @@ from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova.policies import services as services_policies
 from nova import servicegroup
 from nova import utils
 
 ALIAS = "os-services"
-authorize = extensions.os_compute_authorizer(ALIAS)
 
 
 class ServiceController(wsgi.Controller):
@@ -42,7 +42,7 @@ class ServiceController(wsgi.Controller):
         api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
 
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(services_policies.BASE_POLICY_NAME)
 
         _services = [
            s
@@ -155,7 +155,7 @@ class ServiceController(wsgi.Controller):
     def _perform_action(self, req, id, body, actions):
         """Calculate action dictionary dependent on provided fields"""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(services_policies.BASE_POLICY_NAME)
 
         try:
             action = actions[id]
@@ -170,7 +170,7 @@ class ServiceController(wsgi.Controller):
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(services_policies.BASE_POLICY_NAME)
 
         try:
             utils.validate_integer(id, 'id')

@@ -29,11 +29,11 @@ from nova.compute import vm_states
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import volumes as vol_policies
+from nova.policies import volumes_attachments as va_policies
 from nova import volume
 
 ALIAS = "os-volumes"
-authorize = extensions.os_compute_authorizer(ALIAS)
-authorize_attach = extensions.os_compute_authorizer('os-volumes-attachments')
 
 
 def _translate_volume_detail_view(context, vol):
@@ -104,7 +104,7 @@ class VolumeController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         try:
             vol = self.volume_api.get(context, id)
@@ -118,7 +118,7 @@ class VolumeController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a volume."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         try:
             self.volume_api.delete(context, id)
@@ -138,7 +138,7 @@ class VolumeController(wsgi.Controller):
     def _items(self, req, entity_maker):
         """Returns a list of volumes, transformed through entity_maker."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         volumes = self.volume_api.get_all(context)
         limited_list = common.limited(volumes, req)
@@ -150,7 +150,7 @@ class VolumeController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new volume."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         vol = body['volume']
 
@@ -256,7 +256,7 @@ class VolumeAttachmentController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
-        authorize_attach(context, action='index')
+        context.can(va_policies.POLICY_ROOT % 'index')
         return self._items(req, server_id,
                            entity_maker=_translate_attachment_summary_view)
 
@@ -264,8 +264,8 @@ class VolumeAttachmentController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
-        authorize(context)
-        authorize_attach(context, action='show')
+        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(va_policies.POLICY_ROOT % 'show')
 
         volume_id = id
         instance = common.get_instance(self.compute_api, context, server_id)
@@ -298,8 +298,8 @@ class VolumeAttachmentController(wsgi.Controller):
     def create(self, req, server_id, body):
         """Attach a volume to an instance."""
         context = req.environ['nova.context']
-        authorize(context)
-        authorize_attach(context, action='create')
+        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(va_policies.POLICY_ROOT % 'create')
 
         volume_id = body['volumeAttachment']['volumeId']
         device = body['volumeAttachment'].get('device')
@@ -350,8 +350,8 @@ class VolumeAttachmentController(wsgi.Controller):
     @validation.schema(volumes_schema.update_volume_attachment)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
-        authorize(context)
-        authorize_attach(context, action='update')
+        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(va_policies.POLICY_ROOT % 'update')
 
         old_volume_id = id
         try:
@@ -398,8 +398,8 @@ class VolumeAttachmentController(wsgi.Controller):
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
         context = req.environ['nova.context']
-        authorize(context)
-        authorize_attach(context, action='delete')
+        context.can(vol_policies.BASE_POLICY_NAME)
+        context.can(va_policies.POLICY_ROOT % 'delete')
 
         volume_id = id
 
@@ -455,7 +455,7 @@ class VolumeAttachmentController(wsgi.Controller):
     def _items(self, req, server_id, entity_maker):
         """Returns a list of attachments, transformed through entity_maker."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         instance = common.get_instance(self.compute_api, context, server_id)
 
@@ -508,7 +508,7 @@ class SnapshotController(wsgi.Controller):
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         try:
             vol = self.volume_api.get_snapshot(context, id)
@@ -522,7 +522,7 @@ class SnapshotController(wsgi.Controller):
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         try:
             self.volume_api.delete_snapshot(context, id)
@@ -542,7 +542,7 @@ class SnapshotController(wsgi.Controller):
     def _items(self, req, entity_maker):
         """Returns a list of snapshots, transformed through entity_maker."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         snapshots = self.volume_api.get_all_snapshots(context)
         limited_list = common.limited(snapshots, req)
@@ -554,7 +554,7 @@ class SnapshotController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new snapshot."""
         context = req.environ['nova.context']
-        authorize(context)
+        context.can(vol_policies.BASE_POLICY_NAME)
 
         snapshot = body['snapshot']
         volume_id = snapshot['volume_id']
