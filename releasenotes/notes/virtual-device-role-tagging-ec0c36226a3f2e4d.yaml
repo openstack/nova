@@ -14,6 +14,12 @@ features:
     and MAC address. For tagged block devices, the exposed
     hardware metadata includes the bus (ex: SCSI), bus
     address (ex: 1:0:2:0) and serial number.
+
+    The 2.32 microversion also adds the 2016-06-30 version
+    to the metadata API. Starting with 2016-06-30, the
+    metadata contains a 'devices' sections which lists any
+    devices that are tagged as described in the previous
+    paragraph, along with their hardware metadata.
 issues:
   - When using virtual device role tagging, the metadata on
     the config drive lags behind the metadata obtained from
