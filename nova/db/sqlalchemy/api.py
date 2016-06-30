@@ -1521,6 +1521,7 @@ def virtual_interface_create(context, values):
         vif_ref.update(values)
         vif_ref.save(context.session)
     except db_exc.DBError:
+        LOG.exception(_LE("VIF creation failed with a database error."))
         raise exception.VirtualInterfaceCreateException()
 
     return vif_ref
