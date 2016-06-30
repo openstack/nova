@@ -522,6 +522,18 @@ def get_disk_mapping(virt_type, instance,
                                      disk_bus)
         mapping['disk'] = os_info
 
+        if configdrive.required_by(instance):
+            device_type = get_config_drive_type()
+            disk_bus = get_disk_bus_for_device_type(instance,
+                                                    virt_type,
+                                                    image_meta,
+                                                    device_type)
+            config_info = get_next_disk_info(mapping,
+                                             disk_bus,
+                                             device_type,
+                                             last_device=True)
+            mapping['disk.config.rescue'] = config_info
+
         return mapping
 
     pre_assigned_device_names = \
