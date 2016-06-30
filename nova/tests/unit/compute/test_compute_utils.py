@@ -486,6 +486,39 @@ class UsageInfoTestCase(test.TestCase):
                                           uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
+    def test_notify_about_instance_action(self):
+        instance = create_instance(self.context)
+
+        compute_utils.notify_about_instance_action(
+            self.context,
+            instance,
+            host='fake-compute',
+            action='delete',
+            phase='start')
+
+        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+
+        self.assertEqual(notification['priority'], 'INFO')
+        self.assertEqual(notification['event_type'], 'instance.delete.start')
+        self.assertEqual(notification['publisher_id'],
+                         'nova-compute:fake-compute')
+
+        payload = notification['payload']['nova_object.data']
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['uuid'], instance['uuid'])
+
+        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavor = payload['flavor']['nova_object.data']
+        self.assertEqual(str(flavor['flavorid']), flavorid)
+
+        for attr in ('display_name', 'created_at', 'launched_at',
+                     'state', 'task_state'):
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
+
+        self.assertEqual(payload['image_uuid'], uuids.fake_image_ref)
+
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance = create_instance(self.context)

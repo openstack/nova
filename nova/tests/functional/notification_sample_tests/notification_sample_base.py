@@ -12,16 +12,27 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import os
+import time
 
+from oslo_config import cfg
 from oslo_serialization import jsonutils
+from oslo_utils import fixture as utils_fixture
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client as api_client
+from nova.tests.functional import integrated_helpers
+from nova.tests.unit.api.openstack.compute import test_services
 from nova.tests.unit import fake_notifier
+import nova.tests.unit.image.fake
+
+CONF = cfg.CONF
 
 
-class NotificationSampleTestBase(test.TestCase):
+class NotificationSampleTestBase(test.TestCase,
+                                 integrated_helpers.InstanceHelperMixin):
     """Base class for notification sample testing.
 
     To add tests for a versioned notification you have to store a sample file
@@ -43,6 +54,10 @@ class NotificationSampleTestBase(test.TestCase):
 
     def setUp(self):
         super(NotificationSampleTestBase, self).setUp()
+        # Needs to mock this to avoid REQUIRES_LOCKING to be set to True
+        patcher = mock.patch('oslo_concurrency.lockutils.lock')
+        self.addCleanup(patcher.stop)
+        patcher.start()
 
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
                 api_version='v2.1'))
@@ -51,6 +66,18 @@ class NotificationSampleTestBase(test.TestCase):
         self.admin_api = api_fixture.admin_api
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
+
+        self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
+
+        self.flags(scheduler_driver='nova.scheduler.chance.ChanceScheduler')
+        # the image fake backend needed for image discovery
+        nova.tests.unit.image.fake.stub_out_image_service(self)
+        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+
+        self.start_service('conductor', manager=CONF.conductor.manager)
+        self.start_service('scheduler')
+        self.start_service('network')
+        self.start_service('compute')
 
     def _get_notification_sample(self, sample):
         sample_dir = os.path.dirname(os.path.abspath(__file__))
@@ -106,3 +133,47 @@ class NotificationSampleTestBase(test.TestCase):
         self._apply_replacements(replacements, sample_obj, notification)
 
         self.assertJsonEqual(sample_obj, notification)
+
+    def _boot_a_server(self, expected_status='ACTIVE', extra_params=None):
+
+        # We have to depend on a specific image and flavor to fix the content
+        # of the notification that will be emitted
+        flavor_body = {'flavor': {'name': 'test_flavor',
+                                  'ram': 512,
+                                  'vcpus': 1,
+                                  'disk': 1,
+                                  'id': 'a22d5517-147c-4147-a0d1-e698df5cd4e3'
+                                  }}
+
+        flavor_id = self.api.post_flavor(flavor_body)['id']
+
+        server = self._build_minimal_create_server_request(
+            self.api, 'some-server',
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            flavor_id=flavor_id)
+
+        if extra_params:
+            server.update(extra_params)
+
+        post = {'server': server}
+        created_server = self.api.post_server(post)
+        self.assertTrue(created_server['id'])
+
+        # Wait for it to finish being created
+        found_server = self._wait_for_state_change(self.api, created_server,
+                                                   expected_status)
+
+        return found_server
+
+    def _wait_until_deleted(self, server):
+        try:
+            for i in range(40):
+                server = self.api.get_server(server['id'])
+                if server['status'] == 'ERROR':
+                    self.fail('Server went to error state instead of'
+                              'disappearing.')
+                time.sleep(0.5)
+
+            self.fail('Server failed to delete.')
+        except api_client.OpenStackApiNotFoundException:
+            return

@@ -23,13 +23,22 @@ class NotificationObject(base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
+    def __init__(self, **kwargs):
+        super(NotificationObject, self).__init__(**kwargs)
+        # The notification objects are created on the fly when nova emits the
+        # notification. This causes that every object shows every field as
+        # changed. We don't want to send this meaningless information so we
+        # reset the object after creation.
+        self.obj_reset_changes(recursive=False)
+
 
 @base.NovaObjectRegistry.register_notification
 class EventType(NotificationObject):
     # Version 1.0: Initial version
     # Version 1.1: New valid actions values are added to the
     #              NotificationActionField enum
-    VERSION = '1.1'
+    # Version 1.2: DELETE value is added to the NotificationActionField enum
+    VERSION = '1.2'
 
     fields = {
         'object': fields.StringField(nullable=False),
@@ -70,8 +79,8 @@ class NotificationPayloadBase(NotificationObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 
-    def __init__(self, *args, **kwargs):
-        super(NotificationPayloadBase, self).__init__(*args, **kwargs)
+    def __init__(self, **kwargs):
+        super(NotificationPayloadBase, self).__init__(**kwargs)
         self.populated = not self.SCHEMA
 
     def populate_schema(self, **kwargs):
@@ -85,6 +94,10 @@ class NotificationPayloadBase(NotificationObject):
             if source.obj_attr_is_set(field):
                 setattr(self, key, getattr(source, field))
         self.populated = True
+
+        # the schema population will create changed fields but we don't need
+        # this information in the notification
+        self.obj_reset_changes(recursive=False)
 
 
 @base.NovaObjectRegistry.register_notification

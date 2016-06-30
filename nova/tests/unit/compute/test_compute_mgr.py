@@ -119,7 +119,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             event_pwr_state=power_state.SHUTDOWN,
             current_pwr_state=power_state.RUNNING)
 
-    def test_delete_instance_info_cache_delete_ordering(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_delete_instance_info_cache_delete_ordering(self, mock_notify):
         call_tracker = mock.Mock()
         call_tracker.clear_events_for_instance.return_value = None
         mgr_class = self.compute.__class__
@@ -128,6 +129,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # spec out everything except for the method we really want
         # to test, then use call_tracker to verify call sequence
         specd_compute._delete_instance = orig_delete
+        specd_compute.host = 'compute'
 
         mock_inst = mock.Mock()
         mock_inst.uuid = uuids.instance
@@ -157,6 +159,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           '_notify_about_instance_usage',
                           '_shutdown_instance', 'delete'],
                          methods_called)
+        mock_notify.assert_called_once_with(self.context,
+                                            mock_inst,
+                                            specd_compute.host,
+                                            action='delete',
+                                            phase='start')
 
     def _make_compute_node(self, hyp_hostname, cn_id):
             cn = mock.Mock(spec_set=['hypervisor_hostname', 'id',
@@ -245,7 +252,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             else:
                 self.assertFalse(db_node.destroy.called)
 
-    def test_delete_instance_without_info_cache(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_delete_instance_without_info_cache(self, mock_notify):
         instance = fake_instance.fake_instance_obj(
                 self.context,
                 uuid=uuids.instance,
@@ -266,6 +274,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         ):
             instance.info_cache = None
             self.compute._delete_instance(self.context, instance, [], quotas)
+
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='delete', phase='start'),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='delete', phase='end')])
 
     def test_check_device_tagging_no_tagging(self):
         bdms = objects.BlockDeviceMappingList(objects=[

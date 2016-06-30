@@ -239,22 +239,27 @@ class InstanceHelperMixin(object):
 
         return server
 
-    def _build_minimal_create_server_request(self, api, name):
+    def _build_minimal_create_server_request(self, api, name, image_uuid=None,
+                                             flavor_id=None):
         server = {}
 
-        image = api.get_images()[0]
-
-        if 'imageRef' in image:
-            image_href = image['imageRef']
+        if image_uuid:
+            image_href = 'http://fake.server/%s' % image_uuid
         else:
-            image_href = image['id']
-            image_href = 'http://fake.server/%s' % image_href
+            image = api.get_images()[0]
+
+            if 'imageRef' in image:
+                image_href = image['imageRef']
+            else:
+                image_href = image['id']
+                image_href = 'http://fake.server/%s' % image_href
 
         # We now have a valid imageId
         server['imageRef'] = image_href
 
-        # Set a valid flavorId
-        flavor = api.get_flavors()[1]
-        server['flavorRef'] = ('http://fake.server/%s' % flavor['id'])
+        if not flavor_id:
+            # Set a valid flavorId
+            flavor_id = api.get_flavors()[1]['id']
+        server['flavorRef'] = ('http://fake.server/%s' % flavor_id)
         server['name'] = name
         return server
