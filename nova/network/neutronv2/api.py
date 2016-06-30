@@ -686,7 +686,16 @@ class API(base_api.NetworkAPI):
                 updated_port = self._update_port(
                     port_client, instance, vifobj.uuid, port_req_body)
 
-                vifobj.address = updated_port['mac_address']
+                # NOTE(danms): The virtual_interfaces table enforces global
+                # uniqueness on MAC addresses, which clearly does not match
+                # with neutron's view of the world. Since address is a 255-char
+                # string we can namespace it with our port id. Using '/' should
+                # be safely excluded from MAC address notations as well as
+                # UUIDs. We could stop doing this when we remove
+                # nova-network, but we'd need to leave the read translation in
+                # for longer than that of course.
+                vifobj.address = '%s/%s' % (updated_port['mac_address'],
+                                            updated_port['id'])
                 vifobj.create()
 
                 # only add to preexisting_port_ids after update success

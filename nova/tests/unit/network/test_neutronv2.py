@@ -1037,7 +1037,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self._allocate_for_instance(net_idx=1,
                                     requested_networks=requested_networks,
                                     macs=set(['ab:cd:ef:01:23:45']))
-        self.assertEqual('ab:cd:ef:01:23:45', self._vifs_created[0].address)
+        self.assertEqual('ab:cd:ef:01:23:45/%s' % uuids.portid_1,
+                         self._vifs_created[0].address)
 
     def test_allocate_for_instance_accepts_only_portid(self):
         # Make sure allocate_for_instance works when only a portid is provided
@@ -1052,7 +1053,8 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(self.instance.uuid,
                          self._vifs_created[0].instance_uuid)
         self.assertEqual(uuids.portid_1, self._vifs_created[0].uuid)
-        self.assertEqual(self.port_data1[0]['mac_address'],
+        self.assertEqual('%s/%s' % (self.port_data1[0]['mac_address'],
+                                    self.port_data1[0]['id']),
                          self._vifs_created[0].address)
 
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
@@ -1133,7 +1135,7 @@ class TestNeutronv2(TestNeutronv2Base):
         vifs_really_created = [vif for vif in self._vifs_created
                                if vif.create.called]
         self.assertEqual(2, len(vifs_really_created))
-        self.assertEqual([('foo', 'fakemac1'), (None, 'fakemac3')],
+        self.assertEqual([('foo', 'fakemac1/fake'), (None, 'fakemac3/fake')],
                          [(vif.tag, vif.address)
                           for vif in vifs_really_created])
 
@@ -3653,8 +3655,13 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_nc.show_port = show_port
 
         mock_ntrn.return_value = mock_nc
-        up_return = {"port": {'mac_address': 'fakemac'}}
-        mock_nc.update_port.side_effect = [up_return, up_return, Exception]
+
+        def update_port(port_id, body):
+            if port_id == uuids.fail_port_id:
+                raise Exception
+            return {"port": {'mac_address': 'fakemac',
+                             'id': port_id}}
+        mock_nc.update_port.side_effect = update_port
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')

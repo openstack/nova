@@ -52,6 +52,11 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
                 continue
             else:
                 setattr(vif, field, db_vif[field])
+        # NOTE(danms): The neutronv2 module namespaces mac addresses
+        # with port id to avoid uniqueness constraints currently on
+        # our table. Strip that out here so nobody else needs to care.
+        if 'address' in vif and '/' in vif.address:
+            vif.address, _ = vif.address.split('/', 1)
         vif._context = context
         vif.obj_reset_changes()
         return vif
