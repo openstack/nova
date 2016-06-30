@@ -567,7 +567,7 @@ class API(base_api.NetworkAPI):
                                 network_id=request.network_id)
             else:
                 # no requested nets and user has no available nets
-                return []
+                return {}
 
         # if this function is directly called without a requested_network param
         # or if it is indirectly called through allocate_port_for_instance()
@@ -595,7 +595,7 @@ class API(base_api.NetworkAPI):
         #                available net which is permitted bug/1364344
         self._check_external_network_attach(context, nets)
 
-        return nets
+        return {net['id']: net for net in nets}
 
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
@@ -670,15 +670,10 @@ class API(base_api.NetworkAPI):
             vifobj.instance_uuid = instance.uuid
             vifobj.tag = request.tag if 'tag' in request else None
 
-            # Network lookup for available network_id
-            network = None
-            for net in nets:
-                if net['id'] == request.network_id:
-                    network = net
-                    break
+            network = nets.get(request.network_id)
             # if network_id did not pass validate_networks() and not available
             # here then skip it safely not continuing with a None Network
-            else:
+            if not network:
                 continue
 
             nets_in_requested_order.append(network)

@@ -4400,7 +4400,7 @@ class TestAllocateForInstanceHelpers(test.NoDBTestCase):
         result = api._validate_requested_network_ids(self.context,
             self.instance, mock_client, requested_networks, ordered_networks)
 
-        self.assertEqual(nets, result)
+        self.assertEqual(nets, list(result.values()))
         expected_call_list = [
             mock.call(shared=False, tenant_id=uuids.tenant_id),
             mock.call(shared=True)
@@ -4419,7 +4419,7 @@ class TestAllocateForInstanceHelpers(test.NoDBTestCase):
         result = api._validate_requested_network_ids(self.context,
             self.instance, mock_client, requested_networks, ordered_networks)
 
-        self.assertEqual(nets, result)
+        self.assertEqual(nets, list(result.values()))
         mock_client.list_networks.assert_called_once_with(id=['net1'])
 
     def test_validate_requested_network_ids_success_no_nets(self):
@@ -4432,7 +4432,7 @@ class TestAllocateForInstanceHelpers(test.NoDBTestCase):
         result = api._validate_requested_network_ids(self.context,
             self.instance, mock_client, requested_networks, ordered_networks)
 
-        self.assertEqual([], result)
+        self.assertEqual({}, result)
         expected_call_list = [
             mock.call(shared=False, tenant_id=uuids.tenant_id),
             mock.call(shared=True)
