@@ -790,3 +790,22 @@ class HackingTestCase(test.NoDBTestCase):
             code, checks.check_policy_registration_in_central_place,
             filename="nova/api/openstack/compute/non_existent.py",
             expected_errors=errors)
+
+    def test_check_policy_enforce(self):
+        errors = [(3, 0, "N351")]
+        code = """
+        from nova import policy
+
+        policy._ENFORCER.enforce('context_is_admin', target, credentials)
+        """
+        self._assert_has_errors(code, checks.check_policy_enforce,
+                                expected_errors=errors)
+
+    def test_check_policy_enforce_does_not_catch_other_enforce(self):
+        # Simulate a different enforce method defined in Nova
+        code = """
+        from nova import foo
+
+        foo.enforce()
+        """
+        self._assert_has_no_errors(code, checks.check_policy_enforce)
