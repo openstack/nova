@@ -1,11 +1,2 @@
 {
-    "context_is_admin":  "role:admin",
-    "admin_or_owner":  "is_admin:True or project_id:%(project_id)s",
-    "default": "rule:admin_or_owner",
-
-    "cells_scheduler_filter:TargetCellFilter": "is_admin:True",
-
-    "admin_api": "is_admin:True",
-
-    "network:attach_external_network": "is_admin:True"
 }

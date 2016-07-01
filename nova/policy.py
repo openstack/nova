@@ -73,46 +73,6 @@ def set_rules(rules, overwrite=True, use_conf=False):
     _ENFORCER.set_rules(rules, overwrite, use_conf)
 
 
-# TODO(alaski): All users of this method should move over to authorize() as
-# policies are registered and ultimately this should be removed.
-def enforce(context, action, target, do_raise=True, exc=None):
-    """Verifies that the action is valid on the target in this context.
-
-       :param context: nova context
-       :param action: string representing the action to be checked
-           this should be colon separated for clarity.
-           i.e. ``compute:create_instance``,
-           ``compute:attach_volume``,
-           ``volume:attach_volume``
-       :param target: dictionary representing the object of the action
-           for object creation this should be a dictionary representing the
-           location of the object e.g. ``{'project_id': context.project_id}``
-       :param do_raise: if True (the default), raises PolicyNotAuthorized;
-           if False, returns False
-
-       :raises nova.exception.PolicyNotAuthorized: if verification fails
-           and do_raise is True.
-
-       :return: returns a non-False value (not necessarily "True") if
-           authorized, and the exact value False if not authorized and
-           do_raise is False.
-    """
-    init()
-    credentials = context.to_dict()
-    if not exc:
-        exc = exception.PolicyNotAuthorized
-    try:
-        result = _ENFORCER.enforce(action, target, credentials,
-                                   do_raise=do_raise, exc=exc, action=action)
-    except Exception:
-        credentials.pop('auth_token', None)
-        with excutils.save_and_reraise_exception():
-            LOG.debug('Policy check for %(action)s failed with credentials '
-                      '%(credentials)s',
-                      {'action': action, 'credentials': credentials})
-    return result
-
-
 def authorize(context, action, target, do_raise=True, exc=None):
     """Verifies that the action is valid on the target in this context.
 
@@ -128,7 +88,7 @@ def authorize(context, action, target, do_raise=True, exc=None):
        :param do_raise: if True (the default), raises PolicyNotAuthorized;
            if False, returns False
        :param exc: Class of the exception to raise if the check fails.
-                   Any remaining arguments passed to :meth:`enforce` (both
+                   Any remaining arguments passed to :meth:`authorize` (both
                    positional and keyword arguments) will be passed to
                    the exception class. If not specified,
                    :class:`PolicyNotAuthorized` will be used.

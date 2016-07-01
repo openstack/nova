@@ -34,6 +34,9 @@ servers_migrations_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'index',
         check_str=base.RULE_ADMIN_API),
+    policy.RuleDefault(
+        name='os_compute_api:server-migrations:discoverable',
+        check_str=base.RULE_ANY),
 ]
 
 

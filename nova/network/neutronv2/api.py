@@ -26,7 +26,6 @@ from oslo_utils import excutils
 from oslo_utils import uuidutils
 import six
 
-from nova.api.openstack import extensions
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
@@ -40,13 +39,11 @@ from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
+from nova.policies import base as base_policies
 
 CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
-
-soft_external_network_attach_authorize = extensions.soft_core_authorizer(
-    'network', 'attach_external_network')
 
 _SESSION = None
 _ADMIN_AUTH = None
@@ -330,7 +327,8 @@ class API(base_api.NetworkAPI):
 
     def _check_external_network_attach(self, context, nets):
         """Check if attaching to external network is permitted."""
-        if not soft_external_network_attach_authorize(context):
+        if not context.can(base_policies.NETWORK_ATTACH_EXTERNAL,
+                           fatal=False):
             for net in nets:
                 # Perform this check here rather than in validate_networks to
                 # ensure the check is performed every time

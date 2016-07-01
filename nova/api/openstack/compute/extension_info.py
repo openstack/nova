@@ -22,6 +22,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _LE
+from nova.policies import base as base_policies
 from nova.policies import extensions as ext_policies
 
 ALIAS = 'extensions'
@@ -175,8 +176,9 @@ class ExtensionInfoController(wsgi.Controller):
             )
 
         for alias, ext in six.iteritems(self.extension_info.get_extensions()):
-            authorize = extensions.os_compute_soft_authorizer(alias)
-            if authorize(context, action='discoverable'):
+            action = ':'.join([
+                base_policies.COMPUTE_API, alias, 'discoverable'])
+            if context.can(action, fatal=False):
                 discoverable_extensions[alias] = ext
             else:
                 LOG.debug("Filter out extension %s from discover list",

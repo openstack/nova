@@ -49,93 +49,101 @@ class PolicyFileTestCase(test.NoDBTestCase):
             # is_admin or not. As a side-effect, policy reset is needed here
             # to flush existing policy cache.
             policy.reset()
+            policy.init()
+            rule = oslo_policy.RuleDefault('example:test', "")
+            policy._ENFORCER.register_defaults([rule])
 
             action = "example:test"
             with open(tmpfilename, "w") as policyfile:
                 policyfile.write('{"example:test": ""}')
-            policy.enforce(self.context, action, self.target)
+            policy.authorize(self.context, action, self.target)
             with open(tmpfilename, "w") as policyfile:
                 policyfile.write('{"example:test": "!"}')
             policy._ENFORCER.load_rules(True)
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.context, action, self.target)
 
 
 class PolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PolicyTestCase, self).setUp()
-        rules = {
-            "true": '@',
-            "example:allowed": '@',
-            "example:denied": "!",
-            "example:get_http": "http://www.example.com",
-            "example:my_file": "role:compute_admin or "
-                               "project_id:%(project_id)s",
-            "example:early_and_fail": "! and @",
-            "example:early_or_success": "@ or !",
-            "example:lowercase_admin": "role:admin or role:sysadmin",
-            "example:uppercase_admin": "role:ADMIN or role:sysadmin",
-        }
+        rules = [
+            oslo_policy.RuleDefault("true", '@'),
+            oslo_policy.RuleDefault("example:allowed", '@'),
+            oslo_policy.RuleDefault("example:denied", "!"),
+            oslo_policy.RuleDefault("example:get_http",
+                                    "http://www.example.com"),
+            oslo_policy.RuleDefault("example:my_file",
+                                    "role:compute_admin or "
+                                    "project_id:%(project_id)s"),
+            oslo_policy.RuleDefault("example:early_and_fail", "! and @"),
+            oslo_policy.RuleDefault("example:early_or_success", "@ or !"),
+            oslo_policy.RuleDefault("example:lowercase_admin",
+                                    "role:admin or role:sysadmin"),
+            oslo_policy.RuleDefault("example:uppercase_admin",
+                                    "role:ADMIN or role:sysadmin"),
+        ]
         policy.reset()
         policy.init()
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        # before a policy rule can be used, its default has to be registered.
+        policy._ENFORCER.register_defaults(rules)
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.target = {}
 
-    def test_enforce_nonexistent_action_throws(self):
+    def test_authorize_nonexistent_action_throws(self):
         action = "example:noexist"
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(oslo_policy.PolicyNotRegistered, policy.authorize,
                           self.context, action, self.target)
 
-    def test_enforce_bad_action_throws(self):
+    def test_authorize_bad_action_throws(self):
         action = "example:denied"
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
 
-    def test_enforce_bad_action_noraise(self):
+    def test_authorize_bad_action_noraise(self):
         action = "example:denied"
-        result = policy.enforce(self.context, action, self.target, False)
+        result = policy.authorize(self.context, action, self.target, False)
         self.assertFalse(result)
 
-    def test_enforce_good_action(self):
+    def test_authorize_good_action(self):
         action = "example:allowed"
-        result = policy.enforce(self.context, action, self.target)
+        result = policy.authorize(self.context, action, self.target)
         self.assertTrue(result)
 
     @requests_mock.mock()
-    def test_enforce_http_true(self, req_mock):
+    def test_authorize_http_true(self, req_mock):
         req_mock.post('http://www.example.com/',
                       text='True')
         action = "example:get_http"
         target = {}
-        result = policy.enforce(self.context, action, target)
+        result = policy.authorize(self.context, action, target)
         self.assertTrue(result)
 
     @requests_mock.mock()
-    def test_enforce_http_false(self, req_mock):
+    def test_authorize_http_false(self, req_mock):
         req_mock.post('http://www.example.com/',
                       text='False')
         action = "example:get_http"
         target = {}
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, target)
 
-    def test_templatized_enforcement(self):
+    def test_templatized_authorization(self):
         target_mine = {'project_id': 'fake'}
         target_not_mine = {'project_id': 'another'}
         action = "example:my_file"
-        policy.enforce(self.context, action, target_mine)
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        policy.authorize(self.context, action, target_mine)
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, target_not_mine)
 
-    def test_early_AND_enforcement(self):
+    def test_early_AND_authorization(self):
         action = "example:early_and_fail"
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+        self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
 
-    def test_early_OR_enforcement(self):
+    def test_early_OR_authorization(self):
         action = "example:early_or_success"
-        policy.enforce(self.context, action, self.target)
+        policy.authorize(self.context, action, self.target)
 
     def test_ignore_case_role_check(self):
         lowercase_action = "example:lowercase_admin"
@@ -145,40 +153,8 @@ class PolicyTestCase(test.NoDBTestCase):
         admin_context = context.RequestContext('admin',
                                                'fake',
                                                roles=['AdMiN'])
-        policy.enforce(admin_context, lowercase_action, self.target)
-        policy.enforce(admin_context, uppercase_action, self.target)
-
-
-class DefaultPolicyTestCase(test.NoDBTestCase):
-
-    def setUp(self):
-        super(DefaultPolicyTestCase, self).setUp()
-
-        self.rules = {
-            "default": '',
-            "example:exist": "!",
-        }
-
-        self._set_rules('default')
-
-        self.context = context.RequestContext('fake', 'fake')
-
-    def _set_rules(self, default_rule):
-        policy.reset()
-        rules = oslo_policy.Rules.from_dict(self.rules)
-        policy.init(rules=rules, default_rule=default_rule, use_conf=False)
-
-    def test_policy_called(self):
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
-                self.context, "example:exist", {})
-
-    def test_not_found_policy_calls_default(self):
-        policy.enforce(self.context, "example:noexist", {})
-
-    def test_default_not_found(self):
-        self._set_rules("default_noexist")
-        self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
-                self.context, "example:noexist", {})
+        policy.authorize(admin_context, lowercase_action, self.target)
+        policy.authorize(admin_context, uppercase_action, self.target)
 
 
 class IsAdminCheckTestCase(test.NoDBTestCase):
@@ -225,12 +201,12 @@ class AdminRolePolicyTestCase(test.NoDBTestCase):
         self.actions = policy.get_rules().keys()
         self.target = {}
 
-    def test_enforce_admin_actions_with_nonadmin_context_throws(self):
+    def test_authorize_admin_actions_with_nonadmin_context_throws(self):
         """Check if non-admin context passed to admin actions throws
            Policy not authorized exception
         """
         for action in self.actions:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                           self.context, action, self.target)
 
 
@@ -246,6 +222,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
         self.fake_policy = jsonutils.loads(fake_policy.policy_data)
 
         self.admin_only_rules = (
+"cells_scheduler_filter:DifferentCellFilter",
 "cells_scheduler_filter:TargetCellFilter",
 "network:attach_external_network",
 "os_compute_api:servers:create:forced_host",
@@ -321,7 +298,6 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 )
 
         self.admin_or_owner_rules = (
-"default",
 "os_compute_api:servers:start",
 "os_compute_api:servers:stop",
 "os_compute_api:servers:trigger_crash_dump",
@@ -422,6 +398,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-agents:discoverable",
 "os_compute_api:os-attach-interfaces:discoverable",
 "os_compute_api:os-baremetal-nodes:discoverable",
+"os_compute_api:os-block-device-mapping:discoverable",
 "os_compute_api:os-block-device-mapping-v1:discoverable",
 "os_compute_api:os-cells:discoverable",
 "os_compute_api:os-certificates:discoverable",
@@ -453,6 +430,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-hosts:discoverable",
 "os_compute_api:os-hypervisors:discoverable",
 "os_compute_api:images:discoverable",
+"os_compute_api:image-metadata:discoverable",
 "os_compute_api:image-size:discoverable",
 "os_compute_api:os-instance-actions:discoverable",
 "os_compute_api:os-instance-usage-audit-log:discoverable",
@@ -462,6 +440,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-lock-server:discoverable",
 "os_compute_api:os-migrate-server:discoverable",
 "os_compute_api:os-multinic:discoverable",
+"os_compute_api:os-multiple-create:discoverable",
 "os_compute_api:os-networks:discoverable",
 "os_compute_api:os-networks-associate:discoverable",
 "os_compute_api:os-pause-server:discoverable",
@@ -478,14 +457,16 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-server-groups:discoverable",
 "os_compute_api:os-server-tags:delete",
 "os_compute_api:os-server-tags:delete_all",
+"os_compute_api:os-server-tags:discoverable",
 "os_compute_api:os-server-tags:index",
 "os_compute_api:os-server-tags:show",
 "os_compute_api:os-server-tags:update",
 "os_compute_api:os-server-tags:update_all",
 "os_compute_api:os-services:discoverable",
 "os_compute_api:server-metadata:discoverable",
+"os_compute_api:server-migrations:discoverable",
 "os_compute_api:servers:discoverable",
-"os_compute_api:os-shelve:shelve:discoverable",
+"os_compute_api:os-shelve:discoverable",
 "os_compute_api:os-simple-tenant-usage:discoverable",
 "os_compute_api:os-suspend-server:discoverable",
 "os_compute_api:os-tenant-networks:discoverable",
@@ -499,6 +480,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-assisted-volume-snapshots:discoverable",
 "os_compute_api:os-console-auth-tokens:discoverable",
 "os_compute_api:os-server-external-events:discoverable",
+"os_compute_api:versions:discoverable",
 )
 
     def test_all_rules_in_sample_file(self):
@@ -510,21 +492,21 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
     def test_admin_only_rules(self):
         for rule in self.admin_only_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.non_admin_context, rule, self.target)
-            policy.enforce(self.admin_context, rule, self.target)
+            policy.authorize(self.admin_context, rule, self.target)
 
     def test_non_admin_only_rules(self):
         for rule in self.non_admin_only_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.admin_context, rule, self.target)
-            policy.enforce(self.non_admin_context, rule, self.target)
+            policy.authorize(self.non_admin_context, rule, self.target)
 
     def test_admin_or_owner_rules(self):
         for rule in self.admin_or_owner_rules:
-            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+            self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
                               self.non_admin_context, rule, self.target)
-            policy.enforce(self.non_admin_context, rule,
+            policy.authorize(self.non_admin_context, rule,
                            {'project_id': 'fake', 'user_id': 'fake'})
 
     def test_no_empty_rules(self):
@@ -542,7 +524,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 
     def test_allow_all_rules(self):
         for rule in self.allow_all_rules:
-            policy.enforce(self.non_admin_context, rule, self.target)
+            policy.authorize(self.non_admin_context, rule, self.target)
 
     def test_rule_missing(self):
         rules = policy.get_rules()

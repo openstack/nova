@@ -13,24 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
-from nova.api.openstack import extensions as api_extensions
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-
-def fake_soft_extension_authorizer(extension_name, core=False):
-    def authorize(context, action=None):
-        return True
-    return authorize
 
 
 class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "extension-info"
 
-    @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
-    def test_list_extensions(self, soft_auth):
-        soft_auth.side_effect = fake_soft_extension_authorizer
+    def test_list_extensions(self):
         response = self._do_get('extensions')
         # The full extension list is one of the places that things are
         # different between the API versions and the legacy vs. new
@@ -45,8 +34,6 @@ class ExtensionInfoAllSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
 class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     sample_dir = "extension-info"
 
-    @mock.patch.object(api_extensions, 'os_compute_soft_authorizer')
-    def test_get_extensions(self, soft_auth):
-        soft_auth.side_effect = fake_soft_extension_authorizer
+    def test_get_extensions(self):
         response = self._do_get('extensions/os-agents')
         self._verify_response('extensions-get-resp', {}, response, 200)
