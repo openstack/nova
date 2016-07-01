@@ -15741,82 +15741,42 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_extend.assert_called_once_with(imageraw, 50)
             mock_disk_raw_to_qcow2.assert_called_once_with(imageqcow2.path)
 
-    def _test_finish_migration(self, power_on, resize_instance=False):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_inject_data')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_domain_and_network')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_disk_raw_to_qcow2')
+    # Don't write libvirt xml to disk
+    @mock.patch.object(libvirt_utils, 'write_to_file')
+    # NOTE(mdbooth): The following 4 mocks are required to execute
+    #                get_guest_xml().
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_supports_direct_io')
+    @mock.patch('nova.api.metadata.base.InstanceMetadata')
+    def _test_finish_migration(self, mock_instance_metadata,
+                               mock_supports_direct_io,
+                               mock_build_device_metadata,
+                               mock_set_host_enabled, mock_write_to_file,
+                               mock_raw_to_qcow2,
+                               mock_create_domain_and_network,
+                               mock_get_info, mock_inject_data,
+                               power_on=True, resize_instance=False):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration.
         """
-
-        powered_on = power_on
-        self.fake_create_domain_called = False
-        self.fake_disk_resize_called = False
-        create_image_called = [False]
-        bdi = {'block_device_mapping': []}
-
-        def fake_to_xml(context, instance, network_info, disk_info,
-                        image_meta=None, rescue=None,
-                        block_device_info=None):
-            return ""
-
-        def fake_plug_vifs(instance, network_info):
-            pass
-
-        def fake_create_image(context, inst,
-                              disk_mapping, suffix='',
-                              disk_images=None, network_info=None,
-                              block_device_info=None, inject_files=True,
-                              fallback_from_host=None,
-                              ignore_bdi_for_swap=False):
-            self.assertTrue(ignore_bdi_for_swap)
-            self.assertFalse(inject_files)
-            self.assertEqual(bdi, block_device_info)
-            create_image_called[0] = True
-
-        def fake_create_domain_and_network(
-            context, xml, instance, network_info, disk_info,
-            block_device_info=None, power_on=True, reboot=False,
-            vifs_already_plugged=False, post_xml_callback=None):
-            self.fake_create_domain_called = True
-            self.assertEqual(powered_on, power_on)
-            self.assertTrue(vifs_already_plugged)
-            return libvirt_guest.Guest('fake_dom')
-
-        def fake_enable_hairpin():
-            pass
-
-        def fake_execute(*args, **kwargs):
-            pass
-
-        def fake_get_info(instance):
-            if powered_on:
-                return hardware.InstanceInfo(state=power_state.RUNNING)
-            else:
-                return hardware.InstanceInfo(state=power_state.SHUTDOWN)
-
-        def fake_disk_resize(image, size):
-            # Assert that _create_image is called before disk resize,
-            # otherwise we might be trying to resize a disk whose backing
-            # file hasn't been fetched, yet.
-            self.assertTrue(create_image_called[0])
-            self.fake_disk_resize_called = True
-
         self.flags(use_cow_images=True)
-        self.stubs.Set(self.drvr, '_disk_resize',
-                       fake_disk_resize)
-        self.stubs.Set(self.drvr, '_get_guest_xml', fake_to_xml)
-        self.stubs.Set(self.drvr, 'plug_vifs', fake_plug_vifs)
-        self.stubs.Set(self.drvr, '_create_image',
-                       fake_create_image)
-        self.stubs.Set(self.drvr, '_create_domain_and_network',
-                       fake_create_domain_and_network)
-        self.stubs.Set(nova.virt.libvirt.guest.Guest, 'enable_hairpin',
-                       fake_enable_hairpin)
-        self.stubs.Set(utils, 'execute', fake_execute)
-        fw = base_firewall.NoopFirewallDriver()
-        self.stubs.Set(self.drvr, 'firewall_driver', fw)
-        self.stubs.Set(self.drvr, 'get_info',
-                       fake_get_info)
+        if power_on:
+            state = power_state.RUNNING
+        else:
+            state = power_state.SHUTDOWN
+        mock_get_info.return_value = hardware.InstanceInfo(state=state)
 
-        instance = self._create_instance({'config_drive': str(True)})
+        instance = self._create_instance(
+            {'config_drive': str(True),
+             'task_state': task_states.RESIZE_FINISH,
+             'flavor': {'swap': 500}})
+        bdi = {'block_device_mapping': []}
 
         migration = objects.Migration()
         migration.source_compute = 'fake-source-compute'
@@ -15828,45 +15788,85 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # Source disks are raw to test conversion
         disk_info = fake_disk_info_json(instance, type='raw')
 
-        with test.nested(
-            mock.patch.object(self.drvr, '_disk_raw_to_qcow2',
-                              autospec=True),
-            mock.patch.object(self.drvr, '_ensure_console_log_for_instance')
-        ) as (mock_raw_to_qcow2, mock_ensure_console_log):
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+        mock_create_domain_and_network.return_value = \
+            libvirt_guest.Guest('fake_dom')
+
+        with mock.patch.object(self.drvr, '_disk_resize') as mock_disk_resize:
             self.drvr.finish_migration(
                           context.get_admin_context(), migration, instance,
                           disk_info, [], image_meta,
                           resize_instance, bdi, power_on)
 
-            mock_ensure_console_log.assert_called_once_with(instance)
+        # Assert that we converted the root, ephemeral, and swap disks
+        instance_path = libvirt_utils.get_instance_path(instance)
+        convert_calls = [mock.call(os.path.join(instance_path, name))
+                         for name in ('disk', 'disk.local', 'disk.swap')]
+        mock_raw_to_qcow2.assert_has_calls(convert_calls, any_order=True)
 
-            # Assert that we converted the root and ephemeral disks
-            instance_path = libvirt_utils.get_instance_path(instance)
-            convert_calls = [mock.call(os.path.join(instance_path, name))
-                             for name in ('disk', 'disk.local')]
-            mock_raw_to_qcow2.assert_has_calls(convert_calls, any_order=True)
+        # Implicitly assert that we did not convert the config disk
+        self.assertEqual(len(convert_calls), mock_raw_to_qcow2.call_count)
 
-            # Implicitly assert that we did not convert the config disk
-            self.assertEqual(len(convert_calls), mock_raw_to_qcow2.call_count)
+        if resize_instance:
+            # Assert that we're calling _disk_resize on all local disks
+            def local_file(name):
+                return imgmodel.LocalFileImage(backend.disks[name].path, 'raw')
 
-        self.assertTrue(self.fake_create_domain_called)
-        self.assertEqual(
-            resize_instance, self.fake_disk_resize_called)
+            resize_calls = [
+                mock.call(local_file('disk'),
+                          instance.flavor.root_gb * units.Gi),
+                mock.call(local_file('disk.local'),
+                          instance.flavor.ephemeral_gb * units.Gi),
+                mock.call(local_file('disk.swap'), 0),
+                mock.call(local_file('disk.config'), 0),
+            ]
+            mock_disk_resize.assert_has_calls(resize_calls, any_order=True)
+
+        disks = backend.disks
+
+        # Assert that we called cache() on kernel, ramdisk, disk,
+        # and disk.local.
+        # This results in creation of kernel, ramdisk, and disk.swap.
+        # This results in backing file check and resize of disk and disk.local.
+        for name in ('kernel', 'ramdisk', 'disk', 'disk.local', 'disk.swap'):
+            self.assertTrue(disks[name].cache.called,
+                            'cache() not called for %s' % name)
+
+        # Assert that we created a snapshot for the root disk
+        root_disk = disks['disk']
+        self.assertTrue(root_disk.create_snap.called)
+
+        # Assert that we didn't import a config disk
+        # Note that some path currently creates a config disk object,
+        # but only uses it for an exists() check. Therefore the object may
+        # exist, but shouldn't have been imported.
+        if 'disk.config' in disks:
+            self.assertFalse(disks['disk.config'].import_file.called)
+
+        # We shouldn't be injecting data during migration
+        self.assertFalse(mock_inject_data.called)
+
+        # NOTE(mdbooth): If we wanted to check the generated xml, we could
+        #                insert a hook here
+        mock_create_domain_and_network.assert_called_once_with(
+            mock.ANY, mock.ANY, instance, [], mock.ANY,
+            block_device_info=bdi, power_on=power_on,
+            vifs_already_plugged=True, post_xml_callback=mock.ANY)
 
     def test_finish_migration_resize(self):
         with mock.patch('nova.virt.libvirt.guest.Guest.sync_guest_time'
             ) as mock_guest_time:
-            self._test_finish_migration(True, resize_instance=True)
+            self._test_finish_migration(resize_instance=True)
             self.assertTrue(mock_guest_time.called)
 
     def test_finish_migration_power_on(self):
         with mock.patch('nova.virt.libvirt.guest.Guest.sync_guest_time'
             ) as mock_guest_time:
-            self._test_finish_migration(True)
+            self._test_finish_migration()
             self.assertTrue(mock_guest_time.called)
 
     def test_finish_migration_power_off(self):
-        self._test_finish_migration(False)
+        self._test_finish_migration(power_on=False)
 
     def _test_finish_revert_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
