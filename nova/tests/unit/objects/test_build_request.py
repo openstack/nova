@@ -11,7 +11,6 @@
 #    under the License.
 
 import mock
-
 from oslo_serialization import jsonutils
 
 from nova import exception

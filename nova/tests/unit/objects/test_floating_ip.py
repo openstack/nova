@@ -14,7 +14,6 @@
 
 import mock
 import netaddr
-
 from oslo_versionedobjects import base as ovo_base
 
 from nova import exception

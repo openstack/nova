@@ -11,7 +11,6 @@
 #    under the License.
 
 import mock
-
 from oslo_utils import uuidutils
 
 from nova import objects

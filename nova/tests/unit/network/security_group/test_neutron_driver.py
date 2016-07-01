@@ -16,7 +16,6 @@
 import mock
 from neutronclient.common import exceptions as n_exc
 from neutronclient.v2_0 import client
-
 from six.moves import range
 
 from nova import context
