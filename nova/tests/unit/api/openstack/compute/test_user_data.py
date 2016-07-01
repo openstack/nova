@@ -16,9 +16,9 @@
 
 import base64
 import datetime
-import mock
 import uuid
 
+import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 

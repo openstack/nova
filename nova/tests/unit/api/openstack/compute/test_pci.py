@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-
 from webob import exc
 
 from nova.api.openstack.compute import pci

@@ -13,10 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_utils import uuidutils
 import webob
-
-import mock
 
 from nova.api.openstack.compute import server_groups as sg_v21
 from nova import context

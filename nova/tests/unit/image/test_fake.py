@@ -13,6 +13,7 @@
 #    under the License.
 
 import datetime
+
 from six.moves import StringIO
 
 from nova import context
