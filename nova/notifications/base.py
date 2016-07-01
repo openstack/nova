@@ -33,10 +33,14 @@ from nova.i18n import _LE
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
+from nova.notifications.objects import base as notification_base
+from nova.notifications.objects import instance as instance_notification
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova import rpc
 from nova import utils
+
 
 LOG = log.getLogger(__name__)
 
@@ -243,6 +247,61 @@ def _send_instance_update_notification(context, instance, old_vm_state=None,
 
     rpc.get_notifier(service, host).info(context,
                                          'compute.instance.update', payload)
+
+    _send_versioned_instance_update(context, instance, payload, host, service)
+
+
+def _map_service_to_binary(service):
+    if service == 'api':
+        binary = 'nova-api'
+    elif service == 'compute':
+        binary = 'nova-compute'
+    else:
+        binary = service
+    return binary
+
+
+def _send_versioned_instance_update(context, instance, payload, host, service):
+
+    state_update = instance_notification.InstanceStateUpdatePayload(
+        old_state=payload.get('old_state'),
+        state=payload.get('state'),
+        old_task_state=payload.get('old_task_state'),
+        new_task_state=payload.get('new_task_state'))
+
+    audit_period = instance_notification.AuditPeriodPayload(
+            audit_period_beginning=payload.get('audit_period_beginning'),
+            audit_period_ending=payload.get('audit_period_ending'))
+
+    bandwidth = [instance_notification.BandwidthPayload(
+                    network_name=label,
+                    in_bytes=bw['bw_in'],
+                    out_bytes=bw['bw_out'])
+                 for label, bw in payload['bandwidth'].items()]
+
+    network_info = instance.info_cache.network_info
+    flavor = instance_notification.FlavorPayload(instance=instance)
+
+    versioned_payload = instance_notification.InstanceUpdatePayload(
+        instance=instance,
+        state_update=state_update,
+        audit_period=audit_period,
+        bandwidth=bandwidth,
+        ip_addresses=instance_notification.IpPayload.from_network_info(
+            network_info),
+        flavor=flavor,
+        old_display_name=payload.get('old_display_name'))
+
+    notification = instance_notification.InstanceUpdateNotification(
+        priority=fields.NotificationPriority.INFO,
+        event_type=notification_base.EventType(
+            object='instance',
+            action=fields.NotificationAction.UPDATE),
+        publisher=notification_base.NotificationPublisher(
+                host=host or CONF.host,
+                binary=_map_service_to_binary(service)),
+        payload=versioned_payload)
+    notification.emit(context)
 
 
 def audit_period_bounds(current_period=False):

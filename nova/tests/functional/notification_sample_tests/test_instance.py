@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from nova import context
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
@@ -47,3 +48,145 @@ class TestInstanceNotificationSample(
                     notification_sample_base.NotificationSampleTestBase.ANY,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def _verify_instance_update_steps(self, steps, notifications,
+                                      initial=None):
+        replacements = {}
+        if initial:
+            replacements = initial
+        for i, step in enumerate(steps):
+            replacements.update(step)
+            self._verify_notification(
+                'instance-update',
+                replacements=replacements,
+                actual=notifications[i])
+        return replacements
+
+    def test_create_delete_server_with_instance_update(self):
+        self.flags(notify_on_state_change='vm_and_task_state')
+
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+
+        instance_updates = self._get_notifications('instance.update')
+
+        # The first notification comes from the nova-api the rest is from the
+        # nova-compute. To keep the test simpler assert this fact and then
+        # modify the publisher_id of the first notification to match the
+        # template
+        self.assertEqual('nova-api:fake-mini',
+                         instance_updates[0]['publisher_id'])
+        instance_updates[0]['publisher_id'] = 'nova-compute:fake-mini'
+
+        self.assertEqual(7, len(instance_updates))
+        create_steps = [
+            # nothing -> scheduling
+            {'reservation_id':
+                notification_sample_base.NotificationSampleTestBase.ANY,
+             'uuid': server['id'],
+             'host': None,
+             'node': None,
+             'state_update.new_task_state': 'scheduling',
+             'state_update.old_task_state': 'scheduling',
+             'state_update.state': 'building',
+             'state_update.old_state': 'building',
+             'state': 'building'},
+
+            # scheduling -> building
+            {
+             'state_update.new_task_state': None,
+             'state_update.old_task_state': 'scheduling',
+             'task_state': None},
+
+            # scheduled
+            {'host': 'compute',
+             'node': 'fake-mini',
+             'state_update.old_task_state': None},
+
+            # building -> networking
+            {'state_update.new_task_state': 'networking',
+             'state_update.old_task_state': 'networking',
+             'task_state': 'networking'},
+
+            # networking -> block_device_mapping
+            {'state_update.new_task_state': 'block_device_mapping',
+             'state_update.old_task_state': 'networking',
+             'task_state': 'block_device_mapping',
+            },
+
+            # block_device_mapping -> spawning
+            {'state_update.new_task_state': 'spawning',
+             'state_update.old_task_state': 'block_device_mapping',
+             'task_state': 'spawning',
+             'ip_addresses': [{
+                 "nova_object.name": "IpPayload",
+                 "nova_object.namespace": "nova",
+                 "nova_object.version": "1.0",
+                 "nova_object.data": {
+                     "mac": "fa:16:3e:4c:2c:30",
+                     "address": "192.168.1.3",
+                     "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
+                     "meta": {},
+                     "version": 4,
+                     "label": "private-network",
+                     "device_name": "tapce531f90-19"
+                 }}]
+             },
+
+            # spawning -> active
+            {'state_update.new_task_state': None,
+             'state_update.old_task_state': 'spawning',
+             'state_update.state': 'active',
+             'launched_at': '2012-10-29T13:42:11Z',
+             'state': 'active',
+             'task_state': None,
+             'power_state': 'running'},
+        ]
+
+        replacements = self._verify_instance_update_steps(
+                create_steps, instance_updates)
+
+        fake_notifier.reset()
+
+        # Let's generate some bandwidth usage data.
+        # Just call the periodic task directly for simplicity
+        self.compute.manager._poll_bandwidth_usage(context.get_admin_context())
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+
+        instance_updates = self._get_notifications('instance.update')
+        self.assertEqual(2, len(instance_updates))
+
+        delete_steps = [
+            # active -> deleting
+            {'state_update.new_task_state': 'deleting',
+             'state_update.old_task_state': 'deleting',
+             'state_update.old_state': 'active',
+             'state': 'active',
+             'task_state': 'deleting',
+             'bandwidth': [
+                 {'nova_object.namespace': 'nova',
+                  'nova_object.name': 'BandwidthPayload',
+                  'nova_object.data':
+                      {'network_name': 'private-network',
+                       'out_bytes': 0,
+                       'in_bytes': 0},
+                  'nova_object.version': '1.0'}]
+            },
+
+            # deleting -> deleted
+            {'state_update.new_task_state': None,
+             'state_update.old_task_state': 'deleting',
+             'state_update.old_state': 'active',
+             'state_update.state': 'deleted',
+             'state': 'deleted',
+             'task_state': None,
+             'terminated_at': '2012-10-29T13:42:11Z',
+             'ip_addresses': [],
+             'power_state': 'pending',
+             'bandwidth': []},
+        ]
+
+        self._verify_instance_update_steps(delete_steps, instance_updates,
+                                           initial=replacements)
