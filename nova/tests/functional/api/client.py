@@ -349,6 +349,11 @@ class TestOpenStackClient(object):
                              (server_id), volume_attachment
                             ).body['volumeAttachment']
 
+    def put_server_volume(self, server_id, attachment_id, volume_id):
+        return self.api_put('/servers/%s/os-volume_attachments/%s' %
+                            (server_id, attachment_id),
+                            {"volumeAttachment": {"volumeId": volume_id}})
+
     def delete_server_volume(self, server_id, attachment_id):
         return self.api_delete('/servers/%s/os-volume_attachments/%s' %
                             (server_id, attachment_id))

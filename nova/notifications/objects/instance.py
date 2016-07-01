@@ -97,12 +97,34 @@ class InstanceActionPayload(InstancePayload):
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
 
-    def __init__(self, instance, fault, ip_addresses, flavor):
+    def __init__(self, instance, fault, ip_addresses, flavor, **kwargs):
         super(InstanceActionPayload, self).__init__(
                 instance=instance,
                 fault=fault,
                 ip_addresses=ip_addresses,
-                flavor=flavor)
+                flavor=flavor,
+                **kwargs)
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionVolumeSwapPayload(InstanceActionPayload):
+    # No SCHEMA as all the additional fields are calculated
+
+    VERSION = '1.0'
+    fields = {
+        'old_volume_id': fields.UUIDField(),
+        'new_volume_id': fields.UUIDField(),
+    }
+
+    def __init__(self, instance, fault, ip_addresses, flavor,
+                 old_volume_id, new_volume_id):
+        super(InstanceActionVolumeSwapPayload, self).__init__(
+                instance=instance,
+                fault=fault,
+                ip_addresses=ip_addresses,
+                flavor=flavor,
+                old_volume_id=old_volume_id,
+                new_volume_id=new_volume_id)
 
 
 @nova_base.NovaObjectRegistry.register_notification
@@ -267,4 +289,16 @@ class InstanceUpdateNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceUpdatePayload')
+    }
+
+
+@base.notification_sample('instance-volume_swap-start.json')
+@base.notification_sample('instance-volume_swap-end.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionVolumeSwapNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceActionVolumeSwapPayload')
     }

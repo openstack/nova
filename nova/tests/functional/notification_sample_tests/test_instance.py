@@ -9,6 +9,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import time
+
 from nova import context
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
@@ -18,12 +20,26 @@ from nova.tests.unit import fake_notifier
 
 class TestInstanceNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
+    EVENT_TYPE_SWAP_VOL_START = 'instance-volume_swap-start'
+    EVENT_TYPE_SWAP_VOL_END = 'instance-volume_swap-end'
 
     def setUp(self):
         self.flags(use_neutron=True)
         super(TestInstanceNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
+        self.cinder = fixtures.CinderFixture(self)
+        self.useFixture(self.cinder)
+
+    def _wait_until_swap_volume(self, server, volume_id):
+        for i in range(50):
+            volume_attachments = self.api.get_server_volumes(server['id'])
+            if len(volume_attachments) > 0:
+                for volume_attachment in volume_attachments:
+                    if volume_attachment['volumeId'] == volume_id:
+                        return
+            time.sleep(0.5)
+        self.fail('Volume swap operation failed.')
 
     def test_instance_action(self):
         # A single test case is used to test most of the instance action
@@ -350,3 +366,36 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
         self.flags(reclaim_instance_interval=0)
+
+    def _attach_volume_to_server(self, server, volume_id):
+        self.api.post_server_volume(
+            server['id'], {"volumeAttachment": {"volumeId": volume_id}})
+
+    def _volume_swap_server(self, server, attachement_id, volume_id):
+        self.api.put_server_volume(server['id'], attachement_id, volume_id)
+
+    def test_volume_swap_server(self):
+        server = self._boot_a_server(
+            extra_params={'networks':
+                          [{'port': self.neutron.port_1['id']}]})
+
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
+        self.cinder.swap_volume_instance_uuid = server['id']
+
+        self._volume_swap_server(server, self.cinder.SWAP_OLD_VOL,
+                                 self.cinder.SWAP_NEW_VOL)
+        self._wait_until_swap_volume(server, self.cinder.SWAP_NEW_VOL)
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            self.EVENT_TYPE_SWAP_VOL_START,
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            self.EVENT_TYPE_SWAP_VOL_END,
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

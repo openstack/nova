@@ -44,6 +44,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import network_request as net_req_obj
@@ -1741,7 +1742,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
-    def test_swap_volume_volume_api_usage(self):
+    @mock.patch.object(compute_utils, 'notify_about_volume_swap')
+    def test_swap_volume_volume_api_usage(self, mock_notify):
         # This test ensures that volume_id arguments are passed to volume_api
         # and that volume states are OK
         volumes = {}
@@ -1825,34 +1827,65 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                       '_instance_update', lambda c, u, **k: {})
 
         # Good path
+        instance1 = fake_instance.fake_instance_obj(
+            self.context, **{'uuid': uuids.instance})
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
-                fake_instance.fake_instance_obj(
-                    self.context, **{'uuid': uuids.instance}))
+                                 instance1)
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(2, mock_notify.call_count)
+        mock_notify.assert_any_call(test.MatchType(context.RequestContext),
+                                    instance1, self.compute.host,
+                                    fields.NotificationAction.VOLUME_SWAP,
+                                    fields.NotificationPhase.START,
+                                    old_volume_id, new_volume_id)
+        mock_notify.assert_any_call(test.MatchType(context.RequestContext),
+                                    instance1, self.compute.host,
+                                    fields.NotificationAction.VOLUME_SWAP,
+                                    fields.NotificationPhase.END,
+                                    old_volume_id, new_volume_id)
 
         # Error paths
+        mock_notify.reset_mock()
         volumes[old_volume_id]['status'] = 'detaching'
         volumes[new_volume_id]['status'] = 'attaching'
         self.stub_out('nova.virt.fake.FakeDriver.swap_volume',
                       fake_func_exc)
+        instance2 = fake_instance.fake_instance_obj(
+            self.context, **{'uuid': uuids.instance})
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
-                          fake_instance.fake_instance_obj(
-                                self.context, **{'uuid': uuids.instance}))
+                          instance2)
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(1, mock_notify.call_count)
+        mock_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), instance2,
+            self.compute.host,
+            fields.NotificationAction.VOLUME_SWAP,
+            fields.NotificationPhase.START,
+            old_volume_id, new_volume_id)
 
+        mock_notify.reset_mock()
         volumes[old_volume_id]['status'] = 'detaching'
         volumes[new_volume_id]['status'] = 'attaching'
         self.stub_out('nova.volume.cinder.API.initialize_connection',
                        fake_func_exc)
+        instance3 = fake_instance.fake_instance_obj(
+            self.context, **{'uuid': uuids.instance})
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
-                          fake_instance.fake_instance_obj(
-                                self.context, **{'uuid': uuids.instance}))
+                          instance3)
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(1, mock_notify.call_count)
+        mock_notify.assert_called_once_with(
+            test.MatchType(context.RequestContext), instance3,
+            self.compute.host,
+            fields.NotificationAction.VOLUME_SWAP,
+            fields.NotificationPhase.START,
+            old_volume_id, new_volume_id)
 
+    @mock.patch('nova.compute.utils.notify_about_volume_swap')
     @mock.patch('nova.db.block_device_mapping_get_by_instance_and_volume_id')
     @mock.patch('nova.db.block_device_mapping_update')
     @mock.patch('nova.volume.cinder.API.get')
@@ -1862,7 +1895,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                     volume_connector_mock,
                                                     get_volume_mock,
                                                     update_bdm_mock,
-                                                    get_bdm_mock):
+                                                    get_bdm_mock,
+                                                    notify_mock):
         # This test ensures that delete_on_termination flag arguments
         # are reserved
         volumes = {}
