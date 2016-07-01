@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+from webob import exc
 
 from nova.api.openstack.compute import attach_interfaces \
         as attach_interfaces_v21
@@ -24,8 +25,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network_cache_model
-
-from webob import exc
 
 
 FAKE_UUID1 = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'

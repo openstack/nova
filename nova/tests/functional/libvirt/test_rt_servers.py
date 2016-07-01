@@ -13,9 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
 import fixtures
+import mock
 
 from nova.tests.functional.api import client
 from nova.tests.functional.test_servers import ServersTestBase

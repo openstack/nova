@@ -14,10 +14,9 @@
 #    under the License.
 
 import mock
+from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import webob
-
-from oslo_policy import policy as oslo_policy
 
 from nova.api.openstack.compute import keypairs as keypairs_v21
 from nova.api.openstack import wsgi as os_wsgi
