@@ -2456,6 +2456,9 @@ class ComputeManager(manager.Manager):
     def start_instance(self, context, instance):
         """Starting an instance on this host."""
         self._notify_about_instance_usage(context, instance, "power_on.start")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.POWER_ON,
+            phase=fields.NotificationPhase.START)
         self._power_on(context, instance)
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
@@ -2472,6 +2475,9 @@ class ComputeManager(manager.Manager):
 
         instance.save(expected_task_state=task_states.POWERING_ON)
         self._notify_about_instance_usage(context, instance, "power_on.end")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.POWER_ON,
+            phase=fields.NotificationPhase.END)
 
     @messaging.expected_exceptions(NotImplementedError,
                                    exception.TriggerCrashDumpNotSupported,

@@ -190,3 +190,29 @@ class TestInstanceNotificationSample(
 
         self._verify_instance_update_steps(delete_steps, instance_updates,
                                            initial=replacements)
+
+    def test_create_poweron_server(self):
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self.api.post_server_action(server['id'], {'os-stop': {}})
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='SHUTOFF')
+        self.api.post_server_action(server['id'], {'os-start': {}})
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='ACTIVE')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-power_on-start',
+            replacements={
+                'reservation_id':
+                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-power_on-end',
+            replacements={
+                'reservation_id':
+                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

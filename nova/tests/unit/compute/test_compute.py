@@ -1984,7 +1984,8 @@ class ComputeTestCase(BaseTestCase):
                                    clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_start(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_start(self, mock_notify):
         # Ensure instance can be started.
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -2001,7 +2002,11 @@ class ComputeTestCase(BaseTestCase):
         inst_obj.task_state = task_states.POWERING_ON
         inst_obj.save()
         self.compute.start_instance(self.context, instance=inst_obj)
-
+        mock_notify.assert_has_calls([
+            mock.call(self.context, inst_obj, 'fake-mini', action='power_on',
+                      phase='start'),
+            mock.call(self.context, inst_obj, 'fake-mini', action='power_on',
+                      phase='end')])
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_start_shelved_instance(self):
