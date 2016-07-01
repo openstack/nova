@@ -153,3 +153,47 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
 
         ip = driver._get_block_storage_ip()
         self.assertEqual(my_block_storage_ip, ip)
+
+    @mock.patch.object(xenapi_driver, 'invalid_option')
+    @mock.patch.object(xenapi_driver.vm_utils, 'ensure_correct_host')
+    def test_invalid_options(self, mock_ensure, mock_invalid):
+        driver = self._get_driver()
+        self.flags(independent_compute=True, group='xenserver')
+        self.flags(check_host=True, group='xenserver')
+        self.flags(flat_injected=True)
+        self.flags(default_ephemeral_format='vfat')
+
+        driver.init_host('host')
+
+        expected_calls = [
+            mock.call('CONF.xenserver.check_host', False),
+            mock.call('CONF.flat_injected', False),
+            mock.call('CONF.default_ephemeral_format', 'ext3')]
+        mock_invalid.assert_has_calls(expected_calls)
+
+    @mock.patch.object(xenapi_driver.vm_utils, 'cleanup_attached_vdis')
+    @mock.patch.object(xenapi_driver.vm_utils, 'ensure_correct_host')
+    def test_independent_compute_no_vdi_cleanup(self, mock_ensure,
+                                                mock_cleanup):
+        driver = self._get_driver()
+        self.flags(independent_compute=True, group='xenserver')
+        self.flags(check_host=False, group='xenserver')
+        self.flags(flat_injected=False)
+
+        driver.init_host('host')
+
+        self.assertFalse(mock_cleanup.called)
+        self.assertFalse(mock_ensure.called)
+
+    @mock.patch.object(xenapi_driver.vm_utils, 'cleanup_attached_vdis')
+    @mock.patch.object(xenapi_driver.vm_utils, 'ensure_correct_host')
+    def test_dependent_compute_vdi_cleanup(self, mock_ensure, mock_cleanup):
+        driver = self._get_driver()
+        self.assertFalse(mock_cleanup.called)
+        self.flags(independent_compute=False, group='xenserver')
+        self.flags(check_host=True, group='xenserver')
+
+        driver.init_host('host')
+
+        self.assertTrue(mock_cleanup.called)
+        self.assertTrue(mock_ensure.called)
