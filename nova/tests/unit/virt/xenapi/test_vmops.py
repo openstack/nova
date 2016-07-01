@@ -13,14 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from eventlet import greenthread
-import mock
 import uuid
 
 try:
     import xmlrpclib
 except ImportError:
     import six.moves.xmlrpc_client as xmlrpclib
+
+from eventlet import greenthread
+import mock
 
 from nova.compute import power_state
 from nova.compute import task_states

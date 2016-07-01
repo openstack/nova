@@ -13,13 +13,12 @@
 #    under the License.
 
 from collections import deque
+
 from lxml import etree
 import mock
-from oslo_utils import units
-
-import six
-
 from oslo_utils import encodeutils
+from oslo_utils import units
+import six
 
 from nova.compute import power_state
 from nova import objects

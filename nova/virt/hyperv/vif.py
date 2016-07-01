@@ -16,8 +16,9 @@
 
 import abc
 
-import nova.conf
 from os_win import utilsfactory
+
+import nova.conf
 
 CONF = nova.conf.CONF
 

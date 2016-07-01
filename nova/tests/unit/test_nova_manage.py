@@ -13,12 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from six.moves import StringIO
 import sys
 
 import fixtures
 import mock
 from oslo_utils import uuidutils
+from six.moves import StringIO
 
 from nova.cmd import manage
 from nova import conf

@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-
 from os_brick.initiator import connector
 
 from nova.tests.unit.virt.libvirt.volume import test_volume

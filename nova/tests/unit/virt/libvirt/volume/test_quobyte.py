@@ -14,9 +14,9 @@
 #    under the License.
 """Unit tests for the Quobyte volume driver module."""
 
-import mock
 import os
 
+import mock
 from oslo_concurrency import processutils
 from oslo_utils import fileutils
 
