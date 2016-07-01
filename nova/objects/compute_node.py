@@ -452,7 +452,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.12 ComputeNode version 1.12
     # Version 1.13 ComputeNode version 1.13
     # Version 1.14 ComputeNode version 1.14
-    # Version 1.15 ComputeNode version 1.15
+    # Version 1.15 Added get_by_pagination()
     VERSION = '1.15'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
