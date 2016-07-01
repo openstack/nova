@@ -39,6 +39,7 @@ session_check = re.compile(r"\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(r".*\scfg\.")
 # Excludes oslo.config OptGroup objects
 cfg_opt_re = re.compile(r".*[\s\[]cfg\.[a-zA-Z]*Opt\(")
+rule_default_re = re.compile(r".*RuleDefault\(")
 vi_header_re = re.compile(r"^#\s+vim?:.+")
 virt_file_re = re.compile(r"\./nova/(?:tests/)?virt/(\w+)/")
 virt_import_re = re.compile(
@@ -651,6 +652,20 @@ def check_config_option_in_central_place(logical_line, filename):
         yield(0, msg)
 
 
+def check_policy_registration_in_central_place(logical_line, filename):
+    msg = ('N350: Policy registration should be in the central location '
+           '"/nova/policies/*".')
+    # This is where registration should happen
+    if "nova/policies/" in filename:
+        return
+    # A couple of policy tests register rules
+    if "nova/tests/unit/test_policy.py" in filename:
+        return
+
+    if rule_default_re.match(logical_line):
+        yield(0, msg)
+
+
 def check_doubled_words(physical_line, filename):
     """Check for the common doubled-word typos
 
@@ -797,6 +812,7 @@ def factory(register):
     register(check_no_contextlib_nested)
     register(check_greenthread_spawns)
     register(check_config_option_in_central_place)
+    register(check_policy_registration_in_central_place)
     register(check_doubled_words)
     register(check_python3_no_iteritems)
     register(check_python3_no_iterkeys)
