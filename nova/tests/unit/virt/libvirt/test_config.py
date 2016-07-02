@@ -1002,6 +1002,42 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
                                                 obj.device_addr.unit))
         self.assertIsNone(obj.device_addr.format_address())
 
+    def test_config_disk_device_address_type_virtio_mmio(self):
+        xml = """
+            <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2' cache='none'/>
+                <source file='/var/lib/libvirt/images/generic.qcow2'/>
+                <target dev='vda' bus='virtio'/>
+                <address type='virtio-mmio'/>
+            </disk>"""
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_str(xml)
+
+        self.assertNotIsInstance(obj.device_addr,
+                                 config.LibvirtConfigGuestDeviceAddressPCI)
+        self.assertNotIsInstance(obj.device_addr,
+                             config.LibvirtConfigGuestDeviceAddressDrive)
+
+    def test_config_disk_device_address_type_ccw(self):
+        xml = """
+            <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/var/lib/libvirt/images/test.qcow2'/>
+                <backingStore/>
+                <target dev='vda' bus='virtio'/>
+                <alias name='virtio-disk0'/>
+                <address type='ccw' cssid='0xfe' ssid='0x0' devno='0x0000'/>
+            </disk>"""
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_str(xml)
+
+        self.assertNotIsInstance(obj.device_addr,
+                                 config.LibvirtConfigGuestDeviceAddressPCI)
+        self.assertNotIsInstance(obj.device_addr,
+                                 config.LibvirtConfigGuestDeviceAddressDrive)
+
 
 class LibvirtConfigGuestSnapshotDiskTest(LibvirtConfigBaseTest):
 
@@ -1685,6 +1721,42 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         self.assertIsInstance(obj.device_addr,
                               config.LibvirtConfigGuestDeviceAddressPCI)
         self.assertEqual('0000:00:03.0', obj.device_addr.format_address())
+
+    def test_config_interface_address_type_virtio_mmio(self):
+        xml = """
+            <interface type='network'>
+              <mac address='fa:16:3e:d1:28:e4'/>
+              <source network='default'/>
+              <model type='virtio'/>
+              <address type='virtio-mmio'/>
+            </interface>"""
+
+        obj = config.LibvirtConfigGuestInterface()
+        obj.parse_str(xml)
+
+        self.assertNotIsInstance(obj.device_addr,
+                                 config.LibvirtConfigGuestDeviceAddressPCI)
+        self.assertNotIsInstance(obj.device_addr,
+                             config.LibvirtConfigGuestDeviceAddressDrive)
+
+    def test_config_interface_address_type_ccw(self):
+        xml = """
+            <interface type='network'>
+                <mac address='52:54:00:14:6f:50'/>
+                <source network='default' bridge='virbr0'/>
+                <target dev='vnet0'/>
+                <model type='virtio'/>
+                <alias name='net0'/>
+                <address type='ccw' cssid='0xfe' ssid='0x0' devno='0x0001'/>
+            </interface>"""
+
+        obj = config.LibvirtConfigGuestInterface()
+        obj.parse_str(xml)
+
+        self.assertNotIsInstance(obj.device_addr,
+                                 config.LibvirtConfigGuestDeviceAddressPCI)
+        self.assertNotIsInstance(obj.device_addr,
+                             config.LibvirtConfigGuestDeviceAddressDrive)
 
 
 class LibvirtConfigGuestFeatureTest(LibvirtConfigBaseTest):

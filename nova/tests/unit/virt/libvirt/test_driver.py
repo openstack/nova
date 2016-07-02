@@ -1611,6 +1611,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
               <address type='pci' domain='0x0000' bus='0x00' slot='0x09'
               function='0x0'/>
             </disk>
+            <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2' cache='none'/>
+                <source file='/var/lib/libvirt/images/generic.qcow2'/>
+                <target dev='vdb' bus='virtio'/>
+                <address type='virtio-mmio'/>
+            </disk>
+            <disk type='file' device='disk'>
+                <driver name='qemu' type='qcow2'/>
+                <source file='/var/lib/libvirt/images/test.qcow2'/>
+                <backingStore/>
+                <target dev='vdc' bus='virtio'/>
+                <alias name='virtio-disk1'/>
+                <address type='ccw' cssid='0xfe' ssid='0x0' devno='0x0000'/>
+            </disk>
             <interface type='network'>
               <mac address='52:54:00:f6:35:8f'/>
               <source network='default'/>
@@ -1624,6 +1638,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
               <model type='virtio'/>
               <address type='pci' domain='0x0000' bus='0x00' slot='0x04'
               function='0x1'/>
+            </interface>
+            <interface type='network'>
+              <mac address='fa:16:3e:d1:28:e4'/>
+              <source network='default'/>
+              <model type='virtio'/>
+              <address type='virtio-mmio'/>
+            </interface>
+            <interface type='network'>
+                <mac address='52:54:00:14:6f:50'/>
+                <source network='default' bridge='virbr0'/>
+                <target dev='vnet0'/>
+                <model type='virtio'/>
+                <alias name='net0'/>
+                <address type='ccw' cssid='0xfe' ssid='0x0' devno='0x0001'/>
             </interface>
           </devices>
         </domain>"""
@@ -1655,6 +1683,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                     {'id': 5,
                      'source_type': 'volume', 'destination_type': 'volume',
                      'device_name': '/dev/vda', 'tag': "nfvfunc3"}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 6,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdb', 'tag': "nfvfunc4"}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 7,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/vdc', 'tag': "nfvfunc5"}),
             ]
         )
         vif = obj_vif.VirtualInterface(context=self.context)
@@ -1669,7 +1705,19 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vif1.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
         vif1.uuid = 'abec4b21-ef22-6c21-534b-ba3e3ab3a312'
         vif1.tag = None
-        vifs = [vif, vif1]
+        vif2 = obj_vif.VirtualInterface(context=self.context)
+        vif2.address = 'fa:16:3e:d1:28:e4'
+        vif2.network_id = 123
+        vif2.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
+        vif2.uuid = '645686e4-7086-4eab-8c2f-c41f017a1b16'
+        vif2.tag = 'mytag2'
+        vif3 = obj_vif.VirtualInterface(context=self.context)
+        vif3.address = '52:54:00:14:6f:50'
+        vif3.network_id = 123
+        vif3.instance_uuid = '32dfcb37-5af1-552b-357c-be8c3aa38310'
+        vif3.uuid = '99cc3604-782d-4a32-a27c-bc33ac56ce86'
+        vif3.tag = 'mytag3'
+        vifs = [vif, vif1, vif2, vif3]
 
         with test.nested(
             mock.patch('nova.objects.VirtualInterfaceList'
@@ -1683,7 +1731,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             metadata_obj = drvr._build_device_metadata(self.context,
                                                        instance_ref)
             metadata = metadata_obj.devices
-            self.assertEqual(5, len(metadata))
+            self.assertEqual(9, len(metadata))
             self.assertIsInstance(metadata[0],
                                   objects.DiskMetadata)
             self.assertIsInstance(metadata[0].bus,
@@ -1710,11 +1758,23 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertEqual(['nfvfunc3'], metadata[3].tags)
             self.assertEqual('0000:00:09.0', metadata[3].bus.address)
             self.assertIsInstance(metadata[4],
+                                  objects.DiskMetadata)
+            self.assertEqual(['nfvfunc4'], metadata[4].tags)
+            self.assertIsInstance(metadata[5],
+                                  objects.DiskMetadata)
+            self.assertEqual(['nfvfunc5'], metadata[5].tags)
+            self.assertIsInstance(metadata[6],
                                   objects.NetworkInterfaceMetadata)
-            self.assertIsInstance(metadata[4].bus,
+            self.assertIsInstance(metadata[6].bus,
                                   objects.PCIDeviceBus)
-            self.assertEqual(['mytag1'], metadata[4].tags)
-            self.assertEqual('0000:00:03.0', metadata[4].bus.address)
+            self.assertEqual(['mytag1'], metadata[6].tags)
+            self.assertEqual('0000:00:03.0', metadata[6].bus.address)
+            self.assertIsInstance(metadata[7],
+                                  objects.NetworkInterfaceMetadata)
+            self.assertEqual(['mytag2'], metadata[7].tags)
+            self.assertIsInstance(metadata[8],
+                                  objects.NetworkInterfaceMetadata)
+            self.assertEqual(['mytag3'], metadata[8].tags)
 
     @mock.patch.object(host.Host, 'get_connection')
     @mock.patch.object(nova.virt.libvirt.guest.Guest, 'get_xml_desc')
