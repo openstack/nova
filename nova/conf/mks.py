@@ -40,7 +40,7 @@ ALL_MKS_OPTS = mks_opts
 
 def register_opts(conf):
     conf.register_group(mks_group)
-    conf.register_opts(ALL_MKS_OPTS, group = mks_group)
+    conf.register_opts(ALL_MKS_OPTS, group=mks_group)
 
 
 def list_opts():
