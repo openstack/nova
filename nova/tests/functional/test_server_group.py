@@ -18,6 +18,9 @@ import time
 
 from oslo_config import cfg
 
+from nova import context
+from nova import db
+from nova.db.sqlalchemy import api as db_api
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -264,6 +267,33 @@ class ServerGroupTestV2(ServerGroupTestBase):
         for server in servers:
             self.assertIn(server['id'], members)
             self.assertEqual(host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_boot_servers_with_affinity_overquota(self):
+        # Tests that we check server group member quotas and cleanup created
+        # resources when we fail with OverQuota.
+        self.flags(quota_server_group_members=1)
+        # make sure we start with 0 servers
+        servers = self.api.get_servers(detail=False)
+        self.assertEqual(0, len(servers))
+        created_group = self.api.post_server_groups(self.affinity)
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self._boot_servers_to_group,
+                               created_group)
+        self.assertEqual(403, ex.response.status_code)
+        # _boot_servers_to_group creates 2 instances in the group in order, not
+        # multiple servers in a single request. Since our quota is 1, the first
+        # server create would pass, the second should fail, and we should be
+        # left with 1 server and it's 1 block device mapping.
+        servers = self.api.get_servers(detail=False)
+        self.assertEqual(1, len(servers))
+        ctxt = context.get_admin_context()
+        servers = db.instance_get_all(ctxt)
+        self.assertEqual(1, len(servers))
+        ctxt_mgr = db_api.get_context_manager(ctxt)
+        with ctxt_mgr.reader.using(ctxt):
+            bdms = db_api._block_device_mapping_get_query(ctxt).all()
+        self.assertEqual(1, len(bdms))
+        self.assertEqual(servers[0]['uuid'], bdms[0]['instance_uuid'])
 
     def test_boot_servers_with_affinity_no_valid_host(self):
         created_group = self.api.post_server_groups(self.affinity)

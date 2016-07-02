@@ -2774,6 +2774,23 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         system_meta = db.instance_system_metadata_get(ctxt, instance['uuid'])
         self.assertEqual('baz', system_meta['original_image_ref'])
 
+    def test_delete_block_device_mapping_on_instance_destroy(self):
+        # Makes sure that the block device mapping is deleted when the
+        # related instance is deleted.
+        ctxt = context.get_admin_context()
+        instance = db.instance_create(ctxt, dict(display_name='bdm-test'))
+        bdm = {
+            'volume_id': uuidutils.generate_uuid(),
+            'device_name': '/dev/vdb',
+            'instance_uuid': instance['uuid'],
+        }
+        bdm = db.block_device_mapping_create(ctxt, bdm, legacy=False)
+        db.instance_destroy(ctxt, instance['uuid'])
+        # make sure the bdm is deleted as well
+        bdms = db.block_device_mapping_get_all_by_instance(
+            ctxt, instance['uuid'])
+        self.assertEqual([], bdms)
+
     def test_delete_instance_metadata_on_instance_destroy(self):
         ctxt = context.get_admin_context()
         # Create an instance with some metadata
