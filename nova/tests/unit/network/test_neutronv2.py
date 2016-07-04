@@ -3700,7 +3700,7 @@ class TestNeutronv2WithMock(test.TestCase):
         update_port_mock.assert_called_once_with(
             'fake-port-2', {'port': {'binding:host_id': instance.host}})
 
-    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_pci(self,
                                             get_client_mock,
@@ -3756,7 +3756,7 @@ class TestNeutronv2WithMock(test.TestCase):
                                          'physical_network': 'physnet1',
                                          'pci_vendor_info': '1377:0047'}}})
 
-    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_bindings_for_instance_with_pci_fail(self,
                                             get_client_mock,
@@ -4573,7 +4573,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         self.assertEqual(host_id, port_req_body['port']['binding:host_id'])
         self.assertFalse(port_req_body['port'].get('binding:profile'))
 
-    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     def test_populate_neutron_extension_values_binding_sriov(self,
                                          mock_get_instance_pci_devs,
@@ -4604,7 +4604,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
 
         self.assertEqual(profile, port_req_body['port']['binding:profile'])
 
-    @mock.patch.object(pci_whitelist, 'get_pci_device_devspec')
+    @mock.patch.object(pci_whitelist.Whitelist, 'get_devspec')
     @mock.patch.object(pci_manager, 'get_instance_pci_devs')
     def test_populate_neutron_extension_values_binding_sriov_fail(
         self, mock_get_instance_pci_devs, mock_get_pci_device_devspec):
@@ -4625,6 +4625,35 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         self.assertRaises(
             exception.PciDeviceNotFound, api._populate_neutron_binding_profile,
             instance, pci_req_id, port_req_body)
+
+    @mock.patch.object(pci_manager, 'get_instance_pci_devs')
+    def test_pci_parse_whitelist_called_once(self,
+                                             mock_get_instance_pci_devs):
+        white_list = [
+            '{"address":"0000:0a:00.1","physical_network":"default"}']
+        cfg.CONF.set_override('passthrough_whitelist', white_list, 'pci')
+
+        api = neutronapi.API()
+        host_id = 'my_host_id'
+        instance = {'host': host_id}
+        pci_req_id = 'my_req_id'
+        port_req_body = {'port': {}}
+        pci_dev = {'vendor_id': '1377',
+                   'product_id': '0047',
+                   'address': '0000:0a:00.1',
+                  }
+
+        whitelist = pci_whitelist.Whitelist(CONF.pci.passthrough_whitelist)
+        with mock.patch.object(pci_whitelist.Whitelist,
+                '_parse_white_list_from_config',
+                wraps=whitelist._parse_white_list_from_config
+                ) as mock_parse_whitelist:
+            for i in range(2):
+                mydev = objects.PciDevice.create(None, pci_dev)
+                mock_get_instance_pci_devs.return_value = [mydev]
+                api._populate_neutron_binding_profile(instance,
+                                                  pci_req_id, port_req_body)
+                self.assertEqual(0, mock_parse_whitelist.call_count)
 
     def _populate_pci_mac_address_fakes(self):
         instance = fake_instance.fake_instance_obj(self.context)

@@ -93,8 +93,3 @@ class Whitelist(object):
         for spec in self.specs:
             if spec.match_pci_obj(pci_dev):
                 return spec
-
-
-def get_pci_device_devspec(pci_dev):
-    dev_filter = Whitelist(CONF.pci.passthrough_whitelist)
-    return dev_filter.get_devspec(pci_dev)
