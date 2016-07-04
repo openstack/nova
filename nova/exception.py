@@ -372,6 +372,11 @@ class InvalidStrTime(Invalid):
     msg_fmt = _("Invalid datetime string: %(reason)s")
 
 
+class InvalidNUMANodesNumber(Invalid):
+    msg_fmt = _("The property 'numa_nodes' cannot be '%(nodes)s'. "
+                "It must be a number greater than 0")
+
+
 class InvalidName(Invalid):
     msg_fmt = _("An invalid 'name' value was provided. "
                 "The name must be: %(reason)s")

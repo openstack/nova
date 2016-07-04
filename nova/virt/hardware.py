@@ -1178,6 +1178,18 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
     return numa_topology
 
 
+def _validate_numa_nodes(nodes):
+    """Validate NUMA nodes number
+
+    :param nodes: The number of NUMA nodes
+    :raises: exception.InvalidNUMANodesNumber if the given
+             parameter is not a number or less than 1
+    """
+    if nodes is not None and (not strutils.is_int_like(nodes) or
+       int(nodes) < 1):
+        raise exception.InvalidNUMANodesNumber(nodes=nodes)
+
+
 # TODO(sahid): Move numa related to hardward/numa.py
 def numa_get_constraints(flavor, image_meta):
     """Return topology related to input request
@@ -1189,6 +1201,8 @@ def numa_get_constraints(flavor, image_meta):
     image properties are not correctly specified, or
     exception.ImageNUMATopologyForbidden if an attempt is
     made to override flavor settings with image properties.
+    exception.InvalidNUMANodesNumber if the number of NUMA
+    nodes is less than 1 (or not an integer).
 
     :returns: InstanceNUMATopology or None
     """
@@ -1196,12 +1210,14 @@ def numa_get_constraints(flavor, image_meta):
     nodes = flavor.get('extra_specs', {}).get("hw:numa_nodes")
     props = image_meta.properties
     if nodes is not None:
+        _validate_numa_nodes(nodes)
         if props.obj_attr_is_set("hw_numa_nodes"):
             raise exception.ImageNUMATopologyForbidden(
                 name='hw_numa_nodes')
         nodes = int(nodes)
     else:
         nodes = props.get("hw_numa_nodes")
+        _validate_numa_nodes(nodes)
 
     pagesize = _numa_get_pagesize_constraints(
         flavor, image_meta)

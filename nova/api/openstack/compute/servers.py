@@ -689,6 +689,7 @@ class ServersController(wsgi.Controller):
                 exception.ImageNUMATopologyCPUDuplicates,
                 exception.ImageNUMATopologyCPUsUnassigned,
                 exception.ImageNUMATopologyMemoryOutOfRange,
+                exception.InvalidNUMANodesNumber,
                 exception.InstanceGroupNotFound,
                 exception.PciRequestAliasNotDefined,
                 exception.SnapshotNotFound,

@@ -857,6 +857,36 @@ class NUMATopologyTest(test.NoDBTestCase):
                     ]),
             },
             {
+                # a nodes number of zero should lead to an
+                # exception
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
+                    "hw:numa_nodes": 0
+                }),
+                "image": {
+                },
+                "expect": exception.InvalidNUMANodesNumber,
+            },
+            {
+                # a negative nodes number should lead to an
+                # exception
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
+                    "hw:numa_nodes": -1
+                }),
+                "image": {
+                },
+                "expect": exception.InvalidNUMANodesNumber,
+            },
+            {
+                # a nodes number not numeric should lead to an
+                # exception
+                "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
+                    "hw:numa_nodes": 'x'
+                }),
+                "image": {
+                },
+                "expect": exception.InvalidNUMANodesNumber,
+            },
+            {
                 # vcpus is not a multiple of nodes, so it
                 # is an error to not provide cpu/mem mapping
                 "flavor": objects.Flavor(vcpus=8, memory_mb=2048, extra_specs={
