@@ -6121,9 +6121,6 @@ class LibvirtDriver(driver.ComputeDriver):
         on_migration_failure = deque()
         data_gb = self._live_migration_data_gb(instance, disk_paths)
         downtime_steps = list(self._migration_downtime_steps(data_gb))
-        completion_timeout = int(
-            CONF.libvirt.live_migration_completion_timeout * data_gb)
-        progress_timeout = CONF.libvirt.live_migration_progress_timeout
         migration = migrate_data.migration
         curdowntime = None
 
@@ -6175,6 +6172,9 @@ class LibvirtDriver(driver.ComputeDriver):
                     progress_watermark = info.data_remaining
                     progress_time = now
 
+                progress_timeout = CONF.libvirt.live_migration_progress_timeout
+                completion_timeout = int(
+                    CONF.libvirt.live_migration_completion_timeout * data_gb)
                 if libvirt_migrate.should_abort(instance, now, progress_time,
                                                 progress_timeout, elapsed,
                                                 completion_timeout,
