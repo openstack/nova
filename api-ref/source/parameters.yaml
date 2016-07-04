@@ -254,7 +254,7 @@ service_id_path:
   in: path
   required: true
   type: integer
-snapshot_id_2:
+snapshot_id_path:
   description: |
     The UUID of the snapshot.
   in: path
@@ -1195,6 +1195,21 @@ create_info:
   in: body
   required: true
   type: object
+create_info_id:
+  description: |
+    Its an arbitrary string that gets passed back to the user.
+  in: body
+  required: false
+  type: string
+create_info_id_resp:
+  description: |
+    Its the same arbitrary string which was sent in request body.
+    NOTE: This string is passed back to user as it is and not being
+    used in Nova internally. So use snapshot_id instead for further
+    operation on this snapshot.
+  in: body
+  required: true
+  type: string
 createBackup:
   description: |
     The action.
@@ -3552,16 +3567,10 @@ snapshot:
     A partial representation of a snapshot that is used to create a snapshot.
   in: body
   required: true
-  type: string
+  type: object
 snapshot_id:
   description: |
     The snapshot ID.
-  in: body
-  required: true
-  type: string
-snapshot_id_1:
-  description: |
-    The unique identifier for a snapshot.
   in: body
   required: true
   type: string

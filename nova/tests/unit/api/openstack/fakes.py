@@ -631,7 +631,8 @@ def stub_snapshot_create(self, context, volume_id, name, description):
 
 
 def stub_compute_volume_snapshot_create(self, context, volume_id, create_info):
-    return {'snapshot': {'id': 100, 'volumeId': volume_id}}
+    return {'snapshot': {'id': "421752a6-acf6-4b2d-bc7a-119f9148cd8c",
+                         'volumeId': volume_id}}
 
 
 def stub_snapshot_delete(self, context, snapshot_id):
