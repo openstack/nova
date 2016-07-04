@@ -42,6 +42,10 @@ class ServersTestBase(integrated_helpers._IntegratedTestBase):
 
     def setUp(self):
         super(ServersTestBase, self).setUp()
+        # The network service is called as part of server creates but no
+        # networks have been populated in the db, so stub the methods.
+        # The networks aren't relevant to what is being tested.
+        fake_network.set_stub_network_methods(self)
         self.conductor = self.start_service(
             'conductor', manager='nova.conductor.manager.ConductorManager')
 
@@ -99,7 +103,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_error(self):
         # Create a server which will enter error state.
-        fake_network.set_stub_network_methods(self)
 
         def throw_error(*args, **kwargs):
             raise exception.BuildAbortException(reason='',
@@ -121,7 +124,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_and_delete_server(self):
         # Creates and deletes a server.
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         # Build the server data gradually, checking errors along the way
@@ -198,7 +200,6 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete(self):
         # Creates, deletes and waits for server to be reclaimed.
         self.flags(reclaim_instance_interval=1)
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -234,7 +235,6 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete_restore(self):
         # Creates, deletes and restores a server.
         self.flags(reclaim_instance_interval=3600)
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -267,7 +267,6 @@ class ServersTest(ServersTestBase):
     def test_deferred_delete_force(self):
         # Creates, deletes and force deletes a server.
         self.flags(reclaim_instance_interval=3600)
-        fake_network.set_stub_network_methods(self)
 
         # Create server
         server = self._build_minimal_create_server_request()
@@ -299,7 +298,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_metadata(self):
         # Creates a server with metadata.
-        fake_network.set_stub_network_methods(self)
 
         # Build the server data gradually, checking errors along the way
         server = self._build_minimal_create_server_request()
@@ -341,7 +339,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_and_rebuild_server(self):
         # Rebuild a server with metadata.
-        fake_network.set_stub_network_methods(self)
 
         # create a server with initially has no metadata
         server = self._build_minimal_create_server_request()
@@ -407,7 +404,6 @@ class ServersTest(ServersTestBase):
 
     def test_rename_server(self):
         # Test building and renaming a server.
-        fake_network.set_stub_network_methods(self)
 
         # Create a server
         server = self._build_minimal_create_server_request()
@@ -464,7 +460,6 @@ class ServersTest(ServersTestBase):
 
     def test_create_server_with_injected_files(self):
         # Creates a server with injected_files.
-        fake_network.set_stub_network_methods(self)
         personality = []
 
         # Inject a text file
@@ -609,8 +604,6 @@ class ServersTestV219(ServersTestBase):
         self.assertEqual(400, cm.exception.response.status_code)
 
     def test_create_server_with_description(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
         # Create and get a server with a description
         self._create_server_and_verify(True, 'test description')
@@ -622,8 +615,6 @@ class ServersTestV219(ServersTestBase):
         self._create_server_and_verify(False)
 
     def test_update_server_with_description(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
         # Create a server with an initial description
         server_id = self._create_server(True, 'test desc 1')[1]['id']
@@ -643,8 +634,6 @@ class ServersTestV219(ServersTestBase):
         self._delete_server(server_id)
 
     def test_rebuild_server_with_description(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
 
         # Create a server with an initial description
@@ -667,8 +656,6 @@ class ServersTestV219(ServersTestBase):
         self._delete_server(server_id)
 
     def test_version_compatibility(self):
-        fake_network.set_stub_network_methods(self)
-
         # Create a server with microversion v2.19 and a description.
         self.api.microversion = '2.19'
         server_id = self._create_server(True, 'test desc 1')[1]['id']
@@ -701,8 +688,6 @@ class ServersTestV219(ServersTestBase):
         self._create_assertRaisesRegex('test create 2.18')
 
     def test_description_errors(self):
-        fake_network.set_stub_network_methods(self)
-
         self.api.microversion = '2.19'
         # Create servers with invalid descriptions.  These throw 400.
         # Invalid unicode with non-printable control char
