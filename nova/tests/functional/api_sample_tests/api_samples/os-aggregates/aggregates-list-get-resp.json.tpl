@@ -5,7 +5,9 @@
             "created_at": "%(strtime)s",
             "deleted": false,
             "deleted_at": null,
-            "hosts": [],
+            "hosts": [
+                 "%(compute_host)s"
+            ],
             "id": 1,
             "metadata": {
                 "availability_zone": "nova"
