@@ -2025,6 +2025,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         extra_specs = vm_util.ExtraSpecs(cpu_limits=cpu_limits)
         self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
 
+    def test_extra_specs_vif_shares_custom_pos01(self):
+        flavor_extra_specs = {'quota:vif_shares_level': 'custom',
+                              'quota:vif_shares_share': 40}
+        vif_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=40)
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        self._validate_flavor_extra_specs(flavor_extra_specs, extra_specs)
+
+    def test_extra_specs_vif_shares_with_invalid_level(self):
+        flavor_extra_specs = {'quota:vif_shares_level': 'high',
+                              'quota:vif_shares_share': 40}
+        vif_limits = vm_util.Limits(shares_level='custom',
+                                       shares_share=40)
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        self.assertRaises(exception.InvalidInput,
+            self._validate_flavor_extra_specs, flavor_extra_specs, extra_specs)
+
     def _make_vm_config_info(self, is_iso=False, is_sparse_disk=False,
                              vsphere_location=None):
         disk_type = (constants.DISK_TYPE_SPARSE if is_sparse_disk
@@ -2488,6 +2505,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     "package:%s\n" % version.version_string_with_package())
         self.assertEqual(expected, metadata)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(vm_util, 'reconfigure_vm')
     @mock.patch.object(vm_util, 'get_network_attach_config_spec',
                        return_value='fake-attach-spec')
@@ -2496,7 +2514,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_attach_interface(self, mock_get_vm_ref,
                               mock_get_attach_port_index,
                               mock_get_network_attach_config_spec,
-                              mock_reconfigure_vm):
+                              mock_reconfigure_vm,
+                              mock_extra_specs):
         _network_api = mock.Mock()
         self._vmops._network_api = _network_api
 
@@ -2504,12 +2523,15 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                     'VirtualE1000',
                                     utils.is_neutron(),
                                     self._network_values)
+        extra_specs = vm_util.ExtraSpecs()
+        mock_extra_specs.return_value = extra_specs
         self._vmops.attach_interface(self._instance, self._image_meta,
                                      self._network_values)
         mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
         mock_get_attach_port_index(self._session, 'fake-ref')
         mock_get_network_attach_config_spec.assert_called_once_with(
-            self._session.vim.client.factory, vif_info, 1)
+            self._session.vim.client.factory, vif_info, 1,
+            extra_specs.vif_limits)
         mock_reconfigure_vm.assert_called_once_with(self._session,
                                                     'fake-ref',
                                                     'fake-attach-spec')
@@ -2585,3 +2607,38 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         folder_name = self._vmops._get_folder_name(name, uuid)
         self.assertEqual(expected, folder_name)
         self.assertEqual(79, len(folder_name))
+
+    @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
+    @mock.patch.object(vm_util, 'reconfigure_vm')
+    @mock.patch.object(vm_util, 'get_network_attach_config_spec',
+                       return_value='fake-attach-spec')
+    @mock.patch.object(vm_util, 'get_attach_port_index', return_value=1)
+    @mock.patch.object(vm_util, 'get_vm_ref', return_value='fake-ref')
+    def test_attach_interface_with_limits(self, mock_get_vm_ref,
+                              mock_get_attach_port_index,
+                              mock_get_network_attach_config_spec,
+                              mock_reconfigure_vm,
+                              mock_extra_specs):
+        _network_api = mock.Mock()
+        self._vmops._network_api = _network_api
+
+        vif_info = vif.get_vif_dict(self._session, self._cluster,
+                                    'VirtualE1000',
+                                    utils.is_neutron(),
+                                    self._network_values)
+        vif_limits = vm_util.Limits(shares_level='custom',
+                                    shares_share=40)
+        extra_specs = vm_util.ExtraSpecs(vif_limits=vif_limits)
+        mock_extra_specs.return_value = extra_specs
+        self._vmops.attach_interface(self._instance, self._image_meta,
+                                     self._network_values)
+        mock_get_vm_ref.assert_called_once_with(self._session, self._instance)
+        mock_get_attach_port_index(self._session, 'fake-ref')
+        mock_get_network_attach_config_spec.assert_called_once_with(
+            self._session.vim.client.factory, vif_info, 1,
+            extra_specs.vif_limits)
+        mock_reconfigure_vm.assert_called_once_with(self._session,
+                                                    'fake-ref',
+                                                    'fake-attach-spec')
+        _network_api.update_instance_vnic_index(mock.ANY,
+            self._instance, self._network_values, 1)

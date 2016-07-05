@@ -1760,8 +1760,11 @@ class VMwareVMOps(object):
                             lock_file_prefix='nova-vmware-hot-plug'):
             port_index = vm_util.get_attach_port_index(self._session, vm_ref)
             client_factory = self._session.vim.client.factory
+            extra_specs = self._get_extra_specs(instance.flavor)
+
             attach_config_spec = vm_util.get_network_attach_config_spec(
-                                        client_factory, vif_info, port_index)
+                                        client_factory, vif_info, port_index,
+                                        extra_specs.vif_limits)
             LOG.debug("Reconfiguring VM to attach interface",
                       instance=instance)
             try:
