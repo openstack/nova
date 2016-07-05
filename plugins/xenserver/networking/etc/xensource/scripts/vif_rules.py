@@ -123,8 +123,8 @@ def apply_ebtables_rules(command, params):
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print ("usage: %s dom_id online|offline [vif]" %
-               os.path.basename(sys.argv[0]))
+        print("usage: %s dom_id online|offline [vif]" %
+              os.path.basename(sys.argv[0]))
         sys.exit(1)
     else:
         dom_id, command = sys.argv[1:3]
