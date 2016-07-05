@@ -34,6 +34,23 @@ def _create_rp_in_db(context, updates):
 
 
 @db_api.api_context_manager.writer
+def _delete_rp_from_db(context, _id):
+    # Don't delete the resource provider if it has allocations.
+    rp_allocations = context.session.query(models.Allocation).\
+                     filter(models.Allocation.resource_provider_id == _id).\
+                     count()
+    if rp_allocations:
+        raise exception.ResourceProviderInUse()
+    # Delete any inventory associated with the resource provider
+    context.session.query(models.Inventory).\
+        filter(models.Inventory.resource_provider_id == _id).delete()
+    result = context.session.query(models.ResourceProvider).\
+             filter(models.ResourceProvider.id == _id).delete()
+    if not result:
+        raise exception.NotFound()
+
+
+@db_api.api_context_manager.writer
 def _update_rp_in_db(context, id, updates):
     db_rp = context.session.query(models.ResourceProvider).filter_by(
         id=id).first()
@@ -248,7 +265,8 @@ def _set_inventory(context, rp, inv_list):
 @base.NovaObjectRegistry.register
 class ResourceProvider(base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add destroy()
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -271,6 +289,10 @@ class ResourceProvider(base.NovaObject):
         updates = self.obj_get_changes()
         db_rp = self._create_in_db(self._context, updates)
         self._from_db_object(self._context, self, db_rp)
+
+    @base.remotable
+    def destroy(self):
+        self._delete(self._context, self.id)
 
     @base.remotable
     def save(self):
@@ -321,6 +343,10 @@ class ResourceProvider(base.NovaObject):
     @staticmethod
     def _create_in_db(context, updates):
         return _create_rp_in_db(context, updates)
+
+    @staticmethod
+    def _delete(context, id):
+        _delete_rp_from_db(context, id)
 
     @staticmethod
     def _update_in_db(context, id, updates):

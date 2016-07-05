@@ -2094,6 +2094,10 @@ class ConcurrentUpdateDetected(NovaException):
                 "Please retry your update")
 
 
+class ResourceProviderInUse(NovaException):
+    msg_fmt = _("Resource provider has allocations.")
+
+
 class UnsupportedPointerModelRequested(Invalid):
     msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
                 "host.")
