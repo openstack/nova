@@ -141,6 +141,9 @@ CONSOLE = "console=tty0 console=ttyS0"
 GuestNumaConfig = collections.namedtuple(
     'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
 
+InjectionInfo = collections.namedtuple(
+    'InjectionInfo', ['network_info', 'files', 'admin_pass'])
+
 libvirt_volume_drivers = [
     'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
     'iser=nova.virt.libvirt.volume.iser.LibvirtISERVolumeDriver',
@@ -2595,15 +2598,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             image_meta,
                                             rescue=True)
+        injection_info = InjectionInfo(network_info=network_info,
+                                       admin_pass=rescue_password,
+                                       files=None)
         gen_confdrive = functools.partial(self._create_configdrive,
-                                          context, instance,
-                                          admin_pass=rescue_password,
-                                          network_info=network_info,
-                                          suffix='.rescue')
+                                          context, instance, injection_info,
+                                          rescue=True)
         self._create_image(context, instance, disk_info['mapping'],
-                           suffix='.rescue', disk_images=rescue_images,
-                           network_info=network_info,
-                           admin_pass=rescue_password)
+                           injection_info=injection_info, suffix='.rescue',
+                           disk_images=rescue_images)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   image_meta, rescue=rescue_images)
         self._destroy(instance)
@@ -2649,17 +2652,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                             instance,
                                             image_meta,
                                             block_device_info)
+        injection_info = InjectionInfo(network_info=network_info,
+                                       files=injected_files,
+                                       admin_pass=admin_password)
         gen_confdrive = functools.partial(self._create_configdrive,
                                           context, instance,
-                                          admin_pass=admin_password,
-                                          files=injected_files,
-                                          network_info=network_info)
-        self._create_image(context, instance,
-                           disk_info['mapping'],
-                           network_info=network_info,
-                           block_device_info=block_device_info,
-                           files=injected_files,
-                           admin_pass=admin_password)
+                                          injection_info)
+        self._create_image(context, instance, disk_info['mapping'],
+                           injection_info=injection_info,
+                           block_device_info=block_device_info)
 
         # Required by Quobyte CI
         self._ensure_console_log_for_instance(instance)
@@ -2927,11 +2928,6 @@ class LibvirtDriver(driver.ComputeDriver):
         libvirt_utils.file_open(console_file, 'a').close()
 
     @staticmethod
-    def _get_disk_config_path(instance, suffix=''):
-        return os.path.join(libvirt_utils.get_instance_path(instance),
-                            'disk.config' + suffix)
-
-    @staticmethod
     def _get_disk_config_image_type():
         # TODO(mikal): there is a bug here if images_type has
         # changed since creation of the instance, but I am pretty
@@ -2948,20 +2944,18 @@ class LibvirtDriver(driver.ComputeDriver):
         return ((not bool(instance.get('image_ref')))
                 or 'disk' not in disk_mapping)
 
-    def _inject_data(self, injection_image, instance, network_info,
-                     admin_pass, files):
+    def _inject_data(self, disk, instance, injection_info):
         """Injects data in a disk image
 
         Helper used for injecting data in a disk image file system.
 
-        Keyword arguments:
-          injection_image -- An Image object we're injecting into
-          instance -- a dict that refers instance specifications
-          network_info -- a dict that refers network speficications
-          admin_pass -- a string used to set an admin password
-          files -- a list of files needs to be injected
+        :param disk: The disk we're injecting into (an Image object)
+        :param instance: The instance we're injecting into
+        :param injection_info: Injection info
         """
         # Handles the partition need to be used.
+        LOG.debug('Checking root disk injection %(info)s',
+                  info=str(injection_info), instance=instance)
         target_partition = None
         if not instance.kernel_id:
             target_partition = CONF.libvirt.inject_partition
@@ -2979,19 +2973,25 @@ class LibvirtDriver(driver.ComputeDriver):
         # Handles the admin password injection.
         if not CONF.libvirt.inject_password:
             admin_pass = None
+        else:
+            admin_pass = injection_info.admin_pass
 
         # Handles the network injection.
         net = netutils.get_injected_network_template(
-                network_info, libvirt_virt_type=CONF.libvirt.virt_type)
+            injection_info.network_info,
+            libvirt_virt_type=CONF.libvirt.virt_type)
 
         # Handles the metadata injection
         metadata = instance.get('metadata')
 
-        if any((key, net, metadata, admin_pass, files)):
+        if any((key, net, metadata, admin_pass, injection_info.files)):
+            LOG.debug('Injecting %(info)s', info=str(injection_info),
+                      instance=instance)
             img_id = instance.image_ref
             try:
-                disk_api.inject_data(injection_image.get_model(self._conn),
-                                     key, net, metadata, admin_pass, files,
+                disk_api.inject_data(disk.get_model(self._conn),
+                                     key, net, metadata, admin_pass,
+                                     injection_info.files,
                                      partition=target_partition,
                                      mandatory=('files',))
             except Exception as e:
@@ -3005,10 +3005,8 @@ class LibvirtDriver(driver.ComputeDriver):
     # method doesn't fail if an image already exists but instead
     # think that it will be reused (ie: (live)-migration/resize)
     def _create_image(self, context, instance,
-                      disk_mapping, suffix='',
-                      disk_images=None, network_info=None,
-                      block_device_info=None, files=None,
-                      admin_pass=None, inject_files=True,
+                      disk_mapping, injection_info=None, suffix='',
+                      disk_images=None, block_device_info=None,
                       fallback_from_host=None,
                       ignore_bdi_for_swap=False):
         booted_from_volume = self._is_booted_from_volume(
@@ -3049,9 +3047,9 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.chown(image('disk').path, 'root')
 
         self._create_and_inject_local_root(context, instance,
-                                 booted_from_volume, suffix, disk_images,
-                                 network_info, admin_pass, files, inject_files,
-                                 fallback_from_host)
+                                           booted_from_volume, suffix,
+                                           disk_images, injection_info,
+                                           fallback_from_host)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk_api.get_fs_type_for_os_type(
@@ -3132,12 +3130,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                          swap_mb=swap_mb)
 
     def _create_and_inject_local_root(self, context, instance,
-                            booted_from_volume, suffix, disk_images,
-                            network_info, admin_pass, files, inject_files,
-                            fallback_from_host):
+                                      booted_from_volume, suffix, disk_images,
+                                      injection_info, fallback_from_host):
         # File injection only if needed
         need_inject = (not configdrive.required_by(instance) and
-                       inject_files and CONF.libvirt.inject_partition != -2)
+                       injection_info is not None and
+                       CONF.libvirt.inject_partition != -2)
 
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to
@@ -3167,49 +3165,60 @@ class LibvirtDriver(driver.ComputeDriver):
                                         instance, size, fallback_from_host)
 
             if need_inject:
-                self._inject_data(backend, instance, network_info, admin_pass,
-                                  files)
+                self._inject_data(backend, instance, injection_info)
 
         elif need_inject:
             LOG.warning(_LW('File injection into a boot from volume '
                             'instance is not supported'), instance=instance)
 
-    def _create_configdrive(self, context, instance, admin_pass=None,
-                            files=None, network_info=None, suffix=''):
+    def _create_configdrive(self, context, instance, injection_info,
+                            rescue=False):
         # As this method being called right after the definition of a
         # domain, but before its actual launch, device metadata will be built
         # and saved in the instance for it to be used by the config drive and
         # the metadata service.
         instance.device_metadata = self._build_device_metadata(context,
                                                                instance)
-        config_drive_image = None
         if configdrive.required_by(instance):
             LOG.info(_LI('Using config drive'), instance=instance)
 
-            config_drive_image = self.image_backend.by_name(
-                instance, 'disk.config' + suffix,
-                self._get_disk_config_image_type())
+            name = 'disk.config'
+            if rescue:
+                name += '.rescue'
+
+            config_disk = self.image_backend.by_name(
+                instance, name, self._get_disk_config_image_type())
 
             # Don't overwrite an existing config drive
-            if not config_drive_image.exists():
+            if not config_disk.exists():
                 extra_md = {}
-                if admin_pass:
-                    extra_md['admin_pass'] = admin_pass
+                if injection_info.admin_pass:
+                    extra_md['admin_pass'] = injection_info.admin_pass
 
                 inst_md = instance_metadata.InstanceMetadata(
-                    instance, content=files, extra_md=extra_md,
-                    network_info=network_info, request_context=context)
+                    instance, content=injection_info.files, extra_md=extra_md,
+                    network_info=injection_info.network_info,
+                    request_context=context)
 
                 cdb = configdrive.ConfigDriveBuilder(instance_md=inst_md)
                 with cdb:
-                    config_drive_local_path = self._get_disk_config_path(
-                        instance, suffix)
+                    # NOTE(mdbooth): We're hardcoding here the path of the
+                    # config disk when using the flat backend. This isn't
+                    # good, but it's required because we need a local path we
+                    # know we can write to in case we're subsequently
+                    # importing into rbd. This will be cleaned up when we
+                    # replace this with a call to create_from_func, but that
+                    # can't happen until we've updated the backends and we
+                    # teach them not to cache config disks. This isn't
+                    # possible while we're still using cache() under the hood.
+                    config_disk_local_path = os.path.join(
+                        libvirt_utils.get_instance_path(instance), name)
                     LOG.info(_LI('Creating config drive at %(path)s'),
-                             {'path': config_drive_local_path},
+                             {'path': config_disk_local_path},
                              instance=instance)
 
                     try:
-                        cdb.make_drive(config_drive_local_path)
+                        cdb.make_drive(config_disk_local_path)
                     except processutils.ProcessExecutionError as e:
                         with excutils.save_and_reraise_exception():
                             LOG.error(_LE('Creating config drive failed '
@@ -3217,14 +3226,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                       e, instance=instance)
 
                 try:
-                    config_drive_image.import_file(
-                        instance, config_drive_local_path,
-                        'disk.config' + suffix)
+                    config_disk.import_file(
+                        instance, config_disk_local_path, name)
                 finally:
                     # NOTE(mikal): if the config drive was imported into RBD,
                     # then we no longer need the local copy
                     if CONF.libvirt.images_type == 'rbd':
-                        os.unlink(config_drive_local_path)
+                        os.unlink(config_disk_local_path)
 
     def _prepare_pci_devices_for_use(self, pci_devices):
         # kvm , qemu support managed mode
@@ -7308,17 +7316,17 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE: This has the intended side-effect of fetching a missing
         # backing file.
         self._create_image(context, instance, block_disk_info['mapping'],
-                           network_info=network_info,
                            block_device_info=block_device_info,
-                           inject_files=False, ignore_bdi_for_swap=True,
+                           ignore_bdi_for_swap=True,
                            fallback_from_host=migration.source_compute)
 
         # Required by Quobyte CI
         self._ensure_console_log_for_instance(instance)
 
-        gen_confdrive = functools.partial(self._create_configdrive,
-                                          context, instance,
-                                          network_info=network_info)
+        gen_confdrive = functools.partial(
+            self._create_configdrive, context, instance,
+            InjectionInfo(admin_pass=None, network_info=network_info,
+                          files=None))
 
         # Convert raw disks to qcow2 if migrating to host which uses
         # qcow2 from host which uses raw.

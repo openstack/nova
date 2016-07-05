@@ -364,6 +364,11 @@ def fake_disk_info_json(instance, type='qcow2'):
     return jsonutils.dumps(disk_info.values())
 
 
+def get_injection_info(network_info=None, admin_pass=None, files=None):
+    return libvirt_driver.InjectionInfo(
+        network_info=network_info, admin_pass=admin_pass, files=files)
+
+
 def _concurrency(signal, wait, done, target, is_block_dev=False):
     signal.send()
     wait.wait()
@@ -10529,12 +10534,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             fake_imagebackend.ImageBackendFixture(exists=lambda path: False))
 
         mock_build_device_metadata.return_value = None
-
+        injection_info = get_injection_info(
+            network_info=mock.sentinel.network_info,
+            admin_pass=mock.sentinel.admin_pass,
+            files=mock.sentinel.files
+        )
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr._create_configdrive(self.context, instance,
-                                 admin_pass=mock.sentinel.admin_pass,
-                                 files=mock.sentinel.files,
-                                 network_info=mock.sentinel.network_info)
+        drvr._create_configdrive(self.context, instance, injection_info)
 
         expected_config_drive_path = os.path.join(
             CONF.instances_path, instance.uuid, 'disk.config')
@@ -16180,13 +16186,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         disk_images = {'image_id': None}
 
         drvr._create_and_inject_local_root(self.context, instance_ref, False,
-                                    '', disk_images, [], None, [], True, None)
+                                    '', disk_images, get_injection_info(),
+                                    None)
         self.assertFalse(mock_inject.called)
 
     @mock.patch('nova.virt.netutils.get_injected_network_template')
     @mock.patch('nova.virt.disk.api.inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_conn")
-    def _test_inject_data(self, driver_params, path, disk_params,
+    def _test_inject_data(self, instance, injection_info, path, disk_params,
                           mock_conn, disk_inject_data, inj_network,
                           called=True):
         class ImageBackend(object):
@@ -16207,7 +16214,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                return_value=image_backend):
             self.flags(inject_partition=0, group='libvirt')
 
-            self.drvr._inject_data(image_backend, **driver_params)
+            self.drvr._inject_data(image_backend, instance, injection_info)
 
             if called:
                 disk_inject_data.assert_called_once_with(
@@ -16217,18 +16224,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
             self.assertEqual(disk_inject_data.called, called)
 
-    def _test_inject_data_default_driver_params(self, **params):
-        return {
-            'instance': self._create_instance(params=params),
-            'network_info': None,
-            'admin_pass': None,
-            'files': None
-        }
-
     def test_inject_data_adminpass(self):
         self.flags(inject_password=True, group='libvirt')
-        driver_params = self._test_inject_data_default_driver_params()
-        driver_params['admin_pass'] = 'foobar'
+        instance = self._create_instance()
+        injection_info = get_injection_info(admin_pass='foobar')
         disk_params = [
             None,  # key
             None,  # net
@@ -16236,16 +16235,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             'foobar',  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, "/path", disk_params)
+        self._test_inject_data(instance, injection_info, "/path", disk_params)
 
         # Test with the configuration setted to false.
         self.flags(inject_password=False, group='libvirt')
-        self._test_inject_data(driver_params, "/path",
-                               disk_params, called=False)
+        self._test_inject_data(instance, injection_info, "/path", disk_params,
+                               called=False)
 
     def test_inject_data_key(self):
-        driver_params = self._test_inject_data_default_driver_params()
-        driver_params['instance']['key_data'] = 'key-content'
+        instance = self._create_instance(params={'key_data': 'key-content'})
+        injection_info = get_injection_info()
 
         self.flags(inject_key=True, group='libvirt')
         disk_params = [
@@ -16255,18 +16254,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, "/path", disk_params)
+        self._test_inject_data(instance, injection_info, "/path",
+                               disk_params)
 
         # Test with the configuration setted to false.
         self.flags(inject_key=False, group='libvirt')
-        self._test_inject_data(driver_params, "/path",
-                               disk_params, called=False)
+        self._test_inject_data(instance, injection_info, "/path", disk_params,
+                               called=False)
 
     def test_inject_data_metadata(self):
-        instance_metadata = {'metadata': {'data': 'foo'}}
-        driver_params = self._test_inject_data_default_driver_params(
-            **instance_metadata
-        )
+        instance = self._create_instance(params={'metadata': {'data': 'foo'}})
+        injection_info = get_injection_info()
         disk_params = [
             None,  # key
             None,  # net
@@ -16274,11 +16272,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, "/path", disk_params)
+        self._test_inject_data(instance, injection_info, "/path", disk_params)
 
     def test_inject_data_files(self):
-        driver_params = self._test_inject_data_default_driver_params()
-        driver_params['files'] = ['file1', 'file2']
+        instance = self._create_instance()
+        injection_info = get_injection_info(files=['file1', 'file2'])
         disk_params = [
             None,  # key
             None,  # net
@@ -16286,11 +16284,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             None,  # admin_pass
             ['file1', 'file2'],  # files
         ]
-        self._test_inject_data(driver_params, "/path", disk_params)
+        self._test_inject_data(instance, injection_info, "/path", disk_params)
 
     def test_inject_data_net(self):
-        driver_params = self._test_inject_data_default_driver_params()
-        driver_params['network_info'] = {'net': 'eno1'}
+        instance = self._create_instance()
+        injection_info = get_injection_info(network_info={'net': 'eno1'})
         disk_params = [
             None,  # key
             {'net': 'eno1'},  # net
@@ -16298,10 +16296,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, "/path", disk_params)
+        self._test_inject_data(instance, injection_info, "/path", disk_params)
 
     def test_inject_not_exist_image(self):
-        driver_params = self._test_inject_data_default_driver_params()
+        instance = self._create_instance()
+        injection_info = get_injection_info()
         disk_params = [
             'key-content',  # key
             None,  # net
@@ -16309,7 +16308,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             None,  # admin_pass
             None,  # files
         ]
-        self._test_inject_data(driver_params, "/fail/path",
+        self._test_inject_data(instance, injection_info, "/fail/path",
                                disk_params, called=False)
 
     def _test_attach_detach_interface(self, method, power_state,
