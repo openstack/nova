@@ -80,6 +80,15 @@ class ServerDiagnosticsTestV21(test.NoDBTestCase):
         self.assertEqual(409, res.status_int)
 
     @mock.patch.object(compute_api.API, 'get_diagnostics',
+                       side_effect=exception.InstanceNotReady('fake message'))
+    @mock.patch.object(compute_api.API, 'get', fake_instance_get)
+    def test_get_diagnostics_raise_instance_not_ready(self,
+                                                      mock_get_diagnostics):
+        req = self._get_request()
+        res = req.get_response(self.router)
+        self.assertEqual(409, res.status_int)
+
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
                 side_effect=NotImplementedError)
     @mock.patch.object(compute_api.API, 'get', fake_instance_get)
     def test_get_diagnostics_raise_no_notimplementederror(self,
