@@ -87,6 +87,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              os-Migratelive Action does not throw badRequest in case of
              pre-checks failure. Verification result is available over
              instance-actions.
+    * 2.35 - Adds keypairs pagination support.
 """
 
 # The minimum and maximum versions of the API supported
@@ -95,7 +96,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.34"
+_MAX_API_VERSION = "2.35"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 

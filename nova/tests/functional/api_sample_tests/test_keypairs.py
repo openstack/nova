@@ -210,3 +210,76 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
 
         self.assertEqual(403, response.status_code)
+
+
+class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
+    ADMIN_API = True
+    sample_dir = "keypairs"
+    microversion = '2.35'
+    expected_post_status_code = 201
+    scenarios = [('v2_35', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(KeyPairsV235SampleJsonTest, self).setUp()
+        self.api.microversion = self.microversion
+
+    # TODO(pkholkin): this is only needed because we randomly choose the
+    # uuid each time.
+    def generalize_subs(self, subs, vanilla_regexes):
+        subs['keypair_name'] = 'keypair-[0-9a-f-]+'
+        return subs
+
+    def test_keypairs_post(self, user="admin", kp_name=None):
+        return self._check_keypairs_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+            user_id=user, kp_name=kp_name)
+
+    def _check_keypairs_post(self, **kwargs):
+        """Get api sample of key pairs post request."""
+        key_name = kwargs.pop('kp_name')
+        if not key_name:
+            key_name = 'keypair-' + str(uuid.uuid4())
+
+        subs = dict(keypair_name=key_name, **kwargs)
+        response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
+        subs = {'keypair_name': key_name}
+
+        self._verify_response('keypairs-post-resp', subs, response,
+                              self.expected_post_status_code)
+        return key_name
+
+    def test_keypairs_list(self):
+        # Get api sample of key pairs list request.
+
+        # sort key_pairs by name before paging
+        keypairs = sorted([self.test_keypairs_post() for i in range(3)])
+
+        response = self._do_get('os-keypairs?marker=%s&limit=1' % keypairs[1])
+        subs = {'keypair_name': keypairs[2]}
+        self._verify_response('keypairs-list-resp', subs, response, 200)
+
+    def test_keypairs_list_for_different_users(self):
+        # Get api sample of key pairs list request.
+
+        # create common kp_names for two users
+        kp_names = ['keypair-' + str(uuid.uuid4()) for i in range(3)]
+
+        # sort key_pairs by name before paging
+        keypairs_user1 = sorted([self.test_keypairs_post(
+            user="user1", kp_name=kp_name) for kp_name in kp_names])
+        keypairs_user2 = sorted([self.test_keypairs_post(
+            user="user2", kp_name=kp_name) for kp_name in kp_names])
+
+        # get all keypairs after the second for user1
+        response = self._do_get('os-keypairs?user_id=user1&marker=%s'
+                                % keypairs_user1[1])
+        subs = {'keypair_name': keypairs_user1[2]}
+        self._verify_response(
+            'keypairs-list-user1-resp', subs, response, 200)
+
+        # get only one keypair after the second for user2
+        response = self._do_get('os-keypairs?user_id=user2&marker=%s&limit=1'
+                                % keypairs_user2[1])
+        subs = {'keypair_name': keypairs_user2[2]}
+        self._verify_response(
+            'keypairs-list-user2-resp', subs, response, 200)

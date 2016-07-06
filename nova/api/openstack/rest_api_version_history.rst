@@ -350,3 +350,14 @@ user documentation.
   Checks in ``os-migrateLive`` before live-migration actually starts are now
   made in background. ``os-migrateLive`` is not throwing `400 Bad Request` if
   pre-live-migration checks fail.
+
+2.35
+----
+
+  Added pagination support for keypairs.
+
+  Optional parameters 'limit' and 'marker' were added to GET /os-keypairs
+  request, the default sort_key was changed to 'name' field as ASC order,
+  the generic request format is::
+
+    GET /os-keypairs?limit={limit}&marker={kp_name}

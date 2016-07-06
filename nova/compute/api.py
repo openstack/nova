@@ -3981,9 +3981,10 @@ class KeypairAPI(base.Base):
         objects.KeyPair.destroy_by_name(context, user_id, key_name)
         self._notify(context, 'delete.end', key_name)
 
-    def get_key_pairs(self, context, user_id):
+    def get_key_pairs(self, context, user_id, limit=None, marker=None):
         """List key pairs."""
-        return objects.KeyPairList.get_by_user(context, user_id)
+        return objects.KeyPairList.get_by_user(
+            context, user_id, limit=limit, marker=marker)
 
     def get_key_pair(self, context, user_id, key_name):
         """Get a keypair by name."""

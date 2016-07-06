@@ -562,3 +562,43 @@ class KeypairsTestV210(KeypairsTestV22):
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.create,
                           req, body=body)
+
+
+class KeypairsTestV235(test.TestCase):
+    base_url = '/v2/fake'
+    wsgi_api_version = '2.35'
+
+    def _setup_app_and_controller(self):
+        self.app_server = fakes.wsgi_app_v21(init_only=('os-keypairs'))
+        self.controller = keypairs_v21.KeypairController()
+
+    def setUp(self):
+        super(KeypairsTestV235, self).setUp()
+        self._setup_app_and_controller()
+
+    @mock.patch("nova.db.key_pair_get_all_by_user")
+    def test_keypair_list_limit_and_marker(self, mock_kp_get):
+        mock_kp_get.side_effect = db_key_pair_get_all_by_user
+
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/os-keypairs?limit=3&marker=fake_marker',
+            version=self.wsgi_api_version, use_admin_context=True)
+
+        res_dict = self.controller.index(req)
+
+        mock_kp_get.assert_called_once_with(
+            req.environ['nova.context'], 'fake_user',
+            limit=3, marker='fake_marker')
+        response = {'keypairs': [{'keypair': dict(keypair_data, name='FAKE',
+                                                  type='ssh')}]}
+        self.assertEqual(res_dict, response)
+
+    @mock.patch('nova.compute.api.KeypairAPI.get_key_pairs')
+    def test_keypair_list_limit_and_marker_invalid_marker(self, mock_kp_get):
+        mock_kp_get.side_effect = exception.MarkerNotFound(marker='unknown_kp')
+
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/os-keypairs?limit=3&marker=unknown_kp',
+            version=self.wsgi_api_version, use_admin_context=True)
+
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.index, req)
