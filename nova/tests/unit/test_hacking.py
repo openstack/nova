@@ -773,3 +773,20 @@ class HackingTestCase(test.NoDBTestCase):
                    self.assertRaises(FakeExcepion, _test)
                """
         self._assert_has_no_errors(code, checker)
+
+    def test_check_policy_registration_in_central_place(self):
+        errors = [(3, 0, "N350")]
+        code = """
+        from nova import policy
+
+        policy.RuleDefault('context_is_admin', 'role:admin')
+        """
+        # registration in the proper place
+        self._assert_has_no_errors(
+            code, checks.check_policy_registration_in_central_place,
+            filename="nova/policies/base.py")
+        # option at a location which is not in scope right now
+        self._assert_has_errors(
+            code, checks.check_policy_registration_in_central_place,
+            filename="nova/api/openstack/compute/non_existent.py",
+            expected_errors=errors)
