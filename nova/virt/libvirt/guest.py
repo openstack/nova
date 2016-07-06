@@ -662,9 +662,11 @@ class BlockDevice(object):
                   False if completed
         """
         status = self.get_job_info()
-        if not status and abort_on_error:
-            msg = _('libvirt error while requesting blockjob info.')
-            raise exception.NovaException(msg)
+        if not status:
+            if abort_on_error:
+                msg = _('libvirt error while requesting blockjob info.')
+                raise exception.NovaException(msg)
+            return False
 
         if wait_for_job_clean:
             job_ended = status.job == 0
