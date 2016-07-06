@@ -1,13 +1,12 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 =========================================
  Port interfaces (servers, os-interface)
 =========================================
 
-Creates a port interface and uses it to attach a port to a server and
-detaches a port interface from a server. Also, lists all port interfaces
-and shows details for a port interface.
+List port interfaces, show port interface details of the given server.
+Create a port interface and uses it to attach a port to the given server,
+detach a port interface from the given server.
 
 List Port Interfaces
 ====================
@@ -53,7 +52,7 @@ Create Interface
 
 .. rest_method:: POST /servers/{server_id}/os-interface
 
-Creates a port interface and uses it to attach a port to a server instance.
+Creates a port interface and uses it to attach a port to a server.
 
 Normal response codes: 200
 
@@ -75,12 +74,12 @@ Request
 
 **Example Create Interface: JSON request**
 
-Create Interface with ``net_id`` and ``fixed_ips``.
+Create interface with ``net_id`` and ``fixed_ips``.
 
 .. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-net_id-req.json
    :language: javascript
 
-Create Interface with ``port_id``.
+Create interface with ``port_id``.
 
 .. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-req.json
    :language: javascript
@@ -148,7 +147,7 @@ Detach Interface
 
 .. rest_method:: DELETE /servers/{server_id}/os-interface/{port_id}
 
-Detaches a port interface.
+Detaches a port interface from a server.
 
 Normal response codes: 202
 
