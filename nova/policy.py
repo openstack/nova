@@ -129,7 +129,7 @@ def check_is_admin(context):
     # the target is user-self
     credentials = context.to_dict()
     target = credentials
-    return _ENFORCER.enforce('context_is_admin', target, credentials)
+    return _ENFORCER.authorize('context_is_admin', target, credentials)
 
 
 @policy.register('is_admin')
