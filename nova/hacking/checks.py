@@ -40,6 +40,7 @@ cfg_re = re.compile(r".*\scfg\.")
 # Excludes oslo.config OptGroup objects
 cfg_opt_re = re.compile(r".*[\s\[]cfg\.[a-zA-Z]*Opt\(")
 rule_default_re = re.compile(r".*RuleDefault\(")
+policy_enforce_re = re.compile(r".*_ENFORCER\.enforce\(")
 vi_header_re = re.compile(r"^#\s+vim?:.+")
 virt_file_re = re.compile(r"\./nova/(?:tests/)?virt/(\w+)/")
 virt_import_re = re.compile(
@@ -666,6 +667,24 @@ def check_policy_registration_in_central_place(logical_line, filename):
         yield(0, msg)
 
 
+def check_policy_enforce(logical_line, filename):
+    """Look for uses of nova.policy._ENFORCER.enforce()
+
+    Now that policy defaults are registered in code the _ENFORCER.authorize
+    method should be used. That ensures that only registered policies are used.
+    Uses of _ENFORCER.enforce could allow unregistered policies to be used, so
+    this check looks for uses of that method.
+
+    N351
+    """
+
+    msg = ('N351: nova.policy._ENFORCER.enforce() should not be used. '
+           'Use the authorize() method instead.')
+
+    if policy_enforce_re.match(logical_line):
+        yield(0, msg)
+
+
 def check_doubled_words(physical_line, filename):
     """Check for the common doubled-word typos
 
@@ -813,6 +832,7 @@ def factory(register):
     register(check_greenthread_spawns)
     register(check_config_option_in_central_place)
     register(check_policy_registration_in_central_place)
+    register(check_policy_enforce)
     register(check_doubled_words)
     register(check_python3_no_iteritems)
     register(check_python3_no_iterkeys)
