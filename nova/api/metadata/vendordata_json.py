@@ -45,7 +45,7 @@ class JsonFileVendorData(base.VendorDataDriver):
                 else:
                     LOG.warning(_LW("%(logprefix)s unexpected IOError when "
                                     "reading"), {'logprefix': logprefix})
-                raise e
+                raise
             except ValueError:
                 LOG.warning(_LW("%(logprefix)s failed to load json"),
                             {'logprefix': logprefix})
