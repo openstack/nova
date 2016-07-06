@@ -339,6 +339,33 @@ class ResourceProvider(base.NovaObject):
         return _get_rp_by_uuid_from_db(context, uuid)
 
 
+@base.NovaObjectRegistry.register
+class ResourceProviderList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial Version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('ResourceProvider'),
+    }
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_all_by_filters_from_db(context, filters):
+        if not filters:
+            filters = {}
+        query = context.session.query(models.ResourceProvider)
+        if 'name' in filters:
+            query = query.filter_by(name=filters['name'])
+        query = query.filter_by(can_host=filters.get('can_host', 0))
+        return query.all()
+
+    @base.remotable_classmethod
+    def get_all_by_filters(cls, context, filters=None):
+        resource_providers = cls._get_all_by_filters_from_db(context, filters)
+        return base.obj_make_list(context, cls(context),
+                                  objects.ResourceProvider, resource_providers)
+
+
 class _HasAResourceProvider(base.NovaObject):
     """Code shared between Inventory and Allocation
 

@@ -296,3 +296,31 @@ class ResourceProviderTestCase(test.NoDBTestCase):
                                   disk_inv)
         self.assertIn('No inventory of class DISK_GB found for update',
                       str(error))
+
+
+class ResourceProviderListTestCase(test.NoDBTestCase):
+
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(ResourceProviderListTestCase, self).setUp()
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.Database(database='api'))
+        self.context = context.RequestContext('fake-user', 'fake-project')
+
+    def test_get_all_by_filters(self):
+        for rp_i in ['1', '2']:
+            uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
+            name = 'rp_name_' + rp_i
+            rp = objects.ResourceProvider(self.context, name=name, uuid=uuid)
+            rp.create()
+
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context)
+        self.assertEqual(2, len(resource_providers))
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'name': 'rp_name_1'})
+        self.assertEqual(1, len(resource_providers))
+        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+            self.context, filters={'can_host': 1})
+        self.assertEqual(0, len(resource_providers))
