@@ -443,7 +443,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
                 instance = req.get_db_instance(server['id'])
                 groups = instance.get(key)
                 if groups:
-                    server[ATTRIBUTE_NAME] = [{"name": group["name"]}
+                    server[ATTRIBUTE_NAME] = [{"name": group.name}
                                               for group in groups]
         else:
             # If method is a POST we get the security groups intended for an
