@@ -687,6 +687,12 @@ accessIPv6_in:
   type: string
   description: |
     IPv6 address that should be used to access this server.
+action:
+  description: |
+    The name of the action.
+  in: body
+  required: true
+  type: string
 action_reserve:
   description: |
     The attribute to reserve an IP with a value of ``null``.
@@ -1386,10 +1392,52 @@ evacuate:
   in: body
   required: true
   type: string
+event:
+  description: |
+    The name of the event.
+  in: body
+  required: true
+  type: string
+event_finish_time:
+  description: |
+    The date and time when the event was finished. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
 event_name:
   description: |
     The event name. A valid value is ``network-changed``, ``network-vif-plugged``,
     ``network-vif-unplugged``, or ``network-vif-deleted``.
+  in: body
+  required: true
+  type: string
+event_result:
+  description: |
+    The result of the event.
+  in: body
+  required: true
+  type: string
+event_start_time:
+  description: |
+    The date and time when the event was started. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
   in: body
   required: true
   type: string
@@ -1405,6 +1453,12 @@ event_tag:
     A string value that identifies the event.
   in: body
   required: false
+  type: string
+event_traceback:
+  description: |
+    The traceback stack if error occurred in this event.
+  in: body
+  required: true
   type: string
 events:
   description: |
@@ -2180,6 +2234,18 @@ injectNetworkInfo:
   in: body
   required: true
   type: string
+instance_action_events:
+  description: |
+    The events occurred in this action.
+  in: body
+  required: true
+  type: array
+instance_id_body:
+  description: |
+    The UUID of the server.
+  in: body
+  required: true
+  type: string
 instance_name:
   description: |
     The name of the instance.
@@ -2211,6 +2277,18 @@ instance_usage_audit_task_state:
   in: body
   required: true
   type: string
+instanceAction:
+  description: |
+    The instance action object.
+  in: body
+  required: true
+  type: object
+instanceActions:
+  description: |
+    List of the actions for the given instance.
+  in: body
+  required: true
+  type: array
 instances:
   description: |
     The number of allowed instances for each tenant.
@@ -2502,6 +2580,12 @@ memory_mb_used:
   in: body
   required: true
   type: integer
+message:
+  description: |
+    The error message message about this action when error occurred.
+  in: body
+  required: true
+  type: string
 meta:
   description: |
     The object of detailed key metadata items.
@@ -3091,6 +3175,12 @@ project_id:
   in: body
   required: false
   type: string
+project_id_instance_action:
+  description: |
+    The UUID of the project that this server belongs to.
+  in: body
+  required: ture
+  type: string
 project_id_server_group:
   description: |
     The project ID who owns the server group.
@@ -3162,6 +3252,12 @@ removeSecurityGroup:
 removeTenantAccess:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+request_id_body:
+  description: |
+    The request id generated when execute the API of this action.
   in: body
   required: true
   type: string
@@ -3578,6 +3674,21 @@ source_type:
   description: |
     The source type of the volume. A valid value is ``blank``, ``snapshot``, ``volume``,
     or ``image``.
+  in: body
+  required: true
+  type: string
+start_time:
+  description: |
+    The date and time when the action was started. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
   in: body
   required: true
   type: string
