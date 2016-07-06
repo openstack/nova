@@ -11384,19 +11384,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.LibvirtDriver._undefine_domain')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_images_and_backing')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
     def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
-                         mock_get_instance_disk_info, mock_get_guest_xml,
-                         mock_create_images_and_backing,
-                         mock_create_domain_and_network, mock_get_info,
-                         mock_undefine):
+                         mock_get_guest_xml, mock_create_domain_and_network,
+                         mock_get_info, mock_undefine):
         self.context.auth_token = True  # any non-None value will suffice
         instance = objects.Instance(**self.test_instance)
-        instance_path = libvirt_utils.get_instance_path(instance)
         network_info = _fake_network_info(self, 1)
         block_device_info = None
 
@@ -11416,29 +11411,48 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          hardware.InstanceInfo(state=power_state.RUNNING)]
         mock_get_info.side_effect = return_values
 
-        backing_disk_info = [{"virt_disk_size": 2}]
-
-        mock_get_disk_info.return_value = mock.sentinel.disk_info
         mock_get_guest_xml.return_value = dummyxml
-        mock_get_instance_disk_info.return_value = backing_disk_info
+        mock_get_disk_info.return_value = \
+            fake_disk_info_byname(instance).values()
 
-        drvr._hard_reboot(self.context, instance, network_info,
-                          block_device_info)
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        with mock.patch('os.path.exists', return_value=True):
+            drvr._hard_reboot(self.context, instance, network_info,
+                              block_device_info)
+
+        disks = backend.disks
+
+        # NOTE(mdbooth): _create_images_and_backing() passes a full path in
+        # 'disk_name' when creating a disk. This is wrong, but happens to
+        # work due to handling by each individual backend. This will be
+        # fixed in a subsequent commit.
+        #
+        # We translate all the full paths into disk names here to make the
+        # test readable
+        disks = {os.path.basename(name): value
+                 for name, value in six.iteritems(disks)}
+
+        # We should have called cache() on the root and ephemeral disks
+        for name in ('disk', 'disk.local'):
+            self.assertTrue(disks[name].cache.called)
 
         mock_destroy.assert_called_once_with(instance)
         mock_undefine.assert_called_once_with(instance)
 
-        # make sure that _create_images_and_backing is passed the disk_info
-        # returned from _get_instance_disk_info and not the one that is in
-        # scope from blockinfo.get_disk_info
-        mock_create_images_and_backing.assert_called_once_with(self.context,
-            instance, instance_path, backing_disk_info)
-
-        # make sure that _create_domain_and_network is passed the disk_info
-        # returned from blockinfo.get_disk_info and not the one that's
-        # returned from _get_instance_disk_info
+        # Check the structure of disk_info passed to
+        # _create_domain_and_network, but we don't care about any of the values
+        mock_disk_info = {
+            'disk_bus': mock.ANY,
+            'cdrom_bus': mock.ANY,
+            'mapping': {
+                'root': mock.ANY,
+                'disk': mock.ANY,
+                'disk.local': mock.ANY
+            }
+        }
         mock_create_domain_and_network.assert_called_once_with(self.context,
-            dummyxml, instance, network_info, mock.sentinel.disk_info,
+            dummyxml, instance, network_info, mock_disk_info,
             block_device_info=block_device_info,
             reboot=True, vifs_already_plugged=True)
 
