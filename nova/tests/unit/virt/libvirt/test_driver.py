@@ -81,7 +81,6 @@ from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
-from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import fake
@@ -8357,27 +8356,48 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 pre_migration_result=True)['pre_live_migration_result'],
             target_ret)
 
-    def test_pre_live_migration_block_with_config_drive_mocked(self):
-        # Creating testdata
+    @mock.patch.object(os, 'mkdir')
+    @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')
+    @mock.patch('nova.virt.libvirt.driver.remotefs.'
+                'RemoteFilesystem.copy_file')
+    @mock.patch('nova.virt.driver.block_device_info_get_mapping')
+    @mock.patch('nova.virt.configdrive.required_by', return_value=True)
+    def test_pre_live_migration_block_with_config_drive_success(
+            self, mock_required_by, block_device_info_get_mapping,
+            mock_copy_file, mock_get_instance_path, mock_mkdir):
+        self.flags(config_drive_format='iso9660')
         vol = {'block_device_mapping': [
                   {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
                   {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+        fake_instance_path = os.path.join(cfg.CONF.instances_path,
+                                          '/fake_instance_uuid')
+        mock_get_instance_path.return_value = fake_instance_path
+
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        def fake_true(*args, **kwargs):
-            return True
-
-        self.stubs.Set(configdrive, 'required_by', fake_true)
-
         instance = objects.Instance(**self.test_instance)
-        c = context.get_admin_context()
+        migrate_data = objects.LibvirtLiveMigrateData()
+        migrate_data.is_shared_instance_path = False
+        migrate_data.is_shared_block_storage = False
+        migrate_data.block_migration = True
+        migrate_data.instance_relative_path = 'foo'
+        src = "%s:%s/disk.config" % (instance.host, fake_instance_path)
 
-        self.assertRaises(exception.NoLiveMigrationForConfigDriveInLibVirt,
-                          drvr.pre_live_migration, c, instance, vol, None,
-                          None, {'is_shared_instance_path': False,
-                                 'is_shared_block_storage': False,
-                                 'block_migration': False,
-                                 'instance_relative_path': 'foo'})
+        result = drvr.pre_live_migration(
+            self.context, instance, vol, [], None, migrate_data)
+
+        block_device_info_get_mapping.assert_called_once_with(
+            {'block_device_mapping': [
+                {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
+                {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}
+            ]}
+        )
+        mock_copy_file.assert_called_once_with(src, fake_instance_path)
+
+        migrate_data.graphics_listen_addrs_vnc = '127.0.0.1'
+        migrate_data.graphics_listen_addrs_spice = '127.0.0.1'
+        migrate_data.serial_listen_addr = '127.0.0.1'
+        self.assertEqual(migrate_data, result)
 
     @mock.patch('nova.virt.driver.block_device_info_get_mapping',
                 return_value=())
