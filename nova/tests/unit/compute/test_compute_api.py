@@ -40,6 +40,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import fields as fields_obj
 from nova.objects import quotas as quotas_obj
 from nova import quota
@@ -3018,81 +3019,17 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context,
                           instance, instance_type, bdms)
 
-    def _test_create_db_entry_for_new_instance_with_cinder_error(self,
-                                                        expected_exception):
-
-        @mock.patch.object(objects.Instance, 'create')
-        @mock.patch.object(compute_api.SecurityGroupAPI, 'ensure_default')
-        @mock.patch.object(compute_api.API, '_populate_instance_names')
-        @mock.patch.object(compute_api.API, '_populate_instance_for_create')
-        def do_test(self, mock_create, mock_names, mock_ensure,
-                    mock_inst_create):
-            instance = self._create_instance_obj()
-            instance['display_name'] = 'FAKE_DISPLAY_NAME'
-            instance['shutdown_terminate'] = False
-            instance_type = self._create_flavor()
-            fake_image = {
-                'id': 'fake-image-id',
-                'properties': {'mappings': []},
-                'status': 'fake-status',
-                'location': 'far-away'}
-            fake_security_group = None
-            fake_num_instances = 1
-            fake_index = 1
-            bdm = [objects.BlockDeviceMapping(
-                    **fake_block_device.FakeDbBlockDeviceDict(
-                    {
-                     'id': 1,
-                     'volume_id': 1,
-                     'source_type': 'volume',
-                     'destination_type': 'volume',
-                     'device_name': 'vda',
-                     'boot_index': 0,
-                     }))]
-            with mock.patch.object(instance, "destroy") as destroy:
-                self.assertRaises(expected_exception,
-                                  self.compute_api.
-                                  create_db_entry_for_new_instance,
-                                  self.context,
-                                  instance_type,
-                                  fake_image,
-                                  instance,
-                                  fake_security_group,
-                                  bdm,
-                                  fake_num_instances,
-                                  fake_index)
-                destroy.assert_called_once_with()
-
-        # We use a nested method so we can decorate with the mocks.
-        do_test(self)
-
-    @mock.patch.object(cinder.API, 'get',
-             side_effect=exception.CinderConnectionFailed(reason='error'))
-    def test_create_db_entry_for_new_instancewith_cinder_down(self, mock_get):
-        self._test_create_db_entry_for_new_instance_with_cinder_error(
-            expected_exception=exception.CinderConnectionFailed)
-
-    @mock.patch.object(cinder.API, 'get',
-                       return_value={'id': 1, 'status': 'error',
-                                     'attach_status': 'detached'})
-    def test_create_db_entry_for_new_instancewith_error_volume(self, mock_get):
-        self._test_create_db_entry_for_new_instance_with_cinder_error(
-            expected_exception=exception.InvalidVolume)
-
-    def test_provision_instances_creates_request_spec(self):
+    def _test_provision_instances_with_cinder_error(self,
+                                                    expected_exception):
         @mock.patch.object(self.compute_api, '_check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
-        @mock.patch.object(self.compute_api, '_validate_bdm')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
-        @mock.patch.object(objects, 'BuildRequest')
-        @mock.patch.object(objects.InstanceMapping, 'create')
-        def do_test(_mock_inst_mapping_create, _mock_build_req,
+        def do_test(
                 mock_req_spec_from_components, _mock_create_bdm,
-                _mock_validate_bdm, _mock_ensure_default, _mock_create,
-                mock_check_num_inst_quota):
+                _mock_ensure_default, _mock_create, mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
             req_spec_mock = mock.MagicMock()
 
@@ -3140,20 +3077,28 @@ class _ComputeAPIUnitTestMixIn(object):
             filter_properties = {'scheduler_hints': None,
                     'instance_type': flavor}
 
-            instances = self.compute_api._provision_instances(ctxt, flavor,
-                    min_count, max_count, base_options, boot_meta,
-                    security_groups, block_device_mapping, shutdown_terminate,
-                    instance_group, check_server_group_quota,
-                    filter_properties, None)
-            self.assertTrue(uuidutils.is_uuid_like(instances[0].uuid))
-
-            mock_req_spec_from_components.assert_called_once_with(ctxt,
-                    mock.ANY, boot_meta, flavor, base_options['numa_topology'],
-                    base_options['pci_requests'], filter_properties,
-                    instance_group, base_options['availability_zone'])
-            req_spec_mock.create.assert_called_once_with()
+            self.assertRaises(expected_exception,
+                              self.compute_api._provision_instances, ctxt,
+                              flavor, min_count, max_count, base_options,
+                              boot_meta, security_groups, block_device_mapping,
+                              shutdown_terminate, instance_group,
+                              check_server_group_quota, filter_properties,
+                              None)
 
         do_test()
+
+    @mock.patch.object(cinder.API, 'get',
+             side_effect=exception.CinderConnectionFailed(reason='error'))
+    def test_provision_instances_with_cinder_down(self, mock_get):
+        self._test_provision_instances_with_cinder_error(
+            expected_exception=exception.CinderConnectionFailed)
+
+    @mock.patch.object(cinder.API, 'get',
+                       return_value={'id': 1, 'status': 'error',
+                                     'attach_status': 'detached'})
+    def test_provision_instances_with_error_volume(self, mock_get):
+        self._test_provision_instances_with_cinder_error(
+            expected_exception=exception.InvalidVolume)
 
     @mock.patch('nova.objects.RequestSpec.from_components')
     @mock.patch('nova.objects.BuildRequest')
@@ -3167,8 +3112,10 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(self.compute_api,
                            'create_db_entry_for_new_instance')
+        @mock.patch.object(self.compute_api,
+                           '_bdm_validate_set_size_and_instance')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
-        def do_test(mock_cbdm, mock_cdb, mock_sg, mock_cniq):
+        def do_test(mock_cbdm, mock_bdm_v, mock_cdb, mock_sg, mock_cniq):
             mock_cniq.return_value = 1, mock.MagicMock()
             self.compute_api._provision_instances(self.context,
                                                   mock.sentinel.flavor,
@@ -3243,7 +3190,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
-            block_device_mapping = [objects.BlockDeviceMapping(
+            block_device_mapping = objects.BlockDeviceMappingList(
+                objects=[objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                     {
                      'id': 1,
@@ -3252,7 +3200,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      'destination_type': 'volume',
                      'device_name': 'vda',
                      'boot_index': 0,
-                     }))]
+                     }))])
             shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False
@@ -3331,7 +3279,8 @@ class _ComputeAPIUnitTestMixIn(object):
                             'numa_topology': None,
                             'pci_requests': None}
             security_groups = {}
-            block_device_mapping = [objects.BlockDeviceMapping(
+            block_device_mapping = objects.BlockDeviceMappingList(
+                objects=[objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                     {
                      'id': 1,
@@ -3340,7 +3289,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      'destination_type': 'volume',
                      'device_name': 'vda',
                      'boot_index': 0,
-                     }))]
+                     }))])
             shutdown_terminate = True
             instance_group = None
             check_server_group_quota = False
@@ -3358,6 +3307,93 @@ class _ComputeAPIUnitTestMixIn(object):
                     inst_mapping_mock.instance_uuid)
             self.assertIsNone(inst_mapping_mock.cell_mapping)
             self.assertEqual(ctxt.project_id, inst_mapping_mock.project_id)
+        do_test()
+
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_attach',
+                   side_effect=(None, exception.InvalidVolume(reason='error')))
+    def test_provision_instances_cleans_up_when_volume_invalid(self,
+            _mock_cinder_get, _mock_cinder_check_attach):
+        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch.object(objects, 'Instance')
+        @mock.patch.object(self.compute_api.security_group_api,
+                'ensure_default')
+        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
+        @mock.patch.object(objects.RequestSpec, 'from_components')
+        @mock.patch.object(objects, 'BuildRequest')
+        @mock.patch.object(objects.InstanceMapping, 'create')
+        def do_test(_mock_inst_mapping_create, mock_build_req,
+                mock_req_spec_from_components, _mock_create_bdm,
+                _mock_ensure_default, mock_inst, mock_check_num_inst_quota):
+            quota_mock = mock.MagicMock()
+
+            min_count = 1
+            max_count = 2
+            mock_check_num_inst_quota.return_value = (2, quota_mock)
+            req_spec_mock = mock.MagicMock()
+            mock_req_spec_from_components.return_value = req_spec_mock
+            inst_mocks = [mock.MagicMock() for i in range(max_count)]
+            for inst_mock in inst_mocks:
+                inst_mock.project_id = 'fake-project'
+            mock_inst.side_effect = inst_mocks
+            build_req_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_build_req.side_effect = build_req_mocks
+
+            ctxt = context.RequestContext('fake-user', 'fake-project')
+            flavor = self._create_flavor()
+            boot_meta = {
+                'id': 'fake-image-id',
+                'properties': {'mappings': []},
+                'status': 'fake-status',
+                'location': 'far-away'}
+            base_options = {'image_ref': 'fake-ref',
+                            'display_name': 'fake-name',
+                            'project_id': 'fake-project',
+                            'availability_zone': None,
+                            'metadata': {},
+                            'access_ip_v4': None,
+                            'access_ip_v6': None,
+                            'config_drive': None,
+                            'key_name': None,
+                            'reservation_id': None,
+                            'kernel_id': None,
+                            'ramdisk_id': None,
+                            'root_device_name': None,
+                            'user_data': None,
+                            'numa_topology': None,
+                            'pci_requests': None}
+            security_groups = {}
+            block_device_mapping = objects.BlockDeviceMappingList(
+                objects=[objects.BlockDeviceMapping(
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                    {
+                     'id': 1,
+                     'volume_id': 1,
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'device_name': 'vda',
+                     'boot_index': 0,
+                     }))])
+            shutdown_terminate = True
+            instance_group = None
+            check_server_group_quota = False
+            filter_properties = {'scheduler_hints': None,
+                    'instance_type': flavor}
+
+            self.assertRaises(exception.InvalidVolume,
+                              self.compute_api._provision_instances, ctxt,
+                              flavor, min_count, max_count, base_options,
+                              boot_meta, security_groups, block_device_mapping,
+                              shutdown_terminate, instance_group,
+                              check_server_group_quota, filter_properties,
+                              None)
+            # First instance is created and destroyed
+            self.assertTrue(inst_mocks[0].create.called)
+            self.assertTrue(inst_mocks[0].destroy.called)
+            # Second instance is not created nor destroyed
+            self.assertFalse(inst_mocks[1].create.called)
+            self.assertFalse(inst_mocks[1].destroy.called)
+
         do_test()
 
     def _test_rescue(self, vm_state=vm_states.ACTIVE, rescue_password=None,
@@ -3534,6 +3570,58 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'device_type': None,
                                  'volume_id': 'volume_id'}]
         self._test_check_and_transform_bdm(block_device_mapping)
+
+    def test_bdm_validate_set_size_and_instance(self):
+        swap_size = 42
+        ephemeral_size = 24
+        instance = self._create_instance_obj()
+        instance_type = self._create_flavor(swap=swap_size,
+                                            ephemeral_gb=ephemeral_size)
+        block_device_mapping = [
+                {'device_name': '/dev/sda1',
+                 'source_type': 'snapshot', 'destination_type': 'volume',
+                 'snapshot_id': '00000000-aaaa-bbbb-cccc-000000000000',
+                 'delete_on_termination': False,
+                 'boot_index': 0},
+                {'device_name': '/dev/sdb2',
+                 'source_type': 'blank', 'destination_type': 'local',
+                 'guest_format': 'swap', 'delete_on_termination': False},
+                {'device_name': '/dev/sdb3',
+                 'source_type': 'blank', 'destination_type': 'local',
+                 'guest_format': 'ext3', 'delete_on_termination': False}]
+
+        block_device_mapping = (
+                block_device_obj.block_device_make_list_from_dicts(
+                    self.context,
+                    map(fake_block_device.AnonFakeDbBlockDeviceDict,
+                        block_device_mapping)))
+
+        with mock.patch.object(self.compute_api, '_validate_bdm'):
+            bdms = self.compute_api._bdm_validate_set_size_and_instance(
+                self.context, instance, instance_type, block_device_mapping)
+
+        expected = [{'device_name': '/dev/sda1',
+                     'source_type': 'snapshot', 'destination_type': 'volume',
+                     'snapshot_id': '00000000-aaaa-bbbb-cccc-000000000000',
+                     'delete_on_termination': False,
+                     'boot_index': 0},
+                    {'device_name': '/dev/sdb2',
+                     'source_type': 'blank', 'destination_type': 'local',
+                     'guest_format': 'swap', 'delete_on_termination': False},
+                    {'device_name': '/dev/sdb3',
+                     'source_type': 'blank', 'destination_type': 'local',
+                     'delete_on_termination': False}]
+        # Check that the bdm matches what was asked for and that instance_uuid
+        # and volume_size are set properly.
+        for exp, bdm in zip(expected, bdms):
+            self.assertEqual(exp['device_name'], bdm.device_name)
+            self.assertEqual(exp['destination_type'], bdm.destination_type)
+            self.assertEqual(exp['source_type'], bdm.source_type)
+            self.assertEqual(exp['delete_on_termination'],
+                             bdm.delete_on_termination)
+            self.assertEqual(instance.uuid, bdm.instance_uuid)
+        self.assertEqual(swap_size, bdms[1].volume_size)
+        self.assertEqual(ephemeral_size, bdms[2].volume_size)
 
     @mock.patch.object(compute_api.API, '_get_instances_by_filters')
     def test_tenant_to_project_conversion(self, mock_get):
