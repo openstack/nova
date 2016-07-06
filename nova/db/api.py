@@ -964,9 +964,10 @@ def key_pair_get(context, user_id, name):
     return IMPL.key_pair_get(context, user_id, name)
 
 
-def key_pair_get_all_by_user(context, user_id):
+def key_pair_get_all_by_user(context, user_id, limit=None, marker=None):
     """Get all key_pairs by user."""
-    return IMPL.key_pair_get_all_by_user(context, user_id)
+    return IMPL.key_pair_get_all_by_user(
+        context, user_id, limit=limit, marker=marker)
 
 
 def key_pair_count_by_user(context, user_id):

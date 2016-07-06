@@ -1157,7 +1157,7 @@ object_data = {
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
     'LibvirtLiveMigrateData': '1.3-2795e5646ee21e8c7f1c3e64fb6c80a3',
     'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
-    'KeyPairList': '1.2-58b94f96e776bedaf1e192ddb2a24c4e',
+    'KeyPairList': '1.3-94aad3ac5c938eef4b5e83da0212f506',
     'Migration': '1.4-17979b9f2ae7f28d97043a220b2a8350',
     'MigrationContext': '1.1-9fb17b0b521370957a884636499df52d',
     'MigrationList': '1.3-55595bfc1a299a5962614d0821a3567e',

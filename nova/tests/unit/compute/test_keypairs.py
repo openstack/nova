@@ -53,7 +53,7 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
 
     def _keypair_db_call_stubs(self):
 
-        def db_key_pair_get_all_by_user(context, user_id):
+        def db_key_pair_get_all_by_user(context, user_id, limit, marker):
             return [dict(test_keypair.fake_keypair,
                          name=self.existing_key_name,
                          public_key=self.pub_key,
