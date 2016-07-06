@@ -819,10 +819,10 @@ action_unreserve:
   type: string
 addFixedIp:
   description: |
-    The action.
+    The action to add a fixed ip address to a server.
   in: body
   required: true
-  type: string
+  type: object
 addFloatingIp:
   description: |
     The action. Contains required floating IP ``address`` and optional
@@ -3724,10 +3724,10 @@ rebuild:
   type: string
 removeFixedIp:
   description: |
-    The action.
+    The action to remove a fixed ip address from a server.
   in: body
   required: true
-  type: string
+  type: object
 removeFloatingIp:
   description: |
     The action.
