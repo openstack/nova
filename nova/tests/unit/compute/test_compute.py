@@ -2345,17 +2345,21 @@ class ComputeTestCase(BaseTestCase):
                          'compute.instance.unpause.end')
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_suspend(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_suspend(self, mock_context, mock_notify):
         # ensure instance can be suspended and resumed.
+        context = self.context
+        mock_context.return_value = context
         instance = self._create_fake_instance_obj()
-        self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
+        self.compute.build_and_run_instance(context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.task_state = task_states.SUSPENDING
         instance.save()
-        self.compute.suspend_instance(self.context, instance)
+        self.compute.suspend_instance(context, instance)
         instance.task_state = task_states.RESUMING
         instance.save()
-        self.compute.resume_instance(self.context, instance)
+        self.compute.resume_instance(context, instance)
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 6)
 
@@ -2365,7 +2369,11 @@ class ComputeTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[3]
         self.assertEqual(msg.event_type,
                          'compute.instance.suspend.end')
-
+        mock_notify.assert_has_calls([
+        mock.call(context, instance, 'fake-mini',
+                  action='suspend', phase='start'),
+        mock.call(context, instance, 'fake-mini',
+                  action='suspend', phase='end')])
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_suspend_error(self):
