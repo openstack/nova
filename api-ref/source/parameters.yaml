@@ -3263,10 +3263,16 @@ os-getRDPConsole:
     The action.
   in: body
   required: true
-  type: string
+  type: object
 os-getRDPConsole-type:
   description: |
-    The type of RDP console. The correct value is ``rdp-html5``.
+    The type of RDP console. The only valid value is ``rdp-html5``.
+  in: body
+  required: true
+  type: string
+os-getRDPConsole-url:
+  description: |
+    The URL used to connect to the RDP console.
   in: body
   required: true
   type: string
@@ -3275,10 +3281,16 @@ os-getSerialConsole:
     The action.
   in: body
   required: true
-  type: string
+  type: object
 os-getSerialConsole-type:
   description: |
-    The type of serial console. The correct value is ``serial``.
+    The type of serial console. The only valid value is ``serial``.
+  in: body
+  required: true
+  type: string
+os-getSerialConsole-url:
+  description: |
+    The URL used to connect to the Serial console.
   in: body
   required: true
   type: string
@@ -3287,10 +3299,16 @@ os-getSPICEConsole:
     The action.
   in: body
   required: true
-  type: string
+  type: object
 os-getSPICEConsole-type:
   description: |
-    The type of SPICE console. The correct value is ``spice-html5``.
+    The type of SPICE console. The only valid value is ``spice-html5``.
+  in: body
+  required: true
+  type: string
+os-getSPICEConsole-url:
+  description: |
+    The URL used to connect to the SPICE console.
   in: body
   required: true
   type: string
@@ -3299,10 +3317,16 @@ os-getVNCConsole:
     The action.
   in: body
   required: true
-  type: string
+  type: object
 os-getVNCConsole-type:
   description: |
-    The type of VNC console. The correct value is ``novnc``.
+    The type of VNC console. The valid values are ``novnc`` and ``xvpvnc``.
+  in: body
+  required: true
+  type: string
+os-getVNCConsole-url:
+  description: |
+    The URL used to connect to the VNC console.
   in: body
   required: true
   type: string
@@ -3597,6 +3621,34 @@ reboot:
 rebuild:
   description: |
     The action.
+  in: body
+  required: true
+  type: string
+remote_console:
+  description: |
+    The remote console object.
+  in: body
+  required: true
+  type: object
+remote_console_protocol:
+  description: |
+    The protocol of remote console. The valid values are ``vnc``, ``spice``,
+    ``rdp``, ``serial`` and ``mks``. The protocol ``mks`` is added since
+    Microversion ``2.8``.
+  in: body
+  required: true
+  type: string
+remote_console_type:
+  description: |
+    The type of remote console. The valid values are ``novnc``, ``xvpvnc``,
+    ``rdp-html5``, ``spice-html5``, ``serial``, and ``webmks``. The type
+    ``webmks`` is added since Microversion ``2.8``.
+  in: body
+  required: true
+  type: string
+remote_console_url:
+  description: |
+    The URL is used to connect the console.
   in: body
   required: true
   type: string
