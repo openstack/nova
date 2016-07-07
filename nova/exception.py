@@ -1020,6 +1020,12 @@ class QuotaUsageNotFound(QuotaNotFound):
     msg_fmt = _("Quota usage for project %(project_id)s could not be found.")
 
 
+class QuotaUsageRefreshNotAllowed(Invalid):
+    msg_fmt = _("Quota usage refresh of resource %(resource)s for project "
+                "%(project_id)s, user %(user_id)s, is not allowed. "
+                "The allowed resources are %(syncable)s.")
+
+
 class ReservationNotFound(QuotaNotFound):
     msg_fmt = _("Quota reservation %(uuid)s could not be found.")
 
