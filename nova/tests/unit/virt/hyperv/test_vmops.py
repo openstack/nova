@@ -85,18 +85,6 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_import_object.assert_called_once_with(
             vmops.NOVA_VIF_DRIVER)
 
-    @mock.patch('nova.network.is_neutron')
-    def test_load_vif_driver_unknown(self, is_neutron):
-        # TODO(sdague): delete once network_api_class is removed from
-        # config.
-        is_neutron.return_value = None
-        self.assertRaises(TypeError, self._vmops._load_vif_driver_class)
-
-    @mock.patch('nova.virt.hyperv.vmops.importutils.import_object')
-    def test_load_vif_driver_class_error(self, mock_import_object):
-        mock_import_object.side_effect = KeyError
-        self.assertRaises(TypeError, self._vmops._load_vif_driver_class)
-
     def test_list_instances(self):
         mock_instance = mock.MagicMock()
         self._vmops._vmutils.list_instances.return_value = [mock_instance]
