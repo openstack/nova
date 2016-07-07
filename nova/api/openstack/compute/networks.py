@@ -158,7 +158,8 @@ class NetworkController(wsgi.Controller):
                 exception.InvalidAddress,
                 exception.NetworkNotCreated) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message)
-        except exception.CidrConflict as ex:
+        except (exception.CidrConflict,
+                exception.DuplicateVlan) as ex:
             raise exc.HTTPConflict(explanation=ex.format_message())
         return {"network": network_dict(context, network)}
 
