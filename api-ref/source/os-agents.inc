@@ -1,5 +1,4 @@
-.. -*- rst -*-
-.. needs:body_verification
+.. -*- rst -*
 
 ==========================
  Guest agents (os-agents)
@@ -7,8 +6,8 @@
 
 Creates, lists, updates, and deletes guest agent builds. Use guest
 agents to access files on the disk, configure networking, or run other
-applications or scripts in the guest while the agent runs. This
-hypervisor-specific extension is not currently enabled for KVM. Use of
+applications or scripts in the guest while the agent is running. This
+hypervisor-specific extension is currently only for the Xen driver. Use of
 guest agents is possible only if the underlying service provider uses
 the Xen driver.
 
