@@ -877,6 +877,7 @@ class Rbd(Image):
 
         for location in locations:
             if self.driver.is_cloneable(location, image_meta):
+                LOG.debug('Selected location: %(loc)s', {'loc': location})
                 return self.driver.clone(location, self.rbd_name)
 
         reason = _('No image locations are accessible')
