@@ -162,6 +162,9 @@ Nova Images
 Nova VM
 ~~~~~~~~~~~
 
+**DEPRECATED** Use the nova list command from python-novaclient instead.
+The vm subcommand will be removed in the 15.0.0 Ocata release.
+
 ``nova-manage vm list [host]``
     Show a list of all instances. Accepts optional hostname (to show only instances on specific host).
 

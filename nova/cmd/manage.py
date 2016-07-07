@@ -662,9 +662,13 @@ class NetworkCommands(object):
 class VmCommands(object):
     """Class for managing VM instances."""
 
+    description = ('DEPRECATED: Use the nova list command from '
+                   'python-novaclient instead. The vm subcommand will be '
+                   'removed in the 15.0.0 Ocata release.')
+
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
-        """Show a list of all instances."""
+        """DEPRECATED: Show a list of all instances."""
 
         print(("%-10s %-15s %-10s %-10s %-26s %-9s %-9s %-9s"
                "  %-10s %-10s %-10s %-5s" % (_('instance'),

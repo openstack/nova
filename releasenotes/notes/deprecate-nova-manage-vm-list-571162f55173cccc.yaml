@@ -1,0 +1,5 @@
+---
+deprecations:
+  - The ``nova-manage vm list`` command is deprecated and will be removed in
+    the 15.0.0 Ocata release. Use the ``nova list`` command from
+    python-novaclient instead.
