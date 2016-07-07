@@ -1056,6 +1056,40 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, instance, instance_type,
                           mappings_)
 
+    def test_validate_bdm_with_more_than_one_default(self):
+        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        all_mappings = [fake_block_device.FakeDbBlockDeviceDict({
+                         'id': 1,
+                         'no_device': None,
+                         'source_type': 'volume',
+                         'destination_type': 'volume',
+                         'snapshot_id': None,
+                         'volume_size': 1,
+                         'device_name': 'vda',
+                         'boot_index': 0,
+                         'delete_on_termination': False}, anon=True),
+                        fake_block_device.FakeDbBlockDeviceDict({
+                         'device_name': '/dev/vdb',
+                         'source_type': 'blank',
+                         'destination_type': 'local',
+                         'device_type': 'disk',
+                         'volume_size': None,
+                         'boot_index': -1}, anon=True),
+                        fake_block_device.FakeDbBlockDeviceDict({
+                         'device_name': '/dev/vdc',
+                         'source_type': 'blank',
+                         'destination_type': 'local',
+                         'device_type': 'disk',
+                         'volume_size': None,
+                         'boot_index': -1}, anon=True)]
+        all_mappings = block_device_obj.block_device_make_list_from_dicts(
+                self.context, all_mappings)
+
+        self.assertRaises(exception.InvalidBDMEphemeralSize,
+                          self.compute_api._validate_bdm,
+                          self.context, self.instance,
+                          instance_type, all_mappings)
+
     def test_validate_bdm_media_service_exceptions(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({

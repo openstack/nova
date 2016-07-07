@@ -1310,7 +1310,7 @@ class API(base.Base):
                     "(source: 'blank', dest: 'volume') need to have non-zero "
                     "size"))
 
-        ephemeral_size = sum(bdm.volume_size or 0
+        ephemeral_size = sum(bdm.volume_size or instance_type['ephemeral_gb']
                 for bdm in block_device_mappings
                 if block_device.new_format_is_ephemeral(bdm))
         if ephemeral_size > instance_type['ephemeral_gb']:

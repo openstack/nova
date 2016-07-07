@@ -219,7 +219,9 @@ class InvalidBDMLocalsLimit(InvalidBDM):
 
 class InvalidBDMEphemeralSize(InvalidBDM):
     msg_fmt = _("Ephemeral disks requested are larger than "
-                "the instance type allows.")
+                "the instance type allows. If no size is given "
+                "in one block device mapping, flavor ephemeral "
+                "size will be used.")
 
 
 class InvalidBDMSwapSize(InvalidBDM):
