@@ -484,6 +484,14 @@ keypair_type_in:
   description: |
     The type of the keypair. Allowed values are ``ssh`` or ``x509``
   min_version: 2.2
+keypair_user:
+  in: query
+  required: false
+  type: string
+  description: |
+    This allows adminstrative users to list key-pairs of specified
+    user ID.
+  min_version: 2.10
 limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
