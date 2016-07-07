@@ -4138,6 +4138,9 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.SHELVE,
+                phase=fields.NotificationPhase.START)
 
         def update_task_state(task_state, expected_state=task_states.SHELVING):
             shelving_state_map = {
@@ -4167,6 +4170,9 @@ class ComputeManager(manager.Manager):
                 task_states.SHELVING_IMAGE_UPLOADING])
 
         self._notify_about_instance_usage(context, instance, 'shelve.end')
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.SHELVE,
+                phase=fields.NotificationPhase.END)
 
         if CONF.shelved_offload_time == 0:
             self.shelve_offload_instance(context, instance,
