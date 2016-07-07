@@ -88,7 +88,8 @@ quota_opts = [
                     'passed since the last reservation'),
     cfg.StrOpt('quota_driver',
                default='nova.quota.DbQuotaDriver',
-               help='Default driver to use for quota checks'),
+               deprecated_for_removal=True,
+               help='DEPRECATED: Default driver to use for quota checks'),
     ]
 
 
