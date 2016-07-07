@@ -79,8 +79,7 @@ class TestInstanceNotificationSample(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
-
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-delete-start',
             replacements={
@@ -88,11 +87,23 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
-            'instance-delete-end',
+            'instance-shutdown-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self._verify_notification(
+            'instance-shutdown-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'instance-delete-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
     def _verify_instance_update_steps(self, steps, notifications,
                                       initial=None):
