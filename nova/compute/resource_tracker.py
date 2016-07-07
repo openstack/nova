@@ -90,7 +90,7 @@ class ResourceTracker(object):
         self.disk_allocation_ratio = CONF.disk_allocation_ratio
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
-    def instance_claim(self, context, instance_ref, limits=None):
+    def instance_claim(self, context, instance, limits=None):
         """Indicate that some resources are needed for an upcoming compute
         instance build operation.
 
@@ -98,8 +98,8 @@ class ResourceTracker(object):
         an instance build operation that will consume additional resources.
 
         :param context: security context
-        :param instance_ref: instance to reserve resources for.
-        :type instance_ref: nova.objects.instance.Instance object
+        :param instance: instance to reserve resources for.
+        :type instance: nova.objects.instance.Instance object
         :param limits: Dict of oversubscription limits for memory, disk,
                        and CPUs.
         :returns: A Claim ticket representing the reserved resources.  It can
@@ -109,41 +109,41 @@ class ResourceTracker(object):
         if self.disabled:
             # compute_driver doesn't support resource tracking, just
             # set the 'host' and node fields and continue the build:
-            self._set_instance_host_and_node(instance_ref)
+            self._set_instance_host_and_node(instance)
             return claims.NopClaim()
 
         # sanity checks:
-        if instance_ref.host:
+        if instance.host:
             LOG.warning(_LW("Host field should not be set on the instance "
                             "until resources have been claimed."),
-                        instance=instance_ref)
+                        instance=instance)
 
-        if instance_ref.node:
+        if instance.node:
             LOG.warning(_LW("Node field should not be set on the instance "
                             "until resources have been claimed."),
-                        instance=instance_ref)
+                        instance=instance)
 
         # get the overhead required to build this instance:
-        overhead = self.driver.estimate_instance_overhead(instance_ref)
+        overhead = self.driver.estimate_instance_overhead(instance)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': instance_ref.memory_mb,
+                  "MB", {'flavor': instance.memory_mb,
                           'overhead': overhead['memory_mb']})
         LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
-                  "GB", {'flavor': instance_ref.root_gb,
+                  "GB", {'flavor': instance.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
 
         pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
-            context, instance_ref.uuid)
-        claim = claims.Claim(context, instance_ref, self, self.compute_node,
+            context, instance.uuid)
+        claim = claims.Claim(context, instance, self, self.compute_node,
                              pci_requests, overhead=overhead, limits=limits)
 
-        # self._set_instance_host_and_node() will save instance_ref to the DB
-        # so set instance_ref['numa_topology'] first.  We need to make sure
+        # self._set_instance_host_and_node() will save instance to the DB
+        # so set instance.numa_topology first.  We need to make sure
         # that numa_topology is saved while under COMPUTE_RESOURCE_SEMAPHORE
         # so that the resource audit knows about any cpus we've pinned.
         instance_numa_topology = claim.claimed_numa_topology
-        instance_ref.numa_topology = instance_numa_topology
-        self._set_instance_host_and_node(instance_ref)
+        instance.numa_topology = instance_numa_topology
+        self._set_instance_host_and_node(instance)
 
         if self.pci_tracker:
             # NOTE(jaypipes): ComputeNode.pci_device_pools is set below
@@ -152,7 +152,7 @@ class ResourceTracker(object):
                                             instance_numa_topology)
 
         # Mark resources in-use and update stats
-        self._update_usage_from_instance(context, instance_ref)
+        self._update_usage_from_instance(context, instance)
 
         elevated = context.elevated()
         # persist changes to the compute node:
