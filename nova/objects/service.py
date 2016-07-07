@@ -50,31 +50,36 @@ SERVICE_VERSION = 14
 # which will not be caught by the test. An example of this would be
 # triggering (or disabling) an online data migration once all services
 # in the cluster are at the same level.
+#
+# If a version bump is required for something mechanical, just document
+# that generic thing here (like compute RPC version bumps). No need to
+# replicate the details from compute/rpcapi.py here. However, for more
+# complex service interactions, extra detail should be provided
 SERVICE_VERSION_HISTORY = (
     # Version 0: Pre-history
     {'compute_rpc': '4.0'},
 
     # Version 1: Introduction of SERVICE_VERSION
     {'compute_rpc': '4.4'},
-    # Version 2: Changes to rebuild_instance signature in the compute_rpc
+    # Version 2: Compute RPC version 4.5
     {'compute_rpc': '4.5'},
-    # Version 3: Add trigger_crash_dump method to compute rpc api
+    # Version 3: Compute RPC version 4.6
     {'compute_rpc': '4.6'},
     # Version 4: Add PciDevice.parent_addr (data migration needed)
     {'compute_rpc': '4.6'},
-    # Version 5: Add attachment_id kwarg to detach_volume()
+    # Version 5: Compute RPC version 4.7
     {'compute_rpc': '4.7'},
     # Version 6: Compute RPC version 4.8
     {'compute_rpc': '4.8'},
-    # Version 7: Add live_migration_force_complete in the compute_rpc
+    # Version 7: Compute RPC version 4.9
     {'compute_rpc': '4.9'},
-    # Version 8: Add live_migration_abort in the compute_rpc
+    # Version 8: Compute RPC version 4.10
     {'compute_rpc': '4.10'},
-    # Version 9: Allow block_migration and disk_over_commit be None
+    # Version 9: Compute RPC version 4.11
     {'compute_rpc': '4.11'},
     # Version 10: Compute node conversion to Inventories
     {'compute_rpc': '4.11'},
-    # Version 11: Removed migration_id from live_migration_force_complete
+    # Version 11: Compute RPC version 4.12
     {'compute_rpc': '4.12'},
     # Version 12: The network APIs and compute manager support a NetworkRequest
     # object where the network_id value is 'auto' or 'none'.
