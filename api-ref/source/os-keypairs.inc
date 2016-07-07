@@ -146,4 +146,4 @@ Request
 Response
 --------
 
-There is no body returned in a successful response.
+There is no body content for the response of a successful DELETE query

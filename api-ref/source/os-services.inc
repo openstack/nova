@@ -238,4 +238,4 @@ Request
 Response
 --------
 
-No response returned in body upon successful DELETE.
+There is no body content for the response of a successful DELETE query
