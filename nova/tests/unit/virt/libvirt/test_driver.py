@@ -18,6 +18,7 @@ from collections import OrderedDict
 import contextlib
 import copy
 import datetime
+import ddt
 import errno
 import functools
 import glob
@@ -671,6 +672,7 @@ def _create_test_instance():
     }
 
 
+@ddt.ddt
 class LibvirtConnTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
@@ -10501,128 +10503,78 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ]
         self.assertEqual(wantFiles, gotFiles)
 
-    def _create_image_helper(self, callback, exists=None, suffix='',
-                             test_create_configdrive=False):
-
-        def fake_none(*args, **kwargs):
-            return
-
-        def fake_get_info(instance):
-            return hardware.InstanceInfo(state=power_state.RUNNING)
-
-        instance_ref = self.test_instance
-        instance_ref['image_ref'] = 1
-        # NOTE(mikal): use this callback to tweak the instance to match
-        # what you're trying to test
-        callback(instance_ref)
-        instance = objects.Instance(**instance_ref)
-        # Turn on some swap to exercise that codepath in _create_image
-        instance.flavor.swap = 500
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, '_get_guest_xml', fake_none)
-        self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
-        self.stubs.Set(instance_metadata, 'InstanceMetadata', fake_none)
-        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
-                       'make_drive', fake_none)
-
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance,
-                                            image_meta)
-
-        gotFiles = []
-        imported_files = []
-        self.useFixture(fake_imagebackend.ImageBackendFixture(
-            got_files=gotFiles, imported_files=imported_files, exists=exists))
-
-        if test_create_configdrive:
-            drvr._create_configdrive(self.context, instance)
-        else:
-            drvr._create_image(self.context, instance, disk_info['mapping'],
-                               suffix=suffix)
-        drvr._get_guest_xml(self.context, instance, None,
-                            disk_info, image_meta)
-
-        return gotFiles, imported_files
-
-    def test_create_image_with_flavor_swap(self):
-        def enable_swap(instance_ref):
-            # Turn on some swap to exercise that codepath in _create_image
-            instance_ref['system_metadata']['instance_type_swap'] = 500
-
-        gotFiles, _ = self._create_image_helper(enable_swap)
-        wantFiles = [
-            {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
-             'size': 10 * units.Gi},
-            {'filename': self._EPHEMERAL_20_DEFAULT,
-             'size': 20 * units.Gi},
-            {'filename': 'swap_500',
-             'size': 500 * units.Mi},
-            ]
-        self.assertEqual(gotFiles, wantFiles)
-
     @mock.patch(
-        'nova.virt.libvirt.driver.LibvirtDriver._build_device_metadata',
-        return_value=None)
-    def test_create_configdrive(self, mock_save):
-        def enable_configdrive(instance_ref):
-            instance_ref['config_drive'] = 'true'
+        'nova.virt.libvirt.driver.LibvirtDriver._build_device_metadata')
+    @mock.patch('nova.api.metadata.base.InstanceMetadata')
+    @mock.patch('nova.virt.configdrive.ConfigDriveBuilder.make_drive')
+    def test_create_configdrive(self, mock_make_drive,
+                                mock_instance_metadata,
+                                mock_build_device_metadata):
+        instance = objects.Instance(**self.test_instance)
+        instance.config_drive = 'True'
 
-        # Ensure that we create a config drive and then import it into the
-        # image backend store
-        _, imported_files = self._create_image_helper(
-            enable_configdrive, exists=lambda name: False,
-            test_create_configdrive=True)
-        self.assertTrue(imported_files[0][0].endswith('/disk.config'))
-        self.assertEqual('disk.config', imported_files[0][1])
+        backend = self.useFixture(
+            fake_imagebackend.ImageBackendFixture(exists=lambda path: False))
 
-    def test_create_image_with_swap(self):
+        mock_build_device_metadata.return_value = None
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._create_configdrive(self.context, instance,
+                                 admin_pass=mock.sentinel.admin_pass,
+                                 files=mock.sentinel.files,
+                                 network_info=mock.sentinel.network_info)
+
+        expected_config_drive_path = os.path.join(
+            CONF.instances_path, instance.uuid, 'disk.config')
+        mock_make_drive.assert_called_once_with(expected_config_drive_path)
+        mock_instance_metadata.assert_called_once_with(instance,
+            request_context=self.context,
+            network_info=mock.sentinel.network_info,
+            content=mock.sentinel.files,
+            extra_md={'admin_pass': mock.sentinel.admin_pass})
+
+        backend.disks['disk.config'].import_file.assert_called_once_with(
+            instance, mock.ANY, 'disk.config')
+
+    @ddt.unpack
+    @ddt.data({'expected': 200, 'flavor_size': 200},
+              {'expected': 100, 'flavor_size': 200, 'bdi_size': 100},
+              {'expected': 200, 'flavor_size': 200, 'bdi_size': 100,
+               'legacy': True})
+    def test_create_image_with_swap(self, expected,
+                                    flavor_size=None, bdi_size=None,
+                                    legacy=False):
+        # Test the precedence of swap disk size specified in both the bdm and
+        # the flavor.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance_ref = self.test_instance
         instance_ref['image_ref'] = ''
         instance = objects.Instance(**instance_ref)
-        # Also check that bdm specified swap takes precedence over flavor
-        # specified swap
-        instance.flavor.swap = 200
+
+        if flavor_size is not None:
+            instance.flavor.swap = flavor_size
+
+        bdi = {'block_device_mapping': [{'boot_index': 0}]}
+        if bdi_size is not None:
+            bdi['swap'] = {'swap_size': bdi_size, 'device_name': '/dev/vdb'}
+
+        create_image_kwargs = {}
+        if legacy:
+            create_image_kwargs['ignore_bdi_for_swap'] = True
+
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        bdi = {'swap': {'swap_size': 100,
-                        'device_name': '/dev/vdb'},
-               'block_device_mapping': [{'boot_index': 0}]}
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance, image_meta,
                                             block_device_info=bdi)
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
 
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
         drvr._create_image(self.context, instance, disk_info['mapping'],
-                           block_device_info=bdi)
+                           block_device_info=bdi, **create_image_kwargs)
 
         backend.disks['disk.swap'].cache.assert_called_once_with(
             fetch_func=drvr._create_swap, context=self.context,
-            filename='swap_100', size=100 * units.Mi, swap_mb=100)
-
-    def test_create_image_with_legacy_swap_resizing(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance_ref = self.test_instance
-        instance_ref['image_ref'] = ''
-        instance = objects.Instance(**instance_ref)
-        instance.flavor.swap = 200
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        bdi = {'swap': {'swap_size': 100,
-                        'device_name': '/dev/vdb'},
-               'block_device_mapping': [{'boot_index': 0}]}
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance, image_meta,
-                                            block_device_info=bdi)
-        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
-
-        drvr._create_image(self.context, instance, disk_info['mapping'],
-                           block_device_info=bdi, ignore_bdi_for_swap=True)
-
-        backend.disks['disk.swap'].cache.assert_called_once_with(
-            fetch_func=drvr._create_swap, context=self.context,
-            filename='swap_200', size=200 * units.Mi, swap_mb=200)
+            filename='swap_%i' % expected, size=expected * units.Mi,
+            swap_mb=expected)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
