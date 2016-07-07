@@ -43,7 +43,9 @@ def _fake_resources():
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
-    def _shelve_instance(self, shelved_offload_time, clean_shutdown=True):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def _shelve_instance(self, shelved_offload_time,
+                         mock_notify, clean_shutdown=True):
         CONF.set_override('shelved_offload_time', shelved_offload_time)
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
@@ -129,6 +131,11 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             mock_save.side_effect = check_save
             self.compute.shelve_instance(self.context, instance,
                     image_id=image_id, clean_shutdown=clean_shutdown)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='shelve', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='shelve', phase='end')])
 
     def test_shelve(self):
         self._shelve_instance(-1)
