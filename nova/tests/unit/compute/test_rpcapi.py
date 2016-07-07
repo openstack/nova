@@ -71,13 +71,14 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                           compute_rpcapi.ComputeAPI)
 
     @mock.patch('nova.objects.Service.get_minimum_version')
-    def test_auto_pin_kilo(self, mock_get_min):
+    def test_auto_pin_with_service_version_zero(self, mock_get_min):
         mock_get_min.return_value = 0
         self.flags(compute='auto', group='upgrade_levels')
         compute_rpcapi.LAST_VERSION = None
         rpcapi = compute_rpcapi.ComputeAPI()
-        self.assertEqual('4.0', rpcapi.client.version_cap)
+        self.assertEqual('4.11', rpcapi.client.version_cap)
         mock_get_min.assert_called_once_with(mock.ANY, 'nova-compute')
+        self.assertIsNone(compute_rpcapi.LAST_VERSION)
 
     @mock.patch('nova.objects.Service.get_minimum_version')
     def test_auto_pin_caches(self, mock_get_min):
