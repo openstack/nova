@@ -199,14 +199,6 @@ class SchedulerInitTestCase(test.NoDBTestCase):
         manager = self.driver_cls().host_manager
         self.assertIsInstance(manager, ironic_host_manager.IronicHostManager)
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_init_nonexist_hostmanager(self,
-                                       mock_init_agg,
-                                       mock_init_inst):
-        self.flags(scheduler_host_manager='nonexist_host_manager')
-        self.assertRaises(RuntimeError, self.driver_cls)
-
 
 class SchedulerTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver class."""
