@@ -14,7 +14,6 @@
 
 from oslo_log import log as logging
 from oslo_utils import uuidutils
-
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
 

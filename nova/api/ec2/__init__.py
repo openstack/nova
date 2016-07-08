@@ -14,10 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 import webob.dec
 import webob.exc
-
-from oslo_log import log as logging
 
 from nova.i18n import _LW
 from nova import wsgi

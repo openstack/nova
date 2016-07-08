@@ -12,8 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_versionedobjects import fields
 import re
+
+from oslo_versionedobjects import fields
 import six
 
 # TODO(berrange) Temporary import for Arch class

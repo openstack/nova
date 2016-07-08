@@ -14,6 +14,7 @@
 #    under the License.
 
 from datetime import datetime
+
 from six.moves import urllib
 
 from nova import context

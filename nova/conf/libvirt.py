@@ -22,9 +22,9 @@
 
 import itertools
 
-from nova.conf import paths
-
 from oslo_config import cfg
+
+from nova.conf import paths
 
 # Downtime period in milliseconds
 LIVE_MIGRATION_DOWNTIME_MIN = 100

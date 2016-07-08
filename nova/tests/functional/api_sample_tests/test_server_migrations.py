@@ -14,6 +14,7 @@
 #    under the License.
 
 import datetime
+
 import mock
 
 from nova.conductor import manager as conductor_manager
