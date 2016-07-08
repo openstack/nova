@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ========================================
@@ -57,7 +56,17 @@ Response
 
 **Example List Tenant Usage For All Tenants: JSON response**
 
+If the ``detailed`` query parameter is not specified or
+is set to other than 1 (e.g. ``detailed=0``), the response is as follows:
+
 .. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-get.json
+   :language: javascript
+
+If the ``detailed`` query parameter is set to one (``detailed=1``),
+the response includes ``server_usages`` information for each tenant.
+The response is as follows:
+
+.. literalinclude:: ../../doc/api_samples/os-simple-tenant-usage/simple-tenant-usage-get-detail.json
    :language: javascript
 
 Show Usage Details For Tenant
