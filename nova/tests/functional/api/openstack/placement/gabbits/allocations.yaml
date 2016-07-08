@@ -1,0 +1,202 @@
+# Tests of allocations API
+#
+# TODO(cdent): Where in the process is the consumer id being
+# validated?
+
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+
+tests:
+
+- name: get allocations no consumer is 404
+  GET: /allocations
+  status: 404
+
+- name: get allocations is 405
+  GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  status: 405
+  response_headers:
+      allow: /(PUT, DELETE|DELETE, PUT)/
+
+- name: put an allocation no resource provider
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resources:
+              DISK_GB: 10
+  status: 400
+
+- name: create the resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: put an allocation no data
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  status: 400
+
+- name: put an allocation violate schema
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                cow: 10
+  status: 400
+
+- name: put an allocation no inventory
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 409
+
+- name: post some inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: DISK_GB
+      total: 2048
+      min_unit: 10
+      max_unit: 1024
+  status: 201
+
+- name: put an allocation
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+- name: put an allocation different consumer
+  PUT: /allocations/39715579-2167-4c63-8247-301311cc6703
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+- name: check usages after another 10
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      $.usages.DISK_GB: 20
+
+# NOTE(cdent): Contravening the spec, we decided that it is
+# important to be able to update an existing allocation, so this
+# should work but it is important to check the usage.
+- name: put allocation again
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 12
+  status: 204
+
+- name: check usages after 12
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      $.usages.DISK_GB: 22
+
+- name: put allocation bad resource class
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                COWS: 12
+  status: 400
+  response_strings:
+      - Field value COWS is invalid
+
+- name: delete allocation
+  DELETE: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  status: 204
+
+- name: delete allocation again
+  DELETE: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  status: 404
+
+- name: delete allocation of unknown consumer id
+  DELETE: /allocations/da78521f-bf7e-4e6e-9901-3f79bd94d55d
+  status: 404
+
+- name: redo an allocation
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+  status: 204
+
+- name: add other inventory
+  POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_class: VCPU
+      total: 32
+      min_unit: 1
+      max_unit: 8
+  status: 201
+
+- name: multiple allocations 
+  PUT: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 20
+                VCPU: 4
+  status: 204
+
+- name: check usages
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_json_paths:
+      $.resource_provider_generation: 7
+      $.usages.DISK_GB: 40
