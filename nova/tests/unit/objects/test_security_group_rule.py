@@ -13,7 +13,6 @@
 #    under the License.
 
 import mock
-
 from oslo_versionedobjects import exception as ovo_exc
 
 from nova import db

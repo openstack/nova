@@ -16,15 +16,14 @@
 
 import collections
 import datetime
-from six.moves import StringIO
 
 import cryptography
 import glanceclient.exc
 from glanceclient.v1 import images
 import glanceclient.v2.schemas as schemas
 import mock
-
 import six
+from six.moves import StringIO
 import testtools
 
 import nova.conf

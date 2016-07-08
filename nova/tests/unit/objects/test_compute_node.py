@@ -13,6 +13,7 @@
 #    under the License.
 
 import copy
+
 import mock
 import netaddr
 from oslo_serialization import jsonutils

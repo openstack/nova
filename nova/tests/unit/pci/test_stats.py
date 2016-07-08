@@ -14,9 +14,8 @@
 #    under the License.
 
 import mock
-import six
-
 from oslo_config import cfg
+import six
 
 from nova import exception
 from nova import objects
