@@ -40,6 +40,19 @@ class DiskFilter(filters.BaseHostFilter):
         free_disk_mb = host_state.free_disk_mb
         total_usable_disk_mb = host_state.total_usable_disk_gb * 1024
 
+        # Do not allow an instance to overcommit against itself, only against
+        # other instances.  In other words, if there isn't room for even just
+        # this one instance in total_usable_disk space, consider the host full.
+        if total_usable_disk_mb < requested_disk:
+            LOG.debug("%(host_state)s does not have %(requested_disk)s "
+                      "MB usable disk space before overcommit, it only "
+                      "has %(physical_disk_size)s MB.",
+                      {'host_state': host_state,
+                       'requested_disk': requested_disk,
+                       'physical_disk_size':
+                           total_usable_disk_mb})
+            return False
+
         disk_allocation_ratio = self._get_disk_allocation_ratio(
             host_state, spec_obj)
 
