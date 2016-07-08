@@ -213,10 +213,10 @@ class EvacuateTestV21(test.NoDBTestCase):
         self.assertEqual(admin_pass, res['adminPass'])
 
     def test_evacuate_disable_password_return(self):
-        self._test_evacuate_enable_instance_password_conf(False)
+        self._test_evacuate_enable_instance_password_conf(enable_pass=False)
 
     def test_evacuate_enable_password_return(self):
-        self._test_evacuate_enable_instance_password_conf(True)
+        self._test_evacuate_enable_instance_password_conf(enable_pass=True)
 
     @mock.patch('nova.objects.Instance.save')
     def _test_evacuate_enable_instance_password_conf(self, mock_save,
@@ -228,7 +228,7 @@ class EvacuateTestV21(test.NoDBTestCase):
         if enable_pass:
             self.assertIn('adminPass', res)
         else:
-            self.assertIsNone(res.get('adminPass'))
+            self.assertIsNone(res)
 
 
 class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
