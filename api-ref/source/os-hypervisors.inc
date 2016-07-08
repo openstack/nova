@@ -98,7 +98,7 @@ Response
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
 
-**Example List Hypervisors Details: JSON request**
+**Example List Hypervisors Details: JSON response**
 
 .. note::
 
@@ -274,7 +274,7 @@ Response
   - state: hypervisor_state
   - status: hypervisor_status
 
-**Example Search Hypervisor: JSON request**
+**Example Search Hypervisor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-search-resp.json
    :language: javascript
@@ -314,7 +314,7 @@ Response
   - servers.uuid: server_uuid
   - servers.name: server_name
 
-**Example List Hypervisor Servers: JSON request**
+**Example List Hypervisor Servers: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-with-servers-resp.json
    :language: javascript
