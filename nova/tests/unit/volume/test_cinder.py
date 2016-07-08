@@ -45,7 +45,8 @@ class FakeCinderClient(object):
         def __getattr__(self, item):
             return None
 
-    def __init__(self):
+    def __init__(self, version='2'):
+        self.version = version
         self.volumes = self.Volumes()
         self.volume_snapshots = self.volumes
 
@@ -291,6 +292,18 @@ class CinderApiTestCase(test.NoDBTestCase):
                                  'detach',
                                  use_mock_anything=True)
         self.cinderclient.volumes.detach('id1', 'fakeid')
+        self.mox.ReplayAll()
+
+        self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
+
+    def test_detach_v1(self):
+        self.cinderclient = FakeCinderClient('1')
+
+        cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
+        self.mox.StubOutWithMock(self.cinderclient.volumes,
+                                 'detach',
+                                 use_mock_anything=True)
+        self.cinderclient.volumes.detach('id1')
         self.mox.ReplayAll()
 
         self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
