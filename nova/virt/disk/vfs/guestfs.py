@@ -12,8 +12,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from eventlet import tpool
 import os
+
+from eventlet import tpool
 from oslo_log import log as logging
 from oslo_utils import importutils
 import six

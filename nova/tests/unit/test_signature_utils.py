@@ -15,7 +15,6 @@
 
 import base64
 import datetime
-import mock
 
 from castellan.common.exception import KeyManagerError
 import cryptography.exceptions as crypto_exceptions
@@ -24,6 +23,7 @@ from cryptography.hazmat.primitives.asymmetric import dsa
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
+import mock
 from oslo_utils import timeutils
 
 from nova import exception

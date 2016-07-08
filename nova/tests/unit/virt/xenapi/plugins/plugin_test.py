@@ -14,9 +14,10 @@
 #    under the License.
 
 import imp
-import mock
 import os
 import sys
+
+import mock
 
 from nova import test
 from nova.virt.xenapi.client import session
