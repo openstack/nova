@@ -15,9 +15,8 @@
 #    under the License.
 
 import mock
-from webob import exc
-
 from oslo_policy import policy as oslo_policy
+from webob import exc
 
 from nova.api.openstack.compute import certificates \
         as certificates_v21

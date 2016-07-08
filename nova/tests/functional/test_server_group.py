@@ -13,9 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 import time
 
+import mock
 from oslo_config import cfg
 
 from nova import context

@@ -14,10 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import testscenarios
 import webob
 import webob.dec
-
-import testscenarios
 
 from nova.api import openstack as openstack_api
 from nova.api.openstack import auth

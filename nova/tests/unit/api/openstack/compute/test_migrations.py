@@ -13,8 +13,8 @@
 #    under the License.
 
 import datetime
-import mock
 
+import mock
 from oslotest import moxstubout
 
 from nova.api.openstack.compute import migrations as migrations_v21
