@@ -1,5 +1,4 @@
 # needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
 
 
@@ -30,7 +29,7 @@ host_subset_size_opt = cfg.IntOpt("scheduler_host_subset_size",
         default=1,
         help="""
 New instances will be scheduled on a host chosen randomly from a subset of the
-N best hosts, where N is the value set by this option.  Valid values are 1 or
+N best hosts, where N is the value set by this option. Valid values are 1 or
 greater. Any value less than one will be treated as 1.
 
 Setting this to a value greater than 1 will reduce the chance that multiple
@@ -43,9 +42,9 @@ given request.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    None
+* Any integer, although any value less than 1 will be treated as 1
 """)
 
 bm_default_filter_opt = cfg.ListOpt("baremetal_scheduler_default_filters",
@@ -68,10 +67,15 @@ restrictive filters first to make the filtering process more efficient.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    If the 'scheduler_use_baremetal_filters' option is False, this option has
-    no effect.
+* Any list of zero or more strings, with each string being the name of a filter
+  to be used for selecting a baremetal host.
+
+Related options:
+
+* If the 'scheduler_use_baremetal_filters' option is False, this option has
+  no effect.
 """)
 
 use_bm_filters_opt = cfg.BoolOpt("scheduler_use_baremetal_filters",
@@ -84,11 +88,11 @@ scheduling baremetal nodes, leave this at the default setting of False.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Related options:
 
-    If this option is set to True, then the filters specified in the
-    'baremetal_scheduler_default_filters' are used instead of the filters
-    specified in 'scheduler_default_filters'.
+* If this option is set to True, then the filters specified in the
+  'baremetal_scheduler_default_filters' are used instead of the filters
+  specified in 'scheduler_default_filters'.
 """)
 
 host_mgr_avail_filt_opt = cfg.MultiStrOpt("scheduler_available_filters",
@@ -106,9 +110,14 @@ path to a filter.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    scheduler_default_filters
+* Any list of zero or more strings, with each string being the name of a filter
+  that may be used for selecting a host.
+
+Related options:
+
+* scheduler_default_filters
 """)
 
 host_mgr_default_filt_opt = cfg.ListOpt("scheduler_default_filters",
@@ -133,11 +142,16 @@ first to make the filtering process more efficient.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    All of the filters in this option *must* be present in the
-    'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
-    exception will be raised.
+* Any list of zero or more strings, with each string being the name of a filter
+  to be used for selecting a host.
+
+Related options:
+
+* All of the filters in this option *must* be present in the
+  'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
+  exception will be raised.
 """)
 
 host_mgr_sched_wgt_cls_opt = cfg.ListOpt("scheduler_weight_classes",
@@ -158,9 +172,10 @@ the path to a weigher.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    None
+* Any list of zero or more strings, with each string being the name of a
+  weigher that will be used for selecting a host.
 """)
 
 host_mgr_tracks_inst_chg_opt = cfg.BoolOpt("scheduler_tracks_instance_changes",
@@ -178,10 +193,6 @@ usage data to query the database on each request instead.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
-
-* Related options:
-
-    None
 """)
 
 rpc_sched_topic_opt = cfg.StrOpt("scheduler_topic",
@@ -192,9 +203,9 @@ when the scheduler service is started up to configure the queue, and whenever
 an RPC call to the scheduler is made. There is almost never any reason to ever
 change this value.
 
-* Related options:
+Possible values:
 
-    None
+* A valid AMQP topic name
 """)
 
 scheduler_json_config_location_opt = cfg.StrOpt(
@@ -207,9 +218,9 @@ is converted from JSON to a Python data structure, and passed into the
 filtering and weighing functions of the scheduler, which can use it for dynamic
 configuration.
 
-* Related options:
+Possible values:
 
-    None
+* Any valid file path, or an empty string
 """)
 
 sched_driver_host_mgr_opt = cfg.StrOpt("scheduler_host_manager",
@@ -225,9 +236,9 @@ namespace 'nova.scheduler.host_manager' of file 'setup.cfg'. For example,
 option as of the Mitaka release is 'ironic_host_manager', which should be used
 if you're using Ironic to provision bare-metal instances.
 
-* Related options:
+Possible values:
 
-    None
+* Either 'host_manager' (default), or "ironic_hos
 """)
 
 driver_opt = cfg.StrOpt("scheduler_driver",
@@ -238,23 +249,24 @@ of the entrypoints under the namespace 'nova.scheduler.driver' of file
 'setup.cfg'. If nothing is specified in this option, the 'filter_scheduler' is
 used.
 
-This option also supports deprecated full Python path to the class to be used.
-For example, "nova.scheduler.filter_scheduler.FilterScheduler". But note: this
-support will be dropped in the N Release.
-
 Other options are:
 
-    * 'caching_scheduler' which aggressively caches the system state for better
-    individual scheduler performance at the risk of more retries when running
-    multiple schedulers.
+* 'caching_scheduler' which aggressively caches the system state for better
+  individual scheduler performance at the risk of more retries when running
+  multiple schedulers.
+* 'chance_scheduler' which simply picks a host at random.
+* 'fake_scheduler' which is used for testing.
 
-    * 'chance_scheduler' which simply picks a host at random.
+Possible values:
 
-    * 'fake_scheduler' which is used for testing.
-
-* Related options:
-
-    None
+* Any of the drivers included in Nova:
+** filter_scheduler
+** caching_scheduler
+** chance_scheduler
+** fake_scheduler
+* You may also set this to the class name of a custom scheduler driver, but you
+  will be responsible for creating and maintaining the entrypoint in your
+  setup.cfg file.
 """)
 
 driver_period_opt = cfg.IntOpt("scheduler_driver_task_period",
@@ -270,9 +282,13 @@ responsible for sending a heartbeat and it will only do that as often as this
 option allows. As each scheduler can work a little differently than the others,
 be sure to test this with your selected scheduler.
 
-* Related options:
+Possible values:
 
-    ``nova-service service_down_time``
+* Any positive integer
+
+Related options:
+
+* ``nova-service service_down_time``
 """)
 
 isolated_img_opt = cfg.ListOpt("isolated_images",
@@ -285,10 +301,14 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    scheduler/isolated_hosts
-    scheduler/restrict_isolated_hosts_to_isolated_images
+* A list of UUID strings, where each is the UUID of an image
+
+Related options:
+
+* scheduler/isolated_hosts
+* scheduler/restrict_isolated_hosts_to_isolated_images
 """)
 
 isolated_host_opt = cfg.ListOpt("isolated_hosts",
@@ -301,10 +321,14 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    scheduler/isolated_images
-    scheduler/restrict_isolated_hosts_to_isolated_images
+* A list of stings, where each is the name of a host
+
+Related options:
+
+* scheduler/isolated_images
+* scheduler/restrict_isolated_hosts_to_isolated_images
 """)
 
 restrict_iso_host_img_opt = cfg.BoolOpt(
@@ -323,10 +347,10 @@ only affects scheduling if the 'IsolatedHostsFilter' filter is enabled. Even
 then, this option doesn't affect the behavior of requests for isolated images,
 which will *always* be restricted to isolated hosts.
 
-* Related options:
+Related options:
 
-    scheduler/isolated_images
-    scheduler/isolated_hosts
+* scheduler/isolated_images
+* scheduler/isolated_hosts
 """)
 
 # These opts are registered as a separate OptGroup
@@ -347,14 +371,19 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    attestation_server_ca_file
-    attestation_port
-    attestation_api_url
-    attestation_auth_blob
-    attestation_auth_timeout
-    attestation_insecure_ssl
+* A string representing the host name of the attestation server, or an empty
+  string.
+
+Related options:
+
+* attestation_server_ca_file
+* attestation_port
+* attestation_api_url
+* attestation_auth_blob
+* attestation_auth_timeout
+* attestation_insecure_ssl
 """),
     cfg.StrOpt("attestation_server_ca_file",
             help="""
@@ -369,14 +398,19 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    attestation_server
-    attestation_port
-    attestation_api_url
-    attestation_auth_blob
-    attestation_auth_timeout
-    attestation_insecure_ssl
+* A string representing the path to the authentication certificate for the
+  attestation server, or an empty string.
+
+Related options:
+
+* attestation_server
+* attestation_port
+* attestation_api_url
+* attestation_auth_blob
+* attestation_auth_timeout
+* attestation_insecure_ssl
 """),
     cfg.StrOpt("attestation_port",
             default="8443",
@@ -390,14 +424,19 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    attestation_server
-    attestation_server_ca_file
-    attestation_api_url
-    attestation_auth_blob
-    attestation_auth_timeout
-    attestation_insecure_ssl
+* A string of digits representing the port number of the attestation server, or
+  an empty string.
+
+Related options:
+
+* attestation_server
+* attestation_server_ca_file
+* attestation_api_url
+* attestation_auth_blob
+* attestation_auth_timeout
+* attestation_insecure_ssl
 """),
     cfg.StrOpt("attestation_api_url",
             default="/OpenAttestationWebServices/V1.0",
@@ -412,14 +451,18 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    attestation_server
-    attestation_server_ca_file
-    attestation_port
-    attestation_auth_blob
-    attestation_auth_timeout
-    attestation_insecure_ssl
+* A valid URL string of the attestation server, or an empty string.
+
+Related options:
+
+* attestation_server
+* attestation_server_ca_file
+* attestation_port
+* attestation_auth_blob
+* attestation_auth_timeout
+* attestation_insecure_ssl
 """),
     cfg.StrOpt("attestation_auth_blob",
             help="""
@@ -433,14 +476,19 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    attestation_server
-    attestation_server_ca_file
-    attestation_port
-    attestation_api_url
-    attestation_auth_timeout
-    attestation_insecure_ssl
+* A string containing the specific blob required by the attestation server, or
+  an empty string.
+
+Related options:
+
+* attestation_server
+* attestation_server_ca_file
+* attestation_port
+* attestation_api_url
+* attestation_auth_timeout
+* attestation_insecure_ssl
 """),
     cfg.IntOpt("attestation_auth_timeout",
             default=60,
@@ -457,14 +505,19 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    attestation_server
-    attestation_server_ca_file
-    attestation_port
-    attestation_api_url
-    attestation_auth_blob
-    attestation_insecure_ssl
+* Any integer is valid, although setting this to zero or negative values can
+  greatly impact performance when using an attestation service.
+
+Related options:
+
+* attestation_server
+* attestation_server_ca_file
+* attestation_port
+* attestation_api_url
+* attestation_auth_blob
+* attestation_insecure_ssl
 """),
     cfg.BoolOpt("attestation_insecure_ssl",
             default=False,
@@ -479,14 +532,14 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Related options:
+Related options:
 
-    attestation_server
-    attestation_server_ca_file
-    attestation_port
-    attestation_api_url
-    attestation_auth_blob
-    attestation_auth_timeout
+* attestation_server
+* attestation_server_ca_file
+* attestation_port
+* attestation_api_url
+* attestation_auth_blob
+* attestation_auth_timeout
 """),
 ]
 
@@ -503,9 +556,10 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'io_ops_filter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    None
+* Any integer is valid, although a value of zero or less will cause all hosts
+  to fail the IoOpsFilter.
 """)
 
 agg_img_prop_iso_namespace_opt = cfg.StrOpt(
@@ -525,9 +579,13 @@ a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'aggregate_image_properties_isolation' filter is
 enabled.
 
-* Related options:
+Possible values:
 
-    aggregate_image_properties_isolation_separator
+* Any string
+
+Related options:
+
+* aggregate_image_properties_isolation_separator
 """)
 
 agg_img_prop_iso_separator_opt = cfg.StrOpt(
@@ -547,9 +605,13 @@ a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'aggregate_image_properties_isolation' filter is
 enabled.
 
-* Related options:
+Possible values:
 
-    aggregate_image_properties_isolation_namespace
+* Any string
+
+Related options:
+
+* aggregate_image_properties_isolation_namespace
 """)
 
 max_instances_per_host_opt = cfg.IntOpt("max_instances_per_host",
@@ -560,16 +622,17 @@ to the maximum number of instances you want to allow. The num_instances_filter
 will reject any host that has at least as many instances as this option's
 value.
 
-Valid values are positive integers; setting it to zero will cause all hosts to
-be rejected if the num_instances_filter is active.
+Valid values are positive integers; setting it to zero or less will cause all
+hosts to be rejected if the num_instances_filter is active.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'num_instances_filter' filter is enabled.
 
-* Related options:
+Possible values:
 
-    None
+* Any integer, although setting it to zero or less will cause all hosts to be
+  rejected if the num_instances_filter is active.
 """)
 
 ram_weight_mult_opt = cfg.FloatOpt("ram_weight_multiplier",
@@ -590,9 +653,9 @@ only affects scheduling if the 'ram' weigher is enabled.
 
 Valid values are numeric, either integer or float.
 
-* Related options:
+Possible values:
 
-    None
+* Any numeric value
 """)
 
 disk_weight_mult_opt = cfg.FloatOpt("disk_weight_multiplier",
@@ -618,9 +681,9 @@ only affects scheduling if the 'io_ops' weigher is enabled.
 
 Valid values are numeric, either integer or float.
 
-* Related options:
+Possible values:
 
-    None
+* Any numeric value
 """)
 
 # These opts are registered as a separate OptGroup
@@ -632,30 +695,29 @@ When using metrics to weight the suitability of a host, you can use this option
 to change how the calculated weight influences the weight assigned to a host as
 follows:
 
-    * Greater than 1.0: increases the effect of the metric on overall weight.
+* Greater than 1.0: increases the effect of the metric on overall weight.
 
-    * Equal to 1.0: No change to the calculated weight.
-
-    * Less than 1.0, greater than 0: reduces the effect of the metric on
-    overall weight.
-
-    * 0: The metric value is ignored, and the value of the
-    'weight_of_unavailable' option is returned instead.
-
-    * Greater than -1.0, less than 0: the effect is reduced and reversed.
-
-    * -1.0: the effect is reversed
-
-    * Less than -1.0: the effect is increased proportionally and reversed.
+* Equal to 1.0: No change to the calculated weight.
+* Less than 1.0, greater than 0: reduces the effect of the metric on overall
+  weight.
+* 0: The metric value is ignored, and the value of the 'weight_of_unavailable'
+  option is returned instead.
+* Greater than -1.0, less than 0: the effect is reduced and reversed.
+* -1.0: the effect is reversed
+* Less than -1.0: the effect is increased proportionally and reversed.
 
 Valid values are numeric, either integer or float.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    weight_of_unavailable
+* Any numeric value
+
+Related options:
+
+* weight_of_unavailable
 """),
      cfg.ListOpt("weight_setting",
             default=[],
@@ -680,9 +742,15 @@ The final weight will be:
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    weight_of_unavailable
+* A list of zero or more key/value pairs separated by commas, where the key is
+  a string representing the name of a metric, and the value is a numeric weight
+  for that metric
+
+Related options:
+
+* weight_of_unavailable
 """),
     cfg.BoolOpt("required",
             default=True,
@@ -698,9 +766,9 @@ host weight to 'weight_of_unavailable'.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Related options:
 
-    weight_of_unavailable
+* weight_of_unavailable
 """),
     cfg.FloatOpt("weight_of_unavailable",
             default=float(-10000.0),
@@ -708,21 +776,23 @@ a different scheduler, this option has no effect.
 When any of the following conditions are met, this value will be used in place
 of any actual metric value:
 
-    * One of the metrics named in 'weight_setting' is not available for a host,
-    and the value of 'required' is False.
-
-    * The ratio specified for a metric in 'weight_setting' is 0.
-
-    * The 'weight_multiplier' option is set to 0.
+* One of the metrics named in 'weight_setting' is not available for a host,
+  and the value of 'required' is False.
+* The ratio specified for a metric in 'weight_setting' is 0.
+* The 'weight_multiplier' option is set to 0.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Related options:
+Possible values:
 
-    weight_setting
-    required
-    weight_multiplier
+* Any numeric value
+
+Related options:
+
+* weight_setting
+* required
+* weight_multiplier
 """),
 ]
 
@@ -735,29 +805,33 @@ race conflicts, but rather some other problem. When this is reached a
 MaxRetriesExceeded exception is raised, and the instance is set to an error
 state.
 
-Valid values are positive integers (1 or greater).
+Possible values:
 
-* Related options:
-
-    None
+* Any positive integer
 """)
 
-soft_affinity_weight_opt = cfg.FloatOpt('soft_affinity_weight_multiplier',
-            default=1.0,
-            help='Multiplier used for weighing hosts '
-                 'for group soft-affinity. Only a '
-                 'positive value is meaningful. Negative '
-                 'means that the behavior will change to '
-                 'the opposite, which is soft-anti-affinity.')
+soft_affinity_weight_opt = cfg.FloatOpt("soft_affinity_weight_multiplier",
+        default=1.0,
+        help="""
+This is the multiplier used for weighing hosts for group soft-affinity.
+
+Possible values:
+
+* Any numeric, although only a positive value is meaningful, as negative values
+  would make this behave as a soft-anti-affinity weigher.
+""")
 
 soft_anti_affinity_weight_opt = cfg.FloatOpt(
-    'soft_anti_affinity_weight_multiplier',
-                 default=1.0,
-                 help='Multiplier used for weighing hosts '
-                      'for group soft-anti-affinity. Only a '
-                      'positive value is meaningful. Negative '
-                      'means that the behavior will change to '
-                      'the opposite, which is soft-affinity.')
+        "soft_anti_affinity_weight_multiplier",
+        default=1.0,
+        help="""
+This is the multiplier used for weighing hosts for group soft-anti-affinity.
+
+Possible values:
+
+* Any numeric, although only a positive value is meaningful, as negative values
+  would make this behave as a soft-affinity weigher.
+""")
 
 
 default_opts = [host_subset_size_opt,
