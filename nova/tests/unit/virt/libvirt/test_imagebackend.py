@@ -1677,17 +1677,9 @@ class BackendTestCase(test.NoDBTestCase):
         self._test_image('raw', imagebackend.Flat, imagebackend.Flat)
 
     def test_image_flat_preallocate_images(self):
-        flags = ('space', 'Space', 'SPACE')
-        for f in flags:
-            self.flags(preallocate_images=f)
-            raw = imagebackend.Flat(self.INSTANCE, 'fake_disk',
-                                         '/tmp/xyz')
-            self.assertTrue(raw.preallocate)
-
-    def test_image_flat_preallocate_images_bad_conf(self):
-        self.flags(preallocate_images='space1')
+        self.flags(preallocate_images='space')
         raw = imagebackend.Flat(self.INSTANCE, 'fake_disk', '/tmp/xyz')
-        self.assertFalse(raw.preallocate)
+        self.assertTrue(raw.preallocate)
 
     def test_image_flat_native_io(self):
         self.flags(preallocate_images="space")
@@ -1698,16 +1690,9 @@ class BackendTestCase(test.NoDBTestCase):
         self._test_image('qcow2', imagebackend.Qcow2, imagebackend.Qcow2)
 
     def test_image_qcow2_preallocate_images(self):
-        flags = ('space', 'Space', 'SPACE')
-        for f in flags:
-            self.flags(preallocate_images=f)
-            qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
-            self.assertTrue(qcow.preallocate)
-
-    def test_image_qcow2_preallocate_images_bad_conf(self):
-        self.flags(preallocate_images='space1')
+        self.flags(preallocate_images='space')
         qcow = imagebackend.Qcow2(self.INSTANCE, 'fake_disk', '/tmp/xyz')
-        self.assertFalse(qcow.preallocate)
+        self.assertTrue(qcow.preallocate)
 
     def test_image_qcow2_native_io(self):
         self.flags(preallocate_images="space")
