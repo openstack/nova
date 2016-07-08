@@ -105,6 +105,8 @@ class Host(object):
         #                STOPPED lifecycle event some seconds.
         self._lifecycle_delay = 15
 
+        self._initialized = False
+
     def _native_thread(self):
         """Receives async events coming in from libvirtd.
 
@@ -469,6 +471,9 @@ class Host(object):
         pass
 
     def initialize(self):
+        if self._initialized:
+            return
+
         # NOTE(dkliban): Error handler needs to be registered before libvirt
         #                connection is used for the first time.  Otherwise, the
         #                handler does not get registered.
