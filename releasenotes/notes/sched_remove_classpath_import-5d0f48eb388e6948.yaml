@@ -1,0 +1,6 @@
+---
+upgrades:
+  - The ability to specify the scheduler driver via a full class path was
+    deprecated in Mitaka, and has now been removed. Drivers must now be listed
+    as one of the entrypoints under the namespace 'nova.scheduler.driver' of
+    the 'setup.cfg' file.
