@@ -13,10 +13,9 @@
 #    under the License.
 
 import mock
+from oslo_policy import policy as oslo_policy
 import six
 import webob
-
-from oslo_policy import policy as oslo_policy
 
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers \

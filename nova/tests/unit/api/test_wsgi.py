@@ -19,11 +19,10 @@
 Test WSGI basics and provide some helper functions for other WSGI tests.
 """
 
-from nova import test
-
 import routes
 import webob
 
+from nova import test
 from nova import wsgi
 
 

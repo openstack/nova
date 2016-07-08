@@ -25,7 +25,6 @@ import uuid as stdlib_uuid
 import iso8601
 import mock
 import netaddr
-
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import enginefacade

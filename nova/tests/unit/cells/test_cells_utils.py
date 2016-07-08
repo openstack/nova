@@ -16,8 +16,9 @@
 Tests For Cells Utility methods
 """
 import inspect
-import mock
 import random
+
+import mock
 
 from nova.cells import utils as cells_utils
 from nova import exception
