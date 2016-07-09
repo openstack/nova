@@ -1,0 +1,4 @@
+---
+deprecations:
+  - The quota_driver configuration option is now deprecated and will be removed
+    in a subsequent release.
