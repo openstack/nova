@@ -88,16 +88,49 @@ compute_opts = [
 
 resource_tracker_opts = [
     cfg.IntOpt('reserved_host_disk_mb',
+               min=0,
                default=0,
-               help='Amount of disk in MB to reserve for the host'),
+               help="""
+Amount of disk resources in MB to make them always available to host. The
+disk usage gets reported back to the scheduler from nova-compute running
+on the compute nodes. To prevent the disk resources from being considered
+as available, this option can be used to reserve disk space for that host.
+
+Possible values:
+
+  * Any positive integer representing amount of disk in MB to reserve
+    for the host.
+"""),
+
     cfg.IntOpt('reserved_host_memory_mb',
+               min=0,
                default=512,
-               help='Amount of memory in MB to reserve for the host'),
+               help="""
+Amount of memory in MB to reserve for the host so that it is always available
+to host processes. The host resources usage is reported back to the scheduler
+continously from nova-compute running on the compute node. To prevent the host
+memory from being considered as available, this option is used to reserve
+memory for the host.
+
+Possible values:
+
+  * Any positive integer representing amount of memory in MB to reserve
+    for the host.
+"""),
+
     cfg.StrOpt('compute_stats_class',
                default='nova.compute.stats.Stats',
-               help='DEPRECATED: Class that will manage stats for the '
-                    'local compute host',
-               deprecated_for_removal=True),
+               deprecated_for_removal=True,
+               help="""
+Abstracts out managing compute host stats to pluggable class. This class
+manages and updates stats for the local compute host after an instance
+is changed. These configurable compute stats may be useful for a
+particular scheduler implementation.
+
+Possible values
+
+  * A string representing fully qualified class name.
+"""),
 ]
 
 allocation_ratio_opts = [
