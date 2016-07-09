@@ -331,6 +331,11 @@ class Allocation(API_BASE):
     consumer_id = Column(String(36), nullable=False)
     resource_class_id = Column(Integer, nullable=False)
     used = Column(Integer, nullable=False)
+    resource_provider = orm.relationship(
+        "ResourceProvider",
+        primaryjoin=('Allocation.resource_provider_id == '
+                     'ResourceProvider.id'),
+        foreign_keys=resource_provider_id)
 
 
 class ResourceProviderAggregate(API_BASE):

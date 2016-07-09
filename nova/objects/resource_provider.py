@@ -518,3 +518,72 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
                                                               rp_uuid)
         return base.obj_make_list(context, cls(context), objects.Inventory,
                                   db_inventory_list)
+
+
+@base.NovaObjectRegistry.register
+class Allocation(_HasAResourceProvider):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'id': fields.IntegerField(),
+        'resource_provider': fields.ObjectField('ResourceProvider'),
+        'consumer_id': fields.UUIDField(),
+        'resource_class': fields.ResourceClassField(),
+        'used': fields.IntegerField(),
+    }
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _create_in_db(context, updates):
+        db_allocation = models.Allocation()
+        db_allocation.update(updates)
+        context.session.add(db_allocation)
+        return db_allocation
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _destroy(context, id):
+        result = context.session.query(models.Allocation).filter_by(
+            id=id).delete()
+        if not result:
+            raise exception.NotFound()
+
+    @base.remotable
+    def create(self):
+        if 'id' in self:
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        updates = self._make_db(self.obj_get_changes())
+        db_allocation = self._create_in_db(self._context, updates)
+        self._from_db_object(self._context, self, db_allocation)
+
+    @base.remotable
+    def destroy(self):
+        self._destroy(self._context, self.id)
+
+
+@base.NovaObjectRegistry.register
+class AllocationList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial Version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('Allocation'),
+    }
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_allocations_from_db(context, rp_uuid):
+        query = (context.session.query(models.Allocation)
+                 .join(models.Allocation.resource_provider)
+                 .options(contains_eager('resource_provider'))
+                 .filter(models.ResourceProvider.uuid == rp_uuid))
+        return query.all()
+
+    @base.remotable_classmethod
+    def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
+        db_allocation_list = cls._get_allocations_from_db(
+            context, rp_uuid)
+        return base.obj_make_list(
+            context, cls(context), objects.Allocation, db_allocation_list)

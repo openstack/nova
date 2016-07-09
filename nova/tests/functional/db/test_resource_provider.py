@@ -21,26 +21,39 @@ from nova import test
 from nova.tests import fixtures
 from nova.tests import uuidsentinel
 
+RESOURCE_CLASS = fields.ResourceClass.DISK_GB
+RESOURCE_CLASS_ID = fields.ResourceClass.index(
+    fields.ResourceClass.DISK_GB)
 DISK_INVENTORY = dict(
     total=200,
     reserved=10,
     min_unit=2,
     max_unit=5,
     step_size=1,
-    allocation_ratio=1.0
+    allocation_ratio=1.0,
+    resource_class=RESOURCE_CLASS
+)
+
+DISK_ALLOCATION = dict(
+    consumer_id=uuidsentinel.disk_consumer,
+    used=2,
+    resource_class=RESOURCE_CLASS
 )
 
 
-class ResourceProviderTestCase(test.NoDBTestCase):
-    """Test resource-provider objects' lifecycles."""
+class ResourceProviderBaseCase(test.NoDBTestCase):
 
     USES_DB_SELF = True
 
     def setUp(self):
-        super(ResourceProviderTestCase, self).setUp()
+        super(ResourceProviderBaseCase, self).setUp()
         self.useFixture(fixtures.Database())
         self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
+
+
+class ResourceProviderTestCase(ResourceProviderBaseCase):
+    """Test resource-provider objects' lifecycles."""
 
     def test_create_resource_provider_requires_uuid(self):
         resource_provider = objects.ResourceProvider(
@@ -90,11 +103,9 @@ class ResourceProviderTestCase(test.NoDBTestCase):
             context=self.context,
             uuid=uuidsentinel.inventory_resource_provider
         )
-        resource_class = fields.ResourceClass.DISK_GB
         disk_inventory = objects.Inventory(
             context=self.context,
             resource_provider=resource_provider,
-            resource_class=resource_class,
             **DISK_INVENTORY
         )
         self.assertRaises(exception.ObjectActionError,
@@ -111,7 +122,6 @@ class ResourceProviderTestCase(test.NoDBTestCase):
         disk_inventory = objects.Inventory(
             context=self.context,
             resource_provider=resource_provider,
-            resource_class=resource_class,
             **DISK_INVENTORY
         )
         disk_inventory.create()
@@ -324,3 +334,140 @@ class ResourceProviderListTestCase(test.NoDBTestCase):
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
             self.context, filters={'can_host': 1})
         self.assertEqual(0, len(resource_providers))
+
+
+class TestAllocation(ResourceProviderBaseCase):
+
+    def _make_allocation(self, rp_uuid=None):
+        rp_uuid = rp_uuid or uuidsentinel.allocation_resource_provider
+        db_rp = objects.ResourceProvider(
+            context=self.context,
+            uuid=rp_uuid,
+            name=rp_uuid)
+        db_rp.create()
+        updates = dict(DISK_ALLOCATION,
+                       resource_class_id=RESOURCE_CLASS_ID,
+                       resource_provider_id=db_rp.id)
+        db_allocation = objects.Allocation._create_in_db(self.context,
+                                                         updates)
+        return db_rp, db_allocation
+
+    def test_create_list_and_delete_allocation(self):
+        resource_provider = objects.ResourceProvider(
+            context=self.context,
+            uuid=uuidsentinel.allocation_resource_provider,
+            name=uuidsentinel.allocation_resource_name
+        )
+        resource_provider.create()
+        resource_class = fields.ResourceClass.DISK_GB
+        disk_allocation = objects.Allocation(
+            context=self.context,
+            resource_provider=resource_provider,
+            **DISK_ALLOCATION
+        )
+        disk_allocation.create()
+
+        self.assertEqual(resource_class, disk_allocation.resource_class)
+        self.assertEqual(resource_provider,
+                         disk_allocation.resource_provider)
+        self.assertEqual(DISK_ALLOCATION['used'],
+                         disk_allocation.used)
+        self.assertEqual(DISK_ALLOCATION['consumer_id'],
+                         disk_allocation.consumer_id)
+        self.assertIsInstance(disk_allocation.id, int)
+
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, resource_provider.uuid)
+
+        self.assertEqual(1, len(allocations))
+
+        self.assertEqual(DISK_ALLOCATION['used'],
+                        allocations[0].used)
+
+        allocations[0].destroy()
+
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, resource_provider.uuid)
+
+        self.assertEqual(0, len(allocations))
+
+    def test_destroy(self):
+        db_rp, db_allocation = self._make_allocation()
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp.uuid)
+        self.assertEqual(1, len(allocations))
+        objects.Allocation._destroy(self.context, db_allocation.id)
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp.uuid)
+        self.assertEqual(0, len(allocations))
+        self.assertRaises(exception.NotFound, objects.Allocation._destroy,
+                          self.context, db_allocation.id)
+
+    def test_get_allocations_from_db(self):
+        db_rp, db_allocation = self._make_allocation()
+        allocations = objects.AllocationList._get_allocations_from_db(
+            self.context, db_rp.uuid)
+        self.assertEqual(1, len(allocations))
+        self.assertEqual(db_rp.id, allocations[0].resource_provider_id)
+        self.assertEqual(db_allocation.resource_provider_id,
+                         allocations[0].resource_provider_id)
+
+        allocations = objects.AllocationList._get_allocations_from_db(
+            self.context, uuidsentinel.bad_rp_uuid)
+        self.assertEqual(0, len(allocations))
+
+    def test_get_all_by_resource_provider(self):
+        db_rp, db_allocation = self._make_allocation()
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp.uuid)
+        self.assertEqual(1, len(allocations))
+        self.assertEqual(db_rp.id, allocations[0].resource_provider.id)
+        self.assertEqual(db_allocation.resource_provider_id,
+                         allocations[0].resource_provider.id)
+
+    def test_get_all_multiple_providers(self):
+        # This confirms that the join with resource provider is
+        # behaving.
+        db_rp1, db_allocation1 = self._make_allocation(uuidsentinel.rp1)
+        db_rp2, db_allocation2 = self._make_allocation(uuidsentinel.rp2)
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp1.uuid)
+        self.assertEqual(1, len(allocations))
+        self.assertEqual(db_rp1.id, allocations[0].resource_provider.id)
+        self.assertEqual(db_allocation1.resource_provider_id,
+                         allocations[0].resource_provider.id)
+
+        # add more allocations for the first resource provider
+        # of the same class
+        updates = dict(consumer_id=uuidsentinel.consumer1,
+                       resource_class_id=RESOURCE_CLASS_ID,
+                       resource_provider_id=db_rp1.id,
+                       used=2)
+        objects.Allocation._create_in_db(self.context, updates)
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp1.uuid)
+        self.assertEqual(2, len(allocations))
+
+        # add more allocations for the first resource provider
+        # of a different class
+        updates = dict(consumer_id=uuidsentinel.consumer1,
+                       resource_class_id=fields.ResourceClass.index(
+                           fields.ResourceClass.IPV4_ADDRESS),
+                       resource_provider_id=db_rp1.id,
+                       used=4)
+        objects.Allocation._create_in_db(self.context, updates)
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp1.uuid)
+        self.assertEqual(3, len(allocations))
+        self.assertEqual(db_rp1.uuid, allocations[0].resource_provider.uuid)
+
+        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.context, db_rp2.uuid)
+        self.assertEqual(1, len(allocations))
+        self.assertEqual(db_rp2.uuid, allocations[0].resource_provider.uuid)
+        self.assertIn(RESOURCE_CLASS,
+                      [allocation.resource_class
+                       for allocation in allocations])
+        self.assertNotIn(fields.ResourceClass.IPV4_ADDRESS,
+                      [allocation.resource_class
+                       for allocation in allocations])
