@@ -372,6 +372,18 @@ class IronicDriver(virt_driver.ComputeDriver):
             LOG.error(msg)
             raise exception.InstanceDeployFailure(msg)
 
+    def _remove_driver_fields(self, node, instance):
+        patch = [{'path': '/instance_info', 'op': 'remove'},
+                 {'path': '/instance_uuid', 'op': 'remove'}]
+        try:
+            self.ironicclient.call('node.update', node.uuid, patch)
+        except ironic.exc.BadRequest as e:
+            LOG.warning(_LW("Failed to remove deploy parameters from node "
+                            "%(node)s when unprovisioning the instance "
+                            "%(instance)s: %(reason)s"),
+                        {'node': node.uuid, 'instance': instance.uuid,
+                         'reason': six.text_type(e)})
+
     def _cleanup_deploy(self, node, instance, network_info):
         self._unplug_vifs(node, instance, network_info)
         self._stop_firewall(instance, network_info)
@@ -863,6 +875,8 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         if node.provision_state in _UNPROVISION_STATES:
             self._unprovision(instance, node)
+        else:
+            self._remove_driver_fields(node, instance)
 
         self._cleanup_deploy(node, instance, network_info)
         LOG.info(_LI('Successfully unprovisioned Ironic node %s'),
