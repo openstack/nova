@@ -292,6 +292,30 @@ class ProjectCommands(object):
             print(print_format % (key, value['limit'], value['in_use'],
                                   value['reserved']))
 
+    @args('--project', dest='project_id', metavar='<Project Id>',
+            help='Project Id', required=True)
+    @args('--user', dest='user_id', metavar='<User Id>',
+            help='User Id')
+    @args('--key', metavar='<key>', help='Key')
+    def quota_usage_refresh(self, project_id, user_id=None, key=None):
+        """Refresh the quotas for project/user
+
+        If no quota key is provided, all the quota usages will be refreshed.
+        If a valid quota key is provided and it does not exist,
+        it will be created. Otherwise, it will be refreshed.
+        """
+        ctxt = context.get_admin_context()
+
+        keys = None
+        if key:
+            keys = [key]
+
+        try:
+            QUOTAS.usage_refresh(ctxt, project_id, user_id, keys)
+        except exception.QuotaUsageRefreshNotAllowed as e:
+            print(e.format_message())
+            return 2
+
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
     def scrub(self, project_id):

@@ -1,0 +1,11 @@
+---
+features:
+  - Add a nova-manage command to refresh the quota
+    usages for a project or user.  This can be used
+    when the usages in the quota-usages database table
+    are out-of-sync with the actual usages.  For example,
+    if a resource usage is at the limit in the quota_usages
+    table, but the actual usage is less, then nova will
+    not allow VMs to be created for that project or user.
+    The nova-manage command can be used to re-sync
+    the quota_usages table with the actual usage.
