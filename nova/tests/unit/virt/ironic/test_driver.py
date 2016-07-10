@@ -957,6 +957,24 @@ class IronicDriverTestCase(test.NoDBTestCase):
                           self.driver._add_driver_fields,
                           node, instance, image_meta, flavor)
 
+    def _test_remove_driver_fields(self, mock_update):
+        node = ironic_utils.get_test_node(driver='fake')
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node.uuid)
+        self.driver._remove_driver_fields(node, instance)
+        expected_patch = [{'path': '/instance_info', 'op': 'remove'},
+                          {'path': '/instance_uuid', 'op': 'remove'}]
+        mock_update.assert_called_once_with(node.uuid, expected_patch)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'update')
+    def test_remove_driver_fields(self, mock_update):
+        self._test_remove_driver_fields(mock_update)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'update')
+    def test_remove_driver_fields_fail(self, mock_update):
+        mock_update.side_effect = ironic_exception.BadRequest()
+        self._test_remove_driver_fields(mock_update)
+
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT, 'node')
     def test_spawn_node_driver_validation_fail(self, mock_node,
@@ -1156,8 +1174,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertEqual('/dev/sda1', instance.default_ephemeral_device)
 
     @mock.patch.object(FAKE_CLIENT, 'node')
+    @mock.patch.object(ironic_driver.IronicDriver, '_remove_driver_fields')
     @mock.patch.object(ironic_driver.IronicDriver, '_cleanup_deploy')
-    def _test_destroy(self, state, mock_cleanup_deploy, mock_node):
+    def _test_destroy(self, state, mock_cleanup_deploy,
+                      mock_remove_driver_fields, mock_node):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         network_info = 'foo'
 
@@ -1181,8 +1201,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
         if state in ironic_driver._UNPROVISION_STATES:
             mock_node.set_provision_state.assert_called_once_with(
                 node_uuid, 'deleted')
+            self.assertFalse(mock_remove_driver_fields.called)
         else:
             self.assertFalse(mock_node.set_provision_state.called)
+            mock_remove_driver_fields.assert_called_once_with(node, instance)
 
     def test_destroy(self):
         for state in ironic_states.PROVISION_STATE_LIST:
