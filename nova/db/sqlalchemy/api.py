@@ -1756,8 +1756,8 @@ def instance_create(context, values):
             # Generate a new list, so we don't modify the original
             security_groups = [x for x in security_groups if x != 'default']
         if security_groups:
-            models.extend(_security_group_get_by_names(context,
-                    context.project_id, security_groups))
+            models.extend(_security_group_get_by_names(
+                context, security_groups))
         return models
 
     if 'hostname' in values:
@@ -4238,13 +4238,13 @@ def _security_group_get_query(context, read_deleted=None,
     return query
 
 
-def _security_group_get_by_names(context, project_id, group_names):
+def _security_group_get_by_names(context, group_names):
     """Get security group models for a project by a list of names.
     Raise SecurityGroupNotFoundForProject for a name not found.
     """
     query = _security_group_get_query(context, read_deleted="no",
                                       join_rules=False).\
-            filter_by(project_id=project_id).\
+            filter_by(project_id=context.project_id).\
             filter(models.SecurityGroup.name.in_(group_names))
     sg_models = query.all()
     if len(sg_models) == len(group_names):
@@ -4254,7 +4254,7 @@ def _security_group_get_by_names(context, project_id, group_names):
     for group_name in group_names:
         if group_name not in group_names_from_models:
             raise exception.SecurityGroupNotFoundForProject(
-                    project_id=project_id, security_group_id=group_name)
+                project_id=context.project_id, security_group_id=group_name)
     # Not Reached
 
 
@@ -4392,9 +4392,7 @@ def security_group_ensure_default(context):
 @main_context_manager.writer
 def _security_group_ensure_default(context):
     try:
-        default_group = _security_group_get_by_names(context,
-                                                     context.project_id,
-                                                     ['default'])[0]
+        default_group = _security_group_get_by_names(context, ['default'])[0]
     except exception.NotFound:
         values = {'name': 'default',
                   'description': 'default',
