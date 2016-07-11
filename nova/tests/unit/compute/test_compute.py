@@ -9643,7 +9643,7 @@ class ComputeAPITestCase(BaseTestCase):
             bdm_obj.create()
             bdms.append(bdm_obj)
         self.stub_out('nova.volume.cinder.API.terminate_connection',
-                      mox.MockAnything())
+                      mock.MagicMock())
         self.stub_out('nova.volume.cinder.API.detach', mock.MagicMock())
 
         def fake_volume_get(self, context, volume_id):
@@ -10560,7 +10560,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(fake_notifier.NOTIFICATIONS[1].publisher_id,
                          'compute.fake-mini')
 
-    def test_remove_host_from_aggregate_active(self):
+    @mock.patch.object(availability_zones,
+                       'update_host_availability_zone_cache')
+    def test_remove_host_from_aggregate_active(self, mock_az):
         # Ensure we can remove a host from an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
@@ -10575,14 +10577,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
             hosts = kwargs["aggregate"].hosts
             self.assertNotIn(host_to_remove, hosts)
 
-        self.stubs.Set(self.api.compute_rpcapi, 'remove_aggregate_host',
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.remove_aggregate_host',
                        fake_remove_aggregate_host)
-
-        self.mox.StubOutWithMock(availability_zones,
-                                 'update_host_availability_zone_cache')
-        availability_zones.update_host_availability_zone_cache(self.context,
-                                                               host_to_remove)
-        self.mox.ReplayAll()
 
         fake_notifier.NOTIFICATIONS = []
         expected = self.api.remove_host_from_aggregate(self.context,
@@ -10596,6 +10592,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.removehost.end')
         self.assertEqual(len(aggr.hosts) - 1, len(expected.hosts))
+        mock_az.assert_called_with(self.context, host_to_remove)
 
     def test_remove_host_from_aggregate_raise_not_found(self):
         # Ensure ComputeHostNotFound is raised when removing invalid host.
@@ -10929,24 +10926,15 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         self.instance_type = flavors.get_flavor_by_name(
                 "m1.tiny")
 
-    def test_reschedule_resize_or_reraise_called(self):
+    @mock.patch.object(db, 'migration_create')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_reschedule_resize_or_reraise')
+    def test_reschedule_resize_or_reraise_called(self, mock_res, mock_mig):
         """Verify the rescheduling logic gets called when there is an error
         during prep_resize.
         """
         inst_obj = self._create_fake_instance_obj()
-
-        self.mox.StubOutWithMock(self.compute.db, 'migration_create')
-        self.mox.StubOutWithMock(self.compute, '_reschedule_resize_or_reraise')
-
-        self.compute.db.migration_create(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(test.TestingException("Original"))
-
-        self.compute._reschedule_resize_or_reraise(mox.IgnoreArg(), None,
-                inst_obj, mox.IgnoreArg(), self.instance_type,
-                mox.IgnoreArg(), {},
-                {})
-
-        self.mox.ReplayAll()
+        mock_mig.side_effect = test.TestingException("Original")
 
         self.compute.prep_resize(self.context, image=None,
                                  instance=inst_obj,
@@ -10955,7 +10943,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                                  filter_properties={}, node=None,
                                  clean_shutdown=True)
 
-    def test_reschedule_fails_with_exception(self):
+        mock_mig.assert_called_once_with(mock.ANY, mock.ANY)
+        mock_res.assert_called_once_with(mock.ANY, None, inst_obj, mock.ANY,
+                                         self.instance_type, mock.ANY, {}, {})
+
+    @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
+    def test_reschedule_fails_with_exception(self, mock_res):
         """Original exception should be raised if the _reschedule method
         raises another exception
         """
@@ -10963,14 +10956,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         scheduler_hint = dict(filter_properties={})
         method_args = (instance, None, scheduler_hint, self.instance_type,
                        None)
-        self.mox.StubOutWithMock(self.compute, "_reschedule")
-
-        self.compute._reschedule(
-                self.context, None, None, instance,
-                self.compute.compute_task_api.resize_instance, method_args,
-                task_states.RESIZE_PREP).AndRaise(
-                        InnerTestingException("Inner"))
-        self.mox.ReplayAll()
+        mock_res.side_effect = InnerTestingException("Inner")
 
         try:
             raise test.TestingException("Original")
@@ -10981,7 +10967,13 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                     None, instance, exc_info, self.instance_type,
                     self.none_quotas, {}, {})
 
-    def test_reschedule_false(self):
+            mock_res.assert_called_once_with(
+                    self.context, {}, {}, instance,
+                    self.compute.compute_task_api.resize_instance, method_args,
+                    task_states.RESIZE_PREP, exc_info)
+
+    @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
+    def test_reschedule_false(self, mock_res):
         """Original exception should be raised if the resize is not
         rescheduled.
         """
@@ -10989,13 +10981,7 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
         scheduler_hint = dict(filter_properties={})
         method_args = (instance, None, scheduler_hint, self.instance_type,
                        None)
-        self.mox.StubOutWithMock(self.compute, "_reschedule")
-
-        self.compute._reschedule(
-                self.context, None, None, instance,
-                self.compute.compute_task_api.resize_instance, method_args,
-                task_states.RESIZE_PREP).AndReturn(False)
-        self.mox.ReplayAll()
+        mock_res.return_value = False
 
         try:
             raise test.TestingException("Original")
@@ -11006,7 +10992,14 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                     None, instance, exc_info, self.instance_type,
                     self.none_quotas, {}, {})
 
-    def test_reschedule_true(self):
+            mock_res.assert_called_once_with(
+                self.context, {}, {}, instance,
+                self.compute.compute_task_api.resize_instance, method_args,
+                task_states.RESIZE_PREP, exc_info)
+
+    @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
+    @mock.patch.object(compute_manager.ComputeManager, "_log_original_error")
+    def test_reschedule_true(self, mock_log, mock_res):
         # If rescheduled, the original resize exception should be logged.
         instance = self._create_fake_instance_obj()
         scheduler_hint = dict(filter_properties={})
@@ -11017,20 +11010,16 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             raise test.TestingException("Original")
         except Exception:
             exc_info = sys.exc_info()
-
-            self.mox.StubOutWithMock(self.compute, "_reschedule")
-            self.mox.StubOutWithMock(self.compute, "_log_original_error")
-            self.compute._reschedule(self.context, {}, {},
-                    instance,
-                    self.compute.compute_task_api.resize_instance, method_args,
-                    task_states.RESIZE_PREP, exc_info).AndReturn(True)
-
-            self.compute._log_original_error(exc_info, instance.uuid)
-            self.mox.ReplayAll()
+            mock_res.return_value = True
 
             self.compute._reschedule_resize_or_reraise(
                     self.context, None, instance, exc_info,
                     self.instance_type, self.none_quotas, {}, {})
+
+            mock_res.assert_called_once_with(self.context, {}, {},
+                    instance, self.compute.compute_task_api.resize_instance,
+                    method_args, task_states.RESIZE_PREP, exc_info)
+            mock_log.assert_called_once_with(exc_info, instance.uuid)
 
 
 class ComputeInactiveImageTestCase(BaseTestCase):
@@ -11131,21 +11120,22 @@ class EvacuateHostTestCase(BaseTestCase):
 
     def test_rebuild_on_host_updated_target_node_not_found(self):
         """Confirm evacuate scenario where compute_node isn't found."""
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-
         def fake_get_compute_info(context, host):
             raise exception.ComputeHostNotFound(host=host)
+        with test.nested(
+            mock.patch.object(self.compute.driver, 'instance_on_disk',
+                              side_effect=lambda x: True),
+            mock.patch.object(self.compute, '_get_compute_info',
+                              side_effect=fake_get_compute_info)
+        ) as (mock_inst, mock_get):
+            self._rebuild()
 
-        self.stubs.Set(self.compute, '_get_compute_info',
-                       fake_get_compute_info)
-        self.mox.ReplayAll()
-
-        self._rebuild()
-
-        # Should be on destination host
-        instance = db.instance_get(self.context, self.inst.id)
-        self.assertEqual(instance['host'], self.compute.host)
-        self.assertIsNone(instance['node'])
+            # Should be on destination host
+            instance = db.instance_get(self.context, self.inst.id)
+            self.assertEqual(instance['host'], self.compute.host)
+            self.assertIsNone(instance['node'])
+            self.assertTrue(mock_inst.called)
+            self.assertTrue(mock_get.called)
 
     def test_rebuild_on_host_node_passed(self):
         patch_get_info = mock.patch.object(self.compute, '_get_compute_info')
@@ -11180,15 +11170,15 @@ class EvacuateHostTestCase(BaseTestCase):
 
     def test_rebuild_with_wrong_shared_storage(self):
         """Confirm evacuate scenario does not update host."""
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-        self.mox.ReplayAll()
-
-        self.assertRaises(exception.InvalidSharedStorage,
+        with mock.patch.object(self.compute.driver, 'instance_on_disk',
+                               side_effect=lambda x: True) as mock_inst:
+            self.assertRaises(exception.InvalidSharedStorage,
                           lambda: self._rebuild(on_shared_storage=False))
 
-        # Should remain on original host
-        instance = db.instance_get(self.context, self.inst.id)
-        self.assertEqual(instance['host'], 'fake_host_2')
+            # Should remain on original host
+            instance = db.instance_get(self.context, self.inst.id)
+            self.assertEqual(instance['host'], 'fake_host_2')
+            self.assertTrue(mock_inst.called)
 
     def test_rebuild_on_host_with_volumes(self):
         """Confirm evacuate scenario reconnects volumes."""
