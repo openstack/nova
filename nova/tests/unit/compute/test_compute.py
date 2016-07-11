@@ -9011,7 +9011,10 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_vnc_console,
                           self.context, instance, 'novnc')
 
-    def test_spice_console(self):
+    @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
+                       'authorize_console')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_spice_console')
+    def test_spice_console(self, mock_spice, mock_auth):
         # Make sure we can a spice console for an instance.
 
         fake_instance = self._fake_instance(
@@ -9025,26 +9028,20 @@ class ComputeAPITestCase(BaseTestCase):
                              'internal_access_path': 'fake_access_path',
                              'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_console_url'}
+        mock_spice.return_value = fake_connect_info
 
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'get_spice_console')
-        rpcapi.get_spice_console(
-            self.context, instance=fake_instance,
-            console_type=fake_console_type).AndReturn(fake_connect_info)
+        console = self.compute_api.get_spice_console(self.context,
+                fake_instance, fake_console_type)
 
-        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
-                                 'authorize_console')
-        self.compute_api.consoleauth_rpcapi.authorize_console(
+        self.assertEqual(console, {'url': 'fake_console_url'})
+        mock_spice.assert_called_once_with(self.context,
+                                           instance=fake_instance,
+                                           console_type=fake_console_type)
+        mock_auth.assert_called_once_with(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
             'fake_console_port', 'fake_access_path',
             'f3000000-0000-0000-0000-000000000000',
             access_url='fake_console_url')
-
-        self.mox.ReplayAll()
-
-        console = self.compute_api.get_spice_console(self.context,
-                fake_instance, fake_console_type)
-        self.assertEqual(console, {'url': 'fake_console_url'})
 
     def test_get_spice_console_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
@@ -9053,9 +9050,11 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_spice_console,
                           self.context, instance, 'spice')
 
-    def test_rdp_console(self):
+    @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
+                       'authorize_console')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_rdp_console')
+    def test_rdp_console(self, mock_rdp, mock_auth):
         # Make sure we can a rdp console for an instance.
-
         fake_instance = self._fake_instance({
                          'uuid': 'f3000000-0000-0000-0000-000000000000',
                          'host': 'fake_compute_host'})
@@ -9067,26 +9066,19 @@ class ComputeAPITestCase(BaseTestCase):
                              'internal_access_path': 'fake_access_path',
                              'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_console_url'}
+        mock_rdp.return_value = fake_connect_info
 
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'get_rdp_console')
-        rpcapi.get_rdp_console(
-            self.context, instance=fake_instance,
-            console_type=fake_console_type).AndReturn(fake_connect_info)
+        console = self.compute_api.get_rdp_console(self.context,
+                fake_instance, fake_console_type)
 
-        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
-                                 'authorize_console')
-        self.compute_api.consoleauth_rpcapi.authorize_console(
+        self.assertEqual(console, {'url': 'fake_console_url'})
+        mock_rdp.assert_called_once_with(self.context, instance=fake_instance,
+                                         console_type=fake_console_type)
+        mock_auth.assert_called_once_with(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
             'fake_console_port', 'fake_access_path',
             'f3000000-0000-0000-0000-000000000000',
             access_url='fake_console_url')
-
-        self.mox.ReplayAll()
-
-        console = self.compute_api.get_rdp_console(self.context,
-                fake_instance, fake_console_type)
-        self.assertEqual(console, {'url': 'fake_console_url'})
 
     def test_get_rdp_console_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
@@ -9171,24 +9163,22 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_mks_console,
                           self.context, instance, 'mks')
 
-    def test_console_output(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_console_output')
+    def test_console_output(self, mock_console):
         fake_instance = self._fake_instance({
                          'uuid': 'f3000000-0000-0000-0000-000000000000',
                          'host': 'fake_compute_host'})
         fake_tail_length = 699
         fake_console_output = 'fake console output'
-
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'get_console_output')
-        rpcapi.get_console_output(
-            self.context, instance=fake_instance,
-            tail_length=fake_tail_length).AndReturn(fake_console_output)
-
-        self.mox.ReplayAll()
+        mock_console.return_value = fake_console_output
 
         output = self.compute_api.get_console_output(self.context,
                 fake_instance, tail_length=fake_tail_length)
+
         self.assertEqual(output, fake_console_output)
+        mock_console.assert_called_once_with(self.context,
+                                             instance=fake_instance,
+                                             tail_length=fake_tail_length)
 
     def test_console_output_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
@@ -9197,24 +9187,19 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_console_output,
                           self.context, instance)
 
-    def test_attach_interface(self):
+    @mock.patch.object(network_api.API, 'allocate_port_for_instance')
+    def test_attach_interface(self, mock_allocate):
         new_type = flavors.get_flavor_by_flavor_id('4')
-
         instance = objects.Instance(image_ref=uuids.image_instance,
                                     system_metadata={},
                                     flavor=new_type,
                                     host='fake-host')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'allocate_port_for_instance')
         nwinfo = [fake_network_cache_model.new_vif()]
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
-        self.compute.network_api.allocate_port_for_instance(
-            self.context, instance, port_id, network_id, req_ip,
-            bind_host_id='fake-host'
-            ).AndReturn(nwinfo)
-        self.mox.ReplayAll()
+        mock_allocate.return_value = nwinfo
+
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True):
             vif = self.compute.attach_interface(self.context,
@@ -9223,6 +9208,9 @@ class ComputeAPITestCase(BaseTestCase):
                                                 port_id,
                                                 req_ip)
         self.assertEqual(vif['id'], network_id)
+        mock_allocate.assert_called_once_with(
+            self.context, instance, port_id, network_id, req_ip,
+            bind_host_id='fake-host')
         return nwinfo, port_id
 
     def test_attach_interface_failed(self):
@@ -9516,9 +9504,10 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.detach_volume, self.context,
                           fake_instance, volume)
 
-    def test_detach_volume_libvirt_is_down(self):
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    def test_detach_volume_libvirt_is_down(self, mock_get):
         # Ensure rollback during detach if libvirt goes down
-
         called = {}
         instance = self._create_fake_instance_obj()
 
@@ -9527,7 +9516,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'source_type': 'snapshot', 'destination_type': 'volume',
                  'connection_info': '{"test": "test"}'})
 
-        def fake_libvirt_driver_instance_exists(_instance):
+        def fake_libvirt_driver_instance_exists(self, _instance):
             called['fake_libvirt_driver_instance_exists'] = True
             return False
 
@@ -9538,24 +9527,20 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_roll_detaching(*args, **kwargs):
             called['fake_roll_detaching'] = True
 
-        self.stubs.Set(cinder.API, 'roll_detaching', fake_roll_detaching)
-        self.stubs.Set(self.compute.driver, "instance_exists",
+        self.stub_out('nova.volume.cinder.API.roll_detaching',
+                      fake_roll_detaching)
+        self.stub_out('nova.virt.fake.FakeDriver.instance_exists',
                        fake_libvirt_driver_instance_exists)
-        self.stubs.Set(self.compute.driver, "detach_volume",
+        self.stub_out('nova.virt.fake.FakeDriver.detach_volume',
                        fake_libvirt_driver_detach_volume_fails)
-
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume_and_instance')
-        objects.BlockDeviceMapping.get_by_volume_and_instance(
-                self.context, 1, instance.uuid).\
-                    AndReturn(objects.BlockDeviceMapping(
-                        context=self.context, **fake_bdm))
-        self.mox.ReplayAll()
+        mock_get.return_value = objects.BlockDeviceMapping(
+                                    context=self.context, **fake_bdm)
 
         self.assertRaises(AttributeError, self.compute.detach_volume,
                           self.context, 1, instance)
         self.assertTrue(called.get('fake_libvirt_driver_instance_exists'))
         self.assertTrue(called.get('fake_roll_detaching'))
+        mock_get.assert_called_once_with(self.context, 1, instance.uuid)
 
     def test_detach_volume_not_found(self):
         # Ensure that a volume can be detached even when it is removed
@@ -9657,16 +9642,16 @@ class ComputeAPITestCase(BaseTestCase):
             bdm_obj = objects.BlockDeviceMapping(**bdm)
             bdm_obj.create()
             bdms.append(bdm_obj)
-
         self.stub_out('nova.volume.cinder.API.terminate_connection',
                       mox.MockAnything())
-        self.stub_out('nova.volume.cinder.API.detach', mox.MockAnything())
+        self.stub_out('nova.volume.cinder.API.detach', mock.MagicMock())
 
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
 
-        self.stubs.Set(self.compute, '_prep_block_device', mox.MockAnything())
+        self.stub_out('nova.compute.manager.ComputeManager_prep_block_device',
+                      mock.MagicMock())
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
 
@@ -9717,25 +9702,21 @@ class ComputeAPITestCase(BaseTestCase):
                                                      instance,
                                                      security_group_name)
 
-    def test_get_diagnostics(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_diagnostics')
+    def test_get_diagnostics(self, mock_get):
         instance = self._create_fake_instance_obj()
-
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'get_diagnostics')
-        rpcapi.get_diagnostics(self.context, instance=instance)
-        self.mox.ReplayAll()
 
         self.compute_api.get_diagnostics(self.context, instance)
 
-    def test_get_instance_diagnostics(self):
+        mock_get.assert_called_once_with(self.context, instance=instance)
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_instance_diagnostics')
+    def test_get_instance_diagnostics(self, mock_get):
         instance = self._create_fake_instance_obj()
 
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'get_instance_diagnostics')
-        rpcapi.get_instance_diagnostics(self.context, instance=instance)
-        self.mox.ReplayAll()
-
         self.compute_api.get_instance_diagnostics(self.context, instance)
+
+        mock_get.assert_called_once_with(self.context, instance=instance)
 
     @mock.patch.object(compute_rpcapi.ComputeAPI,
                        'refresh_instance_security_rules')
@@ -9996,18 +9977,17 @@ class ComputeAPITestCase(BaseTestCase):
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)
 
-    def test_get_migrations(self):
+    @mock.patch.object(db, "migration_get_all_by_filters")
+    def test_get_migrations(self, mock_migration):
         migration = test_migration.fake_db_migration()
         filters = {'host': 'host1'}
-        self.mox.StubOutWithMock(db, "migration_get_all_by_filters")
-        db.migration_get_all_by_filters(self.context,
-                                        filters).AndReturn([migration])
-        self.mox.ReplayAll()
+        mock_migration.return_value = [migration]
 
         migrations = self.compute_api.get_migrations(self.context,
                                                              filters)
         self.assertEqual(1, len(migrations))
         self.assertEqual(migrations[0].id, migration['id'])
+        mock_migration.assert_called_once_with(self.context, filters)
 
     @mock.patch("nova.db.migration_get_in_progress_by_instance")
     def test_get_migrations_in_progress_by_instance(self, mock_get):
@@ -10476,7 +10456,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.api.delete_aggregate, self.context, aggr.id)
 
-    def test_add_host_to_aggregate(self):
+    @mock.patch.object(availability_zones,
+                       'update_host_availability_zone_cache')
+    def test_add_host_to_aggregate(self, mock_az):
         # Ensure we can add a host to an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
@@ -10488,15 +10470,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
             hosts = kwargs["aggregate"].hosts
             self.assertIn(fake_host, hosts)
 
-        self.stubs.Set(self.api.compute_rpcapi, 'add_aggregate_host',
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.add_aggregate_host',
                        fake_add_aggregate_host)
-
-        self.mox.StubOutWithMock(availability_zones,
-                                 'update_host_availability_zone_cache')
-
-        availability_zones.update_host_availability_zone_cache(self.context,
-                                                               fake_host)
-        self.mox.ReplayAll()
 
         fake_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
@@ -10509,6 +10484,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.addhost.end')
         self.assertEqual(len(aggr.hosts), 1)
+        mock_az.assert_called_once_with(self.context, fake_host)
 
     def test_add_host_to_aggr_with_no_az(self):
         values = _create_service_entries(self.context)
