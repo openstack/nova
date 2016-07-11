@@ -5641,7 +5641,15 @@ class ComputeTestCase(BaseTestCase):
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
 
-    def test_post_live_migration_no_shared_storage_working_correctly(self):
+    @mock.patch.object(fake.FakeDriver, 'unfilter_instance')
+    @mock.patch.object(network_api.API, 'migrate_instance_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'post_live_migration_at_destination')
+    @mock.patch.object(network_api.API, 'setup_networks_on_host')
+    @mock.patch.object(compute_manager.InstanceEvents,
+                       'clear_events_for_instance')
+    def test_post_live_migration_no_shared_storage_working_correctly(self,
+            mock_clear, mock_setup, mock_post, mock_migrate, mock_unfilter):
         """Confirm post_live_migration() works correctly as expected
            for non shared storage migration.
         """
@@ -5654,7 +5662,7 @@ class ComputeTestCase(BaseTestCase):
         def fakecleanup(*args, **kwargs):
             result['cleanup'] = True
 
-        self.stubs.Set(self.compute.driver, 'cleanup', fakecleanup)
+        self.stub_out('nova.virt.fake.FakeDriver.cleanup', fakecleanup)
         dest = 'desthost'
         srchost = self.compute.host
 
@@ -5667,37 +5675,21 @@ class ComputeTestCase(BaseTestCase):
                                 'task_state': task_states.MIGRATING,
                                 'power_state': power_state.PAUSED})
 
-        # creating mocks
-        self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(instance, [])
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'migrate_instance_start')
         migration = {'source_compute': srchost, 'dest_compute': dest, }
-        self.compute.network_api.migrate_instance_start(c, instance,
-                                                        migration)
-
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'post_live_migration_at_destination')
-        self.compute.compute_rpcapi.post_live_migration_at_destination(
-            c, instance, False, dest)
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
-        self.mox.StubOutWithMock(self.compute.instance_events,
-                                 'clear_events_for_instance')
-        self.compute.instance_events.clear_events_for_instance(
-            mox.IgnoreArg())
-
-        # start test
-        self.mox.ReplayAll()
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False,
             is_shared_block_storage=False,
             block_migration=False)
+
         self.compute._post_live_migration(c, instance, dest,
                                           migrate_data=migrate_data)
+
         self.assertIn('cleanup', result)
         self.assertTrue(result['cleanup'])
+        mock_unfilter.assert_called_once_with(instance, [])
+        mock_migrate.assert_called_once_with(c, instance, migration)
+        mock_post.assert_called_once_with(c, instance, False, dest)
+        mock_clear.assert_called_once_with(mock.ANY)
 
     def test_post_live_migration_working_correctly(self):
         # Confirm post_live_migration() works as expected correctly.
@@ -5861,28 +5853,17 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('fake', migration.status)
         migration.save.assert_called_once_with()
 
-    def test_rollback_live_migration_at_destination_correctly(self):
+    @mock.patch.object(network_api.API, 'setup_networks_on_host')
+    @mock.patch.object(fake.FakeDriver,
+                       'rollback_live_migration_at_destination')
+    def test_rollback_live_migration_at_destination_correctly(self,
+                                                    mock_rollback, mock_setup):
         # creating instance testdata
         c = context.get_admin_context()
         instance = self._create_fake_instance_obj({'host': 'dummy'})
-
         fake_notifier.NOTIFICATIONS = []
 
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
-        self.compute.network_api.setup_networks_on_host(c, instance,
-                                                        self.compute.host,
-                                                        teardown=True)
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'rollback_live_migration_at_destination')
-        self.compute.driver.rollback_live_migration_at_destination(c,
-                instance, [], {'swap': None, 'ephemerals': [],
-                               'root_device_name': None,
-                               'block_device_mapping': []},
-                destroy_disks=True, migrate_data=None)
-
         # start test
-        self.mox.ReplayAll()
         ret = self.compute.rollback_live_migration_at_destination(c,
                                                     instance=instance,
                                                     destroy_disks=True,
@@ -5895,6 +5876,13 @@ class ComputeTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                         'compute.instance.live_migration.rollback.dest.end')
+        mock_setup.assert_called_once_with(c, instance, self.compute.host,
+                                           teardown=True)
+        mock_rollback.assert_called_once_with(c, instance, [],
+                        {'swap': None, 'ephemerals': [],
+                         'root_device_name': None,
+                         'block_device_mapping': []},
+                        destroy_disks=True, migrate_data=None)
 
     @mock.patch('nova.network.api.API.setup_networks_on_host',
                 side_effect=test.TestingException)
@@ -6122,93 +6110,100 @@ class ComputeTestCase(BaseTestCase):
                                                     "deleted": True})
         instance2 = self._create_fake_instance_obj({"deleted_at": deleted_at,
                                                     "deleted": True})
-
-        self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
-        self.compute._get_instances_on_driver(
-            admin_context, {'deleted': True,
-                            'soft_deleted': False,
-                            'host': self.compute.host}).AndReturn([instance1,
-                                                                   instance2])
         self.flags(running_deleted_instance_timeout=3600,
                    running_deleted_instance_action=action)
 
         return admin_context, instance1, instance2
 
-    def test_cleanup_running_deleted_instances_reap(self):
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(compute_manager.ComputeManager, "_cleanup_volumes")
+    @mock.patch.object(compute_manager.ComputeManager, "_shutdown_instance")
+    @mock.patch.object(objects.BlockDeviceMappingList, "get_by_instance_uuid")
+    def test_cleanup_running_deleted_instances_reap(self, mock_get_uuid,
+                                mock_shutdown, mock_cleanup, mock_get_inst):
         ctxt, inst1, inst2 = self._test_cleanup_running('reap')
         bdms = block_device_obj.block_device_make_list(ctxt, [])
 
-        self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 "get_by_instance_uuid")
         # Simulate an error and make sure cleanup proceeds with next instance.
-        self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False).\
-                                        AndRaise(test.TestingException)
-        objects.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
-                inst1.uuid, use_slave=True).AndReturn(bdms)
-        objects.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
-                inst2.uuid, use_slave=True).AndReturn(bdms)
-        self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False).\
-                                        AndReturn(None)
+        mock_shutdown.side_effect = [test.TestingException, None]
+        mock_get_uuid.side_effect = [bdms, bdms]
+        mock_cleanup.return_value = None
+        mock_get_inst.return_value = [inst1, inst2]
 
-        self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
-        self.compute._cleanup_volumes(ctxt, inst1['uuid'], bdms).\
-                                      AndReturn(None)
-
-        self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(ctxt)
 
-    def test_cleanup_running_deleted_instances_shutdown(self):
+        mock_shutdown.assert_has_calls([
+            mock.call(ctxt, inst1, bdms, notify=False),
+            mock.call(ctxt, inst2, bdms, notify=False)])
+        mock_cleanup.assert_called_once_with(ctxt, inst2['uuid'], bdms)
+        mock_get_uuid.assert_has_calls([
+            mock.call(ctxt, inst1.uuid, use_slave=True),
+            mock.call(ctxt, inst2.uuid, use_slave=True)])
+        mock_get_inst.assert_called_once_with(ctxt,
+                                              {'deleted': True,
+                                               'soft_deleted': False,
+                                               'host': self.compute.host})
+
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(fake.FakeDriver, "set_bootable")
+    @mock.patch.object(fake.FakeDriver, "power_off")
+    def test_cleanup_running_deleted_instances_shutdown(self, mock_power,
+                                                        mock_set, mock_get):
         ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
+        mock_get.return_value = [inst1, inst2]
 
-        self.mox.StubOutWithMock(self.compute.driver, 'set_bootable')
-        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
-
-        self.compute.driver.set_bootable(inst1, False)
-        self.compute.driver.power_off(inst1)
-        self.compute.driver.set_bootable(inst2, False)
-        self.compute.driver.power_off(inst2)
-
-        self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(ctxt)
 
-    def test_cleanup_running_deleted_instances_shutdown_notimpl(self):
+        mock_get.assert_called_once_with(ctxt,
+                                              {'deleted': True,
+                                               'soft_deleted': False,
+                                               'host': self.compute.host})
+        mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
+        mock_set.assert_has_calls([mock.call(inst1, False),
+                                   mock.call(inst2, False)])
+
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(fake.FakeDriver, "set_bootable")
+    @mock.patch.object(fake.FakeDriver, "power_off")
+    def test_cleanup_running_deleted_instances_shutdown_notimpl(self,
+                                            mock_power, mock_set, mock_get):
         ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
+        mock_get.return_value = [inst1, inst2]
+        mock_set.side_effect = [NotImplementedError, NotImplementedError]
 
-        self.mox.StubOutWithMock(self.compute.driver, 'set_bootable')
-        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
-
-        self.compute.driver.set_bootable(inst1, False).AndRaise(
-                NotImplementedError)
-        compute_manager.LOG.warning(mox.IgnoreArg())
-        self.compute.driver.power_off(inst1)
-        self.compute.driver.set_bootable(inst2, False).AndRaise(
-                NotImplementedError)
-        compute_manager.LOG.warning(mox.IgnoreArg())
-        self.compute.driver.power_off(inst2)
-
-        self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(ctxt)
 
-    def test_cleanup_running_deleted_instances_shutdown_error(self):
+        mock_get.assert_called_once_with(ctxt,
+                                         {'deleted': True,
+                                          'soft_deleted': False,
+                                          'host': self.compute.host})
+        mock_set.assert_has_calls([mock.call(inst1, False),
+                                   mock.call(inst2, False)])
+        mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
+
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(fake.FakeDriver, "set_bootable")
+    @mock.patch.object(fake.FakeDriver, "power_off")
+    def test_cleanup_running_deleted_instances_shutdown_error(self, mock_power,
+                                        mock_set, mock_get):
         ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
-
-        self.mox.StubOutWithMock(self.compute.driver, 'set_bootable')
-        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
-
-        self.mox.StubOutWithMock(compute_manager.LOG, 'exception')
         e = test.TestingException('bad')
+        mock_get.return_value = [inst1, inst2]
+        mock_power.side_effect = [e, e]
 
-        self.compute.driver.set_bootable(inst1, False)
-        self.compute.driver.power_off(inst1).AndRaise(e)
-        compute_manager.LOG.warning(mox.IgnoreArg())
-
-        self.compute.driver.set_bootable(inst2, False)
-        self.compute.driver.power_off(inst2).AndRaise(e)
-        compute_manager.LOG.warning(mox.IgnoreArg())
-
-        self.mox.ReplayAll()
         self.compute._cleanup_running_deleted_instances(ctxt)
+
+        mock_get.assert_called_once_with(ctxt,
+                                         {'deleted': True,
+                                          'soft_deleted': False,
+                                          'host': self.compute.host})
+        mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
+        mock_set.assert_has_calls([mock.call(inst1, False),
+                                   mock.call(inst2, False)])
 
     def test_running_deleted_instances(self):
         admin_context = context.get_admin_context()
