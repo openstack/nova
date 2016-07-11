@@ -182,3 +182,23 @@ class MatchTypeTestCase(test.NoDBTestCase):
         self.assertNotEqual(matcher, World())
         self.assertNotEqual(matcher, 123)
         self.assertNotEqual(matcher, "foo")
+
+
+class ContainKeyValueTestCase(test.NoDBTestCase):
+
+    def test_contain_key_value_normal(self):
+        matcher = test.ContainKeyValue('foo', 'bar')
+
+        self.assertEqual(matcher, {123: 'nova', 'foo': 'bar'})
+        self.assertNotEqual(matcher, {'foo': 123})
+        self.assertNotEqual(matcher, {})
+
+    def test_contain_key_value_exception(self):
+        matcher = test.ContainKeyValue('foo', 'bar')
+
+        # Raise TypeError
+        self.assertNotEqual(matcher, 123)
+        self.assertNotEqual(matcher, 'foo')
+        # Raise KeyError
+        self.assertNotEqual(matcher, {1: 2, '3': 4, 5: '6'})
+        self.assertNotEqual(matcher, {'bar': 'foo'})

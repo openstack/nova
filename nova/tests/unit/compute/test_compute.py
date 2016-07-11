@@ -7006,30 +7006,27 @@ class ComputeTestCase(BaseTestCase):
             mock.call(ctxt, mock.ANY, power_state.RUNNING, use_slave=True),
             mock.call(ctxt, mock.ANY, power_state.SHUTDOWN, use_slave=True)])
 
-    def _test_lifecycle_event(self, lifecycle_event, vm_power_state,
-                              is_actual_state=True):
+    @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_sync_instance_power_state')
+    def _test_lifecycle_event(self, lifecycle_event, vm_power_state, mock_sync,
+                              mock_get, is_actual_state=True):
         instance = self._create_fake_instance_obj()
         uuid = instance['uuid']
-
-        self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
 
         actual_state = (vm_power_state
                         if vm_power_state is not None and is_actual_state
                         else power_state.NOSTATE)
-        self.compute._get_power_state(
-            mox.IgnoreArg(),
-            mox.ContainsKeyValue('uuid', uuid)).AndReturn(actual_state)
+        mock_get.return_value = actual_state
 
-        if actual_state == vm_power_state:
-            self.compute._sync_instance_power_state(
-                mox.IgnoreArg(),
-                mox.ContainsKeyValue('uuid', uuid),
-                vm_power_state)
-        self.mox.ReplayAll()
         self.compute.handle_events(event.LifecycleEvent(uuid, lifecycle_event))
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
+
+        mock_get.assert_called_once_with(mock.ANY,
+            test.ContainKeyValue('uuid', uuid))
+        if actual_state == vm_power_state:
+            mock_sync.assert_called_once_with(mock.ANY,
+                test.ContainKeyValue('uuid', uuid),
+                vm_power_state)
 
     def test_lifecycle_events(self):
         self._test_lifecycle_event(event.EVENT_LIFECYCLE_STOPPED,
@@ -7127,7 +7124,7 @@ class ComputeTestCase(BaseTestCase):
         instance.old_flavor = old_type
         instance.new_flavor = new_type
 
-        fake_rt = self.mox.CreateMockAnything()
+        fake_rt = mock.MagicMock()
 
         def fake_drop_move_claim(*args, **kwargs):
             pass
@@ -7138,27 +7135,30 @@ class ComputeTestCase(BaseTestCase):
         def fake_setup_networks_on_host(self, *args, **kwargs):
             pass
 
-        self.stubs.Set(fake_rt, 'drop_move_claim', fake_drop_move_claim)
-        self.stubs.Set(self.compute, '_get_resource_tracker',
-                       fake_get_resource_tracker)
-        self.stubs.Set(self.compute.network_api, 'setup_networks_on_host',
-                       fake_setup_networks_on_host)
+        with test.nested(
+            mock.patch.object(fake_rt, 'drop_move_claim',
+                              side_effect=fake_drop_move_claim),
+            mock.patch.object(self.compute, '_get_resource_tracker',
+                              side_effect=fake_get_resource_tracker),
+            mock.patch.object(self.compute.network_api,
+                              'setup_networks_on_host',
+                              side_effect=fake_setup_networks_on_host)
+        ) as (mock_drop, mock_get, mock_setup):
+            migration = objects.Migration(context=self.context.elevated())
+            migration.instance_uuid = instance.uuid
+            migration.status = 'finished'
+            migration.migration_type = 'resize'
+            migration.create()
 
-        migration = objects.Migration(context=self.context.elevated())
-        migration.instance_uuid = instance.uuid
-        migration.status = 'finished'
-        migration.migration_type = 'resize'
-        migration.create()
+            instance.task_state = task_states.DELETING
+            instance.vm_state = vm_states.RESIZED
+            instance.system_metadata = {}
+            instance.save()
 
-        instance.task_state = task_states.DELETING
-        instance.vm_state = vm_states.RESIZED
-        instance.system_metadata = {}
-        instance.save()
-
-        self.compute.confirm_resize(self.context, instance=instance,
-                                    migration=migration, reservations=[])
-        instance.refresh()
-        self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
+            self.compute.confirm_resize(self.context, instance=instance,
+                                        migration=migration, reservations=[])
+            instance.refresh()
+            self.assertEqual(vm_states.ACTIVE, instance['vm_state'])
 
     def _get_instance_and_bdm_for_dev_defaults_tests(self):
         instance = self._create_fake_instance_obj(
@@ -7175,58 +7175,60 @@ class ComputeTestCase(BaseTestCase):
 
         return instance, block_device_mapping
 
-    def test_default_block_device_names_empty_instance_root_dev(self):
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_default_device_names_for_instance')
+    def test_default_block_device_names_empty_instance_root_dev(self, mock_def,
+                                                                mock_save):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         instance.root_device_name = None
-        self.mox.StubOutWithMock(objects.Instance, 'save')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_default_device_names_for_instance')
-        self.compute._default_device_names_for_instance(instance,
-                                                        '/dev/vda', [], [],
-                                                        [bdm for bdm in bdms])
-        self.mox.ReplayAll()
+
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
-        self.assertEqual('/dev/vda', instance.root_device_name)
 
-    def test_default_block_device_names_empty_root_device(self):
+        self.assertEqual('/dev/vda', instance.root_device_name)
+        mock_def.assert_called_once_with(instance, '/dev/vda', [], [],
+                                         [bdm for bdm in bdms])
+
+    @mock.patch.object(objects.BlockDeviceMapping, 'save')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_default_device_names_for_instance')
+    def test_default_block_device_names_empty_root_device(self, mock_def,
+                                                          mock_save):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         bdms[0]['device_name'] = None
-        self.mox.StubOutWithMock(self.compute,
-                                 '_default_device_names_for_instance')
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'save')
-        bdms[0].save().AndReturn(None)
-        self.compute._default_device_names_for_instance(instance,
-                                                        '/dev/vda', [], [],
-                                                        [bdm for bdm in bdms])
-        self.mox.ReplayAll()
+        mock_save.return_value = None
+
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
 
-    def test_default_block_device_names_no_root_device(self):
+        mock_def.assert_called_once_with(instance, '/dev/vda', [], [],
+                                         [bdm for bdm in bdms])
+
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.BlockDeviceMapping, 'save')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_default_root_device_name')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_default_device_names_for_instance')
+    def test_default_block_device_names_no_root_device(self, mock_default_name,
+                        mock_default_dev, mock_blk_save, mock_inst_save):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         instance.root_device_name = None
         bdms[0]['device_name'] = None
-        self.mox.StubOutWithMock(objects.Instance, 'save')
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping, 'save')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_default_root_device_name')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_default_device_names_for_instance')
+        mock_default_dev.return_value = '/dev/vda'
+        mock_blk_save.return_value = None
 
-        self.compute._default_root_device_name(instance, mox.IgnoreArg(),
-                                               bdms[0]).AndReturn('/dev/vda')
-        bdms[0].save().AndReturn(None)
-        self.compute._default_device_names_for_instance(instance,
-                                                        '/dev/vda', [], [],
-                                                        [bdm for bdm in bdms])
-        self.mox.ReplayAll()
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
+
         self.assertEqual('/dev/vda', instance.root_device_name)
+        mock_default_dev.assert_called_once_with(instance, mock.ANY, bdms[0])
+        mock_default_name.assert_called_once_with(instance, '/dev/vda', [], [],
+                                                  [bdm for bdm in bdms])
 
     def test_default_block_device_names_with_blank_volumes(self):
         instance = self._create_fake_instance_obj()
@@ -8970,7 +8972,10 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertRaises(exception.InvalidVolume,
                 self.compute_api.rescue, self.context, instance)
 
-    def test_vnc_console(self):
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'get_vnc_console')
+    @mock.patch.object(compute_api.consoleauth_rpcapi.ConsoleAuthAPI,
+                       'authorize_console')
+    def test_vnc_console(self, mock_auth, mock_get):
         # Make sure we can a vnc console for an instance.
 
         fake_instance = self._fake_instance(
@@ -8984,26 +8989,20 @@ class ComputeAPITestCase(BaseTestCase):
                              'internal_access_path': 'fake_access_path',
                              'instance_uuid': fake_instance.uuid,
                              'access_url': 'fake_console_url'}
+        mock_get.return_value = fake_connect_info
 
-        rpcapi = compute_rpcapi.ComputeAPI
-        self.mox.StubOutWithMock(rpcapi, 'get_vnc_console')
-        rpcapi.get_vnc_console(
-            self.context, instance=fake_instance,
-            console_type=fake_console_type).AndReturn(fake_connect_info)
+        console = self.compute_api.get_vnc_console(self.context,
+                fake_instance, fake_console_type)
 
-        self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
-                                 'authorize_console')
-        self.compute_api.consoleauth_rpcapi.authorize_console(
+        self.assertEqual(console, {'url': 'fake_console_url'})
+        mock_get.assert_called_once_with(
+                self.context, instance=fake_instance,
+                console_type=fake_console_type)
+        mock_auth.assert_called_once_with(
             self.context, 'fake_token', fake_console_type, 'fake_console_host',
             'fake_console_port', 'fake_access_path',
             'f3000000-0000-0000-0000-000000000000',
             access_url='fake_console_url')
-
-        self.mox.ReplayAll()
-
-        console = self.compute_api.get_vnc_console(self.context,
-                fake_instance, fake_console_type)
-        self.assertEqual(console, {'url': 'fake_console_url'})
 
     def test_get_vnc_console_no_host(self):
         instance = self._create_fake_instance_obj(params={'host': ''})
