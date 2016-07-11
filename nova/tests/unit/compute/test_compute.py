@@ -28,7 +28,6 @@ import uuid
 from eventlet import greenthread
 from itertools import chain
 import mock
-from mox3 import mox
 from neutronclient.common import exceptions as neutron_exceptions
 from oslo_log import log as logging
 import oslo_messaging as messaging
@@ -11099,24 +11098,26 @@ class EvacuateHostTestCase(BaseTestCase):
 
     def test_rebuild_on_host_updated_target(self):
         """Confirm evacuate scenario updates host and node."""
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-
         def fake_get_compute_info(context, host):
             self.assertTrue(context.is_admin)
             self.assertEqual('fake-mini', host)
             cn = objects.ComputeNode(hypervisor_hostname=self.rt.nodename)
             return cn
 
-        self.stubs.Set(self.compute, '_get_compute_info',
-                       fake_get_compute_info)
-        self.mox.ReplayAll()
+        with test.nested(
+                mock.patch.object(self.compute.driver, 'instance_on_disk',
+                                  side_effect=lambda x: True),
+                mock.patch.object(self.compute, '_get_compute_info',
+                                  side_effect=fake_get_compute_info)
+        ) as (mock_inst, mock_get):
+            self._rebuild()
 
-        self._rebuild()
-
-        # Should be on destination host
-        instance = db.instance_get(self.context, self.inst.id)
-        self.assertEqual(instance['host'], self.compute.host)
-        self.assertEqual(NODENAME, instance['node'])
+            # Should be on destination host
+            instance = db.instance_get(self.context, self.inst.id)
+            self.assertEqual(instance['host'], self.compute.host)
+            self.assertEqual(NODENAME, instance['node'])
+            self.assertTrue(mock_inst.called)
+            self.assertTrue(mock_get.called)
 
     def test_rebuild_on_host_updated_target_node_not_found(self):
         """Confirm evacuate scenario where compute_node isn't found."""
@@ -11159,8 +11160,8 @@ class EvacuateHostTestCase(BaseTestCase):
                            {"vm_state": vm_states.STOPPED})
         self.inst.vm_state = vm_states.STOPPED
 
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-        self.mox.ReplayAll()
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                      lambda *a, **ka: True)
 
         self._rebuild()
 
@@ -11180,7 +11181,11 @@ class EvacuateHostTestCase(BaseTestCase):
             self.assertEqual(instance['host'], 'fake_host_2')
             self.assertTrue(mock_inst.called)
 
-    def test_rebuild_on_host_with_volumes(self):
+    @mock.patch.object(cinder.API, 'detach')
+    @mock.patch.object(compute_manager.ComputeManager, '_prep_block_device')
+    @mock.patch.object(compute_manager.ComputeManager, '_driver_detach_volume')
+    def test_rebuild_on_host_with_volumes(self, mock_drv_detach, mock_prep,
+                                          mock_detach):
         """Confirm evacuate scenario reconnects volumes."""
         values = {'instance_uuid': self.inst.uuid,
                   'source_type': 'volume',
@@ -11193,38 +11198,21 @@ class EvacuateHostTestCase(BaseTestCase):
 
         def fake_volume_get(self, context, volume):
             return {'id': 'fake_volume_id'}
-        self.stubs.Set(cinder.API, "get", fake_volume_get)
+        self.stub_out("nova.volume.cinder.API.get", fake_volume_get)
 
         # Stub out and record whether it gets detached
         result = {"detached": False}
 
-        def fake_detach(self, context, volume, instance_uuid, attachment_id):
-            result["detached"] = volume["id"] == 'fake_volume_id'
-        self.stubs.Set(cinder.API, "detach", fake_detach)
-
-        self.mox.StubOutWithMock(self.compute, '_driver_detach_volume')
-        self.compute._driver_detach_volume(mox.IsA(self.context),
-                                           mox.IsA(instance_obj.Instance),
-                                           mox.IsA(objects.BlockDeviceMapping))
+        def fake_detach(context, volume, instance_uuid, attachment_id):
+            result["detached"] = volume == 'fake_volume_id'
+        mock_detach.side_effect = fake_detach
 
         def fake_terminate_connection(self, context, volume, connector):
             return {}
-        self.stubs.Set(cinder.API, "terminate_connection",
-                       fake_terminate_connection)
-
-        # make sure volumes attach, detach are called
-        self.mox.StubOutWithMock(self.compute.volume_api, 'detach')
-        self.compute.volume_api.detach(mox.IsA(self.context), mox.IgnoreArg(),
-                                       mox.IgnoreArg(), None)
-
-        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
-        self.compute._prep_block_device(mox.IsA(self.context),
-                                        mox.IsA(objects.Instance),
-                                        mox.IgnoreArg())
-
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-        self.mox.ReplayAll()
-
+        self.stub_out("nova.volume.cinder.API.terminate_connection",
+                      fake_terminate_connection)
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                      lambda *a, **ka: True)
         self._rebuild()
 
         # cleanup
@@ -11235,39 +11223,51 @@ class EvacuateHostTestCase(BaseTestCase):
         for bdm in bdms:
             db.block_device_mapping_destroy(self.context, bdm['id'])
 
-    def test_rebuild_on_host_with_shared_storage(self):
-        """Confirm evacuate scenario on shared storage."""
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance),
-                mox.IsA(objects.ImageMeta),
-                mox.IgnoreArg(), 'newpass',
-                network_info=mox.IgnoreArg(),
-                block_device_info=mox.IgnoreArg())
+        mock_drv_detach.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchType(objects.Instance),
+            test.MatchType(objects.BlockDeviceMapping))
+        # make sure volumes attach, detach are called
+        mock_detach.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            mock.ANY, mock.ANY, None)
+        mock_prep.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchType(objects.Instance), mock.ANY)
 
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-        self.mox.ReplayAll()
+    @mock.patch.object(fake.FakeDriver, 'spawn')
+    def test_rebuild_on_host_with_shared_storage(self, mock_spawn):
+        """Confirm evacuate scenario on shared storage."""
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                      lambda *a, **ka: True)
 
         self._rebuild()
 
-    def test_rebuild_on_host_without_shared_storage(self):
+        mock_spawn.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchType(objects.Instance),
+            test.MatchType(objects.ImageMeta),
+            mock.ANY, 'newpass',
+            network_info=mock.ANY,
+            block_device_info=mock.ANY)
+
+    @mock.patch.object(fake.FakeDriver, 'spawn')
+    def test_rebuild_on_host_without_shared_storage(self, mock_spawn):
         """Confirm evacuate scenario without shared storage
         (rebuild from image)
         """
-
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance),
-                mox.IsA(objects.ImageMeta),
-                mox.IgnoreArg(), mox.IsA('newpass'),
-                network_info=mox.IgnoreArg(),
-                block_device_info=mox.IgnoreArg())
-
-        self.stubs.Set(self.compute.driver, 'instance_on_disk',
-                       lambda x: False)
-        self.mox.ReplayAll()
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                      lambda *a, **ka: False)
 
         self._rebuild(on_shared_storage=False)
+
+        mock_spawn.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchType(objects.Instance),
+            test.MatchType(objects.ImageMeta),
+            mock.ANY, 'newpass',
+            network_info=mock.ANY,
+            block_device_info=mock.ANY)
 
     def test_rebuild_on_host_instance_exists(self):
         """Rebuild if instance exists raises an exception."""
@@ -11288,41 +11288,41 @@ class EvacuateHostTestCase(BaseTestCase):
             self.assertRaises(exception.InstanceRecreateNotSupported,
                               lambda: self._rebuild(on_shared_storage=True))
 
+    @mock.patch.object(fake.FakeDriver, 'spawn')
     @mock.patch('nova.objects.ImageMeta.from_image_ref')
     def test_on_shared_storage_not_provided_host_without_shared_storage(self,
-            mock_image_meta):
-        # 'spawn' should be called with the image_meta from the image_ref
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance),
-                mock_image_meta.return_value,
-                mox.IgnoreArg(), mox.IsA('newpass'),
-                network_info=mox.IgnoreArg(),
-                block_device_info=mox.IgnoreArg())
-
-        self.stubs.Set(self.compute.driver, 'instance_on_disk',
-                       lambda x: False)
-        self.mox.ReplayAll()
+            mock_image_meta, mock_spawn):
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                       lambda *a, **ka: False)
 
         self._rebuild(on_shared_storage=None)
 
+        # 'spawn' should be called with the image_meta from the image_ref
+        mock_spawn.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchType(objects.Instance),
+            mock_image_meta.return_value,
+            mock.ANY, 'newpass',
+            network_info=mock.ANY,
+            block_device_info=mock.ANY)
+
+    @mock.patch.object(fake.FakeDriver, 'spawn')
     @mock.patch('nova.objects.Instance.image_meta',
                 new_callable=mock.PropertyMock)
     def test_on_shared_storage_not_provided_host_with_shared_storage(self,
-            mock_image_meta):
-        # 'spawn' should be called with the image_meta from the instance
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(objects.Instance),
-                mock_image_meta.return_value,
-                mox.IgnoreArg(), 'newpass',
-                network_info=mox.IgnoreArg(),
-                block_device_info=mox.IgnoreArg())
-
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
-        self.mox.ReplayAll()
+            mock_image_meta, mock_spawn):
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                      lambda *a, **ka: True)
 
         self._rebuild(on_shared_storage=None)
+
+        mock_spawn.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchType(objects.Instance),
+            mock_image_meta.return_value,
+            mock.ANY, 'newpass',
+            network_info=mock.ANY,
+            block_device_info=mock.ANY)
 
     def test_rebuild_migration_passed_in(self):
         migration = mock.Mock(spec=objects.Migration)
