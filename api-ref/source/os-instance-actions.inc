@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
 .. needs:example_verification
 .. needs:body_verification
 
@@ -30,10 +29,22 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+
+  - instanceActions: instanceActions
+  - action: action
+  - instance_uuid: instance_id_body
+  - message: message
+  - project_id: project_id_instance_action
+  - request_id: request_id_body
+  - start_time: start_time
+  - user_id: user_id
 
 **Example List Actions For Server: JSON response**
 
@@ -60,11 +71,30 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - request_id: request_id
 
 Response
 --------
+
+
+.. rest_parameters:: parameters.yaml
+
+
+  - instanceAction: instanceAction
+  - action: action
+  - instance_uuid: instance_id_body
+  - message: message
+  - project_id: project_id_instance_action
+  - request_id: request_id_body
+  - start_time: start_time
+  - user_id: user_id
+  - events: instance_action_events
+  - events.event: event
+  - events.start_time: event_start_time
+  - events.finish_time: event_finish_time
+  - events.result: event_result
+  - events.traceback: event_traceback
 
 **Example Show Server Action Details: JSON response**
 
