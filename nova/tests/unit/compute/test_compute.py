@@ -26,6 +26,7 @@ import traceback
 import uuid
 
 from eventlet import greenthread
+from itertools import chain
 import mock
 from mox3 import mox
 from neutronclient.common import exceptions as neutron_exceptions
@@ -1757,7 +1758,7 @@ class ComputeTestCase(BaseTestCase):
         """
         def fake(*args, **kwargs):
             raise test.TestingException()
-        self.stubs.Set(self.compute.driver, 'spawn', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', fake)
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(
                           self.context, instance=instance, request_spec={},
@@ -1782,13 +1783,16 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id="fake")
 
-        self.stubs.Set(self.compute.driver, 'spawn', fake)
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
-        self.compute._deallocate_network(mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
+        with test.nested(
+            mock.patch.object(self.compute, '_deallocate_network'),
+            mock.patch.object(self.compute.driver, 'spawn')
+        ) as (mock_deallocate, mock_spawn):
+            mock_spawn.side_effect = fake
+            self.compute.build_and_run_instance(self.context, instance, {}, {},
+                                                {}, block_device_mapping=[])
 
-        self.compute.build_and_run_instance(self.context, instance, {}, {},
-                                            {}, block_device_mapping=[])
+            mock_deallocate.assert_called_with(mock.ANY, mock.ANY, None)
+            self.assertTrue(mock_spawn.called)
 
     def test_run_instance_bails_on_missing_instance(self):
         # Make sure that run_instance() will quickly ignore a deleted instance
@@ -2217,21 +2221,14 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_rescue_handle_err(self):
+    @mock.patch.object(fake.FakeDriver, 'rescue')
+    @mock.patch.object(compute_manager.ComputeManager, '_get_rescue_image')
+    def test_rescue_handle_err(self, mock_get, mock_rescue):
         # If the driver fails to rescue, instance state should got to ERROR
         # and the exception should be converted to InstanceNotRescuable
         inst_obj = self._create_fake_instance_obj()
-        self.mox.StubOutWithMock(self.compute, '_get_rescue_image')
-        self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
-
-        self.compute._get_rescue_image(
-            mox.IgnoreArg(), inst_obj, mox.IgnoreArg()).AndReturn(
-                objects.ImageMeta.from_dict({}))
-        nova.virt.fake.FakeDriver.rescue(
-            mox.IgnoreArg(), inst_obj, [], mox.IgnoreArg(), 'password'
-            ).AndRaise(RuntimeError("Try again later"))
-
-        self.mox.ReplayAll()
+        mock_get.return_value = objects.ImageMeta.from_dict({})
+        mock_rescue.side_effect = RuntimeError("Try again later")
 
         expected_message = ('Instance %s cannot be rescued: '
                             'Driver Error: Try again later' % inst_obj.uuid)
@@ -2244,6 +2241,9 @@ class ComputeTestCase(BaseTestCase):
                     clean_shutdown=True)
 
         self.assertEqual(vm_states.ERROR, inst_obj.vm_state)
+        mock_get.assert_called_once_with(mock.ANY, inst_obj, mock.ANY)
+        mock_rescue.assert_called_once_with(mock.ANY, inst_obj, [],
+                                            mock.ANY, 'password')
 
     @mock.patch.object(image_api.API, "get")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
@@ -2704,40 +2704,38 @@ class ComputeTestCase(BaseTestCase):
                                       on_shared_storage=False)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def _test_reboot(self, soft,
-                     test_delete=False, test_unrescue=False,
-                     fail_reboot=False, fail_running=False):
-
+    @mock.patch.object(compute_manager.ComputeManager,
+                           '_get_instance_block_device_info')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_notify_about_instance_usage')
+    @mock.patch.object(compute_manager.ComputeManager, '_instance_update')
+    @mock.patch.object(db, 'instance_update_and_get_original')
+    @mock.patch.object(compute_manager.ComputeManager, '_get_power_state')
+    def _test_reboot(self, soft, mock_get_power, mock_get_orig,
+                 mock_update, mock_notify, mock_get_nw, mock_get_blk,
+                 test_delete=False, test_unrescue=False,
+                 fail_reboot=False, fail_running=False):
         reboot_type = soft and 'SOFT' or 'HARD'
         task_pending = (soft and task_states.REBOOT_PENDING
-                             or task_states.REBOOT_PENDING_HARD)
+                        or task_states.REBOOT_PENDING_HARD)
         task_started = (soft and task_states.REBOOT_STARTED
-                             or task_states.REBOOT_STARTED_HARD)
+                        or task_states.REBOOT_STARTED_HARD)
         expected_task = (soft and task_states.REBOOTING
-                               or task_states.REBOOTING_HARD)
+                         or task_states.REBOOTING_HARD)
         expected_tasks = (soft and (task_states.REBOOTING,
                                     task_states.REBOOT_PENDING,
                                     task_states.REBOOT_STARTED)
-                               or (task_states.REBOOTING_HARD,
-                                   task_states.REBOOT_PENDING_HARD,
-                                   task_states.REBOOT_STARTED_HARD))
+                          or (task_states.REBOOTING_HARD,
+                              task_states.REBOOT_PENDING_HARD,
+                              task_states.REBOOT_STARTED_HARD))
 
         # This is a true unit test, so we don't need the network stubs.
         fake_network.unset_stub_network_methods(self)
 
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute.driver, 'reboot')
-
         # FIXME(comstud): I don't feel like the context needs to
         # be elevated at all.  Hopefully remove elevated from
-        # reboot_instance and remove the stub here in a future patch.
+        # reboot_instance and remove the mock here in a future patch.
         # econtext would just become self.context below then.
         econtext = self.context.elevated()
 
@@ -2748,8 +2746,7 @@ class ComputeTestCase(BaseTestCase):
                    task_state=expected_task,
                    launched_at=timeutils.utcnow()))
         instance = objects.Instance._from_db_object(econtext,
-                                                    objects.Instance(),
-                                                    db_instance)
+                                objects.Instance(), db_instance)
 
         updated_dbinstance1 = fake_instance.fake_db_instance(
             **dict(uuid=uuids.db_instance_1,
@@ -2777,40 +2774,33 @@ class ComputeTestCase(BaseTestCase):
         fake_power_state2 = power_state.RUNNING
         fake_power_state3 = 10002
 
+        def _fake_elevated(self):
+            return econtext
+
         # Beginning of calls we expect.
-
-        self.mox.StubOutWithMock(self.context, 'elevated')
-        self.context.elevated().AndReturn(econtext)
-
-        self.compute._get_instance_block_device_info(
-            econtext, instance).AndReturn(fake_block_dev_info)
-        self.compute.network_api.get_instance_nw_info(
-            econtext, instance).AndReturn(fake_nw_model)
-        self.compute._notify_about_instance_usage(econtext,
-                                                  instance,
-                                                  'reboot.start')
-        self.compute._get_power_state(econtext,
-                instance).AndReturn(fake_power_state1)
-        db.instance_update_and_get_original(econtext, instance['uuid'],
-                                        {'task_state': task_pending,
-                                         'expected_task_state': expected_tasks,
-                                         'power_state': fake_power_state1},
-                                            columns_to_join=['system_metadata',
-                                                             'extra',
-                                                             'extra.flavor']
-                                        ).AndReturn((None,
-                                                     updated_dbinstance1))
+        self.stub_out('nova.context.RequestContext.elevated', _fake_elevated)
+        mock_get_blk.return_value = fake_block_dev_info
+        mock_get_nw.return_value = fake_nw_model
+        mock_get_power.side_effect = [fake_power_state1]
+        mock_get_orig.side_effect = [(None, updated_dbinstance1),
+                                     (None, updated_dbinstance1)]
+        notify_call_list = [mock.call(econtext, instance, 'reboot.start')]
+        ps_call_list = [mock.call(econtext, instance)]
+        db_call_list = [mock.call(econtext, instance['uuid'],
+                                  {'task_state': task_pending,
+                                   'expected_task_state': expected_tasks,
+                                   'power_state': fake_power_state1},
+                                  columns_to_join=['system_metadata',
+                                                   'extra',
+                                                   'extra.flavor']),
+                        mock.call(econtext, updated_dbinstance1['uuid'],
+                                  {'task_state': task_started,
+                                   'expected_task_state': task_pending},
+                                  columns_to_join=['system_metadata'])]
         expected_nw_info = fake_nw_model
-        db.instance_update_and_get_original(econtext,
-                                        updated_dbinstance1['uuid'],
-                                        {'task_state': task_started,
-                                         'expected_task_state': task_pending},
-                                            columns_to_join=['system_metadata']
-                                        ).AndReturn((None,
-                                                     updated_dbinstance1))
 
         # Annoying.  driver.reboot is wrapped in a try/except, and
-        # doesn't re-raise.  It eats exception generated by mox if
+        # doesn't re-raise.  It eats exception generated by mock if
         # this is called with the wrong args, so we have to hack
         # around it.
         reboot_call_info = {}
@@ -2820,7 +2810,7 @@ class ComputeTestCase(BaseTestCase):
             'kwargs': {'block_device_info': fake_block_dev_info}}
         fault = exception.InstanceNotFound(instance_id='instance-0000')
 
-        def fake_reboot(*args, **kwargs):
+        def fake_reboot(self, *args, **kwargs):
             reboot_call_info['args'] = args
             reboot_call_info['kwargs'] = kwargs
 
@@ -2831,100 +2821,103 @@ class ComputeTestCase(BaseTestCase):
             if fail_reboot:
                 raise fault
 
-        self.stubs.Set(self.compute.driver, 'reboot', fake_reboot)
+        self.stub_out('nova.virt.fake.FakeDriver.reboot', fake_reboot)
 
         # Power state should be updated again
         if not fail_reboot or fail_running:
             new_power_state = fake_power_state2
-            self.compute._get_power_state(econtext,
-                    instance).AndReturn(fake_power_state2)
+            ps_call_list.append(mock.call(econtext, instance))
+            mock_get_power.side_effect = chain(mock_get_power.side_effect,
+                                               [fake_power_state2])
         else:
             new_power_state = fake_power_state3
-            self.compute._get_power_state(econtext,
-                    instance).AndReturn(fake_power_state3)
+            ps_call_list.append(mock.call(econtext, instance))
+            mock_get_power.side_effect = chain(mock_get_power.side_effect,
+                                               [fake_power_state3])
 
         if test_delete:
             fault = exception.InstanceNotFound(
-                        instance_id=instance['uuid'])
-            db.instance_update_and_get_original(
-                econtext, updated_dbinstance1['uuid'],
-                {'power_state': new_power_state,
-                 'task_state': None,
-                 'vm_state': vm_states.ACTIVE},
-                columns_to_join=['system_metadata'],
-                ).AndRaise(fault)
-            self.compute._notify_about_instance_usage(
-                econtext,
-                instance,
-                'reboot.end')
+                instance_id=instance['uuid'])
+            mock_get_orig.side_effect = chain(mock_get_orig.side_effect,
+                                              [fault])
+            db_call_list.append(
+                mock.call(econtext, updated_dbinstance1['uuid'],
+                          {'power_state': new_power_state,
+                           'task_state': None,
+                           'vm_state': vm_states.ACTIVE},
+                          columns_to_join=['system_metadata']))
+            notify_call_list.append(mock.call(econtext, instance,
+                                              'reboot.end'))
         elif fail_reboot and not fail_running:
-            db.instance_update_and_get_original(
-                econtext, updated_dbinstance1['uuid'],
-                {'vm_state': vm_states.ERROR},
-                columns_to_join=['system_metadata'],
-                ).AndRaise(fault)
+            mock_get_orig.side_effect = chain(mock_get_orig.side_effect,
+                                              [fault])
+            db_call_list.append(
+                mock.call(econtext, updated_dbinstance1['uuid'],
+                          {'vm_state': vm_states.ERROR},
+                          columns_to_join=['system_metadata'], ))
         else:
-            db.instance_update_and_get_original(
-                econtext, updated_dbinstance1['uuid'],
-                {'power_state': new_power_state,
-                 'task_state': None,
-                 'vm_state': vm_states.ACTIVE},
-                columns_to_join=['system_metadata'],
-                ).AndReturn((None, updated_dbinstance2))
+            mock_get_orig.side_effect = chain(mock_get_orig.side_effect,
+                                              [(None, updated_dbinstance2)])
+            db_call_list.append(
+                mock.call(econtext, updated_dbinstance1['uuid'],
+                          {'power_state': new_power_state,
+                           'task_state': None,
+                           'vm_state': vm_states.ACTIVE},
+                          columns_to_join=['system_metadata'], ))
             if fail_running:
-                self.compute._notify_about_instance_usage(econtext, instance,
-                        'reboot.error', fault=fault)
-            self.compute._notify_about_instance_usage(
-                econtext,
-                instance,
-                'reboot.end')
-
-        self.mox.ReplayAll()
+                notify_call_list.append(mock.call(econtext, instance,
+                                                  'reboot.error', fault=fault))
+            notify_call_list.append(mock.call(econtext, instance,
+                                              'reboot.end'))
 
         if not fail_reboot or fail_running:
             self.compute.reboot_instance(self.context, instance=instance,
-                                         block_device_info=None,
-                                         reboot_type=reboot_type)
+                                             block_device_info=None,
+                                             reboot_type=reboot_type)
         else:
             self.assertRaises(exception.InstanceNotFound,
-                              self.compute.reboot_instance,
-                              self.context, instance=instance,
-                              block_device_info=None,
-                              reboot_type=reboot_type)
+                                  self.compute.reboot_instance,
+                                  self.context, instance=instance,
+                                  block_device_info=None,
+                                  reboot_type=reboot_type)
 
         self.assertEqual(expected_call_info, reboot_call_info)
+        mock_get_blk.assert_called_once_with(econtext, instance)
+        mock_get_nw.assert_called_once_with(econtext, instance)
+        mock_notify.assert_has_calls(notify_call_list)
+        mock_get_power.assert_has_calls(ps_call_list)
+        mock_get_orig.assert_has_calls(db_call_list)
 
     def test_reboot_soft(self):
         self._test_reboot(True)
 
     def test_reboot_soft_and_delete(self):
-        self._test_reboot(True, True)
+        self._test_reboot(True, test_delete=True)
 
     def test_reboot_soft_and_rescued(self):
-        self._test_reboot(True, False, True)
+        self._test_reboot(True, test_delete=False, test_unrescue=True)
 
     def test_reboot_soft_and_delete_and_rescued(self):
-        self._test_reboot(True, True, True)
+        self._test_reboot(True, test_delete=True, test_unrescue=True)
 
     def test_reboot_hard(self):
         self._test_reboot(False)
 
     def test_reboot_hard_and_delete(self):
-        self._test_reboot(False, True)
+        self._test_reboot(False, test_delete=True)
 
     def test_reboot_hard_and_rescued(self):
-        self._test_reboot(False, False, True)
+        self._test_reboot(False, test_delete=False, test_unrescue=True)
 
     def test_reboot_hard_and_delete_and_rescued(self):
-        self._test_reboot(False, True, True)
+        self._test_reboot(False, test_delete=True, test_unrescue=True)
 
     @mock.patch.object(jsonutils, 'to_primitive')
     def test_reboot_fail(self, mock_to_primitive):
         self._test_reboot(False, fail_reboot=True)
 
     def test_reboot_fail_running(self):
-        self._test_reboot(False, fail_reboot=True,
-                          fail_running=True)
+        self._test_reboot(False, fail_reboot=True, fail_running=True)
 
     def test_get_instance_block_device_info_source_image(self):
         bdms = block_device_obj.block_device_make_list(self.context,
