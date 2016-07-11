@@ -1951,7 +1951,6 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(self.context)
         LOG.info("Running instances: %s", instances)
         self.assertEqual(len(instances), 1)
-        self.mox.ReplayAll()
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
@@ -3990,28 +3989,27 @@ class ComputeTestCase(BaseTestCase):
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
-    def test_run_instance_queries_macs(self):
+    @mock.patch.object(network_api.API, "allocate_for_instance")
+    @mock.patch.object(fake.FakeDriver, "macs_for_instance")
+    def test_run_instance_queries_macs(self, mock_mac, mock_allocate):
         # run_instance should ask the driver for node mac addresses and pass
         # that to the network_api in use.
         fake_network.unset_stub_network_methods(self)
         instance = self._create_fake_instance_obj()
 
         macs = set(['01:23:45:67:89:ab'])
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 "allocate_for_instance")
-        self.compute.network_api.allocate_for_instance(
-            self.context, instance, vpn=False,
-            requested_networks=None, macs=macs,
-            security_groups=[], dhcp_options=None,
-            bind_host_id=self.compute.host).AndReturn(
-                fake_network.fake_get_instance_nw_info(self, 1, 1))
+        mock_allocate.return_value = fake_network.fake_get_instance_nw_info(
+                                                                    self, 1, 1)
+        mock_mac.return_value = macs
 
-        self.mox.StubOutWithMock(self.compute.driver, "macs_for_instance")
-        self.compute.driver.macs_for_instance(
-            mox.IsA(instance_obj.Instance)).AndReturn(macs)
-        self.mox.ReplayAll()
         self.compute._build_networks_for_instance(self.context, instance,
                 requested_networks=None, security_groups=None)
+
+        mock_allocate.assert_called_once_with(self.context, instance,
+                vpn=False, requested_networks=None, macs=macs,
+                security_groups=[], dhcp_options=None,
+                bind_host_id=self.compute.host)
+        mock_mac.assert_called_once_with(test.MatchType(instance_obj.Instance))
 
     def _create_server_group(self, policies, instance_host):
         group_instance = self._create_fake_instance_obj(
@@ -4055,17 +4053,12 @@ class ComputeTestCase(BaseTestCase):
 
         _do_test()
 
-    def test_delete_instance_keeps_net_on_power_off_fail(self):
-        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+    @mock.patch.object(fake.FakeDriver, 'destroy')
+    def test_delete_instance_keeps_net_on_power_off_fail(self, mock_destroy):
         exp = exception.InstancePowerOffFailure(reason='')
-        self.compute.driver.destroy(mox.IgnoreArg(),
-                                    mox.IgnoreArg(),
-                                    mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndRaise(exp)
-        # mox will detect if _deallocate_network gets called unexpectedly
-        self.mox.ReplayAll()
+        mock_destroy.side_effect = exp
         instance = self._create_fake_instance_obj()
+
         self.assertRaises(exception.InstancePowerOffFailure,
                           self.compute._delete_instance,
                           self.context,
@@ -4073,25 +4066,27 @@ class ComputeTestCase(BaseTestCase):
                           [],
                           self.none_quotas)
 
-    def test_delete_instance_loses_net_on_other_fail(self):
-        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-        self.mox.StubOutWithMock(self.compute, '_deallocate_network')
+        mock_destroy.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY,
+                                             mock.ANY)
+
+    @mock.patch.object(compute_manager.ComputeManager, '_deallocate_network')
+    @mock.patch.object(fake.FakeDriver, 'destroy')
+    def test_delete_instance_loses_net_on_other_fail(self, mock_destroy,
+                                                     mock_deallocate):
         exp = test.TestingException()
-        self.compute.driver.destroy(mox.IgnoreArg(),
-                                    mox.IgnoreArg(),
-                                    mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndRaise(exp)
-        self.compute._deallocate_network(mox.IgnoreArg(),
-                                         mox.IgnoreArg(),
-                                         mox.IgnoreArg())
-        self.mox.ReplayAll()
+        mock_destroy.side_effect = exp
         instance = self._create_fake_instance_obj()
+
         self.assertRaises(test.TestingException,
                           self.compute._delete_instance,
                           self.context,
                           instance,
                           [],
                           self.none_quotas)
+
+        mock_destroy.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY,
+                                             mock.ANY)
+        mock_deallocate.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
 
     def test_delete_instance_deletes_console_auth_tokens(self):
         instance = self._create_fake_instance_obj()
@@ -4157,21 +4152,17 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
 
-    def test_network_is_deallocated_on_spawn_failure(self):
+    @mock.patch.object(compute_manager.ComputeManager, '_prep_block_device')
+    def test_network_is_deallocated_on_spawn_failure(self, mock_prep):
         # When a spawn fails the network must be deallocated.
         instance = self._create_fake_instance_obj()
-
-        self.mox.StubOutWithMock(self.compute, "_prep_block_device")
-        self.compute._prep_block_device(
-                mox.IgnoreArg(), mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(messaging.RemoteError('', '', ''))
-
-        self.mox.ReplayAll()
+        mock_prep.side_effect = messaging.RemoteError('', '', '')
 
         self.compute.build_and_run_instance(
             self.context, instance, {}, {}, {}, block_device_mapping=[])
 
         self.compute.terminate_instance(self.context, instance, [], [])
+        mock_prep.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
 
     def _test_state_revert(self, instance, operation, pre_task_state,
                            kwargs=None, vm_state=None):
@@ -4280,86 +4271,90 @@ class ComputeTestCase(BaseTestCase):
             self.stubs.Set(migration, 'save', fake_migration_save)
             self._test_state_revert(instance, *operation)
 
-    def _ensure_quota_reservations_committed(self, instance):
-        """Mock up commit of quota reservations."""
-        reservations = list('fake_res')
-        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
-        nova.quota.QUOTAS.commit(mox.IgnoreArg(), reservations,
+    def _ensure_quota_reservations(self, instance,
+                                   reservations, mock_quota):
+        """Mock up commit/rollback of quota reservations."""
+        mock_quota.assert_called_once_with(mock.ANY, reservations,
                                  project_id=instance['project_id'],
                                  user_id=instance['user_id'])
-        self.mox.ReplayAll()
-        return reservations
 
-    def _ensure_quota_reservations_rolledback(self, instance):
-        """Mock up rollback of quota reservations."""
-        reservations = list('fake_res')
-        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
-        nova.quota.QUOTAS.rollback(mox.IgnoreArg(), reservations,
-                                   project_id=instance['project_id'],
-                                   user_id=instance['user_id'])
-        self.mox.ReplayAll()
-        return reservations
-
-    def test_quotas_successful_delete(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'commit')
+    def test_quotas_successful_delete(self, mock_commit):
         instance = self._create_fake_instance_obj()
-        resvs = self._ensure_quota_reservations_committed(instance)
+        resvs = list('fake_res')
         self.compute.terminate_instance(self.context, instance,
                                         bdms=[], reservations=resvs)
+        self._ensure_quota_reservations(instance, resvs, mock_commit)
 
-    def test_quotas_failed_delete(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_quotas_failed_delete(self, mock_rollback):
         instance = self._create_fake_instance_obj()
 
         def fake_shutdown_instance(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.compute, '_shutdown_instance',
+        self.stub_out('nova.compute.manager.ComputeManager._shutdown_instance',
                        fake_shutdown_instance)
 
-        resvs = self._ensure_quota_reservations_rolledback(instance)
+        resvs = list('fake_res')
         self.assertRaises(test.TestingException,
                           self.compute.terminate_instance,
                           self.context, instance,
                           bdms=[], reservations=resvs)
+        self._ensure_quota_reservations(instance,
+                                        resvs, mock_rollback)
 
-    def test_quotas_successful_soft_delete(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'commit')
+    def test_quotas_successful_soft_delete(self, mock_commit):
         instance = self._create_fake_instance_obj(
                 params=dict(task_state=task_states.SOFT_DELETING))
-        resvs = self._ensure_quota_reservations_committed(instance)
+        resvs = list('fake_res')
         self.compute.soft_delete_instance(self.context, instance,
                                           reservations=resvs)
+        self._ensure_quota_reservations(instance, resvs, mock_commit)
 
-    def test_quotas_failed_soft_delete(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_quotas_failed_soft_delete(self, mock_rollback):
         instance = self._create_fake_instance_obj(
             params=dict(task_state=task_states.SOFT_DELETING))
 
         def fake_soft_delete(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.compute.driver, 'soft_delete',
+        self.stub_out('nova.virt.fake.FakeDriver.soft_delete',
                        fake_soft_delete)
 
-        resvs = self._ensure_quota_reservations_rolledback(instance)
+        resvs = list('fake_res')
+
         self.assertRaises(test.TestingException,
                           self.compute.soft_delete_instance,
                           self.context, instance,
                           reservations=resvs)
 
-    def test_quotas_destroy_of_soft_deleted_instance(self):
+        self._ensure_quota_reservations(instance,
+                                        resvs, mock_rollback)
+
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_quotas_destroy_of_soft_deleted_instance(self, mock_rollback):
         instance = self._create_fake_instance_obj(
             params=dict(vm_state=vm_states.SOFT_DELETED))
         # Termination should be successful, but quota reservations
         # rolled back because the instance was in SOFT_DELETED state.
-        resvs = self._ensure_quota_reservations_rolledback(instance)
+        resvs = list('fake_res')
+
         self.compute.terminate_instance(self.context, instance,
                                         bdms=[], reservations=resvs)
+
+        self._ensure_quota_reservations(instance,
+                                        resvs, mock_rollback)
 
     def _stub_out_resize_network_methods(self):
         def fake(cls, ctxt, instance, *args, **kwargs):
             pass
 
-        self.stubs.Set(network_api.API, 'setup_networks_on_host', fake)
-        self.stubs.Set(network_api.API, 'migrate_instance_start', fake)
-        self.stubs.Set(network_api.API, 'migrate_instance_finish', fake)
+        self.stub_out('nova.network.api.API.setup_networks_on_host', fake)
+        self.stub_out('nova.network.api.API.migrate_instance_start', fake)
+        self.stub_out('nova.network.api.API.migrate_instance_finish', fake)
 
     def _test_finish_resize(self, power_on, resize_instance=True):
         # Contrived test to ensure finish_resize doesn't raise anything and
@@ -4407,85 +4402,91 @@ class ComputeTestCase(BaseTestCase):
         orig_inst_save = instance.save
         network_api = self.compute.network_api
 
-        self.mox.StubOutWithMock(network_api, 'setup_networks_on_host')
-        self.mox.StubOutWithMock(network_api,
-                                 'migrate_instance_finish')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute.driver, 'finish_migration')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(migration, 'save')
-        self.mox.StubOutWithMock(instance, 'save')
+        with test.nested(
+            mock.patch.object(network_api, 'setup_networks_on_host'),
+            mock.patch.object(network_api, 'migrate_instance_finish'),
+            mock.patch.object(self.compute.network_api,
+                              'get_instance_nw_info'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute.driver, 'finish_migration'),
+            mock.patch.object(self.compute, '_get_instance_block_device_info'),
+            mock.patch.object(migration, 'save'),
+            mock.patch.object(instance, 'save'),
+            mock.patch.object(nova.quota.QUOTAS, 'commit')
+        ) as (mock_setup, mock_net_mig, mock_get_nw, mock_notify,
+              mock_virt_mig, mock_get_blk, mock_mig_save, mock_inst_save,
+              mock_commit):
+            def _mig_save():
+                self.assertEqual(migration.status, 'finished')
+                self.assertEqual(vm_state, instance.vm_state)
+                self.assertEqual(task_states.RESIZE_FINISH,
+                                 instance.task_state)
+                self.assertTrue(migration._context.is_admin)
+                orig_mig_save()
 
-        def _mig_save():
-            self.assertEqual(migration.status, 'finished')
-            self.assertEqual(vm_state, instance.vm_state)
-            self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
-            self.assertTrue(migration._context.is_admin)
-            orig_mig_save()
+            def _instance_save0(expected_task_state=None):
+                self.assertEqual(task_states.RESIZE_MIGRATED,
+                                 expected_task_state)
+                self.assertEqual(instance_type['id'],
+                                 instance.instance_type_id)
+                self.assertEqual(task_states.RESIZE_FINISH,
+                                 instance.task_state)
+                orig_inst_save(expected_task_state=expected_task_state)
 
-        def _instance_save0(expected_task_state=None):
-            self.assertEqual(task_states.RESIZE_MIGRATED,
-                             expected_task_state)
-            self.assertEqual(instance_type['id'],
-                             instance.instance_type_id)
-            self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
-            orig_inst_save(expected_task_state=expected_task_state)
+            def _instance_save1(expected_task_state=None):
+                self.assertEqual(task_states.RESIZE_FINISH,
+                                 expected_task_state)
+                self.assertEqual(vm_states.RESIZED, instance.vm_state)
+                self.assertIsNone(instance.task_state)
+                self.assertIn('launched_at', instance.obj_what_changed())
+                orig_inst_save(expected_task_state=expected_task_state)
 
-        def _instance_save1(expected_task_state=None):
-            self.assertEqual(task_states.RESIZE_FINISH,
-                             expected_task_state)
-            self.assertEqual(vm_states.RESIZED, instance.vm_state)
-            self.assertIsNone(instance.task_state)
-            self.assertIn('launched_at', instance.obj_what_changed())
-            orig_inst_save(expected_task_state=expected_task_state)
+            mock_get_nw.return_value = 'fake-nwinfo1'
+            mock_get_blk.return_value = 'fake-bdminfo'
+            inst_call_list = []
 
-        network_api.setup_networks_on_host(self.context, instance,
-                                           'fake-mini')
-        network_api.migrate_instance_finish(self.context,
-                                            mox.IsA(objects.Instance),
-                                            mox.IsA(dict))
+            # First save to update old/current flavor and task state
+            exp_kwargs = dict(expected_task_state=task_states.RESIZE_MIGRATED)
+            inst_call_list.append(mock.call(**exp_kwargs))
+            mock_inst_save.side_effect = [_instance_save0]
 
-        self.compute.network_api.get_instance_nw_info(
-                self.context, instance).AndReturn('fake-nwinfo1')
+            # Ensure instance status updates is after the migration finish
+            mock_mig_save.side_effect = _mig_save
+            exp_kwargs = dict(expected_task_state=task_states.RESIZE_FINISH)
+            inst_call_list.append(mock.call(**exp_kwargs))
+            mock_inst_save.side_effect = chain(mock_inst_save.side_effect,
+                                               [_instance_save1])
+            reservations = list('fake_res')
 
-        # First save to update old/current flavor and task state
-        exp_kwargs = dict(expected_task_state=task_states.RESIZE_MIGRATED)
-        instance.save(**exp_kwargs).WithSideEffects(_instance_save0)
+            self.compute.finish_resize(self.context,
+                                       migration=migration,
+                                       disk_info=disk_info, image=image,
+                                       instance=instance,
+                                       reservations=reservations)
 
-        self.compute._notify_about_instance_usage(
-                self.context, instance, 'finish_resize.start',
-                network_info='fake-nwinfo1')
-
-        self.compute._get_instance_block_device_info(
-                self.context, instance,
-                refresh_conn_info=True).AndReturn('fake-bdminfo')
-        # nova.conf sets the default flavor to m1.small and the test
-        # sets the default flavor to m1.tiny so they should be different
-        # which makes this a resize
-        self.compute.driver.finish_migration(self.context, migration,
-                                             instance, disk_info,
-                                             'fake-nwinfo1',
-                                             mox.IsA(objects.ImageMeta),
-                                             resize_instance,
-                                             'fake-bdminfo', power_on)
-        # Ensure instance status updates is after the migration finish
-        migration.save().WithSideEffects(_mig_save)
-        exp_kwargs = dict(expected_task_state=task_states.RESIZE_FINISH)
-        instance.save(**exp_kwargs).WithSideEffects(_instance_save1)
-        self.compute._notify_about_instance_usage(
-                self.context, instance, 'finish_resize.end',
-                network_info='fake-nwinfo1')
-        # NOTE(comstud): This actually does the mox.ReplayAll()
-        reservations = self._ensure_quota_reservations_committed(instance)
-
-        self.compute.finish_resize(self.context,
-                migration=migration,
-                disk_info=disk_info, image=image, instance=instance,
-                reservations=reservations)
+            mock_setup.assert_called_once_with(self.context, instance,
+                                               'fake-mini')
+            mock_net_mig.assert_called_once_with(self.context,
+                test.MatchType(objects.Instance), test.MatchType(dict))
+            mock_get_nw.assert_called_once_with(self.context, instance)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'finish_resize.start',
+                          network_info='fake-nwinfo1'),
+                mock.call(self.context, instance, 'finish_resize.end',
+                          network_info='fake-nwinfo1')])
+            # nova.conf sets the default flavor to m1.small and the test
+            # sets the default flavor to m1.tiny so they should be different
+            # which makes this a resize
+            mock_virt_mig.assert_called_once_with(self.context, migration,
+                instance, disk_info, 'fake-nwinfo1',
+                test.MatchType(objects.ImageMeta), resize_instance,
+                'fake-bdminfo', power_on)
+            mock_get_blk.assert_called_once_with(self.context, instance,
+                                                 refresh_conn_info=True)
+            mock_inst_save.assert_has_calls(inst_call_list)
+            mock_mig_save.assert_called_once_with()
+            self._ensure_quota_reservations(instance, reservations,
+                                            mock_commit)
 
     def test_finish_resize_from_active(self):
         self._test_finish_resize(power_on=True)
@@ -4496,7 +4497,8 @@ class ComputeTestCase(BaseTestCase):
     def test_finish_resize_without_resize_instance(self):
         self._test_finish_resize(power_on=True, resize_instance=False)
 
-    def test_finish_resize_with_volumes(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'commit')
+    def test_finish_resize_with_volumes(self, mock_commit):
         """Contrived test to ensure finish_resize doesn't raise anything."""
 
         # create instance
@@ -4520,15 +4522,16 @@ class ComputeTestCase(BaseTestCase):
         # stub out volume attach
         def fake_volume_get(self, context, volume_id):
             return volume
-        self.stubs.Set(cinder.API, "get", fake_volume_get)
+        self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
 
         def fake_volume_check_attach(self, context, volume_id, instance):
             pass
-        self.stubs.Set(cinder.API, "check_attach", fake_volume_check_attach)
+        self.stub_out('nova.volume.cinder.API.check_attach',
+                      fake_volume_check_attach)
 
         def fake_get_volume_encryption_metadata(self, context, volume_id):
             return {}
-        self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
+        self.stub_out('nova.volume.cinder.API.get_volume_encryption_metadata',
                        fake_get_volume_encryption_metadata)
 
         orig_connection_data = {
@@ -4544,23 +4547,24 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_init_conn(self, context, volume_id, session):
             return connection_info
-        self.stubs.Set(cinder.API, "initialize_connection", fake_init_conn)
+        self.stub_out('nova.volume.cinder.API.initialize_connection',
+                      fake_init_conn)
 
         def fake_attach(self, context, volume_id, instance_uuid, device_name,
                         mode='rw'):
             volume['instance_uuid'] = instance_uuid
             volume['device_name'] = device_name
-        self.stubs.Set(cinder.API, "attach", fake_attach)
+        self.stub_out('nova.volume.cinder.API.attach', fake_attach)
 
         # stub out virt driver attach
         def fake_get_volume_connector(*args, **kwargs):
             return {}
-        self.stubs.Set(self.compute.driver, 'get_volume_connector',
+        self.stub_out('nova.virt.fake.FakeDriver.get_volume_connector',
                        fake_get_volume_connector)
 
         def fake_attach_volume(*args, **kwargs):
             pass
-        self.stubs.Set(self.compute.driver, 'attach_volume',
+        self.stub_out('nova.virt.fake.FakeDriver.attach_volume',
                        fake_attach_volume)
 
         # attach volume to instance
@@ -4589,7 +4593,7 @@ class ComputeTestCase(BaseTestCase):
         # fake out detach for prep_resize (and later terminate)
         def fake_terminate_connection(self, context, volume, connector):
             connection_info['data'] = None
-        self.stubs.Set(cinder.API, "terminate_connection",
+        self.stub_out('nova.volume.cinder.API.terminate_connection',
                        fake_terminate_connection)
 
         self._stub_out_resize_network_methods()
@@ -4617,12 +4621,12 @@ class ComputeTestCase(BaseTestCase):
         # stub out virt driver finish_migration
         def fake(*args, **kwargs):
             pass
-        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
 
         instance.task_state = task_states.RESIZE_MIGRATED
         instance.save()
 
-        reservations = self._ensure_quota_reservations_committed(instance)
+        reservations = list('fake_res')
 
         # new initialize connection
         new_connection_data = dict(orig_connection_data)
@@ -4632,7 +4636,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_init_conn_with_data(self, context, volume, session):
             connection_info['data'] = new_connection_data
             return connection_info
-        self.stubs.Set(cinder.API, "initialize_connection",
+        self.stub_out('nova.volume.cinder.API.initialize_connection',
                        fake_init_conn_with_data)
 
         self.compute.finish_resize(self.context,
@@ -4652,24 +4656,27 @@ class ComputeTestCase(BaseTestCase):
         def fake_detach(self, context, volume_uuid):
             volume['device_path'] = None
             volume['instance_uuid'] = None
-        self.stubs.Set(cinder.API, "detach", fake_detach)
+        self.stub_out('nova.volume.cinder.API.detach', fake_detach)
+        self._ensure_quota_reservations(instance,
+                                        reservations, mock_commit)
 
         # clean up
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_finish_resize_handles_error(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_finish_resize_handles_error(self, mock_rollback):
         # Make sure we don't leave the instance in RESIZE on error.
 
         def throw_up(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.compute.driver, 'finish_migration', throw_up)
+        self.stub_out('nova.virt.fake.FakeDriver.finish_migration', throw_up)
 
         self._stub_out_resize_network_methods()
 
         old_flavor_name = 'm1.tiny'
         instance = self._create_fake_instance_obj(type_name=old_flavor_name)
-        reservations = self._ensure_quota_reservations_rolledback(instance)
+        reservations = list('fake_res')
 
         instance_type = flavors.get_flavor_by_name('m1.small')
 
@@ -4701,6 +4708,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(old_flavor['ephemeral_gb'], instance.ephemeral_gb)
         self.assertEqual(old_flavor['id'], instance.instance_type_id)
         self.assertNotEqual(instance_type['id'], instance.instance_type_id)
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_rollback)
 
     def test_set_instance_info(self):
         old_flavor_name = 'm1.tiny'
@@ -4895,13 +4904,15 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_prep_resize_instance_migration_error_on_none_host(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_prep_resize_instance_migration_error_on_none_host(self,
+                                                               mock_rollback):
         """Ensure prep_resize raises a migration error if destination host is
         not defined
         """
         instance = self._create_fake_instance_obj()
 
-        reservations = self._ensure_quota_reservations_rolledback(instance)
+        reservations = list('fake_res')
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -4916,20 +4927,23 @@ class ComputeTestCase(BaseTestCase):
                           filter_properties={}, node=None,
                           clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_rollback)
 
-    def test_resize_instance_driver_error(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_resize_instance_driver_error(self, mock_rollback):
         # Ensure instance status set to Error on resize error.
 
         def throw_up(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.compute.driver, 'migrate_disk_and_power_off',
+        self.stub_out('nova.virt.fake.FakeDriver.migrate_disk_and_power_off',
                        throw_up)
 
         instance = self._create_fake_instance_obj()
         instance_type = flavors.get_default_flavor()
 
-        reservations = self._ensure_quota_reservations_rolledback(instance)
+        reservations = list('fake_res')
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -4958,19 +4972,22 @@ class ComputeTestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance, [], [])
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_rollback)
 
-    def test_resize_instance_driver_rollback(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_resize_instance_driver_rollback(self, mock_rollback):
         # Ensure instance status set to Running after rollback.
 
         def throw_up(*args, **kwargs):
             raise exception.InstanceFaultRollback(test.TestingException())
 
-        self.stubs.Set(self.compute.driver, 'migrate_disk_and_power_off',
+        self.stub_out('nova.virt.fake.FakeDriver.migrate_disk_and_power_off',
                        throw_up)
 
         instance = self._create_fake_instance_obj()
         instance_type = flavors.get_default_flavor()
-        reservations = self._ensure_quota_reservations_rolledback(instance)
+        reservations = list('fake_res')
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
         instance.host = 'foo'
@@ -4999,6 +5016,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
         self.assertIsNone(instance.task_state)
         self.compute.terminate_instance(self.context, instance, [], [])
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_rollback)
 
     def _test_resize_instance(self, clean_shutdown=True):
         # Ensure instance can be migrated/resized.
@@ -5066,7 +5085,8 @@ class ComputeTestCase(BaseTestCase):
     def test_resize_instance_forced_shutdown(self):
         self._test_resize_instance(clean_shutdown=False)
 
-    def _test_confirm_resize(self, power_on, numa_topology=None):
+    @mock.patch.object(nova.quota.QUOTAS, 'commit')
+    def _test_confirm_resize(self, mock_commit, power_on, numa_topology=None):
         # Common test case method for confirm_resize
         def fake(*args, **kwargs):
             pass
@@ -5087,13 +5107,13 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params)
 
         self.flags(allow_resize_to_same_host=True)
-        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
-        self.stubs.Set(self.compute.driver, 'confirm_migration',
+        self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.confirm_migration',
                        fake_confirm_migration_driver)
 
         self._stub_out_resize_network_methods()
 
-        reservations = self._ensure_quota_reservations_committed(instance)
+        reservations = list('fake_res')
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -5166,6 +5186,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertIsNone(instance.migration_context)
         self.assertEqual(p_state, instance.power_state)
         self.compute.terminate_instance(self.context, instance, [], [])
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_commit)
 
     def test_confirm_resize_from_active(self):
         self._test_confirm_resize(power_on=True)
@@ -5259,7 +5281,8 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(0, cell.cpu_usage)
             self.assertEqual(set(), cell.pinned_cpus)
 
-    def _test_finish_revert_resize(self, power_on,
+    @mock.patch.object(nova.quota.QUOTAS, 'commit')
+    def _test_finish_revert_resize(self, mock_commit, power_on,
                                    remove_old_vm_state=False,
                                    numa_topology=None):
         """Convenience method that does most of the work for the
@@ -5292,7 +5315,7 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        reservations = self._ensure_quota_reservations_committed(instance)
+        reservations = list('fake_res')
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -5382,6 +5405,9 @@ class ComputeTestCase(BaseTestCase):
         else:
             self.assertEqual(old_vm_state, instance.vm_state)
 
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_commit)
+
     def test_finish_revert_resize_from_active(self):
         self._test_finish_revert_resize(power_on=True)
 
@@ -5406,16 +5432,16 @@ class ComputeTestCase(BaseTestCase):
         flavor_type = flavors.get_flavor_by_flavor_id(1)
         self.assertEqual(flavor_type['name'], 'm1.tiny')
 
-    def test_resize_instance_handles_migration_error(self):
+    @mock.patch.object(nova.quota.QUOTAS, 'rollback')
+    def test_resize_instance_handles_migration_error(self, mock_rollback):
         # Ensure vm_state is ERROR when error occurs.
         def raise_migration_failure(*args):
             raise test.TestingException()
-        self.stubs.Set(self.compute.driver,
-                'migrate_disk_and_power_off',
+        self.stub_out('nova.virt.fake.FakeDriver.migrate_disk_and_power_off',
                 raise_migration_failure)
 
         instance = self._create_fake_instance_obj()
-        reservations = self._ensure_quota_reservations_rolledback(instance)
+        reservations = list('fake_res')
 
         instance_type = flavors.get_default_flavor()
 
@@ -5444,6 +5470,8 @@ class ComputeTestCase(BaseTestCase):
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance, [], [])
+        self._ensure_quota_reservations(instance, reservations,
+                                        mock_rollback)
 
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         # Confirm that no exception is raised if there is no fixed ip on
