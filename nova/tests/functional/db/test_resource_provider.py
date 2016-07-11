@@ -290,8 +290,11 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                 total=2048,
                 reserved=2048)
         disk_inv.obj_set_defaults()
-        self.assertRaises(exception.ObjectActionError,
-                          rp.update_inventory, disk_inv)
+        error = self.assertRaises(exception.InvalidInventoryCapacity,
+                                  rp.update_inventory, disk_inv)
+        self.assertIn("Invalid inventory for '%s'"
+                      % fields.ResourceClass.DISK_GB, str(error))
+        self.assertIn("on resource provider '%s'." % rp.uuid, str(error))
 
         # generation has not bumped
         self.assertEqual(saved_generation, rp.generation)
@@ -347,6 +350,21 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertIn('No inventory of class DISK_GB found for delete',
                       str(error))
 
+    def test_delete_inventory_with_allocation(self):
+        rp, allocation = self._make_allocation()
+        disk_inv = objects.Inventory(resource_provider=rp,
+                                     resource_class='DISK_GB',
+                                     total=2048)
+        disk_inv.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[disk_inv])
+        rp.set_inventory(inv_list)
+        error = self.assertRaises(exception.InventoryInUse,
+                                  rp.delete_inventory,
+                                  'DISK_GB')
+        self.assertIn(
+            "Inventory for 'DISK_GB' on resource provider '%s' in use"
+            % rp.uuid, str(error))
+
     def test_update_inventory_not_found(self):
         rp = objects.ResourceProvider(context=self.context,
                                       uuid=uuidsentinel.rp_uuid,
@@ -360,6 +378,45 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                                   disk_inv)
         self.assertIn('No inventory of class DISK_GB found for update',
                       str(error))
+
+    def test_update_inventory_violates_allocation(self):
+        rp, allocation = self._make_allocation()
+        disk_inv = objects.Inventory(resource_provider=rp,
+                                     resource_class='DISK_GB',
+                                     total=2048)
+        disk_inv.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[disk_inv])
+        rp.set_inventory(inv_list)
+        # attempt to set inventory to less than currently allocated
+        # amounts
+        disk_inv = objects.Inventory(
+            resource_provider=rp,
+            resource_class=fields.ResourceClass.DISK_GB, total=1)
+        disk_inv.obj_set_defaults()
+        error = self.assertRaises(
+            exception.InvalidInventoryNewCapacityExceeded,
+            rp.update_inventory, disk_inv)
+        self.assertIn("Invalid inventory for '%s'"
+                      % fields.ResourceClass.DISK_GB, str(error))
+        self.assertIn("on resource provider '%s'." % rp.uuid, str(error))
+
+    def test_add_invalid_inventory(self):
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=uuidsentinel.rp_uuid,
+                                      name=uuidsentinel.rp_name)
+        rp.create()
+        disk_inv = objects.Inventory(
+            resource_provider=rp,
+            resource_class=fields.ResourceClass.DISK_GB,
+            total=1024, reserved=2048)
+        disk_inv.obj_set_defaults()
+        error = self.assertRaises(exception.InvalidInventoryCapacity,
+                                  rp.add_inventory,
+                                  disk_inv)
+        self.assertIn("Invalid inventory for '%s'"
+                      % fields.ResourceClass.DISK_GB, str(error))
+        self.assertIn("on resource provider '%s'."
+                      % rp.uuid, str(error))
 
 
 class ResourceProviderListTestCase(test.NoDBTestCase):

@@ -2108,6 +2108,28 @@ class ResourceProviderInUse(NovaException):
     msg_fmt = _("Resource provider has allocations.")
 
 
+class InvalidInventory(Invalid):
+    msg_fmt = _("Inventory for '%(resource_class)s' on "
+                "resource provider '%(resource_provider)s' invalid.")
+
+
+class InventoryInUse(InvalidInventory):
+    msg_fmt = _("Inventory for '%(resource_classes)s' on "
+                "resource provider '%(resource_provider)s' in use.")
+
+
+class InvalidInventoryCapacity(InvalidInventory):
+    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
+                "resource provider '%(resource_provider)s'. "
+                "The reserved value is greater than or equal to total.")
+
+
+class InvalidInventoryNewCapacityExceeded(InvalidInventory):
+    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
+                "resource provider '%(resource_provider)s'. The new total "
+                "minus reserved amount is less than the existing used amount.")
+
+
 class UnsupportedPointerModelRequested(Invalid):
     msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
                 "host.")
