@@ -5476,51 +5476,30 @@ class ComputeTestCase(BaseTestCase):
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         # Confirm that no exception is raised if there is no fixed ip on
         # pre_live_migration
-        instance = self._create_fake_instance_obj()
-        c = context.get_admin_context()
+        self.compute.driver.pre_live_migration(
+            test.MatchType(nova.context.RequestContext),
+            test.MatchType(objects.Instance),
+            {'block_device_mapping': []},
+            mock.ANY, mock.ANY, mock.ANY)
 
-        self.mox.ReplayAll()
-        self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
-                                               {'block_device_mapping': []},
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg())
-
-    def test_pre_live_migration_works_correctly(self):
+    @mock.patch.object(network_api.API, 'setup_networks_on_host')
+    @mock.patch.object(fake.FakeDriver, 'ensure_filtering_rules_for_instance')
+    @mock.patch.object(fake.FakeDriver, 'pre_live_migration')
+    def test_pre_live_migration_works_correctly(self, mock_pre, mock_ensure,
+                                                mock_setup):
         # Confirm setup_compute_volume is called when volume is mounted.
         def stupid(*args, **kwargs):
             return fake_network.fake_get_instance_nw_info(self)
-        self.stubs.Set(self.compute.network_api,
-                       'get_instance_nw_info', stupid)
+        self.stub_out('nova.network.api.API.get_instance_nw_info', stupid)
 
         # creating instance testdata
         instance = self._create_fake_instance_obj({'host': 'dummy'})
         c = context.get_admin_context()
         nw_info = fake_network.fake_get_instance_nw_info(self)
-
-        # creating mocks
-        self.mox.StubOutWithMock(self.compute.driver, 'pre_live_migration')
-        self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
-                                               {'swap': None, 'ephemerals': [],
-                                                'root_device_name': None,
-                                                'block_device_mapping': []},
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg())
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'ensure_filtering_rules_for_instance')
-        self.compute.driver.ensure_filtering_rules_for_instance(
-            mox.IsA(instance), nw_info)
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
-        self.compute.network_api.setup_networks_on_host(c, instance,
-                                                        self.compute.host)
-
         fake_notifier.NOTIFICATIONS = []
-        # start test
-        self.mox.ReplayAll()
         migrate_data = {'is_shared_instance_path': False}
+        mock_pre.return_value = None
+
         ret = self.compute.pre_live_migration(c, instance=instance,
                                               block_migration=False, disk=None,
                                               migrate_data=migrate_data)
@@ -5533,11 +5512,31 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'compute.instance.live_migration.pre.end')
 
+        mock_pre.assert_called_once_with(
+            test.MatchType(nova.context.RequestContext),
+            test.MatchType(objects.Instance),
+            {'swap': None, 'ephemerals': [],
+             'root_device_name': None,
+             'block_device_mapping': []},
+            mock.ANY, mock.ANY, mock.ANY)
+        mock_ensure.assert_called_once_with(test.MatchType(objects.Instance),
+                                            nw_info)
+        mock_setup.assert_called_once_with(c, instance, self.compute.host)
+
         # cleanup
         db.instance_destroy(c, instance['uuid'])
 
+    @mock.patch.object(fake.FakeDriver, 'get_instance_disk_info')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(network_api.API, 'setup_networks_on_host')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'remove_volume_connection')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'rollback_live_migration_at_destination')
     @mock.patch('nova.objects.Migration.save')
-    def test_live_migration_exception_rolls_back(self, mock_save):
+    def test_live_migration_exception_rolls_back(self, mock_save,
+                                mock_rollback, mock_remove, mock_setup,
+                                mock_get_uuid, mock_pre, mock_get_disk):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
 
@@ -5562,44 +5561,14 @@ class ComputeTestCase(BaseTestCase):
         migrate_data = migrate_data_obj.XenapiLiveMigrateData(
             block_migration=True)
 
-        # creating mocks
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'get_instance_disk_info')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'pre_live_migration')
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'remove_volume_connection')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'rollback_live_migration_at_destination')
-
         block_device_info = {
                 'swap': None, 'ephemerals': [], 'block_device_mapping': [],
                 'root_device_name': None}
-        self.compute.driver.get_instance_disk_info(
-                instance,
-                block_device_info=block_device_info).AndReturn('fake_disk')
-        self.compute.compute_rpcapi.pre_live_migration(c,
-                instance, True, 'fake_disk', dest_host,
-                migrate_data).AndRaise(test.TestingException())
-
-        self.compute.network_api.setup_networks_on_host(c,
-                instance, self.compute.host)
-        objects.BlockDeviceMappingList.get_by_instance_uuid(c,
-                instance.uuid).MultipleTimes().AndReturn(fake_bdms)
-        self.compute.compute_rpcapi.remove_volume_connection(
-                c, instance, uuids.volume_id_1, dest_host)
-        self.compute.compute_rpcapi.remove_volume_connection(
-                c, instance, uuids.volume_id_2, dest_host)
-        self.compute.compute_rpcapi.rollback_live_migration_at_destination(
-                c, instance, dest_host, destroy_disks=True,
-                migrate_data=mox.IsA(migrate_data_obj.LiveMigrateData))
+        mock_get_disk.return_value = 'fake_disk'
+        mock_pre.side_effect = test.TestingException
+        mock_get_uuid.return_value = fake_bdms
 
         # start test
-        self.mox.ReplayAll()
         migration = objects.Migration()
         self.assertRaises(test.TestingException,
                           self.compute.live_migration,
@@ -5607,14 +5576,36 @@ class ComputeTestCase(BaseTestCase):
                           instance=instance, migration=migration,
                           migrate_data=migrate_data)
         instance.refresh()
+
         self.assertEqual('src_host', instance.host)
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertIsNone(instance.task_state)
         self.assertEqual('error', migration.status)
+        mock_get_disk.assert_called_once_with(instance,
+                block_device_info=block_device_info)
+        mock_pre.assert_called_once_with(c,
+                instance, True, 'fake_disk', dest_host, migrate_data)
+        mock_setup.assert_called_once_with(c, instance, self.compute.host)
+        mock_get_uuid.assert_called_with(c, instance.uuid)
+        mock_remove.assert_has_calls([
+            mock.call(c, instance, uuids.volume_id_1, dest_host),
+            mock.call(c, instance, uuids.volume_id_2, dest_host)])
+        mock_rollback.assert_called_once_with(c, instance, dest_host,
+            destroy_disks=True,
+            migrate_data=test.MatchType(
+                            migrate_data_obj.XenapiLiveMigrateData))
 
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
+    @mock.patch.object(network_api.API, 'migrate_instance_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'post_live_migration_at_destination')
+    @mock.patch.object(network_api.API, 'setup_networks_on_host')
+    @mock.patch.object(compute_manager.InstanceEvents,
+                       'clear_events_for_instance')
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.objects.Migration.save')
-    def test_live_migration_works_correctly(self, mock_save, event_mock):
+    def test_live_migration_works_correctly(self, mock_save, mock_event,
+            mock_clear, mock_setup, mock_post, mock_migrate, mock_pre):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
@@ -5625,35 +5616,10 @@ class ComputeTestCase(BaseTestCase):
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             is_shared_instance_path=False,
             is_shared_block_storage=False)
-
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'pre_live_migration')
-        self.compute.compute_rpcapi.pre_live_migration(
-            c, instance, False, None, dest, migrate_data).AndReturn(
-                migrate_data)
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'migrate_instance_start')
-        migration = {'source_compute': instance['host'], 'dest_compute': dest}
-        self.compute.network_api.migrate_instance_start(c, instance,
-                                                        migration)
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'post_live_migration_at_destination')
-        self.compute.compute_rpcapi.post_live_migration_at_destination(
-            c, instance, False, dest)
-
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_networks_on_host')
-        self.mox.StubOutWithMock(self.compute.instance_events,
-                                 'clear_events_for_instance')
-        self.compute.instance_events.clear_events_for_instance(
-            mox.IgnoreArg())
+        mock_pre.return_value = migrate_data
 
         # start test
-        self.mox.ReplayAll()
-
         migration = objects.Migration()
-
         ret = self.compute.live_migration(c, dest=dest,
                                           instance=instance,
                                           block_migration=False,
@@ -5661,12 +5627,19 @@ class ComputeTestCase(BaseTestCase):
                                           migrate_data=migrate_data)
 
         self.assertIsNone(ret)
-        event_mock.assert_called_with(
+        mock_event.assert_called_with(
                 c, 'compute_live_migration', instance.uuid)
         # cleanup
         instance.destroy()
 
         self.assertEqual('completed', migration.status)
+        mock_pre.assert_called_once_with(c, instance, False, None,
+                                         dest, migrate_data)
+        mock_migrate.assert_called_once_with(c, instance,
+                                             {'source_compute': instance[
+                                              'host'], 'dest_compute': dest})
+        mock_post.assert_called_once_with(c, instance, False, dest)
+        mock_clear.assert_called_once_with(mock.ANY)
 
     def test_post_live_migration_no_shared_storage_working_correctly(self):
         """Confirm post_live_migration() works correctly as expected
