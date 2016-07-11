@@ -6705,10 +6705,22 @@ class ComputeTestCase(BaseTestCase):
                                              'fake_network_info', 'fake-bdi',
                                              True)
 
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(fake.FakeDriver, 'check_instance_shared_storage_local')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'check_instance_shared_storage')
+    @mock.patch.object(fake.FakeDriver,
+                       'check_instance_shared_storage_cleanup')
+    @mock.patch.object(fake.FakeDriver, 'destroy')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_not_implemented(self, mock_save,
-                                                        mock_get):
+            mock_get_filter, mock_destroy, mock_check_clean, mock_check,
+            mock_check_local, mock_get_blk, mock_get_nw, mock_get_inst):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -6727,39 +6739,23 @@ class ComputeTestCase(BaseTestCase):
             {'host': 'otherhost'})
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
-        mock_get.return_value = [migration]
-
+        mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
+        mock_get_inst.return_value = instances
+        mock_get_nw.return_value = 'fake_network_info'
+        mock_get_blk.return_value = 'fake_bdi'
+        mock_check_local.side_effect = NotImplementedError
 
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_instance_shared_storage_local')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'check_instance_shared_storage')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_instance_shared_storage_cleanup')
-        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-
-        self.compute._get_instances_on_driver(
-                fake_context, {'deleted': False}).AndReturn(instances)
-        self.compute.network_api.get_instance_nw_info(
-            fake_context, evacuated_instance).AndReturn('fake_network_info')
-        self.compute._get_instance_block_device_info(
-                fake_context, evacuated_instance).AndReturn('fake_bdi')
-        self.compute.driver.check_instance_shared_storage_local(fake_context,
-                evacuated_instance).AndRaise(NotImplementedError())
-        self.compute.driver.destroy(fake_context, evacuated_instance,
-                                    'fake_network_info',
-                                    'fake_bdi',
-                                    True)
-
-        self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)
+
+        mock_get_inst.assert_called_once_with(fake_context, {'deleted': False})
+        mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
+        mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
+        mock_check_local.assert_called_once_with(fake_context,
+                                                 evacuated_instance)
+        mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
+                                             'fake_network_info',
+                                             'fake_bdi', True)
 
     def test_complete_partial_deletion(self):
         admin_context = context.get_admin_context()
@@ -6851,20 +6847,20 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertNotEqual(0, instance['deleted'])
 
-    def test_partial_deletion_raise_exception(self):
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_complete_partial_deletion')
+    def test_partial_deletion_raise_exception(self, mock_complete):
         admin_context = context.get_admin_context()
         instance = objects.Instance(admin_context)
         instance.uuid = str(uuid.uuid4())
         instance.vm_state = vm_states.DELETED
         instance.deleted = False
         instance.host = self.compute.host
-
-        self.mox.StubOutWithMock(self.compute, '_complete_partial_deletion')
-        self.compute._complete_partial_deletion(
-                                 admin_context, instance).AndRaise(ValueError)
-        self.mox.ReplayAll()
+        mock_complete.side_effect = ValueError
 
         self.compute._init_instance(admin_context, instance)
+
+        mock_complete.assert_called_once_with(admin_context, instance)
 
     def test_add_remove_fixed_ip_updates_instance_updated_at(self):
         def _noop(*args, **kwargs):
@@ -6903,9 +6899,12 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertFalse(instance['cleaned'])
 
-    def test_reclaim_queued_deletes(self):
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_manager.ComputeManager, '_delete_instance')
+    def test_reclaim_queued_deletes(self, mock_delete, mock_bdms):
         self.flags(reclaim_instance_interval=3600)
         ctxt = context.get_admin_context()
+        mock_bdms.return_value = []
 
         # Active
         self._create_fake_instance_obj(params={'host': CONF.host})
@@ -6933,16 +6932,20 @@ class ComputeTestCase(BaseTestCase):
                         'vm_state': vm_states.SOFT_DELETED,
                         'task_state': task_states.RESTORING})
 
-        self.mox.StubOutWithMock(self.compute, '_delete_instance')
-        self.compute._delete_instance(
-                ctxt, mox.IsA(objects.Instance), [],
-                mox.IsA(objects.Quotas))
-
-        self.mox.ReplayAll()
-
         self.compute._reclaim_queued_deletes(ctxt)
 
-    def test_reclaim_queued_deletes_continue_on_error(self):
+        mock_delete.assert_called_once_with(
+                ctxt, test.MatchType(objects.Instance), [],
+                test.MatchType(objects.Quotas))
+        mock_bdms.assert_called_once_with(ctxt, mock.ANY)
+
+    @mock.patch.object(objects.Quotas, 'from_reservations')
+    @mock.patch.object(objects.InstanceList, 'get_by_filters')
+    @mock.patch.object(compute_manager.ComputeManager, '_deleted_old_enough')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_manager.ComputeManager, '_delete_instance')
+    def test_reclaim_queued_deletes_continue_on_error(self, mock_delete_inst,
+                mock_get_uuid, mock_delete_old, mock_get_filter, mock_quota):
         # Verify that reclaim continues on error.
         self.flags(reclaim_instance_interval=3600)
         ctxt = context.get_admin_context()
@@ -6957,69 +6960,51 @@ class ComputeTestCase(BaseTestCase):
                 params={'host': CONF.host,
                         'vm_state': vm_states.SOFT_DELETED,
                         'deleted_at': deleted_at})
-        instances = []
-        instances.append(instance1)
-        instances.append(instance2)
 
-        self.mox.StubOutWithMock(objects.InstanceList,
-                                 'get_by_filters')
-        self.mox.StubOutWithMock(self.compute, '_deleted_old_enough')
-        self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
-                                 'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.compute, '_delete_instance')
-
-        objects.InstanceList.get_by_filters(
-            ctxt, mox.IgnoreArg(),
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
-            use_slave=True
-            ).AndReturn(instances)
-
-        # The first instance delete fails.
-        self.compute._deleted_old_enough(instance1, 3600).AndReturn(True)
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, instance1.uuid).AndReturn([])
-        self.compute._delete_instance(ctxt, instance1,
-                                      [], self.none_quotas).AndRaise(
-                                              test.TestingException)
-
-        # The second instance delete that follows.
-        self.compute._deleted_old_enough(instance2, 3600).AndReturn(True)
-        objects.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, instance2.uuid).AndReturn([])
-        self.compute._delete_instance(ctxt, instance2,
-                                      [], self.none_quotas)
-
-        self.mox.ReplayAll()
+        mock_get_filter.return_value = [instance1, instance2]
+        mock_delete_old.side_effect = (True, True)
+        mock_get_uuid.side_effect = ([], [])
+        mock_delete_inst.side_effect = (test.TestingException, None)
+        mock_quota.return_value = self.none_quotas
 
         self.compute._reclaim_queued_deletes(ctxt)
 
-    def test_sync_power_states(self):
+        mock_get_filter.assert_called_once_with(ctxt, mock.ANY,
+                expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
+                use_slave=True)
+        mock_delete_old.assert_has_calls([mock.call(instance1, 3600),
+                                          mock.call(instance2, 3600)])
+        mock_get_uuid.assert_has_calls([mock.call(ctxt, instance1.uuid),
+                                        mock.call(ctxt, instance2.uuid)])
+        mock_delete_inst.assert_has_calls([
+            mock.call(ctxt, instance1, [], self.none_quotas),
+            mock.call(ctxt, instance2, [], self.none_quotas)])
+        mock_quota.assert_called_once_with(ctxt, None)
+
+    @mock.patch.object(fake.FakeDriver, 'get_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_sync_instance_power_state')
+    def test_sync_power_states(self, mock_sync, mock_get):
         ctxt = self.context.elevated()
         self._create_fake_instance_obj({'host': self.compute.host})
         self._create_fake_instance_obj({'host': self.compute.host})
         self._create_fake_instance_obj({'host': self.compute.host})
-        self.mox.StubOutWithMock(self.compute.driver, 'get_info')
-        self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
 
-        # Check to make sure task continues on error.
-        self.compute.driver.get_info(mox.IgnoreArg()).AndRaise(
-            exception.InstanceNotFound(instance_id=uuids.instance))
-        self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
-                                                power_state.NOSTATE).AndRaise(
-            exception.InstanceNotFound(instance_id=uuids.instance))
+        mock_get.side_effect = [
+            exception.InstanceNotFound(instance_id=uuids.instance),
+            hardware.InstanceInfo(state=power_state.RUNNING),
+            hardware.InstanceInfo(state=power_state.SHUTDOWN)]
+        mock_sync.side_effect = \
+            exception.InstanceNotFound(instance_id=uuids.instance)
 
-        self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
-            hardware.InstanceInfo(state=power_state.RUNNING))
-        self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
-                                                power_state.RUNNING,
-                                                use_slave=True)
-        self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
-            hardware.InstanceInfo(state=power_state.SHUTDOWN))
-        self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
-                                                power_state.SHUTDOWN,
-                                                use_slave=True)
-        self.mox.ReplayAll()
         self.compute._sync_power_states(ctxt)
+
+        mock_get.assert_has_calls([mock.call(mock.ANY), mock.call(mock.ANY),
+                                   mock.call(mock.ANY)])
+        mock_sync.assert_has_calls([
+            mock.call(ctxt, mock.ANY, power_state.NOSTATE, use_slave=True),
+            mock.call(ctxt, mock.ANY, power_state.RUNNING, use_slave=True),
+            mock.call(ctxt, mock.ANY, power_state.SHUTDOWN, use_slave=True)])
 
     def _test_lifecycle_event(self, lifecycle_event, vm_power_state,
                               is_actual_state=True):
