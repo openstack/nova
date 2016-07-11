@@ -3769,6 +3769,10 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
 
+            compute_utils.notify_about_instance_action(context, instance,
+                   self.host, action=fields.NotificationAction.RESIZE,
+                   phase=fields.NotificationPhase.START)
+
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                     context, instance.uuid)
             block_device_info = self._get_instance_block_device_info(
@@ -3804,6 +3808,10 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
+
+            compute_utils.notify_about_instance_action(context, instance,
+                   self.host, action=fields.NotificationAction.RESIZE,
+                   phase=fields.NotificationPhase.END)
             self.instance_events.clear_events_for_instance(instance)
 
     def _terminate_volume_connections(self, context, instance, bdms):

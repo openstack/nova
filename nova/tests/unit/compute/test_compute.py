@@ -5036,6 +5036,8 @@ class ComputeTestCase(BaseTestCase):
                 instance.uuid, 'pre-migrating')
 
         with test.nested(
+            mock.patch.object(nova.compute.utils,
+                'notify_about_instance_action'),
             mock.patch.object(objects.BlockDeviceMappingList,
                 'get_by_instance_uuid', return_value='fake_bdms'),
             mock.patch.object(
@@ -5044,12 +5046,18 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(self.compute, '_terminate_volume_connections'),
             mock.patch.object(self.compute, '_get_power_off_values',
                 return_value=(1, 2))
-        ) as (mock_get_by_inst_uuid, mock_get_instance_vol_bdinfo,
+        ) as (mock_notify_action, mock_get_by_inst_uuid,
+                mock_get_instance_vol_bdinfo,
                 mock_terminate_vol_conn, mock_get_power_off_values):
             self.compute.resize_instance(self.context, instance=instance,
                     migration=migration, image={}, reservations=[],
                     instance_type=jsonutils.to_primitive(instance_type),
                     clean_shutdown=clean_shutdown)
+            mock_notify_action.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                      action='resize', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                      action='resize', phase='end')])
             mock_get_instance_vol_bdinfo.assert_called_once_with(
                     self.context, instance, bdms='fake_bdms')
             mock_terminate_vol_conn.assert_called_once_with(self.context,
