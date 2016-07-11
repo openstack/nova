@@ -6205,29 +6205,28 @@ class ComputeTestCase(BaseTestCase):
         mock_set.assert_has_calls([mock.call(inst1, False),
                                    mock.call(inst2, False)])
 
-    def test_running_deleted_instances(self):
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(timeutils, 'is_older_than')
+    def test_running_deleted_instances(self, mock_is_older, mock_get):
         admin_context = context.get_admin_context()
-
         self.compute.host = 'host'
-
         instance = self._create_fake_instance_obj()
         instance.deleted = True
         now = timeutils.utcnow()
         instance.deleted_at = now
+        mock_get.return_value = [instance]
+        mock_is_older.return_value = True
 
-        self.mox.StubOutWithMock(self.compute, '_get_instances_on_driver')
-        self.compute._get_instances_on_driver(
+        val = self.compute._running_deleted_instances(admin_context)
+
+        self.assertEqual(val, [instance])
+        mock_get.assert_called_once_with(
             admin_context, {'deleted': True,
                             'soft_deleted': False,
-                            'host': self.compute.host}).AndReturn([instance])
-
-        self.mox.StubOutWithMock(timeutils, 'is_older_than')
-        timeutils.is_older_than(now,
-                    CONF.running_deleted_instance_timeout).AndReturn(True)
-
-        self.mox.ReplayAll()
-        val = self.compute._running_deleted_instances(admin_context)
-        self.assertEqual(val, [instance])
+                            'host': self.compute.host})
+        mock_is_older.assert_called_once_with(now,
+                    CONF.running_deleted_instance_timeout)
 
     def _heal_instance_info_cache(self,
                                   _get_instance_nw_info_raise=False,
@@ -6595,10 +6594,19 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj(params)
         self.compute._instance_update(self.context, instance, vcpus=4)
 
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_is_instance_storage_shared')
+    @mock.patch.object(fake.FakeDriver, 'destroy')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_on_shared_storage(self, mock_save,
-                                                          mock_get):
+            mock_get_filter, mock_destroy, mock_is_inst, mock_get_blk,
+            mock_get_nw, mock_get_inst):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -6617,44 +6625,44 @@ class ComputeTestCase(BaseTestCase):
             {'host': 'otherhost'})
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
-        mock_get.return_value = [migration]
-
+        mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
+        mock_get_inst.return_value = instances
+        mock_get_nw.return_value = 'fake_network_info'
+        mock_get_blk.return_value = 'fake_bdi'
+        mock_is_inst.return_value = True
 
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_is_instance_storage_shared')
-        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-
-        self.compute._get_instances_on_driver(
-                fake_context, {'deleted': False}).AndReturn(instances)
-        self.compute.network_api.get_instance_nw_info(
-            fake_context, evacuated_instance).AndReturn('fake_network_info')
-        self.compute._get_instance_block_device_info(
-                fake_context, evacuated_instance).AndReturn('fake_bdi')
-        self.compute._is_instance_storage_shared(fake_context,
-                        evacuated_instance).AndReturn(True)
-        self.compute.driver.destroy(fake_context, evacuated_instance,
-                                    'fake_network_info',
-                                    'fake_bdi',
-                                    False)
-
-        self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)
-        mock_get.assert_called_once_with(fake_context,
+
+        mock_get_filter.assert_called_once_with(fake_context,
                                          {'source_compute': self.compute.host,
                                           'status': ['accepted', 'done'],
                                           'migration_type': 'evacuation'})
+        mock_get_inst.assert_called_once_with(fake_context, {'deleted': False})
+        mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
+        mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
+        mock_is_inst.assert_called_once_with(fake_context, evacuated_instance)
+        mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
+                                             'fake_network_info',
+                                             'fake_bdi', False)
 
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instances_on_driver')
+    @mock.patch.object(network_api.API, 'get_instance_nw_info')
+    @mock.patch.object(compute_manager.ComputeManager,
+                       '_get_instance_block_device_info')
+    @mock.patch.object(fake.FakeDriver,
+                       'check_instance_shared_storage_local')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'check_instance_shared_storage')
+    @mock.patch.object(fake.FakeDriver,
+                       'check_instance_shared_storage_cleanup')
+    @mock.patch.object(fake.FakeDriver, 'destroy')
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')
     def test_destroy_evacuated_instance_with_disks(self, mock_save,
-                                                   mock_get):
+            mock_get_filter, mock_destroy, mock_check_clean, mock_check,
+            mock_check_local, mock_get_blk, mock_get_nw, mock_get_drv):
         fake_context = context.get_admin_context()
 
         # instances in central db
@@ -6673,44 +6681,29 @@ class ComputeTestCase(BaseTestCase):
             {'host': 'otherhost'})
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
-        mock_get.return_value = [migration]
-
+        mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
+        mock_get_drv.return_value = instances
+        mock_get_nw.return_value = 'fake_network_info'
+        mock_get_blk.return_value = 'fake-bdi'
+        mock_check_local.return_value = {'filename': 'tmpfilename'}
+        mock_check.return_value = False
 
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instances_on_driver')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_block_device_info')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_instance_shared_storage_local')
-        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
-                                 'check_instance_shared_storage')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'check_instance_shared_storage_cleanup')
-        self.mox.StubOutWithMock(self.compute.driver, 'destroy')
-
-        self.compute._get_instances_on_driver(
-                fake_context, {'deleted': False}).AndReturn(instances)
-        self.compute.network_api.get_instance_nw_info(
-            fake_context, evacuated_instance).AndReturn('fake_network_info')
-        self.compute._get_instance_block_device_info(
-                fake_context, evacuated_instance).AndReturn('fake_bdi')
-        self.compute.driver.check_instance_shared_storage_local(fake_context,
-                evacuated_instance).AndReturn({'filename': 'tmpfilename'})
-        self.compute.compute_rpcapi.check_instance_shared_storage(fake_context,
-                evacuated_instance,
-                {'filename': 'tmpfilename'}, host=None).AndReturn(False)
-        self.compute.driver.check_instance_shared_storage_cleanup(fake_context,
-                {'filename': 'tmpfilename'})
-        self.compute.driver.destroy(fake_context, evacuated_instance,
-                                    'fake_network_info',
-                                    'fake_bdi',
-                                    True)
-
-        self.mox.ReplayAll()
         self.compute._destroy_evacuated_instances(fake_context)
+
+        mock_get_drv.assert_called_once_with(fake_context, {'deleted': False})
+        mock_get_nw.assert_called_once_with(fake_context, evacuated_instance)
+        mock_get_blk.assert_called_once_with(fake_context, evacuated_instance)
+        mock_check_local.assert_called_once_with(fake_context,
+                                                 evacuated_instance)
+        mock_check.assert_called_once_with(fake_context, evacuated_instance,
+                                           {'filename': 'tmpfilename'},
+                                           host=None)
+        mock_check_clean.assert_called_once_with(fake_context,
+                                                 {'filename': 'tmpfilename'})
+        mock_destroy.assert_called_once_with(fake_context, evacuated_instance,
+                                             'fake_network_info', 'fake-bdi',
+                                             True)
 
     @mock.patch('nova.objects.MigrationList.get_by_filters')
     @mock.patch('nova.objects.Migration.save')
