@@ -10,8 +10,8 @@
 Enables all users to perform an action on a server. Specify the action
 in the request body.
 
-You can associate a fixed or floating IP address with a server instance,
-or disassociate a fixed or floating IP address from a server instance.
+You can associate a fixed or floating IP address with a server,
+or disassociate a fixed or floating IP address from a server.
 You can attach a volume to a server.
 
 You can create an image from a server, evacuate a server from a failed
@@ -62,7 +62,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - addFloatingIp: addFloatingIp
   - address: address
   - fixed_address: fixed_address
@@ -75,6 +75,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Add Security Group To A Server (addSecurityGroup Action)
 ========================================================
@@ -96,7 +98,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - addSecurityGroup: addSecurityGroup
   - name: name
 
@@ -107,6 +109,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Change Administrative Password (changePassword Action)
 ======================================================
@@ -132,7 +136,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - changePassword: changePassword
 
 **Example Change Administrative Password (changePassword Action): JSON request**
@@ -142,6 +146,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Confirm Resized Server (confirmResize Action)
 =============================================
@@ -184,7 +190,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - confirmResize: confirmResize
 
 **Example Confirm Resized Server (confirmResize Action): JSON request**
@@ -194,6 +200,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Create Image (createImage Action)
 =================================
@@ -248,7 +256,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - createImage: createImage
 
 **Example Create Image (createImage Action): JSON request**
@@ -258,6 +266,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Lock Server (lock Action)
 =========================
@@ -282,7 +292,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - lock: lock
 
 **Example Lock Server (lock Action): JSON request**
@@ -292,6 +302,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Pause Server (pause Action)
 ===========================
@@ -317,7 +329,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - pause: pause
 
 **Example Pause Server (pause Action): JSON request**
@@ -327,6 +339,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Reboot Server (reboot Action)
 =============================
@@ -348,7 +362,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - reboot: reboot
 
 **Example Reboot Server (reboot Action): JSON request**
@@ -358,6 +372,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Rebuild Server (rebuild Action)
 ===============================
@@ -382,7 +398,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - rebuild: rebuild
   - imageRef: imageRef
   - name: name
@@ -431,7 +447,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - removeFloatingIp: removeFloatingIp
   - address: address
 
@@ -443,6 +459,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Remove Security Group From A Server (removeSecurityGroup Action)
 ================================================================
@@ -464,7 +482,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - removeSecurityGroup: removeSecurityGroup
   - name: name
 
@@ -475,6 +493,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Rescue Server (rescue Action)
 =============================
@@ -505,7 +525,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - rescue: rescue
   - adminPass: adminPass_rescue
   - rescue_image_ref: rescue_image_ref
@@ -560,7 +580,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - resize: resize
 
 **Example Resize Server (Resize Action): JSON request**
@@ -570,6 +590,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Resume Suspended Server (resume Action)
 =======================================
@@ -595,7 +617,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - resume: resume
 
 **Example Resume Suspended Server (Resume Action): JSON request**
@@ -605,6 +627,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Revert Resized Server (revertResize Action)
 ===========================================
@@ -650,7 +674,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - revertResize: revertResize
 
 **Example Revert Resized Server (revertResize Action): JSON request**
@@ -660,6 +684,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Start Server (os-start Action)
 ==============================
@@ -700,7 +726,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - os-start: os-start
 
 **Example Start server: JSON request**
@@ -710,6 +736,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Stop Server (os-stop Action)
 ============================
@@ -744,7 +772,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - os-stop: os-stop
 
 **Example Stop server: JSON request**
@@ -754,6 +782,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Suspend Server (suspend Action)
 ===============================
@@ -779,7 +809,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - suspend: suspend
 
 **Example Suspend Server (suspend Action): JSON request**
@@ -789,6 +819,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Unlock Server (unlock Action)
 =============================
@@ -813,7 +845,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - unlock: unlock
 
 **Example Unlock Server (unlock Action): JSON request**
@@ -823,6 +855,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Unpause Server (unpause Action)
 ===============================
@@ -848,7 +882,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - unpause: unpause
 
 **Example Unpause Server (unpause Action): JSON request**
@@ -858,6 +892,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
 
 Unrescue Server (unrescue Action)
 =================================
@@ -891,7 +927,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - server_id: server_id_path
   - unrescue: unrescue
 
 **Example Unrescue server: JSON request**
@@ -901,3 +937,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST operation.
