@@ -2949,6 +2949,36 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         conf = drvr._get_cpu_numa_config_from_instance(None, False)
         self.assertIsNone(conf)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support",
+                       return_value=True)
+    def test_get_memnode_numa_config_from_instance(self, mock_numa):
+        instance_topology = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([1, 2]), memory=128),
+            objects.InstanceNUMACell(id=1, cpuset=set([3, 4]), memory=128),
+            objects.InstanceNUMACell(id=16, cpuset=set([5, 6]), memory=128)
+        ])
+
+        host_topology = objects.NUMATopology(
+            cells=[
+                objects.NUMACell(
+                    id=0, cpuset=set([1, 2]), memory=1024, mempages=[]),
+                objects.NUMACell(
+                    id=1, cpuset=set([3, 4]), memory=1024, mempages=[]),
+                objects.NUMACell(
+                    id=16, cpuset=set([5, 6]), memory=1024, mempages=[])])
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with test.nested(
+                mock.patch.object(drvr, "_get_host_numa_topology",
+                                  return_value=host_topology)):
+            guest_numa_config = drvr._get_guest_numa_config(instance_topology,
+                flavor={}, allowed_cpus=[1, 2, 3, 4, 5, 6], image_meta={})
+            self.assertEqual(2, guest_numa_config.numatune.memnodes[2].cellid)
+            self.assertEqual([16],
+                guest_numa_config.numatune.memnodes[2].nodeset)
+            self.assertEqual(set([5, 6]),
+                guest_numa_config.numaconfig.cells[2].cpus)
+
     @mock.patch.object(host.Host, 'has_version', return_value=True)
     def test_has_cpu_policy_support(self, mock_has_version):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
