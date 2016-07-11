@@ -25,7 +25,6 @@ import time
 import traceback
 import uuid
 
-from eventlet import greenthread
 from itertools import chain
 import mock
 from neutronclient.common import exceptions as neutron_exceptions
@@ -54,7 +53,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova.conductor import manager as conductor_manager
 import nova.conf
 from nova.console import type as ctype
 from nova import context
@@ -166,7 +164,7 @@ class BaseTestCase(test.TestCase):
                     self.compute.driver, NODENAME)
         self.compute._resource_tracker_dict[NODENAME] = fake_rt
 
-        def fake_get_compute_nodes_in_db(context, use_slave=False):
+        def fake_get_compute_nodes_in_db(self, context, use_slave=False):
             fake_compute_nodes = [{'local_gb': 259,
                                    'uuid': uuids.fake_compute_node,
                                    'vcpus_used': 0,
@@ -204,8 +202,9 @@ class BaseTestCase(test.TestCase):
         def fake_compute_node_delete(context, compute_node_id):
             self.assertEqual(2, compute_node_id)
 
-        self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
-                fake_get_compute_nodes_in_db)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager._get_compute_nodes_in_db',
+            fake_get_compute_nodes_in_db)
         self.stub_out('nova.db.compute_node_delete',
                 fake_compute_node_delete)
 
@@ -231,10 +230,8 @@ class BaseTestCase(test.TestCase):
                 raise exception.ImageNotFound(image_id=id)
 
         fake_image.stub_out_image_service(self)
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
-
-        fake_taskapi = FakeComputeTaskAPI()
-        self.stubs.Set(self.compute, 'compute_task_api', fake_taskapi)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      fake_show)
 
         fake_network.set_stub_network_methods(self)
         fake_server_actions.stub_out_action_events(self)
@@ -242,14 +239,14 @@ class BaseTestCase(test.TestCase):
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             return network_model.NetworkInfo()
 
-        self.stubs.Set(network_api.API, 'get_instance_nw_info',
+        self.stub_out('nova.network.api.API.get_instance_nw_info',
                        fake_get_nw_info)
 
         def fake_allocate_for_instance(cls, ctxt, instance, *args, **kwargs):
             self.assertFalse(ctxt.is_admin)
             return fake_network.fake_get_instance_nw_info(self, 1, 1)
 
-        self.stubs.Set(network_api.API, 'allocate_for_instance',
+        self.stub_out('nova.network.api.API.allocate_for_instance',
                        fake_allocate_for_instance)
         self.compute_api = compute.API()
 
@@ -337,8 +334,8 @@ class BaseTestCase(test.TestCase):
         def _fake_migrate_server(*args, **kwargs):
             pass
 
-        self.stubs.Set(conductor_manager.ComputeTaskManager,
-                       'migrate_server', _fake_migrate_server)
+        self.stub_out('nova.conductor.manager.ComputeTaskManager'
+                      '.migrate_server', _fake_migrate_server)
 
     def _init_aggregate_with_host(self, aggr, aggr_name, zone, host):
         if not aggr:
@@ -364,22 +361,20 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.instance_object = objects.Instance._from_db_object(
                 self.context, objects.Instance(),
                 fake_instance.fake_db_instance())
-        self.stubs.Set(self.compute.volume_api, 'get', lambda *a, **kw:
+        self.stub_out('nova.volume.cinder.API.get', lambda *a, **kw:
                        {'id': uuids.volume_id, 'size': 4,
                         'attach_status': 'detached'})
-        self.stubs.Set(self.compute.driver, 'get_volume_connector',
+        self.stub_out('nova.virt.fake.FakeDriver.get_volume_connector',
                        lambda *a, **kw: None)
-        self.stubs.Set(self.compute.volume_api, 'initialize_connection',
+        self.stub_out('nova.volume.cinder.API.initialize_connection',
                        lambda *a, **kw: {})
-        self.stubs.Set(self.compute.volume_api, 'terminate_connection',
+        self.stub_out('nova.volume.cinder.API.terminate_connection',
                        lambda *a, **kw: None)
-        self.stubs.Set(self.compute.volume_api, 'attach',
+        self.stub_out('nova.volume.cinder.API.attach',
                        lambda *a, **kw: None)
-        self.stubs.Set(self.compute.volume_api, 'detach',
+        self.stub_out('nova.volume.cinder.API.detach',
                        lambda *a, **kw: None)
-        self.stubs.Set(self.compute.volume_api, 'check_attach',
-                       lambda *a, **kw: None)
-        self.stubs.Set(greenthread, 'sleep',
+        self.stub_out('eventlet.greenthread.sleep',
                        lambda *a, **kw: None)
 
         def store_cinfo(context, *args, **kwargs):
@@ -444,13 +439,13 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.flags(block_device_allocate_retries=2)
         self.flags(block_device_allocate_retries_interval=0.1)
 
-        def never_get(context, vol_id):
+        def never_get(self, context, vol_id):
             return {
                 'status': 'creating',
                 'id': 'blah',
             }
 
-        self.stubs.Set(self.compute.volume_api, 'get', never_get)
+        self.stub_out('nova.volume.cinder.API.get', never_get)
         self.assertRaises(exception.VolumeNotCreated,
                           self.compute._await_block_device_map_created,
                           self.context, '1')
@@ -471,7 +466,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.flags(block_device_allocate_retries=4)
         self.flags(block_device_allocate_retries_interval=0.1)
 
-        def slow_get(context, vol_id):
+        def slow_get(cls, context, vol_id):
             if self.fetched_attempts < 2:
                 self.fetched_attempts += 1
                 return {
@@ -483,7 +478,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'id': 'blah',
             }
 
-        self.stubs.Set(c.volume_api, 'get', slow_get)
+        self.stub_out('nova.volume.cinder.API.get', slow_get)
         attempts = c._await_block_device_map_created(self.context, '1')
         self.assertEqual(attempts, 3)
 
@@ -492,13 +487,13 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.flags(block_device_allocate_retries=-1)
         self.flags(block_device_allocate_retries_interval=0.1)
 
-        def volume_get(context, vol_id):
+        def volume_get(self, context, vol_id):
             return {
                 'status': 'available',
                 'id': 'blah',
             }
 
-        self.stubs.Set(c.volume_api, 'get', volume_get)
+        self.stub_out('nova.volume.cinder.API.get', volume_get)
         attempts = c._await_block_device_map_created(self.context, '1')
         self.assertEqual(1, attempts)
 
@@ -507,17 +502,19 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.flags(block_device_allocate_retries=0)
         self.flags(block_device_allocate_retries_interval=0.1)
 
-        def volume_get(context, vol_id):
+        def volume_get(self, context, vol_id):
             return {
                 'status': 'available',
                 'id': 'blah',
             }
 
-        self.stubs.Set(c.volume_api, 'get', volume_get)
+        self.stub_out('nova.volume.cinder.API.get', volume_get)
         attempts = c._await_block_device_map_created(self.context, '1')
         self.assertEqual(1, attempts)
 
     def test_boot_volume_serial(self):
+        self.stub_out('nova.volume.cinder.API.check_attach',
+                       lambda *a, **kw: None)
         with (
             mock.patch.object(objects.BlockDeviceMapping, 'save')
         ) as mock_save:
@@ -556,7 +553,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             else:
                 return {}
 
-        self.stubs.Set(self.compute_api.volume_api, 'get', volume_api_get)
+        self.stub_out('nova.volume.cinder.API.get', volume_api_get)
 
         expected_no_metadata = {'min_disk': 0, 'min_ram': 0, 'properties': {},
                                 'size': 0, 'status': 'active'}
@@ -614,7 +611,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             else:
                 return {}
 
-        self.stubs.Set(self.compute_api.image_api, 'get', image_api_get)
+        self.stub_out('nova.image.api.API.get', image_api_get)
 
         block_device_mapping = [{
             'boot_index': 0,
@@ -876,9 +873,9 @@ class ComputeVolumeTestCase(BaseTestCase):
         def fake_check_attach(*args, **kwargs):
             pass
 
-        self.stubs.Set(cinder.API, 'get', fake_get)
-        self.stubs.Set(cinder.API, 'get_snapshot', fake_get)
-        self.stubs.Set(cinder.API, 'check_attach',
+        self.stub_out('nova.volume.cinder.API.get', fake_get)
+        self.stub_out('nova.volume.cinder.API.get_snapshot', fake_get)
+        self.stub_out('nova.volume.cinder.API.check_attach',
                        fake_check_attach)
 
         volume_id = '55555555-aaaa-bbbb-cccc-555555555555'
@@ -1129,7 +1126,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                             'status': status,
                             'attach_status': attach_status,
                             'multiattach': False}
-            self.stubs.Set(cinder.API, 'get', fake_volume_get)
+            self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._validate_bdm,
                               self.context, self.instance,
@@ -1139,7 +1136,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         def fake_volume_get_not_found(self, context, volume_id):
             raise exception.VolumeNotFound(volume_id)
 
-        self.stubs.Set(cinder.API, 'get', fake_volume_get_not_found)
+        self.stub_out('nova.volume.cinder.API.get', fake_volume_get_not_found)
         self.assertRaises(exception.InvalidBDMVolume,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
@@ -1152,7 +1149,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                     'status': 'available',
                     'attach_status': 'detached',
                     'multiattach': False}
-        self.stubs.Set(cinder.API, 'get', fake_volume_get_ok)
+        self.stub_out('nova.volume.cinder.API.get', fake_volume_get_ok)
 
         self.compute_api._validate_bdm(self.context, self.instance,
                                        instance_type, bdms)
@@ -1291,7 +1288,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
+        self.stub_out('nova.compute.utils.add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
@@ -1311,7 +1308,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
+        self.stub_out('nova.compute.utils.add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
@@ -1331,7 +1328,7 @@ class ComputeTestCase(BaseTestCase):
         def did_it_add_fault(*args):
             called['fault_added'] = True
 
-        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
+        self.stub_out('nova.utils.add_instance_fault_from_exc',
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
@@ -1469,7 +1466,7 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_is_neutron():
             return True
-        self.stubs.Set(utils, 'is_neutron', fake_is_neutron)
+        self.stub_out('nova.utils.is_neutron', fake_is_neutron)
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.port_instance)])
         self.assertRaises(exception.MultiplePortsNotApplicable,
@@ -1658,13 +1655,14 @@ class ComputeTestCase(BaseTestCase):
 
         # Make sure the access_ip_* updates happen in the same DB
         # update as the set to ACTIVE.
-        def _instance_update(ctxt, instance_uuid, **kwargs):
+        def _instance_update(self, ctxt, instance_uuid, **kwargs):
             if kwargs.get('vm_state', None) == vm_states.ACTIVE:
                 self.assertEqual(kwargs['access_ip_v4'], '192.168.1.100')
                 self.assertEqual(kwargs['access_ip_v6'], '2001:db8:0:1::1')
             return orig_update(ctxt, instance_uuid, **kwargs)
 
-        self.stubs.Set(self.compute, '_instance_update', _instance_update)
+        self.stub_out('nova.compute.manager.ComputeManager._instance_update',
+                      _instance_update)
 
         try:
             self.compute.build_and_run_instance(self.context, instance, {},
@@ -1710,8 +1708,8 @@ class ComputeTestCase(BaseTestCase):
         """
         def fake(*args, **kwargs):
             raise exception.InvalidBDM()
-        self.stubs.Set(nova.compute.manager.ComputeManager,
-                       '_prep_block_device', fake)
+        self.stub_out('nova.compute.manager.ComputeManager'
+                      '._prep_block_device', fake)
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(
                           self.context, instance=instance, image={},
@@ -1901,14 +1899,14 @@ class ComputeTestCase(BaseTestCase):
             bdms.append(bdm)
             return bdm
 
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
-        self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
-        self.stubs.Set(cinder.API, 'reserve_volume',
+        self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
+        self.stub_out('nova.volume.cinder.API.check_attach', fake_check_attach)
+        self.stub_out('nova.volume.cinder.API.reserve_volume',
                        fake_reserve_volume)
-        self.stubs.Set(cinder.API, 'terminate_connection',
+        self.stub_out('nova.volume.cinder.API.terminate_connection',
                        fake_terminate_connection)
-        self.stubs.Set(cinder.API, 'detach', fake_detach)
-        self.stubs.Set(compute_rpcapi.ComputeAPI,
+        self.stub_out('nova.volume.cinder.API.detach', fake_detach)
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.'
                        'reserve_block_device_name',
                        fake_rpc_reserve_block_device_name)
 
@@ -1994,8 +1992,8 @@ class ComputeTestCase(BaseTestCase):
         def _fake_deallocate_network(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.compute, '_deallocate_network',
-                _fake_deallocate_network)
+        self.stub_out('nova.compute.manager.ComputeManager.'
+                      '_deallocate_network', _fake_deallocate_network)
 
         self.assertRaises(test.TestingException,
                           self.compute.terminate_instance,
@@ -2053,7 +2051,8 @@ class ComputeTestCase(BaseTestCase):
             self.deleted_image_id = image_id
 
         fake_image.stub_out_image_service(self)
-        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
+                      fake_delete)
 
         instance = self._create_fake_instance_obj()
         image = {'id': 'fake_id'}
@@ -2115,12 +2114,12 @@ class ComputeTestCase(BaseTestCase):
                         rescue_password):
             called['rescued'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
+        self.stub_out('nova.virt.fake.FakeDriver.rescue', fake_rescue)
 
         def fake_unrescue(self, instance_ref, network_info):
             called['unrescued'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'unrescue',
+        self.stub_out('nova.virt.fake.FakeDriver.unrescue',
                        fake_unrescue)
 
         instance = self._create_fake_instance_obj()
@@ -2143,7 +2142,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_rescue(self, context, instance_ref, network_info, image_meta,
                         rescue_password):
             pass
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
+        self.stub_out('nova.virt.fake.FakeDriver.rescue', fake_rescue)
 
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -2185,7 +2184,7 @@ class ComputeTestCase(BaseTestCase):
         # Ensure notifications on instance rescue.
         def fake_unrescue(self, instance_ref, network_info):
             pass
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'unrescue',
+        self.stub_out('nova.virt.fake.FakeDriver.unrescue',
                        fake_unrescue)
 
         instance = self._create_fake_instance_obj()
@@ -2306,7 +2305,7 @@ class ComputeTestCase(BaseTestCase):
                                  block_device_info):
             called['power_on'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'power_on',
+        self.stub_out('nova.virt.fake.FakeDriver.power_on',
                        fake_driver_power_on)
 
         instance = self._create_fake_instance_obj()
@@ -2331,7 +2330,7 @@ class ComputeTestCase(BaseTestCase):
                                   shutdown_timeout, shutdown_attempts):
             called['power_off'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'power_off',
+        self.stub_out('nova.virt.fake.FakeDriver.power_off',
                        fake_driver_power_off)
 
         instance = self._create_fake_instance_obj()
@@ -2549,7 +2548,7 @@ class ComputeTestCase(BaseTestCase):
         # Make sure virt drivers can override default rebuild
         called = {'rebuild': False}
 
-        def fake(**kwargs):
+        def fake(*args, **kwargs):
             instance = kwargs['instance']
             instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
             instance.save(expected_task_state=[task_states.REBUILDING])
@@ -2558,7 +2557,7 @@ class ComputeTestCase(BaseTestCase):
                 expected_task_state=[task_states.REBUILD_BLOCK_DEVICE_MAPPING])
             called['rebuild'] = True
 
-        self.stubs.Set(self.compute.driver, 'rebuild', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.rebuild', fake)
         instance = self._create_fake_instance_obj()
         image_ref = instance['image_ref']
         sys_metadata = db.instance_system_metadata_get(self.context,
@@ -2595,7 +2594,7 @@ class ComputeTestCase(BaseTestCase):
         # Make sure virt drivers can override default rebuild
         called = {'rebuild': False}
 
-        def fake(**kwargs):
+        def fake(*args, **kwargs):
             instance = kwargs['instance']
             instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
             instance.save(expected_task_state=[task_states.REBUILDING])
@@ -2611,7 +2610,7 @@ class ComputeTestCase(BaseTestCase):
                                                 bdms[0].volume_id,
                                                 instance, destroy_bdm=False)
 
-        self.stubs.Set(self.compute.driver, 'rebuild', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.rebuild', fake)
         instance = self._create_fake_instance_obj()
         image_ref = instance['image_ref']
         sys_metadata = db.instance_system_metadata_get(self.context,
@@ -2682,11 +2681,11 @@ class ComputeTestCase(BaseTestCase):
             (b'/a/b/c', b'foobarbaz'),
         ]
 
-        def _spawn(context, instance, image_meta, injected_files,
+        def _spawn(cls, context, instance, image_meta, injected_files,
                    admin_password, network_info, block_device_info):
             self.assertEqual(self.decoded_files, injected_files)
 
-        self.stubs.Set(self.compute.driver, 'spawn', _spawn)
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', _spawn)
         instance = self._create_fake_instance_obj()
         image_ref = instance['image_ref']
         sys_metadata = db.instance_system_metadata_get(self.context,
@@ -3063,7 +3062,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_inject_network(self, instance, network_info):
             called['inject'] = True
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'inject_network_info',
+        self.stub_out('nova.virt.fake.FakeDriver.inject_network_info',
                        fake_driver_inject_network)
 
         instance = self._create_fake_instance_obj()
@@ -3081,7 +3080,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_reset_network(self, instance):
             called['count'] += 1
 
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'reset_network',
+        self.stub_out('nova.virt.fake.FakeDriver.reset_network',
                        fake_driver_reset_network)
 
         instance = self._create_fake_instance_obj()
@@ -3127,9 +3126,10 @@ class ComputeTestCase(BaseTestCase):
             if raise_during_cleanup:
                 raise Exception()
 
-        self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
+        self.stub_out('nova.virt.fake.FakeDriver.snapshot', fake_snapshot)
         fake_image.stub_out_image_service(self)
-        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
+                      fake_delete)
 
         inst_obj = self._get_snapshotting_instance()
         if method == 'snapshot':
@@ -3177,18 +3177,20 @@ class ComputeTestCase(BaseTestCase):
                      'status': status}
             return image
 
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      fake_show)
 
         def fake_delete(self_, context, image_id):
             self.fake_image_delete_called = True
             self.assertEqual('fakesnap', image_id)
 
-        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
+                      fake_delete)
 
         def fake_snapshot(*args, **kwargs):
             raise exc
 
-        self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
+        self.stub_out('nova.virt.fake.FakeDriver.snapshot', fake_snapshot)
 
         fake_image.stub_out_image_service(self)
 
@@ -3291,7 +3293,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_not_implemented(*args, **kwargs):
             raise NotImplementedError()
 
-        self.stubs.Set(self.compute.driver, 'get_console_output',
+        self.stub_out('nova.virt.fake.FakeDriver.get_console_output',
                        fake_not_implemented)
 
         instance = self._create_fake_instance_obj()
@@ -3314,7 +3316,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_not_found(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake-instance')
 
-        self.stubs.Set(self.compute.driver, 'get_console_output',
+        self.stub_out('nova.virt.fake.FakeDriver.get_console_output',
                        fake_not_found)
 
         instance = self._create_fake_instance_obj()
@@ -3357,7 +3359,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             return ctype.ConsoleVNC(host="fake_host", port=5900)
 
-        self.stubs.Set(self.compute.driver, "get_vnc_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_vnc_console",
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
@@ -3372,7 +3374,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             return ctype.ConsoleSpice(host="fake_host", port=5900, tlsPort=88)
 
-        self.stubs.Set(self.compute.driver, "get_spice_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_spice_console",
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
@@ -3386,7 +3388,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             return ctype.ConsoleRDP(host="fake_host", port=5900)
 
-        self.stubs.Set(self.compute.driver, "get_rdp_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_rdp_console",
                        fake_driver_get_console)
 
         self.assertTrue(self.compute.validate_console_port(
@@ -3412,7 +3414,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             return ctype.ConsoleSpice(host="fake_host", port=5900, tlsPort=88)
 
-        self.stubs.Set(self.compute.driver, "get_vnc_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_vnc_console",
                        fake_driver_get_console)
 
         self.assertFalse(self.compute.validate_console_port(
@@ -3476,7 +3478,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_get_vnc_console_not_implemented(self):
-        self.stubs.Set(self.compute.driver, 'get_vnc_console',
+        self.stub_out('nova.virt.fake.FakeDriver.get_vnc_console',
                        fake_not_implemented)
 
         instance = self._create_fake_instance_obj()
@@ -3533,7 +3535,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_get_spice_console_not_implemented(self):
-        self.stubs.Set(self.compute.driver, 'get_spice_console',
+        self.stub_out('nova.virt.fake.FakeDriver.get_spice_console',
                        fake_not_implemented)
         self.flags(enabled=False, group='vnc')
         self.flags(enabled=True, group='spice')
@@ -3641,7 +3643,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
-        self.stubs.Set(self.compute.driver, "get_vnc_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_vnc_console",
                        fake_driver_get_console)
 
         self.compute = utils.ExceptionHelper(self.compute)
@@ -3659,7 +3661,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
-        self.stubs.Set(self.compute.driver, "get_spice_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_spice_console",
                        fake_driver_get_console)
 
         self.compute = utils.ExceptionHelper(self.compute)
@@ -3677,7 +3679,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_driver_get_console(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
-        self.stubs.Set(self.compute.driver, "get_rdp_console",
+        self.stub_out("nova.virt.fake.FakeDriver.get_rdp_console",
                        fake_driver_get_console)
 
         self.compute = utils.ExceptionHelper(self.compute)
@@ -3785,11 +3787,11 @@ class ComputeTestCase(BaseTestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(network_api.API, 'add_fixed_ip_to_instance',
+        self.stub_out('nova.network.api.API.add_fixed_ip_to_instance',
                        dummy)
-        self.stubs.Set(nova.compute.manager.ComputeManager,
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        'inject_network_info', dummy)
-        self.stubs.Set(nova.compute.manager.ComputeManager,
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        'reset_network', dummy)
 
         instance = self._create_fake_instance_obj()
@@ -3805,11 +3807,11 @@ class ComputeTestCase(BaseTestCase):
         def dummy(*args, **kwargs):
             pass
 
-        self.stubs.Set(network_api.API, 'remove_fixed_ip_from_instance',
+        self.stub_out('nova.network.api.API.remove_fixed_ip_from_instance',
                        dummy)
-        self.stubs.Set(nova.compute.manager.ComputeManager,
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        'inject_network_info', dummy)
-        self.stubs.Set(nova.compute.manager.ComputeManager,
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        'reset_network', dummy)
 
         instance = self._create_fake_instance_obj()
@@ -3878,7 +3880,7 @@ class ComputeTestCase(BaseTestCase):
             raise exception.BuildAbortException(reason="already deleted",
                     instance_uuid=instance_uuid)
 
-        self.stubs.Set(self.compute.driver, 'spawn',
+        self.stub_out('nova.virt.fake.FakeDriver.spawn',
                        build_inst_abort)
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -3903,7 +3905,7 @@ class ComputeTestCase(BaseTestCase):
             raise exception.RescheduledException(instance_uuid=instance_uuid,
                     reason="something bad happened")
 
-        self.stubs.Set(self.compute.driver, 'spawn',
+        self.stub_out('nova.virt.fake.FakeDriver.spawn',
                        build_inst_fail)
 
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -3927,7 +3929,7 @@ class ComputeTestCase(BaseTestCase):
         def build_inst_fail(*args, **kwargs):
             raise test.TestingException("i'm dying")
 
-        self.stubs.Set(self.compute.driver, 'spawn',
+        self.stub_out('nova.virt.fake.FakeDriver.spawn',
                        build_inst_fail)
 
         self.compute.build_and_run_instance(
@@ -4096,8 +4098,8 @@ class ComputeTestCase(BaseTestCase):
         def fake_delete_tokens(*args, **kwargs):
             self.tokens_deleted = True
 
-        cauth_rpcapi = self.compute.consoleauth_rpcapi
-        self.stubs.Set(cauth_rpcapi, 'delete_tokens_for_instance',
+        self.stub_out('nova.consoleauth.rpcapi.ConsoleAuthAPI.'
+                       'delete_tokens_for_instance',
                        fake_delete_tokens)
 
         self.compute._delete_instance(self.context, instance, [],
@@ -4115,8 +4117,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_delete_tokens(*args, **kwargs):
             self.tokens_deleted = True
 
-        cells_rpcapi = self.compute.cells_rpcapi
-        self.stubs.Set(cells_rpcapi, 'consoleauth_delete_tokens',
+        self.stub_out('nova.cells.rpcapi.CellsAPI.consoleauth_delete_tokens',
                        fake_delete_tokens)
 
         self.compute._delete_instance(self.context, instance,
@@ -4137,11 +4138,11 @@ class ComputeTestCase(BaseTestCase):
         """
         instance = self._create_fake_instance_obj()
 
-        def fake_delete_instance(context, instance, bdms,
+        def fake_delete_instance(self, context, instance, bdms,
                                  reservations=None):
             raise exception.InstanceTerminationFailure(reason='')
 
-        self.stubs.Set(self.compute, '_delete_instance',
+        self.stub_out('nova.compute.manager.ComputeManager._delete_instance',
                        fake_delete_instance)
 
         self.assertRaises(exception.InstanceTerminationFailure,
@@ -4179,8 +4180,9 @@ class ComputeTestCase(BaseTestCase):
         def _get_an_exception(*args, **kwargs):
             raise test.TestingException()
 
-        self.stubs.Set(self.context, 'elevated', _get_an_exception)
-        self.stubs.Set(self.compute,
+        self.stub_out('nova.context.RequestContext.elevated',
+                      _get_an_exception)
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        '_notify_about_instance_usage', _get_an_exception)
 
         func = getattr(self.compute, operation)
@@ -4188,8 +4190,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(test.TestingException,
                 func, self.context, instance=instance, **kwargs)
         # self.context.elevated() is called in tearDown()
-        self.stubs.Set(self.context, 'elevated', orig_elevated)
-        self.stubs.Set(self.compute,
+        self.stub_out('nova.context.RequestContext.elevated', orig_elevated)
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        '_notify_about_instance_usage', orig_notify)
 
         # Fetch the instance's task_state and make sure it reverted to None.
@@ -4267,7 +4269,8 @@ class ComputeTestCase(BaseTestCase):
             def fake_migration_save(*args, **kwargs):
                 raise test.TestingException()
 
-            self.stubs.Set(migration, 'save', fake_migration_save)
+            self.stub_out('nova.objects.migration.Migration.save',
+                          fake_migration_save)
             self._test_state_revert(instance, *operation)
 
     def _ensure_quota_reservations(self, instance,
@@ -5297,7 +5300,7 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_finish_revert_migration_driver(*args, **kwargs):
             # Confirm the instance uses the old type in finish_revert_resize
-            inst = args[1]
+            inst = args[2]
             self.assertEqual('1', inst.flavor.flavorid)
 
         old_vm_state = None
@@ -5308,9 +5311,9 @@ class ComputeTestCase(BaseTestCase):
         params = {'vm_state': old_vm_state}
         instance = self._create_fake_instance_obj(params)
 
-        self.stubs.Set(self.compute.driver, 'finish_migration', fake)
-        self.stubs.Set(self.compute.driver, 'finish_revert_migration',
-                       fake_finish_revert_migration_driver)
+        self.stub_out('nova.virt.fake.FakeDriver.finish_migration', fake)
+        self.stub_out('nova.virt.fake.FakeDriver.finish_revert_migration',
+                      fake_finish_revert_migration_driver)
 
         self._stub_out_resize_network_methods()
 
@@ -6263,7 +6266,8 @@ class ComputeTestCase(BaseTestCase):
             return instance_map[instance_uuid]
 
         # NOTE(comstud): Override the stub in setUp()
-        def fake_get_instance_nw_info(context, instance, use_slave=False):
+        def fake_get_instance_nw_info(cls, context, instance,
+                                      use_slave=False):
             # Note that this exception gets caught in compute/manager
             # and is ignored.  However, the below increment of
             # 'get_nw_info' won't happen, and you'll get an assert
@@ -6281,7 +6285,7 @@ class ComputeTestCase(BaseTestCase):
                 fake_instance_get_all_by_host)
         self.stub_out('nova.db.instance_get_by_uuid',
                 fake_instance_get_by_uuid)
-        self.stubs.Set(self.compute.network_api, 'get_instance_nw_info',
+        self.stub_out('nova.network.api.API.get_instance_nw_info',
                 fake_get_instance_nw_info)
 
         # Make an instance appear to be still Building
@@ -6485,7 +6489,7 @@ class ComputeTestCase(BaseTestCase):
                     migration.update(updates)
                     return migration
 
-        def fake_confirm_resize(context, instance, migration=None):
+        def fake_confirm_resize(cls, context, instance, migration=None):
             # raise exception for uuids.migration_instance_4 to check
             # migration status does not get set to 'error' on confirm_resize
             # failure.
@@ -6502,8 +6506,8 @@ class ComputeTestCase(BaseTestCase):
         self.stub_out('nova.db.migration_get_unconfirmed_by_dest_compute',
                 fake_migration_get_unconfirmed_by_dest_compute)
         self.stub_out('nova.db.migration_update', fake_migration_update)
-        self.stubs.Set(self.compute.compute_api, 'confirm_resize',
-                fake_confirm_resize)
+        self.stub_out('nova.compute.api.API.confirm_resize',
+                      fake_confirm_resize)
 
         def fetch_instance_migration_status(instance_uuid):
             for migration in migrations:
@@ -6579,9 +6583,10 @@ class ComputeTestCase(BaseTestCase):
     @mock.patch.object(objects.Instance, 'save')
     def test_instance_update_host_check(self, mock_save):
         # make sure rt usage doesn't happen if the host or node is different
-        def fail_get(nodename):
+        def fail_get(self, nodename):
             raise test.TestingException("wrong host/node")
-        self.stubs.Set(self.compute, '_get_resource_tracker', fail_get)
+        self.stub_out('nova.compute.manager.ComputeManager.'
+                      '_get_resource_tracker', fail_get)
 
         instance = self._create_fake_instance_obj({'host': 'someotherhost'})
         self.compute._instance_update(self.context, instance, vcpus=4)
@@ -6770,19 +6775,20 @@ class ComputeTestCase(BaseTestCase):
         instance.user_id = 'fake-user'
         instance.deleted = False
 
-        def fake_destroy():
+        def fake_destroy(self):
             instance.deleted = True
 
-        self.stubs.Set(instance, 'destroy', fake_destroy)
+        self.stub_out('nova.objects.instance.Instance.destroy', fake_destroy)
 
         self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
                       lambda *a, **k: None)
 
-        self.stubs.Set(self.compute,
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        '_complete_deletion',
                        lambda *a, **k: None)
 
-        self.stubs.Set(objects.Quotas, 'reserve', lambda *a, **k: None)
+        self.stub_out('nova.objects.quotas.Quotas.reserve',
+                      lambda *a, **k: None)
 
         self.compute._complete_partial_deletion(admin_context, instance)
 
@@ -6836,10 +6842,10 @@ class ComputeTestCase(BaseTestCase):
         instance.deleted = False
         instance.host = self.compute.host
 
-        def fake_partial_deletion(context, instance):
+        def fake_partial_deletion(self, context, instance):
             instance['deleted'] = instance['id']
 
-        self.stubs.Set(self.compute,
+        self.stub_out('nova.compute.manager.ComputeManager.'
                        '_complete_partial_deletion',
                        fake_partial_deletion)
         self.compute._init_instance(admin_context, instance)
@@ -6865,9 +6871,9 @@ class ComputeTestCase(BaseTestCase):
         def _noop(*args, **kwargs):
             pass
 
-        self.stubs.Set(self.compute.network_api,
+        self.stub_out('nova.network.api.API.'
                        'add_fixed_ip_to_instance', _noop)
-        self.stubs.Set(self.compute.network_api,
+        self.stub_out('nova.network.api.API.'
                        'remove_fixed_ip_from_instance', _noop)
 
         instance = self._create_fake_instance_obj()
@@ -7396,7 +7402,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         super(ComputeAPITestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
-        self.stubs.Set(network_api.API, 'get_instance_nw_info',
+        self.stub_out('nova.network.api.API.get_instance_nw_info',
                        fake_get_nw_info)
         self.security_group_api = (
             openstack_driver.get_openstack_security_group_driver())
@@ -7448,7 +7454,8 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['memory_mb'] = 1
 
         self.fake_image['min_ram'] = 2
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
             self.compute_api.create, self.context,
@@ -7466,7 +7473,8 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['root_gb'] = 1
 
         self.fake_image['min_disk'] = 2
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.create, self.context,
@@ -7485,7 +7493,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.fake_image['size'] = '1073741825'
 
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.create, self.context,
@@ -7506,7 +7515,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.fake_image['min_ram'] = 2
         self.fake_image['min_disk'] = 2
         self.fake_image['name'] = 'fake_name'
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, self.fake_image['id'])
@@ -7518,7 +7528,8 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type['root_gb'] = 1
         inst_type['memory_mb'] = 1
 
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, self.fake_image['id'])
@@ -7530,7 +7541,8 @@ class ComputeAPITestCase(BaseTestCase):
         }
         self._create_instance_type(params=instance_type_params)
         inst_type = flavors.get_flavor_by_name('test')
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
         (refs, resv_id) = self.compute_api.create(self.context, inst_type,
                                                   self.fake_image['id'])
 
@@ -7553,7 +7565,8 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         expected_message = (
             exception.ImageNotActive.msg_fmt % {'image_id':
@@ -7660,7 +7673,8 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type = flavors.get_default_flavor()
 
         self.fake_image['min_ram'] = 2
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.InstanceUserDataTooLarge,
             self.compute_api.create, self.context, inst_type,
@@ -7672,7 +7686,8 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type = flavors.get_default_flavor()
 
         self.fake_image['min_ram'] = 2
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.InstanceUserDataMalformed,
             self.compute_api.create, self.context, inst_type,
@@ -7684,7 +7699,8 @@ class ComputeAPITestCase(BaseTestCase):
         inst_type = flavors.get_default_flavor()
 
         self.fake_image['min_ram'] = 2
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         # NOTE(mikal): a string of length 48510 encodes to 65532 characters of
         # base64
@@ -7722,13 +7738,12 @@ class ComputeAPITestCase(BaseTestCase):
 
         orig_populate = self.compute_api._populate_instance_for_create
 
-        def _fake_populate(context, base_options, *args, **kwargs):
+        def _fake_populate(self, context, base_options, *args, **kwargs):
             base_options['uuid'] = fake_uuids.pop(0)
             return orig_populate(context, base_options, *args, **kwargs)
 
-        self.stubs.Set(self.compute_api,
-                '_populate_instance_for_create',
-                _fake_populate)
+        self.stub_out('nova.compute.api.API.'
+                      '_populate_instance_for_create', _fake_populate)
 
         cases = [(None, 'server-%s' % fake_uuids[0]),
                  ('Hello, Server!', 'hello-server'),
@@ -7743,7 +7758,8 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(ref[0]['hostname'], hostname)
 
     def test_instance_create_adds_to_instance_group(self):
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         group = objects.InstanceGroup(self.context)
         group.uuid = str(uuid.uuid4())
@@ -7834,29 +7850,29 @@ class ComputeAPITestCase(BaseTestCase):
             info['clean'] = ('progress' not in
                              kwargs['instance'].obj_what_changed())
 
-        self.stubs.Set(self.compute_api.compute_task_api, 'rebuild_instance',
-                       fake_rpc_rebuild)
+        with mock.patch.object(self.compute_api.compute_task_api,
+                               'rebuild_instance', fake_rpc_rebuild):
+            image_ref = instance["image_ref"] + '-new_image_ref'
+            password = "new_password"
 
-        image_ref = instance["image_ref"] + '-new_image_ref'
-        password = "new_password"
+            instance.vm_state = vm_state
+            instance.save()
 
-        instance.vm_state = vm_state
-        instance.save()
+            self.compute_api.rebuild(self.context, instance,
+                                     image_ref, password)
+            self.assertEqual(info['image_ref'], image_ref)
+            self.assertTrue(info['clean'])
 
-        self.compute_api.rebuild(self.context, instance, image_ref, password)
-        self.assertEqual(info['image_ref'], image_ref)
-        self.assertTrue(info['clean'])
-
-        instance.refresh()
-        self.assertEqual(instance.task_state, task_states.REBUILDING)
-        sys_meta = {k: v for k, v in instance.system_metadata.items()
-                    if not k.startswith('instance_type')}
-        self.assertEqual(sys_meta,
-                {'image_kernel_id': uuids.kernel_id,
-                'image_min_disk': '1',
-                'image_ramdisk_id': uuids.ramdisk_id,
-                'image_something_else': 'meow',
-                'preserved': 'preserve this!'})
+            instance.refresh()
+            self.assertEqual(instance.task_state, task_states.REBUILDING)
+            sys_meta = {k: v for k, v in instance.system_metadata.items()
+                        if not k.startswith('instance_type')}
+            self.assertEqual(sys_meta,
+                    {'image_kernel_id': uuids.kernel_id,
+                    'image_min_disk': '1',
+                    'image_ramdisk_id': uuids.ramdisk_id,
+                    'image_something_else': 'meow',
+                    'preserved': 'preserve this!'})
 
     def test_rebuild(self):
         self._test_rebuild(vm_state=vm_states.ACTIVE)
@@ -7866,7 +7882,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_rebuild_in_error_not_launched(self):
         instance = self._create_fake_instance_obj(params={'image_ref': ''})
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
 
@@ -7886,7 +7903,8 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_no_image(self):
         instance = self._create_fake_instance_obj(params={'image_ref': ''})
         instance_uuid = instance.uuid
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
         self.compute_api.rebuild(self.context, instance, '', 'new_password')
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
@@ -7899,7 +7917,8 @@ class ComputeAPITestCase(BaseTestCase):
             params={'image_ref': FAKE_IMAGE_REF})
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         expected_message = (
             exception.ImageNotActive.msg_fmt % {'image_id':
@@ -7916,7 +7935,8 @@ class ComputeAPITestCase(BaseTestCase):
         instance.flavor.root_gb = 1
 
         self.fake_image['min_ram'] = 128
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.FlavorMemoryTooSmall,
             self.compute_api.rebuild, self.context,
@@ -7941,11 +7961,12 @@ class ComputeAPITestCase(BaseTestCase):
             else:
                 raise KeyError()
 
-        self.stubs.Set(flavors, 'extract_flavor',
+        self.stub_out('nova.compute.flavors.extract_flavor',
                        fake_extract_flavor)
 
         self.fake_image['min_disk'] = 2
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanMinDisk,
             self.compute_api.rebuild, self.context,
@@ -7970,12 +7991,13 @@ class ComputeAPITestCase(BaseTestCase):
             else:
                 raise KeyError()
 
-        self.stubs.Set(flavors, 'extract_flavor',
+        self.stub_out('nova.compute.flavors.extract_flavor',
                        fake_extract_flavor)
 
         self.fake_image['min_ram'] = 64
         self.fake_image['min_disk'] = 1
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
@@ -7993,9 +8015,10 @@ class ComputeAPITestCase(BaseTestCase):
             else:
                 raise KeyError()
 
-        self.stubs.Set(flavors, 'extract_flavor',
+        self.stub_out('nova.compute.flavors.extract_flavor',
                        fake_extract_flavor)
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.compute_api.rebuild(self.context,
                 instance, self.fake_image['id'], 'new_password')
@@ -8013,11 +8036,12 @@ class ComputeAPITestCase(BaseTestCase):
             else:
                 raise KeyError()
 
-        self.stubs.Set(flavors, 'extract_flavor',
+        self.stub_out('nova.compute.flavors.extract_flavor',
                        fake_extract_flavor)
 
         self.fake_image['size'] = '1073741825'
-        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      self.fake_show)
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
             self.compute_api.rebuild, self.context,
@@ -8418,8 +8442,9 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
                                           instance_uuid=None):
             meta_changes[0] = diff
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
-                       fake_change_instance_metadata)
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.'
+                      'change_instance_metadata',
+                      fake_change_instance_metadata)
 
         _context = context.get_admin_context()
         instance = self._create_fake_instance_obj({'metadata':
@@ -8472,7 +8497,8 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_change_instance_metadata(inst, ctxt, diff, instance=None,
                                           instance_uuid=None):
             pass
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.'
+                      'change_instance_metadata',
                        fake_change_instance_metadata)
 
         instance = self._create_fake_instance_obj(
@@ -8855,7 +8881,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_add_remove_fixed_ip(self):
         instance = self._create_fake_instance_obj(params={'host': CONF.host})
-        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+        self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.add_fixed_ip(self.context, instance, '1')
         self.compute_api.remove_fixed_ip(self.context,
@@ -8917,9 +8943,9 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
 
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
-        self.stubs.Set(cinder.API, 'check_attach', fake)
-        self.stubs.Set(cinder.API, 'reserve_volume', fake)
+        self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
+        self.stub_out('nova.volume.cinder.API.check_attach', fake)
+        self.stub_out('nova.volume.cinder.API.reserve_volume', fake)
 
         instance = fake_instance.fake_instance_obj(None, **{
             'uuid': 'f3000000-0000-0000-0000-000000000000', 'locked': False,
@@ -9249,9 +9275,9 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_interface(self):
         nwinfo, port_id = self.test_attach_interface()
-        self.stubs.Set(self.compute.network_api,
+        self.stub_out('nova.network.api.API.'
                        'deallocate_port_for_instance',
-                       lambda a, b, c: [])
+                       lambda a, b, c, d: [])
         instance = objects.Instance()
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.info_cache_instance)
@@ -9394,14 +9420,14 @@ class ComputeAPITestCase(BaseTestCase):
             bdm['device_name'] = '/dev/vdb'
             return bdm
 
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
-        self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
-        self.stubs.Set(cinder.API, 'reserve_volume',
+        self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
+        self.stub_out('nova.volume.cinder.API.check_attach', fake_check_attach)
+        self.stub_out('nova.volume.cinder.API.reserve_volume',
                        fake_reserve_volume)
-        self.stubs.Set(compute_rpcapi.ComputeAPI,
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.'
                        'reserve_block_device_name',
                        fake_rpc_reserve_block_device_name)
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'attach_volume',
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.attach_volume',
                        fake_rpc_attach_volume)
 
         instance = self._create_fake_instance_obj()
@@ -9428,9 +9454,10 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_rpc_detach_volume(self, context, **kwargs):
             called['fake_rpc_detach_volume'] = True
 
-        self.stubs.Set(cinder.API, 'check_detach', fake_check_detach)
-        self.stubs.Set(cinder.API, 'begin_detaching', fake_begin_detaching)
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'detach_volume',
+        self.stub_out('nova.volume.cinder.API.check_detach', fake_check_detach)
+        self.stub_out('nova.volume.cinder.API.begin_detaching',
+                      fake_begin_detaching)
+        self.stub_out('nova.compute.rpcapi.ComputeAPI.detach_volume',
                        fake_rpc_detach_volume)
 
         self.compute_api.detach_volume(self.context,
@@ -9596,18 +9623,18 @@ class ComputeAPITestCase(BaseTestCase):
 
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
-        self.stubs.Set(cinder.API, "get", fake_volume_get)
+        self.stub_out("nova.volume.cinder.API.get", fake_volume_get)
 
         # Stub out and record whether it gets detached
         result = {"detached": False}
 
         def fake_detach(self, context, volume_id_param, instance_uuid):
             result["detached"] = volume_id_param == volume_id
-        self.stubs.Set(cinder.API, "detach", fake_detach)
+        self.stub_out("nova.volume.cinder.API.detach", fake_detach)
 
         def fake_terminate_connection(self, context, volume_id, connector):
             return {}
-        self.stubs.Set(cinder.API, "terminate_connection",
+        self.stub_out("nova.volume.cinder.API.terminate_connection",
                        fake_terminate_connection)
 
         # Kill the instance and check that it was detached
@@ -9676,13 +9703,13 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_lock(self):
         instance = self._create_fake_instance_obj()
-        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+        self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.lock(self.context, instance)
 
     def test_unlock(self):
         instance = self._create_fake_instance_obj()
-        self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
+        self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
 
@@ -9955,8 +9982,8 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_service_is_up(*args, **kwargs):
             return True
 
-        self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
-                fake_service_is_up)
+        self.stub_out('nova.servicegroup.api.API.service_is_up',
+                      fake_service_is_up)
 
         self.assertRaises(exception.ComputeServiceInUse,
                 self.compute_api.evacuate, self.context.elevated(), instance,
@@ -10122,7 +10149,7 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
             self.assertEqual(1, kwargs['limit'])
 
 
-def fake_rpc_method(context, method, **kwargs):
+def fake_rpc_method(self, context, method, **kwargs):
     pass
 
 
@@ -10148,8 +10175,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         super(ComputeAPIAggrTestCase, self).setUp()
         self.api = compute_api.AggregateAPI()
         self.context = context.get_admin_context()
-        self.stubs.Set(self.api.compute_rpcapi.client, 'call', fake_rpc_method)
-        self.stubs.Set(self.api.compute_rpcapi.client, 'cast', fake_rpc_method)
+        self.stub_out('oslo_messaging.rpc.client.call', fake_rpc_method)
+        self.stub_out('oslo_messaging.rpc.client.cast', fake_rpc_method)
 
     def test_aggregate_no_zone(self):
         # Ensure we can create an aggregate without an availability  zone
@@ -10731,10 +10758,11 @@ class ComputeAggrTestCase(BaseTestCase):
         self.aggr = db.aggregate_create(self.context, values, metadata=az)
 
     def test_add_aggregate_host(self):
-        def fake_driver_add_to_aggregate(context, aggregate, host, **_ignore):
+        def fake_driver_add_to_aggregate(self, context, aggregate, host,
+                                         **_ignore):
             fake_driver_add_to_aggregate.called = True
             return {"foo": "bar"}
-        self.stubs.Set(self.compute.driver, "add_to_aggregate",
+        self.stub_out("nova.virt.fake.FakeDriver.add_to_aggregate",
                        fake_driver_add_to_aggregate)
 
         self.compute.add_aggregate_host(self.context, host="host",
@@ -10742,12 +10770,12 @@ class ComputeAggrTestCase(BaseTestCase):
         self.assertTrue(fake_driver_add_to_aggregate.called)
 
     def test_remove_aggregate_host(self):
-        def fake_driver_remove_from_aggregate(context, aggregate, host,
+        def fake_driver_remove_from_aggregate(cls, context, aggregate, host,
                                               **_ignore):
             fake_driver_remove_from_aggregate.called = True
             self.assertEqual("host", host, "host")
             return {"foo": "bar"}
-        self.stubs.Set(self.compute.driver, "remove_from_aggregate",
+        self.stub_out("nova.virt.fake.FakeDriver.remove_from_aggregate",
                        fake_driver_remove_from_aggregate)
 
         self.compute.remove_aggregate_host(self.context,
@@ -10756,13 +10784,13 @@ class ComputeAggrTestCase(BaseTestCase):
         self.assertTrue(fake_driver_remove_from_aggregate.called)
 
     def test_add_aggregate_host_passes_slave_info_to_driver(self):
-        def driver_add_to_aggregate(context, aggregate, host, **kwargs):
+        def driver_add_to_aggregate(cls, context, aggregate, host, **kwargs):
             self.assertEqual(self.context, context)
             self.assertEqual(aggregate['id'], self.aggr['id'])
             self.assertEqual(host, "the_host")
             self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
 
-        self.stubs.Set(self.compute.driver, "add_to_aggregate",
+        self.stub_out("nova.virt.fake.FakeDriver.add_to_aggregate",
                        driver_add_to_aggregate)
 
         self.compute.add_aggregate_host(self.context, host="the_host",
@@ -10770,13 +10798,14 @@ class ComputeAggrTestCase(BaseTestCase):
                 aggregate=jsonutils.to_primitive(self.aggr))
 
     def test_remove_from_aggregate_passes_slave_info_to_driver(self):
-        def driver_remove_from_aggregate(context, aggregate, host, **kwargs):
+        def driver_remove_from_aggregate(cls, context, aggregate, host,
+                                         **kwargs):
             self.assertEqual(self.context, context)
             self.assertEqual(aggregate['id'], self.aggr['id'])
             self.assertEqual(host, "the_host")
             self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
 
-        self.stubs.Set(self.compute.driver, "remove_from_aggregate",
+        self.stub_out("nova.virt.fake.FakeDriver.remove_from_aggregate",
                        driver_remove_from_aggregate)
 
         self.compute.remove_aggregate_host(self.context,
@@ -10825,7 +10854,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
             instance_type['disabled'] = False
             return instance_type
 
-        self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
+        self.stub_out('nova.compute.flavors.get_flavor_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
 
         self._stub_migrate_server()
@@ -10844,7 +10873,7 @@ class DisabledInstanceTypesTestCase(BaseTestCase):
             instance_type['disabled'] = True
             return instance_type
 
-        self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
+        self.stub_out('nova.compute.flavors.get_flavor_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
 
         self.assertRaises(exception.FlavorNotFound,
@@ -10861,22 +10890,25 @@ class ComputeReschedulingTestCase(BaseTestCase):
 
         def fake_update(*args, **kwargs):
             self.updated_task_state = kwargs.get('task_state')
-        self.stubs.Set(self.compute, '_instance_update', fake_update)
+        self.stub_out('nova.compute.manager.ComputeManager._instance_update',
+                      fake_update)
 
     def _reschedule(self, request_spec=None, filter_properties=None,
                     exc_info=None):
         if not filter_properties:
             filter_properties = {}
+        fake_taskapi = FakeComputeTaskAPI()
+        with mock.patch.object(self.compute, 'compute_task_api',
+                               fake_taskapi):
+            instance = self._create_fake_instance_obj()
 
-        instance = self._create_fake_instance_obj()
-
-        scheduler_method = self.compute.compute_task_api.resize_instance
-        method_args = (instance, None,
-                       dict(filter_properties=filter_properties),
-                       {}, None)
-        return self.compute._reschedule(self.context, request_spec,
-                filter_properties, instance, scheduler_method,
-                method_args, self.expected_task_state, exc_info=exc_info)
+            scheduler_method = self.compute.compute_task_api.resize_instance
+            method_args = (instance, None,
+                           dict(filter_properties=filter_properties),
+                           {}, None)
+            return self.compute._reschedule(self.context, request_spec,
+                    filter_properties, instance, scheduler_method,
+                    method_args, self.expected_task_state, exc_info=exc_info)
 
     def test_reschedule_no_filter_properties(self):
         # no filter_properties will disable re-scheduling.
@@ -11033,7 +11065,8 @@ class ComputeInactiveImageTestCase(BaseTestCase):
                                    'something_else': 'meow'}}
 
         fake_image.stub_out_image_service(self)
-        self.stubs.Set(fake_image._FakeImageService, 'show', fake_show)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
+                      fake_show)
         self.compute_api = compute.API()
 
     def test_create_instance_with_deleted_image(self):
@@ -11052,11 +11085,11 @@ class EvacuateHostTestCase(BaseTestCase):
         self.inst.task_state = task_states.REBUILDING
         self.inst.save()
 
-        def fake_get_compute_info(context, host):
+        def fake_get_compute_info(cls, context, host):
             cn = objects.ComputeNode(hypervisor_hostname=self.rt.nodename)
             return cn
 
-        self.stubs.Set(self.compute, '_get_compute_info',
+        self.stub_out('nova.compute.manager.ComputeManager._get_compute_info',
                        fake_get_compute_info)
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
@@ -11276,15 +11309,16 @@ class EvacuateHostTestCase(BaseTestCase):
         self.compute.build_and_run_instance(self.context,
                 self.inst, {}, {}, {}, block_device_mapping=[])
 
-        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
+        self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                       lambda *a, **kw: True)
         self.assertRaises(exception.InstanceExists,
                           lambda: self._rebuild(on_shared_storage=True))
 
     def test_driver_does_not_support_recreate(self):
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_recreate=False):
-            self.stubs.Set(self.compute.driver, 'instance_on_disk',
-                           lambda x: True)
+            self.stub_out('nova.virt.fake.FakeDriver.instance_on_disk',
+                           lambda *a, **kw: True)
             self.assertRaises(exception.InstanceRecreateNotSupported,
                               lambda: self._rebuild(on_shared_storage=True))
 
@@ -11412,7 +11446,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeInjectedFilesTestCase, self).setUp()
         self.instance = self._create_fake_instance_obj()
-        self.stubs.Set(self.compute.driver, 'spawn', self._spawn)
+        self.stub_out('nova.virt.fake.FakeDriver.spawn', self._spawn)
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
     def _spawn(self, context, instance, image_meta, injected_files,
