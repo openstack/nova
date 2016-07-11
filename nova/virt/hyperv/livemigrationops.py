@@ -23,6 +23,7 @@ from oslo_utils import excutils
 
 import nova.conf
 from nova.objects import migrate_data as migrate_data_obj
+from nova.virt.hyperv import block_device_manager
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import serialconsoleops
@@ -42,6 +43,7 @@ class LiveMigrationOps(object):
         self._serial_console_ops = serialconsoleops.SerialConsoleOps()
         self._imagecache = imagecache.ImageCache()
         self._vmutils = utilsfactory.get_vmutils()
+        self._block_dev_man = block_device_manager.BlockDeviceInfoManager()
 
     def live_migration(self, context, instance_ref, dest, post_method,
                        recover_method, block_migration=False,
@@ -75,7 +77,7 @@ class LiveMigrationOps(object):
         self._livemigrutils.check_live_migration_config()
 
         if CONF.use_cow_images:
-            boot_from_volume = self._volumeops.ebs_root_in_block_devices(
+            boot_from_volume = self._block_dev_man.is_boot_from_volume(
                 block_device_info)
             if not boot_from_volume and instance.image_ref:
                 self._imagecache.get_cached_image(context, instance)
