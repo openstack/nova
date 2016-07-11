@@ -1588,12 +1588,9 @@ class API(base.Base):
                 cb(context, instance, bdms, reservations=None)
                 quotas.commit()
                 return
-            # NOTE(melwitt): We expect instances in certain states to have no
-            # host set but also have resources on a compute host. If this is
-            # the case, we want to try to clean up their resources. Otherwse,
-            # we can destroy the instance here and return.
-            expect_no_instance_host = self._expect_no_host(instance)
-            if not instance.host and not expect_no_instance_host:
+            shelved_offloaded = (instance.vm_state
+                                 == vm_states.SHELVED_OFFLOADED)
+            if not instance.host and not shelved_offloaded:
                 try:
                     compute_utils.notify_about_instance_usage(
                             self.notifier, context, instance,
@@ -1605,17 +1602,7 @@ class API(base.Base):
                             system_metadata=instance.system_metadata)
                     quotas.commit()
                     return
-                except exception.ObjectActionError as ex:
-                    # The instance's host likely changed under us as
-                    # this instance could be building and has since been
-                    # scheduled. Continue with attempts to delete it.
-                    # NOTE(melwitt): Often instance.host is None after the
-                    # refresh because the claim was aborted on the compute
-                    # host. The service up check will raise ComputeHostNotFound
-                    # in this case and we will do a local delete with compute
-                    # host cleanup
-                    LOG.debug('Refreshing instance because: %s', ex,
-                              instance=instance)
+                except exception.ObjectActionError:
                     instance.refresh()
 
             if instance.vm_state == vm_states.RESIZED:
@@ -1623,7 +1610,7 @@ class API(base.Base):
 
             is_local_delete = True
             try:
-                if not expect_no_instance_host:
+                if not shelved_offloaded:
                     service = objects.Service.get_by_compute_host(
                         context.elevated(), instance.host)
                     is_local_delete = not self.servicegroup_api.service_is_up(
@@ -1650,9 +1637,6 @@ class API(base.Base):
                     cb(context, instance, bdms,
                        reservations=quotas.reservations)
             except exception.ComputeHostNotFound:
-                # NOTE(melwitt): We expect this if instance.host has been
-                # set to None by the compute host during a claim abort
-                # and we pick it up in the instance.refresh()
                 pass
 
             if is_local_delete:
@@ -1670,13 +1654,6 @@ class API(base.Base):
             with excutils.save_and_reraise_exception():
                 if quotas:
                     quotas.rollback()
-
-    def _expect_no_host(self, instance):
-        # NOTE(melwitt): Instances in ERROR state have their host and node
-        # set to None as part of exception handling.
-        if instance.vm_state in (vm_states.SHELVED_OFFLOADED, vm_states.ERROR):
-            return True
-        return False
 
     def _confirm_resize_on_deleting(self, context, instance):
         # If in the middle of a resize, use confirm_resize to
@@ -1771,22 +1748,6 @@ class API(base.Base):
                                                          connector)
                     self.volume_api.detach(elevated, bdm.volume_id,
                                            instance.uuid)
-                except Exception as exc:
-                    err_str = _LW("Ignoring volume cleanup failure due to %s")
-                    LOG.warn(err_str % exc, instance=instance)
-                # This block handles the following case:
-                # 1. Instance scheduled to host and fails on the host.
-                # 2. Compute manager's cleanup calls terminate_connection
-                #    and detach if the spawn made it that far.
-                # 3. Instance fails to boot on all other reschedule attempts.
-                # 4. Instance is left in error state with no assigned host.
-                # 5. Volumes in the instance's BDMs are left in the available
-                #    state.
-                # When this is the case the terminate_connection and detach
-                # calls above will fail. We attempt the volume delete in a
-                # separate try-except to clean up these volume and avoid the
-                # storage leak.
-                try:
                     if bdm.delete_on_termination:
                         self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
