@@ -2350,15 +2350,24 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['power_off'])
         self.compute.terminate_instance(self.context, inst_obj, [], [])
 
-    def test_pause(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch.object(nova.context.RequestContext, 'elevated')
+    def test_pause(self, mock_context, mock_notify):
         # Ensure instance can be paused and unpaused.
         instance = self._create_fake_instance_obj()
+        ctxt = context.get_admin_context()
+        mock_context.return_value = ctxt
         self.compute.build_and_run_instance(self.context,
                 instance, {}, {}, {}, block_device_mapping=[])
         instance.task_state = task_states.PAUSING
         instance.save()
         fake_notifier.NOTIFICATIONS = []
         self.compute.pause_instance(self.context, instance=instance)
+        mock_notify.assert_has_calls([
+            mock.call(ctxt, instance, 'fake-mini',
+                      action='pause', phase='start'),
+            mock.call(ctxt, instance, 'fake-mini',
+                      action='pause', phase='end')])
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,

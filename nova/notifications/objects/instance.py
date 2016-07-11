@@ -223,8 +223,8 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 
 @base.notification_sample('instance-delete-start.json')
 @base.notification_sample('instance-delete-end.json')
-# @base.notification_sample('instance-pause-start.json')
-# @base.notification_sample('instance-pause-end.json')
+@base.notification_sample('instance-pause-start.json')
+@base.notification_sample('instance-pause-end.json')
 # @base.notification_sample('instance-unpause-start.json')
 # @base.notification_sample('instance-unpause-end.json')
 # @base.notification_sample('instance-resize-start.json')
