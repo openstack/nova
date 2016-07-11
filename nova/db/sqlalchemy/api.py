@@ -586,7 +586,7 @@ def _compute_node_select(context, filters=None, limit=None, marker=None):
         try:
             compute_node_get(context, marker)
         except exception.ComputeHostNotFound:
-            raise exception.MarkerNotFound(marker)
+            raise exception.MarkerNotFound(marker=marker)
         select = select.where(cn_tbl.c.id > marker)
     if limit is not None:
         select = select.limit(limit)
@@ -2197,7 +2197,7 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
             marker = _instance_get_by_uuid(
                     context.elevated(read_deleted='yes'), marker)
         except exception.InstanceNotFound:
-            raise exception.MarkerNotFound(marker)
+            raise exception.MarkerNotFound(marker=marker)
     try:
         query_prefix = sqlalchemyutils.paginate_query(query_prefix,
                                models.Instance, limit,
@@ -4987,7 +4987,7 @@ def flavor_get_all(context, inactive=False, filters=None,
                     filter_by(flavorid=marker).\
                     first()
         if not marker_row:
-            raise exception.MarkerNotFound(marker)
+            raise exception.MarkerNotFound(marker=marker)
 
     query = sqlalchemyutils.paginate_query(query, models.InstanceTypes, limit,
                                            [sort_key, 'id'],

@@ -629,7 +629,7 @@ def _flavor_get_all_from_db(context, inactive, filters, sort_key, sort_dir,
                     filter_by(flavorid=marker).\
                     first()
         if not marker_row:
-            raise exception.MarkerNotFound(marker)
+            raise exception.MarkerNotFound(marker=marker)
 
     query = sqlalchemyutils.paginate_query(query, api_models.Flavors,
                                            limit,
