@@ -4129,34 +4129,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(objects.Instance, 'save')
-    def test_build_resources_with_network_info_obj_on_spawn_failure(self,
-                                        mock_save, mock_shutdown, mock_build):
-        mock_save.return_value = self.instance
-        mock_build.return_value = self.network_info
-
-        test_exception = test.TestingException()
-
-        def fake_spawn():
-            raise test_exception
-
-        try:
-            with self.compute._build_resources(self.context, self.instance,
-                    self.requested_networks, self.security_groups,
-                    self.image, self.block_device_mapping):
-                fake_spawn()
-        except Exception as e:
-            self.assertEqual(test_exception, e)
-
-        mock_save.assert_called_once_with()
-        mock_build.assert_called_once_with(self.context, self.instance,
-                self.requested_networks, self.security_groups)
-        mock_shutdown.assert_called_once_with(self.context, self.instance,
-                self.block_device_mapping, self.requested_networks,
-                try_deallocate_networks=False)
-
-    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
-    @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
-    @mock.patch.object(objects.Instance, 'save')
     def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self,
                                         mock_save, mock_shutdown, mock_build):
         mock_save.return_value = self.instance
