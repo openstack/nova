@@ -6540,6 +6540,20 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(len(real_vifs1), 0)
         self.assertEqual(len(real_vifs2), 1)
 
+    def test_virtual_interface_delete(self):
+        values = [dict(address='fake1'), dict(address='fake2'),
+                  dict(address='fake3')]
+        vifs = []
+        for vals in values:
+            vifs.append(self._create_virt_interface(
+                dict(vals, instance_uuid=self.instance_uuid)))
+
+        db.virtual_interface_delete(self.ctxt, vifs[0]['id'])
+
+        real_vifs = db.virtual_interface_get_by_instance(self.ctxt,
+                                                         self.instance_uuid)
+        self.assertEqual(2, len(real_vifs))
+
     def test_virtual_interface_get_all(self):
         inst_uuid2 = db.instance_create(self.ctxt, {})['uuid']
         values = [dict(address='fake1'), dict(address='fake2'),

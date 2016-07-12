@@ -1641,6 +1641,18 @@ def virtual_interface_delete_by_instance(context, instance_uuid):
 
 
 @require_context
+@pick_context_manager_writer
+def virtual_interface_delete(context, id):
+    """Delete virtual interface records.
+
+    :param id: id of the interface
+    """
+    _virtual_interface_query(context).\
+        filter_by(id=id).\
+        soft_delete()
+
+
+@require_context
 @pick_context_manager_reader
 def virtual_interface_get_all(context):
     """Get all vifs."""
