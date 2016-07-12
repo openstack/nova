@@ -85,6 +85,12 @@ console_id:
   in: path
   required: true
   type: string
+console_token:
+  description: |
+    Console authentication token.
+  in: path
+  required: true
+  type: string
 disabled_reason:
   description: |
     The reason for disabling a service.
@@ -3409,6 +3415,12 @@ port_id_resp:
   in: body
   required: true
   type: string
+port_number:
+  description: |
+    The port number.
+  in: body
+  required: true
+  type: integer
 port_state:
   description: |
     The port state.

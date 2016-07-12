@@ -1,7 +1,7 @@
 .. -*- rst -*-
 
 ===============================================================
- Server consoles (servers, os-consoles, os-console-auth-token)
+ Server consoles (servers, os-consoles, os-console-auth-tokens)
 ===============================================================
 
 Manages server consoles.
@@ -138,10 +138,10 @@ Response
 There is no body content for the response of a successful DELETE query
 
 
-Show Console Authentication Token
-=================================
+Show Console Connection Information
+===================================
 
-.. rest_method:: GET /servers/{server_id}/os-console-auth-token
+.. rest_method:: GET /os-console-auth-tokens/{console_token}
 
 Given the console authentication token for a server instance,
 shows the related connection information.
@@ -159,7 +159,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
 
-  - server_id: server_id
+  - console_token: console_token
 
 |
 
@@ -169,9 +169,9 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - console: console
-  - instance_uuid: instance_id
+  - instance_uuid: instance_id_body
   - host: console_host
-  - port: port
+  - port: port_number
   - internal_access_path: internal_access_path
 
 |
