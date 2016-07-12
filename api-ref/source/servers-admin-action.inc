@@ -155,6 +155,12 @@ Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
 through the ``policy.json`` file.
 
+Starting from REST API version 2.34 pre-live-migration checks are done
+asynchronously, results of these checks are available in ``instance-actions``.
+Nova responds immediately, and no pre-live-migration checks are returned.
+The instance will not immediately change state to ``ERROR``, if a failure of
+the live-migration checks occurs.
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403)
