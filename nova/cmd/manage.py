@@ -687,7 +687,7 @@ class NetworkCommands(object):
 
         # The --disassociate-X are boolean options, but if they user
         # mistakenly provides a value, it will be used as a positional argument
-        # and be erroneously interepreted as some other parameter (e.g.
+        # and be erroneously interpreted as some other parameter (e.g.
         # a project instead of host value). The safest thing to do is error-out
         # with a message indicating that there is probably a problem with
         # how the disassociate modifications are being used.

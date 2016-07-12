@@ -159,7 +159,7 @@ class _BaseMessage(object):
         self.max_hop_count = max_hop_count
         self.is_broadcast = False
         self._append_hop()
-        # Each sub-class should set this when the message is inited
+        # Each sub-class should set this when the message is initialized
         self.next_hops = []
         self.resp_queue = None
         self.serializer = objects_base.NovaObjectSerializer()
