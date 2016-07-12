@@ -23,6 +23,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - user_id: keypair_user
+  - limit: keypair_limit
+  - marker: keypair_marker
 
 Response
 --------

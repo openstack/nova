@@ -477,6 +477,25 @@ ip_query:
   in: query
   required: false
   type: string
+keypair_limit:
+  description: |
+    Requests a page size of items. Returns a number of items up to a limit value.
+    Use the ``limit`` parameter to make an initial limited request and use the
+    last-seen item from the response as the ``marker`` parameter value in a
+    subsequent limited request.
+  in: query
+  required: false
+  type: integer
+  min_version: 2.35
+keypair_marker:
+  description: |
+    The last-seen item. Use the ``limit`` parameter to make an initial limited
+    request and use the last-seen item from the response as the ``marker``
+    parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: string
+  min_version: 2.35
 keypair_type_in:
   in: query
   required: false

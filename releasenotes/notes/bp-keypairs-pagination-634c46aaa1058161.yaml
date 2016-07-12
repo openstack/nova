@@ -1,0 +1,5 @@
+---
+features:
+  - Added microversion v2.35 that adds pagination support for keypairs with
+    the help of new optional parameters 'limit' and 'marker' which were added
+    to GET /os-keypairs request.
