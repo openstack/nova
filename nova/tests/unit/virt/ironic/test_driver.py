@@ -916,19 +916,20 @@ class IronicDriverTestCase(test.NoDBTestCase):
                                                    node=node.uuid)
         image_meta = ironic_utils.get_test_image_meta()
         flavor = ironic_utils.get_test_flavor()
+        instance.flavor = flavor
         self.driver._add_driver_fields(node, instance, image_meta, flavor)
         expected_patch = [{'path': '/instance_info/image_source', 'op': 'add',
                            'value': image_meta.id},
                           {'path': '/instance_info/root_gb', 'op': 'add',
-                           'value': str(instance.root_gb)},
+                           'value': str(instance.flavor.root_gb)},
                           {'path': '/instance_info/swap_mb', 'op': 'add',
                            'value': str(flavor['swap'])},
                           {'path': '/instance_info/display_name',
                            'value': instance.display_name, 'op': 'add'},
                           {'path': '/instance_info/vcpus', 'op': 'add',
-                           'value': str(instance.vcpus)},
+                           'value': str(instance.flavor.vcpus)},
                           {'path': '/instance_info/memory_mb', 'op': 'add',
-                           'value': str(instance.memory_mb)},
+                           'value': str(instance.flavor.memory_mb)},
                           {'path': '/instance_info/local_gb', 'op': 'add',
                            'value': str(node.properties.get('local_gb', 0))},
                           {'path': '/instance_uuid', 'op': 'add',

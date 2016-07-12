@@ -87,6 +87,9 @@ def get_test_flavor(**kw):
     flavor = {'name': kw.get('name', 'fake.flavor'),
               'extra_specs': kw.get('extra_specs', default_extra_specs),
               'swap': kw.get('swap', 0),
+              'root_gb': 1,
+              'memory_mb': 1,
+              'vcpus': 1,
               'ephemeral_gb': kw.get('ephemeral_gb', 0)}
     return objects.Flavor(**flavor)
 
