@@ -297,6 +297,7 @@ class BaseTestCase(test.TestCase):
         inst.old_flavor = None
         inst.new_flavor = None
         if params:
+            inst.flavor.update(params.pop('flavor', {}))
             inst.update(params)
         if services:
             _create_service_entries(self.context.elevated(),
@@ -1418,7 +1419,7 @@ class ComputeTestCase(BaseTestCase):
         # Default of memory limit=None is unlimited.
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
         self.rt.update_available_resource(self.context.elevated())
-        params = {"memory_mb": 999999999999}
+        params = {"flavor": {"memory_mb": 999999999999}}
         filter_properties = {'limits': {'memory_mb': None}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
@@ -1440,21 +1441,24 @@ class ComputeTestCase(BaseTestCase):
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
         self.rt.update_available_resource(self.context.elevated())
         limits = {'memory_mb': 4096, 'disk_gb': 1000}
-        params = {"memory_mb": 1024, "root_gb": 128, "ephemeral_gb": 128}
+        params = {"flavor": {"memory_mb": 1024, "root_gb": 128,
+                             "ephemeral_gb": 128}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 {}, block_device_mapping=[], limits=limits)
         self.assertEqual(1024, self.rt.compute_node.memory_mb_used)
         self.assertEqual(256, self.rt.compute_node.local_gb_used)
 
-        params = {"memory_mb": 2048, "root_gb": 256, "ephemeral_gb": 256}
+        params = {"flavor": {"memory_mb": 2048, "root_gb": 256,
+                             "ephemeral_gb": 256}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 {}, block_device_mapping=[], limits=limits)
         self.assertEqual(3072, self.rt.compute_node.memory_mb_used)
         self.assertEqual(768, self.rt.compute_node.local_gb_used)
 
-        params = {"memory_mb": 8192, "root_gb": 8192, "ephemeral_gb": 8192}
+        params = {"flavor": {"memory_mb": 8192, "root_gb": 8192,
+                             "ephemeral_gb": 8192}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance,
                 {}, {}, {}, block_device_mapping=[], limits=limits)
@@ -1492,8 +1496,8 @@ class ComputeTestCase(BaseTestCase):
 
         # build an instance, specifying an amount of memory that exceeds
         # total_mem_mb, but is less than the oversubscribed limit:
-        params = {"memory_mb": instance_mb, "root_gb": 128,
-                  "ephemeral_gb": 128}
+        params = {"flavor": {"memory_mb": instance_mb, "root_gb": 128,
+                             "ephemeral_gb": 128}}
         instance = self._create_fake_instance_obj(params)
 
         limits = {'memory_mb': oversub_limit_mb}
@@ -1519,8 +1523,8 @@ class ComputeTestCase(BaseTestCase):
 
         # build an instance, specifying an amount of memory that exceeds
         # both total_mem_mb and the oversubscribed limit:
-        params = {"memory_mb": instance_mb, "root_gb": 128,
-                  "ephemeral_gb": 128}
+        params = {"flavor": {"memory_mb": instance_mb, "root_gb": 128,
+                             "ephemeral_gb": 128}}
         instance = self._create_fake_instance_obj(params)
 
         filter_properties = {'limits': {'memory_mb': oversub_limit_mb}}
@@ -1542,8 +1546,8 @@ class ComputeTestCase(BaseTestCase):
 
         # build an instance, specifying an amount of memory that exceeds
         # total_mem_mb, but is less than the oversubscribed limit:
-        params = {"memory_mb": 10, "root_gb": 1,
-                  "ephemeral_gb": 1, "vcpus": 2}
+        params = {"flavor": {"memory_mb": 10, "root_gb": 1,
+                             "ephemeral_gb": 1, "vcpus": 2}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
@@ -1551,8 +1555,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(2, self.rt.compute_node.vcpus_used)
 
         # create one more instance:
-        params = {"memory_mb": 10, "root_gb": 1,
-                  "ephemeral_gb": 1, "vcpus": 1}
+        params = {"flavor": {"memory_mb": 10, "root_gb": 1,
+                             "ephemeral_gb": 1, "vcpus": 1}}
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance, {}, {},
                 filter_properties, block_device_mapping=[])
@@ -1567,8 +1571,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(2, self.rt.compute_node.vcpus_used)
 
         # now oversubscribe vcpus and fail:
-        params = {"memory_mb": 10, "root_gb": 1,
-                  "ephemeral_gb": 1, "vcpus": 2}
+        params = {"flavor": {"memory_mb": 10, "root_gb": 1,
+                             "ephemeral_gb": 1, "vcpus": 2}}
         instance = self._create_fake_instance_obj(params)
 
         limits = {'vcpu': 3}
@@ -1591,7 +1595,7 @@ class ComputeTestCase(BaseTestCase):
 
         # build an instance, specifying an amount of disk that exceeds
         # total_disk_gb, but is less than the oversubscribed limit:
-        params = {"root_gb": instance_gb, "memory_mb": 10}
+        params = {"flavor": {"root_gb": instance_gb, "memory_mb": 10}}
         instance = self._create_fake_instance_obj(params)
 
         limits = {'disk_gb': oversub_limit_gb}
@@ -1617,7 +1621,7 @@ class ComputeTestCase(BaseTestCase):
 
         # build an instance, specifying an amount of disk that exceeds
         # total_disk_gb, but is less than the oversubscribed limit:
-        params = {"root_gb": instance_gb, "memory_mb": 10}
+        params = {"flavor": {"root_gb": instance_gb, "memory_mb": 10}}
         instance = self._create_fake_instance_obj(params)
 
         limits = {'disk_gb': oversub_limit_gb}
@@ -6769,8 +6773,7 @@ class ComputeTestCase(BaseTestCase):
         instance.vm_state = vm_states.DELETED
         instance.task_state = None
         instance.system_metadata = {'fake_key': 'fake_value'}
-        instance.vcpus = 1
-        instance.memory_mb = 1
+        instance.flavor = objects.Flavor(vcpus=1, memory_mb=1)
         instance.project_id = 'fake-prj'
         instance.user_id = 'fake-user'
         instance.deleted = False

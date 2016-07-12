@@ -965,8 +965,8 @@ class _ComputeAPIUnitTestMixIn(object):
         inst.update(attrs)
         inst._context = self.context
         deltas = {'instances': -1,
-                  'cores': -inst.vcpus,
-                  'ram': -inst.memory_mb}
+                  'cores': -inst.flavor.vcpus,
+                  'ram': -inst.flavor.memory_mb}
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
                                         tzinfo=iso8601.iso8601.Utc())
         self.useFixture(utils_fixture.TimeFixture(delete_time))

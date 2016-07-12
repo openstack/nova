@@ -126,10 +126,10 @@ class ResourceTracker(object):
         # get the overhead required to build this instance:
         overhead = self.driver.estimate_instance_overhead(instance)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
-                  "MB", {'flavor': instance.memory_mb,
+                  "MB", {'flavor': instance.flavor.memory_mb,
                           'overhead': overhead['memory_mb']})
         LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
-                  "GB", {'flavor': instance.root_gb,
+                  "GB", {'flavor': instance.flavor.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
 
         pci_requests = objects.InstancePCIRequests.get_by_instance_uuid(
@@ -215,7 +215,7 @@ class ResourceTracker(object):
                   "MB", {'flavor': new_instance_type.memory_mb,
                           'overhead': overhead['memory_mb']})
         LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
-                  "GB", {'flavor': instance.root_gb,
+                  "GB", {'flavor': instance.flavor.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
 
         # TODO(moshele): we are recreating the pci requests even if
@@ -867,7 +867,7 @@ class ResourceTracker(object):
                                                          instance,
                                                          sign=sign)
             # new instance, update compute node resource usage:
-            self._update_usage(instance, sign=sign)
+            self._update_usage(self._get_usage_dict(instance), sign=sign)
 
         self.compute_node.current_workload = self.stats.calculate_workload()
         if self.pci_tracker:
@@ -972,7 +972,11 @@ class ResourceTracker(object):
         """
         usage = {}
         if isinstance(object_or_dict, objects.Instance):
-            usage = obj_base.obj_to_primitive(object_or_dict)
+            usage = {'memory_mb': object_or_dict.flavor.memory_mb,
+                     'vcpus': object_or_dict.flavor.vcpus,
+                     'root_gb': object_or_dict.flavor.root_gb,
+                     'ephemeral_gb': object_or_dict.flavor.ephemeral_gb,
+                     'numa_topology': object_or_dict.numa_topology}
         elif isinstance(object_or_dict, objects.Flavor):
             usage = obj_base.obj_to_primitive(object_or_dict)
         else:

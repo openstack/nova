@@ -1717,8 +1717,8 @@ class API(base.Base):
             vram_mb = old_flavor.extra_specs.get('hw_video:ram_max_mb', 0)
             instance_memory_mb = old_flavor.memory_mb + vram_mb
         else:
-            instance_vcpus = instance.vcpus
-            instance_memory_mb = instance.memory_mb
+            instance_vcpus = instance.flavor.vcpus
+            instance_memory_mb = instance.flavor.memory_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,

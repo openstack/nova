@@ -707,7 +707,8 @@ class UpdateUsageFromInstanceTestCase(BaseTrackerTestCase):
         instance.vm_state = vm_states.BUILDING
         self.tracker._update_usage_from_instance(self.context, instance)
 
-        mock_update_usage.assert_called_once_with(instance, sign=1)
+        mock_update_usage.assert_called_once_with(
+            self.tracker._get_usage_dict(instance), sign=1)
 
     @mock.patch.object(resource_tracker.ResourceTracker,
                        '_update_usage')
@@ -719,7 +720,8 @@ class UpdateUsageFromInstanceTestCase(BaseTrackerTestCase):
             instance.uuid] = obj_base.obj_to_primitive(instance)
         self.tracker._update_usage_from_instance(self.context, instance)
 
-        mock_update_usage.assert_called_once_with(instance, sign=-1)
+        mock_update_usage.assert_called_once_with(
+            self.tracker._get_usage_dict(instance), sign=-1)
 
     @mock.patch.object(resource_tracker.ResourceTracker,
                        '_update_usage')
@@ -728,7 +730,8 @@ class UpdateUsageFromInstanceTestCase(BaseTrackerTestCase):
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         self.tracker._update_usage_from_instance(self.context, instance)
 
-        mock_update_usage.assert_called_once_with(instance, sign=1)
+        mock_update_usage.assert_called_once_with(
+            self.tracker._get_usage_dict(instance), sign=1)
 
     @mock.patch.object(resource_tracker.ResourceTracker,
                        '_update_usage')
@@ -740,7 +743,8 @@ class UpdateUsageFromInstanceTestCase(BaseTrackerTestCase):
             instance.uuid] = obj_base.obj_to_primitive(instance)
         self.tracker._update_usage_from_instance(self.context, instance, True)
 
-        mock_update_usage.assert_called_once_with(instance, sign=-1)
+        mock_update_usage.assert_called_once_with(
+            self.tracker._get_usage_dict(instance), sign=-1)
 
 
 class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
