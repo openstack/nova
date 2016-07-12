@@ -2929,10 +2929,21 @@ def key_pair_get(context, user_id, name):
 
 @require_context
 @main_context_manager.reader
-def key_pair_get_all_by_user(context, user_id):
-    return model_query(context, models.KeyPair, read_deleted="no").\
-                   filter_by(user_id=user_id).\
-                   all()
+def key_pair_get_all_by_user(context, user_id, limit=None, marker=None):
+    marker_row = None
+    if marker is not None:
+        marker_row = model_query(context, models.KeyPair, read_deleted="no").\
+            filter_by(name=marker).filter_by(user_id=user_id).first()
+        if not marker_row:
+            raise exception.MarkerNotFound(marker=marker)
+
+    query = model_query(context, models.KeyPair, read_deleted="no").\
+        filter_by(user_id=user_id)
+
+    query = sqlalchemyutils.paginate_query(
+        query, models.KeyPair, limit, ['name'], marker=marker_row)
+
+    return query.all()
 
 
 @require_context

@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_db import exception as db_exc
+from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
 from oslo_utils import versionutils
 
@@ -32,7 +33,7 @@ LOG = logging.getLogger(__name__)
 
 
 @db_api.api_context_manager.reader
-def _get_from_db(context, user_id, name=None):
+def _get_from_db(context, user_id, name=None, limit=None, marker=None):
     query = context.session.query(api_models.KeyPair).\
             filter(api_models.KeyPair.user_id == user_id)
     if name is not None:
@@ -41,8 +42,19 @@ def _get_from_db(context, user_id, name=None):
         if not db_keypair:
             raise exception.KeypairNotFound(user_id=user_id, name=name)
         return db_keypair
-    else:
-        return query.all()
+
+    marker_row = None
+    if marker is not None:
+        marker_row = context.session.query(api_models.KeyPair).\
+            filter(api_models.KeyPair.name == marker).\
+            filter(api_models.KeyPair.user_id == user_id).first()
+        if not marker_row:
+            raise exception.MarkerNotFound(marker=marker)
+
+    query = sqlalchemyutils.paginate_query(
+        query, api_models.KeyPair, limit, ['name'], marker=marker_row)
+
+    return query.all()
 
 
 @db_api.api_context_manager.reader
@@ -180,24 +192,44 @@ class KeyPairList(base.ObjectListBase, base.NovaObject):
     #              KeyPair <= version 1.1
     # Version 1.1: KeyPair <= version 1.2
     # Version 1.2: KeyPair <= version 1.3
-    VERSION = '1.2'
+    # Version 1.3: Add new parameters 'limit' and 'marker' to get_by_user()
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('KeyPair'),
         }
 
     @staticmethod
-    def _get_from_db(context, user_id):
-        return _get_from_db(context, user_id)
+    def _get_from_db(context, user_id, limit, marker):
+        return _get_from_db(context, user_id, limit=limit, marker=marker)
 
     @staticmethod
     def _get_count_from_db(context, user_id):
         return _get_count_from_db(context, user_id)
 
     @base.remotable_classmethod
-    def get_by_user(cls, context, user_id):
-        api_db_keypairs = cls._get_from_db(context, user_id)
-        main_db_keypairs = db.key_pair_get_all_by_user(context, user_id)
+    def get_by_user(cls, context, user_id, limit=None, marker=None):
+        try:
+            api_db_keypairs = cls._get_from_db(
+                context, user_id, limit=limit, marker=marker)
+            # NOTE(pkholkin): If we were asked for a marker and found it in
+            # results from the API DB, we must continue our pagination with
+            # just the limit (if any) to the main DB.
+            marker = None
+        except exception.MarkerNotFound:
+            api_db_keypairs = []
+
+        if limit is not None:
+            limit_more = limit - len(api_db_keypairs)
+        else:
+            limit_more = None
+
+        if limit_more is None or limit_more > 0:
+            main_db_keypairs = db.key_pair_get_all_by_user(
+                context, user_id, limit=limit_more, marker=marker)
+        else:
+            main_db_keypairs = []
+
         return base.obj_make_list(context, cls(context), objects.KeyPair,
                                   api_db_keypairs + main_db_keypairs)
 

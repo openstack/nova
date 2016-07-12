@@ -146,7 +146,9 @@ class KeyPairObjectTestCase(test.NoDBTestCase):
 
         # NOTE(danms): This only fetches from the API DB
         api_keys = objects.KeyPairList._get_from_db(self.context,
-                                                    self.context.user_id)
+                                                    self.context.user_id,
+                                                    limit=None,
+                                                    marker=None)
         self.assertEqual(3, len(api_keys))
 
         # NOTE(danms): This only fetches from the main DB
@@ -177,3 +179,108 @@ class KeyPairObjectTestCase(test.NoDBTestCase):
         total, done = keypair.migrate_keypairs_to_api_db(self.context, 100)
         self.assertEqual(0, total)
         self.assertEqual(0, done)
+
+    def test_get_by_user_limit_and_marker(self):
+        self._api_kp(name='apikey1')
+        self._api_kp(name='apikey2')
+        self._main_kp(name='mainkey1')
+        self._main_kp(name='mainkey2')
+
+        # check all 4 keypairs (2 api and 2 main)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              self.context.user_id)
+        self.assertEqual(4, len(kpl))
+        self.assertEqual(set(['apikey1', 'apikey2', 'mainkey1', 'mainkey2']),
+                         set([x.name for x in kpl]))
+
+        # check only 1 keypair (1 api)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              self.context.user_id,
+                                              limit=1)
+        self.assertEqual(1, len(kpl))
+        self.assertEqual(set(['apikey1']),
+                         set([x.name for x in kpl]))
+
+        # check only 3 keypairs (2 api and 1 main)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              self.context.user_id,
+                                              limit=3)
+        self.assertEqual(3, len(kpl))
+        self.assertEqual(set(['apikey1', 'apikey2', 'mainkey1']),
+                         set([x.name for x in kpl]))
+
+        # check keypairs after 'apikey1' (1 api and 2 main)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              self.context.user_id,
+                                              marker='apikey1')
+        self.assertEqual(3, len(kpl))
+        self.assertEqual(set(['apikey2', 'mainkey1', 'mainkey2']),
+                         set([x.name for x in kpl]))
+
+        # check keypairs after 'mainkey2' (no keypairs)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              self.context.user_id,
+                                              marker='mainkey2')
+        self.assertEqual(0, len(kpl))
+
+        # check only 2 keypairs after 'apikey1' (1 api and 1 main)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              self.context.user_id,
+                                              limit=2,
+                                              marker='apikey1')
+        self.assertEqual(2, len(kpl))
+        self.assertEqual(set(['apikey2', 'mainkey1']),
+                         set([x.name for x in kpl]))
+
+        # check non-existing keypair
+        self.assertRaises(exception.MarkerNotFound,
+                          objects.KeyPairList.get_by_user,
+                          self.context, self.context.user_id,
+                          limit=2, marker='unknown_kp')
+
+    def test_get_by_user_different_users(self):
+        # create keypairs for two users
+        self._api_kp(name='apikey', user_id='user1')
+        self._api_kp(name='apikey', user_id='user2')
+        self._main_kp(name='mainkey', user_id='user1')
+        self._main_kp(name='mainkey', user_id='user2')
+
+        # check all 2 keypairs for user1 (1 api and 1 main)
+        kpl = objects.KeyPairList.get_by_user(self.context, 'user1')
+        self.assertEqual(2, len(kpl))
+        self.assertEqual(set(['apikey', 'mainkey']),
+                         set([x.name for x in kpl]))
+
+        # check all 2 keypairs for user2 (1 api and 1 main)
+        kpl = objects.KeyPairList.get_by_user(self.context, 'user2')
+        self.assertEqual(2, len(kpl))
+        self.assertEqual(set(['apikey', 'mainkey']),
+                         set([x.name for x in kpl]))
+
+        # check only 1 keypair for user1 (1 api)
+        kpl = objects.KeyPairList.get_by_user(self.context, 'user1', limit=1)
+        self.assertEqual(1, len(kpl))
+        self.assertEqual(set(['apikey']),
+                         set([x.name for x in kpl]))
+
+        # check keypairs after 'apikey' for user2 (1 main)
+        kpl = objects.KeyPairList.get_by_user(self.context, 'user2',
+                                              marker='apikey')
+        self.assertEqual(1, len(kpl))
+        self.assertEqual(set(['mainkey']),
+                         set([x.name for x in kpl]))
+
+        # check only 2 keypairs after 'apikey' for user1 (1 main)
+        kpl = objects.KeyPairList.get_by_user(self.context,
+                                              'user1',
+                                              limit=2,
+                                              marker='apikey')
+        self.assertEqual(1, len(kpl))
+        self.assertEqual(set(['mainkey']),
+                         set([x.name for x in kpl]))
+
+        # check non-existing keypair for user2
+        self.assertRaises(exception.MarkerNotFound,
+                          objects.KeyPairList.get_by_user,
+                          self.context, 'user2',
+                          limit=2, marker='unknown_kp')

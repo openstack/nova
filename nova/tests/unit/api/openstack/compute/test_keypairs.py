@@ -47,7 +47,7 @@ def fake_keypair(name):
                 name=name, **keypair_data)
 
 
-def db_key_pair_get_all_by_user(self, user_id):
+def db_key_pair_get_all_by_user(self, user_id, limit, marker):
     return [fake_keypair('FAKE')]
 
 

@@ -6958,6 +6958,92 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualListsOfObjects(key_pairs_user_1, real_keys_1)
         self._assertEqualListsOfObjects(key_pairs_user_2, real_keys_2)
 
+    def test_key_pair_get_all_by_user_limit_and_marker(self):
+        params = [
+            {'name': 'test_1', 'user_id': 'test_user_id', 'type': 'ssh'},
+            {'name': 'test_2', 'user_id': 'test_user_id', 'type': 'ssh'},
+            {'name': 'test_3', 'user_id': 'test_user_id', 'type': 'ssh'}
+        ]
+
+        # check all 3 keypairs
+        keys = [self._create_key_pair(p) for p in params]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_id')
+        self._assertEqualListsOfObjects(keys, db_keys)
+
+        # check only 1 keypair
+        expected_keys = [keys[0]]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_id',
+                                              limit=1)
+        self._assertEqualListsOfObjects(expected_keys, db_keys)
+
+        # check keypairs after 'test_1'
+        expected_keys = [keys[1], keys[2]]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_id',
+                                              marker='test_1')
+        self._assertEqualListsOfObjects(expected_keys, db_keys)
+
+        # check only 1 keypairs after 'test_1'
+        expected_keys = [keys[1]]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_id',
+                                              limit=1,
+                                              marker='test_1')
+        self._assertEqualListsOfObjects(expected_keys, db_keys)
+
+        # check non-existing keypair
+        self.assertRaises(exception.MarkerNotFound,
+                          db.key_pair_get_all_by_user,
+                          self.ctxt, 'test_user_id',
+                          limit=1, marker='unknown_kp')
+
+    def test_key_pair_get_all_by_user_different_users(self):
+        params1 = [
+            {'name': 'test_1', 'user_id': 'test_user_1', 'type': 'ssh'},
+            {'name': 'test_2', 'user_id': 'test_user_1', 'type': 'ssh'},
+            {'name': 'test_3', 'user_id': 'test_user_1', 'type': 'ssh'}
+        ]
+        params2 = [
+            {'name': 'test_1', 'user_id': 'test_user_2', 'type': 'ssh'},
+            {'name': 'test_2', 'user_id': 'test_user_2', 'type': 'ssh'},
+            {'name': 'test_3', 'user_id': 'test_user_2', 'type': 'ssh'}
+        ]
+
+        # create keypairs for two users
+        keys1 = [self._create_key_pair(p) for p in params1]
+        keys2 = [self._create_key_pair(p) for p in params2]
+
+        # check all 2 keypairs for test_user_1
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_1')
+        self._assertEqualListsOfObjects(keys1, db_keys)
+
+        # check all 2 keypairs for test_user_2
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_2')
+        self._assertEqualListsOfObjects(keys2, db_keys)
+
+        # check only 1 keypair for test_user_1
+        expected_keys = [keys1[0]]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_1',
+                                              limit=1)
+        self._assertEqualListsOfObjects(expected_keys, db_keys)
+
+        # check keypairs after 'test_1' for test_user_2
+        expected_keys = [keys2[1], keys2[2]]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_2',
+                                              marker='test_1')
+        self._assertEqualListsOfObjects(expected_keys, db_keys)
+
+        # check only 1 keypairs after 'test_1' for test_user_1
+        expected_keys = [keys1[1]]
+        db_keys = db.key_pair_get_all_by_user(self.ctxt, 'test_user_1',
+                                              limit=1,
+                                              marker='test_1')
+        self._assertEqualListsOfObjects(expected_keys, db_keys)
+
+        # check non-existing keypair for test_user_2
+        self.assertRaises(exception.MarkerNotFound,
+                          db.key_pair_get_all_by_user,
+                          self.ctxt, 'test_user_2',
+                          limit=1, marker='unknown_kp')
+
     def test_key_pair_count_by_user(self):
         params = [
             {'name': 'test_1', 'user_id': 'test_user_id_1', 'type': 'ssh'},
