@@ -26,8 +26,20 @@ exc_log_opts = [
     cfg.BoolOpt('fatal_exception_format_errors',
                 default=False,
                 deprecated_for_removal=True,
-                deprecated_reason='This is only used for internal testing.',
-                help='DEPRECATED: Make exception message format errors fatal'),
+                deprecated_reason="This is only used for internal testing.",
+                help="""
+When set to true, this option enables validation of exception
+message format.
+
+This option is used to detect errors in NovaException class when it formats
+error messages. If True, raise an exception; if False, use the unformatted
+message.
+
+Possible values:
+
+    * True
+    * False (Default)
+"""),
 ]
 
 
