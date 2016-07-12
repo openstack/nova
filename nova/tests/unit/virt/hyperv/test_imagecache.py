@@ -75,7 +75,7 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
 
     def test_get_root_vhd_size_gb(self):
         ret_val = self._test_get_root_vhd_size_gb(old_flavor=False)
-        self.assertEqual(self.instance.root_gb, ret_val)
+        self.assertEqual(self.instance.flavor.root_gb, ret_val)
 
     @mock.patch.object(imagecache.ImageCache, '_get_root_vhd_size_gb')
     def test_resize_and_cache_vhd_smaller(self, mock_get_vhd_size_gb):
@@ -166,7 +166,7 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
         fake_rescue_image_id = 'fake_rescue_image_id'
 
         self.imagecache._vhdutils.get_vhd_info.return_value = {
-            'VirtualSize': self.instance.root_gb + 1}
+            'VirtualSize': (self.instance.flavor.root_gb + 1) * units.Gi}
         (expected_path,
          expected_vhd_path) = self._prepare_get_cached_image(
             rescue_image_id=fake_rescue_image_id)

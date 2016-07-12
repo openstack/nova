@@ -58,7 +58,7 @@ class ImageCache(imagecache.ImageCacheManager):
         if instance.old_flavor:
             return instance.old_flavor.root_gb
         else:
-            return instance.root_gb
+            return instance.flavor.root_gb
 
     def _resize_and_cache_vhd(self, instance, vhd_path):
         vhd_size = self._vhdutils.get_vhd_size(vhd_path)['VirtualSize']
@@ -153,7 +153,7 @@ class ImageCache(imagecache.ImageCacheManager):
                              rescue_image_path):
         rescue_image_info = self._vhdutils.get_vhd_info(rescue_image_path)
         rescue_image_size = rescue_image_info['VirtualSize']
-        flavor_disk_size = instance.root_gb * units.Gi
+        flavor_disk_size = instance.flavor.root_gb * units.Gi
 
         if rescue_image_size > flavor_disk_size:
             err_msg = _('Using a rescue image bigger than the instance '
