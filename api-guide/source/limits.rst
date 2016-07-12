@@ -11,7 +11,7 @@ differ from one deployment of the OpenStack Compute service to
 another. Please contact your provider to determine the limits that
 apply to your account. Your provider may be able to adjust your
 account's limits if they are too low. Also see the API Reference for
-`*Limits* <http://developer.openstack.org/api-ref-compute-v2.html#compute_limits>`__.
+`*Limits* <http://developer.openstack.org/api-ref-compute-v2.1.html#limits-v2.1>`__.
 
 Rate limits
 ~~~~~~~~~~~
@@ -91,4 +91,4 @@ Determine limits programmatically
 
 Applications can programmatically determine current account limits. For
 information, see
-`*Limits* <http://developer.openstack.org/api-ref-compute-v2.html#compute_limits>`__.
+`*Limits* <http://developer.openstack.org/api-ref-compute-v2.1.html#limits-v2.1>`__.
