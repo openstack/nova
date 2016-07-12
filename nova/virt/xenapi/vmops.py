@@ -1212,7 +1212,7 @@ class VMOps(object):
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
     def _ensure_not_resize_down_ephemeral(self, instance, flavor):
-        old_gb = instance["ephemeral_gb"]
+        old_gb = instance.flavor.ephemeral_gb
         new_gb = flavor.ephemeral_gb
 
         if old_gb > new_gb:
@@ -1235,7 +1235,7 @@ class VMOps(object):
                                        step=0,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        old_gb = instance['root_gb']
+        old_gb = instance.flavor.root_gb
         new_gb = flavor.root_gb
         resize_down = old_gb > new_gb
 
@@ -1272,7 +1272,7 @@ class VMOps(object):
                                           mount_device)
 
     def _resize_up_vdis(self, instance, vdis):
-        new_root_gb = instance['root_gb']
+        new_root_gb = instance.flavor.root_gb
         root_vdi = vdis.get('root')
         if new_root_gb and root_vdi:
             if root_vdi.get('osvol', False):  # Don't resize root volumes.
@@ -1289,7 +1289,7 @@ class VMOps(object):
             # to resize, so nothing more to do here.
             return
 
-        total_ephemeral_gb = instance['ephemeral_gb']
+        total_ephemeral_gb = instance.flavor.ephemeral_gb
         if total_ephemeral_gb:
             sizes = vm_utils.get_ephemeral_disk_sizes(total_ephemeral_gb)
             # resize existing (migrated) ephemeral disks,
