@@ -3037,7 +3037,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # create a base image.
         if not booted_from_volume:
             root_fname = imagecache.get_cache_fname(disk_images['image_id'])
-            size = instance.root_gb * units.Gi
+            size = instance.flavor.root_gb * units.Gi
 
             if size == 0 or suffix == '.rescue':
                 size = None
@@ -3073,7 +3073,7 @@ class LibvirtDriver(driver.ComputeDriver):
         file_extension = disk.get_file_extension_for_os_type(
                                                           os_type_with_default)
 
-        ephemeral_gb = instance.ephemeral_gb
+        ephemeral_gb = instance.flavor.ephemeral_gb
         if 'disk.local' in disk_mapping:
             disk_image = image('disk.local')
             fn = functools.partial(self._create_ephemeral,
@@ -6644,7 +6644,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 os_type=instance.os_type,
                                 filename=cache_name,
                                 size=info['virt_disk_size'],
-                                ephemeral_size=instance.ephemeral_gb)
+                                ephemeral_size=instance.flavor.ephemeral_gb)
                 elif cache_name.startswith('swap'):
                     inst_type = instance.get_flavor()
                     swap_mb = inst_type.swap
@@ -7012,10 +7012,10 @@ class LibvirtDriver(driver.ComputeDriver):
         # the original instance's ephemeral_gb property was set and
         # ensure that the new requested flavor ephemeral size is greater
         eph_size = (block_device.get_bdm_ephemeral_disk_size(ephemerals) or
-                    instance.ephemeral_gb)
+                    instance.flavor.ephemeral_gb)
 
         # Checks if the migration needs a disk resize down.
-        root_down = flavor.root_gb < instance.root_gb
+        root_down = flavor.root_gb < instance.flavor.root_gb
         ephemeral_down = flavor.ephemeral_gb < eph_size
         disk_info_text = self.get_instance_disk_info(
             instance, block_device_info=block_device_info)
@@ -7134,9 +7134,9 @@ class LibvirtDriver(driver.ComputeDriver):
         Returns 0 if the disk name not match (disk, disk.local).
         """
         if disk_name == 'disk':
-            size = instance.root_gb
+            size = instance.flavor.root_gb
         elif disk_name == 'disk.local':
-            size = instance.ephemeral_gb
+            size = instance.flavor.ephemeral_gb
         # N.B. We don't handle ephemeral disks named disk.ephN here,
         # which is almost certainly a bug. It's not clear what this function
         # should return if an instance has multiple ephemeral disks.
