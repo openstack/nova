@@ -1,5 +1,4 @@
 # needs:fix_opt_description
-# needs:check_deprecation_status
 # needs:check_opt_group_and_type
 # needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
@@ -105,15 +104,6 @@ Interdependencies to other options:
   and ``key`` in the ``[DEFAULT]`` section have to be set for that.
 """)
 
-# This config option was never used
-listen_opt = cfg.StrOpt('listen',
-        default='127.0.0.1',
-        deprecated_for_removal=True,
-        help="""
-DEPRECATED: this option has no effect anymore. Please use
-"proxyclient_address" instead. This option is deprecated and will be removed
-in future releases.""")
-
 proxyclient_address_opt = cfg.StrOpt('proxyclient_address',
         default='127.0.0.1',
         help="""
@@ -187,7 +177,6 @@ Interdependencies to other options:
 ALL_OPTS = [enabled_opt,
             port_range_opt,
             base_url_opt,
-            listen_opt,
             proxyclient_address_opt,
             serialproxy_host_opt,
             serialproxy_port_opt]
