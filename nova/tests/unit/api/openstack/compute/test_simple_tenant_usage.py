@@ -25,13 +25,11 @@ from nova.api.openstack.compute import simple_tenant_usage as \
     simple_tenant_usage_v21
 from nova.compute import vm_states
 from nova import context
-from nova import db
 from nova import exception
 from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import fake_flavor
 from nova.tests import uuidsentinel as uuids
 
 SERVERS = 5
@@ -65,38 +63,40 @@ FAKE_INST_TYPE = {'id': 1,
                   'extra_specs': {'foo': 'bar'}}
 
 
-def get_fake_db_instance(start, end, instance_id, tenant_id,
-                         vm_state=vm_states.ACTIVE):
-    inst = fakes.stub_instance(
-            id=instance_id,
-            uuid=getattr(uuids, 'instance_%d' % instance_id),
-            image_ref='1',
-            project_id=tenant_id,
-            user_id='fakeuser',
-            display_name='name',
-            flavor_id=FAKE_INST_TYPE['id'],
-            launched_at=start,
-            terminated_at=end,
-            vm_state=vm_state,
-            memory_mb=MEMORY_MB,
-            vcpus=VCPUS,
-            root_gb=ROOT_GB,
-            ephemeral_gb=EPHEMERAL_GB,)
-    return inst
+def _fake_instance(start, end, instance_id, tenant_id,
+                   vm_state=vm_states.ACTIVE):
+    flavor = objects.Flavor(**FAKE_INST_TYPE)
+    return objects.Instance(
+        deleted=False,
+        id=instance_id,
+        uuid=getattr(uuids, 'instance_%d' % instance_id),
+        image_ref='1',
+        project_id=tenant_id,
+        user_id='fakeuser',
+        display_name='name',
+        instance_type_id=FAKE_INST_TYPE['id'],
+        launched_at=start,
+        terminated_at=end,
+        vm_state=vm_state,
+        memory_mb=MEMORY_MB,
+        vcpus=VCPUS,
+        root_gb=ROOT_GB,
+        ephemeral_gb=EPHEMERAL_GB,
+        flavor=flavor)
 
 
-def fake_instance_get_active_by_window_joined(context, begin, end,
-        project_id, host, columns_to_join):
-            return [get_fake_db_instance(START,
-                                         STOP,
-                                         x,
-                                         project_id if project_id else
-                                         "faketenant_%s" % (x / SERVERS))
-                                         for x in range(TENANTS * SERVERS)]
+@classmethod
+def fake_get_active_by_window_joined(cls, context, begin, end=None,
+                                     project_id=None, host=None,
+                                     expected_attrs=None, use_slave=False):
+    return objects.InstanceList(objects=[
+        _fake_instance(START, STOP, x,
+                       project_id or 'faketenant_%s' % (x / SERVERS))
+        for x in range(TENANTS * SERVERS)])
 
 
-@mock.patch.object(db, 'instance_get_active_by_window_joined',
-                   fake_instance_get_active_by_window_joined)
+@mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+            fake_get_active_by_window_joined)
 class SimpleTenantUsageTestV21(test.TestCase):
     policy_rule_prefix = "os_compute_api:os-simple-tenant-usage"
     controller = simple_tenant_usage_v21.SimpleTenantUsageController()
@@ -262,14 +262,9 @@ class SimpleTenantUsageControllerTestV21(test.TestCase):
 
         self.context = context.RequestContext('fakeuser', 'fake-project')
 
-        self.baseinst = get_fake_db_instance(START, STOP, instance_id=1,
-                                             tenant_id=self.context.project_id,
-                                             vm_state=vm_states.DELETED)
-        # convert the fake instance dict to an object
-        flavor = fake_flavor.fake_flavor_obj(self.context, **FAKE_INST_TYPE)
-        self.inst_obj = objects.Instance._from_db_object(
-            self.context, objects.Instance(), self.baseinst)
-        self.inst_obj.flavor = flavor
+        self.inst_obj = _fake_instance(START, STOP, instance_id=1,
+                                       tenant_id=self.context.project_id,
+                                       vm_state=vm_states.DELETED)
 
     @mock.patch('nova.objects.Instance.get_flavor',
                 side_effect=exception.NotFound())

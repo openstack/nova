@@ -120,9 +120,10 @@ class SimpleTenantUsageController(wsgi.Controller):
             info['instance_id'] = instance.uuid
             info['name'] = instance.display_name
 
-            info['memory_mb'] = instance.memory_mb
-            info['local_gb'] = instance.root_gb + instance.ephemeral_gb
-            info['vcpus'] = instance.vcpus
+            info['memory_mb'] = instance.flavor.memory_mb
+            info['local_gb'] = (instance.flavor.root_gb +
+                                instance.flavor.ephemeral_gb)
+            info['vcpus'] = instance.flavor.vcpus
 
             info['tenant_id'] = instance.project_id
 
