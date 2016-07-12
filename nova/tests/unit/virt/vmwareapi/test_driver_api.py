@@ -819,7 +819,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             cached_image = ds_obj.DatastorePath(self.ds, 'vmware_base',
                                                  iid, '%s.80.vmdk' % iid)
             mock_extend.assert_called_once_with(
-                    self.instance, self.instance.root_gb * units.Mi,
+                    self.instance, self.instance.flavor.root_gb * units.Mi,
                     str(cached_image), "fake_dc_ref")
 
     def test_spawn_disk_extend_failed_copy(self):

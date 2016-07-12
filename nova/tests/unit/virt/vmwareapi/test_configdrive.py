@@ -82,6 +82,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)
         self.test_instance.flavor = objects.Flavor(vcpus=4, memory_mb=8192,
+                                                   root_gb=80,
                                                    ephemeral_gb=0, swap=0,
                                                    extra_specs={})
 
