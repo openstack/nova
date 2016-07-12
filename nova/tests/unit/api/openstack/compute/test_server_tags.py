@@ -162,6 +162,7 @@ class ServerTagsTest(test.TestCase):
         res = self.controller.update(req, UUID, TAG2, body=None)
 
         self.assertEqual(201, res.status_int)
+        self.assertEqual(0, len(res.body))
         self.assertEqual(location, res.headers['Location'])
         mock_db_add_inst_tags.assert_called_once_with(context, UUID, TAG2)
         mock_db_get_inst_tags.assert_called_once_with(context, UUID)
@@ -177,6 +178,7 @@ class ServerTagsTest(test.TestCase):
         res = self.controller.update(req, UUID, TAG1, body=None)
 
         self.assertEqual(204, res.status_int)
+        self.assertEqual(0, len(res.body))
         mock_db_get_inst_tags.assert_called_once_with(context, UUID)
 
     @mock.patch('nova.db.instance_tag_get_by_instance_uuid')

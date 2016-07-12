@@ -11,7 +11,7 @@
 #    under the License.
 
 import jsonschema
-from webob import exc
+import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_tags as schema
@@ -62,12 +62,12 @@ class ServerTagsController(wsgi.Controller):
         try:
             exists = objects.Tag.exists(context, server_id, id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         if not exists:
             msg = (_("Server %(server_id)s has no tag '%(tag)s'")
                    % {'server_id': server_id, 'tag': id})
-            raise exc.HTTPNotFound(explanation=msg)
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version("2.26")
     @extensions.expected_errors(404)
@@ -78,7 +78,7 @@ class ServerTagsController(wsgi.Controller):
         try:
             tags = objects.TagList.get_by_resource_id(context, server_id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return {'tags': _get_tags_names(tags)}
 
@@ -96,36 +96,36 @@ class ServerTagsController(wsgi.Controller):
             msg = (_("Tag '%(tag)s' is invalid. It must be a string without "
                      "characters '/' and ','. Validation error message: "
                      "%(err)s") % {'tag': id, 'err': e.message})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             tags = objects.TagList.get_by_resource_id(context, server_id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         if len(tags) >= objects.instance.MAX_TAG_COUNT:
             msg = (_("The number of tags exceeded the per-server limit %d")
                    % objects.instance.MAX_TAG_COUNT)
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if len(id) > objects.tag.MAX_TAG_LENGTH:
             msg = (_("Tag '%(tag)s' is too long. Maximum length of a tag "
                      "is %(length)d") % {'tag': id,
                                          'length': objects.tag.MAX_TAG_LENGTH})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if id in _get_tags_names(tags):
             # NOTE(snikitin): server already has specified tag
-            return exc.HTTPNoContent()
+            return webob.Response(status_int=204)
 
         tag = objects.Tag(context=context, resource_id=server_id, tag=id)
 
         try:
             tag.create()
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        response = exc.HTTPCreated()
+        response = webob.Response(status_int=201)
         response.headers['Location'] = self._view_builder.get_location(
             req, server_id, id)
         return response
@@ -147,7 +147,7 @@ class ServerTagsController(wsgi.Controller):
         if invalid_tags:
             msg = (_("Tags '%s' are invalid. Each tag must be a string "
                      "without characters '/' and ','.") % invalid_tags)
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         tag_count = len(body['tags'])
         if tag_count > objects.instance.MAX_TAG_COUNT:
@@ -155,7 +155,7 @@ class ServerTagsController(wsgi.Controller):
                      "%(max)d. The number of tags in request is %(count)d.")
                    % {'max': objects.instance.MAX_TAG_COUNT,
                       'count': tag_count})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         long_tags = [
             t for t in body['tags'] if len(t) > objects.tag.MAX_TAG_LENGTH]
@@ -163,12 +163,12 @@ class ServerTagsController(wsgi.Controller):
             msg = (_("Tags %(tags)s are too long. Maximum length of a tag "
                      "is %(length)d") % {'tags': long_tags,
                                          'length': objects.tag.MAX_TAG_LENGTH})
-            raise exc.HTTPBadRequest(explanation=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             tags = objects.TagList.create(context, server_id, body['tags'])
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return {'tags': _get_tags_names(tags)}
 
@@ -183,9 +183,9 @@ class ServerTagsController(wsgi.Controller):
         try:
             objects.Tag.destroy(context, server_id, id)
         except exception.InstanceTagNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
@@ -198,7 +198,7 @@ class ServerTagsController(wsgi.Controller):
         try:
             objects.TagList.destroy(context, server_id)
         except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
 
 class ServerTags(extensions.V21APIExtensionBase):
