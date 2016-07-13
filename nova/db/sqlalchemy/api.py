@@ -838,8 +838,7 @@ def floating_ip_get(context, id):
         if not result:
             raise exception.FloatingIpNotFound(id=id)
     except db_exc.DBError:
-        msg = _LW("Invalid floating IP ID %s in request") % id
-        LOG.warning(msg)
+        LOG.warning(_LW("Invalid floating IP ID %s in request"), id)
         raise exception.InvalidID(id=id)
     return result
 
@@ -1679,10 +1678,9 @@ def _validate_unique_server_name(context, name):
         instance_with_same_name = base_query.count()
 
     else:
-        msg = _('Unknown osapi_compute_unique_server_name_scope value: %s'
-                ' Flag must be empty, "global" or'
-                ' "project"') % CONF.osapi_compute_unique_server_name_scope
-        LOG.warning(msg)
+        LOG.warning(_LW('Unknown osapi_compute_unique_server_name_scope value:'
+                        ' %s. Flag must be empty, "global" or "project"'),
+                    CONF.osapi_compute_unique_server_name_scope)
         return
 
     if instance_with_same_name > 0:
@@ -1867,8 +1865,7 @@ def instance_get(context, instance_id, columns_to_join=None):
     except db_exc.DBError:
         # NOTE(sdague): catch all in case the db engine chokes on the
         # id because it's too long of an int to store.
-        msg = _("Invalid instance id %s in request") % instance_id
-        LOG.warning(msg)
+        LOG.warning(_LW("Invalid instance id %s in request"), instance_id)
         raise exception.InvalidID(id=instance_id)
 
 
@@ -5900,10 +5897,9 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                 if attempt < max_retries - 1:
                     ctxt.reraise = False
                 else:
-                    msg = _("Add metadata failed for aggregate %(id)s after "
-                            "%(retries)s retries") % {"id": aggregate_id,
-                                                      "retries": max_retries}
-                    LOG.warning(msg)
+                    LOG.warning(_LW("Add metadata failed for aggregate %(id)s "
+                                    "after %(retries)s retries"),
+                                {"id": aggregate_id, "retries": max_retries})
 
 
 @require_aggregate_exists
@@ -6337,8 +6333,8 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
         # these rows until we clean up a dependent table.  Just
         # skip this table for now; we'll come back to it later.
         LOG.warning(_LW("IntegrityError detected when archiving table "
-                     "%(tablename)s: %(error)s"),
-                 {'tablename': tablename, 'error': six.text_type(ex)})
+                        "%(tablename)s: %(error)s"),
+                    {'tablename': tablename, 'error': six.text_type(ex)})
         return rows_archived
 
     rows_archived = result_delete.rowcount
