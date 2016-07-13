@@ -11989,7 +11989,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         instance_domains = [
             DiagFakeDomain("instance0000001"),
-            DiagFakeDomain("instance0000002")]
+            DiagFakeDomain("instance0000002"),
+            DiagFakeDomain("instance0000003"),
+            DiagFakeDomain("instance0000004")]
         mock_list.return_value = instance_domains
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -12005,15 +12007,35 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                         'virt_disk_size': '0',
                         'backing_file': '/somepath/disk2',
                         'disk_size': '10737418240',
-                        'over_committed_disk_size': '21474836480'}]}
+                        'over_committed_disk_size': '21474836480'}],
+                      'instance0000003':
+                      [{'type': 'raw', 'path': '/somepath/disk3',
+                        'virt_disk_size': '0',
+                        'backing_file': '/somepath/disk3',
+                        'disk_size': '21474836480',
+                        'over_committed_disk_size': '32212254720'}],
+                      'instance0000004':
+                      [{'type': 'raw', 'path': '/somepath/disk4',
+                        'virt_disk_size': '0',
+                        'backing_file': '/somepath/disk4',
+                        'disk_size': '32212254720',
+                        'over_committed_disk_size': '42949672960'}]}
 
         def side_effect(name, dom, block_device_info):
             if name == 'instance0000001':
                 self.assertEqual('/dev/vda',
                                  block_device_info['root_device_name'])
-                raise OSError(errno.EACCES, 'Permission denied')
+                raise OSError(errno.ENOENT, 'No such file or directory')
             if name == 'instance0000002':
                 self.assertEqual('/dev/vdb',
+                                 block_device_info['root_device_name'])
+                raise OSError(errno.ESTALE, 'Stale NFS file handle')
+            if name == 'instance0000003':
+                self.assertEqual('/dev/vdc',
+                                 block_device_info['root_device_name'])
+                raise OSError(errno.EACCES, 'Permission denied')
+            if name == 'instance0000004':
+                self.assertEqual('/dev/vdd',
                                  block_device_info['root_device_name'])
                 return fake_disks.get(name)
         get_disk_info = mock.Mock()
@@ -12026,14 +12048,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             root_device_name='/dev/vda'),
             objects.Instance(
             uuid=instance_uuids[1],
-            root_device_name='/dev/vdb')
+            root_device_name='/dev/vdb'),
+            objects.Instance(
+            uuid=instance_uuids[2],
+            root_device_name='/dev/vdc'),
+            objects.Instance(
+            uuid=instance_uuids[3],
+            root_device_name='/dev/vdd')
         ]
         mock_get.return_value = instances
 
         result = drvr._get_disk_over_committed_size_total()
-        self.assertEqual(21474836480, result)
+        self.assertEqual(42949672960, result)
         mock_list.assert_called_once_with()
-        self.assertEqual(2, get_disk_info.call_count)
+        self.assertEqual(4, get_disk_info.call_count)
         filters = {'uuid': instance_uuids}
         mock_get.assert_called_once_with(mock.ANY, filters, use_slave=True)
         mock_bdms.assert_called_with(mock.ANY, instance_uuids)

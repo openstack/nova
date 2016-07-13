@@ -6912,7 +6912,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     'error_code': error_code,
                     'ex': ex})
             except OSError as e:
-                if e.errno == errno.ENOENT:
+                if e.errno in (errno.ENOENT, errno.ESTALE):
                     LOG.warning(_LW('Periodic task is updating the host stat, '
                                  'it is trying to get disk %(i_name)s, '
                                  'but disk file was removed by concurrent '
