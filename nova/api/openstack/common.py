@@ -195,6 +195,8 @@ def get_pagination_params(request):
         params['page_size'] = _get_int_param(request, 'page_size')
     if 'marker' in request.GET:
         params['marker'] = _get_marker_param(request)
+    if 'offset' in request.GET:
+        params['offset'] = _get_int_param(request, 'offset')
     return params
 
 
@@ -213,7 +215,7 @@ def _get_marker_param(request):
     return request.GET['marker']
 
 
-def limited(items, request, max_limit=CONF.osapi_max_limit):
+def limited(items, request):
     """Return a slice of items according to requested offset and limit.
 
     :param items: A sliceable entity
@@ -223,28 +225,21 @@ def limited(items, request, max_limit=CONF.osapi_max_limit):
                     'limit' is not specified, 0, or > max_limit, we default
                     to max_limit. Negative values for either offset or limit
                     will cause exc.HTTPBadRequest() exceptions to be raised.
-    :kwarg max_limit: The maximum number of items to return from 'items'
     """
-    offset = request.GET.get("offset", 0)
-    limit = request.GET.get('limit', max_limit)
-
-    try:
-        offset = utils.validate_integer(offset, "offset", min_value=0)
-        limit = utils.validate_integer(limit, "limit", min_value=0)
-    except exception.InvalidInput as e:
-        raise webob.exc.HTTPBadRequest(explanation=e.format_message())
-
-    limit = min(max_limit, limit or max_limit)
-    range_end = offset + limit
-    return items[offset:range_end]
-
-
-def get_limit_and_marker(request, max_limit=CONF.osapi_max_limit):
-    """get limited parameter from request."""
     params = get_pagination_params(request)
-    limit = params.get('limit', max_limit)
-    limit = min(max_limit, limit)
-    marker = params.get('marker')
+    offset = params.get('offset', 0)
+    limit = CONF.osapi_max_limit
+    limit = min(limit, params.get('limit') or limit)
+
+    return items[offset:(offset + limit)]
+
+
+def get_limit_and_marker(request):
+    """Get limited parameter from request."""
+    params = get_pagination_params(request)
+    limit = CONF.osapi_max_limit
+    limit = min(limit, params.get('limit', limit))
+    marker = params.get('marker', None)
 
     return limit, marker
 
