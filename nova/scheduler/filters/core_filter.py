@@ -30,7 +30,12 @@ class BaseCoreFilter(filters.BaseHostFilter):
         raise NotImplementedError
 
     def host_passes(self, host_state, spec_obj):
-        """Return True if host has sufficient CPU cores."""
+        """Return True if host has sufficient CPU cores.
+
+        :param host_state: nova.scheduler.host_manager.HostState
+        :param spec_obj: filter options
+        :return: boolean
+        """
         if not host_state.vcpus_total:
             # Fail safe
             LOG.warning(_LW("VCPUs not set; assuming CPU collection broken"))
@@ -50,10 +55,10 @@ class BaseCoreFilter(filters.BaseHostFilter):
             # against other instances.
             if instance_vcpus > host_state.vcpus_total:
                 LOG.debug("%(host_state)s does not have %(instance_vcpus)d "
-                      "total cpus before overcommit, it only has %(cpus)d",
-                      {'host_state': host_state,
-                       'instance_vcpus': instance_vcpus,
-                       'cpus': host_state.vcpus_total})
+                          "total cpus before overcommit, it only has %(cpus)d",
+                          {'host_state': host_state,
+                           'instance_vcpus': instance_vcpus,
+                           'cpus': host_state.vcpus_total})
                 return False
 
         free_vcpus = vcpus_total - host_state.vcpus_used
