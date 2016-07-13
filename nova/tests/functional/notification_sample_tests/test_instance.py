@@ -314,3 +314,28 @@ class TestInstanceNotificationSample(
                     notification_sample_base.NotificationSampleTestBase.ANY,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    def test_delete_restore_server(self):
+        self.flags(reclaim_instance_interval=30)
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self.api.delete_server(server['id'])
+        self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+        self.api.post_server_action(server['id'], {'restore': {}})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-restore-start',
+            replacements={
+                'reservation_id':
+                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-restore-end',
+            replacements={
+                'reservation_id':
+                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

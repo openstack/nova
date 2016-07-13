@@ -247,8 +247,8 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-shelve-end.json')
 # @base.notification_sample('instance-resume-start.json')
 # @base.notification_sample('instance-resume-end.json')
-# @base.notification_sample('instance-restore-start.json')
-# @base.notification_sample('instance-restore-end.json')
+@base.notification_sample('instance-restore-start.json')
+@base.notification_sample('instance-restore-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionNotification(base.NotificationBase):
     # Version 1.0: Initial version

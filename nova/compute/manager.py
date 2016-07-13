@@ -2534,6 +2534,9 @@ class ComputeManager(manager.Manager):
     def restore_instance(self, context, instance):
         """Restore a soft-deleted instance on this host."""
         self._notify_about_instance_usage(context, instance, "restore.start")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.RESTORE,
+            phase=fields.NotificationPhase.START)
         try:
             self.driver.restore(instance)
         except NotImplementedError:
@@ -2545,6 +2548,9 @@ class ComputeManager(manager.Manager):
         instance.task_state = None
         instance.save(expected_task_state=task_states.RESTORING)
         self._notify_about_instance_usage(context, instance, "restore.end")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.RESTORE,
+            phase=fields.NotificationPhase.END)
 
     @staticmethod
     def _set_migration_status(migration, status):
