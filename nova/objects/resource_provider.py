@@ -25,48 +25,6 @@ _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
 
 
-@db_api.api_context_manager.writer
-def _create_rp_in_db(context, updates):
-    db_rp = models.ResourceProvider()
-    db_rp.update(updates)
-    context.session.add(db_rp)
-    return db_rp
-
-
-@db_api.api_context_manager.writer
-def _delete_rp_from_db(context, _id):
-    # Don't delete the resource provider if it has allocations.
-    rp_allocations = context.session.query(models.Allocation).\
-                     filter(models.Allocation.resource_provider_id == _id).\
-                     count()
-    if rp_allocations:
-        raise exception.ResourceProviderInUse()
-    # Delete any inventory associated with the resource provider
-    context.session.query(models.Inventory).\
-        filter(models.Inventory.resource_provider_id == _id).delete()
-    result = context.session.query(models.ResourceProvider).\
-             filter(models.ResourceProvider.id == _id).delete()
-    if not result:
-        raise exception.NotFound()
-
-
-@db_api.api_context_manager.writer
-def _update_rp_in_db(context, id, updates):
-    db_rp = context.session.query(models.ResourceProvider).filter_by(
-        id=id).first()
-    db_rp.update(updates)
-    db_rp.save(context.session)
-
-
-@db_api.api_context_manager.reader
-def _get_rp_by_uuid_from_db(context, uuid):
-    result = context.session.query(models.ResourceProvider).filter_by(
-        uuid=uuid).first()
-    if not result:
-        raise exception.NotFound()
-    return result
-
-
 def _get_current_inventory_resources(conn, rp):
     """Returns a set() containing the resource class IDs for all resources
     currently having an inventory record for the supplied resource provider.
@@ -341,16 +299,37 @@ class ResourceProvider(base.NovaObject):
         self.obj_reset_changes()
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
-        return _create_rp_in_db(context, updates)
+        db_rp = models.ResourceProvider()
+        db_rp.update(updates)
+        context.session.add(db_rp)
+        return db_rp
 
     @staticmethod
-    def _delete(context, id):
-        _delete_rp_from_db(context, id)
+    @db_api.api_context_manager.writer
+    def _delete(context, _id):
+        # Don't delete the resource provider if it has allocations.
+        rp_allocations = context.session.query(models.Allocation).\
+                         filter(models.Allocation.resource_provider_id == _id).\
+                         count()
+        if rp_allocations:
+            raise exception.ResourceProviderInUse()
+        # Delete any inventory associated with the resource provider
+        context.session.query(models.Inventory).\
+            filter(models.Inventory.resource_provider_id == _id).delete()
+        result = context.session.query(models.ResourceProvider).\
+                 filter(models.ResourceProvider.id == _id).delete()
+        if not result:
+            raise exception.NotFound()
 
     @staticmethod
+    @db_api.api_context_manager.writer
     def _update_in_db(context, id, updates):
-        return _update_rp_in_db(context, id, updates)
+        db_rp = context.session.query(models.ResourceProvider).filter_by(
+            id=id).first()
+        db_rp.update(updates)
+        db_rp.save(context.session)
 
     @staticmethod
     def _from_db_object(context, resource_provider, db_resource_provider):
@@ -361,8 +340,13 @@ class ResourceProvider(base.NovaObject):
         return resource_provider
 
     @staticmethod
+    @db_api.api_context_manager.reader
     def _get_by_uuid_from_db(context, uuid):
-        return _get_rp_by_uuid_from_db(context, uuid)
+        result = context.session.query(models.ResourceProvider).filter_by(
+            uuid=uuid).first()
+        if not result:
+            raise exception.NotFound()
+        return result
 
 
 @base.NovaObjectRegistry.register
