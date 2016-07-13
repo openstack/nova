@@ -721,13 +721,12 @@ class ResourceTracker(object):
                                             'evacuation')
 
     def _get_migration_context_resource(self, resource, instance,
-                                        prefix='new_', itype=None):
+                                        prefix='new_'):
         migration_context = instance.migration_context
         resource = prefix + resource
         if migration_context and resource in migration_context:
             return getattr(migration_context, resource)
-        else:
-            return None
+        return None
 
     def _update_usage_from_migration(self, context, instance, image_meta,
                                      migration):
