@@ -29,7 +29,8 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add tag field
     # Version 1.2: Adding a save method
-    VERSION = '1.2'
+    # Version 1.3: Added destroy() method
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -108,6 +109,10 @@ class VirtualInterface(base.NovaPersistentObject, base.NovaObject):
     @base.remotable_classmethod
     def delete_by_instance_uuid(cls, context, instance_uuid):
         db.virtual_interface_delete_by_instance(context, instance_uuid)
+
+    @base.remotable
+    def destroy(self):
+        db.virtual_interface_delete(self._context, self.id)
 
 
 @base.NovaObjectRegistry.register

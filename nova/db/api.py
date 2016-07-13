@@ -687,6 +687,11 @@ def virtual_interface_delete_by_instance(context, instance_id):
     return IMPL.virtual_interface_delete_by_instance(context, instance_id)
 
 
+def virtual_interface_delete(context, id):
+    """Delete virtual interface by id."""
+    return IMPL.virtual_interface_delete(context, id)
+
+
 def virtual_interface_get_all(context):
     """Gets all virtual interfaces from the table."""
     return IMPL.virtual_interface_get_all(context)

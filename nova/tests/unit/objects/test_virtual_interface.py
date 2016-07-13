@@ -124,6 +124,20 @@ class _TestVirtualInterface(object):
                                                              'fake-uuid')
             delete.assert_called_with(self.context, 'fake-uuid')
 
+    def test_destroy(self):
+        vif = vif_obj.VirtualInterface(context=self.context)
+        vif.address = '00:00:00:00:00:00'
+        vif.network_id = 123
+        vif.instance_uuid = uuids.instance_uuid
+        vif.uuid = uuids.vif_uuid
+        vif.tag = 'foo'
+        vif.create()
+
+        vif = vif_obj.VirtualInterface.get_by_id(self.context, vif.id)
+        vif.destroy()
+        self.assertIsNone(vif_obj.VirtualInterface.get_by_id(self.context,
+                                                             vif.id))
+
     def test_obj_make_compatible_pre_1_1(self):
         vif = vif_obj.VirtualInterface(context=self.context)
         vif.address = '00:00:00:00:00:00'
