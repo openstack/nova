@@ -150,7 +150,7 @@ Interdependencies to other options:
 
 * If ``sync_power_state_interval`` is negative and this feature is disabled,
   then instances that get out of sync between the hypervisor and the Nova
-  database will have to be synchonized manually.
+  database will have to be synchronized manually.
 """)
 
 ALL_OPTS = [disable_rootwrap,

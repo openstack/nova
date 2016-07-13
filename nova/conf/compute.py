@@ -108,7 +108,7 @@ Possible values:
                help="""
 Amount of memory in MB to reserve for the host so that it is always available
 to host processes. The host resources usage is reported back to the scheduler
-continously from nova-compute running on the compute node. To prevent the host
+continuously from nova-compute running on the compute node. To prevent the host
 memory from being considered as available, this option is used to reserve
 memory for the host.
 
