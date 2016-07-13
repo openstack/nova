@@ -223,9 +223,6 @@ class APIRouterV21(base_wsgi.Router):
         return 'nova.api.v21.extensions'
 
     def __init__(self, init_only=None):
-        # TODO(cyeoh): bp v3-api-extension-framework. Currently load
-        # all extensions but eventually should be able to exclude
-        # based on a config file
         def _check_load_extension(ext):
             return self._register_extension(ext)
 

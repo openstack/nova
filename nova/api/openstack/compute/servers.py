@@ -662,10 +662,6 @@ class ServersController(wsgi.Controller):
 
         # If the caller wanted a reservation_id, return it
         if return_reservation_id:
-            # NOTE(cyeoh): In v3 reservation_id was wrapped in
-            # servers_reservation but this is reverted for V2 API
-            # compatibility. In the long term with the tasks API we
-            # will probably just drop the concept of reservation_id
             return wsgi.ResponseObject({'reservation_id': resv_id})
 
         req.cache_db_instances(instances)
