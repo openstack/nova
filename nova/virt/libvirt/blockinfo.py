@@ -473,7 +473,7 @@ def default_device_names(virt_type, context, instance, block_device_info,
         driver_bdm.save()
 
 
-def has_default_ephemeral(instance, disk_bus, block_device_info, mapping):
+def get_default_ephemeral_info(instance, disk_bus, block_device_info, mapping):
     ephemerals = driver.block_device_info_get_ephemerals(block_device_info)
     if instance.ephemeral_gb <= 0 or ephemerals:
         return None
@@ -559,8 +559,8 @@ def get_disk_mapping(virt_type, instance,
         # set, nothing is changed.
         update_bdm(root_bdm, root_info)
 
-    default_eph = has_default_ephemeral(instance, disk_bus, block_device_info,
-                                        mapping)
+    default_eph = get_default_ephemeral_info(instance, disk_bus,
+                                             block_device_info, mapping)
     if default_eph:
         mapping['disk.local'] = default_eph
 
