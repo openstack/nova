@@ -39,6 +39,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova.i18n import _, _LI, _LE, _LW
+from nova import objects
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import hardware
@@ -245,6 +246,36 @@ class VMOps(object):
         self._vhdutils.create_dynamic_vhd(eph_info['path'],
                                           eph_info['size'] * units.Gi)
 
+    @staticmethod
+    def _get_vif_metadata(context, instance_id):
+        vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
+                                                                 instance_id)
+        vif_metadata = []
+        for vif in vifs:
+            if 'tag' in vif and vif.tag:
+                device = objects.NetworkInterfaceMetadata(
+                    mac=vif.address,
+                    bus=objects.PCIDeviceBus(),
+                    tags=[vif.tag])
+                vif_metadata.append(device)
+
+        return vif_metadata
+
+    def _save_device_metadata(self, context, instance, block_device_info):
+        """Builds a metadata object for instance devices, that maps the user
+           provided tag to the hypervisor assigned device address.
+        """
+        metadata = []
+
+        metadata.extend(self._get_vif_metadata(context, instance.uuid))
+        if block_device_info:
+            metadata.extend(self._block_dev_man.get_bdm_metadata(
+                context, instance, block_device_info))
+
+        if metadata:
+            instance.device_metadata = objects.InstanceDeviceMetadata(
+                devices=metadata)
+
     @check_admin_permissions
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None):
@@ -269,6 +300,7 @@ class VMOps(object):
         try:
             self.create_instance(instance, network_info, root_device,
                                  block_device_info, vm_gen)
+            self._save_device_metadata(context, instance, block_device_info)
 
             if configdrive.required_by(instance):
                 configdrive_path = self._create_config_drive(instance,
