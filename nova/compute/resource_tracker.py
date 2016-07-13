@@ -835,7 +835,7 @@ class ResourceTracker(object):
                                                   migration)
             except exception.FlavorNotFound:
                 LOG.warning(_LW("Flavor could not be found, skipping "
-                                "migration."), instance_uuid=uuid)
+                                "migration."), instance_uuid=instance.uuid)
                 continue
 
     def _update_usage_from_instance(self, context, instance, is_removed=False):
