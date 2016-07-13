@@ -22,6 +22,12 @@ from nova.tests.unit.virt.xenapi.plugins import plugin_test
 class PartitionUtils(plugin_test.PluginTestBase):
     def setUp(self):
         super(PartitionUtils, self).setUp()
+        self.pluginlib = self.load_plugin("pluginlib_nova.py")
+
+        # Prevent any logging to syslog
+        self.mock_patch_object(self.pluginlib,
+                               'configure_logging')
+
         self.partition_utils = self.load_plugin("partition_utils.py")
 
     def test_wait_for_dev_ok(self):
