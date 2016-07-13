@@ -90,6 +90,7 @@ class ServerTagsJsonTest(test_servers.ServersSampleBase):
         expected_location = "%s/servers/%s/tags/%s" % (
             self._get_vers_compute_endpoint(), uuid, tag.tag)
         self.assertEqual(expected_location, response.headers['Location'])
+        self.assertEqual('', response.content)
 
     def test_server_tags_delete(self):
         uuid = self._put_server_tags()
