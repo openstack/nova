@@ -34,8 +34,8 @@ class AdminPasswordController(wsgi.Controller):
         super(AdminPasswordController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1
-    # +micorversions because the password has been changed when returning
+    # TODO(eliqiao): Here should be 204(No content) instead of 202 by v2.1+
+    # microversions because the password has been changed when returning
     # a response.
     @wsgi.action('changePassword')
     @wsgi.response(202)
