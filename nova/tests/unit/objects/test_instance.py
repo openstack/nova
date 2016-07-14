@@ -1877,6 +1877,18 @@ class TestInstanceObjectMisc(test.TestCase):
                          instance._expected_cols(['metadata',
                                                   'numa_topology']))
 
+    def test_expected_cols_no_duplicates(self):
+        expected_attr = ['metadata', 'system_metadata', 'info_cache',
+                         'security_groups', 'info_cache', 'metadata',
+                         'pci_devices', 'tags', 'extra', 'flavor']
+
+        result_list = instance._expected_cols(expected_attr)
+
+        self.assertEqual(len(result_list), len(set(expected_attr)))
+        self.assertEqual(['metadata', 'system_metadata', 'info_cache',
+                         'security_groups', 'pci_devices', 'tags', 'extra',
+                         'extra.flavor'], result_list)
+
     def test_migrate_instance_keypairs(self):
         ctxt = context.RequestContext('foo', 'bar')
         key = objects.KeyPair(context=ctxt,
