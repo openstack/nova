@@ -3737,7 +3737,9 @@ class TestNeutronv2WithMock(test.TestCase):
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     @mock.patch('nova.network.neutronv2.api.API._get_preexisting_port_ids')
     @mock.patch('nova.network.neutronv2.api.get_client')
-    def test_preexisting_deallocate_for_instance(self, mock_ntrn,
+    @mock.patch.object(objects.VirtualInterface, 'delete_by_instance_uuid')
+    def test_preexisting_deallocate_for_instance(self, mock_delete_vifs,
+                                                 mock_ntrn,
                                                  mock_gppids,
                                                  mock_unbind,
                                                  mock_deletep,
@@ -3772,12 +3774,15 @@ class TestNeutronv2WithMock(test.TestCase):
                                              mock_inst,
                                              set([uuids.portid_2]),
                                              raise_if_fail=True)
+        mock_delete_vifs.assert_called_once_with(mock.sentinel.ctx, 'inst-1')
 
     @mock.patch('nova.network.neutronv2.api.API.get_instance_nw_info')
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     @mock.patch('nova.network.neutronv2.api.compute_utils')
     @mock.patch('nova.network.neutronv2.api.get_client')
+    @mock.patch.object(objects.VirtualInterface, 'get_by_uuid')
     def test_preexisting_deallocate_port_for_instance(self,
+                                                      mock_get_vif_by_uuid,
                                                       mock_ntrn,
                                                       mock_comp_utils,
                                                       mock_unbind,
@@ -3791,10 +3796,14 @@ class TestNeutronv2WithMock(test.TestCase):
                               uuid='inst-1')
         mock_client = mock.Mock()
         mock_ntrn.return_value = mock_client
+        mock_vif = mock.MagicMock(spec=objects.VirtualInterface)
+        mock_get_vif_by_uuid.return_value = mock_vif
         self.api.deallocate_port_for_instance(mock.sentinel.ctx,
                                               mock_inst, '2')
         mock_unbind.assert_called_once_with(mock.sentinel.ctx, ['2'],
                                             mock_client)
+        mock_get_vif_by_uuid.assert_called_once_with(mock.sentinel.ctx, '2')
+        mock_vif.destroy.assert_called_once_with()
 
     @mock.patch('nova.network.neutronv2.api.API.'
                 '_check_external_network_attach')

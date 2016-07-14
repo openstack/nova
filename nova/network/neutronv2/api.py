@@ -1033,6 +1033,10 @@ class API(base_api.NetworkAPI):
         # Delete the rest of the ports
         self._delete_ports(neutron, instance, ports, raise_if_fail=True)
 
+        # deallocate vifs (mac addresses)
+        objects.VirtualInterface.delete_by_instance_uuid(
+            context, instance.uuid)
+
         # NOTE(arosen): This clears out the network_cache only if the instance
         # hasn't already been deleted. This is needed when an instance fails to
         # launch and is rescheduled onto another compute node. If the instance
@@ -1065,6 +1069,15 @@ class API(base_api.NetworkAPI):
         else:
             self._delete_ports(neutron, instance, [port_id],
                                raise_if_fail=True)
+
+        # Delete the VirtualInterface for the given port_id.
+        vif = objects.VirtualInterface.get_by_uuid(context, port_id)
+        if vif:
+            vif.destroy()
+        else:
+            LOG.debug('VirtualInterface not found for port: %s',
+                      port_id, instance=instance)
+
         return self.get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
