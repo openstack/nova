@@ -515,7 +515,6 @@ class VMwareAPISession(api.VMwareAPISession):
                 task_poll_interval=CONF.vmware.task_poll_interval,
                 scheme=scheme,
                 create_session=True,
-                wsdl_loc=CONF.vmware.wsdl_location,
                 cacert=cacert,
                 insecure=insecure)
 

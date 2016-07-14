@@ -1,0 +1,7 @@
+---
+deprecations:
+  - Deprecate the VMware driver's ``wsdl_location`` config option. This
+    option pointed to the location of the WSDL files required when using
+    vCenter versions earlier than 5.1. Since the minimum supported version
+    of vCenter is 5.1, there is no longer a need for this option and its
+    value is ignored.

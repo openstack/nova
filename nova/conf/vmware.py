@@ -190,6 +190,11 @@ is avoided as it creates copy of the virtual machine that shares
 virtual disks with its parent VM.
 """),
     cfg.StrOpt('wsdl_location',
+               deprecated_for_removal=True,
+               deprecated_reason='Only vCenter versions earlier than 5.1 '
+                                 'require this option and the current '
+                                 'minimum version is 5.1.',
+               deprecated_since='15.0.0',
                help="""
 This option specifies VIM Service WSDL Location
 
