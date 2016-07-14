@@ -197,6 +197,19 @@ class RequestContext(context.RequestContext):
             instance_lock_checked=values.get('instance_lock_checked', False),
         )
 
+    @classmethod
+    def from_environ(cls, environ, **kwargs):
+        ctx = super(RequestContext, cls).from_environ(environ, **kwargs)
+
+        # the base oslo.context sets its user param and tenant param but not
+        # our user_id and project_id param so fix those up.
+        if ctx.user and not ctx.user_id:
+            ctx.user_id = ctx.user
+        if ctx.tenant and not ctx.project_id:
+            ctx.project_id = ctx.tenant
+
+        return ctx
+
     def elevated(self, read_deleted=None):
         """Return a version of this context with admin flag set."""
         context = copy.copy(self)
