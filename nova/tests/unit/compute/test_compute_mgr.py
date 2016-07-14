@@ -2764,6 +2764,15 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         msg = mock_log.warning.call_args_list[0]
         self.assertIn('appears to not be owned by this host', msg[0][0])
 
+    def test_init_host_pci_passthrough_whitelist_validation_failure(self):
+        # Tests that we fail init_host if there is a pci_passthrough_whitelist
+        # configured incorrectly.
+        self.flags(pci_passthrough_whitelist=[
+            # it's invalid to specify both in the same devspec
+            jsonutils.dumps({'address': 'foo', 'devname': 'bar'})])
+        self.assertRaises(exception.PciDeviceInvalidDeviceName,
+                          self.compute.init_host)
+
     @mock.patch('nova.compute.manager.ComputeManager._instance_update')
     def test_error_out_instance_on_exception_not_implemented_err(self,
                                                         inst_update_mock):
