@@ -785,6 +785,7 @@ class API(base_api.NetworkAPI):
         created_port_ids = []
         ports_in_requested_order = []
         nets_in_requested_order = []
+        created_vifs = []   # this list is for cleanups if we fail
         for request, created_port_id in requests_and_created_ports:
             vifobj = objects.VirtualInterface(context)
             vifobj.instance_uuid = instance.uuid
@@ -836,6 +837,7 @@ class API(base_api.NetworkAPI):
                                             updated_port['id'])
                 vifobj.uuid = port_id
                 vifobj.create()
+                created_vifs.append(vifobj)
 
                 if not created_port_id:
                     # only add if update worked and port create not called
@@ -850,6 +852,8 @@ class API(base_api.NetworkAPI):
                                        preexisting_port_ids,
                                        neutron, port_client)
                     self._delete_ports(neutron, instance, created_port_ids)
+                    for vif in created_vifs:
+                        vif.destroy()
 
         return (nets_in_requested_order, ports_in_requested_order,
             preexisting_port_ids, created_port_ids)

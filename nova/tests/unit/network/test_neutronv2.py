@@ -3991,6 +3991,63 @@ class TestNeutronv2WithMock(test.TestCase):
         self.assertEqual(expected_floating.obj_to_primitive(),
                          actual_obj.obj_to_primitive())
 
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension',
+                return_value=True)
+    @mock.patch('nova.network.neutronv2.api.API.'
+                '_populate_neutron_extension_values')
+    @mock.patch('nova.network.neutronv2.api.API._update_port',
+                # called twice, fails on the 2nd call and triggers the cleanup
+                side_effect=(mock.MagicMock(),
+                             exception.PortInUse(
+                                 port_id=uuids.created_port_id)))
+    @mock.patch.object(objects.VirtualInterface, 'create')
+    @mock.patch.object(objects.VirtualInterface, 'destroy')
+    @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
+    @mock.patch('nova.network.neutronv2.api.API._delete_ports')
+    def test_update_ports_for_instance_fails_rollback_ports_and_vifs(self,
+            mock_delete_ports,
+            mock_unbind_ports,
+            mock_vif_destroy,
+            mock_vif_create,
+            mock_update_port,
+            mock_populate_ext_values,
+            mock_has_port_binding_extension):
+        """Makes sure we rollback ports and VIFs if we fail updating ports"""
+        instance = fake_instance.fake_instance_obj(self.context)
+        ntrn = mock.Mock(spec='neutronclient.v2_0.client.Client')
+        # we have two requests, one with a preexisting port and one where nova
+        # created the port (on the same network)
+        requests_and_created_ports = [
+            (objects.NetworkRequest(network_id=uuids.network_id,
+                                    port_id=uuids.preexisting_port_id),
+             None),  # None means Nova didn't create this port
+            (objects.NetworkRequest(network_id=uuids.network_id,
+                                    port_id=uuids.created_port_id),
+             uuids.created_port_id),
+        ]
+        network = {'id': uuids.network_id}
+        nets = {uuids.network_id: network}
+        self.assertRaises(exception.PortInUse,
+                          self.api._update_ports_for_instance,
+                          self.context, instance, ntrn, ntrn,
+                          requests_and_created_ports, nets, bind_host_id=None,
+                          dhcp_opts=None, available_macs=None)
+        # assert the calls
+        mock_update_port.assert_has_calls([
+            mock.call(ntrn, instance, uuids.preexisting_port_id, mock.ANY),
+            mock.call(ntrn, instance, uuids.created_port_id, mock.ANY)
+        ])
+        # we only got to create one vif since the 2nd _update_port call fails
+        mock_vif_create.assert_called_once_with()
+        # we only destroy one vif since we only created one
+        mock_vif_destroy.assert_called_once_with()
+        # we unbind the pre-existing port
+        mock_unbind_ports.assert_called_once_with(
+            self.context, [uuids.preexisting_port_id], ntrn, ntrn)
+        # we delete the created port
+        mock_delete_ports.assert_called_once_with(
+            ntrn, instance, [uuids.created_port_id])
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
