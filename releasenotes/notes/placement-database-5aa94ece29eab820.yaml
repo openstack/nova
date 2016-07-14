@@ -1,0 +1,22 @@
+---
+features:
+  - |
+
+    An optional configuration group placement_database can be used in
+    nova.conf to configure a separate database for use with the placement
+    API.
+
+    We recommend setting the placement_database.connection setting to
+    a non-None value in order to ease upgrade and migration of Nova in
+    Ocata. Although we leave the default value of this setting to None
+    -- in order to not break any deployments that use continuous delivery
+    models -- setting this to a non-None value now will avoid a potentially
+    lengthy data migration in the future.
+
+    If placement_database.connection has a value this will be used as the
+    connection URL for the placement database. Before launching the
+    placement API service, the 'nova-manage placement sync' command
+    must be run to create the necessary tables.
+
+    When the setting is None the existing settings for the api_database
+    will be used for hosting placement API data.

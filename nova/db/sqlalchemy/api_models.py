@@ -354,6 +354,31 @@ class ResourceProviderAggregate(API_BASE):
     aggregate_id = Column(Integer, primary_key=True, nullable=False)
 
 
+class PlacementAggregate(API_BASE):
+    """Represents a grouping of resource providers."""
+
+    # NOTE(rpodolyaka): placement API can optionally use the subset of tables
+    # of api DB instead of requiring its own DB. aggregates table is the only
+    # table which schema is a bit different (additional `name` column), but we
+    # can work around that by providing an additional mapping class to a
+    # subset of table columns, so that this model works for both separate and
+    # shared DBs cases.
+    __table__ = API_BASE.metadata.tables['aggregates']
+    __mapper_args__ = {
+        'exclude_properties': ['name']
+    }
+
+    resource_providers = orm.relationship(
+        'ResourceProvider',
+        secondary='resource_provider_aggregates',
+        primaryjoin=('PlacementAggregate.id == '
+                     'ResourceProviderAggregate.aggregate_id'),
+        secondaryjoin=('ResourceProviderAggregate.resource_provider_id == '
+                       'ResourceProvider.id'),
+        backref='aggregates'
+    )
+
+
 class InstanceGroupMember(API_BASE):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'

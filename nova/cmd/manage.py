@@ -927,6 +927,24 @@ class ApiDbCommands(object):
         print(migration.db_version(database='api'))
 
 
+# NOTE(cdent): The behavior of these commands is undefined when
+# the placement configuration is undefined.
+class PlacementCommands(object):
+    """Class for managing the placement database."""
+
+    def __init__(self):
+        pass
+
+    @args('--version', metavar='<version>', help='Database version')
+    def sync(self, version=None):
+        """Sync the database up to the most recent version."""
+        return migration.db_sync(version, database='placement')
+
+    def version(self):
+        """Print the current database version."""
+        print(migration.db_version(database='placement'))
+
+
 class AgentBuildCommands(object):
     """Class for managing agent builds."""
 
@@ -1417,6 +1435,7 @@ CATEGORIES = {
     'host': HostCommands,
     'logs': GetLogCommands,
     'network': NetworkCommands,
+    'placement': PlacementCommands,
     'project': ProjectCommands,
     'shell': ShellCommands,
     'vm': VmCommands,
