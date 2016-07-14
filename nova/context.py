@@ -29,7 +29,7 @@ from oslo_utils import timeutils
 import six
 
 from nova import exception
-from nova.i18n import _, _LW
+from nova.i18n import _
 from nova import policy
 from nova import utils
 
@@ -69,10 +69,8 @@ class RequestContext(context.RequestContext):
 
     """
 
-    def __init__(self, user_id=None, project_id=None,
-                 is_admin=None, read_deleted="no",
-                 roles=None, remote_address=None, timestamp=None,
-                 request_id=None, auth_token=None, overwrite=True,
+    def __init__(self, user_id=None, project_id=None, is_admin=None,
+                 read_deleted="no", remote_address=None, timestamp=None,
                  quota_class=None, user_name=None, project_name=None,
                  service_catalog=None, instance_lock_checked=False,
                  user_auth_plugin=None, **kwargs):
@@ -85,32 +83,13 @@ class RequestContext(context.RequestContext):
 
            :param user_auth_plugin: The auth plugin for the current request's
                 authentication data.
-
-           :param kwargs: Extra arguments that might be present, but we ignore
-                because they possibly came in from older rpc messages.
         """
-        user = kwargs.pop('user', None)
-        tenant = kwargs.pop('tenant', None)
-        super(RequestContext, self).__init__(
-            auth_token=auth_token,
-            user=user_id or user,
-            tenant=project_id or tenant,
-            domain=kwargs.pop('domain', None),
-            user_domain=kwargs.pop('user_domain', None),
-            project_domain=kwargs.pop('project_domain', None),
-            is_admin=is_admin,
-            read_only=kwargs.pop('read_only', False),
-            show_deleted=kwargs.pop('show_deleted', False),
-            request_id=request_id,
-            resource_uuid=kwargs.pop('resource_uuid', None),
-            overwrite=overwrite,
-            roles=roles)
-        # oslo_context's RequestContext.to_dict() generates this field, we can
-        # safely ignore this as we don't use it.
-        kwargs.pop('user_identity', None)
-        if kwargs:
-            LOG.warning(_LW('Arguments dropped when creating context: %s'),
-                        str(kwargs))
+        if user_id:
+            kwargs['user'] = user_id
+        if project_id:
+            kwargs['tenant'] = project_id
+
+        super(RequestContext, self).__init__(is_admin=is_admin, **kwargs)
 
         # FIXME(dims): user_id and project_id duplicate information that is
         # already present in the oslo_context's RequestContext. We need to
@@ -141,7 +120,6 @@ class RequestContext(context.RequestContext):
         self.quota_class = quota_class
         self.user_name = user_name
         self.project_name = project_name
-        self.is_admin = is_admin
 
         # NOTE(dheeraj): The following attributes are used by cellsv2 to store
         # connection information for connecting to the target cell.
@@ -200,7 +178,24 @@ class RequestContext(context.RequestContext):
 
     @classmethod
     def from_dict(cls, values):
-        return cls(**values)
+        return cls(
+            user_id=values.get('user_id'),
+            user=values.get('user'),
+            project_id=values.get('project_id'),
+            tenant=values.get('tenant'),
+            is_admin=values.get('is_admin'),
+            read_deleted=values.get('read_deleted', 'no'),
+            roles=values.get('roles'),
+            remote_address=values.get('remote_address'),
+            timestamp=values.get('timestamp'),
+            request_id=values.get('request_id'),
+            auth_token=values.get('auth_token'),
+            quota_class=values.get('quota_class'),
+            user_name=values.get('user_name'),
+            project_name=values.get('project_name'),
+            service_catalog=values.get('service_catalog'),
+            instance_lock_checked=values.get('instance_lock_checked', False),
+        )
 
     def elevated(self, read_deleted=None):
         """Return a version of this context with admin flag set."""

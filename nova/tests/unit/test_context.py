@@ -31,7 +31,7 @@ class ContextTestCase(test.NoDBTestCase):
     def test_request_context_elevated(self):
         user_ctxt = context.RequestContext('111',
                                            '222',
-                                           admin=False)
+                                           is_admin=False)
         self.assertFalse(user_ctxt.is_admin)
         admin_ctxt = user_ctxt.elevated()
         self.assertTrue(admin_ctxt.is_admin)
@@ -79,22 +79,6 @@ class ContextTestCase(test.NoDBTestCase):
                           ctxt,
                           'read_deleted',
                           True)
-
-    def test_extra_args_to_context_get_logged(self):
-        info = {}
-
-        def fake_warn(log_msg, *args):
-            if args:
-                log_msg = log_msg % args
-            info['log_msg'] = log_msg
-
-        self.stub_out('nova.context.LOG.warning', fake_warn)
-
-        c = context.RequestContext('user', 'project',
-                extra_arg1='meow', extra_arg2='wuff')
-        self.assertTrue(c)
-        self.assertIn("'extra_arg1': 'meow'", info['log_msg'])
-        self.assertIn("'extra_arg2': 'wuff'", info['log_msg'])
 
     def test_service_catalog_default(self):
         ctxt = context.RequestContext('111', '222')
