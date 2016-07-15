@@ -17,6 +17,7 @@ import contextlib
 import tarfile
 
 import eventlet
+import mock
 from os_xenapi.client import session as xenapi_session
 import six
 
@@ -32,109 +33,130 @@ def fake_context(result=None):
 
 class TestDelegatingToCommand(test.NoDBTestCase):
     def test_upload_image_is_delegated_to_command(self):
-        command = self.mox.CreateMock(vdi_through_dev.UploadToGlanceAsRawTgz)
-        self.mox.StubOutWithMock(vdi_through_dev, 'UploadToGlanceAsRawTgz')
-        vdi_through_dev.UploadToGlanceAsRawTgz(
-            'ctx', 'session', 'instance', 'image_id', 'vdis').AndReturn(
-                command)
-        command.upload_image().AndReturn('result')
-        self.mox.ReplayAll()
+        command = mock.create_autospec(vdi_through_dev.UploadToGlanceAsRawTgz,
+                                       spec_set=True)
+        command.upload_image.return_value = 'result'
 
-        store = vdi_through_dev.VdiThroughDevStore()
-        result = store.upload_image(
-            'ctx', 'session', 'instance', 'image_id', 'vdis')
+        with mock.patch.object(vdi_through_dev, 'UploadToGlanceAsRawTgz',
+                               return_value=command) as mock_upload:
+            store = vdi_through_dev.VdiThroughDevStore()
+            result = store.upload_image(
+                'ctx', 'session', 'instance', 'image_id', 'vdis')
 
-        self.assertEqual('result', result)
+            self.assertEqual('result', result)
+            mock_upload.assert_called_once_with(
+                'ctx', 'session', 'instance', 'image_id', 'vdis')
+            command.upload_image.assert_called_once_with()
 
 
 class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
-    def test_upload_image(self):
+    @mock.patch.object(vdi_through_dev.vm_utils, 'vdi_attached')
+    @mock.patch.object(vdi_through_dev.utils, 'make_dev_path')
+    @mock.patch.object(vdi_through_dev.utils, 'temporary_chown')
+    def test_upload_image(self, mock_vdi_temp_chown,
+                          mock_vdi_make_dev_path, mock_vdi_attached):
+        mock_vdi_attached.return_value = fake_context('dev')
+        mock_vdi_make_dev_path.return_value = 'devpath'
+        mock_vdi_temp_chown.return_value = fake_context()
+
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', 'session', 'instance', 'id', ['vdi0', 'vdi1'])
-        self.mox.StubOutWithMock(store, '_perform_upload')
-        self.mox.StubOutWithMock(store, '_get_vdi_ref')
-        self.mox.StubOutWithMock(vdi_through_dev, 'glance')
-        self.mox.StubOutWithMock(vdi_through_dev, 'vm_utils')
-        self.mox.StubOutWithMock(vdi_through_dev, 'utils')
 
-        store._get_vdi_ref().AndReturn('vdi_ref')
-        vdi_through_dev.vm_utils.vdi_attached(
-            'session', 'vdi_ref', read_only=True).AndReturn(
-                fake_context('dev'))
-        vdi_through_dev.utils.make_dev_path('dev').AndReturn('devpath')
-        vdi_through_dev.utils.temporary_chown('devpath').AndReturn(
-            fake_context())
-        store._perform_upload('devpath')
+        with test.nested(
+            mock.patch.object(store, '_perform_upload'),
+            mock.patch.object(store, '_get_vdi_ref',
+                              return_value='vdi_ref'),
+        ) as (mock_upload, mock_get_vdi):
 
-        self.mox.ReplayAll()
+            store.upload_image()
 
-        store.upload_image()
+            mock_get_vdi.assert_called_once_with()
+            mock_upload.assert_called_once_with('devpath')
+            mock_vdi_attached.assert_called_once_with(
+                'session', 'vdi_ref', read_only=True)
+            mock_vdi_make_dev_path.assert_called_once_with('dev')
+            mock_vdi_temp_chown.assert_called_once_with('devpath')
 
     def test__perform_upload(self):
-        producer = self.mox.CreateMock(vdi_through_dev.TarGzProducer)
-        consumer = self.mox.CreateMock(glance.UpdateGlanceImage)
-        pool = self.mox.CreateMock(eventlet.GreenPool)
+        producer = mock.create_autospec(vdi_through_dev.TarGzProducer,
+                                        spec_set=True)
+        consumer = mock.create_autospec(glance.UpdateGlanceImage,
+                                        spec_set=True)
+        pool = mock.create_autospec(eventlet.GreenPool,
+                                    spec_set=True)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', 'session', 'instance', 'id', ['vdi0', 'vdi1'])
-        self.mox.StubOutWithMock(store, '_create_pipe')
-        self.mox.StubOutWithMock(store, '_get_virtual_size')
-        self.mox.StubOutWithMock(producer, 'get_metadata')
-        self.mox.StubOutWithMock(vdi_through_dev, 'TarGzProducer')
-        self.mox.StubOutWithMock(glance, 'UpdateGlanceImage')
-        self.mox.StubOutWithMock(vdi_through_dev, 'eventlet')
 
-        producer.get_metadata().AndReturn('metadata')
-        store._get_virtual_size().AndReturn('324')
-        store._create_pipe().AndReturn(('readfile', 'writefile'))
-        vdi_through_dev.TarGzProducer(
-            'devpath', 'writefile', '324', 'disk.raw').AndReturn(
-                producer)
-        glance.UpdateGlanceImage('context', 'id', 'metadata',
-            'readfile').AndReturn(consumer)
-        vdi_through_dev.eventlet.GreenPool().AndReturn(pool)
-        pool.spawn(producer.start)
-        pool.spawn(consumer.start)
-        pool.waitall()
+        with test.nested(
+            mock.patch.object(store, '_create_pipe',
+                              return_value=('readfile', 'writefile')),
+            mock.patch.object(store, '_get_virtual_size',
+                              return_value='324'),
+            mock.patch.object(producer, 'get_metadata',
+                              return_value='metadata'),
+                mock.patch.object(glance, 'UpdateGlanceImage',
+                                  return_value=consumer),
+            mock.patch.object(vdi_through_dev, 'TarGzProducer',
+                              return_value=producer),
+            mock.patch.object(vdi_through_dev.eventlet, 'GreenPool',
+                              return_value=pool)
+        ) as (mock_create_pipe, mock_virtual_size, mock_metadata,
+              mock_upload, mock_TarGzProducer, mock_greenpool):
 
-        self.mox.ReplayAll()
+            store._perform_upload('devpath')
 
-        store._perform_upload('devpath')
+            mock_metadata.assert_called_once_with()
+            mock_virtual_size.assert_called_once_with()
+            mock_create_pipe.assert_called_once_with()
+            mock_TarGzProducer.assert_called_once_with(
+                'devpath', 'writefile', '324', 'disk.raw')
+            mock_upload.assert_called_once_with(
+                'context', 'id', 'metadata', 'readfile')
+            mock_greenpool.assert_called_once_with()
+            pool.spawn.assert_has_calls([mock.call(producer.start),
+                                         mock.call(consumer.start)])
+            pool.waitall.assert_called_once_with()
 
     def test__get_vdi_ref(self):
-        session = self.mox.CreateMock(xenapi_session.XenAPISession)
+        session = mock.create_autospec(xenapi_session.XenAPISession,
+                                       spec_set=True)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', session, 'instance', 'id', ['vdi0', 'vdi1'])
-        session.call_xenapi('VDI.get_by_uuid', 'vdi0').AndReturn('vdi_ref')
-
-        self.mox.ReplayAll()
+        session.call_xenapi.return_value = 'vdi_ref'
 
         self.assertEqual('vdi_ref', store._get_vdi_ref())
+        session.call_xenapi.assert_called_once_with(
+            'VDI.get_by_uuid', 'vdi0')
 
     def test__get_virtual_size(self):
-        session = self.mox.CreateMock(xenapi_session.XenAPISession)
+        session = mock.create_autospec(xenapi_session.XenAPISession,
+                                       spec_set=True)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', session, 'instance', 'id', ['vdi0', 'vdi1'])
-        self.mox.StubOutWithMock(store, '_get_vdi_ref')
-        store._get_vdi_ref().AndReturn('vdi_ref')
-        session.call_xenapi('VDI.get_virtual_size', 'vdi_ref')
 
-        self.mox.ReplayAll()
+        with mock.patch.object(store, '_get_vdi_ref',
+                               return_value='vdi_ref') as mock_get_vdi:
+            store._get_virtual_size()
 
-        store._get_virtual_size()
+            mock_get_vdi.assert_called_once_with()
+            session.call_xenapi.assert_called_once_with(
+                'VDI.get_virtual_size', 'vdi_ref')
 
-    def test__create_pipe(self):
+    @mock.patch.object(vdi_through_dev.os, 'pipe')
+    @mock.patch.object(vdi_through_dev.greenio, 'GreenPipe')
+    def test__create_pipe(self, mock_vdi_greenpipe, mock_vdi_os_pipe):
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', 'session', 'instance', 'id', ['vdi0', 'vdi1'])
-        self.mox.StubOutWithMock(vdi_through_dev, 'os')
-        self.mox.StubOutWithMock(vdi_through_dev, 'greenio')
-        vdi_through_dev.os.pipe().AndReturn(('rpipe', 'wpipe'))
-        vdi_through_dev.greenio.GreenPipe('rpipe', 'rb', 0).AndReturn('rfile')
-        vdi_through_dev.greenio.GreenPipe('wpipe', 'wb', 0).AndReturn('wfile')
 
-        self.mox.ReplayAll()
+        mock_vdi_os_pipe.return_value = ('rpipe', 'wpipe')
+        mock_vdi_greenpipe.side_effect = ['rfile', 'wfile']
 
         result = store._create_pipe()
         self.assertEqual(('rfile', 'wfile'), result)
+        mock_vdi_os_pipe.assert_called_once_with()
+        mock_vdi_greenpipe.assert_has_calls(
+            [mock.call('rpipe', 'rb', 0),
+             mock.call('wpipe', 'wb', 0)])
 
 
 class TestTarGzProducer(test.NoDBTestCase):
@@ -147,31 +169,31 @@ class TestTarGzProducer(test.NoDBTestCase):
         self.assertEqual('100', producer.size)
         self.assertEqual('writefile', producer.output)
 
-    def test_start(self):
+    @mock.patch.object(vdi_through_dev.tarfile, 'TarInfo')
+    @mock.patch.object(vdi_through_dev.tarfile, 'open')
+    def test_start(self, mock_tar_open, mock_tar_TarInfo):
         outf = six.StringIO()
         producer = vdi_through_dev.TarGzProducer('fpath', outf,
-            '100', 'fname')
+                                                 '100', 'fname')
 
-        tfile = self.mox.CreateMock(tarfile.TarFile)
-        tinfo = self.mox.CreateMock(tarfile.TarInfo)
+        tfile = mock.create_autospec(tarfile.TarFile, spec_set=True)
+        tinfo = mock.create_autospec(tarfile.TarInfo)
 
-        inf = self.mox.CreateMock(open)
+        inf = mock.create_autospec(open, spec_set=True)
 
-        self.mox.StubOutWithMock(vdi_through_dev, 'tarfile')
-        self.mox.StubOutWithMock(producer, '_open_file')
+        mock_tar_open.return_value = fake_context(tfile)
+        mock_tar_TarInfo.return_value = tinfo
 
-        vdi_through_dev.tarfile.TarInfo(name='fname').AndReturn(tinfo)
-        vdi_through_dev.tarfile.open(fileobj=outf, mode='w|gz').AndReturn(
-            fake_context(tfile))
-        producer._open_file('fpath', 'rb').AndReturn(fake_context(inf))
-        tfile.addfile(tinfo, fileobj=inf)
-        outf.close()
+        with mock.patch.object(producer, '_open_file',
+                               return_value=fake_context(inf)
+                               ) as mock_open_file:
+            producer.start()
 
-        self.mox.ReplayAll()
-
-        producer.start()
-
-        self.assertEqual(100, tinfo.size)
+            self.assertEqual(100, tinfo.size)
+            mock_tar_TarInfo.assert_called_once_with(name='fname')
+            mock_tar_open.assert_called_once_with(fileobj=outf, mode='w|gz')
+            mock_open_file.assert_called_once_with('fpath', 'rb')
+            tfile.addfile.assert_called_once_with(tinfo, fileobj=inf)
 
     def test_get_metadata(self):
         producer = vdi_through_dev.TarGzProducer('devpath', 'writefile',
