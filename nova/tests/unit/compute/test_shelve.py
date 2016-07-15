@@ -43,9 +43,20 @@ def _fake_resources():
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
+    @mock.patch.object(nova.network.api.API,
+                        'cleanup_instance_network_on_host')
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'power_off')
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'snapshot')
+    @mock.patch.object(nova.compute.manager.ComputeManager, '_get_power_state')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def _shelve_instance(self, shelved_offload_time,
-                         mock_notify, clean_shutdown=True):
+    def _shelve_instance(self, shelved_offload_time, mock_notify,
+                         mock_notify_instance_usage, mock_get_power_state,
+                         mock_snapshot, mock_power_off, mock_cleanup,
+                         clean_shutdown=True):
+        mock_get_power_state.return_value = 123
+
         CONF.set_override('shelved_offload_time', shelved_offload_time)
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
@@ -54,29 +65,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.useFixture(utils_fixture.TimeFixture())
         instance.task_state = task_states.SHELVING
         instance.save()
-
-        self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute.driver, 'snapshot')
-        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'cleanup_instance_network_on_host')
-
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'shelve.start')
-        if clean_shutdown:
-            self.compute.driver.power_off(instance,
-                                          CONF.shutdown_timeout,
-                                          self.compute.SHUTDOWN_RETRY_INTERVAL)
-        else:
-            self.compute.driver.power_off(instance, 0, 0)
-        self.compute._get_power_state(self.context,
-                instance).AndReturn(123)
-        if CONF.shelved_offload_time == 0:
-            self.compute.network_api.cleanup_instance_network_on_host(
-                self.context, instance, instance.host)
-        self.compute.driver.snapshot(self.context, instance, 'fake_image_id',
-                mox.IgnoreArg())
 
         tracking = {'last_state': instance.vm_state}
 
@@ -115,27 +103,54 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             else:
                 self.fail('Unexpected save!')
 
-        self.compute._notify_about_instance_usage(self.context,
-                                                  instance, 'shelve.end')
-        if CONF.shelved_offload_time == 0:
-            self.compute._notify_about_instance_usage(self.context, instance,
-                'shelve_offload.start')
-            self.compute.driver.power_off(instance, 0, 0)
-            self.compute._get_power_state(self.context,
-                                          instance).AndReturn(123)
-            self.compute._notify_about_instance_usage(self.context, instance,
-                                                      'shelve_offload.end')
-        self.mox.ReplayAll()
-
         with mock.patch.object(instance, 'save') as mock_save:
             mock_save.side_effect = check_save
             self.compute.shelve_instance(self.context, instance,
-                    image_id=image_id, clean_shutdown=clean_shutdown)
+                                         image_id=image_id,
+                                         clean_shutdown=clean_shutdown)
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
                           action='shelve', phase='start'),
                 mock.call(self.context, instance, 'fake-mini',
                           action='shelve', phase='end')])
+
+        # prepare expect call lists
+        mock_notify_instance_usage_call_list = [
+            mock.call(self.context, instance, 'shelve.start'),
+            mock.call(self.context, instance, 'shelve.end')]
+        mock_power_off_call_list = []
+        mock_get_power_state_call_list = [
+            mock.call(self.context, instance)]
+        mock_cleanup_call_list = []
+
+        if clean_shutdown:
+            mock_power_off_call_list.append(
+                mock.call(instance, CONF.shutdown_timeout,
+                          self.compute.SHUTDOWN_RETRY_INTERVAL))
+        else:
+            mock_power_off_call_list.append(mock.call(instance, 0, 0))
+
+        if CONF.shelved_offload_time == 0:
+            mock_notify_instance_usage_call_list.extend([
+                mock.call(self.context, instance, 'shelve_offload.start'),
+                mock.call(self.context, instance, 'shelve_offload.end')])
+            mock_power_off_call_list.append(mock.call(instance, 0, 0))
+            mock_get_power_state_call_list.append(mock.call(self.context,
+                                                            instance))
+            # instance.host is replaced with host because
+            # original instance.host is clear after
+            # ComputeManager.shelve_instance execute with
+            # shelved_offload_time == 0
+            mock_cleanup_call_list.append(mock.call(self.context, instance,
+                                                    host))
+
+        mock_notify_instance_usage.assert_has_calls(
+            mock_notify_instance_usage_call_list)
+        mock_power_off.assert_has_calls(mock_power_off_call_list)
+        mock_cleanup.assert_has_calls(mock_cleanup_call_list)
+        mock_snapshot.assert_called_once_with(self.context, instance,
+                                              'fake_image_id', mock.ANY)
+        mock_get_power_state.assert_has_calls(mock_get_power_state_call_list)
 
     def test_shelve(self):
         self._shelve_instance(-1)
