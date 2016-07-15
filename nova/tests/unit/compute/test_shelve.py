@@ -523,8 +523,10 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
             return metadata
 
         fake_image.stub_out_image_service(self)
-        self.stubs.Set(fake_image._FakeImageService, '__init__', fake_init)
-        self.stubs.Set(fake_image._FakeImageService, 'create', fake_create)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.__init__',
+                      fake_init)
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.create',
+                      fake_create)
 
         self.compute_api.shelve(self.context, instance)
 
