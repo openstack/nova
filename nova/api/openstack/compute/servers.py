@@ -14,9 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
-import re
-
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
@@ -440,22 +437,6 @@ class ServersController(wsgi.Controller):
                 raise exc.HTTPBadRequest(explanation=expl)
 
         return objects.NetworkRequestList(objects=networks)
-
-    # NOTE(vish): Without this regex, b64decode will happily
-    #             ignore illegal bytes in the base64 encoded
-    #             data.
-    B64_REGEX = re.compile('^(?:[A-Za-z0-9+\/]{4})*'
-                           '(?:[A-Za-z0-9+\/]{2}=='
-                           '|[A-Za-z0-9+\/]{3}=)?$')
-
-    def _decode_base64(self, data):
-        data = re.sub(r'\s', '', data)
-        if not self.B64_REGEX.match(data):
-            return None
-        try:
-            return base64.b64decode(data)
-        except TypeError:
-            return None
 
     @extensions.expected_errors(404)
     def show(self, req, id):

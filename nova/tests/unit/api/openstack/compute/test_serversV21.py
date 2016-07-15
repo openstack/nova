@@ -150,42 +150,6 @@ class MockSetAdminPassword(object):
         self.password = password
 
 
-class Base64ValidationTest(test.TestCase):
-    def setUp(self):
-        super(Base64ValidationTest, self).setUp()
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
-
-    def test_decode_base64(self):
-        value = "A random string"
-        result = self.controller._decode_base64(base64.b64encode(value))
-        self.assertEqual(result, value)
-
-    def test_decode_base64_binary(self):
-        value = "\x00\x12\x75\x99"
-        result = self.controller._decode_base64(base64.b64encode(value))
-        self.assertEqual(result, value)
-
-    def test_decode_base64_whitespace(self):
-        value = "A random string"
-        encoded = base64.b64encode(value)
-        white = "\n \n%s\t%s\n" % (encoded[:2], encoded[2:])
-        result = self.controller._decode_base64(white)
-        self.assertEqual(result, value)
-
-    def test_decode_base64_invalid(self):
-        invalid = "A random string"
-        result = self.controller._decode_base64(invalid)
-        self.assertIsNone(result)
-
-    def test_decode_base64_illegal_bytes(self):
-        value = "A random string"
-        encoded = base64.b64encode(value)
-        white = ">\x01%s*%s()" % (encoded[:2], encoded[2:])
-        result = self.controller._decode_base64(white)
-        self.assertIsNone(result)
-
-
 class ControllerTest(test.TestCase):
 
     def setUp(self):
