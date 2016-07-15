@@ -85,10 +85,7 @@ NOVA_VIF_DRIVER = 'nova.virt.hyperv.vif.HyperVNovaNetworkVIFDriver'
 
 def get_network_driver():
     """"Return the correct network module"""
-    if nova.network.is_neutron() is None:
-        # this is an unknown network type, not neutron or nova
-        raise KeyError()
-    elif nova.network.is_neutron():
+    if nova.network.is_neutron():
         return NEUTRON_VIF_DRIVER
     else:
         return NOVA_VIF_DRIVER
@@ -115,13 +112,8 @@ class VMOps(object):
         self._load_vif_driver_class()
 
     def _load_vif_driver_class(self):
-        try:
-            class_name = get_network_driver()
-            self._vif_driver = importutils.import_object(class_name)
-        except KeyError:
-            raise TypeError(_("VIF driver not found for "
-                              "network_api_class: %s") %
-                            CONF.network_api_class)
+        class_name = get_network_driver()
+        self._vif_driver = importutils.import_object(class_name)
 
     def list_instance_uuids(self):
         instance_uuids = []

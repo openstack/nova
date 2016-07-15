@@ -1093,10 +1093,7 @@ def is_neutron():
     if _IS_NEUTRON is not None:
         return _IS_NEUTRON
 
-    # TODO(sdague): As long as network_api_class is importable
-    # is_neutron can return None to mean we have no idea what their
-    # class is.
-    _IS_NEUTRON = (nova.network.is_neutron() is True)
+    _IS_NEUTRON = nova.network.is_neutron()
     return _IS_NEUTRON
 
 

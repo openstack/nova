@@ -257,12 +257,6 @@ with the name 'mtu'.
 
     None
 """),
-    cfg.StrOpt('network_api_class',
-               default=NOVA_NET_API,
-               help='DEPRECATED: The full class name of the '
-                    'network API class to use. ``use_neutron`` '
-                    'should be used instead.',
-               deprecated_for_removal=True),
     cfg.BoolOpt('use_neutron',
                 default=False,
                 help="Whether to use Neutron or Nova Network as the back end "
