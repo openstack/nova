@@ -28,8 +28,14 @@ flavor_opts = [
                default='m1.small',
                deprecated_for_removal=True,
                deprecated_reason='The EC2 API is deprecated',
-               help='DEPRECATED: Default flavor to use for the EC2 API only. '
-                    'The Nova API does not support a default flavor.'),
+               help="""
+Default flavor to use for the EC2 API only.
+The Nova API does not support a default flavor.
+
+Possible values:
+
+* Any flavor name, e.g. m1.tiny, m1.small (Default), m1.medium, m1.large
+"""),
 ]
 
 
