@@ -174,6 +174,13 @@ class RequestContext(context.RequestContext):
             'instance_lock_checked': getattr(self, 'instance_lock_checked',
                                              False)
         })
+        # NOTE(tonyb): This can be removed once we're certain to have a
+        # RequestContext contains 'is_admin_project', We can only get away with
+        # this because we "know" the default value of 'is_admin_project' which
+        # is very fragile.
+        values.update({
+            'is_admin_project': getattr(self, 'is_admin_project', True),
+        })
         return values
 
     @classmethod
