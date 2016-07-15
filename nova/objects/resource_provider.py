@@ -358,14 +358,20 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('ResourceProvider'),
     }
 
+    allowed_filters = (
+        'name', 'uuid'
+    )
+
     @staticmethod
     @db_api.placement_context_manager.reader
     def _get_all_by_filters_from_db(context, filters):
         if not filters:
             filters = {}
         query = context.session.query(models.ResourceProvider)
-        if 'name' in filters:
-            query = query.filter_by(name=filters['name'])
+        for attr in ResourceProviderList.allowed_filters:
+            if attr in filters:
+                query = query.filter(
+                    getattr(models.ResourceProvider, attr) == filters[attr])
         query = query.filter_by(can_host=filters.get('can_host', 0))
         return query.all()
 

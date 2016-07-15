@@ -175,8 +175,27 @@ def list_resource_providers(req):
     a collection of resource providers.
     """
     context = req.environ['placement.context']
+
+    allowed_filters = set(objects.ResourceProviderList.allowed_filters)
+    passed_filters = set(req.GET.keys())
+    invalid_filters = passed_filters - allowed_filters
+    if invalid_filters:
+        raise webob.exc.HTTPBadRequest(
+            'Invalid filters: %s' % ', '.join(invalid_filters),
+            json_formatter=util.json_error_formatter)
+
+    if 'uuid' in req.GET and not uuidutils.is_uuid_like(req.GET['uuid']):
+        raise webob.exc.HTTPBadRequest(
+            'Invalid uuid value: %s' % req.GET['uuid'],
+            json_formatter=util.json_error_formatter)
+
+    filters = {}
+    for attr in objects.ResourceProviderList.allowed_filters:
+        if attr in req.GET:
+            filters[attr] = req.GET[attr]
     resource_providers = objects.ResourceProviderList.get_all_by_filters(
-        context)
+        context, filters)
+
     response = req.response
     response.body = jsonutils.dumps(_serialize_providers(
         req.environ, resource_providers))

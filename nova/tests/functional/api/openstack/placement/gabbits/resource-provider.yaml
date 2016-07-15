@@ -98,6 +98,50 @@ tests:
       $.resource_providers[0].links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
       $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
 
+- name: filter out all resource providers by name
+  GET: /resource_providers?name=flubblebubble
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: filter out all resource providers by uuid
+  GET: /resource_providers?uuid=d67370b5-4dc0-470d-a4fa-85e8e89abc6c
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: list one resource provider filtering by name
+  GET: /resource_providers?name=$ENVIRON['RP_NAME']
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+      $.resource_providers[0].name: $ENVIRON['RP_NAME']
+      $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.resource_providers[0].links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+
+- name: list resource providers filtering by invalid uuid
+  GET: /resource_providers?uuid=spameggs
+  status: 400
+  response_strings:
+      - 'Invalid uuid value: spameggs'
+
+- name: list resource providers providing an invalid filter
+  GET: /resource_providers?spam=eggs
+  status: 400
+  response_strings:
+      - 'Invalid filters: spam'
+
+- name: list one resource provider filtering by uuid
+  GET: /resource_providers?uuid=$ENVIRON['RP_UUID']
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+      $.resource_providers[0].name: $ENVIRON['RP_NAME']
+      $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.resource_providers[0].links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+
 - name: update a resource provider
   PUT: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']
   request_headers:
