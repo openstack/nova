@@ -11,7 +11,6 @@
 #    under the License.
 
 import mock
-from mox3 import mox
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 
@@ -20,6 +19,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import db
+from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova import test
 from nova.tests.unit.compute import test_compute
@@ -179,7 +179,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_update_resource_tracker')
     @mock.patch.object(nova.compute.manager.ComputeManager,
-                       '_get_power_state', return_value = 123)
+                       '_get_power_state', return_value=123)
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_notify_about_instance_usage')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
@@ -222,7 +222,18 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         return instance
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_unshelve(self, mock_notify):
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_notify_about_instance_usage')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_prep_block_device', return_value='fake_bdm')
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'spawn')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_power_state', return_value=123)
+    @mock.patch.object(neutron_api.API, 'setup_instance_network_on_host')
+    def test_unshelve(self, mock_setup_network,
+                      mock_get_power_state, mock_spawn,
+                      mock_prep_block_device, mock_notify_instance_usage,
+                      mock_notify_instance_action):
         instance = self._create_fake_instance_obj()
         instance.task_state = task_states.UNSHELVING
         instance.save()
@@ -239,14 +250,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         sys_meta['shelved_image_id'] = image['id']
         sys_meta['shelved_host'] = host
         instance.system_metadata = sys_meta
-
-        self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.rt, 'instance_claim')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_instance_network_on_host')
 
         self.deleted_image_id = None
 
@@ -280,23 +283,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 self.fail('Unexpected save!')
 
         fake_image.stub_out_image_service(self)
-        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
-
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'unshelve.start')
-        self.compute._prep_block_device(self.context, instance,
-                mox.IgnoreArg()).AndReturn('fake_bdm')
-        self.compute.network_api.setup_instance_network_on_host(
-                self.context, instance, self.compute.host)
-        self.compute.driver.spawn(self.context, instance,
-                mox.IsA(objects.ImageMeta),
-                injected_files=[], admin_password=None,
-                network_info=[],
-                block_device_info='fake_bdm')
-        self.compute._get_power_state(self.context, instance).AndReturn(123)
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'unshelve.end')
-        self.mox.ReplayAll()
+        self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
+                      fake_delete)
 
         with mock.patch.object(self.rt, 'instance_claim',
                                side_effect=fake_claim), \
@@ -307,11 +295,28 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 filter_properties=filter_properties,
                 node=node)
 
-            mock_notify.assert_has_calls([
-                mock.call(self.context, instance, 'fake-mini',
-                          action='unshelve', phase='start'),
-                mock.call(self.context, instance, 'fake-mini',
-                          action='unshelve', phase='end')])
+        mock_notify_instance_action.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='unshelve', phase='start'),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='unshelve', phase='end')])
+
+        # prepare expect call lists
+        mock_notify_instance_usage_call_list = [
+            mock.call(self.context, instance, 'unshelve.start'),
+            mock.call(self.context, instance, 'unshelve.end')]
+
+        mock_notify_instance_usage.assert_has_calls(
+            mock_notify_instance_usage_call_list)
+        mock_prep_block_device.assert_called_once_with(self.context,
+            instance, mock.ANY)
+        mock_setup_network.assert_called_once_with(self.context, instance,
+                                                   self.compute.host)
+        mock_spawn.assert_called_once_with(self.context, instance,
+                test.MatchType(objects.ImageMeta), injected_files=[],
+                admin_password=None, network_info=[],
+                block_device_info='fake_bdm')
+        mock_get_power_state.assert_called_once_with(self.context, instance)
 
         self.assertNotIn('shelved_at', instance.system_metadata)
         self.assertNotIn('shelved_image_id', instance.system_metadata)
@@ -326,9 +331,24 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.assertEqual(self.compute.host, instance.host)
         self.assertFalse(instance.auto_disk_config)
 
-    @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_unshelve_volume_backed(self, mock_notify, mock_image_meta):
+    @mock.patch.object(nova.compute.resource_tracker.ResourceTracker,
+                       'instance_claim')
+    @mock.patch.object(neutron_api.API, 'setup_instance_network_on_host')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_get_power_state', return_value=123)
+    @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'spawn')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_prep_block_device', return_value='fake_bdm')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_notify_about_instance_usage')
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    def test_unshelve_volume_backed(self, mock_image_meta,
+                                    mock_notify_instance_usage,
+                                    mock_prep_block_device, mock_spawn,
+                                    mock_get_power_state,
+                                    mock_setup_network, mock_instance_claim,
+                                    mock_notify_instance_action):
         instance = self._create_fake_instance_obj()
         node = test_compute.NODENAME
         limits = {}
@@ -338,15 +358,15 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         image_meta = {'properties': {'base_image_ref': uuids.image_id}}
         mock_image_meta.return_value = image_meta
 
-        self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
-        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
-        self.mox.StubOutWithMock(self.compute.driver, 'spawn')
-        self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.rt, 'instance_claim')
-        self.mox.StubOutWithMock(self.compute.network_api,
-                                 'setup_instance_network_on_host')
-
         tracking = {'last_state': instance.task_state}
+
+        def fake_claim(context, instance, node, limits):
+            instance.host = self.compute.host
+            requests = objects.InstancePCIRequests(requests=[])
+            return claims.Claim(context, instance, test_compute.NODENAME,
+                                self.rt, _fake_resources(),
+                                requests)
+        mock_instance_claim.side_effect = fake_claim
 
         def check_save(expected_task_state=None):
             if tracking['last_state'] == task_states.UNSHELVING:
@@ -363,31 +383,37 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             else:
                 self.fail('Unexpected save!')
 
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'unshelve.start')
-
-        self.compute._prep_block_device(self.context, instance,
-                mox.IgnoreArg()).AndReturn('fake_bdm')
-        self.compute.network_api.setup_instance_network_on_host(
-                self.context, instance, self.compute.host)
-        self.rt.instance_claim(self.context, instance, node, limits).AndReturn(
-                claims.Claim(self.context, instance, test_compute.NODENAME,
-                             self.rt, _fake_resources(),
-                             objects.InstancePCIRequests(requests=[])))
-        self.compute.driver.spawn(self.context, instance,
-                mox.IsA(objects.ImageMeta),
-                injected_files=[], admin_password=None,
-                network_info=[],
-                block_device_info='fake_bdm')
-        self.compute._get_power_state(self.context, instance).AndReturn(123)
-        self.compute._notify_about_instance_usage(self.context, instance,
-                'unshelve.end')
-        self.mox.ReplayAll()
-
         with mock.patch.object(instance, 'save') as mock_save:
             mock_save.side_effect = check_save
             self.compute.unshelve_instance(self.context, instance, image=None,
                     filter_properties=filter_properties, node=node)
+
+        mock_notify_instance_action.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      action='unshelve', phase='start'),
+            mock.call(self.context, instance, 'fake-mini',
+                      action='unshelve', phase='end')])
+
+        # prepare expect call lists
+        mock_notify_instance_usage_call_list = [
+            mock.call(self.context, instance, 'unshelve.start'),
+            mock.call(self.context, instance, 'unshelve.end')]
+
+        mock_notify_instance_usage.assert_has_calls(
+            mock_notify_instance_usage_call_list)
+        mock_prep_block_device.assert_called_once_with(self.context, instance,
+                mock.ANY)
+        mock_setup_network.assert_called_once_with(self.context, instance,
+                                                   self.compute.host)
+        mock_instance_claim.assert_called_once_with(self.context, instance,
+                                                    test_compute.NODENAME,
+                                                    limits)
+        mock_spawn.assert_called_once_with(self.context, instance,
+                test.MatchType(objects.ImageMeta),
+                injected_files=[], admin_password=None,
+                network_info=[],
+                block_device_info='fake_bdm')
+        mock_get_power_state.assert_called_once_with(self.context, instance)
 
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
     def test_shelved_poll_none_offloaded(self, mock_get_by_filters):
