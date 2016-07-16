@@ -318,8 +318,8 @@ class MigrationOps(object):
         elif sum(eph['size'] for eph in ephemerals) != new_eph_gb:
             # New ephemeral size is different from the original ephemeral size
             # and there are multiple ephemerals.
-            LOG.warn(_LW("Cannot resize multiple ephemeral disks for "
-                         "instance."), instance=instance)
+            LOG.warning(_LW("Cannot resize multiple ephemeral disks for "
+                            "instance."), instance=instance)
 
         for index, eph in enumerate(ephemerals):
             eph_name = "eph%s" % index

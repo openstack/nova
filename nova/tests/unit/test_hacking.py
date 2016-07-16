@@ -747,6 +747,18 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_errors(code, checks.no_os_popen,
                                 expected_errors=errors)
 
+    def test_no_log_warn(self):
+        code = """
+                  LOG.warn("LOG.warn is deprecated")
+               """
+        errors = [(1, 0, 'N352')]
+        self._assert_has_errors(code, checks.no_log_warn,
+                                expected_errors=errors)
+        code = """
+                  LOG.warning("LOG.warn is deprecated")
+               """
+        self._assert_has_no_errors(code, checks.no_log_warn)
+
     def test_uncalled_closures(self):
 
         checker = checks.CheckForUncalledTestClosure

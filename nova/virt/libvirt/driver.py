@@ -3063,8 +3063,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   files)
 
         elif need_inject:
-            LOG.warn(_LW('File injection into a boot from volume '
-                         'instance is not supported'), instance=instance)
+            LOG.warning(_LW('File injection into a boot from volume '
+                            'instance is not supported'), instance=instance)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(instance.os_type)
@@ -4296,9 +4296,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 if self._has_uefi_support():
                     global uefi_logged
                     if not uefi_logged:
-                        LOG.warn(_LW("uefi support is without some kind of "
-                                     "functional testing and therefore "
-                                     "considered experimental."))
+                        LOG.warning(_LW("uefi support is without some kind of "
+                                        "functional testing and therefore "
+                                        "considered experimental."))
                         uefi_logged = True
                     guest.os_loader = DEFAULT_UEFI_LOADER_PATH[
                         caps.host.cpu.arch]

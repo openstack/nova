@@ -802,6 +802,20 @@ def no_os_popen(logical_line):
                  'Replace it using subprocess module. ')
 
 
+def no_log_warn(logical_line):
+    """Disallow 'LOG.warn('
+
+    Deprecated LOG.warn(), instead use LOG.warning
+    https://bugs.launchpad.net/senlin/+bug/1508442
+
+    N352
+    """
+
+    msg = ("N352: LOG.warn is deprecated, please use LOG.warning!")
+    if "LOG.warn(" in logical_line:
+        yield (0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -839,4 +853,5 @@ def factory(register):
     register(check_python3_no_itervalues)
     register(cfg_help_with_enough_text)
     register(no_os_popen)
+    register(no_log_warn)
     register(CheckForUncalledTestClosure)
