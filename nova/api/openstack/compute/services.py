@@ -33,6 +33,7 @@ class ServiceController(wsgi.Controller):
 
     def __init__(self):
         self.host_api = compute.HostAPI()
+        self.aggregate_api = compute.api.AggregateAPI()
         self.servicegroup_api = servicegroup.API()
         self.actions = {"enable": self._enable,
                         "disable": self._disable,
@@ -178,7 +179,17 @@ class ServiceController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
+            service = self.host_api.service_get_by_id(context, id)
+            # remove the service from all the aggregates in which it's included
+            if service.binary == 'nova-compute':
+                aggrs = self.aggregate_api.get_aggregates_by_host(context,
+                                                                  service.host)
+                for ag in aggrs:
+                    self.aggregate_api.remove_host_from_aggregate(context,
+                                                                  ag.id,
+                                                                  service.host)
             self.host_api.service_delete(context, id)
+
         except exception.ServiceNotFound:
             explanation = _("Service %s not found.") % id
             raise webob.exc.HTTPNotFound(explanation=explanation)

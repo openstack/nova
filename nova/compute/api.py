@@ -3619,6 +3619,10 @@ class HostAPI(base.Base):
                 ret_services.append(service)
         return ret_services
 
+    def service_get_by_id(self, context, service_id):
+        """Get service entry for the given service id."""
+        return objects.Service.get_by_id(context, service_id)
+
     def service_get_by_compute_host(self, context, host_name):
         """Get service entry for the given compute hostname."""
         return objects.Service.get_by_compute_host(context, host_name)
@@ -3720,6 +3724,10 @@ class AggregateAPI(base.Base):
     def get_aggregate_list(self, context):
         """Get all the aggregates."""
         return objects.AggregateList.get_all(context)
+
+    def get_aggregates_by_host(self, context, compute_host):
+        """Get all the aggregates where the given host is presented."""
+        return objects.AggregateList.get_by_host(context, compute_host)
 
     @wrap_exception()
     def update_aggregate(self, context, aggregate_id, values):
