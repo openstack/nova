@@ -23,7 +23,15 @@
 from oslo_config import cfg
 from oslo_utils import units
 
-xenserver_group = cfg.OptGroup('xenserver', title='Xenserver Options')
+xenserver_group = cfg.OptGroup('xenserver',
+                               title='Xenserver Options',
+                               help="""
+XenServer options are used when the compute_driver is set to use
+XenServer (compute_driver=xenapi.XenAPIDriver).
+
+Must specify connection_url, and connection_password to use
+compute_driver=xenapi.XenAPIDriver.
+""")
 
 xenapi_agent_opts = [
     cfg.IntOpt('agent_timeout',
@@ -234,62 +242,125 @@ xenapi_vm_utils_opts = [
 
 xenapi_opts = [
     cfg.StrOpt('connection_url',
-               help='URL for connection to XenServer/Xen Cloud Platform. '
-                    'A special value of unix://local can be used to connect '
-                    'to the local unix socket.  '
-                    'Required if compute_driver=xenapi.XenAPIDriver'),
+               help="""
+URL for connection to XenServer/Xen Cloud Platform. A special value
+of unix://local can be used to connect to the local unix socket.
+
+Possible values:
+
+* Any string that represents a URL. The connection_url is
+  generally the management network IP address of the XenServer.
+* This option must be set if you chose the XenServer driver.
+"""),
     cfg.StrOpt('connection_username',
                default='root',
-               help='Username for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
+               help='Username for connection to XenServer/Xen Cloud Platform'),
     cfg.StrOpt('connection_password',
-               help='Password for connection to XenServer/Xen Cloud Platform. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver',
-               secret=True),
+               secret=True,
+               help='Password for connection to XenServer/Xen Cloud Platform'),
     cfg.FloatOpt('vhd_coalesce_poll_interval',
                  default=5.0,
-                 help='The interval used for polling of coalescing vhds. '
-                      'Used only if compute_driver=xenapi.XenAPIDriver'),
+                 min=0,
+                 help="""
+The interval used for polling of coalescing vhds.
+
+This is the interval after which the task of coalesce VHD is
+performed, until it reaches the max attempts that is set by
+vhd_coalesce_max_attempts.
+
+Related options:
+
+* `vhd_coalesce_max_attempts`
+"""),
     cfg.BoolOpt('check_host',
                 default=True,
-                help='Ensure compute service is running on host XenAPI '
-                     'connects to.'),
+                help="""
+Ensure compute service is running on host XenAPI connects to.
+This option must be set to false if the 'independent_compute'
+option is set to true.
+
+Possible values:
+
+* Setting this option to true will make sure that compute service
+  is running on the same host that is specified by connection_url.
+* Setting this option to false, doesn't perform the check.
+
+Related options:
+
+* `independent_compute`
+"""),
     cfg.IntOpt('vhd_coalesce_max_attempts',
+               min=0,
                default=20,
-               help='Max number of times to poll for VHD to coalesce. '
-                    'Used only if compute_driver=xenapi.XenAPIDriver'),
+               help="""
+Max number of times to poll for VHD to coalesce.
+
+This option determines the maximum number of attempts that can be
+made for coalescing the VHD before giving up.
+
+Related opitons:
+
+* `vhd_coalesce_poll_interval`
+"""),
     cfg.StrOpt('sr_base_path',
                default='/var/run/sr-mount',
-               help='Base path to the storage repository'),
+               help="""
+Base path to the storage repository on the XenServer host.
+"""),
     cfg.StrOpt('target_host',
-               help='The iSCSI Target Host'),
+               help="""
+The iSCSI Target Host.
+
+This option represents the hostname or ip of the iSCSI Target.
+If the target host is not present in the connection information from
+the volume provider then the value from this option is taken.
+
+Possible values:
+
+* Any string that represents hostname/ip of Target.
+"""),
+    # TODO(aunnam): This should be PortOpt
     cfg.StrOpt('target_port',
                default='3260',
-               help='The iSCSI Target Port, default is port 3260'),
+               help="""
+The iSCSI Target Port.
+
+This option represents the port of the iSCSI Target. If the
+target port is not present in the connection information from the
+volume provider then the value from this option is taken.
+"""),
     # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
     # when we pull support for it, we should remove this
     cfg.BoolOpt('remap_vbd_dev',
                 default=False,
-                help='Used to enable the remapping of VBD dev '
-                     '(Works around an issue in Ubuntu Maverick)'),
+                help="""
+Used to enable the remapping of VBD dev.
+(Works around an issue in Ubuntu Maverick)
+"""),
     cfg.StrOpt('remap_vbd_dev_prefix',
                default='sd',
-               help='Specify prefix to remap VBD dev to '
-                    '(ex. /dev/xvdb -> /dev/sdb)'),
+               help="""
+Specify prefix to remap VBD dev to (ex. /dev/xvdb -> /dev/sdb).
+
+Related options:
+
+* If `remap_vbd_dev` is set to False this option has no impact.
+"""),
     cfg.BoolOpt('independent_compute',
                 default=False,
                 help="""
-                Used to prevent attempts to attach VBDs locally, so Nova can
-                be run in a VM on a different host.
+Used to prevent attempts to attach VBDs locally, so Nova can
+be run in a VM on a different host.
 
-                This setting is incompatible with:
-                * ``CONF.flat_injected`` (Must be False)
-                * ``CONF.xenserver.check_host`` (Must be False)
-                * ``CONF.default_ephemeral_format`` (Must be unset or 'ext3')
-                * Joining host aggregates (will error if attempted)
-                * Swap disks for Windows VMs (will error if attempted)
-                * Nova-based auto_configure_disk (will error if attempted)
-                """),
+Related options:
+
+* ``CONF.flat_injected`` (Must be False)
+* ``CONF.xenserver.check_host`` (Must be False)
+* ``CONF.default_ephemeral_format`` (Must be unset or 'ext3')
+* Joining host aggregates (will error if attempted)
+* Swap disks for Windows VMs (will error if attempted)
+* Nova-based auto_configure_disk (will error if attempted)
+""")
 ]
 
 xenapi_vmops_opts = [
