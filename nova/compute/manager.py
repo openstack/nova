@@ -4375,13 +4375,12 @@ class ComputeManager(manager.Manager):
         output = self.driver.get_console_output(context, instance)
 
         if type(output) is six.text_type:
-            # the console output will be bytes.
             output = six.b(output)
 
         if tail_length is not None:
             output = self._tail_log(output, tail_length)
 
-        return output.decode('utf-8', 'replace').encode('ascii', 'replace')
+        return output.decode('ascii', 'replace')
 
     def _tail_log(self, log, length):
         try:
