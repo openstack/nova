@@ -87,9 +87,15 @@ class SchedulerOptions(object):
             if now - self.last_checked < datetime.timedelta(minutes=5):
                 return self.data
 
+        self.last_checked = self._get_time_now()
+        LOG.debug('Start to check scheduler configuration file at: %s',
+                  self.last_checked)
+
         last_modified = self._get_file_timestamp(filename)
         if (not last_modified or not self.last_modified or
                 last_modified > self.last_modified):
+            LOG.debug('Start to load scheduler configuration file which'
+                      'modified at: %s', last_modified)
             self.data = self._load_file(self._get_file_handle(filename))
             self.last_modified = last_modified
         if not self.data:

@@ -64,9 +64,11 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
         jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
-                                                                  {}, jdata)
+                                    {}, jdata)
+        self.assertIsNone(fake.last_checked)
         self.assertEqual({}, fake.get_configuration())
         self.assertFalse(fake.file_was_loaded)
+        self.assertIsNone(fake.last_checked)
 
     def test_get_configuration_first_time_empty_file(self):
         last_checked = None
@@ -77,9 +79,12 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
         jdata = ""
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
-                                                                  {}, jdata)
+                                    {}, jdata)
+
+        self.assertIsNone(fake.last_checked)
         self.assertEqual({}, fake.get_configuration('foo.json'))
         self.assertTrue(fake.file_was_loaded)
+        self.assertEqual(now, fake.last_checked)
 
     def test_get_configuration_first_time_happy_day(self):
         last_checked = None
@@ -91,9 +96,11 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
         jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
-                                                                  {}, jdata)
+                                    {}, jdata)
+        self.assertIsNone(fake.last_checked)
         self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertTrue(fake.file_was_loaded)
+        self.assertEqual(now, fake.last_checked)
 
     def test_get_configuration_second_time_no_change(self):
         last_checked = datetime.datetime(2011, 1, 1, 1, 1, 1)
@@ -105,24 +112,38 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
         jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
-                                                                 data, jdata)
+                                    data, jdata)
+
+        self.assertEqual(last_checked, fake.last_checked)
         self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertFalse(fake.file_was_loaded)
+        self.assertEqual(now, fake.last_checked)
 
     def test_get_configuration_second_time_too_fast(self):
-        last_checked = datetime.datetime(2011, 1, 1, 1, 1, 1)
-        now = datetime.datetime(2011, 1, 1, 1, 1, 2)
+        # first check
+        last_checked = None
+        fisrt_now = datetime.datetime(2013, 1, 1, 1, 1, 2)
         file_old = datetime.datetime(2012, 1, 1, 1, 1, 1)
         file_now = datetime.datetime(2013, 1, 1, 1, 1, 1)
-
         old_data = dict(a=1, b=2, c=3)
         data = dict(a=11, b=12, c=13)
         jdata = jsonutils.dumps(data)
+        fake = FakeSchedulerOptions(last_checked, fisrt_now, file_old,
+                                    file_now, old_data, jdata)
+        self.assertIsNone(fake.last_checked)
+        self.assertEqual(data, fake.get_configuration('foo.json'))
+        self.assertTrue(fake.file_was_loaded)
+        self.assertEqual(fisrt_now, fake.last_checked)
 
-        fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
-                                                            old_data, jdata)
-        self.assertEqual(old_data, fake.get_configuration('foo.json'))
+        # second time too fast, so won't check/load again
+        sec_now = datetime.datetime(2013, 1, 1, 1, 1, 3)
+        fake.file_was_loaded = False
+        fake._time_now = sec_now
+        fake._file_data = dict(a=21, b=22, c=23)
+
+        self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertFalse(fake.file_was_loaded)
+        self.assertEqual(fisrt_now, fake.last_checked)
 
     def test_get_configuration_second_time_change(self):
         last_checked = datetime.datetime(2011, 1, 1, 1, 1, 1)
@@ -135,6 +156,8 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
         jdata = jsonutils.dumps(data)
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
-                                                            old_data, jdata)
+                                    old_data, jdata)
+        self.assertEqual(last_checked, fake.last_checked)
         self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertTrue(fake.file_was_loaded)
+        self.assertEqual(now, fake.last_checked)
