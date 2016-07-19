@@ -752,7 +752,7 @@ def _pack_instance_onto_cores(available_siblings,
                   len(instance_cell))
     elif (instance_cell.cpu_thread_policy ==
             fields.CPUThreadAllocationPolicy.PREFER):
-        LOG.debug("Request 'prefer' thread policy for %d cores",
+        LOG.debug("Requested 'prefer' thread policy for %d cores",
                   len(instance_cell))
     elif (instance_cell.cpu_thread_policy ==
             fields.CPUThreadAllocationPolicy.ISOLATE):
@@ -774,7 +774,7 @@ def _pack_instance_onto_cores(available_siblings,
         pinning = _get_pinning(1,  # we only want to "use" one thread per core
                                sibling_sets[threads_per_core],
                                instance_cell.cpuset)
-    else:
+    else:  # REQUIRE, PREFER (explicit, implicit)
         # NOTE(ndipanov): We iterate over the sibling sets in descending order
         # of cores that can be packed. This is an attempt to evenly distribute
         # instances among physical cores
@@ -794,6 +794,15 @@ def _pack_instance_onto_cores(available_siblings,
                                    instance_cell.cpuset)
             if pinning:
                 break
+
+        # NOTE(sfinucan): If siblings weren't available and we're using PREFER
+        # (implicitly or explicitly), fall back to linear assignment across
+        # cores
+        if (instance_cell.cpu_thread_policy !=
+                fields.CPUThreadAllocationPolicy.REQUIRE and
+                not pinning):
+            pinning = zip(sorted(instance_cell.cpuset),
+                          itertools.chain(*sibling_set))
 
         threads_no = _threads(instance_cell, threads_no)
 
