@@ -255,22 +255,72 @@ Related options:
     ``use_neutron``, ``gateway``
 """),
     cfg.IntOpt("cnt_vpn_clients",
-               default=0,
-               help="Number of addresses reserved for vpn clients"),
+            default=0,
+            help="""
+This option represents the number of IP addresses to reserve at the top of the
+address range for VPN clients. It also will be ignored if the configuration
+option for `network_manager` is not set to the default of
+'nova.network.manager.VlanManager'.
+
+Possible values:
+
+    Any integer, 0 or greater. The default is 0.
+
+Related options:
+
+    ``use_neutron``, ``network_manager``
+"""),
     cfg.IntOpt("fixed_ip_disassociate_timeout",
-               default=600,
-               help="Seconds after which a deallocated IP is disassociated"),
+            default=600,
+            help="""
+This is the number of seconds to wait before disassociating a deallocated fixed
+IP address. This is only used with the nova-network service, and has no effect
+when using neutron for networking.
+
+Possible values:
+
+    Any integer, zero or greater. The default is 600 (10 minutes).
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.IntOpt("create_unique_mac_address_attempts",
-               default=5,
-               help="Number of attempts to create unique mac address"),
+            default=5,
+            help="""
+This option determines how many times nova-network will attempt to create a
+unique MAC address before giving up and raising a
+`VirtualInterfaceMacAddressException` error.
+
+Possible values:
+
+    Any positive integer. The default is 5.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.BoolOpt("fake_call",
-                default=False,
-                help="If True, skip using the queue and make local calls"),
+            default=False,
+            help="""
+When this option is True, calls are made locally instead of being placed in the
+queue. However, all usage of this config option have been removed, so it
+currently has no effect at all.
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.BoolOpt("teardown_unused_network_gateway",
-                default=False,
-                help="If True, unused gateway devices (VLAN and bridge) are "
-                     "deleted in VLAN network mode with multi hosted "
-                     "networks"),
+            default=False,
+            help="""
+Determines whether unused gateway devices, both VLAN and bridge, are deleted if
+the network is in nova-network VLAN mode and is multi-hosted.
+
+Related options:
+
+    ``use_neutron``, ``vpn_ip``, ``fake_network``
+"""),
     cfg.BoolOpt("force_dhcp_release",
                 default=True,
                 help="If True, send a dhcp release on instance termination"),
