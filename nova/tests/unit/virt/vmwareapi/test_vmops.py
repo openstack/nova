@@ -765,7 +765,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
                                 'fake-disk',
-                                self._instance.root_gb * units.Gi,
+                                self._instance.flavor.root_gb * units.Gi,
                                 device)
         dc_info = ds_util.DcInfo(ref='fake_ref', name='fake',
                                  vmFolder='fake_folder')
@@ -776,7 +776,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             mock_detach_disk = self._vmops._volumeops.detach_disk_from_vm
 
             flavor = fake_flavor.fake_flavor_obj(self._context,
-                         root_gb=self._instance.root_gb + 1)
+                         root_gb=self._instance.flavor.root_gb + 1)
             self._vmops._resize_disk(self._instance, 'fake-ref', vmdk, flavor)
             fake_get_dc_ref_and_name.assert_called_once_with(datastore.ref)
             fake_disk_copy.assert_called_once_with(
@@ -861,16 +861,16 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_migrate_disk_and_power_off(self):
         self._test_migrate_disk_and_power_off(
-            flavor_root_gb=self._instance.root_gb + 1)
+            flavor_root_gb=self._instance.flavor.root_gb + 1)
 
     def test_migrate_disk_and_power_off_zero_disk_flavor(self):
-        self._instance.root_gb = 0
+        self._instance.flavor.root_gb = 0
         self._test_migrate_disk_and_power_off(flavor_root_gb=0)
 
     def test_migrate_disk_and_power_off_disk_shrink(self):
         self.assertRaises(exception.InstanceFaultRollback,
                           self._test_migrate_disk_and_power_off,
-                          flavor_root_gb=self._instance.root_gb - 1)
+                          flavor_root_gb=self._instance.flavor.root_gb - 1)
 
     @mock.patch.object(vmops.VMwareVMOps, "_remove_ephemerals_and_swap")
     @mock.patch.object(vm_util, 'get_vmdk_info')
@@ -887,7 +887,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
                                 'fake-adapter',
                                 'fake-disk',
-                                self._instance.root_gb * units.Gi,
+                                self._instance.flavor.root_gb * units.Gi,
                                 'fake-device')
         fake_get_vmdk_info.return_value = vmdk
         flavor = fake_flavor.fake_flavor_obj(self._context,
@@ -1040,7 +1040,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.flags(flat_injected=False)
         self.flags(enabled=False, group='vnc')
 
-        image_size = (self._instance.root_gb) * units.Gi / 2
+        image_size = (self._instance.flavor.root_gb) * units.Gi / 2
         image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=image_size)
@@ -1417,7 +1417,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         if extra_specs is None:
             extra_specs = vm_util.ExtraSpecs()
 
-        image_size = (self._instance.root_gb) * units.Gi / 2
+        image_size = (self._instance.flavor.root_gb) * units.Gi / 2
         image = {
             'id': self._image_id,
             'disk_format': 'vmdk',
@@ -1574,7 +1574,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                              extra_specs)
         self.assertEqual(image_info, vi.ii)
         self.assertEqual(self._ds, vi.datastore)
-        self.assertEqual(self._instance.root_gb, vi.root_gb)
+        self.assertEqual(self._instance.flavor.root_gb, vi.root_gb)
         self.assertEqual(self._instance, vi.instance)
         self.assertEqual(self._instance.uuid, vi.instance.uuid)
         self.assertEqual(extra_specs, vi._extra_specs)
@@ -1588,11 +1588,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertEqual(cache_image_folder, str(vi.cache_image_folder))
 
     def test_get_spawn_vm_config_info(self):
-        image_size = (self._instance.root_gb) * units.Gi / 2
+        image_size = (self._instance.flavor.root_gb) * units.Gi / 2
         self._test_get_spawn_vm_config_info(image_size_bytes=image_size)
 
     def test_get_spawn_vm_config_info_image_too_big(self):
-        image_size = (self._instance.root_gb + 1) * units.Gi
+        image_size = (self._instance.flavor.root_gb + 1) * units.Gi
         self.assertRaises(exception.InstanceUnacceptable,
                           self._test_get_spawn_vm_config_info,
                           image_size_bytes=image_size)
@@ -1689,7 +1689,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.flags(enabled=False, group='vnc')
         self.flags(flat_injected=False)
 
-        image_size = (self._instance.root_gb) * units.Gi / 2
+        image_size = (self._instance.flavor.root_gb) * units.Gi / 2
         image_info = images.VMwareImage(
                 image_id=self._image_id,
                 file_size=image_size)
@@ -1806,11 +1806,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_create_ephemeral_with_bdi_but_no_ephemerals(self):
         block_device_info = {'ephemerals': []}
-        self._instance.ephemeral_gb = 1
+        self._instance.flavor.ephemeral_gb = 1
         self._test_create_ephemeral_from_instance(block_device_info)
 
     def test_create_ephemeral_with_no_bdi(self):
-        self._instance.ephemeral_gb = 1
+        self._instance.flavor.ephemeral_gb = 1
         self._test_create_ephemeral_from_instance(None)
 
     def _test_create_swap_from_instance(self, bdi):

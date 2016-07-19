@@ -85,7 +85,7 @@ class VirtualMachineInstanceConfigInfo(object):
         self.instance = instance
 
         self.ii = image_info
-        self.root_gb = instance.root_gb
+        self.root_gb = instance.flavor.root_gb
         self.datastore = datastore
         self.dc_info = dc_info
         self._image_cache = image_cache
@@ -206,8 +206,8 @@ class VMwareVMOps(object):
     def _extend_if_required(self, dc_info, image_info, instance,
                             root_vmdk_path):
         """Increase the size of the root vmdk if necessary."""
-        if instance.root_gb * units.Gi > image_info.file_size:
-            size_in_kb = instance.root_gb * units.Mi
+        if instance.flavor.root_gb * units.Gi > image_info.file_size:
+            size_in_kb = instance.flavor.root_gb * units.Mi
             self._extend_virtual_disk(instance, size_in_kb,
                                       root_vmdk_path, dc_info.ref)
 
@@ -553,8 +553,8 @@ class VMwareVMOps(object):
                             extra_specs):
         """Captures all relevant information from the spawn parameters."""
 
-        if (instance.root_gb != 0 and
-                image_info.file_size > instance.root_gb * units.Gi):
+        if (instance.flavor.root_gb != 0 and
+                image_info.file_size > instance.flavor.root_gb * units.Gi):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
@@ -661,8 +661,8 @@ class VMwareVMOps(object):
 
         # There may be block devices defined but no ephemerals. In this case
         # we need to allocate an ephemeral disk if required
-        if not ephemerals and instance.ephemeral_gb:
-            size = instance.ephemeral_gb * units.Mi
+        if not ephemerals and instance.flavor.ephemeral_gb:
+            size = instance.flavor.ephemeral_gb * units.Mi
             filename = vm_util.get_ephemeral_name(0)
             path = str(ds_obj.DatastorePath(datastore.name, folder,
                                              filename))
@@ -1288,7 +1288,7 @@ class VMwareVMOps(object):
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
     def _resize_disk(self, instance, vm_ref, vmdk, flavor):
-        if (flavor.root_gb > instance.root_gb and
+        if (flavor.root_gb > instance.flavor.root_gb and
             flavor.root_gb > vmdk.capacity_in_bytes / units.Gi):
             root_disk_in_kb = flavor.root_gb * units.Mi
             ds_ref = vmdk.device.backing.datastore
@@ -1347,7 +1347,7 @@ class VMwareVMOps(object):
                                      uuid=instance.uuid)
 
         # Checks if the migration needs a disk resize down.
-        if (flavor.root_gb < instance.root_gb or
+        if (flavor.root_gb < instance.flavor.root_gb or
             (flavor.root_gb != 0 and
              flavor.root_gb < vmdk.capacity_in_bytes / units.Gi)):
             reason = _("Unable to shrink disk.")
@@ -1442,11 +1442,12 @@ class VMwareVMOps(object):
         extra_specs = self._get_extra_specs(instance.flavor,
                                             instance.image_meta)
         metadata = self._get_instance_metadata(context, instance)
-        vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
-                                                    int(instance.vcpus),
-                                                    int(instance.memory_mb),
-                                                    extra_specs,
-                                                    metadata=metadata)
+        vm_resize_spec = vm_util.get_vm_resize_spec(
+            client_factory,
+            int(instance.flavor.vcpus),
+            int(instance.flavor.memory_mb),
+            extra_specs,
+            metadata=metadata)
         vm_util.reconfigure_vm(self._session, vm_ref, vm_resize_spec)
 
         vmdk = vm_util.get_vmdk_info(self._session, vm_ref,
