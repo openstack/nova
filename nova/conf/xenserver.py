@@ -467,15 +467,34 @@ xenapi_vmops_opts = [
 xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',
                default=20,
-               help='Number of seconds to wait for an SR to settle '
-                    'if the VDI does not exist when first introduced'),
-    ]
+               min=0,
+               help="""
+Number of seconds to wait for SR to settle if the VDI
+does not exist when first introduced.
+
+Some SRs, particularly iSCSI connections are slow to see the VDIs
+right after they got introduced. Setting this option to a
+time interval will make the SR to wait for that time period
+before raising VDI not found exception.
+""")
+]
 
 xenapi_ovs_integration_bridge_opts = [
     cfg.StrOpt('ovs_integration_bridge',
                default='xapi1',
-               help='Name of Integration Bridge used by Open vSwitch'),
-    ]
+               help="""
+The name of the integration Bridge that is used with xenapi
+when connecting with Open vSwitch.
+
+Note: The value of this config option is dependent on the
+environment, therefore this configuration value must be set
+accordingly if you are using XenAPI.
+
+Possible options:
+
+   * Any string that represents a bridge name(default is xapi1).
+""")
+]
 
 xenapi_pool_opts = [
     # TODO(macsz): This should be deprecated. Until providing solid reason,
