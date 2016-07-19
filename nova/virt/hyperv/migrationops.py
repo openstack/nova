@@ -106,7 +106,7 @@ class MigrationOps(object):
 
     def _check_target_flavor(self, instance, flavor):
         new_root_gb = flavor.root_gb
-        curr_root_gb = instance.root_gb
+        curr_root_gb = instance.flavor.root_gb
 
         if new_root_gb < curr_root_gb:
             raise exception.InstanceFaultRollback(
@@ -290,7 +290,7 @@ class MigrationOps(object):
                                       src_base_disk_path)
 
             if resize_instance:
-                new_size = instance.root_gb * units.Gi
+                new_size = instance.flavor.root_gb * units.Gi
                 self._check_resize_vhd(root_vhd_path, root_vhd_info, new_size)
 
         ephemerals = block_device_info['ephemerals']

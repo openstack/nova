@@ -140,7 +140,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
 
     def test_check_target_flavor(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
-        mock_instance.root_gb = 1
+        mock_instance.flavor.root_gb = 1
         mock_flavor = mock.MagicMock(root_gb=0)
         self.assertRaises(exception.InstanceFaultRollback,
                           self._migrationops._check_target_flavor,
@@ -376,7 +376,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
                                 mock_check_attach_config_drive,
                                 disk_type=constants.DISK):
         mock_instance = fake_instance.fake_instance_obj(self.context)
-        mock_instance.ephemeral_gb = 1
+        mock_instance.flavor.ephemeral_gb = 1
         root_device = {'type': disk_type}
         block_device_info = {'root_disk': root_device, 'ephemerals': []}
 
@@ -404,7 +404,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
                 mock_vhd_info.get.return_value)
             expected_check_resize.append(
                 mock.call(root_device_path, mock_vhd_info,
-                          mock_instance.root_gb * units.Gi))
+                          mock_instance.flavor.root_gb * units.Gi))
 
         ephemerals = block_device_info['ephemerals']
         mock_check_eph_disks.assert_called_once_with(

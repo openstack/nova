@@ -171,7 +171,7 @@ class VMOps(object):
         root_vhd_path = self._pathutils.get_root_vhd_path(instance.name,
                                                           format_ext,
                                                           is_rescue_vhd)
-        root_vhd_size = instance.root_gb * units.Gi
+        root_vhd_size = instance.flavor.root_gb * units.Gi
 
         try:
             if CONF.use_cow_images:
@@ -313,8 +313,8 @@ class VMOps(object):
         instance_path = os.path.join(CONF.instances_path, instance_name)
 
         self._vmutils.create_vm(instance_name,
-                                instance.memory_mb,
-                                instance.vcpus,
+                                instance.flavor.memory_mb,
+                                instance.flavor.vcpus,
                                 CONF.hyperv.limit_cpu_features,
                                 CONF.hyperv.dynamic_memory_ratio,
                                 vm_gen,
