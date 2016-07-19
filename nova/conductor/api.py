@@ -77,11 +77,15 @@ class LocalComputeTaskAPI(object):
 
     def live_migrate_instance(self, context, instance, host_name,
                               block_migration, disk_over_commit,
-                              request_spec=None):
+                              request_spec=None, async=False):
         scheduler_hint = {'host': host_name}
-        self._manager.live_migrate_instance(context, instance, scheduler_hint,
-                                            block_migration, disk_over_commit,
-                                            request_spec)
+        if async:
+            wrap = lambda *args: utils.spawn_n(*args)
+        else:
+            wrap = lambda *args: args[0](*args[1:])
+
+        wrap(self._manager.live_migrate_instance, context, instance,
+             scheduler_hint, block_migration, disk_over_commit, request_spec)
 
     def build_instances(self, context, instances, image,
             filter_properties, admin_password, injected_files,

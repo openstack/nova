@@ -1912,7 +1912,32 @@ class ConductorLocalComputeTaskAPITestCase(ConductorTaskAPITestCase):
                                '_build_live_migrate_task',
                                return_value=task) as mock_build_task:
             self.conductor.live_migrate_instance(self.context, inst_obj,
-                'destination', 'block_migration', 'disk_over_commit')
+                'destination', 'block_migration', 'disk_over_commit',
+                async=False)
+            mock_build_task.assert_called_once_with(self.context, inst_obj,
+                                                    'destination',
+                                                    'block_migration',
+                                                    'disk_over_commit',
+                                                    migration, None)
+            task.execute.assert_called_once()
+        self.assertEqual('accepted', migration.status)
+        self.assertEqual('destination', migration.dest_compute)
+        self.assertEqual(inst_obj.host, migration.source_compute)
+
+    @mock.patch('nova.objects.Migration')
+    def test_live_migrate_async(self, migobj):
+        inst = fake_instance.fake_db_instance()
+        inst_obj = objects.Instance._from_db_object(
+            self.context, objects.Instance(), inst, [])
+
+        migration = migobj()
+        task = mock.MagicMock()
+        with mock.patch.object(self.conductor_manager,
+                               '_build_live_migrate_task',
+                               return_value=task) as mock_build_task:
+            self.conductor.live_migrate_instance(self.context, inst_obj,
+                'destination', 'block_migration', 'disk_over_commit',
+                async=True)
             mock_build_task.assert_called_once_with(self.context, inst_obj,
                                                     'destination',
                                                     'block_migration',
