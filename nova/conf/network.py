@@ -39,11 +39,7 @@ Possible values:
 
     Any string representing a valid network bridge, such as 'br100'
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     ``use_neutron``
 """),
@@ -60,10 +56,6 @@ Possible values:
 
     Any valid IP address.
 
-* Services that use this:
-
-    ``nova-network``
-
 * Related options:
 
     ``use_neutron``
@@ -77,15 +69,7 @@ the VM before it is booted.
 Please note that this option is only used when using nova-network instead of
 Neutron in your deployment.
 
-Possible values:
-
-    True, False (default)
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     ``use_neutron``
 """),
@@ -101,11 +85,7 @@ Possible values:
 
     Any valid virtual interface name, such as 'eth0'
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     ``use_neutron``
 """),
@@ -128,11 +108,7 @@ Possible values:
     Any integer between 1 and 4094. Values outside of that range will raise a
     ValueError exception. Default = 100.
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     ``network_manager``, ``use_neutron``
 """),
@@ -150,33 +126,134 @@ Possible values:
 
     Any valid virtual interface name, such as 'eth0'
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     ``use_neutron``
 """),
     cfg.IntOpt("num_networks",
-               default=1,
-               help="Number of networks to support"),
+            default=1,
+            help="""
+This option represents the number of networks to create if not explicitly
+specified when the network is created. The only time this is used is if a CIDR
+is specified, but an explicit network_size is not. In that case, the subnets
+are created by diving the IP address space of the CIDR by num_networks. The
+resulting subnet sizes cannot be larger than the configuration option
+`network_size`; in that event, they are reduced to `network_size`, and a
+warning is logged.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any positive integer is technically valid, although there are practical
+    limits based upon available IP address space and virtual interfaces. The
+    default is 1.
+
+Related options:
+
+    ``use_neutron``, ``network_size``
+"""),
     cfg.StrOpt("vpn_ip",
-               default="$my_ip",
-               help="Public IP for the cloudpipe VPN servers"),
+            default="$my_ip",
+            help="""
+This is the public IP address for the cloudpipe VPN servers. It defaults to the
+IP address of the host.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any valid IP address. The default is $my_ip, the IP address of the VM.
+
+Related options:
+
+    ``use_neutron``, ``vpn_start``
+"""),
     cfg.IntOpt("vpn_start",
-               default=1000,
-               help="First Vpn port for private networks"),
+            default=1000,
+            help="""
+This is the port number to use as the first VPN port for private networks.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment. It also will be ignored if the configuration option
+for `network_manager` is not set to the default of
+'nova.network.manager.VlanManager', or if you specify a value the 'vpn_start'
+parameter when creating a network.
+
+Possible values:
+
+    Any integer representing a valid port number. The default is 1000.
+
+Related options:
+
+    ``use_neutron``, ``vpn_ip``, ``network_manager``
+"""),
     cfg.IntOpt("network_size",
-               default=256,
-               help="Number of addresses in each private subnet"),
+            default=256,
+            help="""
+This option determines the number of addresses in each private subnet.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any positive integer that is less than or equal to the available network
+    size. Note that if you are creating multiple networks, they must all fit in
+    the available IP address space. The default is 256.
+
+Related options:
+
+    ``use_neutron``, ``num_networks``
+"""),
     cfg.StrOpt("fixed_range_v6",
-               default="fd00::/48",
-               help="Fixed IPv6 address block"),
+            default="fd00::/48",
+            help="""
+This option determines the fixed IPv6 address block when creating a network.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any valid IPv6 CIDR. The default value is "fd00::/48".
+
+Related options:
+
+    ``use_neutron``
+"""),
     cfg.StrOpt("gateway",
-               help="Default IPv4 gateway"),
+            help="""
+This is the default IPv4 gateway. It is used only in the testing suite.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any valid IP address.
+
+Related options:
+
+    ``use_neutron``, ``gateway_v6``
+"""),
     cfg.StrOpt("gateway_v6",
-               help="Default IPv6 gateway"),
+            help="""
+This is the default IPv6 gateway. It is used only in the testing suite.
+
+Please note that this option is only used when using nova-network instead of
+Neutron in your deployment.
+
+Possible values:
+
+    Any valid IP address.
+
+Related options:
+
+    ``use_neutron``, ``gateway``
+"""),
     cfg.IntOpt("cnt_vpn_clients",
                default=0,
                help="Number of addresses reserved for vpn clients"),
@@ -226,14 +303,6 @@ The use of this configuration has been deprecated and may be removed in any
 release after Mitaka. It is recommended that instead of relying on this option,
 an explicit value should be passed to 'create_networks()' as a keyword argument
 with the name 'share_address'.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
 
     # NOTE(mriedem): Remove network_device_mtu in Newton.
@@ -248,14 +317,6 @@ The use of this configuration has been deprecated and may be removed in any
 release after Mitaka. It is recommended that instead of relying on this option,
 an explicit value should be passed to 'create_networks()' as a keyword argument
 with the name 'mtu'.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.BoolOpt('use_neutron',
                 default=False,
@@ -273,18 +334,10 @@ dhcpbridge. In most cases the default path of '/etc/nova/nova-dhcpbridge.conf'
 should be sufficient, but if you have special needs for configuring dhcpbridge,
 you can change or add to this list.
 
-* Possible values
+Possible values
 
     A list of strings, where each string is the full path to a dhcpbridge
     configuration file.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.StrOpt('networks_path',
             default=paths.state_path_def('networks'),
@@ -293,17 +346,9 @@ The location where the network configuration files will be kept. The default is
 the 'networks' directory off of the location where nova's Python module is
 installed.
 
-* Possible values
+Possible values
 
     A string containing the full path to the desired configuration directory
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.StrOpt('public_interface',
             default='eth0',
@@ -311,17 +356,9 @@ installed.
 This is the name of the network interface for public IP addresses. The default
 is 'eth0'.
 
-* Possible values:
+Possible values:
 
     Any string representing a network interface name
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.StrOpt('dhcpbridge',
             default=paths.bindir_def('nova-dhcpbridge'),
@@ -329,17 +366,9 @@ is 'eth0'.
 The location of the binary nova-dhcpbridge. By default it is the binary named
 'nova-dhcpbridge' that is installed with all the other nova binaries.
 
-* Possible values:
+Possible values:
 
     Any string representing the full path to the binary for dhcpbridge
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.StrOpt('routing_source_ip',
             default='$my_ip',
@@ -347,15 +376,11 @@ The location of the binary nova-dhcpbridge. By default it is the binary named
 This is the public IP address of the network host. It is used when creating a
 SNAT rule.
 
-* Possible values:
+Possible values:
 
     Any valid IP address
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     force_snat_range
 """),
@@ -367,14 +392,6 @@ The lifetime of a DHCP lease, in seconds. The default is 86400 (one day).
 Possible values:
 
     Any positive integer value.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.MultiStrOpt("dns_server",
             default=[],
@@ -390,11 +407,7 @@ Possible values:
 
     A list of strings, where each string is etiher an IP address or a FQDN.
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     use_network_dns_servers
 """),
@@ -405,15 +418,7 @@ When this option is set to True, the dns1 and dns2 servers for the network
 specified by the user on boot will be used for DNS, as well as any specified in
 the `dns_server` option.
 
-Possible values:
-
-    True, False (default)
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     dns_server
 """),
@@ -426,14 +431,6 @@ that should be accepted.
 Possible values:
 
     A list of strings, each of which should be a valid CIDR.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.MultiStrOpt("force_snat_range",
             default=[],
@@ -446,11 +443,7 @@ Possible values:
 
     A list of strings, each of which should be a valid CIDR.
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     routing_source_ip
 """),
@@ -463,14 +456,6 @@ Possible values:
 
     The full path to the configuration file, or an empty string if there is no
     custom dnsmasq configuration file.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.StrOpt("linuxnet_interface_driver",
             default="nova.network.linux_net.LinuxBridgeInterfaceDriver",
@@ -483,14 +468,6 @@ import path for that class.
 Possible values:
 
     Any string representing a dot-separated class path that Nova can import.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.StrOpt("linuxnet_ovs_integration_bridge",
             default="br-int",
@@ -501,14 +478,6 @@ with Open vSwitch."
 Possible values:
 
     Any string representing a valid bridge name.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.BoolOpt("send_arp_for_ha",
             default=False,
@@ -517,15 +486,7 @@ When True, when a device starts up, and upon binding floating IP addresses, arp
 messages will be sent to ensure that the arp caches on the compute hosts are
 up-to-date.
 
-Possible values:
-
-    True, False (default)
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     send_arp_for_ha_count
 """),
@@ -540,11 +501,7 @@ Possible values:
 
     Any integer greater than or equal to 0
 
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
+Related options:
 
     send_arp_for_ha
 """),
@@ -553,18 +510,6 @@ Possible values:
             help="""
 When set to True, only the firt nic of a VM will get its default gateway from
 the DHCP server.
-
-Possible values:
-
-    True, False (default)
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
     cfg.MultiStrOpt("forward_bridge_interface",
             default=["all"],
@@ -575,14 +520,6 @@ in this list is the special keyword 'all', then all traffic will be forwarded.
 Possible values:
 
     A list of zero or more interface names, or the word 'all'.
-
-* Services that use this:
-
-    ``nova-network``
-
-* Related options:
-
-    None
 """),
 cfg.StrOpt('metadata_host',
                default='$my_ip',
