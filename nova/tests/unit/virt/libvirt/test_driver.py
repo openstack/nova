@@ -10037,10 +10037,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
 
     def test_spawn_with_network_info(self):
-        # Preparing mocks
-        def fake_none(*args, **kwargs):
-            return
-
         def fake_getLibVersion():
             return fakelibvirt.FAKE_LIBVIRT_VERSION
 
@@ -10077,51 +10073,42 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                       getVersion=lambda: 1005001,
                                       baselineCPU=fake_baselineCPU)
 
-        instance_ref = self.test_instance
-        instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
-        instance = objects.Instance(**instance_ref)
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = uuids.image_ref
         instance.config_drive = ''
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
-                                 '_build_device_metadata')
-        libvirt_driver.LibvirtDriver._build_device_metadata(self.context,
-                                                           instance)
-        # Mock out the get_info method of the LibvirtDriver so that the polling
-        # in the spawn method of the LibvirtDriver returns immediately
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, 'get_info')
-        libvirt_driver.LibvirtDriver.get_info(instance
-            ).AndReturn(hardware.InstanceInfo(state=power_state.RUNNING))
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
-        # Start test
-        self.mox.ReplayAll()
+        with test.nested(
+            utils.tempdir(),
+            mock.patch('nova.virt.libvirt.driver.libvirt'),
+            mock.patch.object(drvr, '_build_device_metadata'),
+            mock.patch.object(drvr, 'get_info'),
+            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
+            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter')
+        ) as (
+            tmpdir,
+            mock_orig_libvirt,
+            mock_build_device_metadata,
+            mock_get_info,
+            mock_ignored, mock_ignored
+        ):
+            self.flags(instances_path=tmpdir)
 
-        with mock.patch('nova.virt.libvirt.driver.libvirt') as old_virt:
-            del old_virt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
+            hw_running = hardware.InstanceInfo(state=power_state.RUNNING)
+            mock_get_info.return_value = hw_running
+            mock_build_device_metadata.return_value = None
 
-            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-            self.stubs.Set(drvr.firewall_driver,
-                        'setup_basic_filtering',
-                        fake_none)
-            self.stubs.Set(drvr.firewall_driver,
-                        'prepare_instance_filter',
-                        fake_none)
-            self.stubs.Set(imagebackend.Image,
-                        'cache',
-                        fake_none)
+            del mock_orig_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
             drvr.spawn(self.context, instance, image_meta, [], 'herp',
-                        network_info=network_info)
+                       network_info=network_info)
 
-        path = os.path.join(CONF.instances_path, instance['name'])
-        if os.path.isdir(path):
-            shutil.rmtree(path)
-
-        path = os.path.join(CONF.instances_path,
-                            CONF.image_cache_subdirectory_name)
-        if os.path.isdir(path):
-            shutil.rmtree(os.path.join(CONF.instances_path,
-                                       CONF.image_cache_subdirectory_name))
+            mock_get_info.assert_called_once_with(instance)
+            mock_build_device_metadata.assert_called_once_with(self.context,
+                                                               instance)
 
     # Methods called directly by spawn()
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')
@@ -10195,65 +10182,65 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(['disk', 'disk.local'],
                          sorted(fake_backend.created_disks.keys()))
 
-    def test_spawn_from_volume_calls_cache(self):
-        self.cache_called_for_disk = False
-
-        def fake_none(*args, **kwargs):
-            return
-
-        def fake_cache(*args, **kwargs):
-            if kwargs.get('image_id') == 'my_fake_image':
-                self.cache_called_for_disk = True
-
-        def fake_get_info(instance):
-            return hardware.InstanceInfo(state=power_state.RUNNING)
-
+    def _test_spawn_disks(self, image_ref, block_device_info):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr, '_get_guest_xml', fake_none)
 
-        self.stubs.Set(imagebackend.Image, 'cache', fake_cache)
-        self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
-        self.stubs.Set(drvr, 'get_info', fake_get_info)
-
-        block_device_info = {'root_device_name': '/dev/vda',
-                             'block_device_mapping': [
-                                {'mount_device': 'vda',
-                                 'boot_index': 0}
-                                ]
-                            }
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         # Volume-backed instance created without image
-        instance_ref = self.test_instance
-        instance_ref['image_ref'] = ''
-        instance_ref['root_device_name'] = '/dev/vda'
-        instance_ref['uuid'] = uuidutils.generate_uuid()
-        instance = objects.Instance(**instance_ref)
+        instance = objects.Instance(**self.test_instance)
+        instance.image_ref = image_ref
+        instance.root_device_name = '/dev/vda'
+        instance.uuid = uuids.instance_uuid
 
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None,
-                   block_device_info=block_device_info)
-        self.assertFalse(self.cache_called_for_disk)
+        backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
 
-        # Booted from volume but with placeholder image
-        instance_ref = self.test_instance
-        instance_ref['image_ref'] = 'my_fake_image'
-        instance_ref['root_device_name'] = '/dev/vda'
-        instance_ref['uuid'] = uuidutils.generate_uuid()
-        instance = objects.Instance(**instance_ref)
+        with test.nested(
+                mock.patch.object(drvr, '_get_guest_xml'),
+                mock.patch.object(drvr, '_create_domain_and_network'),
+                mock.patch.object(drvr, 'get_info')
+        ) as (
+                mock_get_guest_xml, mock_create_domain_and_network,
+                mock_get_info
+        ):
+            hw_running = hardware.InstanceInfo(state=power_state.RUNNING)
+            mock_get_info.return_value = hw_running
 
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None,
-                   block_device_info=block_device_info)
-        self.assertFalse(self.cache_called_for_disk)
+            drvr.spawn(self.context, instance,
+                       image_meta, [], None,
+                       block_device_info=block_device_info)
 
-        # Booted from an image
-        instance_ref['image_ref'] = 'my_fake_image'
-        instance_ref['uuid'] = uuidutils.generate_uuid()
-        instance = objects.Instance(**instance_ref)
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None)
-        self.assertTrue(self.cache_called_for_disk)
+        # Return a sorted list of created disks
+        return sorted(backend.created_disks.keys())
+
+    def test_spawn_from_volume_no_image_ref(self):
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'block_device_mapping': [
+                                {'mount_device': 'vda',
+                                 'boot_index': 0}]}
+
+        disks_created = self._test_spawn_disks(None, block_device_info)
+
+        # We should have created the ephemeral disk, and nothing else
+        self.assertEqual(['disk.local'], disks_created)
+
+    def test_spawn_from_volume_with_image_ref(self):
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'block_device_mapping': [
+                                 {'mount_device': 'vda',
+                                  'boot_index': 0}]}
+
+        disks_created = self._test_spawn_disks(uuids.image_ref,
+                                               block_device_info)
+
+        # We should have created the ephemeral disk, and nothing else
+        self.assertEqual(['disk.local'], disks_created)
+
+    def test_spawn_from_image(self):
+        disks_created = self._test_spawn_disks(uuids.image_ref, None)
+
+        # We should have created the root and ephemeral disks
+        self.assertEqual(['disk', 'disk.local'], disks_created)
 
     def test_start_lxc_from_volume(self):
         self.flags(virt_type="lxc",
