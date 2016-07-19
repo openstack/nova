@@ -441,6 +441,10 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         self.assertIndexExists(engine, 'instance_group_member',
                                'instance_group_member_instance_idx')
 
+    def _check_019(self, engine, data):
+        self.assertColumnExists(engine, 'build_requests',
+                                'block_device_mappings')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,

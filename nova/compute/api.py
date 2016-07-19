@@ -942,11 +942,10 @@ class API(base.Base):
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping))
 
-                # TODO(alaski): Pass block_device_mapping here when the object
-                # supports it.
                 build_request = objects.BuildRequest(context,
                         instance=instance, instance_uuid=instance.uuid,
-                        project_id=instance.project_id)
+                        project_id=instance.project_id,
+                        block_device_mappings=block_device_mapping)
                 build_request.create()
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups

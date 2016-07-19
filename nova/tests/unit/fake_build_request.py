@@ -18,7 +18,9 @@ from oslo_utils import uuidutils
 from nova import context
 from nova import objects
 from nova.objects import fields
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 def fake_db_req(**updates):
@@ -26,11 +28,23 @@ def fake_db_req(**updates):
     instance_uuid = uuidutils.generate_uuid()
     instance = fake_instance.fake_instance_obj(ctxt, objects.Instance,
             uuid=instance_uuid)
+    block_devices = objects.BlockDeviceMappingList(
+        objects=[fake_block_device.fake_bdm_object(
+            context,
+            fake_block_device.FakeDbBlockDeviceDict(
+                source_type='blank', destination_type='local',
+                guest_format='foo', device_type='disk', disk_bus='',
+                boot_index=1, device_name='xvda', delete_on_termination=False,
+                snapshot_id=None, volume_id=None, volume_size=0,
+                image_id='bar', no_device=False, connection_info=None,
+                tag='', instance_uuid=uuids.instance))])
     db_build_request = {
             'id': 1,
             'project_id': 'fake-project',
             'instance_uuid': instance_uuid,
             'instance': jsonutils.dumps(instance.obj_to_primitive()),
+            'block_device_mappings': jsonutils.dumps(
+                block_devices.obj_to_primitive()),
             'created_at': datetime.datetime(2016, 1, 16),
             'updated_at': datetime.datetime(2016, 1, 16),
     }
@@ -65,6 +79,10 @@ def fake_req_obj(ctxt, db_req=None):
             if field == 'instance':
                 req_obj.instance = objects.Instance.obj_from_primitive(
                         jsonutils.loads(value))
+            elif field == 'block_device_mappings':
+                req_obj.block_device_mappings = (
+                    objects.BlockDeviceMappingList.obj_from_primitive(
+                        jsonutils.loads(value)))
         elif field == 'instance_metadata':
             setattr(req_obj, field, jsonutils.loads(value))
         else:
