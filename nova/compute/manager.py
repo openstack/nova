@@ -709,7 +709,8 @@ class ComputeManager(manager.Manager):
         project_id, user_id = objects.quotas.ids_from_instance(context,
                                                                instance)
         quotas.reserve(project_id=project_id, user_id=user_id, instances=-1,
-                       cores=-instance.vcpus, ram=-instance.memory_mb)
+                       cores=-instance.flavor.vcpus,
+                       ram=-instance.flavor.memory_mb)
         self._complete_deletion(context,
                                 instance,
                                 bdms,
@@ -735,8 +736,8 @@ class ComputeManager(manager.Manager):
         self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _create_reservations(self, context, instance, project_id, user_id):
-        vcpus = instance.vcpus
-        mem_mb = instance.memory_mb
+        vcpus = instance.flavor.vcpus
+        mem_mb = instance.flavor.memory_mb
 
         quotas = objects.Quotas(context=context)
         quotas.reserve(project_id=project_id,
@@ -3830,6 +3831,8 @@ class ComputeManager(manager.Manager):
     @staticmethod
     def _set_instance_info(instance, instance_type):
         instance.instance_type_id = instance_type.id
+        # NOTE(danms): These are purely for any legacy code that still
+        # looks at them.
         instance.memory_mb = instance_type.memory_mb
         instance.vcpus = instance_type.vcpus
         instance.root_gb = instance_type.root_gb

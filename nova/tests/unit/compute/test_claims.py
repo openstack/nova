@@ -72,6 +72,7 @@ class ClaimTestCase(test.NoDBTestCase):
     def _claim(self, limits=None, overhead=None, requests=None, **kwargs):
         numa_topology = kwargs.pop('numa_topology', None)
         instance = self._fake_instance(**kwargs)
+        instance.flavor = self._fake_instance_type(**kwargs)
         if numa_topology:
             db_numa_topology = {
                     'id': 1, 'created_at': None, 'updated_at': None,
@@ -112,10 +113,10 @@ class ClaimTestCase(test.NoDBTestCase):
         instance_type = {
             'id': 1,
             'name': 'fakeitype',
-            'memory_mb': 1,
+            'memory_mb': 1024,
             'vcpus': 1,
-            'root_gb': 1,
-            'ephemeral_gb': 2
+            'root_gb': 10,
+            'ephemeral_gb': 5
         }
         instance_type.update(**kwargs)
         return objects.Flavor(**instance_type)

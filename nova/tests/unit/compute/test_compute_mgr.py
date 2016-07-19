@@ -773,8 +773,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(instance.deleted)
 
         deltas = {'instances': -1,
-                  'cores': -instance.vcpus,
-                  'ram': -instance.memory_mb}
+                  'cores': -instance.flavor.vcpus,
+                  'ram': -instance.flavor.memory_mb}
 
         def fake_inst_destroy():
             instance.deleted = True

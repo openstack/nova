@@ -96,16 +96,17 @@ class Claim(NopClaim):
 
     @property
     def disk_gb(self):
-        return (self.instance.root_gb + self.instance.ephemeral_gb +
+        return (self.instance.flavor.root_gb +
+                self.instance.flavor.ephemeral_gb +
                 self.overhead.get('disk_gb', 0))
 
     @property
     def memory_mb(self):
-        return self.instance.memory_mb + self.overhead['memory_mb']
+        return self.instance.flavor.memory_mb + self.overhead['memory_mb']
 
     @property
     def vcpus(self):
-        return self.instance.vcpus
+        return self.instance.flavor.vcpus
 
     @property
     def numa_topology(self):
