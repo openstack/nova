@@ -3304,9 +3304,11 @@ rescue_image_ref:
   type: string
 reservation_id:
   description: |
-    The reservation ID of the server.
+    The reservation id for the server. This is an id that can
+    be useful in tracking groups of servers created with multiple
+    create, that will all have the same reservation_id.
   in: body
-  required: false
+  required: true
   type: string
 reserved:
   description: |
@@ -3624,6 +3626,26 @@ servers:
   in: body
   required: true
   type: array
+servers_max_count:
+  in: body
+  required: false
+  type: string
+  description: |
+    The max number of servers to be created. Defaults to the value of ``min_count``.
+servers_min_count:
+  in: body
+  required: false
+  type: string
+  description: |
+    The min number of servers to be created. Defaults to 1.
+servers_multiple_create_name:
+  in: body
+  required: true
+  type: string
+  description: |
+    A base name for creating unique names during multiple create. A
+    unique string will be appended to the end of this base name for
+    every server created.
 service:
   description: |
     Object representing a compute service.

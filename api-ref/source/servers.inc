@@ -370,6 +370,62 @@ Response
 .. literalinclude:: ../../doc/api_samples/servers/server-create-resp.json
    :language: javascript
 
+Create Multiple Servers
+=======================
+
+.. rest_method:: POST /servers
+
+There is a second kind of create call which can build multiple servers
+at once. This supports all the same parameters as create with a few
+additional attributes specific to multiple create.
+
+Error handling for multiple create is not as consistent as for single
+server create, and there is no guarantee that all the servers will be
+built. This call should generally be avoided in favor of clients doing
+direct individual server creates.
+
+Request (Additional Parameters)
+-------------------------------
+
+These are the parameters beyond single create that are supported.
+
+.. rest_parameters:: parameters.yaml
+
+   - name: servers_multiple_create_name
+   - min_count: servers_min_count
+   - max_count: servers_max_count
+   - return_reservation_id: return_reservation_id
+
+**Example Multiple Create with reservation ID**
+
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+   - reservation_id: reservation_id
+
+If ``return_reservation_id`` is set to ``true`` only the
+``reservation_id`` will be returned. This can be used as a filter with
+list servers detailed to see the status of all the servers being
+built.
+
+**Example Create multiple servers with reservation ID**
+
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-post-resp.json
+   :language: javascript
+
+If ``return_reservation_id`` is set to ``false`` a representation of
+the ``first`` server will be returned.
+
+**Example Create multiple servers without reservation ID**
+
+.. literalinclude:: ../../doc/api_samples/os-multiple-create/multiple-create-no-resv-post-resp.json
+   :language: javascript
+
 
 List Servers Detailed
 =====================
