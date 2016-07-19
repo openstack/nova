@@ -169,10 +169,10 @@ class FlavorPayload(base.NotificationPayloadBase):
 
     SCHEMA = {
         'flavorid': ('flavor', 'flavorid'),
-        'memory_mb': ('instance', 'memory_mb'),
-        'vcpus': ('instance', 'vcpus'),
-        'root_gb': ('instance', 'root_gb'),
-        'ephemeral_gb': ('instance', 'ephemeral_gb'),
+        'memory_mb': ('flavor', 'memory_mb'),
+        'vcpus': ('flavor', 'vcpus'),
+        'root_gb': ('flavor', 'root_gb'),
+        'ephemeral_gb': ('flavor', 'ephemeral_gb'),
     }
 
     fields = {
