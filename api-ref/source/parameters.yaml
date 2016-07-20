@@ -1554,6 +1554,14 @@ extensions:
   in: body
   required: true
   type: array
+extra_specs:
+  description: |
+    A dictionary of the flavor's extra-specs key-and-value pairs.  It appears
+    in the os-extra-specs' "create" REQUEST body, as well as the
+    os-extra-specs' "create" and "list" RESPONSE body.
+  in: body
+  required: true
+  type: object
 fault:
   description: |
     A fault object. Only displayed in the failed response.
@@ -1688,6 +1696,22 @@ flavor_ephem_disk_in:
     GiB. Ephemeral disks may be written over on server state
     changes. So should only be used as a scratch space for
     applications that are aware of it's limitations. Defaults to 0.
+flavor_extra_spec_key2:
+  description: |
+    The extra spec key of a flavor.  It appears in the os-extra-specs'
+    "create" and "update" REQUEST body, as well as the os-extra-specs'
+    "create", "list", "show", and "update" RESPONSE body.
+  in: body
+  required: true
+  type: string
+flavor_extra_spec_value:
+  description: |
+    The extra spec value of a flavor. It appears in the os-extra-specs'
+    "create" and "update" REQUEST body, as well as the os-extra-specs'
+    "create", "list", "show", and "update" RESPONSE body.
+  in: body
+  required: true
+  type: string
 flavor_id_body:
   description: |
     The ID of the flavor. While people often make this look like

@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ======================================================
  Flavors extra-specs (flavors, os-flavor-extra-specs)
@@ -32,6 +29,13 @@ Request
 Response
 --------
 
+
+.. rest_parameters:: parameters.yaml
+
+  - extra_specs: extra_specs
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
+
 **Example List Extra Specs For A Flavor: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/flavor-extra-specs/flavor-extra-specs-list-resp.json
@@ -46,7 +50,8 @@ Creates extra specs for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
+conflict(409)
 
 Request
 -------
@@ -55,6 +60,9 @@ Request
 
 
   - flavor_id: flavor_id
+  - extra_specs: extra_specs
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
 
 **Example Create Extra Specs For A Flavor: JSON request**
 
@@ -63,6 +71,12 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - extra_specs: extra_specs
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
 
 **Example Create Extra Specs For A Flavor: JSON response**
 
@@ -85,12 +99,17 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
 
+
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
 
 **Example Show An Extra Spec For A Flavor: JSON response**
 
@@ -117,6 +136,9 @@ Request
 
   - flavor_id: flavor_id
   - flavor_extra_spec_key: flavor_extra_spec_key
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
+
 
 **Example Update An Extra Spec For A Flavor: JSON request**
 
@@ -125,6 +147,12 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+
+  - key: flavor_extra_spec_key2
+  - value: flavor_extra_spec_value
 
 **Example Update An Extra Spec For A Flavor: JSON response**
 
@@ -154,3 +182,4 @@ Request
 Response
 --------
 
+There is no body content for the response of a successful DELETE action.
