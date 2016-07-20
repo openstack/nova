@@ -1,6 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
-.. needs:body_verification
 
 ============================
  Quota sets (os-quota-sets)
@@ -65,11 +63,17 @@ Update Quotas
 
 Update the quotas for a project or a project and a user.
 
-You can force the update even if the quota has already been used and the reserved quota exceeds the new quota.
+Users can force the update even if the quota has already been used and the
 
-To force the update, specify the ``"force": "True"`` attribute in the request body. Default is ``false``. The following example request shows the optional ``force`` attribute.
+reserved quota exceeds the new quota.
 
-To update a quota for a project and a user, specify the ``user_id`` query parameter.
+To force the update, specify the ``"force": True`` attribute in the request
+
+body, the default value is ``false``.
+
+To update a quota for a project and a user, specify the ``user_id`` query
+
+parameter.
 
 Normal response codes: 200
 
@@ -102,6 +106,11 @@ Request
 **Example Update Quotas: JSON request**
 
 .. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-update-post-req.json
+   :language: javascript
+
+**Example Update Quotas with the optional ``force`` attribute: JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-quota-sets/quotas-update-force-post-req.json
    :language: javascript
 
 Response
