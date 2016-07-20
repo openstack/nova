@@ -273,7 +273,7 @@ tenant_id:
   in: path
   required: true
   type: string
-volume_id_1:
+volume_id_path:
   description: |
     The unique ID for a volume.
   in: path
@@ -921,11 +921,29 @@ associate_host:
   in: body
   required: true
   type: string
+attachment_device_resp:
+  description: |
+    Name of the device in the attachment object, such as, ``/dev/vdb``.
+  in: body
+  required: false
+  type: string
 attachment_id_resp:
   description: |
     The UUID of the attachment.
   in: body
-  required: true
+  required: false
+  type: string
+attachment_server_id_resp:
+  description: |
+    The UUID of the server.
+  in: body
+  required: false
+  type: string
+attachment_volumeId_resp:
+  description: |
+    The UUID of the attached volume.
+  in: body
+  required: false
   type: string
 availability_zone:
   description: |
@@ -1399,9 +1417,21 @@ display_description:
   description: |
     The volume description.
   in: body
+  required: true
+  type: string
+display_description_optional:
+  description: |
+    The volume description.
+  in: body
   required: false
   type: string
 display_name:
+  description: |
+    The volume name.
+  in: body
+  required: true
+  type: string
+display_name_optional:
   description: |
     The volume name.
   in: body
@@ -1616,7 +1646,7 @@ flavor_access:
 flavor_cpus:
   in: body
   required: true
-  type: int
+  type: integer
   description: |
     The number of virtual CPUs that will be allocated to the server.
 flavor_disabled:
@@ -1629,7 +1659,7 @@ flavor_disabled:
 flavor_disk:
   in: body
   required: true
-  type: int
+  type: integer
   description: |
     The size of the root disk that will be created in GiB. If 0 the
     root disk will be set to exactly the size of the image used to
@@ -1637,7 +1667,7 @@ flavor_disk:
 flavor_ephem_disk:
   in: body
   required: true
-  type: int
+  type: integer
   description: |
     The size of the ephemeral disk that will be created, in
     GiB. Ephemeral disks may be written over on server state
@@ -1646,7 +1676,7 @@ flavor_ephem_disk:
 flavor_ephem_disk_in:
   in: body
   required: false
-  type: int
+  type: integer
   description: |
     The size of the ephemeral disk that will be created, in
     GiB. Ephemeral disks may be written over on server state
@@ -1684,7 +1714,7 @@ flavor_ram:
     The amount of RAM a flavor has, in MiB.
   in: body
   required: true
-  type: int
+  type: integer
 flavor_rxtx_factor:
   description: |
     The receive / transimit factor (as a float) that will be set on
@@ -1707,14 +1737,14 @@ flavor_swap:
     GiB. If 0 (the default), no dedicated swap disk will be created.
   in: body
   required: true
-  type: int
+  type: integer
 flavor_swap_in:
   description: |
     The size of a dedicated swap disk that will be allocated, in
     GiB. If 0 (the default), no dedicated swap disk will be created.
   in: body
   required: false
-  type: int
+  type: integer
 flavorRef:
   description: |
     The flavor reference, as a UUID or full URL, for the flavor for your server instance.
@@ -1782,6 +1812,12 @@ force_live_migrate:
   required: false
   type: boolean
   min_version: 2.30
+force_snapshot:
+  description: |
+    Indicates whether to create a snapshot, even if the volume is attached.
+  in: body
+  required: false
+  type: boolean
 forced_down:
   description: |
     Whether or not this service was forced down manually by an
@@ -2619,6 +2655,8 @@ meta:
   in: body
   required: true
   type: object
+# TODO(karenb): Clean-up the various metadata object params.
+# See metadata, metadata_required, metadata_object, metadata_set_required ...
 metadata:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
@@ -2675,8 +2713,7 @@ metadata_object:
 metadata_required:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
-    255 bytes each. This field is never used, always kept empty.
-    The associated metadata key and value pairs.
+    255 bytes each. The associated metadata key and value pairs.
   in: body
   required: true
   type: object
@@ -2864,6 +2901,12 @@ OS-EXT-AZ:availability_zone:
     The availability zone name.
   in: body
   required: true
+  type: string
+OS-EXT-AZ:availability_zone_optional:
+  description: |
+    The availability zone name.
+  in: body
+  required: false
   type: string
 OS-EXT-SRV-ATTR:host:
   description: |
@@ -3715,10 +3758,34 @@ snapshot:
   type: object
 snapshot_id:
   description: |
-    The snapshot ID.
+    The UUID for a snapshot.
   in: body
   required: true
   type: string
+snapshot_id_optional:
+  description: |
+    The UUID for a snapshot.
+  in: body
+  required: false
+  type: string
+snapshot_status:
+  description: |
+    The status of the snapshot.  Valid status values are:
+
+    - ``available``
+    - ``creating``
+    - ``deleting``
+    - ``error``
+    - ``error_deleting``
+  in: body
+  required: true
+  type: string
+snapshots:
+  description: |
+    A list of snapshot objects.
+  in: body
+  required: true
+  type: array
 source_type:
   description: |
     The source type of the volume. A valid value is ``blank``, ``snapshot``, ``volume``,
@@ -3940,7 +4007,7 @@ volume:
   description: |
     The ``volume`` object.
   in: body
-  required: false
+  required: true
   type: object
 volume_id:
   description: |
@@ -3948,7 +4015,25 @@ volume_id:
   in: body
   required: true
   type: string
+volume_id_resp:
+  description: |
+    The UUID of the volume.
+  in: body
+  required: true
+  type: string
+volume_status:
+  description: |
+    The status of the volume.
+  in: body
+  required: true
+  type: string
 volume_type:
+  description: |
+    The name or unique identifier for a volume type.
+  in: body
+  required: true
+  type: string
+volume_type_optional:
   description: |
     The unique identifier for a volume type.
   in: body
@@ -3956,13 +4041,14 @@ volume_type:
   type: string
 volumeAttachment:
   description: |
-    A dictionary representation of a volume attachment.
+    A dictionary representation of a volume attachment containing the fields,
+    ``device``, ``id``, ``serverId``, ``volumeId``.
   in: body
   required: true
-  type: string
+  type: object
 volumeAttachments:
   description: |
-    List of the volume attachments.
+    The list of volume attachments.
   in: body
   required: true
   type: array
@@ -3984,6 +4070,12 @@ volumeId_swap:
   in: body
   required: true
   type: string
+volumes:
+  description: |
+    The list of ``volume`` objects.
+  in: body
+  required: true
+  type: array
 vpn_ip:
   description: |
     The VPN IP address.
