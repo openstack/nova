@@ -22,6 +22,7 @@ import socket
 import sys
 
 from oslo_log import log as logging
+import six
 from six.moves import http_cookies as Cookie
 import six.moves.urllib.parse as urlparse
 import websockify
@@ -35,6 +36,54 @@ from nova.i18n import _
 LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
+
+
+class TenantSock(object):
+    """A socket wrapper for communicating with the tenant.
+
+    This class provides a socket-like interface to the internal
+    websockify send/receive queue for the client connection to
+    the tenant user. It is used with the security proxy classes.
+    """
+
+    def __init__(self, reqhandler):
+        self.reqhandler = reqhandler
+        self.queue = []
+
+    def recv(self, cnt):
+        # NB(sross): it's ok to block here because we know
+        #            exactly the sequence of data arriving
+        while len(self.queue) < cnt:
+            # new_frames looks like ['abc', 'def']
+            new_frames, closed = self.reqhandler.recv_frames()
+            # flatten frames onto queue
+            for frame in new_frames:
+                # The socket returns (byte) strings in Python 2...
+                if six.PY2:
+                    self.queue.extend(frame)
+                # ...and integers in Python 3. For the Python 3 case, we need
+                # to convert these to characters using 'chr' and then, as this
+                # returns unicode, convert the result to byte strings.
+                else:
+                    self.queue.extend(
+                        [six.binary_type(chr(c), 'ascii') for c in frame])
+
+            if closed:
+                break
+
+        popped = self.queue[0:cnt]
+        del self.queue[0:cnt]
+        return b''.join(popped)
+
+    def sendall(self, data):
+        self.reqhandler.send_frames([data])
+
+    def finish_up(self):
+        self.reqhandler.send_frames([b''.join([self.queue])])
+
+    def close(self):
+        self.finish_up()
+        self.reqhandler.send_close()
 
 
 class NovaProxyRequestHandlerBase(object):
@@ -157,6 +206,21 @@ class NovaProxyRequestHandlerBase(object):
                     tsock.recv(token_loc + len(end_token))
                     break
 
+        if self.server.security_proxy is not None:
+            tenant_sock = TenantSock(self)
+
+            try:
+                tsock = self.server.security_proxy.connect(tenant_sock, tsock)
+            except exception.SecurityProxyNegotiationFailed:
+                LOG.exception("Unable to perform security proxying, shutting "
+                              "down connection")
+                tenant_sock.close()
+                tsock.shutdown(socket.SHUT_RDWR)
+                tsock.close()
+                raise
+
+            tenant_sock.finish_up()
+
         # Start proxying
         try:
             self.do_proxy(tsock)
@@ -180,6 +244,17 @@ class NovaProxyRequestHandler(NovaProxyRequestHandlerBase,
 
 
 class NovaWebSocketProxy(websockify.WebSocketProxy):
+    def __init__(self, *args, **kwargs):
+        """:param security_proxy: instance of
+            nova.console.securityproxy.base.SecurityProxy
+
+        Create a new web socket proxy, optionally using the
+        @security_proxy instance to negotiate security layer
+        with the compute node.
+        """
+        self.security_proxy = kwargs.pop('security_proxy', None)
+        super(NovaWebSocketProxy, self).__init__(*args, **kwargs)
+
     @staticmethod
     def get_logger():
         return LOG
