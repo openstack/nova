@@ -722,14 +722,16 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                        fake_inject_instance_metadata)
 
         if create_record:
+            flavor = objects.Flavor.get_by_id(self.context,
+                                              instance_type_id)
             instance = objects.Instance(context=self.context)
             instance.project_id = self.project_id
             instance.user_id = self.user_id
             instance.image_ref = image_ref
             instance.kernel_id = kernel_id
             instance.ramdisk_id = ramdisk_id
-            instance.root_gb = 20
-            instance.ephemeral_gb = 0
+            instance.root_gb = flavor.root_gb
+            instance.ephemeral_gb = flavor.ephemeral_gb
             instance.instance_type_id = instance_type_id
             instance.os_type = os_type
             instance.hostname = hostname
@@ -737,8 +739,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             instance.architecture = architecture
             instance.system_metadata = {}
 
-            flavor = objects.Flavor.get_by_id(self.context,
-                                              instance_type_id)
             instance.flavor = flavor
             instance.create()
         else:
@@ -1704,6 +1704,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         values = self.instance_values.copy()
         values.update(kw)
         instance = objects.Instance(context=self.context, **values)
+        instance.flavor = objects.Flavor(root_gb=80,
+                                         ephemeral_gb=0)
         instance.create()
         return instance
 
@@ -1750,6 +1752,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0,
                                              ephemeral_gb=0)
         instance = self._create_instance(root_gb=0, ephemeral_gb=0)
+        instance.flavor.root_gb = 0
+        instance.flavor.ephemeral_gb = 0
         xenapi_fake.create_vm(instance['name'], 'Running')
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm_ref = vm_utils.lookup(conn._session, instance['name'])
@@ -1851,6 +1855,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         values["root_gb"] = 0
         values["ephemeral_gb"] = 0
         instance = create_instance_with_system_metadata(self.context, values)
+        instance.flavor.root_gb = 0
+        instance.flavor.ephemeral_gb = 0
 
         def fake_vdi_resize(*args, **kwargs):
             raise Exception("This shouldn't be called")
