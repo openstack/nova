@@ -67,9 +67,10 @@ class LimitsControllerTestV21(BaseLimitTestSuite):
     def _get_index_request(self, accept_header="application/json",
                            tenant_id=None):
         """Helper to set routing arguments."""
-        request = webob.Request.blank("/")
+        request = fakes.HTTPRequest.blank('', version='2.1')
         if tenant_id:
-            request = webob.Request.blank("/?tenant_id=%s" % tenant_id)
+            request = fakes.HTTPRequest.blank('/?tenant_id=%s' % tenant_id,
+                                              version='2.1')
 
         request.accept = accept_header
         request.environ["wsgiorg.routing_args"] = (None, {
@@ -235,3 +236,43 @@ class LimitsPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class LimitsControllerTestV236(BaseLimitTestSuite):
+
+    def setUp(self):
+        super(LimitsControllerTestV236, self).setUp()
+        self.controller = limits_v21.LimitsController()
+        self.req = fakes.HTTPRequest.blank("/?tenant_id=faketenant",
+                                           version='2.36')
+
+    def test_index_filtered(self):
+        absolute_limits = {
+            'ram': 512,
+            'instances': 5,
+            'cores': 21,
+            'key_pairs': 10,
+            'floating_ips': 10,
+            'security_groups': 10,
+            'security_group_rules': 20,
+        }
+
+        def _get_project_quotas(context, project_id, usages=True):
+            return {k: dict(limit=v) for k, v in absolute_limits.items()}
+
+        with mock.patch('nova.quota.QUOTAS.get_project_quotas') as \
+                get_project_quotas:
+            get_project_quotas.side_effect = _get_project_quotas
+            response = self.controller.index(self.req)
+            expected_response = {
+                "limits": {
+                    "rate": [],
+                    "absolute": {
+                        "maxTotalRAMSize": 512,
+                        "maxTotalInstances": 5,
+                        "maxTotalCores": 21,
+                        "maxTotalKeypairs": 10,
+                    },
+                },
+            }
+            self.assertEqual(expected_response, response)

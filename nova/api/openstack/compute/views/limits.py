@@ -16,6 +16,12 @@
 import six
 
 
+# This is a list of limits which needs to filter out from the API response.
+# This is due to the deprecation of network related proxy APIs, the related
+# limit should be removed from the API also.
+FILTERED_LIMITS = ['floating_ips', 'security_groups', 'security_group_rules']
+
+
 class ViewBuilder(object):
     """OpenStack API base limits view builder."""
 
@@ -35,8 +41,9 @@ class ViewBuilder(object):
             "security_group_rules": ["maxSecurityGroupRules"],
     }
 
-    def build(self, absolute_limits):
-        absolute_limits = self._build_absolute_limits(absolute_limits)
+    def build(self, absolute_limits, filter_result=False):
+        absolute_limits = self._build_absolute_limits(
+            absolute_limits, filter_result=filter_result)
 
         output = {
             "limits": {
@@ -47,16 +54,20 @@ class ViewBuilder(object):
 
         return output
 
-    def _build_absolute_limits(self, absolute_limits):
+    def _build_absolute_limits(self, absolute_limits, filter_result=False):
         """Builder for absolute limits
 
         absolute_limits should be given as a dict of limits.
         For example: {"ram": 512, "gigabytes": 1024}.
 
         """
+        filtered_limits = []
+        if filter_result:
+            filtered_limits = FILTERED_LIMITS
         limits = {}
         for name, value in six.iteritems(absolute_limits):
-            if name in self.limit_names and value is not None:
+            if (name in self.limit_names and
+                    value is not None and name not in filtered_limits):
                 for limit_name in self.limit_names[name]:
                     limits[limit_name] = value
         return limits
