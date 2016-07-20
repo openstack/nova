@@ -470,6 +470,24 @@ class NotificationsTestCase(test.TestCase):
         self.assertIn("progress", info)
         self.assertEqual(50, info["progress"])
 
+    def test_payload_has_flavor_attributes(self):
+        # Zero these to make sure they are not used
+        self.instance.vcpus = self.instance.memory_mb = 0
+        self.instance.root_gb = self.instance.ephemeral_gb = 0
+
+        # Set flavor values and make sure _these_ are present in the output
+        self.instance.flavor.vcpus = 10
+        self.instance.flavor.root_gb = 20
+        self.instance.flavor.memory_mb = 30
+        self.instance.flavor.ephemeral_gb = 40
+        info = notifications.info_from_instance(self.context, self.instance,
+                                                self.net_info, None)
+        self.assertEqual(10, info['vcpus'])
+        self.assertEqual(20, info['root_gb'])
+        self.assertEqual(30, info['memory_mb'])
+        self.assertEqual(40, info['ephemeral_gb'])
+        self.assertEqual(60, info['disk_gb'])
+
     def test_send_access_ip_update(self):
         notifications.send_update(self.context, self.instance, self.instance)
         self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))

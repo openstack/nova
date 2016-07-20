@@ -444,14 +444,14 @@ def info_from_instance(context, instance, network_info,
         architecture=instance.architecture,
 
         # Capacity properties
-        memory_mb=instance.memory_mb,
-        disk_gb=instance.root_gb + instance.ephemeral_gb,
-        vcpus=instance.vcpus,
+        memory_mb=instance.flavor.memory_mb,
+        disk_gb=instance.flavor.root_gb + instance.flavor.ephemeral_gb,
+        vcpus=instance.flavor.vcpus,
         # Note(dhellmann): This makes the disk_gb value redundant, but
         # we are keeping it for backwards-compatibility with existing
         # users of notifications.
-        root_gb=instance.root_gb,
-        ephemeral_gb=instance.ephemeral_gb,
+        root_gb=instance.flavor.root_gb,
+        ephemeral_gb=instance.flavor.ephemeral_gb,
 
         # Location properties
         host=instance.host,
