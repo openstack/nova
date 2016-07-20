@@ -14,6 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import re
+
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_utils import strutils
@@ -259,6 +261,14 @@ class ServersController(wsgi.Controller):
             else:
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPForbidden(explanation=msg)
+
+        # Verify the value of the 'name' option is a correct regex.
+        if 'name' in search_opts:
+            try:
+                re.compile(search_opts['name'])
+            except re.error:
+                msg = _("The regex for server name is incorrect")
+                raise exc.HTTPBadRequest(explanation=msg)
 
         if api_version_request.is_supported(req, min_version='2.26'):
             for tag_filter in TAG_SEARCH_FILTERS:
