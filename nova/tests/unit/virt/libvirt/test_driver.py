@@ -547,13 +547,13 @@ def _create_test_instance():
     flavor = objects.Flavor(memory_mb=2048,
                             swap=0,
                             vcpu_weight=None,
-                            root_gb=1,
+                            root_gb=10,
                             id=2,
                             name=u'm1.small',
-                            ephemeral_gb=0,
+                            ephemeral_gb=20,
                             rxtx_factor=1.0,
                             flavorid=u'1',
-                            vcpus=1,
+                            vcpus=2,
                             extra_specs={})
     return {
         'id': 1,
@@ -2013,8 +2013,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      _fake_network_info(self, 1),
                                      image_meta, {'mapping': {}})
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
-        self.assertEqual(2 * units.Mi, cfg.memory)
-        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
+        self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
         self.assertEqual(vm_mode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertEqual("console=tty0 console=ttyS0", cfg.os_cmdline)
@@ -2038,8 +2038,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      _fake_network_info(self, 1),
                                      image_meta, {'mapping': {}})
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
-        self.assertEqual(2 * units.Mi, cfg.memory)
-        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
+        self.assertEqual(instance_ref.vcpus, cfg.vcpus)
         self.assertEqual(vm_mode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertEqual("console=tty0 console=ttyS0", cfg.os_cmdline)
@@ -3182,8 +3182,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestFeatureACPI)
         self.assertIsInstance(cfg.features[1],
                               vconfig.LibvirtConfigGuestFeatureAPIC)
-        self.assertEqual(cfg.memory, 2 * units.Mi)
-        self.assertEqual(cfg.vcpus, 1)
+        self.assertEqual(cfg.memory, instance_ref.flavor.memory_mb * units.Ki)
+        self.assertEqual(cfg.vcpus, instance_ref.flavor.vcpus)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
         self.assertIsNone(cfg.os_root)
@@ -3247,8 +3247,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                      image_meta, disk_info,
                                      None, block_device_info)
         self.assertEqual(0, len(cfg.features))
-        self.assertEqual(cfg.memory, 2 * units.Mi)
-        self.assertEqual(cfg.vcpus, 1)
+        self.assertEqual(cfg.memory, instance_ref.flavor.memory_mb * units.Ki)
+        self.assertEqual(cfg.vcpus, instance_ref.flavor.vcpus)
         self.assertEqual(cfg.os_type, "uml")
         self.assertEqual(cfg.os_boot_dev, [])
         self.assertEqual(cfg.os_root, '/dev/vdb')
@@ -5432,7 +5432,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertIsNone(conf.cpu.mode)
         self.assertIsNone(conf.cpu.model)
-        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
@@ -5455,7 +5455,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-model")
         self.assertIsNone(conf.cpu.model)
-        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
@@ -5509,7 +5509,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-passthrough")
         self.assertIsNone(conf.cpu.model)
-        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
@@ -5529,7 +5529,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-model")
         self.assertIsNone(conf.cpu.model)
-        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
@@ -5551,7 +5551,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "custom")
         self.assertEqual(conf.cpu.model, "Penryn")
-        self.assertEqual(conf.cpu.sockets, 1)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
@@ -14657,8 +14657,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                     image_meta, disk_info)
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
-        self.assertEqual(2 * units.Mi, cfg.memory)
-        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
+        self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
         self.assertEqual(vm_mode.HVM, cfg.os_type)
         self.assertIsNone(cfg.os_root)
         self.assertEqual(6, len(cfg.devices))
@@ -14701,8 +14701,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                     rescue_data)
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
-        self.assertEqual(2 * units.Mi, cfg.memory)
-        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
+        self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
         self.assertEqual(vm_mode.EXE, cfg.os_type)
         self.assertEqual("/sbin/init", cfg.os_init_path)
         self.assertIsNone(cfg.os_root)
@@ -14767,8 +14767,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertEqual("parallels", cfg.virt_type)
         self.assertEqual(instance_ref["uuid"], cfg.uuid)
-        self.assertEqual(2 * units.Mi, cfg.memory)
-        self.assertEqual(1, cfg.vcpus)
+        self.assertEqual(instance_ref.flavor.memory_mb * units.Ki, cfg.memory)
+        self.assertEqual(instance_ref.flavor.vcpus, cfg.vcpus)
         self.assertEqual(vmmode, cfg.os_type)
         self.assertIsNone(cfg.os_root)
         self.assertEqual(devices, len(cfg.devices))
@@ -15045,6 +15045,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                 rxtx_factor=1.0,
                                 flavorid=u'1',
                                 vcpus=1)
+        flavor.update(params.pop('flavor', {}))
 
         inst = {}
         inst['id'] = 1
@@ -15209,7 +15210,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # Note(Mike_D): The size of instance's ephemeral_gb is 0 gb.
         self._test_migrate_disk_and_power_off(
             flavor_obj, block_device_info=info,
-            params_for_instance={'image_ref': None, 'ephemeral_gb': 0})
+            params_for_instance={'image_ref': None,
+                                 'flavor': {'root_gb': 1,
+                                            'ephemeral_gb': 0}})
         disconnect_volume.assert_called_with(
             info['block_device_mapping'][1]['connection_info'], 'vda')
 
@@ -15249,8 +15252,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         # Original instance config
-        instance = self._create_instance({'root_gb': 10,
-                                          'ephemeral_gb': 0})
+        instance = self._create_instance({'flavor': {'root_gb': 10,
+                                                     'ephemeral_gb': 0}})
 
         # Re-size fake instance to 20G root and 1024M swap disk
         flavor = {'root_gb': 20, 'ephemeral_gb': 0, 'swap': 1024}
@@ -15532,8 +15535,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                   'uuid': 'other_uuid'})
 
     def test_disk_size_from_instance_disk_info(self):
-        instance_data = {'root_gb': 10, 'ephemeral_gb': 20, 'swap_gb': 30}
-        inst = objects.Instance(**instance_data)
+        flavor_data = {'root_gb': 10, 'ephemeral_gb': 20, 'swap_gb': 30}
+        inst = objects.Instance(flavor=objects.Flavor(**flavor_data))
         self.assertEqual(10 * units.Gi,
                          self.drvr._disk_size_from_instance(inst, 'disk'))
 
