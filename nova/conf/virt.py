@@ -334,7 +334,7 @@ remove_unused_original_minimum_age_seconds = cfg.IntOpt(
 
 pointer_model = cfg.StrOpt(
     'pointer_model',
-    default=None, choices=[None, 'usbtablet'],
+    choices=[None, 'usbtablet'],
     help="""Generic property to specify the pointer type.
 
 Input devices allow interaction with a graphical framebuffer. For

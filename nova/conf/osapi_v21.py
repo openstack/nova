@@ -77,7 +77,6 @@ extensions will be part of the standard API, and thus always accessible.
     enabled, extensions_blacklist
 """),
         cfg.StrOpt("project_id_regex",
-            default=None,
             deprecated_for_removal=True,
             deprecated_group="osapi_v21",
             help="""
