@@ -6446,22 +6446,6 @@ class LibvirtDriver(driver.ComputeDriver):
             is_shared_instance_path = migrate_data.is_shared_instance_path
             is_block_migration = migrate_data.block_migration
 
-        if configdrive.required_by(instance):
-                # NOTE(sileht): configdrive is stored into the block storage
-                # kvm is a block device, live migration will work
-                # NOTE(sileht): the configdrive is stored into a shared path
-                # kvm don't need to migrate it, live migration will work
-                # NOTE(dims): Using config drive with iso format does not work
-                # because of a bug in libvirt with read only devices. However
-                # one can use vfat as config_drive_format which works fine.
-                # Please see bug/1246201 for details on the libvirt bug.
-            if (is_shared_block_storage or
-                is_shared_instance_path or
-                CONF.config_drive_format == 'vfat'):
-                pass
-            else:
-                raise exception.NoLiveMigrationForConfigDriveInLibVirt()
-
         if not is_shared_instance_path:
             instance_dir = libvirt_utils.get_instance_path_at_destination(
                             instance, migrate_data)
@@ -6498,6 +6482,19 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._create_images_and_backing(
                     context, instance, instance_dir, disk_info,
                     fallback_from_host=instance.host)
+                if (configdrive.required_by(instance) and
+                        CONF.config_drive_format == 'iso9660'):
+                    # NOTE(pkoniszewski): Due to a bug in libvirt iso config
+                    # drive needs to be copied to destination prior to
+                    # migration when instance path is not shared and block
+                    # storage is not shared. Files that are already present
+                    # on destination are excluded from a list of files that
+                    # need to be copied to destination. If we don't do that
+                    # live migration will fail on copying iso config drive to
+                    # destination and writing to read-only device.
+                    # Please see bug/1246201 for more details.
+                    src = "%s:%s/disk.config" % (instance.host, instance_dir)
+                    self._remotefs.copy_file(src, instance_dir)
 
             if not is_block_migration:
                 # NOTE(angdraug): when block storage is shared between source
