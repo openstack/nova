@@ -259,8 +259,7 @@ class ComputeDriver(object):
         :param attach_block_devices: function to attach block devices. See
             nova.compute.manager.ComputeManager:_rebuild_default_impl for
             usage.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param recreate: True if the instance is being recreated on a new
             hypervisor - all the cleanup of old state is skipped.
         :param block_device_info: Information about block devices to be
@@ -289,8 +288,7 @@ class ComputeDriver(object):
             The metadata of the image of the instance.
         :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in instance.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: Information about block devices to be
                                   attached to the instance.
         """
@@ -306,8 +304,7 @@ class ComputeDriver(object):
 
         :param context: security context
         :param instance: Instance object as returned by DB layer.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
@@ -324,8 +321,7 @@ class ComputeDriver(object):
 
         :param context: security context
         :param instance: Instance object as returned by DB layer.
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
@@ -344,8 +340,7 @@ class ComputeDriver(object):
         is paused or halted/stopped.
 
         :param instance: nova.objects.instance.Instance
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param reboot_type: Either a HARD or SOFT reboot
         :param block_device_info: Info pertaining to attached volumes
         :param bad_volumes_callback: Function to handle any bad volumes
@@ -581,8 +576,7 @@ class ComputeDriver(object):
         :param migration: the migrate/resize information
         :param instance: nova.objects.instance.Instance being migrated/resized
         :param disk_info: the newly transferred disk information
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param nova.objects.ImageMeta image_meta:
             The metadata of the image of the instance.
         :param resize_instance: True if the instance is being resized,
@@ -607,8 +601,7 @@ class ComputeDriver(object):
 
         :param context: the context for the finish_revert_migration
         :param instance: nova.objects.instance.Instance being migrated/resized
-        :param network_info:
-           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param network_info: instance network information
         :param block_device_info: instance volume block device info
         :param power_on: True if the instance should be powered on, False
                          otherwise
