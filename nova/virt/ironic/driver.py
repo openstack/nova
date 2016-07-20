@@ -322,6 +322,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             'hypervisor_hostname': str(node.uuid),
             'hypervisor_type': self._get_hypervisor_type(),
             'hypervisor_version': self._get_hypervisor_version(),
+            'resource_class': node.resource_class,
             # The Ironic driver manages multiple hosts, so there are
             # likely many different CPU models in use. As such it is
             # impossible to provide any meaningful info on the CPU
