@@ -1,7 +1,4 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
 ======================================================
  Floating IPs bulk (os-floating-ips-bulk) (DEPRECATED)
@@ -25,6 +22,7 @@ List Floating Ips
 
 .. rest_method:: GET /os-floating-ips-bulk
 
+
 Lists all floating IPs.
 
 Normal response codes: 200
@@ -33,6 +31,16 @@ Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ip_info : floating_ips_list
+  - address : floating_ip
+  - fixed_ip : fixed_ip_address
+  - instance_uuid : server_id
+  - interface : virtual_interface
+  - pool: floating_ip_pool_name
+  - project_id : project_id_value
 
 **Example List Floating Ips: JSON response**
 
@@ -48,14 +56,19 @@ Bulk-creates floating IPs.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), conflict(409)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+conflict(409)
 
 Request
 -------
 
 .. rest_parameters:: parameters.yaml
 
-  - ip_range: ip_range
+  - floating_ips_bulk_create : floating_ip_bulk_object
+  - ip_range : ip_range
+  - interface : virtual_interface_id_optional
+  - pool: floating_ip_pool_name_optional
+
 
 **Example Create Floating Ips: JSON request**
 
@@ -64,6 +77,13 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ips_bulk_create : floating_ip_bulk_object
+  - interface : virtual_interface
+  - ip_range : ip_range
+  - pool: floating_ip_pool_name
 
 **Example Create Floating Ips: JSON response**
 
@@ -86,7 +106,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - ip_range: ip_range
+  - ip_range: ip_range_delete
 
 **Example Bulk-Delete Floating Ips: JSON request**
 
@@ -95,6 +115,10 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ips_bulk_delete : ip_range_delete
 
 **Example Bulk-Delete Floating Ips: JSON response**
 
@@ -121,6 +145,17 @@ Request
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - floating_ip_info : floating_ips_list
+  - address : floating_ip
+  - fixed_ip : fixed_ip_address
+  - instance_uuid : server_id
+  - interface : virtual_interface
+  - pool: floating_ip_pool_name
+  - project_id : project_id_value
+
 
 **Example List Floating Ips By Host: JSON response**
 

@@ -1577,6 +1577,12 @@ fixed_ip:
   in: body
   required: false
   type: string
+fixed_ip_address:
+  description: |
+    Fixed IP associated with floating IP network.
+  in: body
+  required: true
+  type: string
 fixed_ip_host:
   description: |
     The hostname of the host that manages the server that is associated with
@@ -1757,11 +1763,29 @@ flavors:
   in: body
   required: true
   type: array
+floating_ip:
+  description: |
+    The floating ip address.
+  in: body
+  required: true
+  type: string
+floating_ip_bulk_object:
+  description: |
+    The floating ip bulk address object.
+  in: body
+  required: true
+  type: object
 floating_ip_pool_name:
   description: |
     The name of the floating ip pool.
   in: body
   required: true
+  type: string
+floating_ip_pool_name_optional:
+  description: |
+    The name of the floating ip pool
+  in: body
+  required: false
   type: string
 floating_ip_pools:
   description: |
@@ -1775,6 +1799,12 @@ floating_ips:
   in: body
   required: true
   type: integer
+floating_ips_list:
+  description: |
+    An array of floating ip objects.
+  in: body
+  required: true
+  type: array
 floating_ips_quota_details:
   description: |
     The object of detailed floating ips quota, including in_use, limit and
@@ -2431,8 +2461,7 @@ ip_range:
   in: body
   required: true
   type: string
-# TODO(mriedem): this needs to be renamed and used in os-floating-ips-bulk.inc
-ip_range_3:
+ip_range_delete:
   description: |
     The range of IP addresses from which to bulk-delete floating IPs.
   in: body
@@ -3258,6 +3287,12 @@ project_id_server_group:
   in: body
   required: false
   type: string
+project_id_value:
+  description: |
+    The project id under which the bulk ip addresses are created
+  in: body
+  required: true
+  type: string
 quota_set:
   description: |
     A ``quota_set`` object.
@@ -3991,11 +4026,23 @@ versions:
   required: true
   description: >
     A list of version objects that describe the API versions available.
+virtual_interface:
+  description: |
+    Virtual interface for the floating ip address.
+  in: body
+  required: true
+  type: string
 virtual_interface_id:
   description: |
     The UUID of the virtual interface.
   in: body
   required: true
+  type: string
+virtual_interface_id_optional:
+  description: |
+    Virtual interface for the floating ip address
+  in: body
+  required: false
   type: string
 virtual_interfaces:
   description: |
