@@ -16,6 +16,7 @@
 from oslo_config import cfg
 
 from nova import context as nova_context
+from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.ironic import utils as ironic_utils
@@ -32,6 +33,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         self.flavor = ironic_utils.get_test_flavor()
         self.ctx = nova_context.get_admin_context()
         self.instance = fake_instance.fake_instance_obj(self.ctx)
+        self.instance.flavor = self.flavor
         self.node = ironic_utils.get_test_node(driver='fake')
         # Generic expected patches
         self._expected_deploy_patch = [
@@ -39,7 +41,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
              'value': self.image_meta.id,
              'op': 'add'},
             {'path': '/instance_info/root_gb',
-             'value': str(self.instance['root_gb']),
+             'value': str(self.instance.flavor.root_gb),
              'op': 'add'},
             {'path': '/instance_info/swap_mb',
              'value': str(self.flavor['swap']),
@@ -48,10 +50,10 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
              'value': self.instance['display_name'],
              'op': 'add'},
             {'path': '/instance_info/vcpus',
-             'value': str(self.instance['vcpus']),
+             'value': str(self.instance.flavor.vcpus),
              'op': 'add'},
             {'path': '/instance_info/memory_mb',
-             'value': str(self.instance['memory_mb']),
+             'value': str(self.instance.flavor.memory_mb),
              'op': 'add'},
             {'path': '/instance_info/local_gb',
              'value': str(self.node.properties.get('local_gb', 0)),
@@ -105,12 +107,14 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
     def test_generic_get_deploy_patch_ephemeral(self):
         CONF.set_override('default_ephemeral_format', 'testfmt')
         node = ironic_utils.get_test_node(driver='fake')
-        instance = fake_instance.fake_instance_obj(self.ctx,
-                                                   ephemeral_gb=10)
+        instance = fake_instance.fake_instance_obj(
+            self.ctx,
+            flavor=objects.Flavor(root_gb=1, vcpus=1,
+                                  memory_mb=1, ephemeral_gb=10))
         patch = patcher.create(node).get_deploy_patch(
                 instance, self.image_meta, self.flavor)
         expected = [{'path': '/instance_info/ephemeral_gb',
-                     'value': str(instance.ephemeral_gb),
+                     'value': str(instance.flavor.ephemeral_gb),
                      'op': 'add'},
                     {'path': '/instance_info/ephemeral_format',
                      'value': 'testfmt',
