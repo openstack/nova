@@ -1751,7 +1751,7 @@ class API(base.Base):
                         self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
                     err_str = _LW("Ignoring volume cleanup failure due to %s")
-                    LOG.warn(err_str % exc, instance=instance)
+                    LOG.warning(err_str % exc, instance=instance)
             bdm.destroy()
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):

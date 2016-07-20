@@ -444,7 +444,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
                           mock.sentinel.image_meta, True, bdi, True)
 
     @mock.patch.object(migrationops.MigrationOps, '_check_resize_vhd')
-    @mock.patch.object(migrationops.LOG, 'warn')
+    @mock.patch.object(migrationops.LOG, 'warning')
     def test_check_ephemeral_disks_multiple_eph_warn(self, mock_warn,
                                                      mock_check_resize_vhd):
         mock_instance = fake_instance.fake_instance_obj(self.context)

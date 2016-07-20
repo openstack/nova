@@ -614,8 +614,8 @@ class VMOps(object):
 
     def _handle_neutron_event_timeout(self, instance, undo_mgr):
         # We didn't get callback from Neutron within given time
-        LOG.warn(_LW('Timeout waiting for vif plugging callback'),
-                 instance=instance)
+        LOG.warning(_LW('Timeout waiting for vif plugging callback'),
+                    instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
@@ -627,8 +627,8 @@ class VMOps(object):
             self._update_last_dom_id(vm_ref)
 
     def _neutron_failed_callback(self, event_name, instance):
-        LOG.warn(_LW('Neutron Reported failure on event %(event)s'),
-                {'event': event_name}, instance=instance)
+        LOG.warning(_LW('Neutron Reported failure on event %(event)s'),
+                   {'event': event_name}, instance=instance)
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 

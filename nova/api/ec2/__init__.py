@@ -38,7 +38,7 @@ _DEPRECATION_MESSAGE = ('The in tree EC2 API has been removed in Mitaka. '
 class DeprecatedMiddleware(wsgi.Middleware):
     def __init__(self, *args, **kwargs):
         super(DeprecatedMiddleware, self).__init__(args[0])
-        LOG.warn(_LW(_DEPRECATED_MIDDLEWARE % type(self).__name__))  # noqa
+        LOG.warning(_LW(_DEPRECATED_MIDDLEWARE % type(self).__name__))  # noqa
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):

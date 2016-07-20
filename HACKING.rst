@@ -62,6 +62,7 @@ Nova Specific Commandments
 - [N349] Check for closures in tests which are not used
 - [N350] Policy registration should be in the central location ``nova/policies/``
 - [N351] Do not use the oslo_policy.policy.Enforcer.enforce() method.
+- [N352] LOG.warn is deprecated. Enforce use of LOG.warning.
 
 Creating Unit Tests
 -------------------
