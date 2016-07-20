@@ -1788,18 +1788,6 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         body = dict(start="")
         self.controller._start_server(req, FAKE_UUID, body)
 
-    def test_start_policy_failed(self):
-        rules = {
-            "os_compute_api:servers:start": "project_id:non_fake"
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
-        body = dict(start="")
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._start_server,
-                                req, FAKE_UUID, body)
-        self.assertIn("os_compute_api:servers:start", exc.format_message())
-
     def test_start_not_ready(self):
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
@@ -1830,18 +1818,6 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.controller._stop_server(req, FAKE_UUID, body)
-
-    def test_stop_policy_failed(self):
-        rules = {
-            "os_compute_api:servers:stop": "project_id:non_fake"
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        req = fakes.HTTPRequestV21.blank('/fake/servers/%s/action' % FAKE_UUID)
-        body = dict(stop='')
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._stop_server,
-                                req, FAKE_UUID, body)
-        self.assertIn("os_compute_api:servers:stop", exc.format_message())
 
     def test_stop_not_ready(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
