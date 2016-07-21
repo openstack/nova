@@ -9,16 +9,17 @@
 # liujunpeng <liujunpeng@inspur.com>, 2015. #zanata
 # zhangjingwen <zhangjingwen@cn.fujitsu.com>, 2015. #zanata
 # Gaoxiao Zhu <zhu.gaoxiao@h3c.com>, 2016. #zanata
+# maoshuai <fwsakura@163.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev12\n"
+"Project-Id-Version: nova 13.1.1.dev3\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-04-19 04:50+0000\n"
+"POT-Creation-Date: 2016-07-19 22:58+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-08 01:29+0000\n"
-"Last-Translator: Gaoxiao Zhu <zhu.gaoxiao@h3c.com>\n"
+"PO-Revision-Date: 2016-07-19 01:08+0000\n"
+"Last-Translator: maoshuai <fwsakura@163.com>\n"
 "Language: zh-CN\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
@@ -61,8 +62,18 @@ msgstr "刷新网络缓存时发生错误。"
 msgid "Attaching PCI devices %(dev)s to %(dom)s failed."
 msgstr "绑定PCI设备%(dev)s 到 %(dom)s 失败。"
 
+#, python-format
+msgid "Attaching network adapter failed. Exception: %s"
+msgstr "绑定网络适配器失败。异常：%s"
+
 msgid "Cannot cleanup migration files"
 msgstr "无法清除迁移文件"
+
+#, python-format
+msgid ""
+"Cannot log in target %(target_iqn)s. Unsupported iSCSI authentication "
+"method: %(auth_method)s."
+msgstr "不能登录到目标%(target_iqn)s。不支持iSCSI认证方法：%(auth_method)s。"
 
 #, python-format
 msgid "Cannot reboot instance: %s"
@@ -246,6 +257,14 @@ msgstr "在 undefine 时 libvirt 发生错误。Code=%(errcode)s Error=%(e)s"
 #, python-format
 msgid "Error from libvirt during unfilter. Code=%(errcode)s Error=%(e)s"
 msgstr "在 unfilter 期间，libvirt 中出错。Code=%(errcode)s Error=%(e)s"
+
+#, python-format
+msgid ""
+"Error from libvirt while injecting an NMI to %(instance_uuid)s: [Error Code "
+"%(error_code)s] %(ex)s"
+msgstr ""
+"当注入 NMI到实例%(instance_uuid)s时，libvirt报错： [错误号 %(error_code)s] "
+"%(ex)s"
 
 #, python-format
 msgid "Error getting key: %s"
@@ -843,6 +862,10 @@ msgid "Read/Write data failed"
 msgstr "读/写数据失败"
 
 #, python-format
+msgid "Requested VM Generation %s is not supported on this OS."
+msgstr "这个系统不支持请求VM Generation %s。"
+
+#, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
 msgstr "请求VM Generation %s，但是返回VHD而不是VHDX。"
 
@@ -878,6 +901,10 @@ msgstr "临时目录无效：%s"
 #, python-format
 msgid "The Quobyte volume at %s is still in use."
 msgstr "在%s 的Quobyte 卷仍然在用。"
+
+#, python-format
+msgid "The agent call to %(method)s returned an error: %(ret)r. args=%(args)r"
+msgstr "代理调用%(method)s，返回一个错误：%(ret)r. args=%(args)r"
 
 #, python-format
 msgid ""

@@ -30,16 +30,17 @@
 # English translations for nova.
 # Daisy <guoyingc@cn.ibm.com>, 2016. #zanata
 # Linda <duleish@cn.ibm.com>, 2016. #zanata
+# maoshuai <fwsakura@163.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev83\n"
+"Project-Id-Version: nova 13.1.1.dev3\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-11 00:10+0000\n"
+"POT-Creation-Date: 2016-07-19 22:58+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-04-29 04:45+0000\n"
-"Last-Translator: liujunpeng <liujunpeng@inspur.com>\n"
+"PO-Revision-Date: 2016-07-20 09:59+0000\n"
+"Last-Translator: maoshuai <fwsakura@163.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -243,8 +244,8 @@ msgid ""
 "agreed upon here so that the operator knowns they are dealing with the same "
 "file system."
 msgstr ""
-"对每个文件系统给定唯一的标识。在 Glance 中设置这个值，并且与这里的一致，这样"
-"操作者知道他们在处理同一个文件系统。"
+"对每个文件系统给定唯一的标识。在 Glance 中设置这个值，并且与这里一致，这样操"
+"作者知道他们在处理同一文件系统。"
 
 msgid "A valid disk parameter is required"
 msgstr "有效的磁盘参数是必须的"
@@ -611,7 +612,7 @@ msgid ""
 "with the builtin SYSTEM account or other accounts unable to authenticate on "
 "a remote host."
 msgstr ""
-"不能访问\"%(instances_path)s\"，确保路径存在并且您有恰当的权限。实际系统内建"
+"无法访问\"%(instances_path)s\"，确保路径存在并且您有适合的权限。实际系统内建"
 "账号在一个远程机无法认证的账号不能执行命令 Nova-Compute。"
 
 #, python-format
@@ -3794,7 +3795,7 @@ msgid "Success"
 msgstr "成功"
 
 msgid "Suspended"
-msgstr "已暂挂"
+msgstr "挂起"
 
 msgid "Swap drive requested is larger than instance type allows."
 msgstr "请求的交换驱动器超过实例类型允许。"
@@ -4022,7 +4023,7 @@ msgid ""
 "option after you have backed up any necessary data."
 msgstr ""
 "在表格 '%(table_name)s' 中有 %(records)d 个记录，uuid 或者 instance_uuid 列值"
-"为 NULL。在您备份任何需要的数据之后，使用参数 --delete 再运行一次这个命令。"
+"为 NULL。在备份任何需要的数据之后，使用参数 --delete 再运行一次这个命令。"
 
 #, python-format
 msgid ""
@@ -4032,7 +4033,7 @@ msgid ""
 "null_instance_uuid_scan' command."
 msgstr ""
 "在表格 '%(table_name)s' 中有 %(records)d 记录，uuid 或者 instance_uuid 列值"
-"为 NULL。在迁移通过前，必须手动清除。考虑运行命令 'nova-manage db "
+"为 NULL。在迁移通过前，必须手工清除。考虑运行命令 'nova-manage db "
 "null_instance_uuid_scan'。"
 
 msgid "There are not enough hosts available."
@@ -4044,7 +4045,7 @@ msgid ""
 "continue until all instance flavor records have been migrated to the new "
 "format. Please run `nova-manage db migrate_flavor_data' first."
 msgstr ""
-"仍有 %(count)i 个未迁移 flavor 记录。在所有实例 flavor 记录迁移到新的格式之"
+"还有 %(count)i 个未迁移 flavor 记录。在所有实例 flavor 记录迁移到新的格式之"
 "前，迁移不能继续。请先运行“nova-manage db migrate_flavor_data”。"
 
 #, python-format
@@ -4235,7 +4236,7 @@ msgid ""
 "Unable to find a mounted disk for target_iqn: %s. Please ensure that the "
 "host's SAN policy is set to \"OfflineAll\" or \"OfflineShared\""
 msgstr ""
-"找不到 target_iqn: %s 的已安装磁盘。请确保主机 SAN 策略设置为 \"OfflineAll\" "
+"找不到 target_iqn: %s 的已挂载磁盘。请确保主机 SAN 策略设置为 \"OfflineAll\" "
 "或 \"OfflineShared\""
 
 #, python-format
