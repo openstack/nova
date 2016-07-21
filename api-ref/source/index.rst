@@ -18,6 +18,7 @@
 .. include:: servers-action-shelve.inc
 .. include:: servers-action-crash-dump.inc
 .. include:: servers-admin-action.inc
+.. include:: server-security-groups.inc
 .. include:: diagnostics.inc
 .. include:: ips.inc
 .. include:: metadata.inc
