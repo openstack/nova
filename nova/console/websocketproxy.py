@@ -80,7 +80,7 @@ class TenantSock(object):
         self.reqhandler.send_frames([encodeutils.safe_encode(data)])
 
     def finish_up(self):
-        self.reqhandler.send_frames([b''.join([self.queue])])
+        self.reqhandler.send_frames([b''.join(self.queue)])
 
     def close(self):
         self.finish_up()
