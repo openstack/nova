@@ -6853,13 +6853,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 xml = guest.get_xml_desc()
 
                 block_device_info = None
-                if guest.uuid in local_instances:
+                if guest.uuid in local_instances \
+                        and (bdms and guest.uuid in bdms):
                     # Get block device info for instance
                     block_device_info = driver.get_block_device_info(
                         local_instances[guest.uuid], bdms[guest.uuid])
 
                 disk_infos = self._get_instance_disk_info(guest.name, xml,
                                  block_device_info=block_device_info)
+                if not disk_infos:
+                    continue
 
                 for info in disk_infos:
                     disk_over_committed_size += int(
