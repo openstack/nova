@@ -1660,8 +1660,6 @@ def _exec_ebtables(*cmd, **kwargs):
 
     # We always try at least once
     attempts = CONF.ebtables_exec_attempts
-    if attempts <= 0:
-        attempts = 1
     count = 1
     while count <= attempts:
         # Updated our counters if needed
