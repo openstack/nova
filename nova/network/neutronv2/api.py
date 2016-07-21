@@ -73,8 +73,8 @@ def _load_auth_plugin(conf):
 class ClientWrapper(clientv20.Client):
     """A Neutron client wrapper class.
 
-    Wraps the callable methods, catches Unauthorized from Neutron and
-    convert it to a 401 for Nova clients.
+    Wraps the callable methods, catches Unauthorized,Forbidden from Neutron and
+    convert it to a 401,403 for Nova clients.
     """
     def __init__(self, base_client, admin):
         # Expose all attributes from the base_client instance
@@ -108,6 +108,8 @@ class ClientWrapper(clientv20.Client):
                               "valid admin token, please verify Neutron "
                               "admin credential located in nova.conf"))
                 raise exception.NeutronAdminCredentialConfigurationInvalid()
+            except neutron_client_exc.Forbidden as e:
+                raise exception.Forbidden(e)
             return ret
         return wrapper
 

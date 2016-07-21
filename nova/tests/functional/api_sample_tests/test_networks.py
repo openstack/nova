@@ -73,6 +73,13 @@ class NetworksJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-networks/%s' % uuid)
         self.assertEqual(401, response.status_code)
 
+    @mock.patch('nova.network.api.API.create',
+                side_effect=exception.Forbidden)
+    def test_network_create_forbidden(self, mock_create):
+        response = self._do_post("os-networks",
+                                 'network-create-req', {})
+        self.assertEqual(403, response.status_code)
+
     def test_network_create(self):
         response = self._do_post("os-networks",
                                  'network-create-req', {})
