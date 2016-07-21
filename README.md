@@ -23,13 +23,14 @@ COLO is currently not supported upstream, however, you can get patches for
 both [QEMU](https://github.com/orbitfp7/qemu/tree/orbit-wp4-colo-mar16) and
 [libvirt](https://github.com/orbitfp7/libvirt/tree/colo-postcopy). These should
 be setup and installed before you try to use the OpenStack patches.
+QEMU should be installed using QEMU's normal installation process, adding `--enable-colo --enable-qourum` during the configure stage.
 
 These patches are based on the Juno version of Nova. Make sure that your
 OpenStack setup is running or is compatible with Nova running Juno.
 
 ### Installation
 To be able to use COLO through OpenStack you need to install the COLO patches.
-If you’re feeling brave, you could try to apply the patches yourself,
+If you are feeling brave, you could try to apply the patches yourself,
 otherwise, replace your current Nova source code by cloning this repository.
 
 There is also a few minor patches for the
