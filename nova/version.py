@@ -33,7 +33,7 @@ def _load_config():
 
     from oslo_config import cfg
 
-    import logging
+    from oslo_log import log as logging
 
     global loaded, NOVA_VENDOR, NOVA_PRODUCT, NOVA_PACKAGE
     if loaded:

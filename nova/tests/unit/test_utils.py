@@ -15,7 +15,6 @@
 import datetime
 import hashlib
 import importlib
-import logging
 import os
 import os.path
 import socket
@@ -29,6 +28,7 @@ from oslo_concurrency import processutils
 from oslo_config import cfg
 from oslo_context import context as common_context
 from oslo_context import fixture as context_fixture
+from oslo_log import log as logging
 from oslo_utils import encodeutils
 from oslo_utils import fixture as utils_fixture
 from oslo_utils import units

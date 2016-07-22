@@ -24,7 +24,6 @@ import errno
 import functools
 import hashlib
 import inspect
-import logging as std_logging
 import os
 import pyclbr
 import random
@@ -215,7 +214,7 @@ class RootwrapDaemonHelper(RootwrapProcessHelper):
         # rootwrap to honor the same set of flags in kwargs and to ensure
         # that we don't regress any current behavior.
         cmd = [str(c) for c in cmd]
-        loglevel = kwargs.pop('loglevel', std_logging.DEBUG)
+        loglevel = kwargs.pop('loglevel', logging.DEBUG)
         log_errors = kwargs.pop('log_errors', None)
         process_input = kwargs.pop('process_input', None)
         delay_on_retry = kwargs.pop('delay_on_retry', True)
