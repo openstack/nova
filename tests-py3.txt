@@ -57,7 +57,6 @@ nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
 nova.tests.unit.pci.test_stats.PciDeviceStatsWithTagsTestCase
 nova.tests.unit.test_bdm.BlockDeviceMappingEc2CloudTestCase
 nova.tests.unit.test_configdrive2.ConfigDriveTestCase
-nova.tests.unit.test_hacking.HackingTestCase
 nova.tests.unit.test_matchers.TestDictMatches
 nova.tests.unit.test_metadata.MetadataHandlerTestCase
 nova.tests.unit.test_metadata.MetadataPasswordTestCase

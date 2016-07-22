@@ -18,6 +18,7 @@ import os
 import re
 
 import pep8
+import six
 
 """
 Guidelines for writing new hacking checks
@@ -431,14 +432,26 @@ class CheckForStrUnicodeExc(BaseASTChecker):
         self.name = []
         self.already_checked = []
 
-    def visit_TryExcept(self, node):
-        for handler in node.handlers:
-            if handler.name:
-                self.name.append(handler.name.id)
-                super(CheckForStrUnicodeExc, self).generic_visit(node)
-                self.name = self.name[:-1]
-            else:
-                super(CheckForStrUnicodeExc, self).generic_visit(node)
+    # Python 2 produces ast.TryExcept and ast.TryFinally nodes, but Python 3
+    # only produces ast.Try nodes.
+    if six.PY2:
+        def visit_TryExcept(self, node):
+            for handler in node.handlers:
+                if handler.name:
+                    self.name.append(handler.name.id)
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
+                    self.name = self.name[:-1]
+                else:
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
+    else:
+        def visit_Try(self, node):
+            for handler in node.handlers:
+                if handler.name:
+                    self.name.append(handler.name)
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
+                    self.name = self.name[:-1]
+                else:
+                    super(CheckForStrUnicodeExc, self).generic_visit(node)
 
     def visit_Call(self, node):
         if self._check_call_names(node, ['str', 'unicode']):
