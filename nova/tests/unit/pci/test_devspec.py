@@ -154,9 +154,8 @@ class PciDevSpecTestCase(test.NoDBTestCase):
         return_value = (None, False))
     def test_invalid_name(self, mock_get_function_by_ifname):
         pci_info = {"devname": "lo", "physical_network": "hr_net"}
-        exc = self.assertRaises(exception.PciDeviceNotFoundById,
-                  devspec.PciDeviceSpec, pci_info)
-        self.assertEqual('PCI device lo not found', six.text_type(exc))
+        pci = devspec.PciDeviceSpec(pci_info)
+        self.assertFalse(pci.match(dev))
 
     def test_pci_obj(self):
         pci_info = {"vendor_id": "8086", "address": "*:*:*.5",
