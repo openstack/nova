@@ -426,33 +426,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             bind_host_id=instance.get('host'))
 
     @mock.patch.object(network_api.API, 'allocate_for_instance')
-    def test_allocate_network_neg_conf_value_treated_as_zero(self,
-                                                             mock_allocate):
-        self.flags(network_allocate_retries=-1)
-
-        mock_allocate.side_effect = test.TestingException
-
-        instance = {}
-        is_vpn = 'fake-is-vpn'
-        req_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(network_id='fake')])
-        macs = 'fake-macs'
-        sec_groups = 'fake-sec-groups'
-        dhcp_options = None
-
-        self.assertRaises(test.TestingException,
-                          self.compute._allocate_network_async,
-                          self.context, instance, req_networks, macs,
-                          sec_groups, is_vpn, dhcp_options)
-
-        mock_allocate.assert_called_once_with(
-            self.context, instance, vpn=is_vpn,
-            requested_networks=req_networks, macs = macs,
-            security_groups=sec_groups,
-            dhcp_options=dhcp_options,
-            bind_host_id=instance.get('host'))
-
-    @mock.patch.object(network_api.API, 'allocate_for_instance')
     @mock.patch.object(manager.ComputeManager, '_instance_update')
     @mock.patch.object(time, 'sleep')
     def test_allocate_network_with_conf_value_is_one(

@@ -1370,11 +1370,6 @@ class ComputeManager(manager.Manager):
         LOG.debug("Allocating IP information in the background.",
                   instance=instance)
         retries = CONF.network_allocate_retries
-        if retries < 0:
-            LOG.warning(_LW("Treating negative config value (%(retries)s) for "
-                            "'network_allocate_retries' as 0."),
-                        {'retries': retries})
-            retries = 0
         attempts = retries + 1
         retry_time = 1
         bind_host_id = self.driver.network_binding_host_id(context, instance)
