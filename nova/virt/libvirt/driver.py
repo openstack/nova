@@ -2960,7 +2960,8 @@ class LibvirtDriver(driver.ComputeDriver):
                       disk_images=None, network_info=None,
                       block_device_info=None, files=None,
                       admin_pass=None, inject_files=True,
-                      fallback_from_host=None):
+                      fallback_from_host=None,
+                      ignore_bdi_for_swap=False):
         booted_from_volume = self._is_booted_from_volume(
             instance, disk_mapping)
 
@@ -3052,13 +3053,26 @@ class LibvirtDriver(driver.ComputeDriver):
             mapping = disk_mapping['disk.swap']
             swap_mb = 0
 
-            swap = driver.block_device_info_get_swap(block_device_info)
-            if driver.swap_is_usable(swap):
-                swap_mb = swap['swap_size']
-            elif (inst_type['swap'] > 0 and
-                  not block_device.volume_in_mapping(
-                    mapping['dev'], block_device_info)):
+            if ignore_bdi_for_swap:
+                # This is a workaround to support legacy swap resizing,
+                # which does not touch swap size specified in bdm,
+                # but works with flavor specified size only.
+                # In this case we follow the legacy logic and ignore block
+                # device info completely.
+                # NOTE(ft): This workaround must be removed when a correct
+                # implementation of resize operation changing sizes in bdms is
+                # developed. Also at that stage we probably may get rid of
+                # the direct usage of flavor swap size here,
+                # leaving the work with bdm only.
                 swap_mb = inst_type['swap']
+            else:
+                swap = driver.block_device_info_get_swap(block_device_info)
+                if driver.swap_is_usable(swap):
+                    swap_mb = swap['swap_size']
+                elif (inst_type['swap'] > 0 and
+                      not block_device.volume_in_mapping(
+                        mapping['dev'], block_device_info)):
+                    swap_mb = inst_type['swap']
 
             if swap_mb > 0:
                 size = swap_mb * units.Mi
@@ -7192,7 +7206,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # backing file.
         self._create_image(context, instance, block_disk_info['mapping'],
                            network_info=network_info,
-                           block_device_info=None, inject_files=False,
+                           block_device_info=block_device_info,
+                           inject_files=False, ignore_bdi_for_swap=True,
                            fallback_from_host=migration.source_compute)
 
         # Required by Quobyte CI
