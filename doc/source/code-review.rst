@@ -201,10 +201,17 @@ Please note:
 Microversion API
 ================
 
-* If an new microversion API is added, the following needs to happen:
+If a new microversion API is added, the following needs to happen:
 
- * A new patch for the microversion API change in python-novaclient side
-   should be submitted.
+* A new patch for the microversion API change in python-novaclient side
+  should be submitted.
+* If the microversion changes the response schema, a new schema and test for
+  the microversion must be added to Tempest. The microversion change in Nova
+  should not be merged until the Tempest test is submitted and at least
+  passing; it does not need to be merged yet as long as it is testing the
+  Nova change via Depends-On. The Nova microversion change commit message
+  should reference the Change-Id of the Tempest test for reviewers to identify
+  it.
 
 Release Notes
 =============

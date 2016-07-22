@@ -356,6 +356,9 @@ necessary to add changes to other places which describe your change:
 * Make a new commit to python-novaclient and update corresponding
   files to enable the newly added microversion API.
 
+* If the microversion changes the response schema, a new schema and test for
+  the microversion must be added to Tempest.
+
 Allocating a microversion
 -------------------------
 
