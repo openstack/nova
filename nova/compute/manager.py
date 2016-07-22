@@ -1948,6 +1948,7 @@ class ComputeManager(manager.Manager):
                     reason=msg)
         except (exception.VirtualInterfaceCreateException,
                 exception.VirtualInterfaceMacAddressException,
+                exception.FixedIpInvalidOnHost,
                 exception.UnableToAutoAllocateNetwork) as e:
             LOG.exception(_LE('Failed to allocate network(s)'),
                           instance=instance)

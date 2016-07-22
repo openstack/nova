@@ -370,6 +370,13 @@ class API(base_api.NetworkAPI):
                         {'mac': mac_address, 'network': network_id},
                         instance=instance)
             raise exception.PortInUse(port_id=mac_address)
+        except neutron_client_exc.HostNotCompatibleWithFixedIpsClient:
+            network_id = port_req_body['port'].get('network_id')
+            LOG.warning(_LW('Neutron error: Tried to bind a port with '
+                            'fixed_ips to a host in the wrong segment on '
+                            'network %(network)s.'),
+                        {'network': network_id}, instance=instance)
+            raise exception.FixedIpInvalidOnHost(port_id=port_id)
 
     @staticmethod
     def _populate_mac_address(instance, port_req_body, available_macs):
