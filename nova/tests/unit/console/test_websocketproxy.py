@@ -115,6 +115,16 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         else:
             return
 
+    def _fake_getheader_malformed_cookie(self, header):
+        if header == 'cookie':
+            return '?=!; token="123-456-789"'
+        elif header == 'Origin':
+            return 'https://example.net:6080'
+        elif header == 'Host':
+            return 'example.net:6080'
+        else:
+            return
+
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
     def test_new_websocket_client(self, check_token):
         check_token.return_value = {
@@ -370,3 +380,21 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
 
         self.assertRaises(exception.ValidationError,
                           self.wh.new_websocket_client)
+
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
+    def test_malformed_cookie(self, check_token):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'novnc',
+            'access_url': 'https://example.net:6080'
+        }
+        self.wh.socket.return_value = '<socket>'
+        self.wh.path = "http://127.0.0.1/"
+        self.wh.headers.getheader = self._fake_getheader_malformed_cookie
+
+        self.wh.new_websocket_client()
+
+        check_token.assert_called_with(mock.ANY, token="123-456-789")
+        self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        self.wh.do_proxy.assert_called_with('<socket>')
