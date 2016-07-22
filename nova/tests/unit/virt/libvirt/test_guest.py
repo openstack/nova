@@ -139,6 +139,14 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.resume()
         self.domain.resume.assert_called_once_with()
 
+    @mock.patch('time.time', return_value=1234567890.125)
+    def test_time_sync_no_errors(self, time_mock):
+        self.domain.setTime.side_effect = fakelibvirt.libvirtError('error')
+        self.guest.resume()
+        self.domain.setTime.assert_called_once_with(time={
+                                                    'nseconds': 125000000,
+                                                    'seconds': 1234567890})
+
     def test_get_vcpus_info(self):
         self.domain.vcpus.return_value = ([(0, 1, int(10290000000), 2)],
                                      [(True, True)])
