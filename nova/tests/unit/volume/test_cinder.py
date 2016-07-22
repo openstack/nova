@@ -143,38 +143,20 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InvalidVolume,
                           self.api.check_attach, self.ctx, volume)
 
-    def test_check_attach_availability_zone_differs(self):
-        volume = {'id': 'fake', 'status': 'available'}
-        volume['attach_status'] = "detached"
-        instance = {'id': 'fake',
-                    'availability_zone': 'zone1', 'host': 'fakehost'}
+    @mock.patch.object(cinder.az, 'get_instance_availability_zone',
+                       return_value='zone1')
+    def test_check_attach_availability_zone_differs(self,
+                                                    mock_get_instance_az):
+        self.flags(cross_az_attach=False, group='cinder')
+        volume = {'id': uuids.volume_id,
+                  'status': 'available',
+                  'attach_status': 'detached',
+                  'availability_zone': 'zone2'}
+        instance = fake_instance_obj(self.ctx)
 
-        with mock.patch.object(cinder.az, 'get_instance_availability_zone',
-                               side_effect=lambda context,
-                               instance: 'zone1') as mock_get_instance_az:
-
-            CONF.set_override('cross_az_attach', False, group='cinder')
-            volume['availability_zone'] = 'zone1'
-            self.assertIsNone(self.api.check_attach(self.ctx,
-                                                    volume, instance))
-            mock_get_instance_az.assert_called_once_with(self.ctx, instance)
-            mock_get_instance_az.reset_mock()
-            volume['availability_zone'] = 'zone2'
-            self.assertRaises(exception.InvalidVolume,
-                            self.api.check_attach, self.ctx, volume, instance)
-            mock_get_instance_az.assert_called_once_with(self.ctx, instance)
-            mock_get_instance_az.reset_mock()
-            del instance['host']
-            volume['availability_zone'] = 'zone1'
-            self.assertIsNone(self.api.check_attach(
-                self.ctx, volume, instance))
-            mock_get_instance_az.assert_called_once_with(self.ctx, instance)
-            mock_get_instance_az.reset_mock()
-            volume['availability_zone'] = 'zone2'
-            self.assertRaises(exception.InvalidVolume,
-                            self.api.check_attach, self.ctx, volume, instance)
-            mock_get_instance_az.assert_called_once_with(self.ctx, instance)
-            CONF.reset()
+        self.assertRaises(exception.InvalidVolume,
+                          self.api.check_attach, self.ctx, volume, instance)
+        mock_get_instance_az.assert_called_once_with(self.ctx, instance)
 
     def test_check_attach(self):
         volume = {'status': 'available'}
