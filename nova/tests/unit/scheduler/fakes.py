@@ -16,6 +16,7 @@
 Fakes For Scheduler tests.
 """
 
+import datetime
 import six
 
 from nova import objects
@@ -58,7 +59,8 @@ COMPUTE_NODES = [
         objects.ComputeNode(
             id=1, local_gb=1024, memory_mb=1024, vcpus=1,
             disk_available_least=None, free_ram_mb=512, vcpus_used=1,
-            free_disk_gb=512, local_gb_used=0, updated_at=None,
+            free_disk_gb=512, local_gb_used=0,
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
             host='host1', hypervisor_hostname='node1', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
@@ -68,7 +70,8 @@ COMPUTE_NODES = [
         objects.ComputeNode(
             id=2, local_gb=2048, memory_mb=2048, vcpus=2,
             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
-            free_disk_gb=1024, local_gb_used=0, updated_at=None,
+            free_disk_gb=1024, local_gb_used=0,
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
             host='host2', hypervisor_hostname='node2', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],
@@ -78,7 +81,8 @@ COMPUTE_NODES = [
         objects.ComputeNode(
             id=3, local_gb=4096, memory_mb=4096, vcpus=4,
             disk_available_least=3333, free_ram_mb=3072, vcpus_used=1,
-            free_disk_gb=3072, local_gb_used=0, updated_at=None,
+            free_disk_gb=3072, local_gb_used=0,
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
             host='host3', hypervisor_hostname='node3', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=NUMA_TOPOLOGY._to_json(),
             hypervisor_type='foo', supported_hv_specs=[],
@@ -88,7 +92,8 @@ COMPUTE_NODES = [
         objects.ComputeNode(
             id=4, local_gb=8192, memory_mb=8192, vcpus=8,
             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
-            free_disk_gb=8888, local_gb_used=0, updated_at=None,
+            free_disk_gb=8888, local_gb_used=0,
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
             host='host4', hypervisor_hostname='node4', host_ip='127.0.0.1',
             hypervisor_version=0, numa_topology=None,
             hypervisor_type='foo', supported_hv_specs=[],

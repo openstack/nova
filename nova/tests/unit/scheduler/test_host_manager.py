@@ -899,8 +899,8 @@ class HostStateTestCase(test.NoDBTestCase):
             stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
-            updated_at=None, host_ip='127.0.0.1',
-            hypervisor_type='htype',
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
+            host_ip='127.0.0.1', hypervisor_type='htype',
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int, numa_topology=None,
@@ -942,8 +942,8 @@ class HostStateTestCase(test.NoDBTestCase):
             stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
-            updated_at=None, host_ip='127.0.0.1',
-            hypervisor_type='htype',
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
+            host_ip='127.0.0.1', hypervisor_type='htype',
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int, numa_topology=None,
@@ -975,8 +975,8 @@ class HostStateTestCase(test.NoDBTestCase):
             stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
-            updated_at=None, host_ip='127.0.0.1',
-            hypervisor_type='htype',
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
+            host_ip='127.0.0.1', hypervisor_type='htype',
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int, numa_topology=None,
@@ -1135,8 +1135,8 @@ class HostStateTestCase(test.NoDBTestCase):
             memory_mb=0, free_disk_gb=0, local_gb=0,
             local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
             disk_available_least=None,
-            updated_at=None, host_ip='127.0.0.1',
-            hypervisor_type='htype',
+            updated_at=datetime.datetime(2015, 11, 11, 11, 0, 0),
+            host_ip='127.0.0.1', hypervisor_type='htype',
             hypervisor_hostname='hostname', cpu_info='cpu_info',
             supported_hv_specs=[],
             hypervisor_version=hyper_ver_int,
@@ -1156,3 +1156,13 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual({'0': 10, '1': 43},
                          host.metrics[1].numa_membw_values)
         self.assertIsInstance(host.numa_topology, six.string_types)
+
+    def test_stat_consumption_from_compute_node_not_ready(self):
+        compute = objects.ComputeNode(free_ram_mb=100,
+            updated_at=None)
+
+        host = host_manager.HostState("fakehost", "fakenode")
+        host._update_from_compute_node(compute)
+        # Because compute record not ready, the update of free ram
+        # will not happen and the value will still be 0
+        self.assertEqual(0, host.free_ram_mb)
