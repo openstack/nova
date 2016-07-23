@@ -2997,8 +2997,8 @@ class ComputeManager(manager.Manager):
         """Snapshot an instance on this host.
 
         :param context: security context
-        :param instance: a nova.objects.instance.Instance object
         :param image_id: glance.db.sqlalchemy.models.Image.Id
+        :param instance: a nova.objects.instance.Instance object
         """
         # NOTE(dave-mcnally) the task state will already be set by the api
         # but if the compute manager has crashed/been restarted prior to the
