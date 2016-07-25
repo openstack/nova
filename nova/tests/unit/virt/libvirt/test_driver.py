@@ -6798,7 +6798,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                            "disk_over_commit": False,
                            "disk_available_mb": 1024,
                            "is_volume_backed": False}
-        self.assertDictEqual(expected_result, result.to_legacy_dict())
+        self.assertEqual(expected_result, result.to_legacy_dict())
 
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     @mock.patch.object(libvirt_driver.LibvirtDriver,

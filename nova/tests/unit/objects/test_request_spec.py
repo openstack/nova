@@ -499,7 +499,7 @@ class _TestRequestSpecObject(object):
         # object fields
         for field in ['image', 'numa_topology', 'pci_requests', 'flavor',
                 'retry', 'limits', 'instance_group']:
-            self.assertDictEqual(
+            self.assertEqual(
                     getattr(req_obj, field).obj_to_primitive(),
                     getattr(serialized_obj, field).obj_to_primitive())
 
