@@ -390,7 +390,7 @@ Related options:
             default=False,
             deprecated_for_removal=True,
             help="""
-DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
+THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
 
 If True in multi_host mode, all compute hosts share the same dhcp address. The
 same IP address used for DHCP will be added on each nova-network node which is
@@ -406,7 +406,7 @@ with the name 'share_address'.
     cfg.IntOpt("network_device_mtu",
             deprecated_for_removal=True,
             help="""
-DEPRECATED: THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
+THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
 
 MTU (Maximum Transmission Unit) setting for a network interface.
 

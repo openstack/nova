@@ -107,7 +107,7 @@ a space.
             default="nova.api.metadata.vendordata_json.JsonFileVendorData",
             deprecated_for_removal=True,
             help="""
-DEPRECATED: When returning instance metadata, this is the class that is used
+When returning instance metadata, this is the class that is used
 for getting vendor metadata when that class isn't specified in the individual
 request. The value should be the full dot-separated path to the class to use.
 

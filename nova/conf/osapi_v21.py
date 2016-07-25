@@ -29,8 +29,6 @@ api_opts = [
             deprecated_for_removal=True,
             deprecated_group="osapi_v21",
             help="""
-*DEPRECATED*
-
 This option is a list of all of the v2.1 API extensions to never load. However,
 it will be removed in the near future, after which the all the functionality
 that was previously in extensions will be part of the standard API, and thus
@@ -54,8 +52,6 @@ always accessible.
             deprecated_for_removal=True,
             deprecated_group="osapi_v21",
             help="""
-*DEPRECATED*
-
 This is a list of extensions. If it is empty, then *all* extensions except
 those specified in the extensions_blacklist option will be loaded. If it is not
 empty, then only those extensions in this list will be loaded, provided that
@@ -80,8 +76,6 @@ extensions will be part of the standard API, and thus always accessible.
             deprecated_for_removal=True,
             deprecated_group="osapi_v21",
             help="""
-*DEPRECATED*
-
 This option is a string representing a regular expression (regex) that matches
 the project_id as contained in URLs. If not set, it will match normal UUIDs
 created by keystone.
