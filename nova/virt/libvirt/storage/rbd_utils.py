@@ -229,7 +229,7 @@ class RBDDriver(object):
                                                 'storage pool %s') % dest_pool)
 
     def size(self, name):
-        with RBDVolumeProxy(self, name) as vol:
+        with RBDVolumeProxy(self, name, read_only=True) as vol:
             return vol.size()
 
     def resize(self, name, size):
@@ -250,7 +250,8 @@ class RBDDriver(object):
         :pool: Name of pool
         """
         try:
-            with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
+            with RBDVolumeProxy(self, str(volume), pool=pool,
+                                read_only=True) as vol:
                 return vol.parent_info()
         except rbd.ImageNotFound:
             raise exception.ImageUnacceptable(_("no usable parent snapshot "
