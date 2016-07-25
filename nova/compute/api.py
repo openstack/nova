@@ -2987,7 +2987,8 @@ class API(base.Base):
 
     def _check_attach_and_reserve_volume(self, context, volume_id, instance):
         volume = self.volume_api.get(context, volume_id)
-        self.volume_api.check_attach(context, volume, instance=instance)
+        self.volume_api.check_availability_zone(context, volume,
+                                                instance=instance)
         self.volume_api.reserve_volume(context, volume_id)
 
     def _attach_volume(self, context, instance, volume_id, device,

@@ -284,6 +284,14 @@ class API(object):
         if volume['attach_status'] == "attached":
             msg = _("volume %s already attached") % volume['id']
             raise exception.InvalidVolume(reason=msg)
+
+        self.check_availability_zone(context, volume, instance)
+
+    def check_availability_zone(self, context, volume, instance=None):
+        """Ensure that the availability zone is the same."""
+
+        # TODO(walter-boring): move this check to Cinder as part of
+        # the reserve call.
         if instance and not CONF.cinder.cross_az_attach:
             instance_az = az.get_instance_availability_zone(context, instance)
             if instance_az != volume['availability_zone']:
