@@ -104,7 +104,7 @@ class ServerGroupQuotasTestV21(test.TestCase):
         policies = ['anti-affinity']
         sgroup['policies'] = policies
         # Start by creating as many server groups as we're allowed to.
-        for i in range(CONF.quota_server_groups):
+        for i in range(CONF.quota.server_groups):
             self.controller.create(self.req, body={'server_group': sgroup})
 
         # Then, creating a server group should fail.

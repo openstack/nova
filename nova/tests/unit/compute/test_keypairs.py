@@ -151,7 +151,7 @@ class CreateImportSharedTestMixIn(object):
 
     def test_quota_limit(self):
         def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return CONF.quota_key_pairs
+            return CONF.quota.key_pairs
 
         self.stubs.Set(QUOTAS, "count", fake_quotas_count)
 

@@ -310,7 +310,7 @@ class TestSecurityGroupsV21(test.TestCase):
             self.req.environ['nova.context'])
 
     def test_create_security_group_quota_limit(self):
-        for num in range(1, CONF.quota_security_groups):
+        for num in range(1, CONF.quota.security_groups):
             name = 'test%s' % num
             sg = security_group_request_template(name=name)
             res_dict = self.controller.create(self.req, {'security_group': sg})
@@ -1200,7 +1200,7 @@ class TestSecurityGroupRulesV21(test.TestCase):
                           self.req, self.invalid_id)
 
     def test_create_rule_quota_limit(self):
-        for num in range(100, 100 + CONF.quota_security_group_rules):
+        for num in range(100, 100 + CONF.quota.security_group_rules):
             rule = {
                 'ip_protocol': 'tcp', 'from_port': num,
                 'to_port': num, 'parent_group_id': self.sg2['id'],

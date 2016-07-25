@@ -157,7 +157,7 @@ def _quota_reserve(context, project_id, user_id):
         sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
             sqlalchemy_api, sync_name)
     return db.quota_reserve(context, resources, quotas, user_quotas, deltas,
-                    timeutils.utcnow(), CONF.until_refresh,
+                    timeutils.utcnow(), CONF.quota.until_refresh,
                     datetime.timedelta(days=1), project_id, user_id)
 
 
@@ -2237,7 +2237,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(1, usage.in_use)
 
     def test_security_group_ensure_default_until_refresh(self):
-        self.flags(until_refresh=2)
+        self.flags(until_refresh=2, group='quota')
         self.ctxt.project_id = 'fake'
         self.ctxt.user_id = 'fake'
         db.security_group_ensure_default(self.ctxt)

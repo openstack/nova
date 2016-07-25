@@ -485,7 +485,7 @@ class DbQuotaDriver(object):
 
         # Set up the reservation expiration
         if expire is None:
-            expire = CONF.reservation_expire
+            expire = CONF.quota.reservation_expire
         if isinstance(expire, six.integer_types):
             expire = datetime.timedelta(seconds=expire)
         if isinstance(expire, datetime.timedelta):
@@ -539,7 +539,7 @@ class DbQuotaDriver(object):
         #            have to do the work there.
         return db.quota_reserve(context, resources, quotas, user_quotas,
                                 deltas, expire,
-                                CONF.until_refresh, CONF.max_age,
+                                CONF.quota.until_refresh, CONF.quota.max_age,
                                 project_id=project_id, user_id=user_id)
 
     def commit(self, context, reservations, project_id=None, user_id=None):
@@ -660,7 +660,8 @@ class DbQuotaDriver(object):
             resource_names = syncable_resources
 
         return db.quota_usage_refresh(context, resources, resource_names,
-                                      CONF.until_refresh, CONF.max_age,
+                                      CONF.quota.until_refresh,
+                                      CONF.quota.max_age,
                                       project_id=project_id, user_id=user_id)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
@@ -1060,7 +1061,12 @@ class BaseResource(object):
     def default(self):
         """Return the default value of the quota."""
 
-        return CONF[self.flag] if self.flag else -1
+        # NOTE(mikal): special case for quota_networks, which is an API
+        # flag and not a quota flag
+        if self.flag == 'quota_networks':
+            return CONF[self.flag]
+
+        return CONF.quota[self.flag] if self.flag else -1
 
 
 class ReservableResource(BaseResource):
@@ -1158,7 +1164,7 @@ class QuotaEngine(object):
         if self.__driver:
             return self.__driver
         if not self._driver_cls:
-            self._driver_cls = CONF.quota_driver
+            self._driver_cls = CONF.quota.driver
         if isinstance(self._driver_cls, six.string_types):
             self._driver_cls = importutils.import_object(self._driver_cls)
         self.__driver = self._driver_cls
@@ -1520,30 +1526,30 @@ QUOTAS = QuotaEngine()
 
 
 resources = [
-    ReservableResource('instances', '_sync_instances', 'quota_instances'),
-    ReservableResource('cores', '_sync_instances', 'quota_cores'),
-    ReservableResource('ram', '_sync_instances', 'quota_ram'),
+    ReservableResource('instances', '_sync_instances', 'instances'),
+    ReservableResource('cores', '_sync_instances', 'cores'),
+    ReservableResource('ram', '_sync_instances', 'ram'),
     ReservableResource('security_groups', '_sync_security_groups',
-                       'quota_security_groups'),
+                       'security_groups'),
     ReservableResource('floating_ips', '_sync_floating_ips',
-                       'quota_floating_ips'),
-    ReservableResource('fixed_ips', '_sync_fixed_ips', 'quota_fixed_ips'),
-    AbsoluteResource('metadata_items', 'quota_metadata_items'),
-    AbsoluteResource('injected_files', 'quota_injected_files'),
+                       'floating_ips'),
+    ReservableResource('fixed_ips', '_sync_fixed_ips', 'fixed_ips'),
+    AbsoluteResource('metadata_items', 'metadata_items'),
+    AbsoluteResource('injected_files', 'injected_files'),
     AbsoluteResource('injected_file_content_bytes',
-                     'quota_injected_file_content_bytes'),
+                     'injected_file_content_bytes'),
     AbsoluteResource('injected_file_path_bytes',
-                     'quota_injected_file_path_length'),
+                     'injected_file_path_length'),
     CountableResource('security_group_rules',
                       db.security_group_rule_count_by_group,
-                      'quota_security_group_rules'),
+                      'security_group_rules'),
     CountableResource('key_pairs', _keypair_get_count_by_user,
-                      'quota_key_pairs'),
+                      'key_pairs'),
     ReservableResource('server_groups', '_sync_server_groups',
-                      'quota_server_groups'),
+                      'server_groups'),
     CountableResource('server_group_members',
                       _server_group_count_members_by_user,
-                      'quota_server_group_members'),
+                      'server_group_members'),
     ]
 
 

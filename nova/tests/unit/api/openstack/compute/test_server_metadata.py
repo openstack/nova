@@ -75,7 +75,7 @@ def stub_server_metadata():
 
 def stub_max_server_metadata():
     metadata = {"metadata": {}}
-    for num in range(CONF.quota_metadata_items):
+    for num in range(CONF.quota.metadata_items):
         metadata['metadata']['key%i' % num] = "blah"
     return metadata
 
@@ -582,7 +582,7 @@ class ServerMetaDataTestV21(test.TestCase):
         self.stub_out('nova.db.instance_metadata_update',
                       return_create_instance_metadata)
         data = {"metadata": {}}
-        for num in range(CONF.quota_metadata_items + 1):
+        for num in range(CONF.quota.metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
         req = self._get_request()
         req.method = 'POST'
@@ -621,7 +621,7 @@ class ServerMetaDataTestV21(test.TestCase):
         self.stub_out('nova.db.instance_metadata_update',
                       return_create_instance_metadata)
         data = {"metadata": {}}
-        for num in range(CONF.quota_metadata_items + 1):
+        for num in range(CONF.quota.metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
         req = self._get_request()
         req.method = 'PUT'
@@ -637,7 +637,7 @@ class ServerMetaDataTestV21(test.TestCase):
         self.stub_out('nova.db.instance_metadata_update',
                       return_create_instance_metadata)
         data = {"metadata": {}}
-        for num in range(CONF.quota_metadata_items + 1):
+        for num in range(CONF.quota.metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
         req = self._get_request()
         req.method = 'PUT'

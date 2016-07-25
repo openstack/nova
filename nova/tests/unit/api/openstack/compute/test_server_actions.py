@@ -1134,7 +1134,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                 'metadata': {},
             },
         }
-        for num in range(CONF.quota_metadata_items + 1):
+        for num in range(CONF.quota.metadata_items + 1):
             body['createImage']['metadata']['foo%i' % num] = "bar"
 
         self.assertRaises(webob.exc.HTTPForbidden,

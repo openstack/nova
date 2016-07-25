@@ -228,7 +228,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
     def test_boot_servers_with_affinity_overquota(self):
         # Tests that we check server group member quotas and cleanup created
         # resources when we fail with OverQuota.
-        self.flags(quota_server_group_members=1)
+        self.flags(server_group_members=1, group='quota')
         # make sure we start with 0 servers
         servers = self.api.get_servers(detail=False)
         self.assertEqual(0, len(servers))
