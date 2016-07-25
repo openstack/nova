@@ -819,7 +819,7 @@ class IronicDriver(virt_driver.ComputeDriver):
                           instance=instance)
                 raise loopingcall.LoopingCallDone()
 
-            if data['tries'] >= max(0, CONF.ironic.api_max_retries) + 1:
+            if data['tries'] >= CONF.ironic.api_max_retries + 1:
                 msg = (_("Error destroying the instance on node %(node)s. "
                          "Provision state still '%(state)s'.")
                        % {'state': node.provision_state,
