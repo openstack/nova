@@ -82,7 +82,7 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
             # normal disk or multipath device), exit_code will be 1. In the
             # case, we will omit the warning message.
             if e.exit_code != 1:
-                LOG.warning(_LW('cryptsetup status %(dev_name) exited '
+                LOG.warning(_LW('cryptsetup status %(dev_name)s exited '
                                 'abnormally (status %(exit_code)s): %(err)s'),
                             {"dev_name": dev_name, "exit_code": e.exit_code,
                              "err": e.stderr})
