@@ -12,6 +12,8 @@
 
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import networks_associate
 from nova.api.openstack import extensions
@@ -31,6 +33,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     def __init__(self, network_api=None):
         self.network_api = network_api or network.API()
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action("disassociate_host")
     @wsgi.response(202)
     @extensions.expected_errors((404, 501))
@@ -45,6 +48,7 @@ class NetworkAssociateActionController(wsgi.Controller):
         except NotImplementedError:
             common.raise_feature_not_supported()
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action("disassociate_project")
     @wsgi.response(202)
     @extensions.expected_errors((404, 501))
@@ -59,6 +63,7 @@ class NetworkAssociateActionController(wsgi.Controller):
         except NotImplementedError:
             common.raise_feature_not_supported()
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action("associate_host")
     @wsgi.response(202)
     @extensions.expected_errors((404, 501))

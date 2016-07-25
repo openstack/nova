@@ -127,11 +127,12 @@ class TenantNetworksTestV21(test.NoDBTestCase):
 
         reserve_mock.return_value = 'rv'
 
-        res = self.controller.delete(self.req, 1)
+        delete_method = self.controller.delete
+        res = delete_method(self.req, 1)
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.controller, networks_v21.TenantNetworkController):
-            status_int = self.controller.delete.wsgi_code
+            status_int = delete_method.wsgi_code
         else:
             status_int = res.status_int
         self.assertEqual(202, status_int)
@@ -309,3 +310,23 @@ class TenantNetworksEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class TenantNetworksDeprecationTest(test.NoDBTestCase):
+    ctrlr = networks_v21.TenantNetworkController
+    validation_error = exception.ValidationError
+
+    def setUp(self):
+        super(TenantNetworksDeprecationTest, self).setUp()
+        self.controller = networks_v21.TenantNetworkController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})

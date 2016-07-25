@@ -372,10 +372,9 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_disassociate(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        res = self.controller._disassociate_host_and_project(
-            self.req, uuid, {'disassociate': None})
-        self._check_status(res, self.controller._disassociate_host_and_project,
-                           202)
+        disassociate = self.controller._disassociate_host_and_project
+        res = disassociate(self.req, uuid, {'disassociate': None})
+        self._check_status(res, disassociate, 202)
         self.assertIsNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNone(self.fake_network_api.networks[0]['host'])
 
@@ -403,8 +402,9 @@ class NetworksTestV21(test.NoDBTestCase):
                           self.controller.show, self.req, 100)
 
     def test_network_delete(self):
-        res = self.controller.delete(self.req, 1)
-        self._check_status(res, self.controller.delete, 202)
+        delete_method = self.controller.delete
+        res = delete_method(self.req, 1)
+        self._check_status(res, delete_method, 202)
 
     def test_network_delete_not_found(self):
         self.assertRaises(webob.exc.HTTPNotFound,
@@ -416,8 +416,9 @@ class NetworksTestV21(test.NoDBTestCase):
 
     def test_network_add(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.controller.add(self.req, body={'id': uuid})
-        self._check_status(res, self.controller.add, 202)
+        add = self.controller.add
+        res = add(self.req, body={'id': uuid})
+        self._check_status(res, add, 202)
         res_dict = self.controller.show(self.admin_req,
                                         uuid)
         self.assertEqual(res_dict['network']['project_id'],
@@ -458,8 +459,9 @@ class NetworksTestV21(test.NoDBTestCase):
                                 'extra_arg': 123})
 
     def test_network_add_network_with_none_id(self):
-        res = self.controller.add(self.req, body={'id': None})
-        self._check_status(res, self.controller.add, 202)
+        add = self.controller.add
+        res = add(self.req, body={'id': None})
+        self._check_status(res, add, 202)
 
     def test_network_create(self):
         res_dict = self.controller.create(self.req, body=self.new_network)
@@ -505,36 +507,37 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_disassociate_host_only(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        res = self.associate_controller._disassociate_host_only(
+        disassociate = self.associate_controller._disassociate_host_only
+        res = disassociate(
             self.req, uuid, {'disassociate_host': None})
         self._check_status(res,
-                           self.associate_controller._disassociate_host_only,
+                           disassociate,
                            202)
         self.assertIsNotNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNone(self.fake_network_api.networks[0]['host'])
 
     def test_network_disassociate_project_only(self):
         uuid = FAKE_NETWORKS[0]['uuid']
-        res = self.associate_controller._disassociate_project_only(
-            self.req, uuid, {'disassociate_project': None})
-        self._check_status(
-            res, self.associate_controller._disassociate_project_only, 202)
+        disassociate = self.associate_controller._disassociate_project_only
+        res = disassociate(self.req, uuid, {'disassociate_project': None})
+        self._check_status(res, disassociate, 202)
         self.assertIsNone(self.fake_network_api.networks[0]['project_id'])
         self.assertIsNotNone(self.fake_network_api.networks[0]['host'])
 
     def test_network_disassociate_project_network_delete(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.associate_controller._disassociate_project_only(
+        disassociate = self.associate_controller._disassociate_project_only
+        res = disassociate(
             self.req, uuid, {'disassociate_project': None})
-        self._check_status(
-            res, self.associate_controller._disassociate_project_only, 202)
+        self._check_status(res, disassociate, 202)
         self.assertIsNone(self.fake_network_api.networks[1]['project_id'])
-        res = self.controller.delete(self.req, 1)
+        delete = self.controller.delete
+        res = delete(self.req, 1)
 
         # NOTE: On v2.1 code, delete method doesn't return anything and
         # the status code is decorated on wsgi_code of the method.
         self.assertIsNone(res)
-        self.assertEqual(202, self.controller.delete.wsgi_code)
+        self.assertEqual(202, delete.wsgi_code)
 
     def test_network_associate_project_delete_fail(self):
         uuid = FAKE_NETWORKS[0]['uuid']
@@ -544,9 +547,9 @@ class NetworksAssociateTestV21(test.NoDBTestCase):
 
     def test_network_associate_with_host(self):
         uuid = FAKE_NETWORKS[1]['uuid']
-        res = self.associate_controller._associate_host(
-            self.req, uuid, body={'associate_host': "TestHost"})
-        self._check_status(res, self.associate_controller._associate_host, 202)
+        associate = self.associate_controller._associate_host
+        res = associate(self.req, uuid, body={'associate_host': "TestHost"})
+        self._check_status(res, associate, 202)
         res_dict = self.controller.show(self.admin_req, uuid)
         self.assertEqual(res_dict['network']['host'], 'TestHost')
 
@@ -702,3 +705,44 @@ class NetworksAssociateEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+
+class NetworksDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(NetworksDeprecationTest, self).setUp()
+        self.controller = networks_v21.NetworkController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_api_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._disassociate_host_and_project, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.add, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+
+
+class NetworksAssociateDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(NetworksAssociateDeprecationTest, self).setUp()
+        self.controller = networks_associate_v21\
+            .NetworkAssociateActionController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_api_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._associate_host, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._disassociate_project_only, self.req,
+            fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller._disassociate_host_only, self.req,
+            fakes.FAKE_UUID, {})
