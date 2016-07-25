@@ -7528,18 +7528,20 @@ class LibvirtDriver(driver.ComputeDriver):
     def _prepare_device_bus(dev):
         """Determins the device bus and it's hypervisor assigned address
         """
+        bus = None
         address = (dev.device_addr.format_address() if
                    dev.device_addr else None)
         if isinstance(dev.device_addr,
                       vconfig.LibvirtConfigGuestDeviceAddressPCI):
             bus = objects.PCIDeviceBus()
-        elif dev.target_bus == 'scsi':
-            bus = objects.SCSIDeviceBus()
-        elif dev.target_bus == 'ide':
-            bus = objects.IDEDeviceBus()
-        elif dev.target_bus == 'usb':
-            bus = objects.USBDeviceBus()
-        if address is not None:
+        elif isinstance(dev, vconfig.LibvirtConfigGuestDisk):
+            if dev.target_bus == 'scsi':
+                bus = objects.SCSIDeviceBus()
+            elif dev.target_bus == 'ide':
+                bus = objects.IDEDeviceBus()
+            elif dev.target_bus == 'usb':
+                bus = objects.USBDeviceBus()
+        if address is not None and bus is not None:
             bus.address = address
         return bus
 
@@ -7576,9 +7578,10 @@ class LibvirtDriver(driver.ComputeDriver):
                 bus = self._prepare_device_bus(dev)
                 device = objects.NetworkInterfaceMetadata(
                     mac=vif.address,
-                    bus=bus,
                     tags=[vif.tag]
                 )
+                if bus:
+                    device.bus = bus
                 devices.append(device)
 
             # Build disks related metedata
@@ -7587,7 +7590,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 if not bdm:
                     continue
                 bus = self._prepare_device_bus(dev)
-                device = objects.DiskMetadata(bus=bus, tags=[bdm.tag])
+                device = objects.DiskMetadata(tags=[bdm.tag])
+                if bus:
+                    device.bus = bus
                 devices.append(device)
         if devices:
             dev_meta = objects.InstanceDeviceMetadata(devices=devices)

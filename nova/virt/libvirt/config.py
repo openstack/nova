@@ -892,8 +892,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
             elif c.tag == 'shareable':
                 self.shareable = True
             elif c.tag == 'address':
-                obj = LibvirtConfigGuestDeviceAddress.factory(c)
-                obj.parse_dom(c)
+                obj = LibvirtConfigGuestDeviceAddress.parse_dom(c)
                 self.device_addr = obj
             elif c.tag == 'boot':
                 self.boot_order = c.get('order')
@@ -1146,12 +1145,16 @@ class LibvirtConfigGuestDeviceAddress(LibvirtConfigObject):
         self.type = type
 
     @staticmethod
-    def factory(xmldoc):
+    def parse_dom(xmldoc):
         addr_type = xmldoc.get('type')
         if addr_type == 'pci':
-            return LibvirtConfigGuestDeviceAddressPCI()
+            obj = LibvirtConfigGuestDeviceAddressPCI()
         elif addr_type == 'drive':
-            return LibvirtConfigGuestDeviceAddressDrive()
+            obj = LibvirtConfigGuestDeviceAddressDrive()
+        else:
+            return None
+        obj.parse_dom(xmldoc)
+        return obj
 
 
 class LibvirtConfigGuestDeviceAddressDrive(LibvirtConfigGuestDeviceAddress):
@@ -1398,8 +1401,7 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
                         if sub.get('peak'):
                             self.vif_outbound_peak = int(sub.get('peak'))
             elif c.tag == 'address':
-                obj = LibvirtConfigGuestDeviceAddress.factory(c)
-                obj.parse_dom(c)
+                obj = LibvirtConfigGuestDeviceAddress.parse_dom(c)
                 self.device_addr = obj
 
     def add_filter_param(self, key, value):
