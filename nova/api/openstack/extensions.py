@@ -356,6 +356,12 @@ def expected_errors(errors):
                     # happens due to invalid API parameters, as an
                     # expected error.
                     raise
+                elif isinstance(exc, exception.Unauthorized):
+                    # Handle an authorized exception, will be
+                    # automatically converted to a HTTP 401, clients
+                    # like python-novaclient handle this error to
+                    # generate new token and do another attempt.
+                    raise
 
                 LOG.exception(_LE("Unexpected exception in API method"))
                 msg = _('Unexpected API Error. Please report this at '

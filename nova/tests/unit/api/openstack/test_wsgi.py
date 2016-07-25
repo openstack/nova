@@ -448,7 +448,7 @@ class ResourceTest(MicroversionedTest):
         self.assertEqual(response.status_int, 200)
         self.assertEqual(b'success', response.body)
 
-    def test_resource_not_authorized(self):
+    def test_resource_forbidden(self):
         class Controller(object):
             def index(self, req):
                 raise exception.Forbidden()
@@ -457,6 +457,16 @@ class ResourceTest(MicroversionedTest):
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
         self.assertEqual(response.status_int, 403)
+
+    def test_resource_not_authorized(self):
+        class Controller(object):
+            def index(self, req):
+                raise exception.Unauthorized()
+
+        req = webob.Request.blank('/tests')
+        app = fakes.TestRouter(Controller())
+        self.assertRaises(
+            exception.Unauthorized, req.get_response, app)
 
     def test_dispatch(self):
         class Controller(object):
