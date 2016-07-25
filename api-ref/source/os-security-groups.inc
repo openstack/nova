@@ -13,7 +13,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead.
    See: `Relevant Network APIs
-   <http://developer.openstack.org/api-ref-networking-v2-ext.html#security_groups>`__.
+   <http://developer.openstack.org/api-ref/networking/v2-ext/index.html#security-groups-security-groups>`__.
 
 Lists, shows information for, creates, updates and deletes security groups.
 
