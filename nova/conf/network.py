@@ -618,39 +618,121 @@ Possible values:
 
     A list of zero or more interface names, or the word 'all'.
 """),
-cfg.StrOpt('metadata_host',
-               default='$my_ip',
-               help='The IP address for the metadata API server'),
-    cfg.IntOpt('metadata_port',
-               default=8775,
-               min=1,
-               max=65535,
-               help='The port for the metadata API port'),
-    cfg.StrOpt('iptables_top_regex',
-               default='',
-               help='Regular expression to match the iptables rule that '
-                    'should always be on the top.'),
-    cfg.StrOpt('iptables_bottom_regex',
-               default='',
-               help='Regular expression to match the iptables rule that '
-                    'should always be on the bottom.'),
-    cfg.StrOpt('iptables_drop_action',
-               default='DROP',
-               help='The table that iptables to jump to when a packet is '
-                    'to be dropped.'),
-    cfg.IntOpt('ovs_vsctl_timeout',
-               default=120,
-               help='Amount of time, in seconds, that ovs_vsctl should wait '
-                    'for a response from the database. 0 is to wait forever.'),
-    cfg.BoolOpt('fake_network',
-                default=False,
-                help='If passed, use fake network devices and addresses'),
-    cfg.IntOpt('ebtables_exec_attempts',
-               default=3,
-               help='Number of times to retry ebtables commands on failure.'),
-    cfg.FloatOpt('ebtables_retry_interval',
-                 default=1.0,
-                 help='Number of seconds to wait between ebtables retries.'),
+    cfg.StrOpt("metadata_host",
+            default="$my_ip",
+            help="""
+This option determines the IP address for the network metadata API server.
+
+Possible values:
+
+   * Any valid IP address. The default is the address of the Nova API server.
+
+Related options:
+
+    * metadata_port
+"""),
+    cfg.PortOpt("metadata_port",
+            default=8775,
+            help="""
+This option determines the port used for the metadata API server.
+
+Related options:
+
+    * metadata_host
+"""),
+    cfg.StrOpt("iptables_top_regex",
+            default="",
+            help="""
+This expression, if defined, will select any matching iptables rules and place
+them at the top when applying metadata changes to the rules.
+
+Possible values:
+
+    * Any string representing a valid regular expression, or an empty string
+
+Related options:
+
+    * iptables_bottom_regex
+"""),
+    cfg.StrOpt("iptables_bottom_regex",
+            default="",
+            help="""
+This expression, if defined, will select any matching iptables rules and place
+them at the bottom when applying metadata changes to the rules.
+
+Possible values:
+
+    * Any string representing a valid regular expression, or an empty string
+
+Related options:
+
+    * iptables_top_regex
+"""),
+    cfg.StrOpt("iptables_drop_action",
+            default="DROP",
+            help="""
+By default, packets that do not pass the firewall are DROPped. In many cases,
+though, an operator may find it more useful to change this from DROP to REJECT,
+so that the user issuing those packets may have a better idea as to what's
+going on, or LOGDROP in order to record the blocked traffic before DROPping.
+
+Possible values:
+
+    * A string representing an iptables chain. The default is DROP.
+"""),
+    cfg.IntOpt("ovs_vsctl_timeout",
+            default=120,
+            min=0,
+            help="""
+This option represents the period of time, in seconds, that the ovs_vsctl calls
+will wait for a response from the database before timing out. A setting of 0
+means that the utility should wait forever for a response.
+
+Possible values:
+
+    * Any positive integer if a limited timeout is desired, or zero if the
+    calls should wait forever for a response.
+"""),
+    cfg.BoolOpt("fake_network",
+            default=False,
+            help="""
+This option is used mainly in testing to avoid calls to the underlying network
+utilities.
+"""),
+    cfg.IntOpt("ebtables_exec_attempts",
+            default=3,
+            min=1,
+            help="""
+This option determines the number of times to retry ebtables commands before
+giving up. The minimum number of retries is 1.
+
+Possible values:
+
+    * Any positive integer
+
+Related options:
+
+    * ebtables_retry_interval
+"""),
+    cfg.FloatOpt("ebtables_retry_interval",
+            default=1.0,
+            help="""
+This option determines the time, in seconds, that the system will sleep in
+between ebtables retries. Note that each successive retry waits a multiple of
+this value, so for example, if this is set to the default of 1.0 seconds, and
+ebtables_exec_attempts is 4, after the first failure, the system will sleep for
+1 * 1.0 seconds, after the second failure it will sleep 2 * 1.0 seconds, and
+after the third failure it will sleep 3 * 1.0 seconds.
+
+Possible values:
+
+    * Any non-negative float or integer. Setting this to zero will result in no
+    waiting between attempts.
+
+Related options:
+
+    * ebtables_exec_attempts
+"""),
 ]
 
 
