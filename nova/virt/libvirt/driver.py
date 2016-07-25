@@ -3007,6 +3007,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.info(_LI('Creating image'), instance=instance)
 
+        # NOTE(vish): No need add the suffix to console.log
+        libvirt_utils.write_to_file(
+            self._get_console_log_path(instance), '', 7)
+
         if not disk_images:
             disk_images = {'image_id': instance.image_ref,
                            'kernel_id': instance.kernel_id,
@@ -6501,6 +6505,12 @@ class LibvirtDriver(driver.ComputeDriver):
                 # and destination and instance path isn't (e.g. volume backed
                 # or rbd backed instance), instance path on destination has to
                 # be prepared
+
+                # Touch the console.log file, required by libvirt.
+                console_file = self._get_console_log_path(instance)
+                LOG.debug('Touch instance console log: %s', console_file,
+                          instance=instance)
+                libvirt_utils.file_open(console_file, 'a').close()
 
                 # if image has kernel and ramdisk, just download
                 # following normal way.

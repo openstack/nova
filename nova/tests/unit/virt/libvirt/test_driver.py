@@ -16340,6 +16340,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                         mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
+                               mox.IgnoreArg())
 
         mock_backend = mock.MagicMock()
         imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
@@ -16468,6 +16470,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                     mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
+        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
+                                    mox.IgnoreArg())
 
         mock_backend = mock.MagicMock()
         imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
