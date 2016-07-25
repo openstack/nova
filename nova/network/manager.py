@@ -1101,11 +1101,6 @@ class NetworkManager(manager.Manager):
                         bridge_interface=None, dns1=None, dns2=None,
                         fixed_cidr=None, allowed_start=None,
                         allowed_end=None, **kwargs):
-        arg_names = ("label", "cidr", "multi_host", "num_networks",
-                     "network_size", "cidr_v6",
-                     "gateway", "gateway_v6", "bridge",
-                     "bridge_interface", "dns1", "dns2",
-                     "fixed_cidr", "allowed_start", "allowed_end")
         if 'mtu' not in kwargs:
             kwargs['mtu'] = CONF.network_device_mtu
         if 'dhcp_server' not in kwargs:
@@ -1114,8 +1109,23 @@ class NetworkManager(manager.Manager):
             kwargs['enable_dhcp'] = True
         if 'share_address' not in kwargs:
             kwargs['share_address'] = CONF.share_dhcp_address
-        for name in arg_names:
-            kwargs[name] = locals()[name]
+        kwargs.update({
+            'label': label,
+            'cidr': cidr,
+            'multi_host': multi_host,
+            'num_networks': num_networks,
+            'network_size': network_size,
+            'cidr_v6': cidr_v6,
+            'gateway': gateway,
+            'gateway_v6': gateway_v6,
+            'bridge': bridge,
+            'bridge_interface': bridge_interface,
+            'dns1': dns1,
+            'dns2': dns2,
+            'fixed_cidr': fixed_cidr,
+            'allowed_start': allowed_start,
+            'allowed_end': allowed_end,
+        })
         self._convert_int_args(kwargs)
 
         kwargs["bridge"] = kwargs["bridge"] or CONF.flat_network_bridge

@@ -68,10 +68,21 @@ from nova.virt.xenapi.client import session as xenapi_session
 
 _CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
             'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
+_after_create_functions = {}
+_destroy_functions = {}
 
 _db_content = {}
 
 LOG = logging.getLogger(__name__)
+
+
+def add_to_dict(functions):
+    """A decorator that adds a function to dictionary."""
+
+    def decorator(func):
+        functions[func.__name__] = func
+        return func
+    return decorator
 
 
 def reset():
@@ -137,6 +148,7 @@ def create_vm(name_label, status, **kwargs):
     return vm_ref
 
 
+@add_to_dict(_destroy_functions)
 def destroy_vm(vm_ref):
     vm_rec = _db_content['VM'][vm_ref]
 
@@ -149,6 +161,7 @@ def destroy_vm(vm_ref):
     del _db_content['VM'][vm_ref]
 
 
+@add_to_dict(_destroy_functions)
 def destroy_vbd(vbd_ref):
     vbd_rec = _db_content['VBD'][vbd_ref]
 
@@ -163,6 +176,7 @@ def destroy_vbd(vbd_ref):
     del _db_content['VBD'][vbd_ref]
 
 
+@add_to_dict(_destroy_functions)
 def destroy_vdi(vdi_ref):
     vdi_rec = _db_content['VDI'][vdi_ref]
 
@@ -196,6 +210,7 @@ def create_vdi(name_label, sr_ref, **kwargs):
     return vdi_ref
 
 
+@add_to_dict(_after_create_functions)
 def after_VDI_create(vdi_ref, vdi_rec):
     vdi_rec.setdefault('VBDs', [])
 
@@ -214,6 +229,7 @@ def create_vbd(vm_ref, vdi_ref, userdevice=0, other_config=None):
     return vbd_ref
 
 
+@add_to_dict(_after_create_functions)
 def after_VBD_create(vbd_ref, vbd_rec):
     """Create read-only fields and backref from VM and VDI to VBD when VBD
     is created.
@@ -235,6 +251,7 @@ def after_VBD_create(vbd_ref, vbd_rec):
         vdi_rec['VBDs'].append(vbd_ref)
 
 
+@add_to_dict(_after_create_functions)
 def after_VIF_create(vif_ref, vif_rec):
     """Create backref from VM to VIF when VIF is created.
     """
@@ -243,6 +260,7 @@ def after_VIF_create(vif_ref, vif_rec):
     vm_rec['VIFs'].append(vif_ref)
 
 
+@add_to_dict(_after_create_functions)
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
     vm_rec.setdefault('domid', "-1")
@@ -998,8 +1016,12 @@ class SessionBase(object):
 
         # Call hook to provide any fixups needed (ex. creating backrefs)
         after_hook = 'after_%s_create' % cls
-        if after_hook in globals():
-            globals()[after_hook](ref, params[1])
+        try:
+            func = _after_create_functions[after_hook]
+        except KeyError:
+            pass
+        else:
+            func(ref, params[1])
 
         obj = get_record(cls, ref)
 
@@ -1017,7 +1039,7 @@ class SessionBase(object):
             raise Failure(['HANDLE_INVALID', table, ref])
 
         # Call destroy function (if exists)
-        destroy_func = globals().get('destroy_%s' % table.lower())
+        destroy_func = _destroy_functions.get('destroy_%s' % table.lower())
         if destroy_func:
             destroy_func(ref)
         else:

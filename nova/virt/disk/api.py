@@ -392,11 +392,11 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
     Returns True if all requested operations completed without issue.
     Raises an exception if a mandatory item can't be injected.
     """
+    items = {'image': image, 'key': key, 'net': net, 'metadata': metadata,
+             'files': files, 'partition': partition}
     LOG.debug("Inject data image=%(image)s key=%(key)s net=%(net)s "
               "metadata=%(metadata)s admin_password=<SANITIZED> "
-              "files=%(files)s partition=%(partition)s",
-              {'image': image, 'key': key, 'net': net, 'metadata': metadata,
-               'files': files, 'partition': partition})
+              "files=%(files)s partition=%(partition)s", items)
     try:
         fs = vfs.VFS.instance_for_image(image, partition)
         fs.setup()
@@ -404,7 +404,7 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
         # If a mandatory item is passed to this function,
         # then reraise the exception to indicate the error.
         for inject in mandatory:
-            inject_val = locals()[inject]
+            inject_val = items[inject]
             if inject_val:
                 raise
         LOG.warning(_LW('Ignoring error injecting data into image %(image)s '
@@ -493,12 +493,20 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
     Returns True if all requested operations completed without issue.
     Raises an exception if a mandatory item can't be injected.
     """
+    items = {'key': key, 'net': net, 'metadata': metadata,
+             'admin_password': admin_password, 'files': files}
+    functions = {
+        'key': _inject_key_into_fs,
+        'net': _inject_net_into_fs,
+        'metadata': _inject_metadata_into_fs,
+        'admin_password': _inject_admin_password_into_fs,
+        'files': _inject_files_into_fs,
+    }
     status = True
-    for inject in ('key', 'net', 'metadata', 'admin_password', 'files'):
-        inject_val = locals()[inject]
-        inject_func = globals()['_inject_%s_into_fs' % inject]
+    for inject, inject_val in items.items():
         if inject_val:
             try:
+                inject_func = functions[inject]
                 inject_func(inject_val, fs)
             except Exception as e:
                 if inject in mandatory:

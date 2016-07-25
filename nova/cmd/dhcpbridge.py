@@ -81,12 +81,17 @@ def add_action_parsers(subparsers):
     #            is passed if known. We don't care about
     #            hostname, but argparse will complain if we
     #            do not accept it.
-    for action in ['add', 'del', 'old']:
+    actions = {
+        'add': add_lease,
+        'del': del_lease,
+        'old': old_lease,
+    }
+    for action, func in actions.items():
         parser = subparsers.add_parser(action)
         parser.add_argument('mac')
         parser.add_argument('ip')
         parser.add_argument('hostname', nargs='?', default='')
-        parser.set_defaults(func=globals()[action + '_lease'])
+        parser.set_defaults(func=func)
 
 
 CONF.register_cli_opt(
