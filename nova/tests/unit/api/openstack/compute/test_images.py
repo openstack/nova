@@ -361,8 +361,9 @@ class ImagesControllerTestV21(test.NoDBTestCase):
     def test_delete_image(self, delete_mocked):
         request = self.http_request.blank(self.url_base + 'images/124')
         request.method = 'DELETE'
-        response = self.controller.delete(request, '124')
-        self._check_response(self.controller.delete, response, 204)
+        delete_method = self.controller.delete
+        response = delete_method(request, '124')
+        self._check_response(delete_method, response, 204)
         delete_mocked.assert_called_once_with(mock.ANY, '124')
 
     @mock.patch('nova.image.api.API.delete',
@@ -405,3 +406,21 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         params = urlparse.parse_qs(href_parts.query)
         self.assertThat({'limit': ['1'], 'marker': [IMAGE_FIXTURES[0]['id']]},
                         matchers.DictMatches(params))
+
+
+class ImagesControllerDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(ImagesControllerDeprecationTest, self).setUp()
+        self.controller = images_v21.ImagesController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_not_found_for_all_images_api(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+                          self.controller.detail, self.req)

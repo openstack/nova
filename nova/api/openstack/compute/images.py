@@ -15,6 +15,8 @@
 
 import webob.exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import images as views_images
 from nova.api.openstack import extensions
@@ -74,6 +76,7 @@ class ImagesController(wsgi.Controller):
 
         return filters
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(404)
     def show(self, req, id):
         """Return detailed information about a specific image.
@@ -92,6 +95,7 @@ class ImagesController(wsgi.Controller):
         req.cache_db_items('images', [image], 'id')
         return self._view_builder.show(req, image)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((403, 404))
     @wsgi.response(204)
     def delete(self, req, id):
@@ -112,6 +116,7 @@ class ImagesController(wsgi.Controller):
             explanation = _("You are not allowed to delete the image.")
             raise webob.exc.HTTPForbidden(explanation=explanation)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(400)
     def index(self, req):
         """Return an index listing of images available to the request.
@@ -130,6 +135,7 @@ class ImagesController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         return self._view_builder.index(req, images)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(400)
     def detail(self, req):
         """Return a detailed index listing of images available to the request.
