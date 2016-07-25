@@ -46,11 +46,6 @@ from nova.virt.ironic import ironic_states
 
 CONF = cfg.CONF
 
-IRONIC_FLAGS = dict(
-    api_version=1,
-    group='ironic',
-)
-
 FAKE_CLIENT = ironic_utils.FakeClient()
 
 
@@ -94,7 +89,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
                        lambda *_: FAKE_CLIENT_WRAPPER)
     def setUp(self):
         super(IronicDriverTestCase, self).setUp()
-        self.flags(**IRONIC_FLAGS)
 
         self.driver = ironic_driver.IronicDriver(None)
         self.driver.virtapi = fake.FakeVirtAPI()
@@ -1667,7 +1661,6 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
                        lambda *_: FAKE_CLIENT_WRAPPER)
     def setUp(self):
         super(IronicDriverGenerateConfigDriveTestCase, self).setUp()
-        self.flags(**IRONIC_FLAGS)
         self.driver = ironic_driver.IronicDriver(None)
         self.driver.virtapi = fake.FakeVirtAPI()
         self.ctx = nova_context.get_admin_context()

@@ -58,7 +58,11 @@ def _get_ironic_client():
               'os_endpoint_type': 'public',
               'insecure': 'true',
               'ironic_url': CONF.ironic.api_endpoint}
-    icli = ironic_client.get_client(CONF.ironic.api_version, **kwargs)
+    # NOTE(mriedem): The 1 api_version arg here is the only valid value for
+    # the client, but it's not even used so it doesn't really matter. The
+    # ironic client wrapper in the virt driver actually uses a hard-coded
+    # microversion via the os_ironic_api_version kwarg.
+    icli = ironic_client.get_client(1, **kwargs)
     return icli
 
 

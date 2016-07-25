@@ -29,13 +29,6 @@ If using the Ironic driver following options must be set:
 """)
 
 ironic_options = [
-    cfg.IntOpt('api_version',
-        default=1,
-        deprecated_for_removal=True,
-        help="""
-Version of Ironic API service endpoint.
-This option is deprecated and setting the API version is not possible anymore.
-"""),
     cfg.StrOpt(
         # TODO(raj_singh): Get this value from keystone service catalog
         'api_endpoint',
