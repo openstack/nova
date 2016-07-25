@@ -200,6 +200,7 @@ class HypervisorsTestV21(test.NoDBTestCase):
              state='up', status='enabled'),
         dict(id=2, hypervisor_hostname="hyper2",
              state='up', status='enabled')]
+    DETAIL_NULL_CPUINFO_DICT = {'': '', None: None}
 
     def _get_request(self, use_admin_context, url=''):
         return fakes.HTTPRequest.blank(url,
@@ -255,6 +256,26 @@ class HypervisorsTestV21(test.NoDBTestCase):
                                   dict(name="inst4", uuid=uuids.instance_4)]})
 
         self.assertEqual(result, expected_dict)
+
+    def _test_view_hypervisor_detail_cpuinfo_null(self, cpu_info):
+        req = self._get_request(True)
+
+        test_hypervisor_obj = copy.deepcopy(self.TEST_HYPERS_OBJ[0])
+        test_hypervisor_obj.cpu_info = cpu_info
+        result = self.controller._view_hypervisor(test_hypervisor_obj,
+                                                  self.TEST_SERVICES[0],
+                                                  True, req)
+
+        expected_dict = copy.deepcopy(self.DETAIL_HYPERS_DICTS[0])
+        expected_dict.update({'cpu_info':
+                              self.DETAIL_NULL_CPUINFO_DICT[cpu_info]})
+        self.assertEqual(result, expected_dict)
+
+    def test_view_hypervisor_detail_cpuinfo_empty_string(self):
+        self._test_view_hypervisor_detail_cpuinfo_null('')
+
+    def test_view_hypervisor_detail_cpuinfo_none(self):
+        self._test_view_hypervisor_detail_cpuinfo_null(None)
 
     def test_index(self):
         req = self._get_request(True)
@@ -487,6 +508,12 @@ class CellHypervisorsTestV21(HypervisorsTestV21):
                                                                  hyp['id']))
                          for hyp in INDEX_HYPER_DICTS]
 
+    # __deepcopy__ is added for copying an object locally in
+    # _test_view_hypervisor_detail_cpuinfo_null
+    cells_utils.ComputeNodeProxy.__deepcopy__ = (lambda self, memo:
+        cells_utils.ComputeNodeProxy(copy.deepcopy(self._obj, memo),
+                                     self._cell_path))
+
     @classmethod
     def fake_compute_node_get_all(cls, context, limit=None, marker=None):
         return cls.TEST_HYPERS_OBJ
@@ -543,6 +570,7 @@ class HypervisorsTestV228(HypervisorsTestV21):
     DETAIL_HYPERS_DICTS = copy.deepcopy(HypervisorsTestV21.DETAIL_HYPERS_DICTS)
     DETAIL_HYPERS_DICTS[0]['cpu_info'] = jsonutils.loads(CPU_INFO)
     DETAIL_HYPERS_DICTS[1]['cpu_info'] = jsonutils.loads(CPU_INFO)
+    DETAIL_NULL_CPUINFO_DICT = {'': {}, None: {}}
 
 
 class HypervisorsTestV233(HypervisorsTestV228):

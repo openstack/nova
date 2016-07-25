@@ -69,7 +69,10 @@ class HypervisorsController(wsgi.Controller):
                 }
 
             if api_version_request.is_supported(req, min_version='2.28'):
-                hyp_dict['cpu_info'] = jsonutils.loads(hypervisor.cpu_info)
+                if hypervisor.cpu_info:
+                    hyp_dict['cpu_info'] = jsonutils.loads(hypervisor.cpu_info)
+                else:
+                    hyp_dict['cpu_info'] = {}
             else:
                 hyp_dict['cpu_info'] = hypervisor.cpu_info
 
