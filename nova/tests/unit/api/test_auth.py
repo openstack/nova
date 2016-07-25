@@ -91,7 +91,7 @@ class TestKeystoneMiddlewareRoles(test.NoDBTestCase):
 
             if "knight" in context.roles and "bad" not in context.roles:
                 return webob.Response(status="200 Role Match")
-            elif context.roles == ['']:
+            elif not context.roles:
                 return webob.Response(status="200 No Roles")
             else:
                 raise webob.exc.HTTPBadRequest("unexpected role header")

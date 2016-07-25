@@ -76,28 +76,9 @@ class NovaKeystoneContext(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        user_id = req.headers.get('X_USER')
-        user_id = req.headers.get('X_USER_ID', user_id)
-        if user_id is None:
-            LOG.debug("Neither X_USER_ID nor X_USER found in request")
-            return webob.exc.HTTPUnauthorized()
-
-        roles = self._get_roles(req)
-
-        if 'X_TENANT_ID' in req.headers:
-            # This is the new header since Keystone went to ID/Name
-            project_id = req.headers['X_TENANT_ID']
-        else:
-            # This is for legacy compatibility
-            project_id = req.headers['X_TENANT']
         project_name = req.headers.get('X_TENANT_NAME')
         user_name = req.headers.get('X_USER_NAME')
-
         req_id = req.environ.get(request_id.ENV_REQUEST_ID)
-
-        # Get the auth token
-        auth_token = req.headers.get('X_AUTH_TOKEN',
-                                     req.headers.get('X_STORAGE_TOKEN'))
 
         # Build a context, including the auth_token...
         remote_address = req.remote_addr
@@ -117,22 +98,18 @@ class NovaKeystoneContext(wsgi.Middleware):
         # middleware in newer versions.
         user_auth_plugin = req.environ.get('keystone.token_auth')
 
-        ctx = context.RequestContext(user_id,
-                                     project_id,
-                                     user_name=user_name,
-                                     project_name=project_name,
-                                     roles=roles,
-                                     auth_token=auth_token,
-                                     remote_address=remote_address,
-                                     service_catalog=service_catalog,
-                                     request_id=req_id,
-                                     user_auth_plugin=user_auth_plugin)
+        ctx = context.RequestContext.from_environ(
+            req.environ,
+            user_name=user_name,
+            project_name=project_name,
+            user_auth_plugin=user_auth_plugin,
+            remote_address=remote_address,
+            service_catalog=service_catalog,
+            request_id=req_id)
+
+        if ctx.user_id is None:
+            LOG.debug("Neither X_USER_ID nor X_USER found in request")
+            return webob.exc.HTTPUnauthorized()
 
         req.environ['nova.context'] = ctx
         return self.application
-
-    def _get_roles(self, req):
-        """Get the list of roles."""
-
-        roles = req.headers.get('X_ROLES', '')
-        return [r.strip() for r in roles.split(',')]
