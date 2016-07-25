@@ -24,28 +24,31 @@ from oslo_config import cfg
 
 novnc_opts = [
     cfg.StrOpt('record',
-                help='This is the filename that will be used for storing '
-                     'websocket frames received and sent by a proxy service '
-                     '(like VNC, spice, serial) running on this host. If this '
-                     'is not set (default), no recording will be done.'),
+               help="""
+Filename that will be used for storing websocket frames received
+and sent by a proxy service (like VNC, spice, serial) running on this host.
+If this is not set, no recording will be done.
+"""),
     cfg.BoolOpt('daemon',
                 default=False,
-                help='Become a daemon (background process)'),
+                help="Run as a background process."),
     cfg.BoolOpt('ssl_only',
                 default=False,
-                help='Disallow non-encrypted connections'),
+                help="Disallow non-encrypted connections."),
     cfg.BoolOpt('source_is_ipv6',
                 default=False,
-                help='Source is ipv6'),
+                help="Set to True if source host is addressed with IPv6."),
     cfg.StrOpt('cert',
                default='self.pem',
-               help='SSL certificate file'),
+               help="Path to SSL certificate file."),
     cfg.StrOpt('key',
-               help='SSL key file (if separate from cert)'),
+               help="SSL key file (if separate from cert)."),
     cfg.StrOpt('web',
                default='/usr/share/spice-html5',
-               help='Run webserver on same port. Serve files from DIR.'),
-    ]
+               help="""
+Path to directory with content which will be served by a web server.
+"""),
+]
 
 
 def register_opts(conf):
