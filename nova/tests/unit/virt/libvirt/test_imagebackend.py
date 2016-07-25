@@ -281,7 +281,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_create_image(self):
         fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH, max_size=None, image_id=None)
+        fn(target=self.TEMPLATE_PATH, image_id=None)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
         self.mox.ReplayAll()
 
@@ -304,7 +304,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
                        return_value=imageutils.QemuImgInfo())
     def test_create_image_extend(self, fake_qemu_img_info):
         fn = self.prepare_mocks()
-        fn(max_size=self.SIZE, target=self.TEMPLATE_PATH, image_id=None)
+        fn(target=self.TEMPLATE_PATH, image_id=None)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
         image = imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_RAW)
         imagebackend.disk.extend(image, self.SIZE)
@@ -443,7 +443,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_create_image(self):
         fn = self.prepare_mocks()
-        fn(max_size=None, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
         self.mox.ReplayAll()
@@ -455,7 +455,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_create_image_with_size(self):
         fn = self.prepare_mocks()
-        fn(max_size=self.SIZE, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(imagebackend.Image,
                                  'verify_base_size')
@@ -498,7 +498,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_generate_resized_backing_files(self):
         fn = self.prepare_mocks()
-        fn(max_size=self.SIZE, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils,
                                  'get_disk_backing_file')
@@ -531,7 +531,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_qcow2_exists_and_has_no_backing_file(self):
         fn = self.prepare_mocks()
-        fn(max_size=self.SIZE, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(imagebackend.libvirt_utils,
                                  'get_disk_backing_file')
@@ -597,7 +597,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def _create_image(self, sparse):
         fn = self.prepare_mocks()
-        fn(max_size=None, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         self.lvm.create_volume(self.VG,
                                self.LV,
                                self.TEMPLATE_SIZE,
@@ -629,7 +629,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def _create_image_resize(self, sparse):
         fn = self.prepare_mocks()
-        fn(max_size=self.SIZE, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         self.lvm.create_volume(self.VG, self.LV,
                                self.SIZE, sparse=sparse)
         self.disk.get_disk_size(self.TEMPLATE_PATH
@@ -720,7 +720,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_create_image_negative(self):
         fn = self.prepare_mocks()
-        fn(max_size=self.SIZE, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
         self.lvm.create_volume(self.VG,
                                self.LV,
                                self.SIZE,
@@ -831,7 +831,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
                 context=self.CONTEXT)
 
             fn.assert_called_with(context=self.CONTEXT,
-                max_size=self.TEMPLATE_SIZE,
                 target=self.TEMPLATE_PATH)
             self.lvm.create_volume.assert_called_with(self.VG,
                 self.LV,
@@ -909,8 +908,8 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
             image.create_image(fn, self.TEMPLATE_PATH, self.SIZE,
                 context=self.CONTEXT)
 
-            fn.assert_called_with(context=self.CONTEXT, max_size=self.SIZE,
-                target=self.TEMPLATE_PATH)
+            fn.assert_called_with(context=self.CONTEXT,
+                                  target=self.TEMPLATE_PATH)
             self.disk.get_disk_size.assert_called_with(self.TEMPLATE_PATH)
             self.lvm.create_volume.assert_called_with(
                 self.VG,
@@ -982,7 +981,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
             fn.assert_called_with(
                 context=self.CONTEXT,
-                max_size=self.SIZE,
                 target=self.TEMPLATE_PATH)
             self.disk.get_disk_size.assert_called_with(
                 self.TEMPLATE_PATH)
@@ -1024,7 +1022,6 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
             fn.assert_called_with(
                 context=self.CONTEXT,
-                max_size=self.SIZE,
                 target=self.TEMPLATE_PATH)
             self.disk.get_disk_size.assert_called_with(self.TEMPLATE_PATH)
             self.lvm.create_volume.assert_called_with(
@@ -1243,7 +1240,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def test_create_image(self):
         fn = self.mox.CreateMockAnything()
-        fn(max_size=None, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
 
         rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
@@ -1269,7 +1266,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image_resize(self):
         fn = self.mox.CreateMockAnything()
         full_size = self.SIZE * 2
-        fn(max_size=full_size, target=self.TEMPLATE_PATH)
+        fn(target=self.TEMPLATE_PATH)
 
         rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
@@ -1615,7 +1612,7 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image(self):
         self.stubs.Set(imagebackend.Ploop, 'get_disk_size', lambda a, b: 2048)
         fn = self.prepare_mocks()
-        fn(target=self.TEMPLATE_PATH, max_size=2048, image_id=None)
+        fn(target=self.TEMPLATE_PATH, image_id=None)
         img_path = os.path.join(self.PATH, "root.hds")
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, img_path)
         self.utils.execute("ploop", "restore-descriptor", "-f", "raw",
