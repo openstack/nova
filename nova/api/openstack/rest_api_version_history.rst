@@ -361,3 +361,27 @@ user documentation.
   the generic request format is::
 
     GET /os-keypairs?limit={limit}&marker={kp_name}
+
+2.36
+----
+
+  All the APIs which proxy to another service were deprecated in this version,
+  also the fping API. Those APIs will return 404 with Microversion 2.36. The
+  network related quotas and limits are removed from API also. The deprecated
+  API endpoints as below::
+
+    '/images'
+    '/os-networks'
+    '/os-tenant-networks'
+    '/os-fixed-ips'
+    '/os-floating-ips'
+    '/os-floating-ips-bulk'
+    '/os-floating-ip-pools'
+    '/os-floating-ip-dns'
+    '/os-security-groups'
+    '/os-security-group-rules'
+    '/os-security-group-default-rules'
+    '/os-volumes'
+    '/os-snapshots'
+    '/os-baremetal-nodes'
+    '/os-fping'
