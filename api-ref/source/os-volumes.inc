@@ -223,7 +223,7 @@ Request
 Response
 --------
 
-No response body is returned on successful DELETE.
+There is no body content for the response of a successful DELETE query
 
 
 List Snapshots
@@ -399,4 +399,4 @@ Request
 Response
 --------
 
-No response body is returned on successful DELETE.
+There is no body content for the response of a successful DELETE query

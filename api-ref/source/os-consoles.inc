@@ -135,7 +135,7 @@ Request
 Response
 --------
 
-No body content is returned on a successful DELETE.
+There is no body content for the response of a successful DELETE query
 
 
 Show Console Authentication Token
