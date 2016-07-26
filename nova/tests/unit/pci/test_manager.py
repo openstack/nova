@@ -472,6 +472,27 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 3)
 
+    def test_free_device(self):
+        pci_requests_obj = self._create_pci_requests_object(
+            [{'count': 2, 'spec': [{'vendor_id': 'v'}]}])
+        self.tracker.claim_instance(mock.sentinel.context,
+                                    pci_requests_obj, None)
+        self.tracker.update_pci_for_instance(None, self.inst, sign=1)
+        free_pci_device_ids = (
+            [dev.id for dev in self.tracker.pci_stats.get_free_devs()])
+        self.assertEqual(1, len(free_pci_device_ids))
+        allocated_devs = manager.get_instance_pci_devs(self.inst)
+        pci_device_a = allocated_devs[0]
+        pci_device_b = copy.deepcopy(allocated_devs[1])
+        self.assertNotIn(pci_device_a.id, free_pci_device_ids)
+        self.assertNotIn(pci_device_b.id, free_pci_device_ids)
+        for pci_device in (pci_device_a, pci_device_b):
+            self.tracker.free_device(pci_device, self.inst)
+            free_pci_device_ids = (
+                [dev.id for dev in self.tracker.pci_stats.get_free_devs()])
+            self.assertIn(pci_device.id, free_pci_device_ids)
+        self.assertEqual(3, len(free_pci_device_ids))
+
 
 class PciGetInstanceDevs(test.NoDBTestCase):
 

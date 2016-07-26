@@ -263,7 +263,7 @@ class PciDevTracker(object):
         for pci_dev in self.pci_devs:
             # find the matching pci device in the pci resource tracker
             # pci device. Once found one free it.
-            if dev == pci_dev and dev.instance_uuid == instance['uuid']:
+            if dev.id == pci_dev.id and dev.instance_uuid == instance['uuid']:
                 self._free_device(pci_dev)
 
     def _free_device(self, dev, instance=None):
