@@ -217,10 +217,17 @@ class ComputeTaskManager(base.Base):
         # it only provides filter_properties legacy dict back to the
         # conductor with no RequestSpec part of the payload.
         if not request_spec:
+            # Make sure we hydrate a new RequestSpec object with the new flavor
+            # and not the nested one from the instance
             request_spec = objects.RequestSpec.from_components(
                 context, instance.uuid, image,
-                instance.flavor, instance.numa_topology, instance.pci_requests,
+                flavor, instance.numa_topology, instance.pci_requests,
                 filter_properties, None, instance.availability_zone)
+        else:
+            # NOTE(sbauza): Resizes means new flavor, so we need to update the
+            # original RequestSpec object for make sure the scheduler verifies
+            # the right one and not the original flavor
+            request_spec.flavor = flavor
 
         task = self._build_cold_migrate_task(context, instance, flavor,
                                              request_spec,
@@ -261,6 +268,10 @@ class ComputeTaskManager(base.Base):
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
                                               updates, ex, legacy_spec)
+        # NOTE(sbauza): Make sure we persist the new flavor in case we had
+        # a successful scheduler call if and only if nothing bad happened
+        if request_spec.obj_what_changed():
+            request_spec.save()
 
     def _set_vm_state_and_notify(self, context, instance_uuid, method, updates,
                                  ex, request_spec):
