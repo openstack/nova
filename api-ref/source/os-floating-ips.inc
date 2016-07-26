@@ -13,7 +13,7 @@
    deprecated all the proxy APIs and users should use the native APIs
    instead.
    See: `Relevant Network APIs
-   <http://developer.openstack.org/api-ref-networking-v2-ext.html#layer3-ext>`__.
+   <http://developer.openstack.org/api-ref/networking/v2-ext/index.html#layer-3-networking-routers-floatingips>`__.
 
 Lists floating IP addresses for a project. Also, creates (allocates) a
 floating IP address for a project, shows floating IP address details,
