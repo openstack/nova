@@ -1,4 +1,3 @@
-# needs:fix_opt_description
 # needs:check_deprecation_status
 # needs:check_opt_group_and_type
 # needs:fix_opt_description_indentation
@@ -24,7 +23,17 @@ from oslo_config import cfg
 
 enable_guestfs_debug_opts = cfg.BoolOpt('debug',
                                         default=False,
-                                        help='Enable guestfs debug')
+                                        help="""
+Enable the debug mode of "libguestfs".
+
+If this node uses "libguestfs" (for example to inject data or passwords),
+this option can be used to turn its debug mode on.
+
+Possible values:
+* True: turn debug on. This integrates libguestfs's logs into the log
+  of OpenStack.
+* False: turn debug off
+""")
 
 ALL_OPTS = [enable_guestfs_debug_opts]
 
