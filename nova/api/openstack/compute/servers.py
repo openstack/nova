@@ -1031,9 +1031,9 @@ class ServersController(wsgi.Controller):
 
     def _get_server_admin_password(self, server):
         """Determine the admin password for a server on creation."""
-        try:
+        if 'adminPass' in server:
             password = server['adminPass']
-        except KeyError:
+        else:
             password = utils.generate_password()
         return password
 
