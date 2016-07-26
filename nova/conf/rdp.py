@@ -26,49 +26,61 @@ from oslo_config import cfg
 enabled = cfg.BoolOpt('enabled',
                       default=False,
                       help="""
-Enables RDP related features
+Enable Remote Desktop Protocol (RDP) related features.
 
-Hyper-V, unlike the majority of the hypervisors employed on
-Nova compute nodes, uses RDP instead of VNC and SPICE as a
-desktop sharing protocol to provide instance console access.
-This option enables RDP for graphical console access
-for virtual machines created by Hyper-V.
+Hyper-V, unlike the majority of the hypervisors employed on Nova compute
+nodes, uses RDP instead of VNC and SPICE as a desktop sharing protocol to
+provide instance console access. This option enables RDP for graphical
+console access for virtual machines created by Hyper-V.
 
-* Possible values:
+**Note:** RDP should only be enabled on compute nodes that support the Hyper-V
+virtualization platform.
 
-    True or False(default).
+Possible values:
 
-* Services that use this:
+* True: Enables the feature
+* False: Disables the feature
 
-    ``nova-compute``
+Related options:
 
-* Related options:
+* ``compute_driver``: Must be hyperv.
 
-    None
 """)
-
 
 html5_proxy_base_url = cfg.StrOpt('html5_proxy_base_url',
         default='http://127.0.0.1:6083/',
         help="""
-Location of RDP html5 console proxy
+The URL an end user would use to connect to the RDP HTML5 console proxy.
+The console proxy service is called with this token-embedded URL and
+establishes the connection to the proper instance.
 
-In order to use the web based console access, FreeRDP HTML5
-proxy should be configured and installed.
+An RDP HTML5 console proxy service will need to be configured to listen on the
+address configured here. Typically the console proxy service would be run on a
+controller node. The localhost address used as default would only work in a
+single node environment i.e. devstack.
 
-* Possible values:
+An RDP HTML5 proxy allows a user to access via the web the text or graphical
+console of any Windows server or workstation using RDP. RDP HTML5 console
+proxy services include FreeRDP, wsgate.
+See https://github.com/FreeRDP/FreeRDP-WebConnect
 
-    Must be a valid URL of the form:``http://host:port/"
-    where host and port should be configured in the node
-    running FreeRDP HTML5 proxy.
+Possible values:
 
-* Services that use this:
+* <scheme>://<ip-address>:<port-number>/
 
-    ``nova-compute``
+The scheme must be identical to the scheme configured for the RDP HTML5
+console proxy service.
 
-* Related options:
+The IP address must be identical to the address on which the RDP HTML5 console
+proxy service is listening.
 
-    [rdp]enabled = True
+The port must be identical to the port on which the RDP HTML5 console proxy
+service is listening.
+
+Related options:
+
+* ``rdp.enabled``: Must be set to ``True`` for ``html5_proxy_base_url`` to be
+                   effective.
 """)
 
 ALL_OPTS = [enabled,
