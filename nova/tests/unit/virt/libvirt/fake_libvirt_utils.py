@@ -39,8 +39,12 @@ def get_disk_size(path, format=None):
     return 0
 
 
-def get_disk_backing_file(path, format=None):
-    return disk_backing_files.get(path, None)
+def get_disk_backing_file(path, basename=True, format=None):
+    backing_file = disk_backing_files.get(path, None)
+    if backing_file and basename:
+        backing_file = os.path.basename(backing_file)
+
+    return backing_file
 
 
 def get_disk_type_from_path(path):
