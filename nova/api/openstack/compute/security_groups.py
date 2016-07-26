@@ -19,6 +19,8 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import security_groups as \
                                                   schema_security_groups
@@ -43,7 +45,7 @@ def _authorize_context(req):
     return context
 
 
-class SecurityGroupControllerBase(wsgi.Controller):
+class SecurityGroupControllerBase(object):
     """Base class for Security Group controllers."""
 
     def __init__(self):
@@ -113,9 +115,10 @@ class SecurityGroupControllerBase(wsgi.Controller):
         return value
 
 
-class SecurityGroupController(SecurityGroupControllerBase):
+class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
     """The Security group API controller for the OpenStack API."""
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404))
     def show(self, req, id):
         """Return data about the given security group."""
@@ -133,6 +136,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
         return {'security_group': self._format_security_group(context,
                                                               security_group)}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404))
     @wsgi.response(202)
     def delete(self, req, id):
@@ -149,6 +153,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
         except exception.Invalid as exp:
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(404)
     def index(self, req):
         """Returns a list of security groups."""
@@ -170,6 +175,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
                 list(sorted(result,
                             key=lambda k: (k['tenant_id'], k['name'])))}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 403))
     def create(self, req, body):
         """Creates a new security group."""
@@ -194,6 +200,7 @@ class SecurityGroupController(SecurityGroupControllerBase):
         return {'security_group': self._format_security_group(context,
                                                               group_ref)}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404))
     def update(self, req, id, body):
         """Update a security group."""
@@ -227,8 +234,10 @@ class SecurityGroupController(SecurityGroupControllerBase):
                                                               group_ref)}
 
 
-class SecurityGroupRulesController(SecurityGroupControllerBase):
+class SecurityGroupRulesController(SecurityGroupControllerBase,
+                                   wsgi.Controller):
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 403, 404))
     def create(self, req, body):
         context = _authorize_context(req)
@@ -302,6 +311,7 @@ class SecurityGroupRulesController(SecurityGroupControllerBase):
             return self.security_group_api.new_cidr_ingress_rule(
                                         cidr, ip_protocol, from_port, to_port)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):
