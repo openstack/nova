@@ -79,6 +79,32 @@ base_create_v232['properties']['server'][
     'properties']['tag'] = server_tags.tag
 
 
+# 2.37 builds on 2.32 and makes the following changes:
+# 1. server.networks is required
+# 2. server.networks is now either an enum or a list
+# 3. server.networks.uuid is now required to be a uuid
+base_create_v237 = copy.deepcopy(base_create_v232)
+base_create_v237['properties']['server']['required'].append('networks')
+base_create_v237['properties']['server']['properties']['networks'] = {
+    'oneOf': [
+        {'type': 'array',
+         'items': {
+             'type': 'object',
+             'properties': {
+                 'fixed_ip': parameter_types.ip_address,
+                 'port': {
+                     'oneOf': [{'type': 'string', 'format': 'uuid'},
+                               {'type': 'null'}]
+                 },
+                 'uuid': {'type': 'string', 'format': 'uuid'},
+             },
+             'additionalProperties': False,
+         },
+        },
+        {'type': 'string', 'enum': ['none', 'auto']},
+    ]}
+
+
 base_update = {
     'type': 'object',
     'properties': {

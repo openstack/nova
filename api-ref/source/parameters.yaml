@@ -3001,6 +3001,9 @@ network_uuid:
     To provision the server instance with a NIC for a network, specify the UUID of
     the network in the ``uuid`` attribute in a ``networks`` object. Required if you
     omit the ``port`` attribute.
+
+    Starting with microversion 2.37, this value is strictly enforced to be in
+    UUID format.
   in: body
   required: false
   type: string
@@ -3020,6 +3023,16 @@ networks:
     metadata API and the config drive and is associated to hardware metadata
     for that network interface, such as bus (ex: PCI), bus address (ex:
     0000:00:02.0), and MAC address.
+
+    Starting with microversion 2.37, this field is required and the special
+    values *auto* and *none* can be specified for networks. *auto* tells the
+    Compute service to use a network that is available to the project, if one
+    exists. If one does not exist, the Compute service will attempt to
+    automatically allocate a network for the project (if possible). *none*
+    tells the Compute service to not allocate a network for the instance. The
+    *auto* and *none* values cannot be used with any other network values,
+    including other network uuids, ports or fixed IPs. These are requested as
+    strings for the networks value, not in a list. See the associated example.
   in: body
   required: false
   type: object

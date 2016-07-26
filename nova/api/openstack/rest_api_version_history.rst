@@ -385,3 +385,23 @@ user documentation.
     '/os-snapshots'
     '/os-baremetal-nodes'
     '/os-fping'
+
+2.37
+----
+
+  Added support for automatic allocation of networking, also known as "Get Me a
+  Network". With this microversion, when requesting the creation of a new
+  server (or servers) the ``networks`` entry in the ``server`` portion of the
+  request body is required. The ``networks`` object in the request can either
+  be a list or an enum with values:
+
+  #. *none* which means no networking will be allocated for the created
+     server(s).
+  #. *auto* which means either a network that is already available to the
+     project will be used, or if one does not exist, will be automatically
+     created for the project. Automatic network allocation for a project only
+     happens once for a project. Subsequent requests using *auto* for the same
+     project will reuse the network that was previously allocated.
+
+  Also, the ``uuid`` field in the ``networks`` object in the server create
+  request is now strictly enforced to be in UUID format.

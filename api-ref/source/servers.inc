@@ -224,6 +224,8 @@ keypair to the server when you create it. To create a keypair, make a
 <http://developer.openstack.org/api-ref-compute-v2.1.html#createKeypair>`__
 request.
 
+.. note:: Starting with microversion 2.37 the ``networks`` field is required.
+
 Preconditions
 
 - The user must have sufficient server quota to create the number of
@@ -314,9 +316,9 @@ Request
 .. literalinclude:: ../../doc/api_samples/servers/server-create-req.json
    :language: javascript
 
-**Example Create Server (v2.32)**
+**Example Create Server With Automatic Networking (v2.37)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.32/server-create-req.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.37/server-create-req.json
    :language: javascript
 
 Response

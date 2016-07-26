@@ -77,6 +77,7 @@ class ServersController(wsgi.Controller):
     schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
 
     schema_server_create_v232 = schema_servers.base_create_v232
+    schema_server_create_v237 = schema_servers.base_create_v237
 
     @staticmethod
     def _add_location(robj):
@@ -169,6 +170,9 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if list(self.create_schema_manager):
+            self.create_schema_manager.map(self._create_extension_schema,
+                                           self.schema_server_create_v237,
+                                           '2.37')
             self.create_schema_manager.map(self._create_extension_schema,
                                            self.schema_server_create_v232,
                                           '2.32')
@@ -400,9 +404,51 @@ class ServersController(wsgi.Controller):
             expl = _("Duplicate networks (%s) are not allowed") % net_id
             raise exc.HTTPBadRequest(explanation=expl)
 
+    @staticmethod
+    def _validate_auto_or_none_network_request(requested_networks):
+        """Validates a set of network requests with 'auto' or 'none' in it.
+
+        :param requested_networks: nova.objects.NetworkRequestList
+        :returns: nova.objects.NetworkRequestList - the same list as the input
+            if validation is OK, None if the request can't be honored due to
+            the minimum nova-compute service version in the deployment is not
+            new enough to support auto-allocated networking.
+        """
+
+        # Check the minimum nova-compute service version since Mitaka
+        # computes can't handle network IDs that aren't UUIDs.
+        # TODO(mriedem): Remove this check in Ocata.
+        min_compute_version = objects.Service.get_minimum_version(
+            nova_context.get_admin_context(), 'nova-compute')
+
+        # NOTE(mriedem): If the minimum compute version is not new enough
+        # for supporting auto-allocation, change the network request to
+        # None so it works the same as it did in Mitaka when you don't
+        # request anything.
+        if min_compute_version < 12:
+            LOG.debug("User requested network '%s' but the minimum "
+                      "nova-compute version in the deployment is not new "
+                      "enough to support that request, so treating it as "
+                      "though a specific network was not requested.",
+                      requested_networks[0].network_id)
+            return None
+        return requested_networks
+
     def _get_requested_networks(self, requested_networks,
                                 supports_device_tagging=False):
         """Create a list of requested networks from the networks attribute."""
+
+        # Starting in the 2.37 microversion, requested_networks is either a
+        # list or a string enum with value 'auto' or 'none'. The auto/none
+        # values are verified via jsonschema so we don't check them again here.
+        if isinstance(requested_networks, six.string_types):
+            req_nets = objects.NetworkRequestList(
+                objects=[objects.NetworkRequest(
+                    network_id=requested_networks)])
+            # Check the minimum nova-compute service version for supporting
+            # these special values.
+            return self._validate_auto_or_none_network_request(req_nets)
+
         networks = []
         network_uuids = []
         for network in requested_networks:
@@ -461,7 +507,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
     @validation.schema(schema_server_create, '2.1', '2.18')
     @validation.schema(schema_server_create_v219, '2.19', '2.31')
-    @validation.schema(schema_server_create_v232, '2.32')
+    @validation.schema(schema_server_create_v232, '2.32', '2.36')
+    @validation.schema(schema_server_create_v237, '2.37')
     def create(self, req, body):
         """Creates a new server for a given user."""
 

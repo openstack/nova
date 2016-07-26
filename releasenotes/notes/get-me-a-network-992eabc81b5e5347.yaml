@@ -1,0 +1,38 @@
+---
+features:
+  - |
+    The 2.37 microversion adds support for automatic allocation of network
+    resources for a project when ``networks: auto`` is specified in a server
+    create request. If the project does not have any networks available to it
+    and the ``auto-allocated-topology`` API is available in the Neutron
+    networking service, Nova will call that API to allocate resources for the
+    project. There is some setup required in the deployment for the
+    ``auto-allocated-topology`` API to work in Neutron. See the
+    `Additional features`_ section of the OpenStack Networking Guide
+    for more details for setting up this feature in Neutron.
+
+    .. note:: The API does not default to 'auto'. However, python-novaclient
+      will default to passing 'auto' for this microversion if no specific
+      network values are provided to the CLI.
+
+    .. note:: This feature is not available until all of the compute services
+      in the deployment are running Newton code. This is to avoid sending a
+      server create request to a Mitaka compute that can not understand a
+      network ID of 'auto' or 'none'. If this is the case, the API will treat
+      the request as if ``networks`` was not in the server create request body.
+      Once all computes are upgraded to Newton, a restart of the nova-api
+      service will be required to use this new feature.
+
+    .. _Additional features: http://docs.openstack.org/networking-guide/intro-os-networking-features.html
+
+upgrade:
+  - |
+    The 2.37 microversion enforces the following:
+
+    * ``networks`` is required in the server create request body for the API.
+      Specifying ``networks: auto`` is similar to not requesting specific
+      networks when creating a server before 2.37.
+    * The ``uuid`` field in the ``networks`` object of a server create request
+      is now required to be in UUID format, it cannot be a random string. More
+      specifically, the API used to support a nic uuid with a "br-" prefix but
+      that is a legacy artifact which is no longer supported.

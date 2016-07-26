@@ -26,6 +26,7 @@ from mox3 import mox
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+import six
 from six.moves import range
 import six.moves.urllib.parse as urlparse
 import testtools
@@ -3441,6 +3442,124 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
             self._create_server()
 
 
+class ServersControllerCreateTestV237(test.NoDBTestCase):
+    """Tests server create scenarios with the v2.37 microversion.
+
+    These tests are mostly about testing the validation on the 2.37
+    server create request with emphasis on negative scenarios.
+    """
+    def setUp(self):
+        super(ServersControllerCreateTestV237, self).setUp()
+        # Set the use_neutron flag to process requested networks.
+        self.flags(use_neutron=True)
+        # Create the server controller.
+        ext_info = extension_info.LoadedExtensionInfo()
+        self.controller = servers.ServersController(extension_info=ext_info)
+        # Define a basic server create request body which tests can customize.
+        self.body = {
+            'server': {
+                'name': 'auto-allocate-test',
+                'imageRef': '6b0edabb-8cde-4684-a3f4-978960a51378',
+                'flavorRef': '2',
+            },
+        }
+        # Create a fake request using the 2.37 microversion.
+        self.req = fakes.HTTPRequestV21.blank('/fake/servers', version='2.37')
+        self.req.method = 'POST'
+        self.req.headers['content-type'] = 'application/json'
+
+    def _create_server(self, networks):
+        self.body['server']['networks'] = networks
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        return self.controller.create(self.req, body=self.body).obj['server']
+
+    def test_create_server_auth_pre_2_37_fails(self):
+        """Negative test to make sure you can't pass 'auto' before 2.37"""
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.36')
+        self.assertRaises(exception.ValidationError, self._create_server,
+                          'auto')
+
+    def test_create_server_no_requested_networks_fails(self):
+        """Negative test for a server create request with no networks requested
+        which should fail with the v2.37 schema validation.
+        """
+        self.assertRaises(exception.ValidationError, self._create_server, None)
+
+    def test_create_server_network_id_not_uuid_fails(self):
+        """Negative test for a server create request where the requested
+        network id is not one of the auto/none enums.
+        """
+        self.assertRaises(exception.ValidationError, self._create_server,
+                          'not-auto-or-none')
+
+    def test_create_server_network_id_empty_string_fails(self):
+        """Negative test for a server create request where the requested
+        network id is the empty string.
+        """
+        self.assertRaises(exception.ValidationError, self._create_server, '')
+
+    @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
+                       side_effect=exception.FlavorNotFound(flavor_id='2'))
+    def test_create_server_auto_flavornotfound(self,
+                                                                 get_flavor):
+        """Tests that requesting auto networking is OK. This test
+        short-circuits on a FlavorNotFound error.
+        """
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest, self._create_server, 'auto')
+        # make sure it was a flavor not found error and not something else
+        self.assertIn('Flavor 2 could not be found', six.text_type(ex))
+
+    @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
+                       side_effect=exception.FlavorNotFound(flavor_id='2'))
+    def test_create_server_none_flavornotfound(self,
+                                                                 get_flavor):
+        """Tests that requesting none for networking is OK. This test
+        short-circuits on a FlavorNotFound error.
+        """
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest, self._create_server, 'none')
+        # make sure it was a flavor not found error and not something else
+        self.assertIn('Flavor 2 could not be found', six.text_type(ex))
+
+    @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
+                       side_effect=exception.FlavorNotFound(flavor_id='2'))
+    def test_create_server_multiple_specific_nics_flavornotfound(self,
+                                                                 get_flavor):
+        """Tests that requesting multiple specific network IDs is OK. This test
+        short-circuits on a FlavorNotFound error.
+        """
+        ex = self.assertRaises(
+            webob.exc.HTTPBadRequest, self._create_server,
+                [{'uuid': 'e3b686a8-b91d-4a61-a3fc-1b74bb619ddb'},
+                 {'uuid': 'e0f00941-f85f-46ec-9315-96ded58c2f14'}])
+        # make sure it was a flavor not found error and not something else
+        self.assertIn('Flavor 2 could not be found', six.text_type(ex))
+
+    def test_create_server_legacy_neutron_network_id_fails(self):
+        """Tests that we no longer support the legacy br-<uuid> format for
+           a network id.
+        """
+        uuid = 'br-00000000-0000-0000-0000-000000000000'
+        self.assertRaises(exception.ValidationError, self._create_server,
+                          [{'uuid': uuid}])
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=11)
+    def test_validate_auto_or_none_network_request_old_computes(self,
+                                                                mock_get_ver):
+        """Tests that the network request is nulled out when the minimum
+           nova-compute is not running new enough code to support 'auto'.
+        """
+        req_nets = objects.NetworkRequestList(
+            objects=[objects.NetworkRequest(network_id='auto')])
+        self.assertIsNone(
+            self.controller._validate_auto_or_none_network_request(
+                req_nets))
+        mock_get_ver.assert_called_once_with(mock.ANY, 'nova-compute')
+
+
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     flavor_ref = 'http://localhost/123/flavors/3'
@@ -4130,7 +4249,7 @@ class FakeExt(extensions.V21APIExtensionBase):
         pass
 
     def fake_schema_extension_point(self, version):
-        if version in ('2.1', '2.19', '2.32'):
+        if version in ('2.1', '2.19', '2.32', '2.37'):
             return self.fake_schema
         elif version == '2.0':
             return {}
