@@ -245,8 +245,8 @@ Response
   - snapshots: snapshots
   - id: snapshot_id
   - createdAt: created
-  - displayName: display_name
-  - displayDescription: display_description
+  - displayName: snapshot_name
+  - displayDescription: snapshot_description
   - size: size
   - status: snapshot_status
   - volumeId: volume_id
@@ -276,8 +276,8 @@ Request
 
   - snapshot: snapshot
   - volume_id: volume_id
-  - display_description: display_description_optional
-  - display_name: display_name_optional
+  - display_description: snapshot_description_optional
+  - display_name: snapshot_name_optional
   - force: force_snapshot
 
 **Example Create Snapshot**
@@ -293,8 +293,8 @@ Response
   - snapshot: snapshot
   - id: snapshot_id
   - createdAt: created
-  - displayName: display_name
-  - displayDescription: display_description
+  - displayName: snapshot_name
+  - displayDescription: snapshot_description
   - volumeId: volume_id
   - size: size
   - status: snapshot_status
@@ -323,8 +323,8 @@ Response
   - snapshots: snapshots
   - id: snapshot_id
   - createdAt: created
-  - displayName: display_name
-  - displayDescription: display_description
+  - displayName: snapshot_name
+  - displayDescription: snapshot_description
   - volumeId: volume_id
   - size: size
   - status: snapshot_status
@@ -362,8 +362,8 @@ Response
   - snapshot: snapshot
   - id: snapshot_id
   - createdAt: created
-  - displayName: display_name
-  - displayDescription: display_description
+  - displayName: snapshot_name
+  - displayDescription: snapshot_description
   - volumeId: volume_id
   - size: size
   - status: snapshot_status

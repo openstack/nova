@@ -4014,6 +4014,18 @@ snapshot:
   in: body
   required: true
   type: object
+snapshot_description:
+  description: |
+    The snapshot description.
+  in: body
+  required: true
+  type: string
+snapshot_description_optional:
+  description: |
+    The snapshot description.
+  in: body
+  required: false
+  type: string
 snapshot_id:
   description: |
     The UUID for a snapshot.
@@ -4023,6 +4035,18 @@ snapshot_id:
 snapshot_id_optional:
   description: |
     The UUID for a snapshot.
+  in: body
+  required: false
+  type: string
+snapshot_name:
+  description: |
+    The snapshot name.
+  in: body
+  required: true
+  type: string
+snapshot_name_optional:
+  description: |
+    The snapshot name.
   in: body
   required: false
   type: string
