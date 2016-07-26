@@ -20,6 +20,8 @@ import os
 import six
 from webob import exc
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -67,6 +69,7 @@ class FpingController(wsgi.Controller):
             ret += [ip["address"] for ip in all_ips]
         return ret
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(503)
     def index(self, req):
         context = req.environ["nova.context"]
@@ -117,6 +120,7 @@ class FpingController(wsgi.Controller):
             })
         return {"servers": res}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((404, 503))
     def show(self, req, id):
         context = req.environ["nova.context"]
