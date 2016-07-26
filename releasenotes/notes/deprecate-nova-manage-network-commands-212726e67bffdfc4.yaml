@@ -1,0 +1,15 @@
+---
+deprecations:
+  - |
+    The following nova-manage commands are deprecated for removal in the
+    Nova 15.0.0 Ocata release:
+
+    * nova-maange account scrub
+    * nova-manage fixed *
+    * nova-manage floating *
+    * nova-manage network *
+    * nova-manage project scrub
+    * nova-manage vpn *
+
+    These commands only work with nova-network which is itself deprecated in
+    favor of Neutron.

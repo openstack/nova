@@ -116,6 +116,11 @@ def param2id(object_id):
 class VpnCommands(object):
     """Class for managing VPNs."""
 
+    description = ('DEPRECATED: VPN commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'VPN commands will be removed in the Nova 15.0.0 '
+                   'Ocata release.')
+
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
     @args('--ip', metavar='<IP Address>', help='IP Address')
@@ -319,7 +324,12 @@ class ProjectCommands(object):
     @args('--project', dest='project_id', metavar='<Project name>',
             help='Project name')
     def scrub(self, project_id):
-        """Deletes data associated with project."""
+        """DEPRECATED: Deletes network data associated with project.
+
+        This command is only for nova-network deployments and nova-network is
+        deprecated in favor of Neutron. This command will be removed in the
+        Nova 15.0.0 Ocata release.
+        """
         admin_context = context.get_admin_context()
         networks = db.project_get_networks(admin_context, project_id)
         for network in networks:
@@ -334,6 +344,11 @@ AccountCommands = ProjectCommands
 
 class FixedIpCommands(object):
     """Class for managing fixed IP."""
+
+    description = ('DEPRECATED: Fixed IP commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'fixed IP commands will be removed in the Nova 15.0.0 '
+                   'Ocata release.')
 
     @args('--host', metavar='<host>', help='Host')
     def list(self, host=None):
@@ -428,6 +443,11 @@ class FixedIpCommands(object):
 
 class FloatingIpCommands(object):
     """Class for managing floating IP."""
+
+    description = ('DEPRECATED: Floating IP commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'floating IP commands will be removed in the Nova 15.0.0 '
+                   'Ocata release.')
 
     @staticmethod
     def address_to_hosts(addresses):
@@ -526,6 +546,11 @@ def validate_network_plugin(f, *args, **kwargs):
 
 class NetworkCommands(object):
     """Class for managing networks."""
+
+    description = ('DEPRECATED: Network commands are deprecated since '
+                   'nova-network is deprecated in favor of Neutron. The '
+                   'network commands will be removed in the Nova 15.0.0 Ocata '
+                   'release.')
 
     @validate_network_plugin
     @args('--label', metavar='<label>', help='Label for network (ex: public)')
