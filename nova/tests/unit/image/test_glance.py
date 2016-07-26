@@ -2413,6 +2413,25 @@ class TestExtractAttributes(test.NoDBTestCase):
         self.assertEqual(v1_output, v2_output)
 
     @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
+    def test_extract_image_attributes_empty_images_no_size(self,
+                                                           mocked_schema):
+        image_v1_dict = dict(image_fixtures['empty_image_v1'])
+        # pop the size attribute since it might not be set on a snapshot image
+        image_v1_dict.pop('size')
+        image_v2 = ImageV2(image_fixtures['empty_image_v2'])
+
+        image_v1 = collections.namedtuple('_', image_v1_dict.keys())(
+            **image_v1_dict)
+
+        self.flags(use_glance_v1=True, group='glance')
+        v1_output = glance._translate_from_glance(
+            image_v1, include_locations=False)
+        self.flags(use_glance_v1=False, group='glance')
+        v2_output = glance._translate_from_glance(
+            image_v2, include_locations=False)
+        self.assertEqual(v1_output, v2_output)
+
+    @mock.patch.object(schemas, 'Schema', side_effect=FakeSchema)
     def test_extract_image_attributes_active_images_custom_prop(
             self, mocked_schema):
         image_v1_dict = image_fixtures['custom_property_image_v1']
