@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack import api_version_request
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.views import limits as limits_views
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -24,11 +27,32 @@ QUOTAS = quota.QUOTAS
 ALIAS = 'limits'
 
 
+def _get_filter_result_version():
+    """Calculate the start API version which needs to filter the network
+    related limits. MAX_PROXY_API_SUPPORT_VERSION is the end API version
+    of supporting those network related limits. So we return
+    MAX_PROXY_API_SUPPORT_VERSION +1 in this method.
+    """
+    filter_result_version = api_version_request.APIVersionRequest(
+        MAX_PROXY_API_SUPPORT_VERSION)
+    filter_result_version.ver_minor = filter_result_version.ver_minor + 1
+    return filter_result_version.get_string()
+
+
 class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def index(self, req):
+        return self._index(req)
+
+    @wsgi.Controller.api_version(_get_filter_result_version())  # noqa
+    @extensions.expected_errors(())
+    def index(self, req):
+        return self._index(req, filter_result=True)
+
+    def _index(self, req, filter_result=False):
         """Return all global limit information."""
         context = req.environ['nova.context']
         context.can(limits_policies.BASE_POLICY_NAME)
@@ -38,8 +62,7 @@ class LimitsController(wsgi.Controller):
         abs_limits = {k: v['limit'] for k, v in quotas.items()}
 
         builder = self._get_view_builder(req)
-
-        return builder.build(abs_limits)
+        return builder.build(abs_limits, filter_result=filter_result)
 
     def _get_view_builder(self, req):
         return limits_views.ViewBuilderV21()
