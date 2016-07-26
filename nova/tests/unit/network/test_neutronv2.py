@@ -3757,11 +3757,39 @@ class TestNeutronv2WithMock(test.TestCase):
         instance.migration_context.old_pci_devices = old_pci_devices
         instance.migration_context.new_pci_devices = new_pci_devices
         instance.pci_devices = instance.migration_context.old_pci_devices
+        migration = {'status': 'confirmed'}
 
         pci_mapping = self.api._get_pci_mapping_for_migration(
-            self.context, instance)
+            self.context, instance, migration)
         self.assertEqual(
             {old_pci_devices[0].address: new_pci_devices[0]}, pci_mapping)
+
+    def test_get_pci_mapping_for_migration_reverted(self):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.migration_context = objects.MigrationContext()
+        old_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0a:00.1',
+                                       compute_node_id=1,
+                                       request_id='1234567890')])
+
+        new_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0b:00.1',
+                                       compute_node_id=2,
+                                       request_id='1234567890')])
+
+        instance.migration_context.old_pci_devices = old_pci_devices
+        instance.migration_context.new_pci_devices = new_pci_devices
+        instance.pci_devices = instance.migration_context.old_pci_devices
+        migration = {'status': 'reverted'}
+
+        pci_mapping = self.api._get_pci_mapping_for_migration(
+            self.context, instance, migration)
+        self.assertEqual(
+            {new_pci_devices[0].address: old_pci_devices[0]}, pci_mapping)
 
     @mock.patch('nova.network.neutronv2.api.compute_utils')
     def test_get_preexisting_port_ids(self, mocked_comp_utils):

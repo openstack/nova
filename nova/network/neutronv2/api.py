@@ -1921,7 +1921,8 @@ class API(base_api.NetworkAPI):
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
         self._update_port_binding_for_instance(context, instance,
-                                               migration['dest_compute'])
+                                               migration['dest_compute'],
+                                               migration=migration)
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
@@ -2212,7 +2213,17 @@ class API(base_api.NetworkAPI):
         """Cleanup network for specified instance on host."""
         pass
 
-    def _get_pci_mapping_for_migration(self, context, instance):
+    def _get_pci_devices_from_migration_context(self, migration_context,
+                                                migration):
+        if migration and migration.get('status') == 'reverted':
+            # In case of revert, swap old and new devices to
+            # update the ports back to the original devices.
+            return (migration_context.new_pci_devices,
+                    migration_context.old_pci_devices)
+        return (migration_context.old_pci_devices,
+                migration_context.new_pci_devices)
+
+    def _get_pci_mapping_for_migration(self, context, instance, migration):
         """Get the mapping between the old PCI devices and the new PCI
         devices that have been allocated during this migration.  The
         correlation is based on PCI request ID which is unique per PCI
@@ -2220,14 +2231,16 @@ class API(base_api.NetworkAPI):
 
         :param context:  The request context.
         :param instance: Get PCI mapping for this instance.
+        :param migration: The migration for this instance.
         :Returns: dictionary of mapping {'<old pci address>': <New PciDevice>}
         """
         migration_context = instance.migration_context
         if not migration_context:
             return {}
 
-        old_pci_devices = migration_context.old_pci_devices
-        new_pci_devices = migration_context.new_pci_devices
+        old_pci_devices, new_pci_devices = \
+            self._get_pci_devices_from_migration_context(migration_context,
+                                                         migration)
         if old_pci_devices and new_pci_devices:
             LOG.debug("Determining PCI devices mapping using migration"
                       "context: old_pci_devices: %(old)s, "
@@ -2240,7 +2253,8 @@ class API(base_api.NetworkAPI):
                             if old.request_id == new.request_id}
         return {}
 
-    def _update_port_binding_for_instance(self, context, instance, host):
+    def _update_port_binding_for_instance(self, context, instance, host,
+                                          migration=None):
         if not self._has_port_binding_extension(context, refresh_cache=True):
             return
         neutron = get_client(context, admin=True)
@@ -2265,7 +2279,7 @@ class API(base_api.NetworkAPI):
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
                 if not pci_mapping:
                     pci_mapping = self._get_pci_mapping_for_migration(context,
-                        instance)
+                        instance, migration)
 
                 binding_profile = p.get('binding:profile', {})
                 pci_slot = binding_profile.get('pci_slot')
