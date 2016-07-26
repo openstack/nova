@@ -1,7 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -50,7 +46,6 @@ Related options:
   configuration drive as a CD drive. To attach the configuration drive as a CD
   drive, set config_drive_cdrom option at hyperv section, to true.
 """),
-
     cfg.BoolOpt('force_config_drive',
         default=False,
         help="""
@@ -78,8 +73,6 @@ Related options:
   configuration section to the full path to an qemu-img command
   installation.
 """),
-
-
     cfg.StrOpt('mkisofs_cmd',
         default='genisoimage',
         help="""
