@@ -1,7 +1,7 @@
 ---
 deprecations:
   - |
-    All the APIs which proxy to another services were deprecated in this API
+    All the APIs which proxy to other services were deprecated in this API
     version. Those APIs will return 404 on Microversion 2.36 or higher. The API
     user should use native API as instead of using those pure proxy for other
     REST APIs. The quotas and limits related to network resources 'fixed_ips',
@@ -13,7 +13,7 @@ deprecations:
     nova-network and depend on the deployment. The deprecated APIs are as
     below:
 
-    - /os-images
+    - /images
     - /os-networks
     - /os-fixed-ips
     - /os-floating-ips
