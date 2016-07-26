@@ -322,6 +322,18 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         # one targeted message should have been created
         self.assertEqual(1, mock_msg.call_count)
 
+    def test_populate_instance_for_create(self):
+        super(CellsComputeAPITestCase, self).test_populate_instance_for_create(
+            num_instances=2)
+
+    def test_multi_instance_display_name_default(self):
+        self._multi_instance_display_name_default(cells_enabled=True)
+
+    def test_multi_instance_display_name_template(self):
+        super(CellsComputeAPITestCase,
+              self).test_multi_instance_display_name_template(
+                  cells_enabled=True)
+
 
 class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     def setUp(self):

@@ -7711,7 +7711,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, inst_type, self.fake_image['id'],
             user_data=base64.encodestring(b'1' * 48510))
 
-    def test_populate_instance_for_create(self):
+    def test_populate_instance_for_create(self, num_instances=1):
         base_options = {'image_ref': self.fake_image['id'],
                         'system_metadata': {'fake': 'value'},
                         'display_name': 'foo',
@@ -7726,13 +7726,15 @@ class ComputeAPITestCase(BaseTestCase):
                                 1,
                                 security_groups=objects.SecurityGroupList(),
                                 instance_type=inst_type,
-                                num_instances=1,
+                                num_instances=num_instances,
                                 shutdown_terminate=False)
         self.assertEqual(str(base_options['image_ref']),
                          instance['system_metadata']['image_base_image_ref'])
         self.assertEqual(vm_states.BUILDING, instance['vm_state'])
         self.assertEqual(task_states.SCHEDULING, instance['task_state'])
         self.assertEqual(1, instance['launch_index'])
+        self.assertEqual(base_options['display_name'],
+                         instance['display_name'])
         self.assertIsNotNone(instance.get('uuid'))
         self.assertEqual([], instance.security_groups.objects)
 
@@ -8809,42 +8811,49 @@ class ComputeAPITestCase(BaseTestCase):
         for instance in refs:
             self.assertEqual(instance['reservation_id'], resv_id)
 
-    def test_multi_instance_display_name_template(self):
+    def test_multi_instance_display_name_template(self, cells_enabled=False):
+        num_instances = 2
         self.flags(multi_instance_display_name_template='%(name)s')
         (refs, resv_id) = self.compute_api.create(self.context,
                 flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
-                min_count=2, max_count=2, display_name='x')
-        self.assertEqual(refs[0]['display_name'], 'x')
-        self.assertEqual(refs[0]['hostname'], 'x')
-        self.assertEqual(refs[1]['display_name'], 'x')
-        self.assertEqual(refs[1]['hostname'], 'x')
+                min_count=num_instances, max_count=num_instances,
+                display_name='x')
+        for i in range(num_instances):
+            hostname = None if cells_enabled else 'x'
+            self.assertEqual(refs[i]['display_name'], 'x')
+            self.assertEqual(refs[i]['hostname'], hostname)
 
         self.flags(multi_instance_display_name_template='%(name)s-%(count)d')
-        self._multi_instance_display_name_default()
+        self._multi_instance_display_name_default(cells_enabled=cells_enabled)
 
         self.flags(multi_instance_display_name_template='%(name)s-%(uuid)s')
         (refs, resv_id) = self.compute_api.create(self.context,
                 flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
-                min_count=2, max_count=2, display_name='x')
-        self.assertEqual(refs[0]['display_name'], 'x-%s' % refs[0]['uuid'])
-        self.assertEqual(refs[0]['hostname'], 'x-%s' % refs[0]['uuid'])
-        self.assertEqual(refs[1]['display_name'], 'x-%s' % refs[1]['uuid'])
-        self.assertEqual(refs[1]['hostname'], 'x-%s' % refs[1]['uuid'])
+                min_count=num_instances, max_count=num_instances,
+                display_name='x')
+        for i in range(num_instances):
+            name = 'x' if cells_enabled else 'x-%s' % refs[i]['uuid']
+            hostname = None if cells_enabled else name
+            self.assertEqual(refs[i]['display_name'], name)
+            self.assertEqual(refs[i]['hostname'], hostname)
 
     def test_multi_instance_display_name_default(self):
         self._multi_instance_display_name_default()
 
-    def _multi_instance_display_name_default(self):
+    def _multi_instance_display_name_default(self, cells_enabled=False):
+        num_instances = 2
         (refs, resv_id) = self.compute_api.create(self.context,
                 flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
-                min_count=2, max_count=2, display_name='x')
-        self.assertEqual(refs[0]['display_name'], 'x-1')
-        self.assertEqual(refs[0]['hostname'], 'x-1')
-        self.assertEqual(refs[1]['display_name'], 'x-2')
-        self.assertEqual(refs[1]['hostname'], 'x-2')
+                min_count=num_instances, max_count=num_instances,
+                display_name='x')
+        for i in range(num_instances):
+            name = 'x' if cells_enabled else 'x-%s' % (i + 1,)
+            hostname = None if cells_enabled else name
+            self.assertEqual(refs[i]['display_name'], name)
+            self.assertEqual(refs[i]['hostname'], hostname)
 
     def test_instance_architecture(self):
         # Test the instance architecture.
