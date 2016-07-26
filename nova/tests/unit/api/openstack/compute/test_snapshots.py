@@ -73,12 +73,13 @@ class SnapshotApiTestV21(test.NoDBTestCase):
 
     def test_snapshot_delete(self):
         snapshot_id = '123'
-        result = self.controller.delete(self.req, snapshot_id)
+        delete = self.controller.delete
+        result = delete(self.req, snapshot_id)
 
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.controller, volumes_v21.SnapshotController):
-            status_int = self.controller.delete.wsgi_code
+            status_int = delete.wsgi_code
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
@@ -117,3 +118,23 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         self.assertIn('snapshots', resp_dict)
         resp_snapshots = resp_dict['snapshots']
         self.assertEqual(3, len(resp_snapshots))
+
+
+class TestSnapshotAPIDeprecation(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestSnapshotAPIDeprecation, self).setUp()
+        self.controller = volumes_v21.SnapshotController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.detail, self.req)
