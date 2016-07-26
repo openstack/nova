@@ -18,6 +18,9 @@ import six
 import six.moves.urllib.parse as urlparse
 import webob
 
+from nova.api.openstack import api_version_request
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import quota_sets
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -32,10 +35,22 @@ from nova import quota
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 
+FILTERED_QUOTAS = ["fixed_ips", "floating_ips", "networks",
+                   "security_group_rules", "security_groups"]
+
+max_proxy_api_version_obj = api_version_request.APIVersionRequest(
+    MAX_PROXY_API_SUPPORT_VERSION)
+api_version_without_proxy_api_obj = api_version_request.APIVersionRequest()
+api_version_without_proxy_api_obj.ver_major = (
+    max_proxy_api_version_obj.ver_major)
+api_version_without_proxy_api_obj.ver_minor = (
+    max_proxy_api_version_obj.ver_minor + 1)
+API_VERSION_WITHOUT_PROXY_API = api_version_without_proxy_api_obj.get_string()
+
 
 class QuotaSetsController(wsgi.Controller):
 
-    def _format_quota_set(self, project_id, quota_set):
+    def _format_quota_set(self, project_id, quota_set, filtered_quotas):
         """Convert the quota object to a result dict."""
         if project_id:
             result = dict(id=str(project_id))
@@ -43,7 +58,8 @@ class QuotaSetsController(wsgi.Controller):
             result = {}
 
         for resource in QUOTAS.resources:
-            if resource in quota_set:
+            if (resource not in filtered_quotas and
+                    resource in quota_set):
                 result[resource] = quota_set[resource]
         return dict(quota_set=result)
 
@@ -82,27 +98,56 @@ class QuotaSetsController(wsgi.Controller):
         else:
             return {k: v['limit'] for k, v in values.items()}
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def show(self, req, id):
+        return self._show(req, id, [])
+
+    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    def show(self, req, id):
+        return self._show(req, id, FILTERED_QUOTAS)
+
+    def _show(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'show', {'project_id': id})
         params = urlparse.parse_qs(req.environ.get('QUERY_STRING', ''))
         user_id = params.get('user_id', [None])[0]
         return self._format_quota_set(id,
-            self._get_quotas(context, id, user_id=user_id))
+            self._get_quotas(context, id, user_id=user_id),
+            filtered_quotas=filtered_quotas)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def detail(self, req, id):
+        return self._detail(req, id, [])
+
+    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @extensions.expected_errors(())
+    def detail(self, req, id):
+        return self._detail(req, id, FILTERED_QUOTAS)
+
+    def _detail(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'detail', {'project_id': id})
         user_id = req.GET.get('user_id', None)
-        return self._format_quota_set(id, self._get_quotas(context, id,
-                                                           user_id=user_id,
-                                                           usages=True))
+        return self._format_quota_set(
+            id,
+            self._get_quotas(context, id, user_id=user_id, usages=True),
+            filtered_quotas=filtered_quotas)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(400)
     @validation.schema(quota_sets.update)
     def update(self, req, id, body):
+        return self._update(req, id, body, [])
+
+    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @extensions.expected_errors(400)
+    @validation.schema(quota_sets.update_v236)
+    def update(self, req, id, body):
+        return self._update(req, id, body, FILTERED_QUOTAS)
+
+    def _update(self, req, id, body, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'update', {'project_id': id})
         project_id = id
@@ -144,15 +189,27 @@ class QuotaSetsController(wsgi.Controller):
                                             key, value, user_id=user_id)
         # Note(gmann): Removed 'id' from update's response to make it same
         # as V2. If needed it can be added with microversion.
-        return self._format_quota_set(None, self._get_quotas(context, id,
-                                                             user_id=user_id))
+        return self._format_quota_set(
+            None,
+            self._get_quotas(context, id, user_id=user_id),
+            filtered_quotas=filtered_quotas)
 
+    @wsgi.Controller.api_version("2.0", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def defaults(self, req, id):
+        return self._defaults(req, id, [])
+
+    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @extensions.expected_errors(())
+    def defaults(self, req, id):
+        return self._defaults(req, id, FILTERED_QUOTAS)
+
+    def _defaults(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'defaults', {'project_id': id})
         values = QUOTAS.get_defaults(context)
-        return self._format_quota_set(id, values)
+        return self._format_quota_set(id, values,
+            filtered_quotas=filtered_quotas)
 
     # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
     # +microversions because the resource quota-set has been deleted completely

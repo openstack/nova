@@ -45,6 +45,12 @@ quota_resources = {
 update_quota_set = copy.deepcopy(quota_resources)
 update_quota_set.update({'force': parameter_types.boolean})
 
+update_quota_set_v236 = copy.deepcopy(quota_resources)
+del update_quota_set_v236['fixed_ips']
+del update_quota_set_v236['floating_ips']
+del update_quota_set_v236['security_groups']
+del update_quota_set_v236['security_group_rules']
+
 update = {
     'type': 'object',
     'properties': {
@@ -57,3 +63,6 @@ update = {
     'required': ['quota_set'],
     'additionalProperties': False,
 }
+
+update_v236 = copy.deepcopy(update)
+update_v236['properties']['quota_set']['properties'] = update_quota_set_v236
