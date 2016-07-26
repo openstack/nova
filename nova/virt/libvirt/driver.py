@@ -111,7 +111,7 @@ from nova.virt.libvirt import vif as libvirt_vif
 from nova.virt.libvirt.volume import remotefs
 from nova.virt import netutils
 from nova.virt import watchdog_actions
-from nova import volume
+from nova.volume import cinder
 from nova.volume import encryptors
 
 libvirt = None
@@ -378,7 +378,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 continue
             self.disk_cachemodes[disk_type] = cache_mode
 
-        self._volume_api = volume.API()
+        self._volume_api = cinder.API()
         self._image_api = image.API()
 
         sysinfo_serial_funcs = {

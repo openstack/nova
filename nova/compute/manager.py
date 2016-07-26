@@ -98,7 +98,7 @@ from nova.virt import driver
 from nova.virt import event as virtevent
 from nova.virt import storage_users
 from nova.virt import virtapi
-from nova import volume
+from nova.volume import cinder
 from nova.volume import encryptors
 
 CONF = nova.conf.CONF
@@ -494,7 +494,7 @@ class ComputeManager(manager.Manager):
         """Load configuration options and connect to the hypervisor."""
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = network.API()
-        self.volume_api = volume.API()
+        self.volume_api = cinder.API()
         self.image_api = image.API()
         self._last_host_check = 0
         self._last_bw_usage_poll = 0

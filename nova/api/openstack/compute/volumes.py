@@ -33,7 +33,7 @@ from nova.i18n import _
 from nova import objects
 from nova.policies import volumes as vol_policies
 from nova.policies import volumes_attachments as va_policies
-from nova import volume
+from nova.volume import cinder
 
 ALIAS = "os-volumes"
 
@@ -99,7 +99,7 @@ class VolumeController(wsgi.Controller):
     """The Volumes API controller for the OpenStack API."""
 
     def __init__(self):
-        self.volume_api = volume.API()
+        self.volume_api = cinder.API()
         super(VolumeController, self).__init__()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
@@ -256,7 +256,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
     def __init__(self):
         self.compute_api = compute.API()
-        self.volume_api = volume.API()
+        self.volume_api = cinder.API()
         super(VolumeAttachmentController, self).__init__()
 
     @extensions.expected_errors(404)
@@ -508,7 +508,7 @@ class SnapshotController(wsgi.Controller):
     """The Snapshots API controller for the OpenStack API."""
 
     def __init__(self):
-        self.volume_api = volume.API()
+        self.volume_api = cinder.API()
         super(SnapshotController, self).__init__()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
