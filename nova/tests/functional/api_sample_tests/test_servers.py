@@ -115,6 +115,11 @@ class ServersSampleJsonTest(ServersSampleBase):
         self._verify_response('servers-details-resp', subs, response, 200)
 
 
+class ServersSampleJson23Test(ServersSampleJsonTest):
+    microversion = '2.3'
+    scenarios = [('v2_3', {'api_major_version': 'v2.1'})]
+
+
 class ServersSampleJson29Test(ServersSampleJsonTest):
     microversion = '2.9'
     # NOTE(gmann): microversion tests do not need to run for v2 API
