@@ -409,12 +409,13 @@ class FloatingIpTestV21(test.TestCase):
         self.stubs.Set(self.floating_ips, "disassociate_floating_ip",
                 fake_disassociate_floating_ip)
 
-        res = self.controller.delete(self.fake_req, '9876')
+        delete = self.controller.delete
+        res = delete(self.fake_req, '9876')
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
         if isinstance(self.controller,
                       fips_v21.FloatingIPController):
-            status_int = self.controller.delete.wsgi_code
+            status_int = delete.wsgi_code
         else:
             status_int = res.status_int
         self.assertEqual(status_int, 202)
@@ -967,3 +968,21 @@ class FloatingIPActionPolicyEnforcementV21(test.NoDBTestCase):
         self._common_policy_check(
             self.controller._remove_floating_ip, self.req,
             FAKE_UUID, body=body)
+
+
+class FloatingIpsDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpsDeprecationTest, self).setUp()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+        self.controller = fips_v21.FloatingIPController()
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.create, self.req, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)

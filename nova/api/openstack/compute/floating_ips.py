@@ -20,6 +20,8 @@ from oslo_utils import netutils
 from oslo_utils import uuidutils
 import webob
 
+from nova.api.openstack.api_version_request \
+    import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import floating_ips
 from nova.api.openstack import extensions
@@ -104,7 +106,7 @@ def disassociate_floating_ip(self, context, instance, address):
         raise webob.exc.HTTPForbidden(explanation=msg)
 
 
-class FloatingIPController(object):
+class FloatingIPController(wsgi.Controller):
     """The Floating IPs API controller for the OpenStack API."""
 
     def __init__(self):
@@ -112,6 +114,7 @@ class FloatingIPController(object):
         self.network_api = network.API()
         super(FloatingIPController, self).__init__()
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 404))
     def show(self, req, id):
         """Return data about the given floating IP."""
@@ -128,6 +131,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ip_view(floating_ip)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors(())
     def index(self, req):
         """Return a list of floating IPs allocated to a project."""
@@ -138,6 +142,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ips_view(floating_ips)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @extensions.expected_errors((400, 403, 404))
     def create(self, req, body=None):
         context = req.environ['nova.context']
@@ -168,6 +173,7 @@ class FloatingIPController(object):
 
         return _translate_floating_ip_view(ip)
 
+    @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
     def delete(self, req, id):

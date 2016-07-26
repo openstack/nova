@@ -253,11 +253,11 @@ class FloatingIpDNSTestV21(test.TestCase):
 
         self.stubs.Set(network.api.API, "delete_dns_entry",
                        network_delete_dns_entry)
-
-        res = self.entry_controller.delete(self.req, _quote_domain(domain),
+        delete = self.entry_controller.delete
+        res = delete(self.req, _quote_domain(domain),
                                            name)
 
-        self._check_status(202, res, self.entry_controller.delete)
+        self._check_status(202, res, delete)
         self.assertEqual([(name, domain)], calls)
 
     def test_delete_entry_notfound(self):
@@ -283,10 +283,10 @@ class FloatingIpDNSTestV21(test.TestCase):
         self.stubs.Set(network.api.API, "delete_dns_domain",
                        network_delete_dns_domain)
 
-        res = self.domain_controller.delete(req,
-                                            _quote_domain(domain))
+        delete = self.domain_controller.delete
+        res = delete(req, _quote_domain(domain))
 
-        self._check_status(202, res, self.domain_controller.delete)
+        self._check_status(202, res, delete)
         self.assertEqual([domain], calls)
 
     def test_delete_domain_notfound(self):
@@ -439,3 +439,36 @@ class FloatingIPDNSEntryPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % self.rule_name,
             exc.format_message())
+
+
+class FloatingIpDNSDomainDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpDNSDomainDeprecationTest, self).setUp()
+        self.controller = fipdns_v21.FloatingIPDNSDomainController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.index, self.req)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID)
+
+
+class FloatingIpDNSEntryDeprecationTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FloatingIpDNSEntryDeprecationTest, self).setUp()
+        self.controller = fipdns_v21.FloatingIPDNSEntryController()
+        self.req = fakes.HTTPRequest.blank('', version='2.36')
+
+    def test_all_apis_return_not_found(self):
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.show, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.update, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID,
+            {})
+        self.assertRaises(exception.VersionNotFoundForAPIMethod,
+            self.controller.delete, self.req, fakes.FAKE_UUID, fakes.FAKE_UUID)
