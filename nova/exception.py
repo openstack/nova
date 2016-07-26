@@ -93,7 +93,7 @@ class NovaException(Exception):
                 # log the issue and the kwargs
                 LOG.exception(_LE('Exception in string format operation'))
                 for name, value in six.iteritems(kwargs):
-                    LOG.error("%s: %s" % (name, value))    # noqa
+                    LOG.error("%s: %s" % (name, value))  # noqa
 
                 if CONF.fatal_exception_format_errors:
                     six.reraise(*exc_info)

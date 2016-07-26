@@ -333,6 +333,7 @@ class ComputeTaskManager(base.Base):
         try:
             task.execute()
         except (exception.NoValidHost,
+                exception.ComputeHostNotFound,
                 exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
                 exception.InvalidCPUInfo,
