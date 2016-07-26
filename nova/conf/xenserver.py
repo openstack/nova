@@ -526,14 +526,58 @@ Related options:
 xenapi_vmops_opts = [
     cfg.IntOpt('running_timeout',
         default=60,
-        help='Number of seconds to wait for instance to go to running state.'),
+        min=0,
+        help="""
+Wait time for instances to go to running state.
+
+Provide an integer value representing time in seconds to set the
+wait time for an instance to go to running state.
+
+When a request to create an instance is received by nova-api and
+communicated to nova-compute, the creation of the instance occurs
+through interaction with Xen via XenAPI in the compute node. Once
+the node on which the instance(s) are to be launched is decided by
+nova-schedule and the launch is triggered, a certain amount of wait
+time is involved until the instance(s) can become available and
+'running'. This wait time is defined by running_timeout. If the
+instances do not go to running state within this specified wait
+time, the launch expires and the instance(s) are set to 'error'
+state.
+"""),
     cfg.StrOpt('vif_driver',
         default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-        help='The XenAPI VIF driver using XenServer Network APIs.'),
+        help="""
+The XenAPI VIF driver using XenServer Network APIs.
+
+Provide a string value representing the VIF XenAPI bridge driver to
+use for bridging.
+
+Xen configuration uses bridging within the backend domain to allow
+all VMs to appear on the network as individual hosts. Bridge
+interfaces are used to create a XenServer VLAN network in which
+the VIFs for the VM instances are plugged. If no VIF bridge driver
+is plugged, the bridge is not made available. This configuration
+option takes in a value for the VIF driver.
+
+NOTE:
+The XenAPIBridgeDriver should be used for running OVS or Bridge in
+XenServer.
+"""),
+    # TODO(dharinic): Make this, a stevedore plugin
     cfg.StrOpt('image_upload_handler',
         default='nova.virt.xenapi.image.glance.GlanceStore',
-        help='Dom0 plugin driver used to handle image uploads.'),
-    ]
+        help="""
+Dom0 plugin driver used to handle image uploads.
+
+Provide a string value representing a plugin driver required to
+handle the image uploading to GlanceStore.
+
+Images, and snapshots from XenServer need to be uploaded to the data
+store for use. image_upload_handler takes in a value for the Dom0
+plugin driver. This driver is then called to uplaod images to the
+GlanceStore.
+"""),
+]
 
 xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',
