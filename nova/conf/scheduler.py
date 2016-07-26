@@ -1,5 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
 # needs:check_opt_group_and_type
 # needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
@@ -45,10 +43,6 @@ given request.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     None
@@ -74,10 +68,6 @@ restrictive filters first to make the filtering process more efficient.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     If the 'scheduler_use_baremetal_filters' option is False, this option has
@@ -93,10 +83,6 @@ scheduling baremetal nodes, leave this at the default setting of False.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -119,10 +105,6 @@ path to a filter.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -151,10 +133,6 @@ first to make the filtering process more efficient.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     All of the filters in this option *must* be present in the
@@ -180,10 +158,6 @@ the path to a weigher.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     None
@@ -205,10 +179,6 @@ usage data to query the database on each request instead.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     None
@@ -221,10 +191,6 @@ This is the message queue topic that the scheduler 'listens' on. It is used
 when the scheduler service is started up to configure the queue, and whenever
 an RPC call to the scheduler is made. There is almost never any reason to ever
 change this value.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -240,10 +206,6 @@ location is monitored by the scheduler for changes and reloads it if needed. It
 is converted from JSON to a Python data structure, and passed into the
 filtering and weighing functions of the scheduler, which can use it for dynamic
 configuration.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -262,10 +224,6 @@ namespace 'nova.scheduler.host_manager' of file 'setup.cfg'. For example,
 'host_manager' is the default setting. Aside from the default, the only other
 option as of the Mitaka release is 'ironic_host_manager', which should be used
 if you're using Ironic to provision bare-metal instances.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -294,10 +252,6 @@ Other options are:
 
     * 'fake_scheduler' which is used for testing.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     None
@@ -316,10 +270,6 @@ responsible for sending a heartbeat and it will only do that as often as this
 option allows. As each scheduler can work a little differently than the others,
 be sure to test this with your selected scheduler.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     ``nova-service service_down_time``
@@ -334,10 +284,6 @@ hosts, list those image UUIDs here.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -354,10 +300,6 @@ hosts, list those host names here.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'IsolatedHostsFilter' filter is enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -380,10 +322,6 @@ a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'IsolatedHostsFilter' filter is enabled. Even
 then, this option doesn't affect the behavior of requests for isolated images,
 which will *always* be restricted to isolated hosts.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -409,10 +347,6 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     attestation_server_ca_file
@@ -435,10 +369,6 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     attestation_server
@@ -459,10 +389,6 @@ Valid values are strings, not integers, but must be digits only.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -486,10 +412,6 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     attestation_server
@@ -510,10 +432,6 @@ for more information about host verification.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -539,10 +457,6 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     attestation_server
@@ -564,10 +478,6 @@ Valid values are True or False. The default is False.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'TrustedFilter' filter is enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -593,10 +503,6 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'io_ops_filter' filter is enabled.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     None
@@ -618,10 +524,6 @@ This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'aggregate_image_properties_isolation' filter is
 enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -645,10 +547,6 @@ a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'aggregate_image_properties_isolation' filter is
 enabled.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     aggregate_image_properties_isolation_namespace
@@ -668,10 +566,6 @@ be rejected if the num_instances_filter is active.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'num_instances_filter' filter is enabled.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -695,10 +589,6 @@ a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'ram' weigher is enabled.
 
 Valid values are numeric, either integer or float.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -727,10 +617,6 @@ a different scheduler, this option has no effect. Also note that this setting
 only affects scheduling if the 'io_ops' weigher is enabled.
 
 Valid values are numeric, either integer or float.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -767,10 +653,6 @@ Valid values are numeric, either integer or float.
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     weight_of_unavailable
@@ -798,10 +680,6 @@ The final weight will be:
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     weight_of_unavailable
@@ -819,10 +697,6 @@ host weight to 'weight_of_unavailable'.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
@@ -844,10 +718,6 @@ of any actual metric value:
 This option is only used by the FilterScheduler and its subclasses; if you use
 a different scheduler, this option has no effect.
 
-* Services that use this:
-
-    ``nova-scheduler``
-
 * Related options:
 
     weight_setting
@@ -866,10 +736,6 @@ MaxRetriesExceeded exception is raised, and the instance is set to an error
 state.
 
 Valid values are positive integers (1 or greater).
-
-* Services that use this:
-
-    ``nova-scheduler``
 
 * Related options:
 
