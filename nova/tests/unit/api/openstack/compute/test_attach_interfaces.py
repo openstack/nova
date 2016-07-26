@@ -425,6 +425,23 @@ class InterfaceAttachTestsV21(test.NoDBTestCase):
         get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
                                          expected_attrs=None)
 
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'attach_interface')
+    def test_attach_interface_failed_securitygroup_cannot_be_applied(
+        self, attach_mock, get_mock):
+        fake_instance = objects.Instance(uuid=FAKE_UUID1,
+                                         project_id=FAKE_UUID2)
+        get_mock.return_value = fake_instance
+        attach_mock.side_effect = (
+            exception.SecurityGroupCannotBeApplied())
+        self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
+                          self.req, FAKE_UUID1, body={})
+        ctxt = self.req.environ['nova.context']
+        attach_mock.assert_called_once_with(ctxt, fake_instance, None,
+                                            None, None)
+        get_mock.assert_called_once_with(ctxt, FAKE_UUID1,
+                                         expected_attrs=None)
+
     def _test_attach_interface_with_invalid_parameter(self, param):
         self.stubs.Set(compute_api.API, 'attach_interface',
                        fake_attach_interface)
