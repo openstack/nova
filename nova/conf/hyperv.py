@@ -1,5 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
 # needs:check_opt_group_and_type
 # needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
@@ -48,13 +46,7 @@ Possible values:
 * Float values greater than 1.0: Enables allocation of total implied
   RAM divided by this value for startup.
 
-Services which consume this:
 
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 enable_instance_metrics_collection_opt = cfg.BoolOpt(
@@ -72,13 +64,6 @@ Possible values:
 * True: Enables metrics collection.
 * False: Disables metric collection (Default).
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 instances_path_share_opt = cfg.StrOpt('instances_path_share',
@@ -95,10 +80,6 @@ Possible values:
 
 * "": An administrative share will be used (Default).
 * Name of a Windows share.
-
-Services which consume this:
-
-* nova-compute
 
 Related options:
 
@@ -120,13 +101,6 @@ Possible values:
 * True: Limit processor-specific features.
 * False: Do not limit processor-specific features (Default).
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 mounted_disk_query_retry_count_opt = cfg.IntOpt(
@@ -146,10 +120,6 @@ Possible values:
 * Positive integer values. Values greater than 1 is recommended
   (Default: 10).
 
-Services which consume this:
-
-* nova-compute
-
 Related options:
 
 * Time interval between disk mount retries is declared with
@@ -167,10 +137,6 @@ Interval between checks for a mounted iSCSI disk, in seconds.
 Possible values:
 
 * Time in seconds (Default: 5).
-
-Services which consume this:
-
-* nova-compute
 
 Related options:
 
@@ -193,13 +159,6 @@ Possible values:
 
 * Timeframe in seconds (Default: 60).
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 power_state_event_polling_interval_opt = cfg.IntOpt(
@@ -218,13 +177,6 @@ Possible values:
 
 * Time in seconds (Default: 2).
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 qemu_img_cmd_opt = cfg.StrOpt('qemu_img_cmd',
@@ -247,10 +199,6 @@ Possible values:
   directory as the nova-compute service or its path is in the
   PATH environment variable (Default).
 * Path of qemu-img command (DRIVELETTER:\PATH\TO\QEMU-IMG\COMMAND).
-
-Services which consume this:
-
-* nova-compute
 
 Related options:
 
@@ -280,13 +228,6 @@ Possible values:
   is used. This list is queried using WQL.
 * Virtual switch name.
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 wait_soft_reboot_seconds_opt = cfg.IntOpt('wait_soft_reboot_seconds',
@@ -302,13 +243,6 @@ Possible values:
 
 * Time in seconds (Default: 60).
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 config_drive_cdrom_opt = cfg.BoolOpt('config_drive_cdrom',
@@ -325,10 +259,6 @@ Possible values:
 
 * True: Attach the configuration drive image as a CD drive.
 * False: Attach the configuration drive image as a disk drive (Default).
-
-Services which consume this:
-
-* nova-compute
 
 Related options:
 
@@ -357,10 +287,6 @@ Possible values:
 * True: Enables the feature.
 * False: Disables the feature (Default).
 
-Services which consume this:
-
-* nova-compute
-
 Related options:
 
 * This option is meaningful when used with other options that enable
@@ -384,10 +310,6 @@ Possible values:
 
 * Positive integer values (Default: 10).
 
-Services which consume this:
-
-* nova-compute
-
 Related options:
 
 * Time interval between attachment attempts is declared with
@@ -404,10 +326,6 @@ Interval between volume attachment attempts, in seconds.
 Possible values:
 
 * Time in seconds (Default: 5).
-
-Services which consume this:
-
-* nova-compute
 
 Related options:
 
@@ -451,13 +369,6 @@ Windows / Hyper-V Server 2016. Acceptable values::
 
     64, 128, 256, 512, 1024
 
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None
 """)
 
 
