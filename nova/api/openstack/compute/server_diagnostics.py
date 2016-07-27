@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob
+
 from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -45,6 +47,8 @@ class ServerDiagnosticsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics', server_id)
+        except exception.InstanceNotReady as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             common.raise_feature_not_supported()
 

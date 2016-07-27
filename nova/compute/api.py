@@ -2731,10 +2731,12 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.UNPAUSE)
         self.compute_rpcapi.unpause_instance(context, instance)
 
+    @check_instance_host
     def get_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""
         return self.compute_rpcapi.get_diagnostics(context, instance=instance)
 
+    @check_instance_host
     def get_instance_diagnostics(self, context, instance):
         """Retrieve diagnostics for the given instance."""
         return self.compute_rpcapi.get_instance_diagnostics(context,

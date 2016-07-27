@@ -1941,6 +1941,20 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(vm_states.PAUSED, instance.vm_state)
         self.assertEqual(task_states.UNPAUSING, instance.task_state)
 
+    def test_get_diagnostics_none_host(self):
+        instance = self._create_instance_obj()
+        instance.host = None
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.get_diagnostics,
+                          self.context, instance)
+
+    def test_get_instance_diagnostics_none_host(self):
+        instance = self._create_instance_obj()
+        instance.host = None
+        self.assertRaises(exception.InstanceNotReady,
+                          self.compute_api.get_instance_diagnostics,
+                          self.context, instance)
+
     def test_live_migrate_active_vm_state(self):
         instance = self._create_instance_obj()
         self._live_migrate_instance(instance)
