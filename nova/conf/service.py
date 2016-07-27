@@ -1,6 +1,5 @@
 # needs:fix_opt_description
 # needs:check_deprecation_status
-# needs:check_opt_group_and_type
 # needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
 
@@ -40,13 +39,11 @@ service_opts = [
     cfg.ListOpt('enabled_ssl_apis',
                 default=[],
                 help='A list of APIs with enabled SSL'),
-    cfg.StrOpt('osapi_compute_listen',
+    cfg.IPOpt('osapi_compute_listen',
                default="0.0.0.0",
                help='The IP address on which the OpenStack API will listen.'),
-    cfg.IntOpt('osapi_compute_listen_port',
+    cfg.PortOpt('osapi_compute_listen_port',
                default=8774,
-               min=1,
-               max=65535,
                help='The port on which the OpenStack API will listen.'),
     cfg.IntOpt('osapi_compute_workers',
                help='Number of workers for OpenStack API service. The default '
@@ -55,13 +52,11 @@ service_opts = [
                default='nova.api.manager.MetadataManager',
                help='DEPRECATED: OpenStack metadata service manager',
                deprecated_for_removal=True),
-    cfg.StrOpt('metadata_listen',
+    cfg.IPOpt('metadata_listen',
                default="0.0.0.0",
                help='The IP address on which the metadata API will listen.'),
-    cfg.IntOpt('metadata_listen_port',
+    cfg.PortOpt('metadata_listen_port',
                default=8775,
-               min=1,
-               max=65535,
                help='The port on which the metadata API will listen.'),
     cfg.IntOpt('metadata_workers',
                help='Number of workers for metadata service. The default will '
