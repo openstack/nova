@@ -191,7 +191,8 @@ class SchedulerInitTestCase(test.NoDBTestCase):
         manager = self.driver_cls().host_manager
         self.assertIsInstance(manager, host_manager.HostManager)
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def test_init_using_ironic_hostmanager(self,
                                            mock_init_agg,
@@ -211,7 +212,8 @@ class SchedulerInitTestCase(test.NoDBTestCase):
     # NOTE(Yingxin): Loading full class path is deprecated and should be
     # removed in the N release.
     @mock.patch.object(driver.LOG, 'warning')
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def test_init_using_classpath_to_hostmanager(self,
                                                  mock_init_agg,

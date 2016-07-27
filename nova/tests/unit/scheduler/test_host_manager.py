@@ -114,6 +114,30 @@ class HostManagerTestCase(test.NoDBTestCase):
         exp_filters = {'deleted': False, 'host': [u'host1', u'host2']}
         mock_get_by_filters.assert_called_once_with(mock.ANY, exp_filters)
 
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
+    @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
+    def test_init_instance_info_compute_nodes(self, mock_get_all,
+                                              mock_get_by_filters):
+        cn1 = objects.ComputeNode(host='host1')
+        cn2 = objects.ComputeNode(host='host2')
+        inst1 = objects.Instance(host='host1', uuid=uuids.instance_1)
+        inst2 = objects.Instance(host='host1', uuid=uuids.instance_2)
+        inst3 = objects.Instance(host='host2', uuid=uuids.instance_3)
+        mock_get_by_filters.return_value = objects.InstanceList(
+                objects=[inst1, inst2, inst3])
+        hm = self.host_manager
+        hm._instance_info = {}
+        hm._init_instance_info([cn1, cn2])
+        self.assertEqual(len(hm._instance_info), 2)
+        fake_info = hm._instance_info['host1']
+        self.assertIn(uuids.instance_1, fake_info['instances'])
+        self.assertIn(uuids.instance_2, fake_info['instances'])
+        self.assertNotIn(uuids.instance_3, fake_info['instances'])
+        exp_filters = {'deleted': False, 'host': [u'host1', u'host2']}
+        mock_get_by_filters.assert_called_once_with(mock.ANY, exp_filters)
+        # should not be called if the list of nodes was passed explicitly
+        self.assertFalse(mock_get_all.called)
+
     def test_default_filters(self):
         default_filters = self.host_manager.default_filters
         self.assertEqual(1, len(default_filters))
