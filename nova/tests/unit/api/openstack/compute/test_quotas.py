@@ -280,6 +280,19 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
 
+    def test_update_network_quota_disabled(self):
+        self.flags(enable_network_quota=False)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self._get_http_request(),
+                          1234, body={'quota_set': {'networks': 1}})
+
+    def test_update_network_quota_enabled(self):
+        self.flags(enable_network_quota=True)
+        tenant_networks._register_network_quota()
+        self.controller.update(self._get_http_request(),
+                               1234, body={'quota_set': {'networks': 1}})
+        del quota.QUOTAS._resources['networks']
+
 
 class ExtendedQuotasTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21
