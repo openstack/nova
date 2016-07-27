@@ -24,9 +24,27 @@ from oslo_config import cfg
 
 servicegroup_driver = cfg.StrOpt('servicegroup_driver',
                                   default='db',
-                                  help='The driver for servicegroup '
-                                       'service.',
-                                  choices=['db', 'mc'])
+                                  choices=['db', 'mc'],
+                                  help="""
+This option specifies the driver to be used for the servicegroup service.
+
+ServiceGroup API in nova enables checking status of a compute node. When a
+compute worker running the nova-compute daemon starts, it calls the join API
+to join the compute group. Services like nova scheduler can query the
+ServiceGroup API to check if a node is alive. Internally, the ServiceGroup
+client driver automatically updates the compute worker status. There are
+multiple backend implementations for this service: Database ServiceGroup driver
+and Memcache ServiceGroup driver.
+
+Possible Values:
+
+    * db : Database ServiceGroup driver (default)
+    * mc : Memcache ServiceGroup driver
+
+Related Options:
+
+    * service_down_time (maximum time since last check-in for up service)
+""")
 
 SERVICEGROUP_OPTS = [servicegroup_driver]
 
