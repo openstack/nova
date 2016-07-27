@@ -309,27 +309,89 @@ interval_opts = [
 
 timeout_opts = [
     cfg.IntOpt("reboot_timeout",
-               default=0,
-               help="Automatically hard reboot an instance if it has been "
-                    "stuck in a rebooting state longer than N seconds. "
-                    "Set to 0 to disable."),
+            default=0,
+            min=0,
+            help="""
+Time interval after which an instance is hard rebooted automatically.
+
+When doing a soft reboot, it is possible that a guest kernel is
+completely hung in a way that causes the soft reboot task
+to not ever finish. Setting this option to a time period in seconds
+will automatically hard reboot an instance if it has been stuck
+in a rebooting state longer than N seconds.
+
+Possible values:
+
+* 0: Disables the option (default).
+* Any positive integer in seconds: Enables the option.
+"""),
     cfg.IntOpt("instance_build_timeout",
-               default=0,
-               help="Amount of time in seconds an instance can be in BUILD "
-                    "before going into ERROR status. "
-                    "Set to 0 to disable."),
+            default=0,
+            min=0,
+            help="""
+Maximum time in seconds that an instance can take to build.
+
+If this timer expires, instance status will be changed to ERROR.
+Enabling this option will make sure an instance will not be stuck
+in BUILD state for a longer period.
+
+Possible values:
+
+* 0: Disables the option (default)
+* Any positive integer in seconds: Enables the option.
+"""),
     cfg.IntOpt("rescue_timeout",
-               default=0,
-               help="Automatically unrescue an instance after N seconds. "
-                    "Set to 0 to disable."),
+            default=0,
+            min=0,
+            help="""
+Interval to wait before un-rescuing an instance stuck in RESCUE.
+
+Possible values:
+
+* 0: Disables the option (default)
+* Any positive integer in seconds: Enables the option.
+"""),
     cfg.IntOpt("resize_confirm_window",
-               default=0,
-               help="Automatically confirm resizes after N seconds. "
-                    "Set to 0 to disable."),
+            default=0,
+            min=0,
+            help="""
+Automatically confirm resizes after N seconds.
+
+Resize functionality will save the existing server before resizing.
+After the resize completes, user is requested to confirm the resize.
+The user has the opportunity to either confirm or revert all
+changes. Confirm resize removes the original server and changes
+server status from resized to active. Setting this option to a time
+period (in seconds) will automatically confirm the resize if the
+server is in resized state longer than that time.
+
+Possible values:
+
+* 0: Disables the option (default)
+* Any positive integer in seconds: Enables the option.
+"""),
     cfg.IntOpt("shutdown_timeout",
-               default=60,
-               help="Total amount of time to wait in seconds for an instance "
-                    "to perform a clean shutdown."),
+            default=60,
+            min=1,
+            help="""
+Total time to wait in seconds for an instance toperform a clean
+shutdown.
+
+It determines the overall period (in seconds) a VM is allowed to
+perform a clean shutdown. While performing stop, rescue and shelve,
+rebuild operations, configuring this option gives the VM a chance
+to perform a controlled shutdown before the instance is powered off.
+The default timeout is 60 seconds.
+
+The timeout value can be overridden on a per image basis by means
+of os_shutdown_timeout that is an image metadata setting allowing
+different types of operating systems to specify how much time they
+need to shut down cleanly.
+
+Possible values:
+
+* Any positive integer in seconds (default value is 60).
+""")
 ]
 
 running_deleted_opts = [
