@@ -1,6 +1,3 @@
-# needs:check_deprecation_status
-
-
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -23,6 +20,7 @@ cells_group = cfg.OptGroup('cells',
                             help="""
 Cells options allow you to use cells functionality in openstack
 deployment.
+
 """)
 
 cells_opts = [
@@ -46,6 +44,7 @@ Related options:
 * name: A unique cell name must be given when this functionality
   is enabled.
 * cell_type: Cell type should be defined for all cells.
+
 """),
     cfg.StrOpt('topic',
                 default='cells',
@@ -61,31 +60,6 @@ Possible values:
 * cells: This is the recommended and the default value.
 
 """),
-    cfg.StrOpt('manager',
-               default='nova.cells.manager.CellsManager',
-               deprecated_for_removal=True,
-               help="""
-Manager for cells
-
-The nova-cells manager class. This class defines RPC methods that
-the local cell may call. This class is NOT used for messages coming
-from other cells. That communication is driver-specific.
-
-Communication to other cells happens via the nova.cells.messaging module.
-The MessageRunner from that module will handle routing the message to
-the correct cell via the communication driver. Most methods below
-create 'targeted' (where we want to route a message to a specific cell)
-or 'broadcast' (where we want a message to go to multiple cells)
-messages.
-
-Scheduling requests get passed to the scheduler class.
-
-Possible values:
-
-* 'nova.cells.manager.CellsManager' is the only possible value for
-  this option as of the Mitaka release
-
-"""),
     cfg.StrOpt('name',
                 default='nova',
                 help="""
@@ -99,6 +73,7 @@ Related options:
 
 * enabled: This option is meaningful only when cells service
   is enabled
+
 """),
     cfg.ListOpt('capabilities',
                 default=['hypervisor=xenserver;kvm', 'os=linux;windows'],
@@ -291,6 +266,7 @@ Related options:
 
 * This value is used with the ``instance_update_num_instances``
   value in a periodic task run.
+
 """),
         cfg.IntOpt("instance_update_num_instances",
                 default=1,
@@ -311,6 +287,7 @@ Related options:
 
 * This value is used with the ``instance_updated_at_threshold``
   value in a periodic task run.
+
 """)
 ]
 
@@ -338,7 +315,6 @@ Cells scheduler
 The class of the driver used by the cells scheduler. This should be
 the full Python path to the class to be used. If nothing is specified
 in this option, the CellsScheduler is used.
-
 
 """)
 ]
@@ -443,6 +419,7 @@ Related options:
 
 * This value is used with the ``scheduler_retry_delay`` value
   while retrying to find a suitable cell.
+
 """),
         cfg.IntOpt('scheduler_retry_delay',
                 default=2,
@@ -463,6 +440,7 @@ Related options:
 
 * This value is used with the ``scheduler_retries`` value
   while retrying to find a suitable cell.
+
 """)
 ]
 
