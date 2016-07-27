@@ -134,7 +134,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((404, 409))
     @wsgi.action('add_host')
     @validation.schema(aggregates.add_host)
     def _add_host(self, req, id, body):
@@ -156,7 +156,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((404, 409))
     @wsgi.action('remove_host')
     @validation.schema(aggregates.remove_host)
     def _remove_host(self, req, id, body):
