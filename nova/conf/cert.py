@@ -1,5 +1,3 @@
-# needs:check_deprecation_status
-
 # Copyright 2016 IBM Corp.
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
@@ -20,6 +18,12 @@ from oslo_config import cfg
 
 cert_opts = [
     cfg.StrOpt("cert_topic",
+        deprecated_for_removal=True,
+        deprecated_reason="""
+Since the nova-cert service is marked for deprecation, the feature to change
+RPC topic that cert nodes listen may be removed as early as the 15.0.0
+Ocata release.
+""",
         default="cert",
         help="""
 Determines the RPC topic that the cert nodes listen on. For most deployments
