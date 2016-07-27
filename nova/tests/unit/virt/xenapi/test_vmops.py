@@ -896,7 +896,7 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
                 migrate_up, migrate_down, *mocks):
         instance = objects.Instance(
             flavor=objects.Flavor(root_gb=2, ephemeral_gb=0),
-            uuid="uuid")
+            uuid=uuids.instance)
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=1,
                                              ephemeral_gb=0)
 
@@ -911,7 +911,7 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
         instance = objects.Instance(
             flavor=objects.Flavor(root_gb=1,
                                   ephemeral_gb=1),
-            uuid="uuid")
+            uuid=uuids.instance)
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=2,
                                              ephemeral_gb=2)
 
@@ -1271,7 +1271,7 @@ class ResizeVdisTestCase(VMOpsTestBase):
                                                     mock_generate,
                                                     mock_resize):
         mock_sizes.return_value = [2000, 1000]
-        instance = objects.Instance(uuid='a',
+        instance = objects.Instance(uuid=uuids.instance,
                                     flavor=objects.Flavor(root_gb=0,
                                                           ephemeral_gb=3000))
         ephemerals = {"4": {"ref": 4}}

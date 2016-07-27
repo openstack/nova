@@ -226,7 +226,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         dest = objects.Destination(host='fake_host1', node='fake-node')
         fake_properties = objects.RequestSpec(requested_destination=dest,
                                               ignore_hosts=[],
-                                              instance_uuid='fake-uuid1',
+                                              instance_uuid=uuids.fake_uuid1,
                                               force_hosts=[],
                                               force_nodes=[])
 
@@ -243,7 +243,7 @@ class HostManagerTestCase(test.NoDBTestCase):
         dest = objects.Destination(host='dummy', node='fake-node')
         fake_properties = objects.RequestSpec(requested_destination=dest,
                                               ignore_hosts=[],
-                                              instance_uuid='fake-uuid1',
+                                              instance_uuid=uuids.fake_uuid1,
                                               force_hosts=[],
                                               force_nodes=[])
 
