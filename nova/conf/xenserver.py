@@ -386,10 +386,22 @@ xenapi_ovs_integration_bridge_opts = [
     ]
 
 xenapi_pool_opts = [
+    # TODO(macsz): This should be deprecated. Until providing solid reason,
+    # leaving it as-it-is.
     cfg.BoolOpt('use_join_force',
                 default=True,
-                help='To use for hosts with different CPUs'),
-    ]
+                help="""
+When adding new host to a pool, this will append a --force flag to the
+command, forcing hosts to join a pool, even if they have different CPUs.
+
+Since XenServer version 5.6 it is possible to create a pool of hosts that have
+different CPU capabilities. To accommodate CPU differences, XenServer limited
+features it uses to determine CPU compatibility to only the ones that are
+exposed by CPU and support for CPU masking was added.
+Despite this effort to level differences between CPUs, it is still possible
+that adding new host will fail, thus option to force join was introduced.
+"""),
+]
 
 
 ALL_XENSERVER_OPTS = (xenapi_agent_opts +
