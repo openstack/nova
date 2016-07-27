@@ -1,7 +1,4 @@
 # needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
 
 
 # Copyright 2015 OpenStack Foundation
@@ -19,10 +16,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import itertools
-
 from oslo_config import cfg
 
+cells_group = cfg.OptGroup('cells',
+                            title='Cells Options',
+                            help="""
+Cells options allow you to use cells functionality in openstack
+deployment.
+""")
 
 cells_opts = [
     cfg.BoolOpt('enable',
@@ -535,22 +536,21 @@ this optional configuration:
 """)
 ]
 
-ALL_CELLS_OPTS = list(itertools.chain(
-            cells_opts,
-            mute_weigher_opts,
-            ram_weigher_opts,
-            weigher_opts,
-            cell_manager_opts,
-            cell_messaging_opts,
-            cell_rpc_driver_opts,
-            cell_scheduler_opts,
-            cell_state_manager_opts
-            ))
+ALL_CELLS_OPTS = (cells_opts +
+                  mute_weigher_opts +
+                  ram_weigher_opts +
+                  weigher_opts +
+                  cell_manager_opts +
+                  cell_messaging_opts +
+                  cell_rpc_driver_opts +
+                  cell_scheduler_opts +
+                  cell_state_manager_opts)
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_CELLS_OPTS, group="cells")
+    conf.register_group(cells_group)
+    conf.register_opts(ALL_CELLS_OPTS, group=cells_group)
 
 
 def list_opts():
-    return {'cells': ALL_CELLS_OPTS}
+    return {cells_group: ALL_CELLS_OPTS}
