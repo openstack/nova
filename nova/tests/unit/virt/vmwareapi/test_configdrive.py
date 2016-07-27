@@ -97,7 +97,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None,
-                         network_info=None):
+                         network_info=None, request_context=None):
                 pass
 
             def metadata_for_config_drive(self):
@@ -141,15 +141,16 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.test_instance.config_drive = 'True'
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
-        self.conn._vmops._create_config_drive(self.test_instance,
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
-                                               mox.IgnoreArg()
-                                               ).AndReturn('[ds1] fake.iso')
+        self.conn._vmops._create_config_drive(mox.IgnoreArg(),
+                                              self.test_instance,
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg(),
+                                              mox.IgnoreArg()
+                                              ).AndReturn('[ds1] fake.iso')
         self.conn._vmops._attach_cdrom_to_vm(mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),

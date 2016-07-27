@@ -295,7 +295,8 @@ class VMOps(object):
             self._save_device_metadata(context, instance, block_device_info)
 
             if configdrive.required_by(instance):
-                configdrive_path = self._create_config_drive(instance,
+                configdrive_path = self._create_config_drive(context,
+                                                             instance,
                                                              injected_files,
                                                              admin_password,
                                                              network_info)
@@ -440,8 +441,8 @@ class VMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance_id,
                                                  reason=reason)
 
-    def _create_config_drive(self, instance, injected_files, admin_password,
-                             network_info, rescue=False):
+    def _create_config_drive(self, context, instance, injected_files,
+                             admin_password, network_info, rescue=False):
         if CONF.config_drive_format != 'iso9660':
             raise exception.ConfigDriveUnsupportedFormat(
                 format=CONF.config_drive_format)
@@ -452,10 +453,9 @@ class VMOps(object):
         if admin_password and CONF.hyperv.config_drive_inject_password:
             extra_md['admin_pass'] = admin_password
 
-        inst_md = instance_metadata.InstanceMetadata(instance,
-                                                     content=injected_files,
-                                                     extra_md=extra_md,
-                                                     network_info=network_info)
+        inst_md = instance_metadata.InstanceMetadata(
+                      instance, content=injected_files, extra_md=extra_md,
+                      network_info=network_info, request_context=context)
 
         configdrive_path_iso = self._pathutils.get_configdrive_path(
             instance.name, constants.DVD_FORMAT, rescue=rescue)
@@ -822,6 +822,7 @@ class VMOps(object):
         if configdrive.required_by(instance):
             self._detach_config_drive(instance.name)
             rescue_configdrive_path = self._create_config_drive(
+                context,
                 instance,
                 injected_files=None,
                 admin_password=rescue_password,

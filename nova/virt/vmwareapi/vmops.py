@@ -211,12 +211,14 @@ class VMwareVMOps(object):
             self._extend_virtual_disk(instance, size_in_kb,
                                       root_vmdk_path, dc_info.ref)
 
-    def _configure_config_drive(self, instance, vm_ref, dc_info, datastore,
-                                injected_files, admin_password, network_info):
+    def _configure_config_drive(self, context, instance, vm_ref, dc_info,
+                                datastore, injected_files, admin_password,
+                                network_info):
         session_vim = self._session.vim
         cookies = session_vim.client.options.transport.cookiejar
         dc_path = vutil.get_inventory_path(session_vim, dc_info.ref)
-        uploaded_iso_path = self._create_config_drive(instance,
+        uploaded_iso_path = self._create_config_drive(context,
+                                                      instance,
                                                       injected_files,
                                                       admin_password,
                                                       network_info,
@@ -803,7 +805,7 @@ class VMwareVMOps(object):
 
         if configdrive.required_by(instance):
             self._configure_config_drive(
-                    instance, vm_ref, vi.dc_info, vi.datastore,
+                    context, instance, vm_ref, vi.dc_info, vi.datastore,
                     injected_files, admin_password, network_info)
 
         # Rename the VM. This is done after the spec is created to ensure
@@ -827,9 +829,9 @@ class VMwareVMOps(object):
                 raise exception.UnsupportedHardware(model=adapter_type,
                                                     virt="vmware")
 
-    def _create_config_drive(self, instance, injected_files, admin_password,
-                             network_info, data_store_name, dc_name,
-                             upload_folder, cookies):
+    def _create_config_drive(self, context, instance, injected_files,
+                             admin_password, network_info, data_store_name,
+                             dc_name, upload_folder, cookies):
         if CONF.config_drive_format != 'iso9660':
             reason = (_('Invalid config_drive_format "%s"') %
                       CONF.config_drive_format)
@@ -843,7 +845,8 @@ class VMwareVMOps(object):
         inst_md = instance_metadata.InstanceMetadata(instance,
                                                      content=injected_files,
                                                      extra_md=extra_md,
-                                                     network_info=network_info)
+                                                     network_info=network_info,
+                                                     request_context=context)
         try:
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
                 with utils.tempdir() as tmp_path:

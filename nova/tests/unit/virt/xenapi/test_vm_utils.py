@@ -158,8 +158,9 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
 
         with mock.patch.object(six.moves.builtins, 'open') as mock_open:
             mock_open.return_value.__enter__.return_value = 'open_fd'
-            vm_utils.generate_configdrive('session', 'instance', 'vm_ref',
-                                          'userdevice', 'network_info')
+            vm_utils.generate_configdrive('session', 'context', 'instance',
+                                          'vm_ref', 'userdevice',
+                                          'network_info')
 
             mock_size.assert_called_with('/mock/configdrive.vhd')
             mock_open.assert_called_with('/mock/configdrive.vhd')
@@ -168,7 +169,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
                                             '/mock/configdrive.vhd')
             mock_instance_metadata.assert_called_with(
                 'instance', content=None, extra_md={},
-                network_info='network_info')
+                network_info='network_info', request_context='context')
             mock_stream.assert_called_with('session', 'instance', 'vhd',
                                            'open_fd', 100, 'vdi_ref')
 
@@ -180,7 +181,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
     def test_vdi_cleaned_up(self, mock_instance_metadata, mock_create,
                             mock_find_sr, mock_destroy):
         self.assertRaises(test.TestingException, vm_utils.generate_configdrive,
-                          'session', None, None, None, None)
+                          'session', None, None, None, None, None)
         mock_destroy.assert_called_once_with('session', 'vdi_ref')
 
 
