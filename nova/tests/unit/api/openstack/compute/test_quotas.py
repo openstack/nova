@@ -19,6 +19,7 @@ import copy
 import mock
 import webob
 
+from nova.api.openstack.compute.legacy_v2.contrib import os_tenant_networks
 from nova.api.openstack.compute.legacy_v2.contrib import quotas as quotas_v2
 from nova.api.openstack.compute import quota_sets as quotas_v21
 from nova.api.openstack import extensions
@@ -308,6 +309,21 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         self.mox.VerifyAll()
         self.assertEqual(202, self.get_delete_status_int(res))
 
+    def test_update_network_quota_disabled(self):
+        self.flags(enable_network_quota=False)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          self._get_http_request(),
+                          1234, body={'quota_set': {'networks': 1}})
+
+    def test_update_network_quota_enabled(self):
+        self.flags(enable_network_quota=True)
+        quota.QUOTAS.register_resource(quota.ReservableResource('networks',
+                                           os_tenant_networks._sync_networks,
+                                           'quota_networks'))
+        self.controller.update(self._get_http_request(),
+                               1234, body={'quota_set': {'networks': 1}})
+        del quota.QUOTAS._resources['networks']
+
 
 class ExtendedQuotasTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21
@@ -594,6 +610,12 @@ class QuotaSetsTestV2(QuotaSetsTestV21):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'update_me', body=body)
 
+    def test_update_network_quota_disabled(self):
+        pass
+
+    def test_update_network_quota_enabled(self):
+        pass
+
 
 class QuotaSetsTestV2WithoutServerGroupQuotas(QuotaSetsTestV2):
     include_server_group_quotas = False
@@ -612,6 +634,12 @@ class QuotaSetsTestV2WithoutServerGroupQuotas(QuotaSetsTestV2):
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
+
+    def test_update_network_quota_disabled(self):
+        pass
+
+    def test_update_network_quota_enabled(self):
+        pass
 
 
 class ExtendedQuotasTestV2(ExtendedQuotasTestV21):

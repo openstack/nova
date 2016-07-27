@@ -40,6 +40,7 @@ quota_resources = {
     'injected_file_path_bytes': common_quota,
     'server_groups': common_quota,
     'server_group_members': common_quota,
+    'networks': common_quota
 }
 
 update_quota_set = copy.deepcopy(quota_resources)
