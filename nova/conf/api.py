@@ -306,11 +306,12 @@ The full path to the fping binary.
 os_network_opts = [
     cfg.BoolOpt("enable_network_quota",
             deprecated_for_removal=True,
+            deprecated_reason="""
+CRUD operations on tenant networks are only available when using nova-network
+and nova-network is itself deprecated.""",
             default=False,
             help="""
 This option is used to enable or disable quota checking for tenant networks.
-This option is deprecated since CRUD operations on tenant networks are only
-available when using nova-network and nova-network is itself disabled.
 
 * Services that use this:
 
@@ -364,12 +365,13 @@ Possible values:
 """),
     cfg.IntOpt('quota_networks',
             deprecated_for_removal=True,
+            deprecated_reason="""
+CRUD operations on tenant networks are only available when using nova-network
+and nova-network is itself deprecated.""",
             default=3,
             help="""
 This option controls the number of private networks that can be created per
-project (or per tenant). This option is deprecated since CRUD operations on
-tenant networks are only available when using nova-network and nova-network is
-itself disabled.
+project (or per tenant).
 
 * Services that use this:
 
