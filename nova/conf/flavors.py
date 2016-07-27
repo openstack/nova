@@ -1,7 +1,5 @@
-# needs:fix_opt_description
 # needs:check_deprecation_status
 # needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
 
 
@@ -24,17 +22,14 @@ from oslo_config import cfg
 
 
 flavor_opts = [
-    cfg.StrOpt('default_flavor',
-               default='m1.small',
-               deprecated_for_removal=True,
-               deprecated_reason='The EC2 API is deprecated',
-               help="""
+    cfg.StrOpt(
+        "default_flavor",
+        default="m1.small",
+        deprecated_for_removal=True,
+        deprecated_reason="The EC2 API is deprecated",
+        help="""
 Default flavor to use for the EC2 API only.
 The Nova API does not support a default flavor.
-
-Possible values:
-
-* Any flavor name, e.g. m1.tiny, m1.small (Default), m1.medium, m1.large
 """),
 ]
 
@@ -44,4 +39,4 @@ def register_opts(conf):
 
 
 def list_opts():
-    return {'DEFAULT': flavor_opts}
+    return {"DEFAULT": flavor_opts}
