@@ -215,7 +215,8 @@ class ViewBuilder(common.ViewBuilder):
         host = instance.get("host")
         project = str(instance.get("project_id"))
         if host:
-            sha_hash = hashlib.sha224(project + host)
+            data = (project + host).encode('utf-8')
+            sha_hash = hashlib.sha224(data)
             return sha_hash.hexdigest()
 
     def _get_addresses(self, request, instance, extend_address=False):
