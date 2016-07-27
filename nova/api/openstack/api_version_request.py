@@ -102,8 +102,9 @@ _MAX_API_VERSION = "2.36"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # All the proxy APIs which related network, images and baremetal
-# were deprecated after this version.
+# were deprecated from 2.36.
 MAX_PROXY_API_SUPPORT_VERSION = '2.35'
+MIN_WITHOUT_PROXY_API_SUPPORT_VERSION = '2.36'
 
 
 # NOTE(cyeoh): min and max versions declared as functions so we can
