@@ -76,6 +76,9 @@ Glance v2 will be a hard requirement in Ocata.
                 default=False,
                 help='Require Nova to perform signature verification on '
                      'each image downloaded from Glance.'),
+    cfg.BoolOpt('debug',
+                default=False,
+                help='Enable or disable debug logging with glanceclient.'),
     ]
 
 
