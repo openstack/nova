@@ -325,7 +325,7 @@ class InvalidGlobalAPIVersion(Invalid):
 
 
 class ApiVersionsIntersect(Invalid):
-    msg_fmt = _("Version of %(name) %(min_ver) %(max_ver) intersects "
+    msg_fmt = _("Version of %(name)s %(min_ver)s %(max_ver)s intersects "
                 "with another versions.")
 
 
