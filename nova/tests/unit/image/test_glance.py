@@ -2560,14 +2560,12 @@ class TestTranslateToGlance(test.NoDBTestCase):
             'id': 'f8116538-309f-449c-8d49-df252a97a48d',
             'image_type': 'test',
             'instance_uuid': 'ec1ea9c7-8c5e-498d-a753-6ccc2464123c',
-            'kernel_id': None,
             'min_disk': 0,
             'min_ram': 0,
             'name': 'tempest-image-1294122904',
             'os_distro': 'value2',
             'os_version': 'value1',
             'owner': 'd76b51cf8a44427ea404046f4c1d82ab',
-            'ramdisk_id': None,
             'user_id': 'ca2ff78fd33042ceb45fbbe19012ef3f',
             'visibility': 'public'}
         nova_image_dict = self.fixture
