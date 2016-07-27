@@ -613,11 +613,6 @@ class ResourceTracker(object):
             free_vcpus = 'unknown'
             LOG.debug("Hypervisor: VCPU information unavailable")
 
-        if ('pci_passthrough_devices' in resources and
-                resources['pci_passthrough_devices']):
-            LOG.debug("Hypervisor: assignable PCI devices: %s",
-                      resources['pci_passthrough_devices'])
-
         pci_devices = resources.get('pci_passthrough_devices')
 
         LOG.debug("Hypervisor/Node resource view: "
