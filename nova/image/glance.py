@@ -843,13 +843,13 @@ def _convert_to_v2(image_meta):
     for name, value in six.iteritems(image_meta):
         if name == 'properties':
             for prop_name, prop_value in six.iteritems(value):
-                # in v2 kernel_id and ramdisk_id must be uuid4 or None,
-                # therefore we convert every value with empty string and
-                # 'None' to just None.
+                # if allow_additional_image_properties is disabled we can't
+                # define kernel_id and ramdisk_id as None, so we have to omit
+                # these properties if they are not set.
                 if prop_name in ('kernel_id', 'ramdisk_id') and \
                                 prop_value is not None and \
                                 prop_value.strip().lower() in ('none', ''):
-                    output[prop_name] = None
+                    continue
                 # in glance only string and None property values are allowed,
                 # v1 client accepts any values and converts them to string,
                 # v2 doesn't - so we have to take care of it.
