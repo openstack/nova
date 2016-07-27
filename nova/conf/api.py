@@ -124,6 +124,117 @@ request. The value should be the full dot-separated path to the class to use.
 
     None
 """),
+    cfg.ListOpt('vendordata_providers',
+                default=[],
+                help="""
+A list of vendordata providers.
+
+vendordata providers are how deployers can provide metadata via configdrive and
+metadata that is specific to their deployment. There are currently two
+supported providers: StaticJSON and DynamicJSON.
+
+StaticJSON reads a JSON file configured by the flag vendordata_jsonfile_path
+and places the JSON from that file into vendor_data.json and vendor_data2.json.
+
+DynamicJSON is configured via the vendordata_dynamic_targets flag, which is
+documented separately. For each of the endpoints specified in that flag, a
+section is added to the vendor_data2.json.
+
+For more information on the requirements for implementing a vendordata
+dynamic endpoint, please see the vendordata.rst file in the nova developer
+reference.
+
+* Possible values:
+
+    A list of vendordata providers, with StaticJSON and DynamicJSON being
+    current options.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    vendordata_dynamic_targets
+    vendordata_dynamic_ssl_certfile
+    vendordata_dynamic_connect_timeout
+    vendordata_dynamic_read_timeout
+"""),
+    cfg.ListOpt('vendordata_dynamic_targets',
+                default=[],
+                help="""
+A list of targets for the dynamic vendordata provider. These targets are of
+the form <name>@<url>.
+
+The dynamic vendordata provider collects metadata by contacting external REST
+services and querying them for information about the instance. This behaviour
+is documented in the vendordata.rst file in the nova developer reference.
+"""),
+    cfg.StrOpt('vendordata_dynamic_ssl_certfile',
+               default='',
+               help="""
+Path to an optional certificate file or CA bundle to verify dynamic vendordata
+REST services ssl certificates against.
+
+* Possible values:
+
+    An empty string, or a path to a valid certificate file
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    vendordata_providers
+    vendordata_dynamic_targets
+    vendordata_dynamic_connect_timeout
+    vendordata_dynamic_read_timeout
+"""),
+    cfg.IntOpt('vendordata_dynamic_connect_timeout',
+               default=5,
+               min=3,
+               help="""
+Maximum wait time for an external REST service to connect.
+
+* Possible values:
+
+    Any integer with a value greater than three (the TCP packet retransmission
+    timeout). Note that instance start may be blocked during this wait time,
+    so this value should be kept small.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    vendordata_providers
+    vendordata_dynamic_targets
+    vendordata_dynamic_ssl_certfile
+    vendordata_dynamic_read_timeout
+"""),
+    cfg.IntOpt('vendordata_dynamic_read_timeout',
+               default=5,
+               help="""
+Maximum wait time for an external REST service to return data once connected.
+
+* Possible values:
+
+    Any integer. Note that instance start is blocked during this wait time,
+    so this value should be kept small.
+
+* Services that use this:
+
+    ``nova-api``
+
+* Related options:
+
+    vendordata_providers
+    vendordata_dynamic_targets
+    vendordata_dynamic_ssl_certfile
+    vendordata_dynamic_connect_timeout
+"""),
     cfg.IntOpt("metadata_cache_expiration",
             default=15,
             help="""

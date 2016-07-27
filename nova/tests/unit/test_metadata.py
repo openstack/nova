@@ -20,7 +20,9 @@ import base64
 import copy
 import hashlib
 import hmac
+import os
 import re
+import requests
 
 try:
     import cPickle as pickle
@@ -36,6 +38,7 @@ import webob
 from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova.api.metadata import password
+from nova.api.metadata import vendordata
 from nova import block_device
 from nova.compute import flavors
 from nova.conductor import api as conductor_api
@@ -52,6 +55,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
 from nova.tests import uuidsentinel as uuids
+from nova import utils
 from nova.virt import netutils
 
 CONF = cfg.CONF
@@ -441,10 +445,16 @@ class MetadataTestCase(test.TestCase):
             'openstack/2016-06-30/user_data',
             'openstack/2016-06-30/vendor_data.json',
             'openstack/2016-06-30/network_data.json',
+            'openstack/2016-10-06/meta_data.json',
+            'openstack/2016-10-06/user_data',
+            'openstack/2016-10-06/vendor_data.json',
+            'openstack/2016-10-06/network_data.json',
+            'openstack/2016-10-06/vendor_data2.json',
             'openstack/latest/meta_data.json',
             'openstack/latest/user_data',
             'openstack/latest/vendor_data.json',
             'openstack/latest/network_data.json',
+            'openstack/latest/vendor_data2.json',
         ]
         actual_paths = []
         for (path, value) in inst_md.metadata_for_config_drive():
@@ -525,7 +535,7 @@ class MetadataTestCase(test.TestCase):
             expected_metadata['random_seed'] = FAKE_SEED
         if md._check_os_version(base.LIBERTY, os_version):
             expected_metadata['project_id'] = instance.project_id
-        if md._check_os_version(base.NEWTON, os_version):
+        if md._check_os_version(base.NEWTON_ONE, os_version):
             expected_metadata['devices'] = fake_metadata_dicts()
 
         mock_cells_keypair.return_value = keypair
@@ -790,12 +800,16 @@ class OpenStackMetadataTestCase(test.TestCase):
         result = mdinst.lookup("/openstack/2013-04-04")
         self.assertNotIn('vendor_data.json', result)
 
+        # verify that 2016-10-06 has the vendor_data2.json file
+        result = mdinst.lookup("/openstack/2016-10-06")
+        self.assertIn('vendor_data2.json', result)
+
     def test_vendor_data_response(self):
         inst = self.instance.obj_clone()
 
         mydata = {'mykey1': 'value1', 'mykey2': 'value2'}
 
-        class myVdriver(base.VendorDataDriver):
+        class myVdriver(vendordata.VendorDataDriver):
             def __init__(self, *args, **kwargs):
                 super(myVdriver, self).__init__(*args, **kwargs)
                 data = mydata.copy()
@@ -819,6 +833,45 @@ class OpenStackMetadataTestCase(test.TestCase):
         # check the other expected values
         for k, v in mydata.items():
             self.assertEqual(vd[k], v)
+
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2(self, request_mock):
+        request_mock.return_value.status_code = requests.codes.OK
+        request_mock.return_value.text = '{"color": "blue"}'
+
+        with utils.tempdir() as tmpdir:
+            jsonfile = os.path.join(tmpdir, 'test.json')
+            with open(jsonfile, 'w') as f:
+                f.write(jsonutils.dumps({'ldap': '10.0.0.1',
+                                         'ad': '10.0.0.2'}))
+
+            self.flags(vendordata_providers=['StaticJSON', 'DynamicJSON'],
+                       vendordata_jsonfile_path=jsonfile,
+                       vendordata_dynamic_targets=[
+                           'web@http://fake.com/foobar']
+                       )
+
+            inst = self.instance.obj_clone()
+            mdinst = fake_InstanceMetadata(self, inst)
+
+            # verify that 2013-10-17 has the vendor_data.json file
+            vdpath = "/openstack/2013-10-17/vendor_data.json"
+            vd = jsonutils.loads(mdinst.lookup(vdpath))
+            self.assertEqual('10.0.0.1', vd.get('ldap'))
+            self.assertEqual('10.0.0.2', vd.get('ad'))
+
+            # verify that 2016-10-06 works as well
+            vdpath = "/openstack/2016-10-06/vendor_data.json"
+            vd = jsonutils.loads(mdinst.lookup(vdpath))
+            self.assertEqual('10.0.0.1', vd.get('ldap'))
+            self.assertEqual('10.0.0.2', vd.get('ad'))
+
+            # verify the new format as well
+            vdpath = "/openstack/2016-10-06/vendor_data2.json"
+            vd = jsonutils.loads(mdinst.lookup(vdpath))
+            self.assertEqual('10.0.0.1', vd['static'].get('ldap'))
+            self.assertEqual('10.0.0.2', vd['static'].get('ad'))
+            self.assertEqual('blue', vd['web'].get('color'))
 
     def test_network_data_presence(self):
         inst = self.instance.obj_clone()

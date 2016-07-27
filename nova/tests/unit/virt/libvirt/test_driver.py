@@ -16543,7 +16543,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
                                             content=mox.IgnoreArg(),
                                             extra_md=mox.IgnoreArg(),
-                                            network_info=mox.IgnoreArg())
+                                            network_info=mox.IgnoreArg(),
+                                            request_context=mox.IgnoreArg())
         image_meta = objects.ImageMeta.from_dict(
             {'id': uuids.image_id, 'name': 'fake'})
         self.drvr._get_guest_xml(mox.IgnoreArg(), instance,
