@@ -38,6 +38,7 @@ from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
+from nova.network import rpcapi as network_rpcapi
 from nova import objects
 from nova.objects import network as network_obj
 from nova.objects import virtual_interface as vif_obj
@@ -1705,7 +1706,62 @@ class VlanNetworkTestCase(test.TestCase):
         def vif_get(_context, _vif_id):
             return vifs[0]
 
+        def release_dhcp(self, context, instance, dev, address, vif_address):
+            linux_net.release_dhcp(dev, address, vif_address)
+
         self.stub_out('nova.db.virtual_interface_get', vif_get)
+        self.stub_out('nova.network.rpcapi.NetworkAPI.release_dhcp',
+                      release_dhcp)
+        context1 = context.RequestContext('user', fakes.FAKE_PROJECT_ID)
+
+        instance = db.instance_create(context1,
+                {'project_id': fakes.FAKE_PROJECT_ID})
+
+        elevated = context1.elevated()
+        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                      address=fix_addr.address,
+                                      instance_uuid=instance.uuid,
+                                      allocated=True,
+                                      virtual_interface_id=3,
+                                      network=dict(test_network.fake_network,
+                                                   **networks[1]))
+
+        self.flags(force_dhcp_release=True)
+        self.mox.StubOutWithMock(linux_net, 'release_dhcp')
+        linux_net.release_dhcp(networks[1]['bridge'], fix_addr.address,
+                'DE:AD:BE:EF:00:00')
+        self.mox.ReplayAll()
+        self.network.deallocate_fixed_ip(context1, fix_addr.address, 'fake')
+        fixed_update.assert_called_once_with(context1, fix_addr.address,
+                                             {'allocated': False})
+
+    @mock.patch('nova.db.fixed_ip_get_by_address')
+    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.fixed_ip_update')
+    def test_deallocate_fixed_rpc_pinned(self, fixed_update, net_get,
+                                         fixed_get):
+        """Ensure that if the RPC call to release_dhcp raises a
+        RPCPinnedToOldVersion, we fall back to the previous behaviour of
+        calling release_dhcp in the local linux_net driver. In the previous
+        test, release_dhcp was mocked to call the driver, since this is what
+        happens on a successful RPC call. In this test, we mock it to raise,
+        but the expected behaviour is exactly the same - namely that
+        release_dhcp is called in the linux_net driver, which is why the two
+        tests are otherwise identical.
+        """
+        net_get.return_value = dict(test_network.fake_network,
+                                    **networks[1])
+
+        def vif_get(_context, _vif_id):
+            return vifs[0]
+
+        def release_dhcp(self, context, instance, dev, address, vif_address):
+            raise exception.RPCPinnedToOldVersion()
+
+        self.stub_out('nova.db.virtual_interface_get', vif_get)
+        self.stub_out('nova.network.rpcapi.NetworkAPI.release_dhcp',
+                      release_dhcp)
         context1 = context.RequestContext('user', fakes.FAKE_PROJECT_ID)
 
         instance = db.instance_create(context1,
@@ -1741,12 +1797,17 @@ class VlanNetworkTestCase(test.TestCase):
         def vif_get(_context, _vif_id):
             return vifs[0]
 
+        def release_dhcp(self, context, instance, dev, address, vif_address):
+            linux_net.release_dhcp(dev, address, vif_address)
+
         with test.nested(
+            mock.patch.object(network_rpcapi.NetworkAPI, 'release_dhcp',
+                              release_dhcp),
             mock.patch.object(db, 'virtual_interface_get', vif_get),
             mock.patch.object(
                 utils, 'execute',
                 side_effect=processutils.ProcessExecutionError()),
-        ) as (_vif_get, _execute):
+        ) as (release_dhcp, _vif_get, _execute):
             context1 = context.RequestContext('user', fakes.FAKE_PROJECT_ID)
 
             instance = db.instance_create(context1,
@@ -3602,13 +3663,15 @@ class NetworkManagerNoDBTestCase(test.NoDBTestCase):
         self.assertFalse(mock_disassociate.called,
                          str(mock_disassociate.mock_calls))
 
+    @mock.patch.object(network_rpcapi.NetworkAPI, 'release_dhcp')
     @mock.patch.object(objects.FixedIP, 'get_by_address')
     @mock.patch.object(objects.VirtualInterface, 'get_by_id')
     @mock.patch.object(objects.Quotas, 'reserve')
     def test_deallocate_fixed_ip_explicit_disassociate(self,
                                                        mock_quota_reserve,
                                                        mock_vif_get_by_id,
-                                                       mock_fip_get_by_addr):
+                                                       mock_fip_get_by_addr,
+                                                       mock_release_dhcp):
         # Tests that we explicitly call FixedIP.disassociate when the fixed IP
         # is not leased and has an associated instance (race with dnsmasq).
         self.flags(force_dhcp_release=True)
