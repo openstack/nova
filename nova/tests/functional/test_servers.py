@@ -17,14 +17,23 @@ import datetime
 import time
 import zlib
 
+import mock
 from oslo_log import log as logging
 from oslo_utils import timeutils
 
+from nova.compute import api as compute_api
+from nova.compute import rpcapi
 from nova import context
 from nova import exception
+from nova import objects
+from nova.objects import block_device as block_device_obj
+from nova import test
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
+from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+from nova import volume
 
 
 LOG = logging.getLogger(__name__)
@@ -704,3 +713,113 @@ class ServersTestV219(ServersTestBase):
         # Description is longer than 255 chars
         self._update_assertRaisesRegex(server_id, 'x' * 256)
         self._rebuild_assertRaisesRegex(server_id, 'x' * 256)
+
+
+class ServerTestV220(ServersTestBase):
+    api_major_version = 'v2.1'
+
+    def setUp(self):
+        super(ServerTestV220, self).setUp()
+        self.api.microversion = '2.20'
+        fake_network.set_stub_network_methods(self)
+        self.ctxt = context.get_admin_context()
+
+    def _create_server(self):
+        server = self._build_minimal_create_server_request()
+        post = {'server': server}
+        response = self.api.api_post('/servers', post).body
+        return (server, response['server'])
+
+    def _shelve_server(self):
+        server = self._create_server()[1]
+        server_id = server['id']
+        self._wait_for_state_change(server, 'BUILD')
+        self.api.post_server_action(server_id, {'shelve': None})
+        return self._wait_for_state_change(server, 'ACTIVE')
+
+    def _get_fake_bdms(self, ctxt):
+        return block_device_obj.block_device_make_list(self.ctxt,
+                    [fake_block_device.FakeDbBlockDeviceDict(
+                    {'device_name': '/dev/vda',
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'volume_id': '5d721593-f033-4f6d-ab6f-b5b067e61bc4'})])
+
+    def test_attach_detach_vol_to_shelved_server(self):
+        self.flags(shelved_offload_time=-1)
+        found_server = self._shelve_server()
+        self.assertEqual('SHELVED', found_server['status'])
+        server_id = found_server['id']
+
+        # Test attach volume
+        with test.nested(mock.patch.object(compute_api.API,
+                                       '_check_attach_and_reserve_volume'),
+                         mock.patch.object(rpcapi.ComputeAPI,
+                                       'attach_volume')) as (mock_reserve,
+                                                             mock_attach):
+            volume_attachment = {"volumeAttachment": {"volumeId":
+                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
+            self.api.api_post(
+                            '/servers/%s/os-volume_attachments' % (server_id),
+                            volume_attachment)
+            self.assertTrue(mock_reserve.called)
+            self.assertTrue(mock_attach.called)
+
+        # Test detach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        with test.nested(mock.patch.object(compute_api.API,
+                                           '_check_and_begin_detach'),
+                         mock.patch.object(objects.BlockDeviceMappingList,
+                                           'get_by_instance_uuid'),
+                         mock.patch.object(rpcapi.ComputeAPI,
+                                           'detach_volume')
+                         ) as (mock_check, mock_get_bdms, mock_rpc):
+
+            mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
+            attachment_id = mock_get_bdms.return_value[0]['volume_id']
+
+            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
+                            (server_id, attachment_id))
+            self.assertTrue(mock_check.called)
+            self.assertTrue(mock_rpc.called)
+
+        self._delete_server(server_id)
+
+    def test_attach_detach_vol_to_shelved_offloaded_server(self):
+        self.flags(shelved_offload_time=0)
+        found_server = self._shelve_server()
+        self.assertEqual('SHELVED_OFFLOADED', found_server['status'])
+        server_id = found_server['id']
+
+        # Test attach volume
+        with test.nested(mock.patch.object(compute_api.API,
+                                       '_check_attach_and_reserve_volume'),
+                         mock.patch.object(volume.cinder.API,
+                                       'attach')) as (mock_reserve, mock_vol):
+            volume_attachment = {"volumeAttachment": {"volumeId":
+                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
+            attach_response = self.api.api_post(
+                             '/servers/%s/os-volume_attachments' % (server_id),
+                             volume_attachment).body['volumeAttachment']
+            self.assertTrue(mock_reserve.called)
+            self.assertTrue(mock_vol.called)
+            self.assertIsNone(attach_response['device'])
+
+        # Test detach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        with test.nested(mock.patch.object(compute_api.API,
+                                           '_check_and_begin_detach'),
+                         mock.patch.object(objects.BlockDeviceMappingList,
+                                           'get_by_instance_uuid'),
+                         mock.patch.object(compute_api.API,
+                                           '_local_cleanup_bdm_volumes')
+                         ) as (mock_check, mock_get_bdms, mock_clean_vols):
+
+            mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
+            attachment_id = mock_get_bdms.return_value[0]['volume_id']
+            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
+                            (server_id, attachment_id))
+            self.assertTrue(mock_check.called)
+            self.assertTrue(mock_clean_vols.called)
+
+        self._delete_server(server_id)
