@@ -111,8 +111,7 @@ class LiveMigrationOps(object):
         LOG.debug("check_can_live_migrate_destination called", instance_ref)
         return migrate_data_obj.HyperVLiveMigrateData()
 
-    def cleanup_live_migration_destination_check(self, ctxt,
-                                                   dest_check_data):
+    def cleanup_live_migration_destination_check(self, ctxt, dest_check_data):
         LOG.debug("cleanup_live_migration_destination_check called")
 
     def check_can_live_migrate_source(self, ctxt, instance_ref,
