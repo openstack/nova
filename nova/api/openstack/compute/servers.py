@@ -547,12 +547,7 @@ class ServersController(wsgi.Controller):
             context.can(server_policies.SERVERS % 'create:attach_network',
                         target)
 
-        try:
-            flavor_id = self._flavor_id_from_req_data(body)
-        except ValueError:
-            msg = _("Invalid flavorRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
+        flavor_id = self._flavor_id_from_req_data(body)
         try:
             inst_type = flavors.get_flavor_by_flavor_id(
                     flavor_id, ctxt=context, read_deleted="no")
@@ -576,9 +571,6 @@ class ServersController(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Can not find requested image")
             raise exc.HTTPBadRequest(explanation=msg)
-        except exception.FlavorNotFound:
-            msg = _("Invalid flavorRef provided.")
-            raise exc.HTTPBadRequest(explanation=msg)
         except exception.KeypairNotFound:
             msg = _("Invalid key_name provided.")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -597,6 +589,7 @@ class ServersController(wsgi.Controller):
         except (exception.ImageNotActive,
                 exception.ImageBadRequest,
                 exception.FixedIpNotFoundForAddress,
+                exception.FlavorNotFound,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
                 exception.InvalidMetadata,
