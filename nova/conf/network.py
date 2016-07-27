@@ -288,17 +288,6 @@ Related options:
 
     ``use_neutron``
 """),
-    cfg.BoolOpt("fake_call",
-            default=False,
-            help="""
-When this option is True, calls are made locally instead of being placed in the
-queue. However, all usage of this config option have been removed, so it
-currently has no effect at all.
-
-Related options:
-
-    ``use_neutron``
-"""),
     cfg.BoolOpt("teardown_unused_network_gateway",
             default=False,
             help="""

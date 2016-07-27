@@ -599,7 +599,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
-        self.flags(fake_call=True)
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.get_admin_context()
