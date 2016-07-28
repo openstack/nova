@@ -265,7 +265,7 @@ class HyperVDriver(driver.ComputeDriver):
             block_migration, disk_over_commit)
 
     def cleanup_live_migration_destination_check(self, context,
-                                                   dest_check_data):
+                                                 dest_check_data):
         self._livemigrationops.cleanup_live_migration_destination_check(
             context, dest_check_data)
 

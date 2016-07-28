@@ -480,7 +480,7 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def cleanup_live_migration_destination_check(self, context,
-                                                   dest_check_data):
+                                                 dest_check_data):
         return
 
     def check_can_live_migrate_destination(self, context, instance,

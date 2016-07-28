@@ -458,7 +458,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                                               disk_over_commit)
 
     def cleanup_live_migration_destination_check(self, context,
-                                                   dest_check_data):
+                                                 dest_check_data):
         """Do required cleanup on dest host after check_can_live_migrate calls
 
         :param context: security context
