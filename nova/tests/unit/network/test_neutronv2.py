@@ -162,6 +162,17 @@ class TestNeutronClient(test.NoDBTestCase):
             exception.NeutronAdminCredentialConfigurationInvalid,
             client.list_networks)
 
+    @mock.patch.object(client.Client, "create_port",
+                       side_effect=exceptions.Forbidden())
+    def test_Forbidden(self, mock_create_port):
+        my_context = context.RequestContext('userid', uuids.my_tenant,
+                                            auth_token='token',
+                                            is_admin=False)
+        client = neutronapi.get_client(my_context)
+        self.assertRaises(
+            exception.Forbidden,
+            client.create_port)
+
     def test_withtoken_context_is_admin(self):
         self.flags(url='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
