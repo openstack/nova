@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -34,12 +27,7 @@ message format.
 This option is used to detect errors in NovaException class when it formats
 error messages. If True, raise an exception; if False, use the unformatted
 message.
-
-Possible values:
-
-    * True
-    * False (Default)
-"""),
+""")
 ]
 
 
