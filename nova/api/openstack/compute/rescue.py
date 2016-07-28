@@ -55,9 +55,8 @@ class RescueController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, id)
         rescue_image_ref = None
-        if body['rescue'] and 'rescue_image_ref' in body['rescue']:
-            rescue_image_ref = common.image_uuid_from_href(
-                body['rescue']['rescue_image_ref'], 'rescue_image_ref')
+        if body['rescue']:
+            rescue_image_ref = body['rescue'].get('rescue_image_ref')
 
         try:
             self.compute_api.rescue(context, instance,

@@ -140,6 +140,51 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self.mox.ReplayAll()
         self._test_create(params, no_image=True)
 
+    @mock.patch.object(compute_api.API, '_validate_bdm')
+    @mock.patch.object(compute_api.API, '_get_bdm_image_metadata')
+    def test_create_instance_with_imageRef_as_empty_string(
+        self, mock_bdm_image_metadata, mock_validate_bdm):
+        volume = {
+            'id': uuids.volume_id,
+            'status': 'active',
+            'volume_image_metadata':
+                {'test_key': 'test_value'}
+        }
+        mock_bdm_image_metadata.return_value = volume
+        mock_validate_bdm.return_value = True
+        params = {'block_device_mapping': self.bdm,
+                  'imageRef': ''}
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertEqual(kwargs['block_device_mapping'], self.bdm)
+            return old_create(*args, **kwargs)
+
+        self.stub_out('nova.compute.api.API.create', create)
+        self._test_create(params)
+
+    def test_create_instance_with_imageRef_as_full_url(self):
+        bdm = [{
+            'volume_id': self.volume_id,
+            'device_name': 'vda'
+        }]
+        image_href = ('http://localhost/v2/fake/images/'
+                      '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
+        params = {'block_device_mapping': bdm,
+                  'imageRef': image_href}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create, params)
+
+    def test_create_instance_with_non_uuid_imageRef(self):
+        bdm = [{
+            'volume_id': self.volume_id,
+            'device_name': 'vda'
+        }]
+        params = {'block_device_mapping': bdm,
+                  'imageRef': 'bad-format'}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create, params)
+
     def test_create_instance_with_volumes_disabled(self):
         bdm = [{'device_name': 'foo'}]
         params = {'block_device_mapping': bdm}

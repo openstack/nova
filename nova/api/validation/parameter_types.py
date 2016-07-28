@@ -269,6 +269,14 @@ image_id = {
 }
 
 
+image_id_or_empty_string = {
+    'oneOf': [
+        {'type': 'string', 'format': 'uuid'},
+        {'type': 'string', 'maxLength': 0}
+    ]
+}
+
+
 volume_id = {
     'type': 'string', 'format': 'uuid'
 }
@@ -290,11 +298,6 @@ admin_password = {
     # In addition, users set sometimes long/strange string
     # as password. It is unnecessary to limit string length
     # and string pattern.
-    'type': 'string',
-}
-
-
-image_ref = {
     'type': 'string',
 }
 
