@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -48,11 +41,11 @@ tools (e.g. Libvirt or QEMU) or Nova itself under certain conditions. These
 should only be enabled in exceptional circumstances. All options are linked
 against bug IDs, where more information on the issue can be found.
 """)
-
-disable_rootwrap = cfg.BoolOpt(
-    'disable_rootwrap',
-    default=False,
-    help="""
+ALL_OPTS = [
+    cfg.BoolOpt(
+        'disable_rootwrap',
+        default=False,
+        help="""
 Use sudo instead of rootwrap.
 
 Allow fallback to sudo for performance reasons.
@@ -66,19 +59,15 @@ Possible values:
 * True: Use sudo instead of rootwrap
 * False: Use rootwrap as usual
 
-Services which consume this:
-
-* ``nova-compute``
-
 Interdependencies to other options:
 
-Any options that affect 'rootwrap' will be ignored.
-""")
+* Any options that affect 'rootwrap' will be ignored.
+"""),
 
-disable_libvirt_livesnapshot = cfg.BoolOpt(
-    'disable_libvirt_livesnapshot',
-    default=True,
-    help="""
+    cfg.BoolOpt(
+        'disable_libvirt_livesnapshot',
+        default=True,
+        help="""
 Disable live snapshots when using the libvirt driver.
 
 Live snapshots allow the snapshot of the disk to happen without an
@@ -100,20 +89,12 @@ Possible values:
 * True: Live snapshot is disabled when using libvirt
 * False: Live snapshots are always used when snapshotting (as long as
   there is a new enough libvirt and the backend storage supports it)
+"""),
 
-Services which consume this:
-
-* ``nova-compute``
-
-Interdependencies to other options:
-
-* None
-""")
-
-handle_virt_lifecycle_events = cfg.BoolOpt(
-    'handle_virt_lifecycle_events',
-    default=True,
-    help="""
+    cfg.BoolOpt(
+        'handle_virt_lifecycle_events',
+        default=True,
+        help="""
 Enable handling of events emitted from compute drivers.
 
 Many compute drivers emit lifecycle events, which are events that occur when,
@@ -137,28 +118,17 @@ For more information, refer to the bug report:
 
   https://bugs.launchpad.net/bugs/1444630
 
-Possible values:
-
-* True: Enable the feature
-* False: Disable the feature
-
-Services which consume this:
-
-* ``nova-compute``
-
 Interdependencies to other options:
 
 * If ``sync_power_state_interval`` is negative and this feature is disabled,
   then instances that get out of sync between the hypervisor and the Nova
   database will have to be synchronized manually.
-""")
-
-ALL_OPTS = [disable_rootwrap,
-            disable_libvirt_livesnapshot,
-            handle_virt_lifecycle_events]
+"""),
+]
 
 
 def register_opts(conf):
+    conf.register_group(workarounds_group)
     conf.register_opts(ALL_OPTS, group=workarounds_group)
 
 
