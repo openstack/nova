@@ -1,9 +1,6 @@
 # needs:fix_opt_description
 # needs:check_deprecation_status
 # needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
 
 # All Rights Reserved.
 #
@@ -21,7 +18,8 @@
 
 from oslo_config import cfg
 
-config_drive_format_opt = cfg.StrOpt('config_drive_format',
+config_drive_opts = [
+    cfg.StrOpt('config_drive_format',
         default='iso9660',
         choices=('iso9660', 'vfat'),
         help="""
@@ -51,9 +49,9 @@ Related options:
 * A compute node running Hyper-V hypervisor can be configured to attach
   configuration drive as a CD drive. To attach the configuration drive as a CD
   drive, set config_drive_cdrom option at hyperv section, to true.
-""")
+"""),
 
-force_config_drive_opt = cfg.BoolOpt('force_config_drive',
+    cfg.BoolOpt('force_config_drive',
         default=False,
         help="""
 Force injection to take place on a config drive
@@ -79,10 +77,10 @@ Related options:
   Additionally, you must set the qemu_img_cmd value in the hyperv
   configuration section to the full path to an qemu-img command
   installation.
-""")
+"""),
 
 
-mkisofs_cmd_opt = cfg.StrOpt('mkisofs_cmd',
+    cfg.StrOpt('mkisofs_cmd',
         default='genisoimage',
         help="""
 Name or path of the tool used for ISO image creation
@@ -108,16 +106,13 @@ Related options:
 * To use configuration drive with Hyper-V, you must set the qemu_img_cmd
   value in the hyperv configuration section to the full path to an qemu-img
   command installation.
-""")
-
-ALL_OPTS = [config_drive_format_opt,
-            force_config_drive_opt,
-            mkisofs_cmd_opt]
+"""),
+]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS)
+    conf.register_opts(config_drive_opts)
 
 
 def list_opts():
-    return {"DEFAULT": ALL_OPTS}
+    return {"DEFAULT": config_drive_opts}
