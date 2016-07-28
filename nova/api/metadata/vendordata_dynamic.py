@@ -19,7 +19,6 @@ import requests
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from oslo_utils import excutils
 
 from nova.api.metadata import vendordata
 import nova.conf
@@ -77,8 +76,7 @@ class DynamicVendorData(vendordata.VendorDataDriver):
                                    timeout=timeout)
             if res.status_code in (requests.codes.OK,
                                    requests.codes.CREATED,
-                                   requests.codes.ACCEPTED,
-                                   requests.codes.NO_CONTENT):
+                                   requests.codes.ACCEPTED):
                 # TODO(mikal): Use the Cache-Control response header to do some
                 # sensible form of caching here.
                 return jsonutils.loads(res.text)
@@ -87,13 +85,13 @@ class DynamicVendorData(vendordata.VendorDataDriver):
 
         except (TypeError, ValueError, requests.exceptions.RequestException,
                 requests.exceptions.SSLError) as e:
-            with excutils.save_and_reraise_exception():
-                LOG.warning(_LW('Error from dynamic vendordata service '
-                                '%(service_name)s at %(url)s: %(error)s'),
-                            {'service_name': service_name,
-                             'url': url,
-                             'error': e},
-                            instance=self.instance)
+            LOG.warning(_LW('Error from dynamic vendordata service '
+                            '%(service_name)s at %(url)s: %(error)s'),
+                        {'service_name': service_name,
+                         'url': url,
+                         'error': e},
+                        instance=self.instance)
+            return {}
 
     def get(self):
         j = {}
