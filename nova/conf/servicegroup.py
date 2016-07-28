@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright (c) 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,10 +15,11 @@
 
 from oslo_config import cfg
 
-servicegroup_driver = cfg.StrOpt('servicegroup_driver',
-                                  default='db',
-                                  choices=['db', 'mc'],
-                                  help="""
+SERVICEGROUP_OPTS = [
+    cfg.StrOpt('servicegroup_driver',
+        default='db',
+        choices=['db', 'mc'],
+        help="""
 This option specifies the driver to be used for the servicegroup service.
 
 ServiceGroup API in nova enables checking status of a compute node. When a
@@ -38,15 +32,14 @@ and Memcache ServiceGroup driver.
 
 Possible Values:
 
-    * db : Database ServiceGroup driver (default)
+    * db : Database ServiceGroup driver
     * mc : Memcache ServiceGroup driver
 
 Related Options:
 
     * service_down_time (maximum time since last check-in for up service)
-""")
-
-SERVICEGROUP_OPTS = [servicegroup_driver]
+"""),
+]
 
 
 def register_opts(conf):
