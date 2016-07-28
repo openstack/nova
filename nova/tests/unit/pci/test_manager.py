@@ -157,7 +157,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.pci_devs), 3)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 3)
-        self.assertEqual(self.tracker.stale.keys(), [])
+        self.assertEqual(list(self.tracker.stale), [])
         self.assertEqual(len(self.tracker.stats.pools), 3)
         self.assertEqual(self.tracker.node_id, 1)
         for dev in self.tracker.pci_devs:
@@ -170,7 +170,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.pci_devs), 3)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 3)
-        self.assertEqual(self.tracker.stale.keys(), [])
+        self.assertEqual(list(self.tracker.stale), [])
         self.assertEqual(len(self.tracker.stats.pools), 2)
         self.assertEqual(self.tracker.node_id, 1)
         pf = [dev for dev in self.tracker.pci_devs
@@ -190,7 +190,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.pci_devs), 1)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 1)
-        self.assertEqual(self.tracker.stale.keys(), [])
+        self.assertEqual(list(self.tracker.stale), [])
         self.assertEqual(len(self.tracker.stats.pools), 1)
         self.assertEqual(self.tracker.node_id, 1)
         pf = self.tracker.pci_devs[0]
@@ -203,7 +203,7 @@ class PciDevTrackerTestCase(test.NoDBTestCase):
         self.assertEqual(len(self.tracker.pci_devs), 1)
         free_devs = self.tracker.pci_stats.get_free_devs()
         self.assertEqual(len(free_devs), 1)
-        self.assertEqual(self.tracker.stale.keys(), [])
+        self.assertEqual(list(self.tracker.stale), [])
         self.assertEqual(len(self.tracker.stats.pools), 1)
         self.assertEqual(self.tracker.node_id, 1)
         vf = self.tracker.pci_devs[0]

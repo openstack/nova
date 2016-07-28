@@ -51,9 +51,6 @@ nova.tests.unit.db.test_migrations.TestNovaMigrationsPostgreSQL
 nova.tests.unit.db.test_migrations.TestNovaMigrationsSQLite
 nova.tests.unit.image.test_fake.FakeImageServiceTestCase
 nova.tests.unit.network.test_manager.LdapDNSTestCase
-nova.tests.unit.pci.test_manager.PciDevTrackerTestCase
-nova.tests.unit.pci.test_stats.PciDeviceStatsTestCase
-nova.tests.unit.pci.test_stats.PciDeviceStatsWithTagsTestCase
 nova.tests.unit.test_bdm.BlockDeviceMappingEc2CloudTestCase
 nova.tests.unit.test_configdrive2.ConfigDriveTestCase
 nova.tests.unit.test_matchers.TestDictMatches

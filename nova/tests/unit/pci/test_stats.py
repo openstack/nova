@@ -72,9 +72,9 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self.fake_dev_3 = objects.PciDevice.create(None, fake_pci_3)
         self.fake_dev_4 = objects.PciDevice.create(None, fake_pci_4)
 
-        map(self.pci_stats.add_device,
-            [self.fake_dev_1, self.fake_dev_2,
-             self.fake_dev_3, self.fake_dev_4])
+        for dev in [self.fake_dev_1, self.fake_dev_2,
+                    self.fake_dev_3, self.fake_dev_4]:
+            self.pci_stats.add_device(dev)
 
     def setUp(self):
         super(PciDeviceStatsTestCase, self).setUp()
@@ -105,17 +105,19 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     def test_pci_stats_equivalent(self):
         pci_stats2 = stats.PciDeviceStats()
-        map(pci_stats2.add_device, [self.fake_dev_1,
-                                    self.fake_dev_2,
-                                    self.fake_dev_3,
-                                    self.fake_dev_4])
+        for dev in [self.fake_dev_1,
+                    self.fake_dev_2,
+                    self.fake_dev_3,
+                    self.fake_dev_4]:
+            pci_stats2.add_device(dev)
         self.assertEqual(self.pci_stats, pci_stats2)
 
     def test_pci_stats_not_equivalent(self):
         pci_stats2 = stats.PciDeviceStats()
-        map(pci_stats2.add_device, [self.fake_dev_1,
-                                    self.fake_dev_2,
-                                    self.fake_dev_3])
+        for dev in [self.fake_dev_1,
+                    self.fake_dev_2,
+                    self.fake_dev_3]:
+            pci_stats2.add_device(dev)
         self.assertNotEqual(self.pci_stats, pci_stats2)
 
     def test_object_create(self):
@@ -257,8 +259,11 @@ class PciDeviceStatsWithTagsTestCase(test.NoDBTestCase):
             self.pci_untagged_devices.append(objects.PciDevice.create(None,
                                                                       pci_dev))
 
-        map(self.pci_stats.add_device, self.pci_tagged_devices)
-        map(self.pci_stats.add_device, self.pci_untagged_devices)
+        for dev in self.pci_tagged_devices:
+            self.pci_stats.add_device(dev)
+
+        for dev in self.pci_untagged_devices:
+            self.pci_stats.add_device(dev)
 
     def _assertPoolContent(self, pool, vendor_id, product_id, count, **tags):
         self.assertEqual(vendor_id, pool['vendor_id'])

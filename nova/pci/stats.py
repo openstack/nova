@@ -296,10 +296,11 @@ class PciDeviceStats(object):
         self.pools = []
 
     def __eq__(self, other):
-        return cmp(self.pools, other.pools) == 0
+        return self.pools == other.pools
 
-    def __ne__(self, other):
-        return not (self == other)
+    if six.PY2:
+        def __ne__(self, other):
+            return not (self == other)
 
     def to_device_pools_obj(self):
         """Return the contents of the pools as a PciDevicePoolList object."""

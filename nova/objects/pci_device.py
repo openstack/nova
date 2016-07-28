@@ -157,8 +157,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         # functions like claim/allocate etc. The id is allocated by
         # database. The extra_info is created by the object.
         no_changes = ('status', 'instance_uuid', 'id', 'extra_info')
-        map(lambda x: dev_dict.pop(x, None),
-            [key for key in no_changes])
+        for key in no_changes:
+            dev_dict.pop(key, None)
 
         # NOTE(ndipanov): This needs to be set as it's accessed when matching
         dev_dict.setdefault('parent_addr')
