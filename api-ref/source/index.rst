@@ -37,7 +37,6 @@
 .. include:: os-assisted-volume-snapshots.inc
 .. include:: os-availability-zone.inc
 .. include:: os-cells.inc
-.. include:: os-certificates.inc
 .. include:: os-cloudpipe.inc
 .. include:: os-consoles.inc
 .. include:: os-hosts.inc
@@ -51,6 +50,7 @@
 .. include:: os-simple-tenant-usage.inc
 .. include:: os-server-external-events.inc
 .. include:: extensions.inc
+.. include:: os-certificates.inc
 .. include:: os-networks.inc
 .. include:: os-volumes.inc
 .. include:: images.inc

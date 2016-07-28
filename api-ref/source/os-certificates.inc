@@ -6,13 +6,12 @@
 
 Creates and shows details for a root certificate.
 
-.. note::
+.. warning::
 
    This API existed solely because of the need to build euca bundles
    when Nova had an in tree EC2 API. It no longer interacts with any
-   parts of the system besides it's own certificate daemon. It should
-   be considered vestigial, and will likely be deprecated and removed
-   in the near future.
+   parts of the system besides it's own certificate daemon. It is
+   deprecated and will be removed in the near future.
 
 Create Root Certificate
 =======================

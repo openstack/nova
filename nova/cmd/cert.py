@@ -17,10 +17,12 @@
 import sys
 
 from oslo_log import log as logging
+from oslo_log import versionutils
 from oslo_reports import guru_meditation_report as gmr
 
 import nova.conf
 from nova import config
+from nova.i18n import _LW
 from nova import objects
 from nova import service
 from nova import utils
@@ -34,6 +36,11 @@ def main():
     logging.setup(CONF, "nova")
     utils.monkey_patch()
     objects.register_all()
+    log = logging.getLogger(__name__)
+    versionutils.report_deprecated_feature(
+        log,
+        _LW('The nova-cert service is deprecated and will be removed '
+            'in a future release.'))
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
