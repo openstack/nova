@@ -25,12 +25,12 @@ barbican_group = cfg.OptGroup(
     title="Barbican options")
 
 barbican_opts = [
-     cfg.StrOpt("catalog_info",
-                default="key-manager:barbican:public",
-                deprecated_for_removal=True,
-                deprecated_reason="This option have been moved to the "
-                                  "Castellan library",
-                help="""
+    cfg.StrOpt("catalog_info",
+               default="key-manager:barbican:public",
+               deprecated_for_removal=True,
+               deprecated_reason="This option have been moved to the "
+                                 "Castellan library",
+               help="""
 Info to match when looking for barbican in the service
 catalog. Format is: separated values of the form:
 <service_type>:<service_name>:<endpoint_type>
