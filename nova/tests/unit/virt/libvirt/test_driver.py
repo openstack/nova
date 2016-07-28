@@ -16076,7 +16076,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(ins_ref, _fake_network_info(self, 1))
-            mock_get_path.assert_called_once_with(ins_ref, forceold=True)
+            mock_get_path.assert_called_once_with(ins_ref)
             mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
                                               delay_on_retry=True, attempts=5)
 
@@ -16103,7 +16103,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(ins_ref, fake_net)
-            mock_get_path.assert_called_once_with(ins_ref, forceold=True)
+            mock_get_path.assert_called_once_with(ins_ref)
             mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
                                               delay_on_retry=True, attempts=5)
             mock_undef.assert_called_once_with(ins_ref)
@@ -16127,7 +16127,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(ins_ref, _fake_network_info(self, 1))
-            mock_get_path.assert_called_once_with(ins_ref, forceold=True)
+            mock_get_path.assert_called_once_with(ins_ref)
             mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
                                               delay_on_retry=True, attempts=5)
             mock_remove.assert_called_once_with(
@@ -16151,7 +16151,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(ins_ref, _fake_network_info(self, 1))
-            mock_get_path.assert_called_once_with(ins_ref, forceold=True)
+            mock_get_path.assert_called_once_with(ins_ref)
             mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
                                               delay_on_retry=True, attempts=5)
             self.assertFalse(mock_remove.called)
