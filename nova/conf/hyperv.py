@@ -1,8 +1,3 @@
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright (c) 2016 TUBITAK BILGEM
 # All Rights Reserved.
 #
@@ -20,18 +15,17 @@
 
 from oslo_config import cfg
 
-
 hyperv_opt_group = cfg.OptGroup("hyperv",
-                title="The Hyper-V feature",
-                help="""
+    title='The Hyper-V feature',
+    help="""
 The hyperv feature allows you to configure the Hyper-V hypervisor
 driver to be used within an OpenStack deployment.
 """)
 
-
-dynamic_memory_ratio_opt = cfg.FloatOpt('dynamic_memory_ratio',
-                default=1.0,
-                help="""
+hyperv_opts = [
+    cfg.FloatOpt('dynamic_memory_ratio',
+        default=1.0,
+        help="""
 Dynamic memory ratio
 
 Enables dynamic memory allocation (ballooning) when set to a value
@@ -45,30 +39,19 @@ Possible values:
 * 1.0: Disables dynamic memory allocation (Default).
 * Float values greater than 1.0: Enables allocation of total implied
   RAM divided by this value for startup.
-
-
-""")
-
-enable_instance_metrics_collection_opt = cfg.BoolOpt(
-                'enable_instance_metrics_collection',
-                default=False,
-                help="""
+"""),
+    cfg.BoolOpt('enable_instance_metrics_collection',
+        default=False,
+        help="""
 Enable instance metrics collection
 
 Enables metrics collections for an instance by using Hyper-V's
 metric APIs. Collected data can by retrieved by other apps and
 services, e.g.: Ceilometer.
-
-Possible values:
-
-* True: Enables metrics collection.
-* False: Disables metric collection (Default).
-
-""")
-
-instances_path_share_opt = cfg.StrOpt('instances_path_share',
-                default="",
-                help="""
+"""),
+    cfg.StrOpt('instances_path_share',
+        default="",
+        help="""
 Instances path share
 
 The name of a Windows share mapped to the "instances_path" dir
@@ -85,28 +68,20 @@ Related options:
 
 * "instances_path": The directory which will be used if this option
   here is left blank.
-""")
-
-limit_cpu_features_opt = cfg.BoolOpt('limit_cpu_features',
-                default=False,
-                help="""
+"""),
+    cfg.BoolOpt('limit_cpu_features',
+        default=False,
+        help="""
 Limit CPU features
 
 This flag is needed to support live migration to hosts with
 different CPU features and checked during instance creation
 in order to limit the CPU features used by the instance.
-
-Possible values:
-
-* True: Limit processor-specific features.
-* False: Do not limit processor-specific features (Default).
-
-""")
-
-mounted_disk_query_retry_count_opt = cfg.IntOpt(
-                'mounted_disk_query_retry_count',
-                default=10,
-                help="""
+"""),
+    cfg.IntOpt('mounted_disk_query_retry_count',
+        default=10,
+        min=0,
+        help="""
 Mounted disk query retry count
 
 The number of times to retry checking for a disk mounted via iSCSI.
@@ -124,12 +99,11 @@ Related options:
 
 * Time interval between disk mount retries is declared with
   "mounted_disk_query_retry_interval" option.
-""")
-
-mounted_disk_query_retry_interval_opt = cfg.IntOpt(
-                'mounted_disk_query_retry_interval',
-                default=5,
-                help="""
+"""),
+    cfg.IntOpt('mounted_disk_query_retry_interval',
+        default=5,
+        min=0,
+        help="""
 Mounted disk query retry interval
 
 Interval between checks for a mounted iSCSI disk, in seconds.
@@ -144,11 +118,11 @@ Related options:
   is greater than 1.
 * The retry loop runs with mounted_disk_query_retry_count and
   mounted_disk_query_retry_interval configuration options.
-""")
-
-power_state_check_timeframe_opt = cfg.IntOpt('power_state_check_timeframe',
-                default=60,
-                help="""
+"""),
+    cfg.IntOpt('power_state_check_timeframe',
+        default=60,
+        min=0,
+        help="""
 Power state check timeframe
 
 The timeframe to be checked for instance power state changes.
@@ -158,13 +132,11 @@ through the WMI interface, within the specified timeframe.
 Possible values:
 
 * Timeframe in seconds (Default: 60).
-
-""")
-
-power_state_event_polling_interval_opt = cfg.IntOpt(
-                'power_state_event_polling_interval',
-                default=2,
-                help="""
+"""),
+    cfg.IntOpt('power_state_event_polling_interval',
+        default=2,
+        min=0,
+        help="""
 Power state event polling interval
 
 Instance power state change event polling frequency. Sets the
@@ -176,12 +148,10 @@ has to change this value.
 Possible values:
 
 * Time in seconds (Default: 2).
-
-""")
-
-qemu_img_cmd_opt = cfg.StrOpt('qemu_img_cmd',
-                default="qemu-img.exe",
-                help="""
+"""),
+    cfg.StrOpt('qemu_img_cmd',
+        default="qemu-img.exe",
+        help="""
 qemu-img command
 
 qemu-img is required for some of the image related operations
@@ -207,10 +177,9 @@ Related options:
   remain an ISO. To use configuration drive with Hyper-V, you must
   set the mkisofs_cmd value to the full path to an mkisofs.exe
   installation.
-""")
-
-vswitch_name_opt = cfg.StrOpt('vswitch_name',
-                help="""
+"""),
+    cfg.StrOpt('vswitch_name',
+        help="""
 External virtual switch name
 
 The Hyper-V Virtual Switch is a software-based layer-2 Ethernet
@@ -227,12 +196,11 @@ Possible values:
 * If not provided, the first of a list of available vswitches
   is used. This list is queried using WQL.
 * Virtual switch name.
-
-""")
-
-wait_soft_reboot_seconds_opt = cfg.IntOpt('wait_soft_reboot_seconds',
-                default=60,
-                help="""
+"""),
+    cfg.IntOpt('wait_soft_reboot_seconds',
+        default=60,
+        min=0,
+        help="""
 Wait soft reboot seconds
 
 Number of seconds to wait for instance to shut down after soft
@@ -242,12 +210,10 @@ does not shutdown within this window.
 Possible values:
 
 * Time in seconds (Default: 60).
-
-""")
-
-config_drive_cdrom_opt = cfg.BoolOpt('config_drive_cdrom',
-                default=False,
-                help="""
+"""),
+    cfg.BoolOpt('config_drive_cdrom',
+        default=False,
+        help="""
 Configuration drive cdrom
 
 OpenStack can be configured to write instance metadata to
@@ -273,30 +239,24 @@ Related options:
   to an qemu-img command installation.
 * You can configure the Compute service to always create a configuration
   drive by setting the force_config_drive option to 'True'.
-""")
-
-config_drive_inject_password_opt = cfg.BoolOpt('config_drive_inject_password',
-                default=False,
-                help="""
+"""),
+    cfg.BoolOpt('config_drive_inject_password',
+        default=False,
+        help="""
 Configuration drive inject password
 
 Enables setting the admin password in the configuration drive image.
-
-Possible values:
-
-* True: Enables the feature.
-* False: Disables the feature (Default).
 
 Related options:
 
 * This option is meaningful when used with other options that enable
   configuration drive usage with Hyper-V, such as force_config_drive.
 * Currently, the only accepted config_drive_format is 'iso9660'.
-""")
-
-volume_attach_retry_count_opt = cfg.IntOpt('volume_attach_retry_count',
-                default=10,
-                help="""
+"""),
+    cfg.IntOpt('volume_attach_retry_count',
+        default=10,
+        min=0,
+        help="""
 Volume attach retry count
 
 The number of times to retry to attach a volume. This option is used
@@ -314,11 +274,11 @@ Related options:
 
 * Time interval between attachment attempts is declared with
   volume_attach_retry_interval option.
-""")
-
-volume_attach_retry_interval_opt = cfg.IntOpt('volume_attach_retry_interval',
-                default=5,
-                help="""
+"""),
+    cfg.IntOpt('volume_attach_retry_interval',
+        default=5,
+        min=0,
+        help="""
 Volume attach retry interval
 
 Interval between volume attachment attempts, in seconds.
@@ -333,22 +293,15 @@ Related options:
   is greater than 1.
 * The retry loop runs with volume_attach_retry_count and
   volume_attach_retry_interval configuration options.
-""")
-
-
-enable_remotefx_opt = cfg.BoolOpt('enable_remotefx',
-                default=False,
-                help="""
+"""),
+    cfg.BoolOpt('enable_remotefx',
+        default=False,
+        help="""
 Enable RemoteFX feature
 
 This requires at least one DirectX 11 capable graphics adapter for
 Windows / Hyper-V Server 2012 R2 or newer and RDS-Virtualization
 feature has to be enabled.
-
-Possible values:
-
-* False: Disables the feature (Default).
-* True: Enables the feature.
 
 Instances with RemoteFX can be requested with the following flavor
 extra specs:
@@ -368,31 +321,14 @@ extra specs:
 Windows / Hyper-V Server 2016. Acceptable values::
 
     64, 128, 256, 512, 1024
-
 """)
-
-
-ALL_OPTS = [dynamic_memory_ratio_opt,
-            enable_instance_metrics_collection_opt,
-            instances_path_share_opt,
-            limit_cpu_features_opt,
-            mounted_disk_query_retry_count_opt,
-            mounted_disk_query_retry_interval_opt,
-            power_state_check_timeframe_opt,
-            power_state_event_polling_interval_opt,
-            qemu_img_cmd_opt,
-            vswitch_name_opt,
-            wait_soft_reboot_seconds_opt,
-            config_drive_cdrom_opt,
-            config_drive_inject_password_opt,
-            volume_attach_retry_count_opt,
-            volume_attach_retry_interval_opt,
-            enable_remotefx_opt]
+]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS, group=hyperv_opt_group)
+    conf.register_group(hyperv_opt_group)
+    conf.register_opts(hyperv_opts, group=hyperv_opt_group)
 
 
 def list_opts():
-    return {hyperv_opt_group: ALL_OPTS}
+    return {hyperv_opt_group: hyperv_opts}
