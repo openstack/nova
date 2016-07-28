@@ -99,14 +99,14 @@ class SerialConsoleHandlerTestCase(test_base.HyperVBaseTestCase):
         mock_serial_proxy = mock_serial_proxy_class.return_value
 
         mock_acquire_port.return_value = mock.sentinel.port
-        self.flags(proxyclient_address=mock.sentinel.host,
+        self.flags(proxyclient_address='127.0.0.3',
                    group='serial_console')
 
         self._consolehandler._setup_serial_proxy_handler()
 
         mock_serial_proxy_class.assert_called_once_with(
             mock.sentinel.instance_name,
-            mock.sentinel.host, mock.sentinel.port,
+            '127.0.0.3', mock.sentinel.port,
             mock_input_queue,
             mock_output_queue,
             mock_client_connected)
