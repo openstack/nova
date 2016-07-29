@@ -415,9 +415,11 @@ class MoveClaimTestCase(ClaimTestCase):
                                      limits=limits)
         return get_claim()
 
-    def test_abort(self):
+    @mock.patch('nova.objects.Instance.drop_migration_context')
+    def test_abort(self, mock_drop):
         claim = self._abort()
         self.assertTrue(claim.tracker.rcalled)
+        mock_drop.assert_called_once_with()
 
     def test_image_meta(self):
         claim = self._claim()

@@ -31,6 +31,7 @@ import nova
 from nova.compute import build_results
 from nova.compute import manager
 from nova.compute import power_state
+from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
@@ -4683,6 +4684,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
+            self.instance.migration_context = objects.MigrationContext()
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['host']
             self.compute.finish_revert_resize(context=self.context,
@@ -4693,6 +4695,73 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.instance, 'nw_info', mock.ANY, mock.ANY)
 
         do_test()
+
+    def test_finish_revert_resize_migration_context(self):
+        fake_rt = resource_tracker.ResourceTracker(None, None, None)
+        fake_rt.tracked_migrations[self.instance['uuid']] = (
+            self.migration, None)
+
+        @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
+        @mock.patch.object(fake_rt, '_get_instance_type', return_value=None)
+        @mock.patch.object(self.instance, 'revert_migration_context')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
+        @mock.patch.object(self.compute, '_is_instance_storage_shared')
+        @mock.patch.object(self.compute, '_instance_update')
+        @mock.patch.object(self.compute, '_get_resource_tracker',
+                           return_value=fake_rt)
+        @mock.patch.object(self.compute.driver, 'destroy')
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
+        @mock.patch.object(self.compute.network_api, 'migrate_instance_start')
+        @mock.patch.object(compute_utils, 'notify_usage_exists')
+        @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        def do_revert_resize(mock_get_by_instance_uuid,
+                             mock_migration_save,
+                             mock_notify_usage_exists,
+                             mock_migrate_instance_start,
+                             mock_setup_networks_on_host,
+                             mock_destroy,
+                             mock_get_resource_tracker,
+                             mock_instance_update,
+                             mock_is_instance_storage_shared,
+                             mock_get_instance_nw_info,
+                             mock_revert_migration_context,
+                             mock_get_itype,
+                             mock_finish_revert):
+
+            self.instance.migration_context = objects.MigrationContext()
+            self.migration.source_compute = self.instance['host']
+            self.migration.source_node = self.instance['node']
+
+            self.compute.revert_resize(context=self.context,
+                                       migration=self.migration,
+                                       instance=self.instance,
+                                       reservations=None)
+            self.assertIsNotNone(self.instance.migration_context)
+
+        @mock.patch.object(self.compute, "_notify_about_instance_usage")
+        @mock.patch.object(self.compute, "_set_instance_info")
+        @mock.patch.object(self.instance, 'save')
+        @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
+        @mock.patch.object(self.compute.network_api, 'migrate_instance_finish')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
+        def do_finish_revert_resize(mock_get_instance_nw_info,
+                                    mock_instance_finish,
+                                    mock_setup_network,
+                                    mock_mig_save,
+                                    mock_inst_save,
+                                    mock_set,
+                                    mock_notify):
+            self.compute.finish_revert_resize(context=self.context,
+                                              instance=self.instance,
+                                              reservations=None,
+                                              migration=self.migration)
+            self.assertIsNone(self.instance.migration_context)
+
+        do_revert_resize()
+        do_finish_revert_resize()
 
     def test_consoles_enabled(self):
         self.flags(enabled=False, group='vnc')
