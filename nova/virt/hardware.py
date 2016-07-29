@@ -981,7 +981,6 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
 
 def _numa_get_flavor_cpu_map_list(flavor):
     hw_numa_cpus = []
-    hw_numa_cpus_set = False
     extra_specs = flavor.get("extra_specs", {})
     for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
         cpuprop = "hw:numa_cpus.%d" % cellid
@@ -989,9 +988,8 @@ def _numa_get_flavor_cpu_map_list(flavor):
             break
         hw_numa_cpus.append(
             parse_cpu_spec(extra_specs[cpuprop]))
-        hw_numa_cpus_set = True
 
-    if hw_numa_cpus_set:
+    if hw_numa_cpus:
         return hw_numa_cpus
 
 
@@ -1010,16 +1008,14 @@ def _numa_get_cpu_map_list(flavor, image_meta):
 
 def _numa_get_flavor_mem_map_list(flavor):
     hw_numa_mem = []
-    hw_numa_mem_set = False
     extra_specs = flavor.get("extra_specs", {})
     for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
         memprop = "hw:numa_mem.%d" % cellid
         if memprop not in extra_specs:
             break
         hw_numa_mem.append(int(extra_specs[memprop]))
-        hw_numa_mem_set = True
 
-    if hw_numa_mem_set:
+    if hw_numa_mem:
         return hw_numa_mem
 
 
