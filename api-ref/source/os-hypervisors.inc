@@ -17,7 +17,9 @@ List Hypervisors
 
 Lists hypervisors.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -54,7 +56,9 @@ List Hypervisors Details
 
 Lists hypervisors details.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -114,7 +118,9 @@ Show Hypervisor Statistics
 
 Shows summary statistics for all hypervisors over all compute nodes.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions through the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -151,8 +157,9 @@ Show Hypervisor Details
 
 Shows details for a hypervisor.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
-ugh the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -211,8 +218,9 @@ Show Hypervisor Uptime
 
 Shows the uptime for a hypervisor.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
-ugh the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response codes: 200
 
@@ -249,8 +257,9 @@ Search Hypervisor
 
 Search hypervisor by given hypervisor id.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
-ugh the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response code: 200
 
@@ -286,8 +295,9 @@ List Hypervisor Servers
 
 List all servers belong to given hypervisor.
 
-Policy defaults enable only users with the administrative role to perform this operation. Cloud providers can change these permissions thro
-ugh the ``policy.json`` file.
+Policy defaults enable only users with the administrative role to perform
+this operation. Cloud providers can change these permissions through
+the ``policy.json`` file.
 
 Normal response code: 200
 

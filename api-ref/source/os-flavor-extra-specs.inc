@@ -125,7 +125,7 @@ Updates an extra spec, by key, for a flavor, by ID.
 
 Normal response codes: 200
 
-Error response codes: badRequest(400), uauthorized(401), forbidden(403)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 itemNotFound(404), conflict(409)
 
 Request

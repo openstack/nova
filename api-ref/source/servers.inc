@@ -544,7 +544,7 @@ The server usage information appears in the ``OS-SRV-USG:launched_at`` and ``OS-
 
 To hide ``addresses`` information for instances in a certain state, set the ``osapi_hide_server_address_states`` configuration option. Set this option to a valid VM state in the ``nova.conf`` configuration file.
 
-HostId is unique peraccount and is not globally unique.
+HostId is unique per account and is not globally unique.
 
 Preconditions
 

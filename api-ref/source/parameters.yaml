@@ -3182,7 +3182,7 @@ period_beginning:
   type: string
 period_ending:
   description: |
-    The ending time of the instance usgae audit period.
+    The ending time of the instance usage audit period.
     For example, ``2016-06-01 00:00:00``.
   in: body
   required: true

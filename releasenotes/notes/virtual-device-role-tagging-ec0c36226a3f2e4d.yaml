@@ -1,7 +1,7 @@
 ---
 features:
   - |
-    The 2.32 microverison adds support for virtual device
+    The 2.32 microversion adds support for virtual device
     role tagging. Device role tagging is an answer to the
     question 'Which device is which, inside the guest?' When
     booting an instance, an optional arbitrary 'tag'
