@@ -49,7 +49,7 @@ class MigrationTask(base.TaskBase):
         # scheduler.utils methods use directly the NovaObject.
         self.request_spec = objects.RequestSpec.from_components(
             self.context, self.instance.uuid, image,
-            self.instance.flavor, self.instance.numa_topology,
+            self.flavor, self.instance.numa_topology,
             self.instance.pci_requests, legacy_props, None,
             self.instance.availability_zone)
         # NOTE(sbauza): Force_hosts/nodes needs to be reset
