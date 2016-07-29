@@ -16,6 +16,7 @@
 import mock
 from oslo_utils import versionutils
 
+from nova import exception
 from nova import objects
 from nova.tests.functional.api_sample_tests import test_servers
 
@@ -75,6 +76,19 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
         # Get api samples to server live migrate request.
         self._check_post_live_migrate_server()
 
+    def test_live_migrate_compute_host_not_found(self):
+        hostname = 'dummy-host'
+
+        def fake_execute(_self):
+            raise exception.ComputeHostNotFound(host=hostname)
+        self.stub_out('nova.conductor.tasks.live_migrate.'
+                      'LiveMigrationTask._execute', fake_execute)
+
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'live-migrate-server',
+                                 {'hostname': hostname})
+        self.assertEqual(400, response.status_code)
+
 
 class MigrateServerSamplesJsonTestV225(MigrateServerSamplesJsonTest):
     sample_dir = "os-migrate-server"
@@ -113,3 +127,17 @@ class MigrateServerSamplesJsonTestV230(MigrateServerSamplesJsonTest):
         self._check_post_live_migrate_server(
             req_subs={'hostname': self.compute.host,
                       'force': 'True'})
+
+    def test_live_migrate_compute_host_not_found(self):
+        hostname = 'dummy-host'
+
+        def fake_execute(_self):
+            raise exception.ComputeHostNotFound(host=hostname)
+        self.stub_out('nova.conductor.tasks.live_migrate.'
+                      'LiveMigrationTask._execute', fake_execute)
+
+        response = self._do_post('servers/%s/action' % self.uuid,
+                                 'live-migrate-server',
+                                 {'hostname': hostname,
+                                  'force': 'False'})
+        self.assertEqual(400, response.status_code)
