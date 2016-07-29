@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright (c) 2016 Intel, Inc.
 # Copyright (c) 2013 OpenStack Foundation
 # All Rights Reserved.
@@ -45,14 +38,15 @@ Possible values:
     cfg.BoolOpt(
         'notify_api_faults',
         default=False,
-        help="If set, send api.fault notifications on caught exceptions in "
-             "the API service."),
+        help="""
+If enabled, send api.fault notifications on caught exceptions in the
+API service.
+"""),
 
     cfg.StrOpt(
         'default_notification_level',
         default='INFO',
-        choices=('DEBUG', 'INFO', 'WARN',
-                 'ERROR', 'CRITICAL'),
+        choices=('DEBUG', 'INFO', 'WARN', 'ERROR', 'CRITICAL'),
         help="Default notification level for outgoing notifications."),
 
     cfg.StrOpt(
@@ -64,7 +58,8 @@ notifications using different publisher, change this value accordingly.
 
 Possible values:
 
-* String with valid IP address. Default is IPv4 address of this host.
+* Defaults to the IPv4 address of this host, but it can be any valid
+  oslo.messaging publisher_id
 
 Related options:
 
@@ -77,5 +72,6 @@ def register_opts(conf):
     conf.register_opts(ALL_OPTS)
 
 
+# TODO(johngarbutt): we should move this to a notification group.
 def list_opts():
     return {'DEFAULT': ALL_OPTS}
