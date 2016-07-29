@@ -3553,9 +3553,6 @@ class ComputeManager(manager.Manager):
 
         with self._error_out_instance_on_exception(context, instance,
                                                    quotas=quotas):
-            network_info = self.network_api.get_instance_nw_info(context,
-                                                                 instance)
-
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
@@ -3578,6 +3575,12 @@ class ComputeManager(manager.Manager):
 
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
+            migration_p = obj_base.obj_to_primitive(migration)
+            self.network_api.migrate_instance_finish(context,
+                                                     instance,
+                                                     migration_p)
+            network_info = self.network_api.get_instance_nw_info(context,
+                                                                 instance)
 
             block_device_info = self._get_instance_block_device_info(
                     context, instance, refresh_conn_info=True)
@@ -3589,11 +3592,6 @@ class ComputeManager(manager.Manager):
 
             instance.launched_at = timeutils.utcnow()
             instance.save(expected_task_state=task_states.RESIZE_REVERTING)
-
-            migration_p = obj_base.obj_to_primitive(migration)
-            self.network_api.migrate_instance_finish(context,
-                                                     instance,
-                                                     migration_p)
 
             # if the original vm state was STOPPED, set it back to STOPPED
             LOG.info(_LI("Updating instance to original state: '%s'"),

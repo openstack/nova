@@ -4604,6 +4604,47 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_revert_resize_instance_destroy_disks_non_shared_storage(self):
         self._test_revert_resize_instance_destroy_disks(is_shared=False)
 
+    def test_finish_revert_resize_network_calls_order(self):
+        self.nw_info = None
+
+        def _migrate_instance_finish(context, instance, migration):
+            self.nw_info = 'nw_info'
+
+        def _get_instance_nw_info(context, instance):
+            return self.nw_info
+
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute.driver, 'finish_revert_migration')
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
+                           side_effect=_get_instance_nw_info)
+        @mock.patch.object(self.compute.network_api, 'migrate_instance_finish',
+                           side_effect=_migrate_instance_finish)
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
+        @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(self.instance, 'save')
+        @mock.patch.object(self.compute, '_set_instance_info')
+        @mock.patch.object(compute_utils, 'notify_about_instance_usage')
+        def do_test(notify_about_instance_usage,
+                    set_instance_info,
+                    instance_save,
+                    migration_save,
+                    setup_networks_on_host,
+                    migrate_instance_finish,
+                    get_instance_nw_info,
+                    finish_revert_migration,
+                    get_resource_tracker):
+
+            self.migration.source_compute = self.instance['host']
+            self.migration.source_node = self.instance['host']
+            self.compute.finish_revert_resize(context=self.context,
+                                              migration=self.migration,
+                                              instance=self.instance,
+                                              reservations=None)
+            finish_revert_migration.assert_called_with(self.context,
+                self.instance, 'nw_info', mock.ANY, mock.ANY)
+
+        do_test()
+
     def test_consoles_enabled(self):
         self.flags(enabled=False, group='vnc')
         self.flags(enabled=False, group='spice')
