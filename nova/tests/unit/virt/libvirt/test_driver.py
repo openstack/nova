@@ -14,6 +14,7 @@
 #    under the License.
 
 from collections import deque
+from collections import OrderedDict
 import contextlib
 import copy
 import datetime
@@ -98,6 +99,7 @@ from nova.virt.libvirt import firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import migration as libvirt_migrate
 from nova.virt.libvirt.storage import dmcrypt
 from nova.virt.libvirt.storage import lvm
@@ -282,6 +284,86 @@ _fake_cpu_info = {
     },
     "features": ["feature1", "feature2"]
 }
+
+eph_default_ext = utils.get_hash_str(disk._DEFAULT_FILE_SYSTEM)[:7]
+
+
+def eph_name(size):
+    return ('ephemeral_%(size)s_%(ext)s' %
+            {'size': size, 'ext': eph_default_ext})
+
+
+def fake_disk_info_byname(instance, type='qcow2'):
+    """Return instance_disk_info corresponding accurately to the properties of
+    the given Instance object. The info is returned as an OrderedDict of
+    name->disk_info for each disk.
+
+    :param instance: The instance we're generating fake disk_info for.
+    :param type: libvirt's disk type.
+    :return: disk_info
+    :rtype: OrderedDict
+    """
+    instance_dir = os.path.join(CONF.instances_path, instance.uuid)
+
+    def instance_path(name):
+        return os.path.join(instance_dir, name)
+
+    disk_info = OrderedDict()
+
+    # root disk
+    if instance.image_ref is not None:
+        cache_name = imagecache.get_cache_fname(instance.image_ref)
+        disk_info['disk'] = {
+            'type': type,
+            'path': instance_path('disk'),
+            'virt_disk_size': instance.flavor.root_gb * units.Gi,
+            'backing_file': cache_name,
+            'disk_size': instance.flavor.root_gb * units.Gi,
+            'over_committed_disk_size': 0}
+
+    swap_mb = instance.flavor.swap
+    if swap_mb > 0:
+        disk_info['disk.swap'] = {
+            'type': type,
+            'path': instance_path('disk.swap'),
+            'virt_disk_size': swap_mb * units.Mi,
+            'backing_file': 'swap_%s' % swap_mb,
+            'disk_size': swap_mb * units.Mi,
+            'over_committed_disk_size': 0}
+
+    eph_gb = instance.flavor.ephemeral_gb
+    if eph_gb > 0:
+        disk_info['disk.local'] = {
+            'type': type,
+            'path': instance_path('disk.local'),
+            'virt_disk_size': eph_gb * units.Gi,
+            'backing_file': eph_name(eph_gb),
+            'disk_size': eph_gb * units.Gi,
+            'over_committed_disk_size': 0}
+
+    if instance.config_drive:
+        disk_info['disk.config'] = {
+            'type': 'raw',
+            'path': instance_path('disk.config'),
+            'virt_disk_size': 1024,
+            'backing_file': '',
+            'disk_size': 1024,
+            'over_committed_disk_size': 0}
+
+    return disk_info
+
+
+def fake_disk_info_json(instance, type='qcow2'):
+    """Return fake instance_disk_info corresponding accurately to the
+    properties of the given Instance object.
+
+    :param instance: The instance we're generating fake disk_info for.
+    :param type: libvirt's disk type.
+    :return: JSON representation of instance_disk_info for all disks.
+    :rtype: str
+    """
+    disk_info = fake_disk_info_byname(instance, type)
+    return jsonutils.dumps(disk_info.values())
 
 
 def _concurrency(signal, wait, done, target, is_block_dev=False):
@@ -594,8 +676,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     REQUIRES_LOCKING = True
 
-    _EPHEMERAL_20_DEFAULT = ('ephemeral_20_%s' %
-                             utils.get_hash_str(disk._DEFAULT_FILE_SYSTEM)[:7])
+    _EPHEMERAL_20_DEFAULT = eph_name(20)
 
     def setUp(self):
         super(LibvirtConnTestCase, self).setUp()
@@ -9338,22 +9419,16 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_images_and_backing_ephemeral_gets_created(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        disk_info = [
-            {u'backing_file': u'fake_image_backing_file',
-             u'disk_size': 10747904,
-             u'path': u'disk_path',
-             u'type': u'qcow2',
-             u'virt_disk_size': 25165824},
-            {u'backing_file': u'ephemeral_1_default',
-             u'disk_size': 393216,
-             u'over_committed_disk_size': 1073348608,
-             u'path': u'disk_eph_path',
-             u'type': u'qcow2',
-             u'virt_disk_size': 1073741824}]
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
         instance = objects.Instance(**self.test_instance)
+        disk_info_byname = fake_disk_info_byname(instance)
+        disk_info = disk_info_byname.values()
+
+        # Give the ephemeral disk a non-default name
+        disk_info_byname['disk.local']['backing_file'] = 'ephemeral_foo'
+
         with test.nested(
             mock.patch.object(drvr, '_fetch_instance_kernel_ramdisk'),
             mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
@@ -9363,23 +9438,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         ) as (fetch_kernel_ramdisk_mock, fetch_image_mock,
                 create_ephemeral_mock, verify_base_size_mock, disk_size_mock):
             drvr._create_images_and_backing(self.context, instance,
-                                            "/fake/instance/dir",
-                                            disk_info)
+                                            CONF.instances_path, disk_info)
             self.assertEqual(len(create_ephemeral_mock.call_args_list), 1)
+
+            root_backing, ephemeral_backing = [
+                os.path.join(base_dir, name)
+                for name in (disk_info_byname['disk']['backing_file'],
+                             'ephemeral_foo')
+            ]
+
             m_args, m_kwargs = create_ephemeral_mock.call_args_list[0]
-            self.assertEqual(
-                    os.path.join(base_dir, 'ephemeral_1_default'),
-                    m_kwargs['target'])
+            self.assertEqual(ephemeral_backing, m_kwargs['target'])
             self.assertEqual(len(fetch_image_mock.call_args_list), 1)
+
             m_args, m_kwargs = fetch_image_mock.call_args_list[0]
-            self.assertEqual(
-                    os.path.join(base_dir, 'fake_image_backing_file'),
-                    m_kwargs['target'])
+            self.assertEqual(root_backing, m_kwargs['target'])
+
             verify_base_size_mock.assert_has_calls([
-                mock.call(os.path.join(base_dir, 'fake_image_backing_file'),
-                          25165824),
-                mock.call(os.path.join(base_dir, 'ephemeral_1_default'),
-                          1073741824)
+                mock.call(root_backing, instance.flavor.root_gb * units.Gi),
+                mock.call(ephemeral_backing,
+                          instance.flavor.ephemeral_gb * units.Gi)
             ])
 
     def test_create_images_and_backing_disk_info_none(self):
@@ -15147,26 +15225,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         inst.update(params)
 
-        return objects.Instance(flavor=flavor,
-                                old_flavor=None, new_flavor=None,
-                                **inst)
-
-    @staticmethod
-    def _disk_info(type='qcow2', config_disk=False):
-        # 10G root and 512M swap disk
-        disk_info = [{'disk_size': 1, 'type': type,
-                      'virt_disk_size': 10737418240, 'path': '/test/disk',
-                      'backing_file': '/base/disk'},
-                     {'disk_size': 1, 'type': type,
-                      'virt_disk_size': 536870912, 'path': '/test/disk.swap',
-                      'backing_file': '/base/swap_512'}]
-
-        if config_disk:
-            disk_info.append({'disk_size': 1, 'type': 'raw',
-                              'virt_disk_size': 1024,
-                              'path': '/test/disk.config'})
-
-        return jsonutils.dumps(disk_info)
+        return fake_instance.fake_instance_obj(
+            self.context, expected_attrs=['metadata', 'system_metadata'],
+            flavor=flavor, **inst)
 
     def test_migrate_disk_and_power_off_exception(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
@@ -15224,7 +15285,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         .migrate_disk_and_power_off.
         """
 
-        disk_info = self._disk_info()
+        instance = self._create_instance(params=params_for_instance)
+        disk_info = fake_disk_info_json(instance)
 
         def fake_get_instance_disk_info(instance,
                                         block_device_info=None):
@@ -15253,17 +15315,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(libvirt_utils, 'copy_image', fake_copy_image)
 
-        ins_ref = self._create_instance(params=params_for_instance)
-
         # dest is different host case
         out = self.drvr.migrate_disk_and_power_off(
-               context.get_admin_context(), ins_ref, '10.0.0.2',
+               context.get_admin_context(), instance, '10.0.0.2',
                flavor_obj, None, block_device_info=block_device_info)
         self.assertEqual(out, disk_info)
 
         # dest is same host case
         out = self.drvr.migrate_disk_and_power_off(
-               context.get_admin_context(), ins_ref, '10.0.0.1',
+               context.get_admin_context(), instance, '10.0.0.1',
                flavor_obj, None, block_device_info=block_device_info)
         self.assertEqual(out, disk_info)
 
@@ -15309,7 +15369,11 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         """
         self.copy_or_move_swap_called = False
 
-        disk_info = self._disk_info()
+        # Original instance config
+        instance = self._create_instance({'flavor': {'root_gb': 10,
+                                                     'ephemeral_gb': 0}})
+
+        disk_info = fake_disk_info_json(instance)
         mock_get_disk_info.return_value = disk_info
         get_host_ip_addr.return_value = '10.0.0.1'
 
@@ -15327,10 +15391,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_execute.side_effect = fake_execute
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-
-        # Original instance config
-        instance = self._create_instance({'flavor': {'root_gb': 10,
-                                                     'ephemeral_gb': 0}})
 
         # Re-size fake instance to 20G root and 1024M swap disk
         flavor = {'root_gb': 20, 'ephemeral_gb': 0, 'swap': 1024}
@@ -15352,10 +15412,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         """Test for nova.virt.libvirt.libvirt_driver.LibvirtConnection
         .migrate_disk_and_power_off.
         """
+        instance = self._create_instance()
+        disk_info = fake_disk_info_json(instance)
 
         def fake_get_instance_disk_info(instance, xml=None,
                                         block_device_info=None):
-            return self._disk_info()
+            return disk_info
 
         def fake_destroy(instance):
             pass
@@ -15369,14 +15431,13 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(self.drvr, 'get_host_ip_addr',
                        fake_get_host_ip_addr)
 
-        ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
         flavor_obj = objects.Flavor(**flavor)
 
         # Migration is not implemented for LVM backed instances
         self.assertRaises(expected_exc,
               self.drvr.migrate_disk_and_power_off,
-              None, ins_ref, '10.0.0.1', flavor_obj, None)
+              None, instance, '10.0.0.1', flavor_obj, None)
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
@@ -15454,7 +15515,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance = self._create_instance()
         flavor = {'root_gb': 5, 'ephemeral_gb': 10}
         flavor_obj = objects.Flavor(**flavor)
-        mock_get_disk_info.return_value = self._disk_info()
+        mock_get_disk_info.return_value = fake_disk_info_json(instance)
 
         self.assertRaises(
             exception.InstanceFaultRollback,
@@ -15469,7 +15530,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 0}
         flavor_obj = objects.Flavor(**flavor)
-        mock_get_disk_info.return_value = self._disk_info()
+        mock_get_disk_info.return_value = fake_disk_info_json(instance)
 
         self.assertRaises(exception.InstanceFaultRollback,
                           self.drvr.migrate_disk_and_power_off,
@@ -15526,7 +15587,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # Old flavor, eph is 20, real disk is 3, target is 2, fail
         flavor = {'root_gb': 10, 'ephemeral_gb': 2}
         flavor_obj = objects.Flavor(**flavor)
-        mock_get_disk_info.return_value = self._disk_info()
+        mock_get_disk_info.return_value = fake_disk_info_json(instance)
 
         self.assertRaises(
             exception.InstanceFaultRollback,
@@ -15555,7 +15616,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                               mock_execuate):
 
         instance = self._create_instance()
-        disk_info = self._disk_info()
+        disk_info = fake_disk_info_json(instance)
         disk_info_text = jsonutils.loads(disk_info)
         instance_base = os.path.dirname(disk_info_text[0]['path'])
         flavor = {'root_gb': 10, 'ephemeral_gb': 25}
@@ -15750,7 +15811,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.stubs.Set(self.drvr, 'get_info',
                        fake_get_info)
 
-        ins_ref = self._create_instance()
+        instance = self._create_instance({'config_drive': str(True)})
 
         migration = objects.Migration()
         migration.source_compute = 'fake-source-compute'
@@ -15760,18 +15821,19 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         # Source disks are raw to test conversion
-        disk_info = self._disk_info(type='raw', config_disk=True)
+        disk_info = fake_disk_info_json(instance, type='raw')
 
         with mock.patch.object(self.drvr, '_disk_raw_to_qcow2',
                                autospec=True) as mock_raw_to_qcow2:
             self.drvr.finish_migration(
-                          context.get_admin_context(), migration, ins_ref,
+                          context.get_admin_context(), migration, instance,
                           disk_info, [], image_meta,
                           resize_instance, None, power_on)
 
-            # Assert that we converted the root and swap disks
-            convert_calls = [mock.call('/test/disk'),
-                             mock.call('/test/disk.swap')]
+            # Assert that we converted the root and ephemeral disks
+            instance_path = libvirt_utils.get_instance_path(instance)
+            convert_calls = [mock.call(os.path.join(instance_path, name))
+                             for name in ('disk', 'disk.local')]
             mock_raw_to_qcow2.assert_has_calls(convert_calls, any_order=True)
 
             # Implicitly assert that we did not convert the config disk
@@ -16501,7 +16563,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.guest.Guest')
     def test_rescue_config_drive(self, mock_guest, mock_make, mock_add,
                                  mock_save):
-        instance = self._create_instance()
+        instance = self._create_instance({'config_drive': str(True)})
         uuid = instance.uuid
         configdrive_path = uuid + '/disk.config.rescue'
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
