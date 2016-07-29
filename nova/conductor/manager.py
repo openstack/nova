@@ -166,6 +166,7 @@ class ComputeTaskManager(base.Base):
     @messaging.expected_exceptions(
         exception.NoValidHost,
         exception.ComputeServiceUnavailable,
+        exception.ComputeHostNotFound,
         exception.InvalidHypervisorType,
         exception.InvalidCPUInfo,
         exception.UnableToMigrateToSelf,

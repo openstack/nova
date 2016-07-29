@@ -102,6 +102,7 @@ class MigrateServerController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
+                exception.ComputeHostNotFound,
                 exception.InvalidHypervisorType,
                 exception.InvalidCPUInfo,
                 exception.UnableToMigrateToSelf,

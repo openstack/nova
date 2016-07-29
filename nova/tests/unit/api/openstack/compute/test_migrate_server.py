@@ -217,6 +217,10 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.ComputeServiceUnavailable(host='host'))
 
+    def test_migrate_live_compute_service_not_found(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.ComputeHostNotFound(host='host'))
+
     def test_migrate_live_invalid_hypervisor_type(self):
         self._test_migrate_live_failed_with_exception(
             exception.InvalidHypervisorType())
@@ -373,6 +377,9 @@ class MigrateServerTestsV234(MigrateServerTestsV230):
     # NOTE(tdurakov): for REST API version 2.34 and above, tests below are not
     # valid, as they are made in background.
     def test_migrate_live_compute_service_unavailable(self):
+        pass
+
+    def test_migrate_live_compute_service_not_found(self):
         pass
 
     def test_migrate_live_invalid_hypervisor_type(self):

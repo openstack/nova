@@ -1420,7 +1420,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                exc.InvalidCPUInfo(reason='dummy'),
                exc.UnableToMigrateToSelf(instance_id='dummy', host='dummy'),
                exc.InvalidLocalStorage(path='dummy', reason='dummy'),
-               exc.MigrationSchedulerRPCError(reason='dummy')]
+               exc.MigrationSchedulerRPCError(reason='dummy'),
+               exc.ComputeHostNotFound(host='dummy')]
         for ex in exs:
             self._test_migrate_server_deals_with_expected_exceptions(ex)
 
