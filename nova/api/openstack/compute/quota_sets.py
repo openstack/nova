@@ -18,9 +18,10 @@ import six
 import six.moves.urllib.parse as urlparse
 import webob
 
-from nova.api.openstack import api_version_request
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
+from nova.api.openstack.api_version_request \
+    import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import quota_sets
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -37,15 +38,6 @@ QUOTAS = quota.QUOTAS
 
 FILTERED_QUOTAS = ["fixed_ips", "floating_ips", "networks",
                    "security_group_rules", "security_groups"]
-
-max_proxy_api_version_obj = api_version_request.APIVersionRequest(
-    MAX_PROXY_API_SUPPORT_VERSION)
-api_version_without_proxy_api_obj = api_version_request.APIVersionRequest()
-api_version_without_proxy_api_obj.ver_major = (
-    max_proxy_api_version_obj.ver_major)
-api_version_without_proxy_api_obj.ver_minor = (
-    max_proxy_api_version_obj.ver_minor + 1)
-API_VERSION_WITHOUT_PROXY_API = api_version_without_proxy_api_obj.get_string()
 
 
 class QuotaSetsController(wsgi.Controller):
@@ -103,7 +95,7 @@ class QuotaSetsController(wsgi.Controller):
     def show(self, req, id):
         return self._show(req, id, [])
 
-    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION)  # noqa
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS)
 
@@ -121,7 +113,7 @@ class QuotaSetsController(wsgi.Controller):
     def detail(self, req, id):
         return self._detail(req, id, [])
 
-    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION)  # noqa
     @extensions.expected_errors(())
     def detail(self, req, id):
         return self._detail(req, id, FILTERED_QUOTAS)
@@ -141,7 +133,7 @@ class QuotaSetsController(wsgi.Controller):
     def update(self, req, id, body):
         return self._update(req, id, body, [])
 
-    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION)  # noqa
     @extensions.expected_errors(400)
     @validation.schema(quota_sets.update_v236)
     def update(self, req, id, body):
@@ -199,7 +191,7 @@ class QuotaSetsController(wsgi.Controller):
     def defaults(self, req, id):
         return self._defaults(req, id, [])
 
-    @wsgi.Controller.api_version(API_VERSION_WITHOUT_PROXY_API)  # noqa
+    @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION)  # noqa
     @extensions.expected_errors(())
     def defaults(self, req, id):
         return self._defaults(req, id, FILTERED_QUOTAS)
