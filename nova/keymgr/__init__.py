@@ -14,7 +14,6 @@
 #    under the License.
 
 
-from castellan import options as castellan_opts
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import importutils
@@ -25,8 +24,6 @@ from nova.i18n import _LW
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
-
-castellan_opts.set_defaults(CONF)
 
 # NOTE(kfarr): This line can be removed when a value is assigned in DevStack
 CONF.set_default('api_class', 'nova.keymgr.conf_key_mgr.ConfKeyManager',
