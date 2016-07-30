@@ -358,11 +358,11 @@ class ResourceTracker(object):
                 usage = self._get_usage_dict(
                         itype, numa_topology=numa_topology)
                 if self.pci_tracker:
-                    # free old allocated pci devices
-                    old_pci_devices = self._get_migration_context_resource(
-                        'pci_devices', instance, prefix='old_')
-                    if old_pci_devices:
-                        for pci_device in old_pci_devices:
+                    # free old/new allocated pci devices
+                    pci_devices = self._get_migration_context_resource(
+                        'pci_devices', instance, prefix=prefix)
+                    if pci_devices:
+                        for pci_device in pci_devices:
                             self.pci_tracker.free_device(pci_device, instance)
                 self._update_usage(usage, sign=-1)
 

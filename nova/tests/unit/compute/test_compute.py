@@ -5288,6 +5288,69 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(0, cell.cpu_usage)
             self.assertEqual(set(), cell.pinned_cpus)
 
+    def _test_resize_with_pci(self, method, expected_pci_addr):
+        instance = self._create_fake_instance_obj()
+        instance.old_flavor = instance.flavor
+        instance.new_flavor = instance.flavor
+
+        old_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0a:00.1')])
+
+        new_pci_devices = objects.PciDeviceList(
+            objects=[objects.PciDevice(vendor_id='1377',
+                                       product_id='0047',
+                                       address='0000:0b:00.1')])
+
+        if expected_pci_addr == old_pci_devices[0].address:
+            expected_pci_device = old_pci_devices[0]
+        else:
+            expected_pci_device = new_pci_devices[0]
+
+        migration = objects.Migration(context=self.context.elevated())
+        migration.instance_uuid = instance.uuid
+        migration.status = 'finished'
+        migration.migration_type = 'migration'
+        migration.source_node = NODENAME
+        migration.create()
+
+        migration_context = objects.MigrationContext()
+        migration_context.migration_id = migration.id
+        migration_context.old_pci_devices = old_pci_devices
+        migration_context.new_pci_devices = new_pci_devices
+
+        instance.pci_devices = old_pci_devices
+        instance.migration_context = migration_context
+        instance.vm_state = vm_states.RESIZED
+        instance.system_metadata = {}
+        instance.save()
+
+        self.rt.pci_tracker = mock.Mock()
+        self.rt.tracked_migrations[instance.uuid] = (migration,
+                                                     instance.flavor)
+
+        with test.nested(
+            mock.patch.object(self.compute.network_api,
+                              'setup_networks_on_host'),
+            mock.patch.object(self.compute.network_api,
+                              'migrate_instance_start'),
+            mock.patch.object(self.rt.pci_tracker,
+                              'free_device')
+            ) as (mock_setup, mock_migrate, mock_pci_free_device):
+            method(self.context, instance=instance,
+                                 migration=migration, reservations=[])
+            mock_pci_free_device.assert_called_once_with(
+                expected_pci_device, mock.ANY)
+
+    def test_confirm_resize_with_pci(self):
+        self._test_resize_with_pci(
+            self.compute.confirm_resize, '0000:0a:00.1')
+
+    def test_revert_resize_with_pci(self):
+        self._test_resize_with_pci(
+            self.compute.revert_resize, '0000:0b:00.1')
+
     @mock.patch.object(nova.quota.QUOTAS, 'commit')
     def _test_finish_revert_resize(self, mock_commit, power_on,
                                    remove_old_vm_state=False,
