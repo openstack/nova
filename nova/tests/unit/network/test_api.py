@@ -144,7 +144,7 @@ class ApiTestCase(test.TestCase):
             instance = objects.Instance(id=1, uuid=uuids.instance,
                                         project_id='project_id',
                                         host='host', system_metadata={},
-                                        flavor=flavor)
+                                        flavor=flavor, deleted=False)
             self.network_api.allocate_for_instance(
                 self.context, instance, 'vpn', requested_networks=None,
                 macs=macs)
@@ -565,7 +565,7 @@ class TestUpdateInstanceCache(test.NoDBTestCase):
     def setUp(self):
         super(TestUpdateInstanceCache, self).setUp()
         self.context = context.get_admin_context()
-        self.instance = objects.Instance(uuid=FAKE_UUID)
+        self.instance = objects.Instance(uuid=FAKE_UUID, deleted=False)
         vifs = [network_model.VIF(id='super_vif')]
         self.nw_info = network_model.NetworkInfo(vifs)
         self.nw_json = fields.NetworkModel.to_primitive(self, 'network_info',
@@ -583,6 +583,12 @@ class TestUpdateInstanceCache(test.NoDBTestCase):
         db_mock.assert_called_once_with(self.context, self.instance.uuid,
                                         {'network_info': self.nw_json})
         self.assertEqual(self.nw_info, self.instance.info_cache.network_info)
+
+    def test_update_nw_info_none_instance_deleted(self, db_mock, api_mock):
+        instance = objects.Instance(uuid=FAKE_UUID, deleted=True)
+        base_api.update_instance_cache_with_nw_info(
+            api_mock, self.context, instance)
+        self.assertFalse(api_mock.called)
 
     def test_update_nw_info_one_network(self, db_mock, api_mock):
         info_cache = copy.deepcopy(fake_info_cache)
