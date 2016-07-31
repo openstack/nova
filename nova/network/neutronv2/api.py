@@ -1535,7 +1535,7 @@ class API(base_api.NetworkAPI):
         # from the hypervisor.  So we just check the quota and return
         # how many of the requested number of instances can be created
         if ports_needed_per_instance:
-            quotas = neutron.show_quota(tenant_id=context.project_id)['quota']
+            quotas = neutron.show_quota(context.project_id)['quota']
             if quotas.get('port', -1) == -1:
                 # Unlimited Port Quota
                 return num_instances
