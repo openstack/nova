@@ -8,7 +8,7 @@
 
    These APIs are proxy calls to the Network service. Nova has
    deprecated all the proxy APIs and users should use the native APIs
-   instead.
+   instead. These will fail with a 404 after microversion 2.35.
 
 Shows data for a fixed IP, such as host name, CIDR, and address. Also,
 reserves and releases a fixed IP address.

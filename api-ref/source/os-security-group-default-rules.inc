@@ -11,6 +11,7 @@
 
    This API only available with ``nova-network`` which is
    deprecated. It should be avoided in any new applications.
+   These will fail with a 404 after microversion 2.35.
 
 Lists, shows information for, and creates default security group rules.
 
