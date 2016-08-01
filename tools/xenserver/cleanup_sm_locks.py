@@ -115,8 +115,8 @@ def main():
     if options.dry_run:
         print("** Dry Run **")
 
-    print("Total locks removed: ", lockpaths_removed)
-    print("Total namespaces removed: ", nspaths_removed)
+    print("Total locks removed: %d" % lockpaths_removed)
+    print("Total namespaces removed: %d" % nspaths_removed)
 
 
 if __name__ == '__main__':
