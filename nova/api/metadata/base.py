@@ -416,7 +416,7 @@ class InstanceMetadata(object):
                     device_metadata['mac'] = device.mac
                 elif isinstance(device, metadata_obj.DiskMetadata):
                     device_metadata['type'] = 'disk'
-                    # serial and path are optional paramenters
+                    # serial and path are optional parameters
                     if 'serial' in device:
                         device_metadata['serial'] = device.serial
                     if 'path' in device:

@@ -33,7 +33,7 @@ create = {
                 # following parameters:
                 #  "qpid://<username>:<password>@<rpc_host>:<rpc_port>/"
                 #  or
-                #  "rabiit://<username>:<password>@<rpc_host>:<rpc_port>/"
+                #  "rabbit://<username>:<password>@<rpc_host>:<rpc_port>/"
                 # Then the url is stored into transport_url of cells table
                 # which is defined with String(255).
                 'username': {
