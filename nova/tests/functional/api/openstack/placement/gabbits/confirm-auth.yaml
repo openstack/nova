@@ -1,0 +1,22 @@
+#
+# Confirm that the noauth handler is causing a 401 when no fake
+# token is provided.
+#
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        accept: application/json
+
+tests:
+    - name: no token gets 401
+      GET: /
+      status: 401
+
+    - name: with token 200
+      GET: /
+      request_headers:
+          x-auth-token: admin:admin
+      status: 200

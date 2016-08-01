@@ -1,0 +1,73 @@
+# Tests to build microversion functionality behavior and confirm
+# it is present and behaving as expected.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        accept: application/json
+        x-auth-token: user
+
+tests:
+- name: root has microversion header
+  GET: /
+  response_headers:
+      vary: /OpenStack-API-Version/
+      openstack-api-version: /^placement \d+\.\d+$/
+
+- name: root has microversion info
+  GET: /
+  response_json_paths:
+      $.versions[0].max_version: /^\d+\.\d+$/
+      $.versions[0].min_version: /^\d+\.\d+$/
+      $.versions[0].id: v1.0
+
+- name: unavailable microversion raises 406
+  GET: /
+  request_headers:
+      openstack-api-version: placement 0.5
+  status: 406
+  response_headers:
+      content-type: /application/json/
+  response_json_paths:
+      $.errors.[0].title: Not Acceptable
+      $.errors.[0].max_version: /^\d+\.\d+$/
+      $.errors.[0].min_version: /^\d+\.\d+$/
+  response_strings:
+      - "Unacceptable version header: 0.5"
+
+- name: latest microversion is 1.0
+  GET: /
+  request_headers:
+      openstack-api-version: placement latest
+  response_headers:
+      vary: /OpenStack-API-Version/
+      openstack-api-version: placement 1.0
+
+- name: other accept header bad version
+  GET: /
+  request_headers:
+      accept: text/html
+      openstack-api-version: placement 0.5
+  status: 406
+  response_headers:
+      content-type: /text/html/
+  response_strings:
+      - "Unacceptable version header: 0.5"
+
+- name: bad format string raises 400
+  GET: /
+  request_headers:
+      openstack-api-version: placement pony.horse
+  status: 400
+  response_strings:
+      - "invalid version string: pony.horse"
+
+- name: bad format multidot raises 400
+  GET: /
+  request_headers:
+      openstack-api-version: placement 1.2.3
+  status: 400
+  response_strings:
+      - "invalid version string: 1.2.3"
