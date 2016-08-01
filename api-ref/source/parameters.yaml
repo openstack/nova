@@ -508,7 +508,7 @@ keypair_user:
   required: false
   type: string
   description: |
-    This allows adminstrative users to list key-pairs of specified
+    This allows administrative users to list key-pairs of specified
     user ID.
   min_version: 2.10
 limit:

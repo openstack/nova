@@ -215,8 +215,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual("ns0:ParaVirtualSCSIController",
                          config_spec.device.obj_name)
 
-    def test_create_controller_spec_with_specfic_bus_number(self):
-        # Test controller spec with specifc bus number rather default 0
+    def test_create_controller_spec_with_specific_bus_number(self):
+        # Test controller spec with specific bus number rather default 0
         config_spec = vm_util.create_controller_spec(fake.FakeFactory(), -101,
                           adapter_type=constants.ADAPTER_TYPE_LSILOGICSAS,
                           bus_number=1)

@@ -477,7 +477,7 @@ class InstanceMetadata(object):
         if self._check_os_version(HAVANA, version):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
 
-            # NOTE(mikal): backwards compatability... If the deployer has
+            # NOTE(mikal): backwards compatibility... If the deployer has
             # specified providers, and one of those providers is StaticJSON,
             # then do that thing here. Otherwise, if the deployer has
             # specified an old style driver here, then use that. This second
