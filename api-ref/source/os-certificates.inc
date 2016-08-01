@@ -1,8 +1,8 @@
 .. -*- rst -*-
 
-=====================================
- Root certificates (os-certificates)
-=====================================
+=================================================
+ Root certificates (os-certificates) (DEPRECATED)
+=================================================
 
 Creates and shows details for a root certificate.
 
