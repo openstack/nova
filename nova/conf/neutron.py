@@ -1,8 +1,4 @@
-# needs:fix_opt_description
 # needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
 
 
 # Copyright 2016 OpenStack Foundation
@@ -27,29 +23,27 @@ from oslo_config import cfg
 
 NEUTRON_GROUP = 'neutron'
 
-neutron_group = cfg.OptGroup(NEUTRON_GROUP, title='Neutron Options')
+neutron_group = cfg.OptGroup(
+    NEUTRON_GROUP,
+    title='Neutron Options',
+    help="""
+Configuration options for neutron (network connectivity as a service).
+""")
 neutron_options = None
 
 neutron_opts = [
-    cfg.StrOpt(
-        'url',
+    cfg.URIOpt('url',
         default='http://127.0.0.1:9696',
         help="""
 This option specifies the URL for connecting to Neutron.
 
 Possible values:
 
-  * The default is 'http://127.0.0.1:9696' however any valid URL that
-    points to the Neutron API service is appropriate here. This typically
-    matches the URL returned for the 'network' service type from the
-    Keystone service catalog.
-
-Related options:
-
-  * None
+* Any valid URL that points to the Neutron API service is appropriate here.
+  This typically matches the URL returned for the 'network' service type
+  from the Keystone service catalog.
 """),
-    cfg.StrOpt(
-        'region_name',
+    cfg.StrOpt('region_name',
         default='RegionOne',
         help="""
 Region name for connecting to Neutron in admin context.
@@ -60,17 +54,8 @@ services need to be created in Keystone with two different regions and
 associate corresponding endpoints to those services. When requests are made
 to Keystone, the Keystone service uses the region_name to determine the
 region the request is coming from.
-
-Possible values:
-
-  * Any string representing a region name.
-
-Related options:
-
-  * None
 """),
-    cfg.StrOpt(
-        'ovs_bridge',
+    cfg.StrOpt('ovs_bridge',
          default='br-int',
          help="""
 Specifies the name of an integration bridge interface used by OpenvSwitch.
@@ -78,55 +63,33 @@ This option is used only if Neutron does not specify the OVS bridge name.
 
 Possible values:
 
-  * Any string representing OVS bridge name.
-  * default value is 'br-int'
-
-Related options:
-
-  * None
+* Any string representing OVS bridge name.
 """),
-    cfg.IntOpt(
-        'extension_sync_interval',
+    cfg.IntOpt('extension_sync_interval',
          default=600,
+         min=0,
          help="""
-Number of seconds to wait before querying Neutron for extensions.
-After this number of seconds the next time Nova needs to create a resource in
-Neutron it will requery Neutron for the extensions that it has loaded.
-
-Possible values:
-
-  * Any positive Integer value
-  * default value is 600
-
-Related options:
-
-  * None
+Integer value representing the number of seconds to wait before querying
+Neutron for extensions.  After this number of seconds the next time Nova
+needs to create a resource in Neutron it will requery Neutron for the
+extensions that it has loaded.  Setting value to 0 will refresh the
+extensions with no wait.
 """),
 ]
 
 metadata_proxy_opts = [
-    cfg.BoolOpt(
-        "service_metadata_proxy",
+    cfg.BoolOpt("service_metadata_proxy",
         default=False,
         help="""
 When set to True, this option indicates that Neutron will be used to proxy
 metadata requests and resolve instance ids. Otherwise, the instance ID must be
 passed to the metadata request in the 'X-Instance-ID' header.
 
-Possible values:
+Related options:
 
-    True, False (default)
-
-* Services which consume this:
-
-    ``nova-api``
-
-* Related options:
-
-    metadata_proxy_shared_secret
+* metadata_proxy_shared_secret
 """),
-     cfg.StrOpt(
-        "metadata_proxy_shared_secret",
+     cfg.StrOpt("metadata_proxy_shared_secret",
         default="",
         secret=True,
         help="""
@@ -134,17 +97,9 @@ This option holds the shared secret string used to validate proxy requests to
 Neutron metadata requests. In order to be used, the
 'X-Metadata-Provider-Signature' header must be supplied in the request.
 
-Possible values:
+Related options:
 
-    Any string
-
-* Services which consume this:
-
-    ``nova-api``
-
-* Related options:
-
-    service_metadata_proxy
+* service_metadata_proxy
 """),
 ]
 
