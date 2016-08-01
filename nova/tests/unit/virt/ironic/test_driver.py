@@ -29,7 +29,9 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
+from nova import hash_ring
 from nova import objects
+from nova import servicegroup
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import utils
@@ -47,6 +49,8 @@ from nova.virt.ironic import ironic_states
 CONF = cfg.CONF
 
 FAKE_CLIENT = ironic_utils.FakeClient()
+
+SENTINEL = object()
 
 
 class FakeClientWrapper(cw.IronicClientWrapper):
@@ -79,6 +83,10 @@ def _get_stats():
     return {'cpu_arch': 'x86_64'}
 
 
+def _make_compute_service(hostname):
+    return objects.Service(host=hostname)
+
+
 FAKE_CLIENT_WRAPPER = FakeClientWrapper()
 
 
@@ -87,7 +95,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
     @mock.patch.object(cw, 'IronicClientWrapper',
                        lambda *_: FAKE_CLIENT_WRAPPER)
-    def setUp(self):
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
+    @mock.patch.object(servicegroup, 'API', autospec=True)
+    def setUp(self, mock_sg, mock_hash):
         super(IronicDriverTestCase, self).setUp()
 
         self.driver = ironic_driver.IronicDriver(None)
@@ -695,25 +705,38 @@ class IronicDriverTestCase(test.NoDBTestCase):
             provision_state=ironic_states.AVAILABLE)
         self.assertFalse(self.driver._node_resources_used(unused_node))
 
+    @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
     @mock.patch.object(FAKE_CLIENT.node, 'list')
-    def test_get_available_nodes(self, mock_list):
+    def test_get_available_nodes(self, mock_list, mock_gi):
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   uuid=self.instance_uuid)
+        mock_gi.return_value = [instance.uuid]
         node_dicts = [
             # a node in maintenance /w no instance and power OFF
             {'uuid': uuidutils.generate_uuid(),
              'maintenance': True,
-             'power_state': ironic_states.POWER_OFF},
-            # a node /w instance and power ON
+             'power_state': ironic_states.POWER_OFF,
+             'expected': True},
+            # a node /w instance on this compute daemon and power ON
             {'uuid': uuidutils.generate_uuid(),
              'instance_uuid': self.instance_uuid,
-             'power_state': ironic_states.POWER_ON},
+             'power_state': ironic_states.POWER_ON,
+             'expected': True},
+            # a node /w instance on another compute daemon and power ON
+            {'uuid': uuidutils.generate_uuid(),
+             'instance_uuid': uuidutils.generate_uuid(),
+             'power_state': ironic_states.POWER_ON,
+             'expected': False},
             # a node not in maintenance /w no instance and bad power state
             {'uuid': uuidutils.generate_uuid(),
-             'power_state': ironic_states.ERROR},
+             'power_state': ironic_states.ERROR,
+             'expected': True},
         ]
         nodes = [ironic_utils.get_test_node(**n) for n in node_dicts]
         mock_list.return_value = nodes
         available_nodes = self.driver.get_available_nodes()
-        expected_uuids = [n['uuid'] for n in node_dicts]
+        mock_gi.assert_called_once_with(mock.ANY, CONF.host)
+        expected_uuids = [n['uuid'] for n in node_dicts if n['expected']]
         self.assertEqual(sorted(expected_uuids), sorted(available_nodes))
 
     @mock.patch.object(FAKE_CLIENT.node, 'get')
@@ -1696,3 +1719,175 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_cd_builder.assert_called_once_with(instance_md='fake-instance')
         mock_instance_meta.assert_called_once_with(self.instance,
             network_info=self.network_info, extra_md={}, content=None)
+
+
+class HashRingTestCase(test.NoDBTestCase):
+    @mock.patch.object(servicegroup, 'API', autospec=True)
+    def setUp(self, mock_sg):
+        super(HashRingTestCase, self).setUp()
+
+        self.driver = ironic_driver.IronicDriver(None)
+        self.driver.virtapi = fake.FakeVirtAPI()
+        self.ctx = nova_context.get_admin_context()
+        self.mock_is_up = (
+            self.driver.servicegroup_api.service_is_up)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
+    def test_hash_ring_refreshed_on_init(self, mock_hr):
+        ironic_driver.IronicDriver(None)
+        mock_hr.assert_called_once_with(mock.ANY)
+
+    @mock.patch.object(hash_ring, 'HashRing')
+    @mock.patch.object(objects.ServiceList, 'get_all_computes_by_hv_type')
+    def _test__refresh_hash_ring(self, services, expected_hosts, mock_services,
+                                 mock_hash_ring):
+        services = [_make_compute_service(host) for host in services]
+        is_up_calls = [mock.call(svc) for svc in services]
+        self.flags(host='host1')
+        mock_services.return_value = services
+        mock_hash_ring.return_value = SENTINEL
+
+        self.driver._refresh_hash_ring(self.ctx)
+
+        mock_services.assert_called_once_with(
+            mock.ANY, self.driver._get_hypervisor_type())
+        mock_hash_ring.assert_called_once_with(expected_hosts)
+        self.assertEqual(SENTINEL, self.driver.hash_ring)
+        self.mock_is_up.assert_has_calls(is_up_calls)
+
+    def test__refresh_hash_ring_one_compute(self):
+        services = ['host1']
+        expected_hosts = {'host1'}
+        self.mock_is_up.return_value = True
+        self._test__refresh_hash_ring(services, expected_hosts)
+
+    def test__refresh_hash_ring_many_computes(self):
+        services = ['host1', 'host2', 'host3']
+        expected_hosts = {'host1', 'host2', 'host3'}
+        self.mock_is_up.return_value = True
+        self._test__refresh_hash_ring(services, expected_hosts)
+
+    def test__refresh_hash_ring_one_compute_new_compute(self):
+        services = []
+        expected_hosts = {'host1'}
+        self.mock_is_up.return_value = True
+        self._test__refresh_hash_ring(services, expected_hosts)
+
+    def test__refresh_hash_ring_many_computes_new_compute(self):
+        services = ['host2', 'host3']
+        expected_hosts = {'host1', 'host2', 'host3'}
+        self.mock_is_up.return_value = True
+        self._test__refresh_hash_ring(services, expected_hosts)
+
+    def test__refresh_hash_ring_some_computes_down(self):
+        services = ['host1', 'host2', 'host3', 'host4']
+        expected_hosts = {'host1', 'host2', 'host4'}
+        self.mock_is_up.side_effect = [True, True, False, True]
+        self._test__refresh_hash_ring(services, expected_hosts)
+
+
+class NodeCacheTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(NodeCacheTestCase, self).setUp()
+
+        self.driver = ironic_driver.IronicDriver(None)
+        self.driver.virtapi = fake.FakeVirtAPI()
+        self.ctx = nova_context.get_admin_context()
+
+        self.host = 'host1'
+        self.flags(host=self.host)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
+    @mock.patch.object(hash_ring.HashRing, 'get_hosts')
+    @mock.patch.object(ironic_driver.IronicDriver, '_get_node_list')
+    @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')
+    def _test__refresh_cache(self, instances, nodes, hosts, mock_instances,
+                             mock_nodes, mock_hosts, mock_hash_ring):
+        mock_instances.return_value = instances
+        mock_nodes.return_value = nodes
+        mock_hosts.side_effect = hosts
+        self.driver.node_cache = {}
+        self.driver.node_cache_time = None
+
+        self.driver._refresh_cache()
+
+        mock_hash_ring.assert_called_once_with(mock.ANY)
+        mock_instances.assert_called_once_with(mock.ANY, self.host)
+        mock_nodes.assert_called_once_with(detail=True, limit=0)
+        self.assertIsNotNone(self.driver.node_cache_time)
+
+    def test__refresh_cache(self):
+        # normal operation, one compute service
+        instances = []
+        nodes = [
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+        ]
+        hosts = [self.host, self.host, self.host]
+
+        self._test__refresh_cache(instances, nodes, hosts)
+
+        expected_cache = {n.uuid: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_multiple_services(self):
+        # normal operation, many compute services
+        instances = []
+        nodes = [
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+        ]
+        hosts = [self.host, 'host2', 'host3']
+
+        self._test__refresh_cache(instances, nodes, hosts)
+
+        expected_cache = {n.uuid: n for n in nodes[0:1]}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_our_instances(self):
+        # we should manage a node we have an instance for, even if it doesn't
+        # map to us
+        instances = [uuidutils.generate_uuid()]
+        nodes = [
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=instances[0]),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+        ]
+        # only two calls, having the instance will short-circuit the first node
+        hosts = [{self.host}, {self.host}]
+
+        self._test__refresh_cache(instances, nodes, hosts)
+
+        expected_cache = {n.uuid: n for n in nodes}
+        self.assertEqual(expected_cache, self.driver.node_cache)
+
+    def test__refresh_cache_their_instances(self):
+        # we should never manage a node that another compute service has
+        # an instance for, even if it maps to us
+        instances = []
+        nodes = [
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=uuidutils.generate_uuid()),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+            ironic_utils.get_test_node(uuid=uuidutils.generate_uuid(),
+                instance_uuid=None),
+        ]
+        hosts = [self.host, self.host]
+
+        # only two calls, having the instance will short-circuit the first node
+        self._test__refresh_cache(instances, nodes, hosts)
+
+        expected_cache = {n.uuid: n for n in nodes[1:]}
+        self.assertEqual(expected_cache, self.driver.node_cache)

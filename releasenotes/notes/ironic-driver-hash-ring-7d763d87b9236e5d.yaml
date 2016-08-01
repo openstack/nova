@@ -1,0 +1,33 @@
+---
+features:
+  - |
+    Adds a new feature to the ironic virt driver, which allows
+    multiple nova-compute services to be run simultaneously. This uses
+    consistent hashing to divide the ironic nodes between the nova-compute
+    services, with the hash ring being refreshed each time the resource tracker
+    runs.
+
+    Note that instances will still be owned by the same nova-compute service
+    for the entire life of the instance, and so the ironic node that instance
+    is on will also be managed by the same nova-compute service until the node
+    is deleted. This also means that removing a nova-compute service will
+    leave instances managed by that service orphaned, and as such most
+    instance actions will not work until a nova-compute service with the same
+    hostname is brought (back) online.
+
+    When nova-compute services are brought up or down, the ring will eventually
+    re-balance (when the resource tracker runs on each compute). This may
+    result in duplicate compute_node entries for ironic nodes while the
+    nova-compute service pool is re-balancing. However, because any
+    nova-compute service running the ironic virt driver can manage any ironic
+    node, if a build request goes to the compute service not currently managing
+    the node the build request is for, it will still succeed.
+
+    There is no configuration to do to enable this feature; it is always
+    enabled.  There are no major changes when only one compute service is
+    running. If more compute services are brought online, the bigger changes
+    come into play.
+
+    Note that this is tested when running with only one nova-compute service,
+    but not more than one. As such, this should be used with caution for
+    multiple compute hosts until it is properly tested in CI.
