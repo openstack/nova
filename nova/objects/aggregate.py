@@ -386,7 +386,6 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                                                     "updateprop.start",
                                                     payload)
         updates.pop('id', None)
-        db_aggregate = None
         try:
             db_aggregate = _aggregate_update_to_db(self._context,
                                                    self.id, updates)

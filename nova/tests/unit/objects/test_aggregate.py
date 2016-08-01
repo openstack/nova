@@ -167,7 +167,7 @@ class _TestAggregateObject(object):
 
     @mock.patch('nova.objects.aggregate._aggregate_update_to_db')
     @mock.patch('nova.db.aggregate_update')
-    def test_save(self, update_mock, api_update_mock):
+    def test_save_to_cell(self, update_mock, api_update_mock):
         api_update_mock.side_effect = exception.AggregateNotFound(
             aggregate_id='foo')
         update_mock.return_value = fake_aggregate
@@ -181,10 +181,9 @@ class _TestAggregateObject(object):
                                             {'name': 'fake-aggregate'})
         self.assertTrue(api_update_mock.called)
 
-    @mock.patch('nova.objects.Aggregate.in_api', return_value=True)
     @mock.patch('nova.objects.aggregate._aggregate_update_to_db')
     @mock.patch('nova.db.aggregate_update')
-    def test_save_to_api(self, update_mock, api_update_mock, in_api_mock):
+    def test_save_to_api(self, update_mock, api_update_mock):
         api_update_mock.return_value = fake_aggregate
         agg = aggregate.Aggregate(context=self.context)
         agg.id = 123
