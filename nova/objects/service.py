@@ -410,7 +410,8 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
     # Version 1.16: Service version 1.18
     # Version 1.17: Service version 1.19
     # Version 1.18: Added include_disabled parameter to get_by_binary()
-    VERSION = '1.18'
+    # Version 1.19: Added get_all_computes_by_hv_type()
+    VERSION = '1.19'
 
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
@@ -443,5 +444,12 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         if set_zones:
             db_services = availability_zones.set_availability_zones(
                 context, db_services)
+        return base.obj_make_list(context, cls(context), objects.Service,
+                                  db_services)
+
+    @base.remotable_classmethod
+    def get_all_computes_by_hv_type(cls, context, hv_type):
+        db_services = db.service_get_all_computes_by_hv_type(
+            context, hv_type, include_disabled=False)
         return base.obj_make_list(context, cls(context), objects.Service,
                                   db_services)

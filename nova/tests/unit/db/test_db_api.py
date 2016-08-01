@@ -86,6 +86,34 @@ def _reservation_get(context, uuid):
     return result
 
 
+def _make_compute_node(host, node, hv_type, service_id):
+    compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
+                        uuid=uuidsentinel.fake_compute_node,
+                        vcpus_used=0, memory_mb_used=0,
+                        local_gb_used=0, free_ram_mb=1024,
+                        free_disk_gb=2048, hypervisor_type=hv_type,
+                        hypervisor_version=1, cpu_info="",
+                        running_vms=0, current_workload=0,
+                        service_id=service_id,
+                        host=host,
+                        disk_available_least=100,
+                        hypervisor_hostname=node,
+                        host_ip='127.0.0.1',
+                        supported_instances='',
+                        pci_stats='',
+                        metrics='',
+                        extra_resources='',
+                        cpu_allocation_ratio=16.0,
+                        ram_allocation_ratio=1.5,
+                        disk_allocation_ratio=1.0,
+                        stats='', numa_topology='')
+    # add some random stats
+    stats = dict(num_instances=3, num_proj_12345=2,
+            num_proj_23456=2, num_vm_building=3)
+    compute_node_dict['stats'] = jsonutils.dumps(stats)
+    return compute_node_dict
+
+
 def _quota_reserve(context, project_id, user_id):
     """Create sample Quota, QuotaUsage and Reservation objects.
 
@@ -3508,6 +3536,50 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected = services[:3]
         real = db.service_get_all_by_binary(self.ctxt, 'b1',
                                             include_disabled=True)
+        self._assertEqualListsOfObjects(expected, real)
+
+    def test_service_get_all_computes_by_hv_type(self):
+        values = [
+            {'host': 'host1', 'binary': 'nova-compute'},
+            {'host': 'host2', 'binary': 'nova-compute', 'disabled': True},
+            {'host': 'host3', 'binary': 'nova-compute'},
+            {'host': 'host4', 'binary': 'b2'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+        compute_nodes = [
+            _make_compute_node('host1', 'node1', 'ironic', services[0]['id']),
+            _make_compute_node('host1', 'node2', 'ironic', services[0]['id']),
+            _make_compute_node('host2', 'node3', 'ironic', services[1]['id']),
+            _make_compute_node('host3', 'host3', 'kvm', services[2]['id']),
+        ]
+        [db.compute_node_create(self.ctxt, cn) for cn in compute_nodes]
+
+        expected = services[:1]
+        real = db.service_get_all_computes_by_hv_type(self.ctxt,
+                                                      'ironic',
+                                                      include_disabled=False)
+        self._assertEqualListsOfObjects(expected, real)
+
+    def test_service_get_all_computes_by_hv_type_include_disabled(self):
+        values = [
+            {'host': 'host1', 'binary': 'nova-compute'},
+            {'host': 'host2', 'binary': 'nova-compute', 'disabled': True},
+            {'host': 'host3', 'binary': 'nova-compute'},
+            {'host': 'host4', 'binary': 'b2'}
+        ]
+        services = [self._create_service(vals) for vals in values]
+        compute_nodes = [
+            _make_compute_node('host1', 'node1', 'ironic', services[0]['id']),
+            _make_compute_node('host1', 'node2', 'ironic', services[0]['id']),
+            _make_compute_node('host2', 'node3', 'ironic', services[1]['id']),
+            _make_compute_node('host3', 'host3', 'kvm', services[2]['id']),
+        ]
+        [db.compute_node_create(self.ctxt, cn) for cn in compute_nodes]
+
+        expected = services[:2]
+        real = db.service_get_all_computes_by_hv_type(self.ctxt,
+                                                      'ironic',
+                                                      include_disabled=True)
         self._assertEqualListsOfObjects(expected, real)
 
     def test_service_get_all_by_host(self):
