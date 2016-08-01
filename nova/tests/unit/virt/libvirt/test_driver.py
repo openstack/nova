@@ -15821,12 +15821,17 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # Source disks are raw to test conversion
         disk_info = fake_disk_info_json(instance, type='raw')
 
-        with mock.patch.object(self.drvr, '_disk_raw_to_qcow2',
-                               autospec=True) as mock_raw_to_qcow2:
+        with test.nested(
+            mock.patch.object(self.drvr, '_disk_raw_to_qcow2',
+                              autospec=True),
+            mock.patch.object(self.drvr, '_ensure_console_log_for_instance')
+        ) as (mock_raw_to_qcow2, mock_ensure_console_log):
             self.drvr.finish_migration(
                           context.get_admin_context(), migration, instance,
                           disk_info, [], image_meta,
                           resize_instance, None, power_on)
+
+            mock_ensure_console_log.assert_called_once_with(instance)
 
             # Assert that we converted the root and ephemeral disks
             instance_path = libvirt_utils.get_instance_path(instance)
@@ -16457,8 +16462,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                         mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
-                               mox.IgnoreArg())
 
         mock_backend = mock.MagicMock()
         imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
@@ -16587,8 +16590,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                     mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-        libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg(),
-                                    mox.IgnoreArg())
 
         mock_backend = mock.MagicMock()
         imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
