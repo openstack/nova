@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright (c) 2016 Intel, Inc.
 # Copyright (c) 2013 OpenStack Foundation
 # All Rights Reserved.
@@ -26,8 +19,9 @@ from oslo_config import cfg
 debugger_group = cfg.OptGroup('remote_debug',
     title='debugger options')
 
-host = cfg.StrOpt('host',
-    help="""
+CLI_OPTS = [
+    cfg.StrOpt('host',
+               help="""
 Debug host (IP or name) to connect to. This command line parameter is used when
 you want to connect to a nova service via a debugger running on a different
 host.
@@ -43,10 +37,10 @@ Possible Values:
 
     /usr/local/bin/nova-compute --config-file /etc/nova/nova.conf
     --remote_debug-host <IP address where the debugger is running>
-""")
+"""),
 
-port = cfg.PortOpt('port',
-    help="""
+    cfg.PortOpt('port',
+               help="""
 Debug port to connect to. This command line parameter allows you to specify
 the port you want to use to connect to a nova service via a debugger running
 on different host.
@@ -63,12 +57,12 @@ Possible Values:
     /usr/local/bin/nova-compute --config-file /etc/nova/nova.conf
     --remote_debug-host <IP address where the debugger is running>
     --remote_debug-port <port> it's listening on>.
-""")
-
-CLI_OPTS = [host, port]
+"""),
+]
 
 
 def register_cli_opts(conf):
+    conf.register_group(debugger_group)
     conf.register_cli_opts(CLI_OPTS, group=debugger_group)
 
 
