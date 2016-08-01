@@ -15,7 +15,8 @@
              ``neutron`` when appropriate, but as with all translation
              proxies, this is far from perfect compatibility. These
              APIs should be avoided in new applications in favor of
-             using ``neutron`` directly.
+             using ``neutron`` directly. These will fail with a 404
+             after microversion 2.35.
              See: `Relevant Network APIs
              <http://developer.openstack.org/api-ref-networking-v2.html#networks>`__.
 

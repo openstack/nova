@@ -8,6 +8,7 @@
 
    This API only works with ``nova-network`` which is
    deprecated. It should be avoided in any new applications.
+   These will fail with a 404 after microversion 2.35.
 
 Pings instances and reports which instances are alive.
 

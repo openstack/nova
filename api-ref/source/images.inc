@@ -8,7 +8,7 @@
 
    These APIs are proxy calls to the Image service. Nova has
    deprecated all the proxy APIs and users should use the native APIs
-   instead.
+   instead. These will fail with a 404 after microversion 2.35.
    See: `Relevant Image APIs
    <http://developer.openstack.org/api-ref-image-v2.html#images-images-v2>`__.
 
