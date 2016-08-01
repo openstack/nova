@@ -601,7 +601,7 @@ class VolumeBDMPathNotFound(VolumeBDMNotFound):
 
 
 class DeviceDetachFailed(NovaException):
-    msg_fmt = _("Device detach failed for %(device)s: %(reason)s)")
+    msg_fmt = _("Device detach failed for %(device)s: %(reason)s")
 
 
 class DeviceNotFound(NotFound):
