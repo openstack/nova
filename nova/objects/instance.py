@@ -1132,7 +1132,8 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 @base.NovaObjectRegistry.register
 class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 2.0: Initial Version
-    VERSION = '2.0'
+    # Version 2.1: Add get_uuids_by_host()
+    VERSION = '2.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -1307,6 +1308,14 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             instance.obj_reset_changes(['fault'])
 
         return faults_by_uuid.keys()
+
+    @base.remotable_classmethod
+    def get_uuids_by_host(cls, context, host):
+        # NOTE(danms): We could potentially do this a little more efficiently
+        # but for now just pull all the instances and scrape the uuids.
+        db_instances = db.instance_get_all_by_host(context, host,
+                                                   columns_to_join=[])
+        return [inst['uuid'] for inst in db_instances]
 
 
 @db_api.main_context_manager.writer

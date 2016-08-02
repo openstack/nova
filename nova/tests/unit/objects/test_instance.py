@@ -1822,6 +1822,20 @@ class _TestInstanceListObject(object):
         self.assertEqual(2, len(instances))
         self.assertEqual([1, 2], [x.id for x in instances])
 
+    @mock.patch('nova.db.instance_get_all_by_host')
+    def test_get_uuids_by_host(self, mock_get_all):
+        fake_instances = [
+            fake_instance.fake_db_instance(id=1),
+            fake_instance.fake_db_instance(id=2),
+            ]
+        mock_get_all.return_value = fake_instances
+        expected_uuids = [inst['uuid'] for inst in fake_instances]
+        actual_uuids = objects.InstanceList.get_uuids_by_host(
+            self.context, 'b')
+        self.assertEqual(expected_uuids, actual_uuids)
+        mock_get_all.assert_called_once_with(self.context, 'b',
+                                             columns_to_join=[])
+
 
 class TestInstanceListObject(test_objects._LocalTest,
                              _TestInstanceListObject):
