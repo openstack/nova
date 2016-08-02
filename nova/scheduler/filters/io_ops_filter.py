@@ -29,7 +29,7 @@ class IoOpsFilter(filters.BaseHostFilter):
     """Filter out hosts with too many concurrent I/O operations."""
 
     def _get_max_io_ops_per_host(self, host_state, spec_obj):
-        return CONF.max_io_ops_per_host
+        return CONF.filter_scheduler.max_io_ops_per_host
 
     def host_passes(self, host_state, spec_obj):
         """Use information about current vm and task states collected from
@@ -54,14 +54,16 @@ class AggregateIoOpsFilter(IoOpsFilter):
     """
 
     def _get_max_io_ops_per_host(self, host_state, spec_obj):
+        max_io_ops_per_host = CONF.filter_scheduler.max_io_ops_per_host
         aggregate_vals = utils.aggregate_values_from_key(
             host_state,
             'max_io_ops_per_host')
+
         try:
             value = utils.validate_num_values(
-                aggregate_vals, CONF.max_io_ops_per_host, cast_to=int)
+                aggregate_vals, max_io_ops_per_host, cast_to=int)
         except ValueError as e:
             LOG.warning(_LW("Could not decode max_io_ops_per_host: '%s'"), e)
-            value = CONF.max_io_ops_per_host
+            value = max_io_ops_per_host
 
         return value

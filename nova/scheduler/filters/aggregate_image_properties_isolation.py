@@ -36,8 +36,10 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
         """Checks a host in an aggregate that metadata key/value match
         with image properties.
         """
-        cfg_namespace = CONF.aggregate_image_properties_isolation_namespace
-        cfg_separator = CONF.aggregate_image_properties_isolation_separator
+        cfg_namespace = (CONF.filter_scheduler.
+            aggregate_image_properties_isolation_namespace)
+        cfg_separator = (CONF.filter_scheduler.
+            aggregate_image_properties_isolation_separator)
 
         image_props = spec_obj.image.properties if spec_obj.image else {}
         metadata = utils.aggregate_metadata_get_by_host(host_state)

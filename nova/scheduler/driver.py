@@ -38,7 +38,7 @@ class Scheduler(object):
     def __init__(self):
         self.host_manager = driver.DriverManager(
                 "nova.scheduler.host_manager",
-                CONF.scheduler_host_manager,
+                CONF.scheduler.host_manager,
                 invoke_on_load=True).driver
         self.servicegroup_api = servicegroup.API()
 

@@ -58,7 +58,7 @@ class DiskWeigherTestCase(test.NoDBTestCase):
         self.assertEqual('host4', weighed_host.obj.host)
 
     def test_disk_filter_multiplier1(self):
-        self.flags(disk_weight_multiplier=0.0)
+        self.flags(disk_weight_multiplier=0.0, group='filter_scheduler')
         hostinfo_list = self._get_all_hosts()
 
         # host1: free_disk_mb=5120
@@ -71,7 +71,7 @@ class DiskWeigherTestCase(test.NoDBTestCase):
         self.assertEqual(0.0, weighed_host.weight)
 
     def test_disk_filter_multiplier2(self):
-        self.flags(disk_weight_multiplier=2.0)
+        self.flags(disk_weight_multiplier=2.0, group='filter_scheduler')
         hostinfo_list = self._get_all_hosts()
 
         # host1: free_disk_mb=5120
@@ -85,7 +85,7 @@ class DiskWeigherTestCase(test.NoDBTestCase):
         self.assertEqual('host4', weighed_host.obj.host)
 
     def test_disk_filter_negative(self):
-        self.flags(disk_weight_multiplier=1.0)
+        self.flags(disk_weight_multiplier=1.0, group='filter_scheduler')
         hostinfo_list = self._get_all_hosts()
         host_attr = {'id': 100, 'disk_mb': 81920, 'free_disk_mb': -5120}
         host_state = fakes.FakeHostState('negative', 'negative', host_attr)

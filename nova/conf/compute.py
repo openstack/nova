@@ -437,7 +437,7 @@ interval_opts = [
                help='Waiting time interval (seconds) between sending the '
                     'scheduler a list of current instance UUIDs to verify '
                     'that its view of instances is in sync with nova. If the '
-                    'CONF option `scheduler_tracks_instance_changes` is '
+                    'CONF option `filter_scheduler.track_instance_changes` is '
                     'False, changing this option will have no effect.'),
     cfg.IntOpt('update_resources_interval',
                default=0,

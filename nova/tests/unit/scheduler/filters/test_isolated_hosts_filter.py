@@ -30,7 +30,8 @@ class TestIsolatedHostsFilter(test.NoDBTestCase):
             self.flags(isolated_images=[uuids.image_ref],
                        isolated_hosts=['isolated_host'],
                        restrict_isolated_hosts_to_isolated_images=
-                       restrict_isolated_hosts_to_isolated_images)
+                       restrict_isolated_hosts_to_isolated_images,
+                       group='filter_scheduler')
         host_name = 'isolated_host' if host_in_list else 'free_host'
         image_ref = uuids.image_ref if image_in_list else uuids.fake_image_ref
         spec_obj = objects.RequestSpec(image=objects.ImageMeta(id=image_ref))
@@ -58,7 +59,7 @@ class TestIsolatedHostsFilter(test.NoDBTestCase):
         self.assertTrue(self._do_test_isolated_hosts(False, False, False))
 
     def test_isolated_hosts_no_hosts_config(self):
-        self.flags(isolated_images=[uuids.image_ref])
+        self.flags(isolated_images=[uuids.image_ref], group='filter_scheduler')
         # If there are no hosts in the config, it should only filter out
         # images that are listed
         self.assertFalse(self._do_test_isolated_hosts(False, True, False))
@@ -67,7 +68,7 @@ class TestIsolatedHostsFilter(test.NoDBTestCase):
         self.assertTrue(self._do_test_isolated_hosts(False, False, False))
 
     def test_isolated_hosts_no_images_config(self):
-        self.flags(isolated_hosts=['isolated_host'])
+        self.flags(isolated_hosts=['isolated_host'], group='filter_scheduler')
         # If there are no images in the config, it should only filter out
         # isolated_hosts
         self.assertTrue(self._do_test_isolated_hosts(False, True, False))

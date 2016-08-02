@@ -515,7 +515,8 @@ class ComputeManager(manager.Manager):
         self._sync_power_pool = eventlet.GreenPool(
             size=CONF.sync_power_state_pool_size)
         self._syncs_in_progress = {}
-        self.send_instance_updates = CONF.scheduler_tracks_instance_changes
+        self.send_instance_updates = (
+            CONF.filter_scheduler.track_instance_changes)
         if CONF.max_concurrent_builds != 0:
             self._build_semaphore = eventlet.semaphore.Semaphore(
                 CONF.max_concurrent_builds)

@@ -48,7 +48,7 @@ class SchedulerManager(manager.Manager):
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         if not scheduler_driver:
-            scheduler_driver = CONF.scheduler_driver
+            scheduler_driver = CONF.scheduler.driver
         self.driver = driver.DriverManager(
                 "nova.scheduler.driver",
                 scheduler_driver,
@@ -60,7 +60,7 @@ class SchedulerManager(manager.Manager):
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
 
-    @periodic_task.periodic_task(spacing=CONF.scheduler_driver_task_period,
+    @periodic_task.periodic_task(spacing=CONF.scheduler.periodic_task_interval,
                                  run_immediately=True)
     def _run_periodic_tasks(self, context):
         self.driver.run_periodic_tasks(context)

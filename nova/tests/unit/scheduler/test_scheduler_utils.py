@@ -203,7 +203,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                                       'force-node2'])
 
     def test_populate_retry_exception_at_max_attempts(self):
-        self.flags(scheduler_max_attempts=2)
+        self.flags(max_attempts=2, group='scheduler')
         msg = 'The exception text was preserved!'
         filter_properties = dict(retry=dict(num_attempts=2, hosts=[],
                                             exc_reason=[msg]))
@@ -243,15 +243,16 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                   [('bar', -2.1)])
 
     def test_validate_filters_configured(self):
-        self.flags(scheduler_default_filters='FakeFilter1,FakeFilter2')
+        self.flags(enabled_filters='FakeFilter1,FakeFilter2',
+                   group='filter_scheduler')
         self.assertTrue(scheduler_utils.validate_filter('FakeFilter1'))
         self.assertTrue(scheduler_utils.validate_filter('FakeFilter2'))
         self.assertFalse(scheduler_utils.validate_filter('FakeFilter3'))
 
     def test_validate_weighers_configured(self):
-        self.flags(scheduler_weight_classes=
-                   ['ServerGroupSoftAntiAffinityWeigher',
-                    'FakeFilter1'])
+        self.flags(weight_classes=[
+            'ServerGroupSoftAntiAffinityWeigher', 'FakeFilter1'],
+            group='filter_scheduler')
 
         self.assertTrue(scheduler_utils.validate_weigher(
             'ServerGroupSoftAntiAffinityWeigher'))
@@ -304,8 +305,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertIsNone(group_info)
 
     def _get_group_details_with_filter_not_configured(self, policy):
-        self.flags(scheduler_default_filters=['fake'])
-        self.flags(scheduler_weight_classes=['fake'])
+        self.flags(enabled_filters=['fake'], group='filter_scheduler')
+        self.flags(weight_classes=['fake'], group='filter_scheduler')
 
         instance = fake_instance.fake_instance_obj(self.context,
                 params={'host': 'hostA'})

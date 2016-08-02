@@ -122,9 +122,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                               'pci_requests': None})
     def test_schedule_host_pool(self, mock_get_extra, mock_get_all,
                                 mock_by_host, mock_get_by_binary):
-        """Make sure the scheduler_host_subset_size property works properly."""
+        """Make sure the host_subset_size property works properly."""
 
-        self.flags(scheduler_host_subset_size=2)
+        self.flags(host_subset_size=2, group='filter_scheduler')
 
         spec_obj = objects.RequestSpec(
             num_instances=1,
@@ -161,7 +161,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         is larger than number of filtered hosts.
         """
 
-        self.flags(scheduler_host_subset_size=20)
+        self.flags(host_subset_size=20, group='filter_scheduler')
 
         spec_obj = objects.RequestSpec(
             num_instances=1,
@@ -195,11 +195,11 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_schedule_chooses_best_host(self, mock_get_extra, mock_cn_get_all,
                                         mock_get_by_binary,
                                         mock_get_inst_info):
-        """If scheduler_host_subset_size is 1, the largest host with greatest
-        weight should be returned.
+        """If host_subset_size is 1, the largest host with greatest weight
+        should be returned.
         """
 
-        self.flags(scheduler_host_subset_size=1)
+        self.flags(host_subset_size=1, group='filter_scheduler')
         self.next_weight = 50
 
         def _fake_weigh_objects(_self, functions, hosts, options):

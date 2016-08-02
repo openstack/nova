@@ -318,17 +318,17 @@ Configuring Filters
 
 To use filters you specify two settings:
 
-* ``scheduler_available_filters`` - Defines filter classes made available to the
-   scheduler. This setting can be used multiple times.
-* ``scheduler_default_filters`` - Of the available filters, defines those that
-  the scheduler uses by default.
+* ``filter_scheduler.available_filters`` - Defines filter classes made
+  available to the scheduler. This setting can be used multiple times.
+* ``filter_scheduler.enabled_filters`` - Of the available filters, defines
+  those that the scheduler uses by default.
 
 The default values for these settings in nova.conf are:
 
 ::
 
-    --scheduler_available_filters=nova.scheduler.filters.all_filters
-    --scheduler_default_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter'
+    --filter_scheduler.available_filters=nova.scheduler.filters.all_filters
+    --filter_scheduler.enabled_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
 
 With this configuration, all filters in ``nova.scheduler.filters``
 would be available, and by default the |RamFilter|, |ComputeFilter|,
@@ -350,10 +350,10 @@ settings:
 
 ::
 
-    --scheduler_driver=nova.scheduler.FilterScheduler
-    --scheduler_available_filters=nova.scheduler.filters.all_filters
-    --scheduler_available_filters=myfilter.MyFilter
-    --scheduler_default_filters=RamFilter,ComputeFilter,MyFilter
+    --scheduler.driver=nova.scheduler.FilterScheduler
+    --filter_scheduler.available_filters=nova.scheduler.filters.all_filters
+    --filter_scheduler.available_filters=myfilter.MyFilter
+    --filter_scheduler.enabled_filters=RamFilter,ComputeFilter,MyFilter
 
 .. note:: When writing your own filter, be sure to add it to the list of available filters
    and enable it in the default filters. The "all_filters" setting  only includes the
@@ -364,15 +364,15 @@ driver.  The standard nova filters and MyFilter are available to the
 FilterScheduler.  The RamFilter, ComputeFilter, and MyFilter are used by
 default when no filters are specified in the request.
 
-Each filter selects hosts in a different way and has different costs. The order of
-``scheduler_default_filters`` affects scheduling performance. The general suggestion
-is to filter out invalid hosts as soon as possible to avoid unnecessary costs.
-We can sort ``scheduler_default_filters`` items by their costs in reverse order.
-For example, ComputeFilter is better before any resource calculating filters
-like RamFilter, CoreFilter.
+Each filter selects hosts in a different way and has different costs. The order
+of ``filter_scheduler.enabled_filters`` affects scheduling performance. The
+general suggestion is to filter out invalid hosts as soon as possible to avoid
+unnecessary costs.  We can sort ``filter_scheduler.enabled_filters`` items by
+their costs in reverse order. For example, ComputeFilter is better before any
+resource calculating filters like RamFilter, CoreFilter.
 
-In medium/large environments having AvailabilityZoneFilter before any capability or
-resource calculating filters can be useful.
+In medium/large environments having AvailabilityZoneFilter before any
+capability or resource calculating filters can be useful.
 
 Weights
 -------
@@ -396,7 +396,7 @@ and not modify the weight of the object directly, since final weights are normal
 and computed by ``weight.BaseWeightHandler``.
 
 The Filter Scheduler weighs hosts based on the config option
-`scheduler_weight_classes`, this defaults to
+`filter_scheduler.weight_classes`, this defaults to
 `nova.scheduler.weights.all_weighers`, which selects the following weighers:
 
 * |RAMWeigher| Compute weight based on available RAM on the compute node.

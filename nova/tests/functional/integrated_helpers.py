@@ -90,7 +90,7 @@ class _IntegratedTestBase(test.TestCase):
         return self.start_service('compute')
 
     def _setup_scheduler_service(self):
-        self.flags(scheduler_driver='chance_scheduler')
+        self.flags(group='scheduler', driver='chance_scheduler')
         return self.start_service('scheduler')
 
     def _setup_services(self):

@@ -46,9 +46,9 @@ class ServerGroupTestBase(test.TestCase,
 
     # Note(gibi): RamFilter is needed to ensure that
     # test_boot_servers_with_affinity_no_valid_host behaves as expected
-    _scheduler_default_filters = ['ServerGroupAntiAffinityFilter',
-                                  'ServerGroupAffinityFilter',
-                                  'RamFilter']
+    _enabled_filters = ['ServerGroupAntiAffinityFilter',
+                        'ServerGroupAffinityFilter',
+                        'RamFilter']
 
     # Override servicegroup parameters to make the tests run faster
     _service_down_time = 2
@@ -62,8 +62,10 @@ class ServerGroupTestBase(test.TestCase,
 
     def setUp(self):
         super(ServerGroupTestBase, self).setUp()
-        self.flags(scheduler_default_filters=self._scheduler_default_filters)
-        self.flags(scheduler_weight_classes=self._get_weight_classes())
+        self.flags(enabled_filters=self._enabled_filters,
+                   group='filter_scheduler')
+        self.flags(weight_classes=self._get_weight_classes(),
+                   group='filter_scheduler')
         self.flags(service_down_time=self._service_down_time)
         self.flags(report_interval=self._report_interval)
 
@@ -460,7 +462,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
 class ServerGroupAffinityConfTest(ServerGroupTestBase):
     api_major_version = 'v2.1'
     # Load only anti-affinity filter so affinity will be missing
-    _scheduler_default_filters = 'ServerGroupAntiAffinityFilter'
+    _enabled_filters = 'ServerGroupAntiAffinityFilter'
 
     @mock.patch('nova.scheduler.utils._SUPPORTS_AFFINITY', None)
     def test_affinity_no_filter(self):
@@ -477,7 +479,7 @@ class ServerGroupAffinityConfTest(ServerGroupTestBase):
 class ServerGroupAntiAffinityConfTest(ServerGroupTestBase):
     api_major_version = 'v2.1'
     # Load only affinity filter so anti-affinity will be missing
-    _scheduler_default_filters = 'ServerGroupAffinityFilter'
+    _enabled_filters = 'ServerGroupAffinityFilter'
 
     @mock.patch('nova.scheduler.utils._SUPPORTS_ANTI_AFFINITY', None)
     def test_anti_affinity_no_filter(self):
@@ -519,10 +521,6 @@ class ServerGroupSoftAntiAffinityConfTest(ServerGroupTestBase):
     microversion = '2.15'
     soft_anti_affinity = {'name': 'fake-name-3',
                           'policies': ['soft-anti-affinity']}
-
-    # Load only soft affinity filter so anti-affinity will be missing
-    _scheduler_weight_classes = ['nova.scheduler.weights.affinity.'
-                                 'ServerGroupSoftAffinityWeigher']
 
     def _get_weight_classes(self):
         # Load only soft affinity filter so anti-affinity will be missing

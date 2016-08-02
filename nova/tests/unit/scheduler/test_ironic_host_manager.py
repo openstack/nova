@@ -320,21 +320,23 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def setUp(self, mock_init_agg, mock_init_inst):
         super(IronicHostManagerTestFilters, self).setUp()
-        self.flags(scheduler_available_filters=['%s.%s' % (__name__, cls) for
-                                                cls in ['FakeFilterClass1',
-                                                        'FakeFilterClass2']])
-        self.flags(scheduler_default_filters=['FakeFilterClass1'])
-        self.flags(baremetal_scheduler_default_filters=['FakeFilterClass2'])
+        self.flags(available_filters=[
+            __name__ + '.FakeFilterClass1', __name__ + '.FakeFilterClass2'],
+                   group='filter_scheduler')
+        self.flags(enabled_filters=['FakeFilterClass1'],
+                   group='filter_scheduler')
+        self.flags(baremetal_enabled_filters=['FakeFilterClass2'],
+                   group='filter_scheduler')
         self.host_manager = ironic_host_manager.IronicHostManager()
         self.fake_hosts = [ironic_host_manager.IronicNodeState(
                 'fake_host%s' % x, 'fake-node') for x in range(1, 5)]
         self.fake_hosts += [ironic_host_manager.IronicNodeState(
                 'fake_multihost', 'fake-node%s' % x) for x in range(1, 5)]
 
-    def test_default_filters(self):
-        default_filters = self.host_manager.default_filters
-        self.assertEqual(1, len(default_filters))
-        self.assertIsInstance(default_filters[0], FakeFilterClass1)
+    def test_enabled_filters(self):
+        enabled_filters = self.host_manager.enabled_filters
+        self.assertEqual(1, len(enabled_filters))
+        self.assertIsInstance(enabled_filters[0], FakeFilterClass1)
 
     def test_choose_host_filters_not_found(self):
         self.assertRaises(exception.SchedulerHostFilterNotFound,
@@ -348,33 +350,33 @@ class IronicHostManagerTestFilters(test.NoDBTestCase):
         self.assertEqual(1, len(host_filters))
         self.assertIsInstance(host_filters[0], FakeFilterClass2)
 
-    def test_host_manager_default_filters(self):
-        default_filters = self.host_manager.default_filters
-        self.assertEqual(1, len(default_filters))
-        self.assertIsInstance(default_filters[0], FakeFilterClass1)
+    def test_host_manager_enabled_filters(self):
+        enabled_filters = self.host_manager.enabled_filters
+        self.assertEqual(1, len(enabled_filters))
+        self.assertIsInstance(enabled_filters[0], FakeFilterClass1)
 
     @mock.patch.object(ironic_host_manager.IronicHostManager,
                        '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_host_manager_default_filters_uses_baremetal(self, mock_init_agg,
+    def test_host_manager_enabled_filters_uses_baremetal(self, mock_init_agg,
                                                          mock_init_inst):
-        self.flags(scheduler_use_baremetal_filters=True)
+        self.flags(use_baremetal_filters=True, group='filter_scheduler')
         host_manager = ironic_host_manager.IronicHostManager()
 
-        # ensure the defaults come from baremetal_scheduler_default_filters
-        # and not scheduler_default_filters
-        default_filters = host_manager.default_filters
-        self.assertEqual(1, len(default_filters))
-        self.assertIsInstance(default_filters[0], FakeFilterClass2)
+        # ensure the defaults come from scheduler.baremetal_enabled_filters
+        # and not enabled_filters
+        enabled_filters = host_manager.enabled_filters
+        self.assertEqual(1, len(enabled_filters))
+        self.assertIsInstance(enabled_filters[0], FakeFilterClass2)
 
     def test_load_filters(self):
-        # without scheduler_use_baremetal_filters
+        # without scheduler.use_baremetal_filters
         filters = self.host_manager._load_filters()
         self.assertEqual(['FakeFilterClass1'], filters)
 
     def test_load_filters_baremetal(self):
-        # with scheduler_use_baremetal_filters
-        self.flags(scheduler_use_baremetal_filters=True)
+        # with scheduler.use_baremetal_filters
+        self.flags(use_baremetal_filters=True, group='filter_scheduler')
         filters = self.host_manager._load_filters()
         self.assertEqual(['FakeFilterClass2'], filters)
 
