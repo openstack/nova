@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:31+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -31,14 +31,6 @@ msgid ""
 msgstr ""
 "%(base)s virtuální velikost %(base_size)s větší než velikost kořenového "
 "disku konfigurace %(size)s "
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"%(base)s virtuální velikost %(disk_size)s větší než velikost kořenového "
-"disku konfigurace %(size)s"
 
 #, python-format
 msgid ""
@@ -426,9 +418,6 @@ msgstr ""
 "Nelze zkopírovat snímek v mezipaměti %(source)s do %(dest)s pro změnu "
 "velikosti: %(error)s"
 
-msgid "Failed to deallocate network for instance."
-msgstr "Nelze zrušit přidělení sítě instance."
-
 msgid "Failed to deallocate networks"
 msgstr "Nelze zrušit přidělení sítí"
 
@@ -496,10 +485,6 @@ msgid ""
 msgstr ""
 "Nelze získat id instance pro žádost o popisná data, poskytovatel "
 "%(provider)s, sítě %(networks)s, žadatel %(requester)s. Chyba: %(error)s"
-
-#, python-format
-msgid "Failed to get metadata for IP: %s"
-msgstr "Nelze získat popisná data pro Ip adresu: %s"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"
