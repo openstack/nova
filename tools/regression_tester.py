@@ -62,8 +62,8 @@ def main():
         original_branch = run("git rev-parse --abbrev-ref HEAD")
         run("git review -d %s" % options.review)
     else:
-        print ("no gerrit review number specified, running on latest commit"
-               "on current branch.")
+        print("no gerrit review number specified, running on latest commit"
+              "on current branch.")
 
     test_works = False
 
