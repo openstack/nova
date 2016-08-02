@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:31+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -75,10 +75,6 @@ msgstr "地址 |%(address)s| 没有分配"
 #, python-format
 msgid "Address |%(address)s| is not allocated to your project |%(project)s|"
 msgstr "地址 |%(address)s| 没有分配给你的项目 |%(project)s|"
-
-#, python-format
-msgid "Arguments dropped when creating context: %s"
-msgstr "创建上下文时已删除自变量：%s"
 
 #, python-format
 msgid ""
@@ -290,10 +286,6 @@ msgid ""
 msgstr "扩展%(ext_name)s：无法扩展资源 %(collection)s：没有那种资源"
 
 #, python-format
-msgid "Extensions in both blacklist and whitelist: %s"
-msgstr "白名单和黑名单中包括扩展： %s"
-
-#, python-format
 msgid "Failed to %(service)s_%(method)s: %(ex)s"
 msgstr "%(service)s_%(method)s 失败：%(ex)s"
 
@@ -349,16 +341,8 @@ msgid ""
 msgstr "当删除实例时，杀死一个与它有关的长时间运行的进程%(pid)s失败。"
 
 #, python-format
-msgid "Failed to load extension %(classpath)s: %(exc)s"
-msgstr "加载扩展 %(classpath)s 失败：%(exc)s"
-
-#, python-format
 msgid "Failed to load extension %(ext_factory)s: %(exc)s"
 msgstr "加载扩展 %(ext_factory)s 失败：%(exc)s"
-
-#, python-format
-msgid "Failed to load extension %(ext_name)s:%(exc)s"
-msgstr "加载扩展%(ext_name)s:%(exc)s失败"
 
 msgid "Failed to power off instance"
 msgstr "关闭实例失败"
@@ -494,13 +478,6 @@ msgstr "正在忽略由于 %s 而导致的卷清除故障"
 
 msgid "Image not found during snapshot"
 msgstr "快照期间，没有找到镜像"
-
-msgid ""
-"In the M release you must run all of the API. The concept of API extensions "
-"will be removed from the codebase to ensure there is a single Compute API."
-msgstr ""
-"在M版本，您必须运行所有的API。API扩展的概念将从代码基线移除，保证这是一个单一"
-"的计算API。"
 
 msgid ""
 "In vmwareapi:vmops:_destroy_instance, exception while deleting the VM "
@@ -961,14 +938,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"The legacy v2 API module already moved into'nova.api.openstack.compute."
-"legacy_v2.contrib'. Use new path instead of old path %s"
-msgstr ""
-"遗留的v2 模块移动到'nova.api.openstack.compute.legacy_v2.contrib' 。使用新路"
-"径代替旧路径 %s"
-
-#, python-format
-msgid ""
 "The same keypair name '%(name)s' exists in the following cells: "
 "%(cell_names)s. The keypair value from the first cell is returned."
 msgstr ""
@@ -1290,14 +1259,6 @@ msgstr "plug_vifs() 失败 %(cnt)d。重试到%(max_retry)d。"
 #, python-format
 msgid "rbd remove %(volume)s in pool %(pool)s failed"
 msgstr "rbd 移除池 %(pool)s 的卷   %(volume)s 失败"
-
-#, python-format
-msgid ""
-"serial_console.port_range should be <num>:<num>. Given value %(port_range)s "
-"could not be parsed. Taking the default port range %(default)s."
-msgstr ""
-"串口端口范围serial_console.port_range 应该是 <num>:<num> 。给定值 "
-"%(port_range)s  不能够被解析。使用缺省端口范围%(default)s。"
 
 msgid "set_admin_password is not implemented by this driver or guest instance."
 msgstr "此驱动程序或 guest 实例未实现 set_admin_password。"

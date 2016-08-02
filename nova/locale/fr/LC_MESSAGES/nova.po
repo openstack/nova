@@ -25,9 +25,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:30+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -392,10 +392,6 @@ msgstr "Préfixe incorrecte pour le réseau dans cidr %s"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "Préfixe incorrecte pour to_global_ipv6 : %s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "project_id incorrect pour to_global_ipv6 : %s"
 
 #, python-format
 msgid ""
@@ -998,10 +994,6 @@ msgid "Device '%(device)s' not found."
 msgstr "Device '%(device)s' introuvable."
 
 #, python-format
-msgid "Device detach failed for %(device)s: %(reason)s)"
-msgstr "Echec de déconnexion du périphérique pour %(device)s : %(reason)s)"
-
-#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr ""
@@ -1080,11 +1072,6 @@ msgid ""
 msgstr ""
 "Soit l'uuid du réseau %(network_uuid)s n'est pas présente ou n'est pas "
 "assignée au projet %(project_id)s."
-
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr ""
-"Les disques éphémères demandés sont plus grands que ce qui est autorisé par "
-"le type d'instance. "
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -1385,15 +1372,6 @@ msgstr "Fichier %(file_path)s introuvable."
 msgid "File path %s not valid"
 msgstr "Chemin d'accès au fichier %s non valide"
 
-msgid "Filename of private key"
-msgstr "Nom de fichier de la clé privée"
-
-msgid "Filename of root CA"
-msgstr "Nom du fichier contenant la racine de l'autorité de certification"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "Nom du fichier de la liste de révocation du Certificat Racine"
-
 #, python-format
 msgid "Fixed IP %(address)s already exists."
 msgstr "L'adresse IP fixe %(address)s existe déjà."
@@ -1672,7 +1650,7 @@ msgstr "Le type virtuel d'hyperviseur '%s' n'est pas valide"
 #, python-format
 msgid "Hypervisor virtualization type '%(hv_type)s' is not recognised"
 msgstr ""
-"Le type de virtualization de l'hyperviseur '%(hv_type)s' n'est pas reconnu."
+"Le type de virtualisation de l'hyperviseur '%(hv_type)s' n'est pas reconnu."
 
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
@@ -2160,10 +2138,6 @@ msgstr ""
 msgid "Invalid input received: %(reason)s"
 msgstr "Entrée invalide reçue : %(reason)s"
 
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "ID instance %s non valide dans la demande"
-
 msgid "Invalid instance image."
 msgstr "Instance image non valide."
 
@@ -2321,15 +2295,6 @@ msgid ""
 msgstr ""
 "Echec de la validation du noeud Ironic : %(id)s. (déploiement : %(deploy)s, "
 "alimentation : %(power)s)"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"Non-concordance du nombre d'interfaces virtuelles et physiques sur le noeud "
-"Ironic : %(id)s (nombre d'int. virt. : %(vif_count)d, nombre d'int. p. : "
-"%(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "Le service approprié est-il actif ?"
@@ -2853,7 +2818,7 @@ msgid ""
 "\" hypervisor virtualization type."
 msgstr ""
 "Aucun URI de migration à chaud n'est configuré et aucune valeur par défaut "
-"n'est disponible pour le type de virtualization d'hyperviseur \"%(virt_type)s"
+"n'est disponible pour le type de virtualisation d'hyperviseur \"%(virt_type)s"
 "\"."
 
 #, python-format
@@ -2951,6 +2916,9 @@ msgstr "N'est pas un instantané rbd"
 #, python-format
 msgid "Not authorized for image %(image_id)s."
 msgstr "Non autorisé pour l'image %(image_id)s."
+
+msgid "Not authorized."
+msgstr "Non autorisé."
 
 msgid "Not enough parameters to build a valid rule."
 msgstr "Pas assez de parametres pour contruire un règle valide."
@@ -3462,24 +3430,8 @@ msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "La plannification de filtre hôte %(filter_name)s ne peut être trouvée."
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"Le groupe de sécurité %(name)s est ajouté %(protocol)s en entrée de "
-"(%(from_port)s : %(to_port)s)"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "Groupe de sécurité %(name)s introuvable pour le projet %(project)s"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"Le groupe de sécurité %(name)s a supprimé le protocole %(protocol)s "
-"(%(from_port)s:%(to_port)s)"
 
 #, python-format
 msgid ""
@@ -3563,10 +3515,6 @@ msgstr ""
 msgid "Server does not exist"
 msgstr "Le serveur n'existe pas"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr ""
-"La suggestion de planificateur du groupe de serveurs doit être un UUID."
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "La stratégie ServerGroup n'est pas supporté: %(reason)s"
@@ -3620,9 +3568,6 @@ msgstr "Le partage '%s' n'est pas pris en charge"
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "Le niveau de partage '%s' n'a pas de partage configuré"
-
-msgid "Should we use a CA for each project?"
-msgstr "Doit-on utiliser une autorité de certification pour chaque projet ?"
 
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
@@ -3692,16 +3637,6 @@ msgstr "Erreur de stockage: %(reason)s"
 msgid "Storage policy %s did not match any datastores"
 msgstr "Les règles de stockage %s ne correspondent à aucun magasin de données"
 
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "Sujet de certificat pour projets, %s pour le projet, timestamp"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr ""
-"Sujet pour les certificats utilisateurs, %s pour le projet, utilisateur, "
-"timestamp"
-
 msgid "Success"
 msgstr "Sucées "
 
@@ -3746,10 +3681,6 @@ msgstr ""
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "L'entrée DNS %(name)s existe déjà dans le domaine %(domain)s."
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "L'identifiant %(id)s est inconnu."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -4363,14 +4294,6 @@ msgid "Unknown method '%(method)s' in compute API"
 msgstr "Méthode inconnue '%(method)s' dans l'API de calcul"
 
 #, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"Valeur de osapi_compute_unique_server_name_scope inconnue : %s. L'indicateur "
-"doit être vide, \"global\" ou \"project\""
-
-#, python-format
 msgid "Unknown quota resources %(unknown)s."
 msgstr "Ressources de quota inconnues %(unknown)s."
 
@@ -4456,10 +4379,6 @@ msgstr ""
 "Nombre de tentatives de coalescence du disque VHD supérieur à (%d), "
 "abandon..."
 
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "Pilote d'INT. VIRT. non trouvé pour network_api_class : %s"
-
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "Le branchement de VIF n'est pas pris en charge par le pilote Hyper-V."
 
@@ -4522,7 +4441,7 @@ msgstr ""
 #, python-format
 msgid "Virtualization type '%(virt)s' is not supported by this compute driver"
 msgstr ""
-"Le type de virtualization '%(virt)s' n'est pas pris en charge par ce pilote "
+"Le type de virtualisation '%(virt)s' n'est pas pris en charge par ce pilote "
 "de calcul"
 
 msgid "VlanID"
@@ -4601,12 +4520,6 @@ msgid ""
 msgstr ""
 "Lors de l'exécution du serveur en mode SSL, vous devez spécifier une valeur "
 "d'option cert_file et key_file dans votre fichier de configuration"
-
-msgid "Where we keep our keys"
-msgstr "Emplacement de sauvegarde des clefs"
-
-msgid "Where we keep our root CA"
-msgstr "Emplacement de sauvegarde des racines d'autorité de certification"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:31+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -29,14 +29,6 @@ msgid ""
 "%(size)s"
 msgstr ""
 "O tamanho virtual %(base_size)s  do %(base)s é maior que o tamanho do disco "
-"raiz de tipo %(size)s"
-
-#, python-format
-msgid ""
-"%(base)s virtual size %(disk_size)s larger than flavor root disk size "
-"%(size)s"
-msgstr ""
-"O tamanho virtual %(disk_size)s  do %(base)s é maior que o tamanho do disco "
 "raiz de tipo %(size)s"
 
 #, python-format
@@ -452,9 +444,6 @@ msgstr ""
 "Falha ao copiar a imagem em cache %(source)s para %(dest)s para o "
 "redimensionamento: %(error)s"
 
-msgid "Failed to deallocate network for instance."
-msgstr "Falha ao desalocar rede para a instância."
-
 msgid "Failed to deallocate networks"
 msgstr "Falha ao desalocar redes"
 
@@ -523,10 +512,6 @@ msgid ""
 msgstr ""
 "Falha ao obter o ID da instância para a solicitação de metadados, provedor "
 "%(provider)s, redes %(networks)s, solicitador %(requester)s. Erro: %(error)s"
-
-#, python-format
-msgid "Failed to get metadata for IP: %s"
-msgstr "Falha ao obter metadados para o IP: %s"
 
 #, python-format
 msgid "Failed to get metadata for instance id: %s"

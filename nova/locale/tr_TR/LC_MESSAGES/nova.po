@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:30+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -305,10 +305,6 @@ msgstr "%s cidr'indeki ağ için kötü ön ek"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "Global ipv6 için yanlış sonek: %s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "Global ipv6 için yanlış proje numarası: %s"
 
 msgid "Blank components"
 msgstr "Boş bileşenler"
@@ -808,9 +804,6 @@ msgid ""
 msgstr ""
 "Ya ağ uuid %(network_uuid)s yok ya da %(project_id)s projesine atanmamış."
 
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr "İstenen geçici diskler sunucu türünün izin verdiğinden daha büyük."
-
 #, python-format
 msgid ""
 "Error destroying the instance on node %(node)s. Provision state still "
@@ -1064,15 +1057,6 @@ msgstr "%(file_path)s dosyası bulunamadı."
 #, python-format
 msgid "File path %s not valid"
 msgstr "Dosya yolu %s geçerli değil"
-
-msgid "Filename of private key"
-msgstr "Özel anahtarın dosya adı"
-
-msgid "Filename of root CA"
-msgstr "Kök sertifika yetkilisinin dosya adı"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "Kök sertifika iptali listesinin dosya adı"
 
 #, python-format
 msgid "Fixed IP %(ip)s is not a valid ip address for network %(network_id)s."
@@ -1685,10 +1669,6 @@ msgstr ""
 msgid "Invalid input received: %(reason)s"
 msgstr "Geçersiz girdi alındı: %(reason)s"
 
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "İstekte geçersiz sunucu id'si %s"
-
 msgid "Invalid instance image."
 msgstr "Geçersiz sunucu imajı."
 
@@ -1832,14 +1812,6 @@ msgid ""
 "%(power)s)"
 msgstr ""
 "Ironic düğümü: %(id)s doğrulayamadı. (açılma: %(deploy)s, güç: %(power)s)"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"Ironic düğümü: %(id)s sanaldan fiziksele arayüz sayısı  uyuşmuyor (Vif "
-"sayısı: %(vif_count)d, Pif sayısı: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "Uygun servis çalışıyor mu?"
@@ -2327,6 +2299,9 @@ msgstr "Rbd anlık görüntüsü değil"
 msgid "Not authorized for image %(image_id)s."
 msgstr "İmaj %(image_id)s için yetkilendirilmemiş."
 
+msgid "Not authorized."
+msgstr "Yetkiniz yok."
+
 msgid "Not enough parameters to build a valid rule."
 msgstr "Geçerli bir kuralı oluşturmak için yeterli parametre yok."
 
@@ -2724,24 +2699,8 @@ msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "%(filter_name)s zamanlayıcı sunucu filtresi bulunamadı."
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"%(name)s güvenlik grubu %(protocol)s girişi ekledi (%(from_port)s:"
-"%(to_port)s)"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "Güvenlik grubu %(name)s %(project)s projesi için bulunamadı"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"%(name)s güvenlik grubu %(protocol)s girişini kaldırdı (%(from_port)s:"
-"%(to_port)s)"
 
 #, python-format
 msgid ""
@@ -2823,9 +2782,6 @@ msgstr "Sunucu diski yeniden boyutlandırılamadı çünkü: %(reason)s"
 msgid "Server does not exist"
 msgstr "Sunucu mevcut değil"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr "Sunucu grup zamanlayıcı ipucu UUID olmalı."
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "SunucuGrubu ilkesi desteklenmiyor: %(reason)s"
@@ -2870,9 +2826,6 @@ msgstr "Paylaşım '%s' desteklenmiyor"
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "Paylaşım seviyesi '%s' paylaşım yapılandırmasına sahip olamaz"
-
-msgid "Should we use a CA for each project?"
-msgstr "Her proje için sertifika yetkilisini kullanmalı mıyız?"
 
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
@@ -2928,15 +2881,6 @@ msgstr "Depolama hatası: %(reason)s"
 msgid "Storage policy %s did not match any datastores"
 msgstr "Depolama ilkesi %s hiçbir verideposuyla eşleşmedi"
 
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "Projelerin sertifika konusu, proje ve tarih bilgisi için %s"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr ""
-"Kullanıcıların sertifika konusu, proje, kullanıcı ve tarih bilgisi için %s"
-
 msgid "Success"
 msgstr "Başarılı"
 
@@ -2971,10 +2915,6 @@ msgstr "%(project)s için CRL dosyası bulunamadı"
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "%(domain)s alanında %(name)s DNS girdisi halen var."
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "Kimlik %(id)s bilinmiyor."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -3461,14 +3401,6 @@ msgid "Unknown method '%(method)s' in compute API"
 msgstr "Hesap API'sinde bilinmeyen metod '%(method)s'"
 
 #, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"Bilinmeyen osapi_compute_unique_server_name_scope değeri: %s Bayrağı boş, "
-"\"genel\" veya \"proje\" olmalı"
-
-#, python-format
 msgid "Unknown quota resources %(unknown)s."
 msgstr "Bilinmeyen kota kaynakları %(unknown)s."
 
@@ -3550,10 +3482,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD ergitme girişimi aşıldı (%d), vaz geçiliyor..."
-
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "network_api_class: %s için VIF sürücüsü bulunamadı"
 
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "VIF takma Hiper-V sürücüs tarafından desteklenmiyor."
@@ -3660,12 +3588,6 @@ msgid ""
 msgstr ""
 "Sunucu SSL kipinde çalıştırıldığında, yapılandırma dosyanızda hem cert_file "
 "hem key_file seçeneklerinin değerlerini belirtmelisiniz"
-
-msgid "Where we keep our keys"
-msgstr "Anahtarlarımızı tuttuğumuz yer"
-
-msgid "Where we keep our root CA"
-msgstr "Kök sertifika yetkilisini tutttuğumuz yer"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

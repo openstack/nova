@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:30+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -364,10 +364,6 @@ msgstr "cidr %s의 네트워크에 대한 접두부가 올바르지 않음"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "to_global_ipv6에 대한 잘못된 접두부: %s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "to_global_ipv6에 대한 잘못된 project_id: %s"
 
 #, python-format
 msgid ""
@@ -924,10 +920,6 @@ msgid "Device '%(device)s' not found."
 msgstr "'%(device)s' 디바이스를 찾을 수 없습니다."
 
 #, python-format
-msgid "Device detach failed for %(device)s: %(reason)s)"
-msgstr "%(device)s의 디바이스 연결 해제에 실패함: %(reason)s)"
-
-#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr "지정된 디바이스 ID %(id)s은(는) 하이퍼바이저 버전 %(version)s임"
@@ -1001,9 +993,6 @@ msgid ""
 msgstr ""
 "네트워크 UUID %(network_uuid)s이(가) 존재하지 않거나%(project_id)s 프로젝트"
 "에 지정되지 않았습니다. "
-
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr "요청한 임시 디스크가 허용되는 인스턴스 유형보다 큽니다."
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -1295,15 +1284,6 @@ msgstr "%(file_path)s 파일을 찾을 수 없습니다. "
 #, python-format
 msgid "File path %s not valid"
 msgstr "파일 경로 %s이(가) 올바르지 않음"
-
-msgid "Filename of private key"
-msgstr "개인키 파일 이름"
-
-msgid "Filename of root CA"
-msgstr "Root CA 파일 이름"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "Root 인증서 해지 목록 파일 이름"
 
 #, python-format
 msgid "Fixed IP %(address)s already exists."
@@ -2042,10 +2022,6 @@ msgstr ""
 msgid "Invalid input received: %(reason)s"
 msgstr "올바르지 않은 입력을 받았습니다: %(reason)s"
 
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "요청의 인스턴스 ID %s이(가) 올바르지 않음"
-
 msgid "Invalid instance image."
 msgstr "올바르지 않은 인스턴스 이미지"
 
@@ -2201,14 +2177,6 @@ msgid ""
 msgstr ""
 "아이로닉 노드: %(id)s이(가) 유효성을 검증하는 데 실패했습니다.(배치: "
 "%(deploy)s, 전원: %(power)s)"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"아이로닉 노드: 실제 인터페이스 개수에 대한 %(id)s 가상 불일치(Vif 개수: "
-"%(vif_count)d, Pif 개수: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "적합한 서버가 실행 중입니까?"
@@ -2805,6 +2773,9 @@ msgstr "rbd 스냅샷이 아님"
 msgid "Not authorized for image %(image_id)s."
 msgstr "%(image_id)s 이미지에 대한 권한이 없습니다. "
 
+msgid "Not authorized."
+msgstr "권한이 없습니다. "
+
 msgid "Not enough parameters to build a valid rule."
 msgstr "유효한 규칙을 빌드하기엔 매개변수가 부족합니다. "
 
@@ -3295,24 +3266,8 @@ msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "스케줄러 호스트 필터 %(filter_name)s을(를) 찾을 수 없습니다. "
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"보안 그룹 %(name)s이(가) %(protocol)s 입구(%(from_port)s:%(to_port)s)를 제거"
-"했음"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "프로젝트 %(project)s에 대해 보안 그룹 %(name)s을(를) 찾을 수 없음"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"보안 그룹 %(name)s이(가) %(protocol)s 입구(%(from_port)s:%(to_port)s)를 제거"
-"했음"
 
 #, python-format
 msgid ""
@@ -3393,9 +3348,6 @@ msgstr "서버 디스크의 크기를 재조정할 수 없음. 이유: %(reason)
 msgid "Server does not exist"
 msgstr "서버가 없음"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr "서버 그룹 스케줄러 힌트는 UUID여야 합니다."
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "ServerGroup 정책이 지원되지 않음: %(reason)s"
@@ -3449,9 +3401,6 @@ msgstr "공유 '%s'은(는) 지원되지 않음"
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "공유 레벨 '%s'에는 공유를 구성할 수 없음"
-
-msgid "Should we use a CA for each project?"
-msgstr "각 프로젝트에서 CA 사용 하실껀가요?"
 
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
@@ -3519,14 +3468,6 @@ msgstr "스토리지 오류: %(reason)s"
 msgid "Storage policy %s did not match any datastores"
 msgstr "스토리지 정책 %s이(가) 데이터 저장소와 일치하지 않음"
 
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "프로젝트에 대한 인증서 제목, 프로젝트 %s, 시간"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr "사용자에 대한 인증서 제목, 프로젝트 %s, 사용자, 시간"
-
 msgid "Success"
 msgstr "완료"
 
@@ -3564,10 +3505,6 @@ msgstr "%(project)s의 CRL 파일을 찾을 수 없음"
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "DNS 항목 %(name)s이(가) 이미 %(domain)s 도메인에 존재합니다. "
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "ID %(id)s을(를) 알 수 없습니다."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -4158,14 +4095,6 @@ msgid "Unknown method '%(method)s' in compute API"
 msgstr "계산 API의 알 수 없는 메소드 '%(method)s'"
 
 #, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"알 수 없는 osapi_compute_unique_server_name_scope 값: %s 플래그는 비어 있거"
-"나 \"global\" 또는 \"project\"여야 함."
-
-#, python-format
 msgid "Unknown quota resources %(unknown)s."
 msgstr "알 수 없는 할당량 자원 %(unknown)s."
 
@@ -4247,10 +4176,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD 합병 시도가 (%d)을(를) 초과했음, 포기하는 중..."
-
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "network_api_class에 대한 VIF 드라이버를 찾을 수 없음: %s"
 
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "Hyper-V 드라이버에서 VIF 연결을 지원하지 않습니다."
@@ -4386,12 +4311,6 @@ msgid ""
 msgstr ""
 "서버를 SSL 모드에서 실행할 때 구성 파일에 cert_file 및 key_file 옵션 값을 모"
 "두 지정해야 함"
-
-msgid "Where we keep our keys"
-msgstr "키를 보관하는 장소"
-
-msgid "Where we keep our root CA"
-msgstr "Root CA를 보관하는 장소"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

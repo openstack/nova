@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:30+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -350,10 +350,6 @@ msgstr "CIDR %s 中網路的字首錯誤"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "to_global_ipv6 的字首錯誤：%s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "to_global_ipv6 的 project_id 錯誤：%s"
 
 #, python-format
 msgid ""
@@ -879,10 +875,6 @@ msgid "Device '%(device)s' not found."
 msgstr "找不到裝置 '%(device)s'。"
 
 #, python-format
-msgid "Device detach failed for %(device)s: %(reason)s)"
-msgstr "分離裝置 %(device)s 失敗：%(reason)s"
-
-#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr "Hypervisor 版本 %(version)s 不支援所指定的裝置 ID %(id)s"
@@ -951,9 +943,6 @@ msgid ""
 "Either network uuid %(network_uuid)s is not present or is not assigned to "
 "the project %(project_id)s."
 msgstr "網路 UUID %(network_uuid)s 不存在，或者未指派給專案 %(project_id)s。"
-
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr "所要求的暫時磁碟，大於實例類型所容許的容量。"
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -1237,15 +1226,6 @@ msgstr "找不到檔案 %(file_path)s。"
 #, python-format
 msgid "File path %s not valid"
 msgstr "檔案路徑 %s 無效"
-
-msgid "Filename of private key"
-msgstr "Private key 私鑰檔案名稱"
-
-msgid "Filename of root CA"
-msgstr "主要 CA 的檔名"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "主要憑證撤銷清冊的檔名"
 
 #, python-format
 msgid "Fixed IP %(address)s already exists."
@@ -1950,10 +1930,6 @@ msgstr "欄位/屬性 %(path)s 的輸入無效。值：%(value)s。%(message)s"
 msgid "Invalid input received: %(reason)s"
 msgstr "收到的輸入無效：%(reason)s"
 
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "要求中的實例 ID %s 無效"
-
 msgid "Invalid instance image."
 msgstr "無效的實例映像檔。"
 
@@ -2106,14 +2082,6 @@ msgid ""
 "Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
 "%(power)s)"
 msgstr "無法驗證 Ironic 節點 %(id)s。（部署：%(deploy)s，電源：%(power)s）"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"Ironic 節點 %(id)s 虛擬至實體介面計數不符（Vif計數：%(vif_count)d，Pif 計數："
-"%(pif_count)d）"
 
 msgid "Is the appropriate service running?"
 msgstr "正在執行適當的服務嗎？"
@@ -2684,6 +2652,9 @@ msgstr "不是 rbd Snapshot"
 msgid "Not authorized for image %(image_id)s."
 msgstr "未獲映像檔 %(image_id)s 的授權。"
 
+msgid "Not authorized."
+msgstr "未被授權"
+
 msgid "Not enough parameters to build a valid rule."
 msgstr "參數數目不足以建置有效的規則。"
 
@@ -3158,20 +3129,8 @@ msgid "Scheduler Host Filter %(filter_name)s could not be found."
 msgstr "找不到「排程器主機過濾器」%(filter_name)s。"
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr "安全群組 %(name)s 新增了 %(protocol)s 入口(%(from_port)s:%(to_port)s)"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "找不到專案 %(project)s 的安全群組 %(name)s"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr "安全群組 %(name)s 移除了 %(protocol)s 入口(%(from_port)s:%(to_port)s)"
 
 #, python-format
 msgid ""
@@ -3244,9 +3203,6 @@ msgstr "無法調整伺服器磁碟的大小，原因：%(reason)s"
 msgid "Server does not exist"
 msgstr "伺服器不存在"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr "伺服器群組排程器提示必須為 UUID。"
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "不支援 ServerGroup 原則：%(reason)s"
@@ -3300,9 +3256,6 @@ msgstr "不支援共用 '%s'"
 #, python-format
 msgid "Share level '%s' cannot have share configured"
 msgstr "共用層次 '%s' 不能配置共用"
-
-msgid "Should we use a CA for each project?"
-msgstr "是否需要一個project 使用一個CA"
 
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
@@ -3368,14 +3321,6 @@ msgstr "儲存體錯誤：%(reason)s"
 msgid "Storage policy %s did not match any datastores"
 msgstr "儲存體原則 %s 不符合任何資料儲存庫"
 
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "專案憑證的主旨，%s 用於專案及時間戳記"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr "使用者憑證的主旨，%s 用於專案、使用者及時間戳記"
-
 msgid "Success"
 msgstr "成功"
 
@@ -3413,10 +3358,6 @@ msgstr "找不到 %(project)s 的 CRL 檔案"
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "DNS 項目 %(name)s 已存在於網域 %(domain)s 中。"
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "ID %(id)s 不明。"
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -3983,14 +3924,6 @@ msgid "Unknown method '%(method)s' in compute API"
 msgstr "計算 API 中的方法 '%(method)s' 不明"
 
 #, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"不明的 osapi_compute_unique_server_name_scope 值：%s。旗標必須是空"
-"的、\"global\" 或 \"project\""
-
-#, python-format
 msgid "Unknown quota resources %(unknown)s."
 msgstr "不明的配額資源 %(unknown)s。"
 
@@ -4070,10 +4003,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "VHD 聯合嘗試次數已超出 (%d) 次，正在放棄..."
-
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "找不到 network_api_class 的 VIF 驅動程式：%s"
 
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "Hyper-V 驅動程式不支援 VIF 插拔。"
@@ -4201,12 +4130,6 @@ msgid ""
 "key_file option value in your configuration file"
 msgstr ""
 "在 SSL 模式下執行伺服器時，必須在配置檔中指定 cert_file 及 key_file 選項值"
-
-msgid "Where we keep our keys"
-msgstr "我們的keys留存於何處"
-
-msgid "Where we keep our root CA"
-msgstr "我們的根憑證留存於何處"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"

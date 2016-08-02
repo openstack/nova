@@ -17,9 +17,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b2.dev117\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-08 04:30+0000\n"
+"POT-Creation-Date: 2016-08-02 00:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -378,10 +378,6 @@ msgstr "Prefixo inválido para rede em cidr %s"
 #, python-format
 msgid "Bad prefix for to_global_ipv6: %s"
 msgstr "Prefixo inválido para to_global_ipv6: %s"
-
-#, python-format
-msgid "Bad project_id for to_global_ipv6: %s"
-msgstr "project_id inválido para to_global_ipv6: %s"
 
 #, python-format
 msgid ""
@@ -977,10 +973,6 @@ msgid "Device '%(device)s' not found."
 msgstr "Dispositivo '%(device)s' não localizado."
 
 #, python-format
-msgid "Device detach failed for %(device)s: %(reason)s)"
-msgstr "A separação do dispositivo falhou para %(device)s: %(reason)s)"
-
-#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr ""
@@ -1058,11 +1050,6 @@ msgid ""
 msgstr ""
 "O uuid da rede %(network_uuid)s não está presente ou não está designado para "
 "o projeto %(project_id)s."
-
-msgid "Ephemeral disks requested are larger than the instance type allows."
-msgstr ""
-"Os discos efêmeros requisitados são maiores do que o tipo de instância "
-"permite."
 
 #, python-format
 msgid "Error attempting to run %(method)s"
@@ -1359,15 +1346,6 @@ msgstr "O arquivo %(file_path)s não pôde ser localizado."
 #, python-format
 msgid "File path %s not valid"
 msgstr "Caminho de arquivo %s inválido"
-
-msgid "Filename of private key"
-msgstr "Nome do arquivo da chave privada"
-
-msgid "Filename of root CA"
-msgstr "Nome do arquivo da CA raiz"
-
-msgid "Filename of root Certificate Revocation List"
-msgstr "O nome do arquivo da Lista de Revogação de Certificado raiz"
 
 #, python-format
 msgid "Fixed IP %(address)s already exists."
@@ -2123,10 +2101,6 @@ msgstr ""
 msgid "Invalid input received: %(reason)s"
 msgstr "Entrada inválida recebida: %(reason)s"
 
-#, python-format
-msgid "Invalid instance id %s in request"
-msgstr "ID da instância %s inválido na solicitação"
-
 msgid "Invalid instance image."
 msgstr "Imagem de instância inválida."
 
@@ -2285,15 +2259,6 @@ msgid ""
 msgstr ""
 "Nó do Ironic: %(id)s validação com falha. (implementação: %(deploy)s, "
 "potência: %(power)s)"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
-"count: %(vif_count)d, Pif count: %(pif_count)d)"
-msgstr ""
-"Nó do Ironic: %(id)s incompatibilidade de contagem da interface virtual com "
-"a física (Contagem interface virtual: %(vif_count)d, Contagem da interface "
-"física: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "O serviço está sendo executado da forma adequada?"
@@ -2906,6 +2871,9 @@ msgstr "Não uma captura instantânea de rbd"
 msgid "Not authorized for image %(image_id)s."
 msgstr "Não autorizado para a imagem %(image_id)s."
 
+msgid "Not authorized."
+msgstr "Não autorizado."
+
 msgid "Not enough parameters to build a valid rule."
 msgstr "Não há parâmetros suficientes para construir uma regra válida."
 
@@ -3408,24 +3376,8 @@ msgstr ""
 "O Filtro do Host do Planejador %(filter_name)s não pôde ser localizado."
 
 #, python-format
-msgid ""
-"Security group %(name)s added %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"Grupo de segurança %(protocol)s incluído %(name)s ingresso (%(from_port)s:"
-"%(to_port)s)"
-
-#, python-format
 msgid "Security group %(name)s is not found for project %(project)s"
 msgstr "Grupo de segurança %(name)s não localizado para o projeto %(project)s"
-
-#, python-format
-msgid ""
-"Security group %(name)s removed %(protocol)s ingress (%(from_port)s:"
-"%(to_port)s)"
-msgstr ""
-"Grupo de segurança %(name)s removido %(protocol)s ingresso (%(from_port)s:"
-"%(to_port)s)"
 
 #, python-format
 msgid ""
@@ -3508,9 +3460,6 @@ msgstr "O disco do servidor não pôde ser redimensionado porque: %(reason)s"
 msgid "Server does not exist"
 msgstr "O servidor não existe"
 
-msgid "Server group scheduler hint must be a UUID."
-msgstr "Sugestão do planejador do grupo do servidor deve ser um UUID."
-
 #, python-format
 msgid "ServerGroup policy is not supported: %(reason)s"
 msgstr "Política do ServerGroup não é suportada: %(reason)s"
@@ -3565,9 +3514,6 @@ msgstr "O compartilhamento '%s' não é suportado"
 msgid "Share level '%s' cannot have share configured"
 msgstr ""
 "O nível de compartilhamento '%s' não pode ter compartilhamento configurado"
-
-msgid "Should we use a CA for each project?"
-msgstr "Devemos usar um CA para cada projeto?"
 
 msgid ""
 "Shrinking the filesystem down with resize2fs has failed, please check if you "
@@ -3639,15 +3585,6 @@ msgid "Storage policy %s did not match any datastores"
 msgstr ""
 "Política de armazenamento %s não corresponde a nenhum armazenamento de dados"
 
-#, python-format
-msgid "Subject for certificate for projects, %s for project, timestamp"
-msgstr "Assunto do certificado para projetos, %s para projeto, timestamp"
-
-#, python-format
-msgid "Subject for certificate for users, %s for project, user, timestamp"
-msgstr ""
-"Assunto do certificado para usuários, %s para projeto, usuário, timestamp"
-
 msgid "Success"
 msgstr "Sucesso"
 
@@ -3685,10 +3622,6 @@ msgstr "O arquivo CRL para %(project)s não pôde ser localizado"
 #, python-format
 msgid "The DNS entry %(name)s already exists in domain %(domain)s."
 msgstr "A entrada de DNS %(name)s já existe no domínio %(domain)s."
-
-#, python-format
-msgid "The ID %(id)s is unknown."
-msgstr "O ID %(id)s é desconhecido."
 
 #, python-format
 msgid "The PCI address %(address)s has an incorrect format."
@@ -4297,14 +4230,6 @@ msgid "Unknown method '%(method)s' in compute API"
 msgstr "Método '%(method)s' desconhecido na API de cálculo"
 
 #, python-format
-msgid ""
-"Unknown osapi_compute_unique_server_name_scope value: %s Flag must be empty, "
-"\"global\" or \"project\""
-msgstr ""
-"Valor de osapi_compute_unique_server_name_scope desconhecido: %s O "
-"sinalizador deve estar vazio, \"global\" ou \"projeto\""
-
-#, python-format
 msgid "Unknown quota resources %(unknown)s."
 msgstr "Recursos da cota desconhecidos %(unknown)s."
 
@@ -4388,10 +4313,6 @@ msgstr ""
 #, python-format
 msgid "VHD coalesce attempts exceeded (%d), giving up..."
 msgstr "Tentativas de união de VHD excedeu (%d), concedendo..."
-
-#, python-format
-msgid "VIF driver not found for network_api_class: %s"
-msgstr "Driver VIF não localizado para network_api_class: %s"
 
 msgid "VIF plugging is not supported by the Hyper-V driver."
 msgstr "Conexão VIF não é suportada pelo driver Hyper-V."
@@ -4531,12 +4452,6 @@ msgid ""
 msgstr ""
 "Ao executar o servidor no modo SSL, você deve especificar os valores de "
 "opção cert_file e key_file em seu arquivo de configuração"
-
-msgid "Where we keep our keys"
-msgstr "Aonde armazenamos nossas chaves"
-
-msgid "Where we keep our root CA"
-msgstr "Onde mantemos nosso CA raiz"
 
 #, python-format
 msgid "Wrong quota method %(method)s used on resource %(res)s"
