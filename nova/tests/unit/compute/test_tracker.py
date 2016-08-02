@@ -415,6 +415,7 @@ def setup_rt(hostname, nodename, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     # Make sure we don't change any global fixtures during tests
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources
+    vd.get_host_ip_addr.return_value = _NODENAME
     vd.estimate_instance_overhead.side_effect = estimate_overhead
 
     with test.nested(
@@ -1574,6 +1575,194 @@ class TestInstanceClaim(BaseTestCase):
             self.assertEqualNUMAHostTopology(expected_numa, new_numa)
 
 
+class TestResize(BaseTestCase):
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_resize_claim_same_host(self, get_mock, migr_mock, get_cn_mock,
+            pci_mock, instance_pci_mock):
+        # Resize an existing instance from its current flavor (instance type
+        # 1) to a new flavor (instance type 2) and verify that the compute
+        # node's resources are appropriately updated to account for the new
+        # flavor's resources. In this scenario, we use an Instance that has not
+        # already had its "current" flavor set to the new flavor.
+        self.flags(reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=1,
+                              memory_mb_used=128,
+                              local_gb_used=1)
+        self._setup_rt(virt_resources=virt_resources)
+
+        get_mock.return_value = _INSTANCE_FIXTURES
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        self.rt.update_available_resource(mock.sentinel.ctx)
+
+        migration = objects.Migration(
+            id=3,
+            instance_uuid=instance.uuid,
+            source_compute=_HOSTNAME,
+            dest_compute=_HOSTNAME,
+            source_node=_NODENAME,
+            dest_node=_NODENAME,
+            old_instance_type_id=1,
+            new_instance_type_id=2,
+            migration_type='resize',
+            status='migrating'
+        )
+        # This migration context is fine, it points to the first instance
+        # fixture and indicates a source-and-dest resize.
+        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
+        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        # not using mock.sentinel.ctx because resize_claim calls #elevated
+        ctx = mock.MagicMock()
+
+        expected = self.rt.compute_node.obj_clone()
+        expected.vcpus_used = (expected.vcpus_used +
+                               new_flavor.vcpus)
+        expected.memory_mb_used = (expected.memory_mb_used +
+                                   new_flavor.memory_mb)
+        expected.free_ram_mb = expected.memory_mb - expected.memory_mb_used
+        expected.local_gb_used = (expected.local_gb_used +
+                                 (new_flavor.root_gb +
+                                    new_flavor.ephemeral_gb))
+        expected.free_disk_gb = (expected.free_disk_gb -
+                                (new_flavor.root_gb +
+                                    new_flavor.ephemeral_gb))
+
+        with test.nested(
+            mock.patch('nova.compute.resource_tracker.ResourceTracker'
+                       '._create_migration',
+                       return_value=migration),
+            mock.patch('nova.objects.MigrationContext',
+                       return_value=mig_context_obj),
+            mock.patch('nova.objects.Instance.save'),
+        ) as (create_mig_mock, ctxt_mock, inst_save_mock):
+            claim = self.rt.resize_claim(ctx, instance, new_flavor)
+
+        create_mig_mock.assert_called_once_with(
+                ctx, instance, new_flavor,
+                None  # move_type is None for resize...
+        )
+        self.assertIsInstance(claim, claims.MoveClaim)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node))
+        self.assertEqual(1, len(self.rt.tracked_migrations))
+
+    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
+                return_value=True)
+    @mock.patch('nova.objects.PciDevice.save')
+    @mock.patch('nova.pci.manager.PciDevTracker.claim_instance')
+    @mock.patch('nova.pci.request.get_pci_requests_from_flavor')
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_resize_claim_dest_host_with_pci(self, get_mock, migr_mock,
+            get_cn_mock, pci_mock, pci_req_mock, pci_claim_mock,
+            pci_dev_save_mock, pci_supports_mock):
+        # Starting from an empty destination compute node, perform a resize
+        # operation for an instance containing SR-IOV PCI devices on the
+        # original host.
+        self.flags(reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
+        self._setup_rt()
+
+        # TODO(jaypipes): Remove once the PCI tracker is always created
+        # upon the resource tracker being initialized...
+        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
+
+        pci_dev = pci_device.PciDevice.create(
+            None, fake_pci_device.dev_dict)
+        pci_devs = [pci_dev]
+        self.rt.pci_tracker.pci_devs = objects.PciDeviceList(objects=pci_devs)
+        pci_claim_mock.return_value = [pci_dev]
+
+        # start with an empty dest compute node. No migrations, no instances
+        get_mock.return_value = []
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
+
+        self.rt.update_available_resource(mock.sentinel.ctx)
+
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        instance.task_state = task_states.RESIZE_MIGRATING
+        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        # A destination-only migration
+        migration = objects.Migration(
+            id=3,
+            instance_uuid=instance.uuid,
+            source_compute="other-host",
+            dest_compute=_HOSTNAME,
+            source_node="other-node",
+            dest_node=_NODENAME,
+            old_instance_type_id=1,
+            new_instance_type_id=2,
+            migration_type='resize',
+            status='migrating',
+            instance=instance,
+        )
+        mig_context_obj = objects.MigrationContext(
+            instance_uuid=instance.uuid,
+            migration_id=3,
+            new_numa_topology=None,
+            old_numa_topology=None,
+        )
+        instance.migration_context = mig_context_obj
+        new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        request = objects.InstancePCIRequest(count=1,
+            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
+        pci_requests = objects.InstancePCIRequests(
+                requests=[request],
+                instance_uuid=instance.uuid,
+        )
+        instance.pci_requests = pci_requests
+        # NOTE(jaypipes): This looks weird, so let me explain. The Instance PCI
+        # requests on a resize come from two places. The first is the PCI
+        # information from the new flavor. The second is for SR-IOV devices
+        # that are directly attached to the migrating instance. The
+        # pci_req_mock.return value here is for the flavor PCI device requests
+        # (which is nothing). This empty list will be merged with the Instance
+        # PCI requests defined directly above.
+        pci_req_mock.return_value = objects.InstancePCIRequests(requests=[])
+
+        # not using mock.sentinel.ctx because resize_claim calls #elevated
+        ctx = mock.MagicMock()
+
+        with test.nested(
+            mock.patch('nova.pci.manager.PciDevTracker.allocate_instance'),
+            mock.patch('nova.compute.resource_tracker.ResourceTracker'
+                       '._create_migration',
+                       return_value=migration),
+            mock.patch('nova.objects.MigrationContext',
+                       return_value=mig_context_obj),
+            mock.patch('nova.objects.Instance.save'),
+        ) as (alloc_mock, create_mig_mock, ctxt_mock, inst_save_mock):
+            self.rt.resize_claim(ctx, instance, new_flavor)
+
+        pci_claim_mock.assert_called_once_with(ctx, pci_req_mock.return_value,
+                                               None)
+        # Validate that the pci.request.get_pci_request_from_flavor() return
+        # value was merged with the instance PCI requests from the Instance
+        # itself that represent the SR-IOV devices from the original host.
+        pci_req_mock.assert_called_once_with(new_flavor)
+        self.assertEqual(1, len(pci_req_mock.return_value.requests))
+        self.assertEqual(request, pci_req_mock.return_value.requests[0])
+        alloc_mock.assert_called_once_with(instance)
+
+
 @mock.patch('nova.objects.Instance.save')
 @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
 @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -1646,86 +1835,6 @@ class TestMoveClaim(BaseTestCase):
         expected.free_ram_mb -= flavor['memory_mb']
         expected.memory_mb_used += flavor['memory_mb']
         expected.vcpus_used += flavor['vcpus']
-
-    @mock.patch('nova.objects.Flavor.get_by_id')
-    def test_claim(self, flavor_mock, pci_mock, inst_list_mock, inst_by_uuid,
-            migr_mock, inst_save_mock):
-        """Resize self.instance and check that the expected quantities of each
-        resource have been consumed.
-        """
-
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
-                            inst_save_mock)
-        self.driver_mock.get_host_ip_addr.return_value = "fake-ip"
-        flavor_mock.return_value = objects.Flavor(**self.flavor)
-        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid]
-        self.instance.migration_context = mig_context_obj
-
-        expected = copy.deepcopy(self.rt.compute_node)
-        self.adjust_expected(expected, self.flavor)
-
-        with test.nested(
-            mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
-                       return_value=objects.InstancePCIRequests(requests=[])),
-            mock.patch.object(self.rt, '_create_migration',
-                              return_value=_MIGRATION_FIXTURES['source-only']),
-            mock.patch('nova.objects.MigrationContext',
-                       return_value=mig_context_obj)
-        ) as (int_pci_mock, migr_mock, ctxt_mock):
-            claim = self.rt.resize_claim(
-                self.ctx, self.instance, self.flavor, None)
-            self.assertEqual(1, ctxt_mock.call_count)
-
-        self.assertIsInstance(claim, claims.MoveClaim)
-        inst_save_mock.assert_called_once_with()
-        self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                 self.rt.compute_node))
-
-    @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
-                return_value=True)
-    @mock.patch('nova.pci.stats.PciDeviceStats.consume_requests')
-    def test_claim_with_pci(self, pci_stats_consume_mock,
-                            pci_stats_support_mock, pci_mock, inst_list_mock,
-                            inst_by_uuid, migr_mock, inst_save_mock):
-        # Test that a move claim involving PCI requests correctly claims
-        # PCI devices on the host and sends an updated pci_device_pools
-        # attribute of the ComputeNode object.
-        self.assertFalse(self.rt.disabled)
-
-        # TODO(jaypipes): Remove once the PCI tracker is always created
-        # upon the resource tracker being initialized...
-        self.rt.pci_tracker = pci_manager.PciDevTracker(mock.sentinel.ctx)
-
-        pci_dev = pci_device.PciDevice.create(
-            None, fake_pci_device.dev_dict)
-        pci_devs = [pci_dev]
-        self.rt.pci_tracker.pci_devs = objects.PciDeviceList(objects=pci_devs)
-        pci_stats_consume_mock.return_value = pci_devs
-
-        self.driver_mock.get_host_ip_addr.return_value = "fake-host"
-        migr_obj = _MIGRATION_FIXTURES['dest-only']
-        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
-        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid]
-        self.instance.migration_context = mig_context_obj
-        self.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
-
-        request = objects.InstancePCIRequest(count=1,
-            spec=[{'vendor_id': 'v', 'product_id': 'p'}])
-        pci_requests = objects.InstancePCIRequests(
-                requests=[request],
-                instance_uuid=self.instance.uuid)
-        self.instance.pci_requests = pci_requests
-
-        with test.nested(
-            mock.patch.object(self.rt, '_update'),
-            mock.patch.object(self.instance, 'save'),
-            mock.patch.object(self.rt, '_create_migration',
-                              return_value=migr_obj),
-            mock.patch.object(pci_dev, 'allocate'),
-        ) as (update_mock, save_mock, create_mig_mock, allocate_mock):
-            self.rt.resize_claim(
-                self.ctx, self.instance, self.flavor, None)
-            allocate_mock.assert_called_once_with(self.instance)
 
     def test_claim_abort(self, pci_mock, inst_list_mock,
             inst_by_uuid, migr_mock, inst_save_mock):
