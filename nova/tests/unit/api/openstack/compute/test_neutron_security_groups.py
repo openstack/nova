@@ -73,7 +73,7 @@ class TestNeutronSecurityGroupsV21(
     def _create_port(self, **kwargs):
         body = {'port': {'binding:vnic_type': model.VNIC_TYPE_NORMAL}}
         fields = ['security_groups', 'device_id', 'network_id',
-                  'port_security_enabled']
+                  'port_security_enabled', 'ip_allocation']
         for field in fields:
             if field in kwargs:
                 body['port'][field] = kwargs[field]
@@ -277,6 +277,22 @@ class TestNeutronSecurityGroupsV21(
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.manager._addSecurityGroup,
                           req, UUID_SERVER, body)
+
+    def test_associate_deferred_ip_port(self):
+        sg = self._create_sg_template().get('security_group')
+        net = self._create_network()
+        self._create_port(
+            network_id=net['network']['id'], security_groups=[sg['id']],
+            port_security_enabled=True, ip_allocation='deferred',
+            device_id=UUID_SERVER)
+
+        self.stub_out('nova.db.instance_get_by_uuid',
+                      test_security_groups.return_server)
+        body = dict(addSecurityGroup=dict(name="test"))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
+                                      UUID_SERVER)
+        self.manager._addSecurityGroup(req, UUID_SERVER, body)
 
     def test_disassociate_by_non_existing_security_group_name(self):
         self.stub_out('nova.db.instance_get_by_uuid',
@@ -696,6 +712,7 @@ class MockClient(object):
                'admin_state_up': p.get('admin_state_up', True),
                'security_groups': p.get('security_groups', []),
                'network_id': p.get('network_id'),
+               'ip_allocation': p.get('ip_allocation'),
                'binding:vnic_type':
                    p.get('binding:vnic_type') or model.VNIC_TYPE_NORMAL}
 
@@ -710,7 +727,7 @@ class MockClient(object):
         if not port_security and ret['security_groups']:
             raise exception.SecurityGroupCannotBeApplied()
 
-        if network['subnets']:
+        if network['subnets'] and p.get('ip_allocation') != 'deferred':
             ret['fixed_ips'] = [{'subnet_id': network['subnets'][0],
                                  'ip_address': '10.0.0.1'}]
         if not ret['security_groups'] and (port_security is None or

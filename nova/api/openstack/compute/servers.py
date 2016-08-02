@@ -417,8 +417,8 @@ class ServersController(wsgi.Controller):
                         raise exc.HTTPBadRequest(explanation=msg)
                     if request.address is not None:
                         msg = _("Specified Fixed IP '%(addr)s' cannot be used "
-                                "with port '%(port)s': port already has "
-                                "a Fixed IP allocated.") % {
+                                "with port '%(port)s': the two cannot be "
+                                "specified together.") % {
                                     "addr": request.address,
                                     "port": request.port_id}
                         raise exc.HTTPBadRequest(explanation=msg)

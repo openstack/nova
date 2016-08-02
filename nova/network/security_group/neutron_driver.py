@@ -419,7 +419,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def _has_security_group_requirements(self, port):
         port_security_enabled = port.get('port_security_enabled', True)
         has_ip = port.get('fixed_ips')
-        if has_ip:
+        deferred_ip = port.get('ip_allocation') == 'deferred'
+        if has_ip or deferred_ip:
             return port_security_enabled
         return False
 
