@@ -1604,6 +1604,10 @@ class TestResize(BaseTestCase):
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        # This migration context is fine, it points to the first instance
+        # fixture and indicates a source-and-dest resize.
+        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
+        instance.migration_context = mig_context_obj
 
         self.rt.update_available_resource(mock.sentinel.ctx)
 
@@ -1619,9 +1623,6 @@ class TestResize(BaseTestCase):
             migration_type='resize',
             status='migrating'
         )
-        # This migration context is fine, it points to the first instance
-        # fixture and indicates a source-and-dest resize.
-        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
 
         # not using mock.sentinel.ctx because resize_claim calls #elevated
@@ -1658,6 +1659,18 @@ class TestResize(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected,
                                                  self.rt.compute_node))
         self.assertEqual(1, len(self.rt.tracked_migrations))
+
+        # Now abort the resize claim and check that the resources have been set
+        # back to their original values.
+        with mock.patch('nova.objects.Instance.'
+                        'drop_migration_context') as drop_migr_mock:
+            claim.abort()
+        drop_migr_mock.assert_called_once_with()
+
+        self.assertEqual(1, self.rt.compute_node.vcpus_used)
+        self.assertEqual(1, self.rt.compute_node.local_gb_used)
+        self.assertEqual(128, self.rt.compute_node.memory_mb_used)
+        self.assertEqual(0, len(self.rt.tracked_migrations))
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
@@ -1835,80 +1848,6 @@ class TestMoveClaim(BaseTestCase):
         expected.free_ram_mb -= flavor['memory_mb']
         expected.memory_mb_used += flavor['memory_mb']
         expected.vcpus_used += flavor['vcpus']
-
-    def test_claim_abort(self, pci_mock, inst_list_mock,
-            inst_by_uuid, migr_mock, inst_save_mock):
-        # Resize self.instance and check that the expected quantities of each
-        # resource have been consumed. The abort the resize claim and check
-        # that the resources have been set back to their original values.
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
-                            inst_save_mock)
-        self.driver_mock.get_host_ip_addr.return_value = "fake-host"
-        migr_obj = _MIGRATION_FIXTURES['dest-only']
-        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
-        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid]
-        self.instance.migration_context = mig_context_obj
-        self.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
-
-        with mock.patch.object(self.rt, '_create_migration') as migr_mock:
-            migr_mock.return_value = migr_obj
-            claim = self.rt.resize_claim(
-                self.ctx, self.instance, self.flavor, None)
-
-        self.assertIsInstance(claim, claims.MoveClaim)
-        self.assertEqual(5, self.rt.compute_node.local_gb_used)
-        self.assertEqual(256, self.rt.compute_node.memory_mb_used)
-        self.assertEqual(1, len(self.rt.tracked_migrations))
-
-        with mock.patch('nova.objects.Instance.'
-                        'drop_migration_context') as drop_migr_mock:
-            claim.abort()
-            drop_migr_mock.assert_called_once_with()
-
-        self.assertEqual(0, self.rt.compute_node.local_gb_used)
-        self.assertEqual(0, self.rt.compute_node.memory_mb_used)
-        self.assertEqual(0, len(self.rt.tracked_migrations))
-
-    def test_same_host(self, pci_mock, inst_list_mock, inst_by_uuid,
-            migr_mock, inst_save_mock):
-        """Resize self.instance to the same host but with a different flavor.
-        Then abort the claim. Check that the same amount of resources are
-        available afterwards as we started with.
-        """
-
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
-                            inst_save_mock)
-        migr_obj = _MIGRATION_FIXTURES['source-and-dest']
-        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
-        self.instance._context = self.ctx
-        mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid]
-        self.instance.migration_context = mig_context_obj
-
-        with mock.patch.object(self.instance, 'save'):
-            self.rt.instance_claim(self.ctx, self.instance, None)
-        expected = copy.deepcopy(self.rt.compute_node)
-
-        create_mig_mock = mock.patch.object(self.rt, '_create_migration')
-        mig_ctxt_mock = mock.patch('nova.objects.MigrationContext',
-                                   return_value=mig_context_obj)
-
-        with create_mig_mock as migr_mock, mig_ctxt_mock as ctxt_mock:
-            migr_mock.return_value = migr_obj
-            claim = self.rt.resize_claim(self.ctx, self.instance,
-                    _INSTANCE_TYPE_OBJ_FIXTURES[1], None)
-            self.assertEqual(1, ctxt_mock.call_count)
-
-        self.audit(self.rt, [self.instance], [migr_obj], self.instance)
-        inst_save_mock.assert_called_once_with()
-        self.assertNotEqual(expected, self.rt.compute_node)
-
-        claim.instance.migration_context = mig_context_obj
-        with mock.patch.object(claim.instance,
-                               'drop_migration_context') as drop_mig_ctxt:
-            claim.abort()
-            self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                     self.rt.compute_node))
-            drop_mig_ctxt.assert_called_once_with()
 
     def test_revert_reserve_source(
             self, pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
