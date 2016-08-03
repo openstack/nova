@@ -2579,9 +2579,6 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_meta.obj_attr_is_set("id"):
             rescue_image_id = image_meta.id
 
-        # NOTE(dprince): for rescue console.log may already exist... chown it.
-        self._chown_console_log_for_instance(instance)
-
         rescue_images = {
             'image_id': (rescue_image_id or
                         CONF.libvirt.rescue_image_id or instance.image_ref),
@@ -2658,6 +2655,10 @@ class LibvirtDriver(driver.ComputeDriver):
                            block_device_info=block_device_info,
                            files=injected_files,
                            admin_pass=admin_password)
+
+        # Required by Quobyte CI
+        self._ensure_console_log_for_instance(instance)
+
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
                                   block_device_info=block_device_info,
@@ -2754,9 +2755,14 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             raise exception.ConsoleNotAvailable()
 
-        self._chown_console_log_for_instance(instance)
-        data = self._flush_libvirt_console(pty)
         console_log = self._get_console_log_path(instance)
+        # By default libvirt chowns the console log when it starts a domain.
+        # We need to chown it back before attempting to read from or write
+        # to it.
+        if os.path.exists(console_log):
+            libvirt_utils.chown(console_log, os.getuid())
+
+        data = self._flush_libvirt_console(pty)
         fpath = self._append_to_file(data, console_log)
 
         with libvirt_utils.file_open(fpath, 'rb') as fp:
@@ -2889,6 +2895,31 @@ class LibvirtDriver(driver.ComputeDriver):
         return os.path.join(libvirt_utils.get_instance_path(instance),
                             'console.log')
 
+    def _ensure_console_log_for_instance(self, instance):
+        # NOTE(mdbooth): Although libvirt will create this file for us
+        # automatically when it starts, it will initially create it with
+        # root ownership and then chown it depending on the configuration of
+        # the domain it is launching. Quobyte CI explicitly disables the
+        # chown by setting dynamic_ownership=0 in libvirt's config.
+        # Consequently when the domain starts it is unable to write to its
+        # console.log. See bug https://bugs.launchpad.net/nova/+bug/1597644
+        #
+        # To work around this, we create the file manually before starting
+        # the domain so it has the same ownership as Nova. This works
+        # for Quobyte CI because it is also configured to run qemu as the same
+        # user as the Nova service. Installations which don't set
+        # dynamic_ownership=0 are not affected because libvirt will always
+        # correctly configure permissions regardless of initial ownership.
+        #
+        # Setting dynamic_ownership=0 is dubious and potentially broken in
+        # more ways than console.log (see comment #22 on the above bug), so
+        # Future Maintainer who finds this code problematic should check to see
+        # if we still support it.
+        console_file = self._get_console_log_path(instance)
+        LOG.debug('Ensure instance console log exists: %s', console_file,
+                  instance=instance)
+        libvirt_utils.file_open(console_file, 'a').close()
+
     @staticmethod
     def _get_disk_config_path(instance, suffix=''):
         return os.path.join(libvirt_utils.get_instance_path(instance),
@@ -2900,11 +2931,6 @@ class LibvirtDriver(driver.ComputeDriver):
         # changed since creation of the instance, but I am pretty
         # sure that this bug already exists.
         return 'rbd' if CONF.libvirt.images_type == 'rbd' else 'raw'
-
-    def _chown_console_log_for_instance(self, instance):
-        console_log = self._get_console_log_path(instance)
-        if os.path.exists(console_log):
-            libvirt_utils.chown(console_log, os.getuid())
 
     @staticmethod
     def _is_booted_from_volume(instance, disk_mapping):
@@ -3006,10 +3032,6 @@ class LibvirtDriver(driver.ComputeDriver):
         fileutils.ensure_tree(libvirt_utils.get_instance_path(instance))
 
         LOG.info(_LI('Creating image'), instance=instance)
-
-        # NOTE(vish): No need add the suffix to console.log
-        libvirt_utils.write_to_file(
-            self._get_console_log_path(instance), '', 7)
 
         if not disk_images:
             disk_images = {'image_id': instance.image_ref,
@@ -6506,11 +6528,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # or rbd backed instance), instance path on destination has to
                 # be prepared
 
-                # Touch the console.log file, required by libvirt.
-                console_file = self._get_console_log_path(instance)
-                LOG.debug('Touch instance console log: %s', console_file,
-                          instance=instance)
-                libvirt_utils.file_open(console_file, 'a').close()
+                # Required by Quobyte CI
+                self._ensure_console_log_for_instance(instance)
 
                 # if image has kernel and ramdisk, just download
                 # following normal way.
@@ -7218,6 +7237,9 @@ class LibvirtDriver(driver.ComputeDriver):
                            network_info=network_info,
                            block_device_info=None, inject_files=False,
                            fallback_from_host=migration.source_compute)
+
+        # Required by Quobyte CI
+        self._ensure_console_log_for_instance(instance)
 
         gen_confdrive = functools.partial(self._create_configdrive,
                                           context, instance,
