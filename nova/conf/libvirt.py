@@ -105,6 +105,7 @@ libvirt_general_opts = [
                                  'block_migration_flag will be removed to '
                                  'avoid potential misconfiguration.'),
     cfg.BoolOpt('live_migration_tunnelled',
+                default=False,
                 help='Whether to use tunnelled migration, where migration '
                      'data is transported over the libvirtd connection. If '
                      'True, we use the VIR_MIGRATE_TUNNELLED migration flag, '
