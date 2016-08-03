@@ -87,6 +87,10 @@ class _ImageTestCase(object):
         self.TEMPLATE_DIR = os.path.join(CONF.instances_path, '_base')
         self.TEMPLATE_PATH = os.path.join(self.TEMPLATE_DIR, 'template')
 
+        # Ensure can_fallocate is not initialised on the class
+        if hasattr(self.image_class, 'can_fallocate'):
+            del self.image_class.can_fallocate
+
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
@@ -782,8 +786,8 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
     SIZE = 1024
 
     def setUp(self):
-        super(EncryptedLvmTestCase, self).setUp()
         self.image_class = imagebackend.Lvm
+        super(EncryptedLvmTestCase, self).setUp()
         self.flags(enabled=True, group='ephemeral_storage_encryption')
         self.flags(cipher='aes-xts-plain64',
                    group='ephemeral_storage_encryption')
