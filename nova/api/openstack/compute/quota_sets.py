@@ -56,13 +56,6 @@ class QuotaSetsController(wsgi.Controller):
         return dict(quota_set=result)
 
     def _validate_quota_limit(self, resource, limit, minimum, maximum):
-        # NOTE: -1 is a flag value for unlimited
-        if limit < -1:
-            msg = (_("Quota limit %(limit)s for %(resource)s "
-                     "must be -1 or greater.") %
-                   {'limit': limit, 'resource': resource})
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-
         def conv_inf(value):
             return float("inf") if value == -1 else value
 
