@@ -3464,6 +3464,30 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             drvr._get_guest_config, instance_ref, [],
             image_meta, disk_info)
 
+    @mock.patch('nova.console.serial.release_port')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
+    @mock.patch.object(host.Host, 'get_guest')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_serial_ports_from_guest')
+    def test_serial_console_release_port(
+            self, mock_get_serial_ports_from_guest, mock_get_guest,
+            mock_get_info, mock_release_port):
+        self.flags(enabled="True", group='serial_console')
+
+        guest = libvirt_guest.Guest(FakeVirtDomain())
+        guest.power_off = mock.Mock()
+        mock_get_info.return_value = hardware.InstanceInfo(
+            state=power_state.SHUTDOWN)
+        mock_get_guest.return_value = guest
+        mock_get_serial_ports_from_guest.return_value = iter([
+            ('127.0.0.1', 10000), ('127.0.0.1', 10001)])
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._destroy(objects.Instance(**self.test_instance))
+        mock_release_port.assert_has_calls(
+            [mock.call(host='127.0.0.1', port=10000),
+             mock.call(host='127.0.0.1', port=10001)])
+
     @mock.patch('os.path.getsize', return_value=0)  # size doesn't matter
     @mock.patch('nova.virt.libvirt.storage.lvm.get_volume_size',
                 return_value='fake-size')
@@ -13182,74 +13206,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             self.assertRaises(test.TestingException,
                               drvr.cleanup, 'ctxt', fake_inst, 'netinfo')
             unplug.assert_called_once_with(fake_inst, 'netinfo', True)
-
-    @mock.patch.object(driver, 'block_device_info_get_mapping')
-    @mock.patch.object(host.Host, "get_guest")
-    @mock.patch.object(libvirt_driver.LibvirtDriver,
-                       '_get_serial_ports_from_guest')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
-    def test_cleanup_serial_console_enabled(
-            self, undefine, get_ports, get_guest,
-            block_device_info_get_mapping):
-        self.flags(enabled="True", group='serial_console')
-        instance = 'i1'
-        network_info = {}
-        bdm_info = {}
-        firewall_driver = mock.MagicMock()
-
-        guest = mock.Mock(spec=libvirt_guest.Guest)
-        get_guest.return_value = guest
-        get_ports.return_value = iter([('127.0.0.1', 10000)])
-        block_device_info_get_mapping.return_value = ()
-
-        # We want to ensure undefine_domain is called after
-        # lookup_domain.
-        def undefine_domain(instance):
-            get_ports.side_effect = Exception("domain undefined")
-        undefine.side_effect = undefine_domain
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        drvr.firewall_driver = firewall_driver
-        drvr.cleanup(
-            'ctx', instance, network_info,
-            block_device_info=bdm_info,
-            destroy_disks=False, destroy_vifs=False)
-
-        get_ports.assert_called_once_with(guest)
-        undefine.assert_called_once_with(instance)
-        firewall_driver.unfilter_instance.assert_called_once_with(
-            instance, network_info=network_info)
-        block_device_info_get_mapping.assert_called_once_with(bdm_info)
-
-    @mock.patch.object(driver, 'block_device_info_get_mapping')
-    @mock.patch.object(host.Host, "get_guest")
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_undefine_domain')
-    def test_cleanup_serial_console_domain_gone(
-            self, undefine, get_guest, block_device_info_get_mapping):
-        self.flags(enabled="True", group='serial_console')
-        instance = {'name': 'i1'}
-        network_info = {}
-        bdm_info = {}
-        firewall_driver = mock.MagicMock()
-
-        block_device_info_get_mapping.return_value = ()
-
-        # Ensure get_guest raises same exception that would have occurred
-        # if domain was gone.
-        get_guest.side_effect = exception.InstanceNotFound("domain undefined")
-
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        drvr.firewall_driver = firewall_driver
-        drvr.cleanup(
-            'ctx', instance, network_info,
-            block_device_info=bdm_info,
-            destroy_disks=False, destroy_vifs=False)
-
-        get_guest.assert_called_once_with(instance)
-        undefine.assert_called_once_with(instance)
-        firewall_driver.unfilter_instance.assert_called_once_with(
-            instance, network_info=network_info)
-        block_device_info_get_mapping.assert_called_once_with(bdm_info)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'unfilter_instance')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'delete_instance_files',
