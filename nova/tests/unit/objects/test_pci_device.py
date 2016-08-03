@@ -346,6 +346,13 @@ class _TestPciDeviceObject(object):
         pci_device2.instance_uuid = None
         self.assertNotEqual(pci_device1, pci_device2)
 
+    def test_pci_device_not_equivalent_with_not_pci_device(self):
+        pci_device1 = pci_device.PciDevice.create(None, dev_dict)
+        self.assertNotEqual(pci_device1, None)
+        self.assertNotEqual(pci_device1, 'foo')
+        self.assertNotEqual(pci_device1, 1)
+        self.assertNotEqual(pci_device1, objects.PciDeviceList())
+
     def test_claim_device(self):
         self._create_fake_instance()
         devobj = pci_device.PciDevice.create(None, dev_dict)
