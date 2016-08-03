@@ -484,7 +484,7 @@ and will be used as DNS servers, too.
 
 Possible values:
 
-    A list of strings, where each string is etiher an IP address or a FQDN.
+    A list of strings, where each string is either an IP address or a FQDN.
 
 Related options:
 

@@ -41,7 +41,7 @@ filesystems = cfg.ListOpt(
            'sections'))
 
 # NOTE(jbresnah) because the group under which these options are added is
-# dyncamically determined these options need to stay out of global space
+# dynamically determined these options need to stay out of global space
 # or they will confuse generate_sample.sh
 filesystem_opts = [
      cfg.StrOpt('id',
@@ -78,6 +78,6 @@ def list_opts():
     # list the "filesystem_opts" for the "nova.conf.sample" file here. A
     # follow up patch will deprecate those. Due to their dynamic creation
     # they never got shown in "nova.conf.sample" nor the config reference
-    # manual. I see no need to change this here with a dummy group or somehing
+    # manual. I see no need to change this here with a dummy group or something
     # like that.
     return {image_file_url_group: ALL_OPTS}

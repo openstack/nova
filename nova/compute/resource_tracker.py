@@ -392,7 +392,7 @@ class ResourceTracker(object):
         return self.compute_node is None
 
     def _init_compute_node(self, context, resources):
-        """Initialise the compute node if it does not already exist.
+        """Initialize the compute node if it does not already exist.
 
         The resource tracker will be inoperable if compute_node
         is not defined. The compute_node will remain undefined if
@@ -423,7 +423,7 @@ class ResourceTracker(object):
 
         # there was no local copy and none in the database
         # so we need to create a new compute node. This needs
-        # to be initialised with resource values.
+        # to be initialized with resource values.
         self.compute_node = objects.ComputeNode(context)
         self.compute_node.host = self.host
         self._copy_resources(resources)
@@ -447,7 +447,7 @@ class ResourceTracker(object):
             self.compute_node.pci_device_pools = dev_pools_obj
 
     def _copy_resources(self, resources):
-        """Copy resource values to initialise compute_node and related
+        """Copy resource values to initialize compute_node and related
         data structures.
         """
         # purge old stats and init with anything passed in by the driver
@@ -477,7 +477,7 @@ class ResourceTracker(object):
                                 "error: %(exc)s"),
                             {'mon': monitor, 'exc': exc})
         # TODO(jaypipes): Remove this when compute_node.metrics doesn't need
-        # to be populated as a JSON-ified string.
+        # to be populated as a JSONified string.
         metrics = metrics.to_list()
         if len(metrics):
             metrics_info['nodename'] = nodename
@@ -531,7 +531,7 @@ class ResourceTracker(object):
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def _update_available_resource(self, context, resources):
 
-        # initialise the compute node object, creating it
+        # initialize the compute node object, creating it
         # if it does not already exist.
         self._init_compute_node(context, resources)
 

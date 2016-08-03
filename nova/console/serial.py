@@ -31,7 +31,7 @@ SERIAL_LOCK = 'serial-lock'
 
 CONF = nova.conf.CONF
 
-# TODO(sahid): Add a method to initialize ALOCATED_PORTS with the
+# TODO(sahid): Add a method to initialize ALLOCATED_PORTS with the
 # already binded TPC port(s). (cf from danpb: list all running guests and
 # query the XML in libvirt driver to find out the TCP port(s) it uses).
 

@@ -695,10 +695,10 @@ class API(base.Base):
 
         return flavor_defined_bdms
 
-    def _merge_bdms_lists(self, overrideable_mappings, overrider_mappings):
+    def _merge_bdms_lists(self, overridable_mappings, overrider_mappings):
         """Override any block devices from the first list by device name
 
-        :param overridable_mappings: list which items are overriden
+        :param overridable_mappings: list which items are overridden
         :param overrider_mappings: list which items override
 
         :returns: A merged list of bdms
@@ -706,7 +706,7 @@ class API(base.Base):
         device_names = set(bdm['device_name'] for bdm in overrider_mappings
                            if bdm['device_name'])
         return (overrider_mappings +
-                [bdm for bdm in overrideable_mappings
+                [bdm for bdm in overridable_mappings
                  if bdm['device_name'] not in device_names])
 
     def _check_and_transform_bdm(self, context, base_options, instance_type,
