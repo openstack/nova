@@ -16,9 +16,11 @@
 
 import os
 
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 
 from nova import exception
+from nova.i18n import _LW
 from nova import utils
 from nova.volume.encryptors import base
 
@@ -48,9 +50,44 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
         self.symlink_path = connection_info['data']['device_path']
 
         # a unique name for the volume -- e.g., the iSCSI participant name
-        self.dev_name = self.symlink_path.split('/')[-1]
+        self.dev_name = 'crypt-%s' % self.symlink_path.split('/')[-1]
+
+        # NOTE(tsekiyama): In older version of nova, dev_name was the same
+        # as the symlink name. Now it has 'crypt-' prefix to avoid conflict
+        # with multipath device symlink. To enable rolling update, we use the
+        # old name when the encrypted volume already exists.
+        old_dev_name = self.symlink_path.split('/')[-1]
+        wwn = data.get('multipath_id')
+        if self._is_crypt_device_available(old_dev_name):
+            self.dev_name = old_dev_name
+            LOG.debug("Using old encrypted volume name: %s", self.dev_name)
+        elif wwn and wwn != old_dev_name:
+            # FibreChannel device could be named '/dev/mapper/<WWN>'.
+            if self._is_crypt_device_available(wwn):
+                self.dev_name = wwn
+                LOG.debug("Using encrypted volume name from wwn: %s",
+                          self.dev_name)
+
         # the device's actual path on the compute host -- e.g., /dev/sd_
         self.dev_path = os.path.realpath(self.symlink_path)
+
+    def _is_crypt_device_available(self, dev_name):
+        if not os.path.exists('/dev/mapper/%s' % dev_name):
+            return False
+
+        try:
+            utils.execute('cryptsetup', 'status', dev_name, run_as_root=True)
+        except processutils.ProcessExecutionError as e:
+            # If /dev/mapper/<dev_name> is a non-crypt block device (such as a
+            # normal disk or multipath device), exit_code will be 1. In the
+            # case, we will omit the warning message.
+            if e.exit_code != 1:
+                LOG.warning(_LW('cryptsetup status %(dev_name) exited '
+                                'abnormally (status %(exit_code)s): %(err)s'),
+                            {"dev_name": dev_name, "exit_code": e.exit_code,
+                             "err": e.stderr})
+            return False
+        return True
 
     def _get_passphrase(self, key):
         """Convert raw key to string."""
