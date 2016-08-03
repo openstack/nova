@@ -146,6 +146,16 @@ def service_get_all_by_binary(context, binary, include_disabled=False):
                                           include_disabled=include_disabled)
 
 
+def service_get_all_computes_by_hv_type(context, hv_type,
+                                        include_disabled=False):
+    """Get all compute services for a given hypervisor type.
+
+    Includes disabled services if 'include_disabled' parameter is True.
+    """
+    return IMPL.service_get_all_computes_by_hv_type(context, hv_type,
+        include_disabled=include_disabled)
+
+
 def service_get_all_by_host(context, host):
     """Get all services for a given host."""
     return IMPL.service_get_all_by_host(context, host)

@@ -495,6 +495,20 @@ def service_get_all_by_binary(context, binary, include_disabled=False):
 
 
 @pick_context_manager_reader
+def service_get_all_computes_by_hv_type(context, hv_type,
+                                        include_disabled=False):
+    query = model_query(context, models.Service, read_deleted="no").\
+                    filter_by(binary='nova-compute')
+    if not include_disabled:
+        query = query.filter_by(disabled=False)
+    query = query.join(models.ComputeNode,
+                       models.Service.host == models.ComputeNode.host).\
+                  filter(models.ComputeNode.hypervisor_type == hv_type).\
+                  distinct('host')
+    return query.all()
+
+
+@pick_context_manager_reader
 def service_get_by_host_and_binary(context, host, binary):
     result = model_query(context, models.Service, read_deleted="no").\
                     filter_by(host=host).\

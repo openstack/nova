@@ -274,6 +274,16 @@ class _TestServiceObject(object):
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
 
+    @mock.patch.object(db, 'service_get_all_computes_by_hv_type')
+    def test_get_all_computes_by_hv_type(self, mock_get_all):
+        mock_get_all.return_value = [fake_service]
+        services = service.ServiceList.get_all_computes_by_hv_type(
+            self.context, 'hv-type')
+        self.assertEqual(1, len(services))
+        self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
+        mock_get_all.assert_called_once_with(self.context, 'hv-type',
+                                             include_disabled=False)
+
     def test_load_when_orphaned(self):
         service_obj = service.Service()
         service_obj.id = 123
