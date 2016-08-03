@@ -903,6 +903,14 @@ class LibvirtDriver(driver.ComputeDriver):
     def _destroy(self, instance, attempt=1):
         try:
             guest = self._host.get_guest(instance)
+            if CONF.serial_console.enabled:
+                # This method is called for several events: destroy,
+                # rebuild, hard-reboot, power-off - For all of these
+                # events we want to release the serial ports acquired
+                # for the guest before destroying it.
+                serials = self._get_serial_ports_from_guest(guest)
+                for hostname, port in serials:
+                    serial_console.release_port(host=hostname, port=port)
         except exception.InstanceNotFound:
             guest = None
 
@@ -1140,15 +1148,6 @@ class LibvirtDriver(driver.ComputeDriver):
             if success:
                 instance.cleaned = True
             instance.save()
-
-        if CONF.serial_console.enabled:
-            try:
-                guest = self._host.get_guest(instance)
-                serials = self._get_serial_ports_from_guest(guest)
-                for hostname, port in serials:
-                    serial_console.release_port(host=hostname, port=port)
-            except exception.InstanceNotFound:
-                pass
 
         self._undefine_domain(instance)
 
