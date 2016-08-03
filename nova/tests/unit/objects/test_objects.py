@@ -23,7 +23,6 @@ import fixtures
 import mock
 from oslo_log import log
 from oslo_utils import timeutils
-from oslo_utils import versionutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
 from oslo_versionedobjects import fixture
@@ -1238,17 +1237,18 @@ class TestObjectVersions(test.NoDBTestCase):
         # This doesn't actually test the data conversions, but it at least
         # makes sure the method doesn't blow up on something basic like
         # expecting the wrong version format.
-        obj_classes = base.NovaObjectRegistry.obj_classes()
-        for obj_name in obj_classes:
-            versions = ovo_base.obj_tree_get_versions(obj_name)
-            obj_class = obj_classes[obj_name][0]
-            version = versionutils.convert_version_to_tuple(obj_class.VERSION)
-            for n in range(version[1]):
-                test_version = '%d.%d' % (version[0], n)
-                LOG.info('testing obj: %s version: %s' %
-                         (obj_name, test_version))
-                obj_class().obj_to_primitive(target_version=test_version,
-                                             version_manifest=versions)
+
+        # Hold a dictionary of args/kwargs that need to get passed into
+        # __init__() for specific classes. The key in the dictionary is
+        # the obj_class that needs the init args/kwargs.
+        init_args = {}
+        init_kwargs = {}
+
+        checker = fixture.ObjectVersionChecker(
+            base.NovaObjectRegistry.obj_classes())
+        checker.test_compatibility_routines(use_manifest=True,
+                                            init_args=init_args,
+                                            init_kwargs=init_kwargs)
 
     def test_list_obj_make_compatible(self):
         @base.NovaObjectRegistry.register_if(False)
