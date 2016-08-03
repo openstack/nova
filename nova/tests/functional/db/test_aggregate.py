@@ -23,6 +23,7 @@ from nova import exception
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import matchers
+from nova.tests.unit.objects.test_objects import compare_obj as base_compare
 from nova.tests import uuidsentinel
 
 import nova.objects.aggregate as aggregate_obj
@@ -204,6 +205,65 @@ class AggregateObjectDbTestCase(test.NoDBTestCase):
         rl1 = aggregate_obj._get_by_metadata_key_from_db(self.context,
                                                      key='goodkey')
         self.assertEqual(2, len(rl1))
+
+    def test_aggregate_create_in_db(self):
+        fake_create_aggregate = {
+            'name': 'fake-aggregate',
+        }
+        agg = aggregate_obj._aggregate_create_in_db(self.context,
+                                                    fake_create_aggregate)
+        result = aggregate_obj._aggregate_get_from_db(self.context,
+                                                      agg.id)
+        self.assertEqual(result.name, fake_create_aggregate['name'])
+
+    def test_aggregate_create_in_db_with_metadata(self):
+        fake_create_aggregate = {
+            'name': 'fake-aggregate',
+        }
+        agg = aggregate_obj._aggregate_create_in_db(self.context,
+                                                fake_create_aggregate,
+                                                metadata={'goodkey': 'good'})
+        result = aggregate_obj._aggregate_get_from_db(self.context,
+                                                      agg.id)
+        md = aggregate_obj._get_by_metadata_key_from_db(self.context,
+                                                        key='goodkey')
+        self.assertEqual(len(md), 1)
+        self.assertEqual(md[0]['id'], agg.id)
+        self.assertEqual(result.name, fake_create_aggregate['name'])
+
+    def test_aggregate_create_raise_exist_exc(self):
+        fake_create_aggregate = {
+            'name': 'fake-aggregate',
+        }
+        aggregate_obj._aggregate_create_in_db(self.context,
+                                              fake_create_aggregate)
+        self.assertRaises(exception.AggregateNameExists,
+                          aggregate_obj._aggregate_create_in_db,
+                          self.context,
+                          fake_create_aggregate,
+                          metadata=None)
+
+    def test_aggregate_delete(self):
+        result = _create_aggregate(self.context, metadata=None)
+        aggregate_obj._aggregate_delete_from_db(self.context, result['id'])
+        self.assertRaises(exception.AggregateNotFound,
+                          aggregate_obj._aggregate_get_from_db,
+                          self.context, result['id'])
+
+    def test_aggregate_delete_raise_not_found(self):
+        # this does not exist!
+        aggregate_id = 45
+        self.assertRaises(exception.AggregateNotFound,
+                          aggregate_obj._aggregate_delete_from_db,
+                          self.context, aggregate_id)
+
+    def test_aggregate_delete_with_metadata(self):
+        result = _create_aggregate(self.context,
+                            metadata={'availability_zone': 'fake_avail_zone'})
+        aggregate_obj._aggregate_delete_from_db(self.context, result['id'])
+        self.assertRaises(exception.AggregateNotFound,
+                          aggregate_obj._aggregate_get_from_db,
+                          self.context, result['id'])
 
     def test_aggregate_update(self):
         created = _create_aggregate(self.context,
@@ -408,3 +468,128 @@ class AggregateObjectDbTestCase(test.NoDBTestCase):
         self.assertRaises(exception.AggregateMetadataNotFound,
                           aggregate_obj._metadata_delete_from_db,
                           self.context, result['id'], 'foo_key')
+
+
+def create_aggregate(context, db_id, in_api=True):
+    if in_api:
+        fake_aggregate = _get_fake_aggregate(db_id, in_api=False, result=False)
+        aggregate_obj._aggregate_create_in_db(context, fake_aggregate,
+                                       metadata=_get_fake_metadata(db_id))
+        for host in _get_fake_hosts(db_id):
+            aggregate_obj._host_add_to_db(context, fake_aggregate['id'], host)
+    else:
+        fake_aggregate = _get_fake_aggregate(db_id, in_api=False, result=False)
+        db.aggregate_create(context, fake_aggregate,
+                            metadata=_get_fake_metadata(db_id))
+        for host in _get_fake_hosts(db_id):
+            db.aggregate_host_add(context, fake_aggregate['id'], host)
+
+
+def compare_obj(test, result, source):
+    source['deleted'] = False
+
+    def updated_at_comparator(result, source):
+        return True
+
+    return base_compare(test, result, source, subs=SUBS,
+                        comparators={'updated_at': updated_at_comparator})
+
+
+class AggregateObjectCellTestCase(test.NoDBTestCase):
+    """Tests for the case where all aggregate data is in Cell DB"""
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(AggregateObjectCellTestCase, self).setUp()
+        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.useFixture(fixtures.Database())
+        self.useFixture(fixtures.Database(database='api'))
+        self._seed_data()
+
+    def _seed_data(self):
+        for i in range(1, 10):
+            create_aggregate(self.context, i, in_api=False)
+
+    def test_get_by_id(self):
+        for i in range(1, 10):
+            agg = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            compare_obj(self, agg, _get_fake_aggregate(i))
+
+    def test_save(self):
+        for i in range(1, 10):
+            agg = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            fake_agg = _get_fake_aggregate(i)
+            fake_agg['name'] = 'new-name' + str(i)
+            agg.name = 'new-name' + str(i)
+            agg.save()
+            result = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            compare_obj(self, agg, fake_agg)
+            compare_obj(self, result, fake_agg)
+
+    def test_update_metadata(self):
+        for i in range(1, 10):
+            agg = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            fake_agg = _get_fake_aggregate(i)
+            fake_agg['metadetails'] = {'constant_key': 'constant_value'}
+            agg.update_metadata({'unique_key': None})
+            agg.save()
+            result = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            compare_obj(self, agg, fake_agg)
+            compare_obj(self, result, fake_agg)
+
+    def test_destroy(self):
+        for i in range(1, 10):
+            agg = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            agg.destroy()
+        aggs = aggregate_obj.AggregateList.get_all(self.context)
+        self.assertEqual(len(aggs), 0)
+
+    def test_add_host(self):
+        for i in range(1, 10):
+            agg = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            fake_agg = _get_fake_aggregate(i)
+            fake_agg['hosts'].append('barbar')
+            agg.add_host('barbar')
+            agg.save()
+            result = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            compare_obj(self, agg, fake_agg)
+            compare_obj(self, result, fake_agg)
+
+    def test_delete_host(self):
+        for i in range(1, 10):
+            agg = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            fake_agg = _get_fake_aggregate(i)
+            fake_agg['hosts'].remove('constant_host')
+            agg.delete_host('constant_host')
+            result = aggregate_obj.Aggregate.get_by_id(self.context, i)
+            compare_obj(self, agg, fake_agg)
+            compare_obj(self, result, fake_agg)
+
+
+class AggregateObjectApiTestCase(AggregateObjectCellTestCase):
+    """Tests the aggregate in the case where all data is in the API DB"""
+    def _seed_data(self):
+        for i in range(1, 10):
+            create_aggregate(self.context, i)
+
+    def test_create(self):
+        new_agg = aggregate_obj.Aggregate(self.context)
+        new_agg.name = 'new-aggregate'
+        new_agg.create()
+        result = aggregate_obj.Aggregate.get_by_id(self.context, new_agg.id)
+        self.assertEqual(new_agg.name, result.name)
+
+
+class AggregateObjectMixedTestCase(AggregateObjectCellTestCase):
+    """Tests the aggregate in the case where data is in both databases"""
+    def _seed_data(self):
+        for i in range(1, 6):
+            create_aggregate(self.context, i)
+        for i in range(6, 10):
+            create_aggregate(self.context, i, in_api=False)
+
+    def test_create(self):
+        new_agg = aggregate_obj.Aggregate(self.context)
+        new_agg.name = 'new-aggregate'
+        self.assertRaises(exception.ObjectActionError,
+                          new_agg.create)

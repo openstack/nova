@@ -23,8 +23,9 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
+from nova.db.sqlalchemy import models as main_models
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -160,6 +161,45 @@ def _metadata_delete_from_db(context, aggregate_id, key):
 
 
 @db_api.api_context_manager.writer
+def _aggregate_create_in_db(context, values, metadata=None):
+    query = context.session.query(api_models.Aggregate)
+    query = query.filter(api_models.Aggregate.name == values['name'])
+    aggregate = query.first()
+
+    if not aggregate:
+        aggregate = api_models.Aggregate()
+        aggregate.update(values)
+        aggregate.save(context.session)
+        # We don't want these to be lazy loaded later.  We know there is
+        # nothing here since we just created this aggregate.
+        aggregate._hosts = []
+        aggregate._metadata = []
+    else:
+        raise exception.AggregateNameExists(aggregate_name=values['name'])
+    if metadata:
+        _metadata_add_to_db(context, aggregate.id, metadata)
+        context.session.expire(aggregate, ['_metadata'])
+        aggregate._metadata
+
+    return aggregate
+
+
+@db_api.api_context_manager.writer
+def _aggregate_delete_from_db(context, aggregate_id):
+    # Delete Metadata first
+    context.session.query(api_models.AggregateMetadata).\
+        filter_by(aggregate_id=aggregate_id).\
+        delete()
+
+    count = context.session.query(api_models.Aggregate).\
+                filter(api_models.Aggregate.id == aggregate_id).\
+                delete()
+
+    if count == 0:
+        raise exception.AggregateNotFound(aggregate_id=aggregate_id)
+
+
+@db_api.api_context_manager.writer
 def _aggregate_update_to_db(context, aggregate_id, values):
     aggregate = _aggregate_get_from_db(context, aggregate_id)
 
@@ -285,11 +325,31 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
             db_aggregate = db.aggregate_get_by_uuid(context, aggregate_uuid)
         return cls._from_db_object(context, cls(), db_aggregate)
 
+    @staticmethod
+    @db_api.main_context_manager.reader
+    def _ensure_migrated(context):
+        result = context.session.query(main_models.Aggregate).\
+                 filter_by(deleted=0).count()
+        if result:
+            LOG.warning(
+                _LW('Main database contains %(count)i unmigrated aggregates'),
+                {'count': result})
+        return result == 0
+
     @base.remotable
     def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
+
+        # NOTE(mdoff): Once we have made it past a point where we know
+        # all aggregates have been migrated, we can remove this. Ideally
+        # in Ocata with a blocker migration to be sure.
+        if not self._ensure_migrated(self._context):
+            raise exception.ObjectActionError(
+                action='create',
+                reason='main database still contains aggregates')
+
         self._assert_no_hosts('create')
         updates = self.obj_get_changes()
         payload = dict(updates)
@@ -304,8 +364,8 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                                                     "create.start",
                                                     payload)
         metadata = updates.pop('metadata', None)
-        db_aggregate = db.aggregate_create(self._context, updates,
-                                           metadata=metadata)
+        db_aggregate = _aggregate_create_in_db(self._context, updates,
+                                               metadata=metadata)
         self._from_db_object(self._context, self, db_aggregate)
         payload['aggregate_id'] = self.id
         compute_utils.notify_about_aggregate_update(self._context,
@@ -372,7 +432,10 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def destroy(self):
-        db.aggregate_delete(self._context, self.id)
+        try:
+            _aggregate_delete_from_db(self._context, self.id)
+        except exception.AggregateNotFound:
+            db.aggregate_delete(self._context, self.id)
 
     @base.remotable
     def add_host(self, host):

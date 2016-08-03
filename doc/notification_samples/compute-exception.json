@@ -4,8 +4,8 @@
         "nova_object.data": {
             "exception": "AggregateNameExists",
             "exception_message": "Aggregate versioned_exc_aggregate already exists.",
-            "function_name": "aggregate_create",
-            "module_name": "nova.db.sqlalchemy.api"
+            "function_name": "_aggregate_create_in_db",
+            "module_name": "nova.objects.aggregate"
         },
         "nova_object.name": "ExceptionPayload",
         "nova_object.namespace": "nova",

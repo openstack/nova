@@ -10260,8 +10260,6 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          None)
         self.api.delete_aggregate(self.context, aggr.id)
-        db.aggregate_get(self.context.elevated(read_deleted='yes'),
-                         aggr.id)
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr.id)
 
@@ -10544,8 +10542,6 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.delete.end')
-        db.aggregate_get(self.context.elevated(read_deleted='yes'),
-                         aggr.id)
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr.id)
 

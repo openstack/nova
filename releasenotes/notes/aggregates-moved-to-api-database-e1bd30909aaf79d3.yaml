@@ -1,0 +1,14 @@
+---
+upgrade:
+  - Aggregates are being moved to the API database for CellsV2. In this
+    release, the online data migrations will move any aggregates you have
+    in your main database to the API database, retaining all
+    attributes. Until this is complete, new attempts to create aggregates
+    will return an HTTP 409 to avoid creating aggregates in one place that
+    may conflict with aggregates you already have and are yet to be
+    migrated.
+  - Note that aggregates can no longer be soft-deleted as the API
+    database does not replicate the legacy soft-delete functionality
+    from the main database. As such, deleted aggregates are not migrated
+    and the behavior users will experience will be the same as if a
+    purge of deleted records was performed.

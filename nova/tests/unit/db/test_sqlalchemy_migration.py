@@ -261,8 +261,7 @@ class TestNewtonCheck(test.TestCase):
                           self.migration.upgrade, self.engine)
 
     def test_aggregate_not_migrated(self):
-        agg = objects.Aggregate(context=self.context, name='foo')
-        agg.create()
+        agg = db_api.aggregate_create(self.context, {"name": "foobar"})
         db_api.aggregate_update(self.context, agg.id, {'uuid': None})
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
