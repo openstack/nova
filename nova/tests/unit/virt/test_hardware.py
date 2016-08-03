@@ -2031,7 +2031,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
         inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=1, threads=3)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=3, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
         got_pinning = {x: x for x in range(0, 3)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
@@ -2057,7 +2057,7 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
         inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
         self.assertInstanceCellPinned(inst_pin)
-        got_topo = objects.VirtCPUTopology(sockets=1, cores=1, threads=4)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=4, threads=1)
         self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
@@ -2287,6 +2287,21 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         self.assertIsNone(inst_pin)
 
     def test_get_pinning_isolate_policy_fits(self):
+        host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
+                                    memory=4096, memory_usage=0,
+                                    siblings=[],
+                                    mempages=[], pinned_cpus=set([]))
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1]),
+                memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertInstanceCellPinned(inst_pin)
+        got_topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=1)
+        self.assertEqualTopology(got_topo, inst_pin.cpu_topology)
+
+    def test_get_pinning_isolate_policy_fits_ht_host(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                     memory=4096, memory_usage=0,
                                     siblings=[set([0, 1]), set([2, 3])],
