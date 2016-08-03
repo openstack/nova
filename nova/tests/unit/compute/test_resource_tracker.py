@@ -784,7 +784,7 @@ class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
         self.tracker._update_usage_from_migrations(self.context, [migration])
         mock_get_instance.assert_called_once_with(self.context, instance.uuid)
         mock_update_usage.assert_called_once_with(
-            self.context, instance, None, migration)
+            self.context, instance, migration)
 
     @mock.patch.object(resource_tracker.ResourceTracker,
                        '_update_usage_from_migration')
@@ -800,7 +800,7 @@ class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
         self.tracker._update_usage_from_migrations(self.context, [migration])
         mock_get_instance.assert_called_once_with(self.context, instance.uuid)
         mock_update_usage.assert_called_once_with(
-            self.context, instance, None, migration)
+            self.context, instance, migration)
 
     @mock.patch.object(resource_tracker.ResourceTracker,
                        '_update_usage_from_migration')
@@ -846,4 +846,4 @@ class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
             self.context, [migration_2002, migration_2003, migration_2001])
         mock_get_instance.assert_called_once_with(self.context, instance.uuid)
         mock_update_usage.assert_called_once_with(
-            self.context, instance, None, migration_2003)
+            self.context, instance, migration_2003)
