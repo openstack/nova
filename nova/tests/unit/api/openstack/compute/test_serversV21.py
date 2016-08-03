@@ -585,6 +585,11 @@ class ServersControllerTest(ControllerTest):
         num_servers = len(res_dict['servers'])
         self.assertEqual(0, num_servers)
 
+    def test_get_server_details_with_bad_name(self):
+        req = self.req('/fake/servers/detail?name=%2Binstance')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
+
     def test_get_server_details_with_limit(self):
         req = self.req('/fake/servers/detail?limit=3')
         res = self.controller.detail(req)
