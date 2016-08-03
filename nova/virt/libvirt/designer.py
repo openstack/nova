@@ -61,19 +61,6 @@ def set_vif_host_backend_ethernet_config(conf, tapname):
     conf.script = ""
 
 
-def set_vif_host_backend_ovs_config(conf, brname, interfaceid, tapname=None):
-    """Populate a LibvirtConfigGuestInterface instance
-    with host backend details for an OpenVSwitch bridge.
-    """
-
-    conf.net_type = "bridge"
-    conf.source_dev = brname
-    conf.vporttype = "openvswitch"
-    conf.add_vport_param("interfaceid", interfaceid)
-    if tapname:
-        conf.target_dev = tapname
-
-
 def set_vif_host_backend_802qbg_config(conf, devname, managerid,
                                        typeid, typeidversion,
                                        instanceid, tapname=None):

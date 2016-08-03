@@ -60,15 +60,6 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertEqual('fake-tap', conf.target_dev)
         self.assertEqual('', conf.script)
 
-    def test_set_vif_host_backend_ovs_config(self):
-        conf = config.LibvirtConfigGuestInterface()
-        designer.set_vif_host_backend_ovs_config(conf, 'fake-bridge',
-                                                 'fake-interface', 'fake-tap')
-        self.assertEqual('bridge', conf.net_type)
-        self.assertEqual('fake-bridge', conf.source_dev)
-        self.assertEqual('openvswitch', conf.vporttype)
-        self.assertEqual('fake-tap', conf.target_dev)
-
     def test_set_vif_host_backend_802qbg_config(self):
         conf = config.LibvirtConfigGuestInterface()
         designer.set_vif_host_backend_802qbg_config(conf, 'fake-devname',
