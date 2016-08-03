@@ -7255,9 +7255,7 @@ class ComputeTestCase(BaseTestCase):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         instance.root_device_name = None
 
-        self.compute._default_block_device_names(self.context,
-                                                 instance,
-                                                 {}, bdms)
+        self.compute._default_block_device_names(instance, {}, bdms)
 
         self.assertEqual('/dev/vda', instance.root_device_name)
         mock_def.assert_called_once_with(instance, '/dev/vda', [], [],
@@ -7272,9 +7270,7 @@ class ComputeTestCase(BaseTestCase):
         bdms[0]['device_name'] = None
         mock_save.return_value = None
 
-        self.compute._default_block_device_names(self.context,
-                                                 instance,
-                                                 {}, bdms)
+        self.compute._default_block_device_names(instance, {}, bdms)
 
         mock_def.assert_called_once_with(instance, '/dev/vda', [], [],
                                          [bdm for bdm in bdms])
@@ -7293,9 +7289,7 @@ class ComputeTestCase(BaseTestCase):
         mock_default_dev.return_value = '/dev/vda'
         mock_blk_save.return_value = None
 
-        self.compute._default_block_device_names(self.context,
-                                                 instance,
-                                                 {}, bdms)
+        self.compute._default_block_device_names(instance, {}, bdms)
 
         self.assertEqual('/dev/vda', instance.root_device_name)
         mock_default_dev.assert_called_once_with(instance, mock.ANY, bdms[0])
@@ -7353,7 +7347,7 @@ class ComputeTestCase(BaseTestCase):
                               '_default_device_names_for_instance')
         ) as (default_root_device, object_save,
               default_device_names):
-            self.compute._default_block_device_names(self.context, instance,
+            self.compute._default_block_device_names(instance,
                                                      image_meta, bdms)
             default_root_device.assert_called_once_with(instance, image_meta,
                                                         bdms[0])
