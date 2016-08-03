@@ -455,6 +455,17 @@ class MetadataTestCase(test.TestCase):
             self._test_as_json_with_options(is_cells=True,
                                             os_version=os_version)
 
+    @mock.patch.object(objects.KeyPair, 'get_by_name',
+                       side_effect=exception.KeypairNotFound(
+                           name='key', user_id='fake_user'))
+    def test_metadata_as_json_deleted_keypair(self, mock_keypair_get_by_name):
+        """Tests that we handle missing instance keypairs.
+        """
+        md = fake_InstanceMetadata(self.stubs, self.instance)
+        meta = md._metadata_as_json(base.OPENSTACK_VERSIONS[-1], path=None)
+        meta = jsonutils.loads(meta)
+        self.assertNotIn('keys', meta)
+
 
 class OpenStackMetadataTestCase(test.TestCase):
     def setUp(self):
