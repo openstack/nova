@@ -41,6 +41,21 @@ from nova.virt.libvirt import utils as libvirt_utils
 LOG = logging.getLogger(__name__)
 
 
+class RbdProxy(object):
+    """A wrapper around rbd.RBD class instance to avoid blocking of process.
+
+    Offloads all calls to rbd.RBD class methods to native OS threads, so that
+    we do not block the whole process while executing the librbd code.
+
+    """
+
+    def __init__(self):
+        self._rbd = tpool.Proxy(rbd.RBD())
+
+    def __getattr__(self, attr):
+        return getattr(self._rbd, attr)
+
+
 class RBDVolumeProxy(object):
     """Context manager for dealing with an existing rbd volume.
 
@@ -55,9 +70,9 @@ class RBDVolumeProxy(object):
         client, ioctx = driver._connect_to_rados(pool)
         try:
             snap_name = snapshot.encode('utf8') if snapshot else None
-            self.volume = rbd.Image(ioctx, name.encode('utf8'),
-                                    snapshot=snap_name,
-                                    read_only=read_only)
+            self.volume = tpool.Proxy(rbd.Image(ioctx, name.encode('utf8'),
+                                      snapshot=snap_name,
+                                      read_only=read_only))
         except rbd.ImageNotFound:
             with excutils.save_and_reraise_exception():
                 LOG.debug("rbd image %s does not exist", name)
@@ -218,12 +233,12 @@ class RBDDriver(object):
         with RADOSClient(self, str(pool)) as src_client:
             with RADOSClient(self, dest_pool) as dest_client:
                 try:
-                    rbd.RBD().clone(src_client.ioctx,
-                                    image.encode('utf-8'),
-                                    snapshot.encode('utf-8'),
-                                    dest_client.ioctx,
-                                    str(dest_name),
-                                    features=src_client.features)
+                    RbdProxy().clone(src_client.ioctx,
+                                     image.encode('utf-8'),
+                                     snapshot.encode('utf-8'),
+                                     dest_client.ioctx,
+                                     str(dest_name),
+                                     features=src_client.features)
                 except rbd.PermissionError:
                     raise exception.Forbidden(_('no write permission on '
                                                 'storage pool %s') % dest_pool)
@@ -266,7 +281,7 @@ class RBDDriver(object):
         """
         LOG.debug('flattening %(pool)s/%(vol)s', dict(pool=pool, vol=volume))
         with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
-            tpool.execute(vol.flatten)
+            vol.flatten()
 
     def exists(self, name, pool=None, snapshot=None):
         try:
@@ -285,7 +300,7 @@ class RBDDriver(object):
         """
         with RADOSClient(self, self.pool) as client:
             try:
-                rbd.RBD().remove(client.ioctx, name)
+                RbdProxy().remove(client.ioctx, name)
             except rbd.ImageNotFound:
                 LOG.warning(_LW('image %(volume)s in pool %(pool)s can not be '
                              'found, failed to remove'),
@@ -317,7 +332,7 @@ class RBDDriver(object):
         """
         def _cleanup_vol(ioctx, volume, retryctx):
             try:
-                rbd.RBD().remove(ioctx, volume)
+                RbdProxy().remove(ioctx, volume)
                 raise loopingcall.LoopingCallDone(retvalue=False)
             except rbd.ImageHasSnapshots:
                 self.remove_snap(volume, libvirt_utils.RESIZE_SNAPSHOT_NAME,
@@ -357,7 +372,7 @@ class RBDDriver(object):
                 else:
                     return disk.startswith(instance.uuid)
 
-            volumes = rbd.RBD().list(client.ioctx)
+            volumes = RbdProxy().list(client.ioctx)
             for volume in filter(belongs_to_instance, volumes):
                 self._destroy_volume(client, volume)
 
@@ -379,9 +394,9 @@ class RBDDriver(object):
         LOG.debug('creating snapshot(%(snap)s) on rbd image(%(img)s)',
                   {'snap': name, 'img': volume})
         with RBDVolumeProxy(self, str(volume), pool=pool) as vol:
-            tpool.execute(vol.create_snap, name)
+            vol.create_snap(name)
             if protect and not vol.is_protected_snap(name):
-                tpool.execute(vol.protect_snap, name)
+                vol.protect_snap(name)
 
     def remove_snap(self, volume, name, ignore_errors=False, pool=None,
                     force=False):
@@ -397,7 +412,7 @@ class RBDDriver(object):
             if name in [snap.get('name', '') for snap in vol.list_snaps()]:
                 if vol.is_protected_snap(name):
                     if force:
-                        tpool.execute(vol.unprotect_snap, name)
+                        vol.unprotect_snap(name)
                     elif not ignore_errors:
                         LOG.warning(_LW('snapshot(%(name)s) on rbd '
                                         'image(%(img)s) is protected, '
@@ -406,7 +421,7 @@ class RBDDriver(object):
                         return
                 LOG.debug('removing snapshot(%(name)s) on rbd image(%(img)s)',
                           {'name': name, 'img': volume})
-                tpool.execute(vol.remove_snap, name)
+                vol.remove_snap(name)
             elif not ignore_errors:
                 LOG.warning(_LW('no snapshot(%(name)s) found on rbd '
                                 'image(%(img)s)'),
@@ -422,7 +437,7 @@ class RBDDriver(object):
             if name in [snap.get('name', '') for snap in vol.list_snaps()]:
                 LOG.debug('rolling back rbd image(%(img)s) to '
                           'snapshot(%(snap)s)', {'snap': name, 'img': volume})
-                tpool.execute(vol.rollback_to_snap, name)
+                vol.rollback_to_snap(name)
             else:
                 raise exception.SnapshotNotFound(snapshot_id=name)
 
