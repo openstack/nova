@@ -197,8 +197,7 @@ class CellsController(wsgi.Controller):
 
         # Start with the cell type conversion
         if 'type' in cell:
-            cell['is_parent'] = cell['type'] == 'parent'
-            del cell['type']
+            cell['is_parent'] = cell.pop('type') == 'parent'
         # Avoid cell type being overwritten to 'child'
         elif existing:
             cell['is_parent'] = existing['is_parent']
