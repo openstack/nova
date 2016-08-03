@@ -270,7 +270,7 @@ class AggregateObjectDbTestCase(test.NoDBTestCase):
                             metadata={'availability_zone': 'fake_avail_zone'})
         result = aggregate_obj._aggregate_get_from_db(self.context,
                                                       created['id'])
-        self.assertEqual(result['availability_zone'], 'fake_avail_zone')
+        self.assertEqual('fake_avail_zone', result['availability_zone'])
         new_values = deepcopy(_get_fake_aggregate(1, result=False))
         new_values['availability_zone'] = 'different_avail_zone'
         updated = aggregate_obj._aggregate_update_to_db(self.context,
