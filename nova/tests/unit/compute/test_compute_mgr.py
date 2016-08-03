@@ -306,7 +306,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.BlockDeviceMapping(source_type='volume',
                                        destination_type='volume',
                                        instance_uuid=uuids.instance)])
-        net_req = net_req_obj.NetworkRequest(port_id='bar', tag='foo')
+        net_req = net_req_obj.NetworkRequest(port_id=uuids.bar, tag='foo')
         net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_device_tagging=False):
@@ -345,7 +345,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                        destination_type='volume',
                                        tag='foo',
                                        instance_uuid=uuids.instance)])
-        net_req = net_req_obj.NetworkRequest(network_id='bar')
+        net_req = net_req_obj.NetworkRequest(network_id=uuids.bar)
         net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_device_tagging=True):
@@ -356,7 +356,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects.BlockDeviceMapping(source_type='volume',
                                        destination_type='volume',
                                        instance_uuid=uuids.instance)])
-        net_req = net_req_obj.NetworkRequest(network_id='bar', tag='foo')
+        net_req = net_req_obj.NetworkRequest(network_id=uuids.bar, tag='foo')
         net_req_list = net_req_obj.NetworkRequestList(objects=[net_req])
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_device_tagging=True):
