@@ -15,7 +15,6 @@
 
 """Tests for compute resource tracking."""
 
-import datetime
 import uuid
 
 import mock
@@ -25,7 +24,6 @@ from oslo_utils import timeutils
 
 from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker
-from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
@@ -801,49 +799,3 @@ class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
         mock_get_instance.assert_called_once_with(self.context, instance.uuid)
         mock_update_usage.assert_called_once_with(
             self.context, instance, migration)
-
-    @mock.patch.object(resource_tracker.ResourceTracker,
-                       '_update_usage_from_migration')
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_not_resizing_state(self, mock_get_instance, mock_update_usage):
-        instance = self._fake_instance_obj()
-        instance.vm_state = vm_states.ACTIVE
-        instance.task_state = task_states.SUSPENDING
-        mock_get_instance.return_value = instance
-        migration = objects.Migration(
-            context=self.context,
-            instance_uuid=instance.uuid,
-        )
-        self.tracker._update_usage_from_migrations(self.context, [migration])
-        mock_get_instance.assert_called_once_with(self.context, instance.uuid)
-        self.assertFalse(mock_update_usage.called)
-
-    @mock.patch.object(resource_tracker.ResourceTracker,
-                       '_update_usage_from_migration')
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_use_most_recent(self, mock_get_instance, mock_update_usage):
-        instance = self._fake_instance_obj()
-        mock_get_instance.return_value = instance
-        migration_2002 = objects.Migration(
-            id=2002,
-            context=self.context,
-            instance_uuid=instance.uuid,
-            updated_at=datetime.datetime(2002, 1, 1, 0, 0, 0),
-        )
-        migration_2003 = objects.Migration(
-            id=2003,
-            context=self.context,
-            instance_uuid=instance.uuid,
-            updated_at=datetime.datetime(2003, 1, 1, 0, 0, 0),
-        )
-        migration_2001 = objects.Migration(
-            id=2001,
-            context=self.context,
-            instance_uuid=instance.uuid,
-            updated_at=datetime.datetime(2001, 1, 1, 0, 0, 0),
-        )
-        self.tracker._update_usage_from_migrations(
-            self.context, [migration_2002, migration_2003, migration_2001])
-        mock_get_instance.assert_called_once_with(self.context, instance.uuid)
-        mock_update_usage.assert_called_once_with(
-            self.context, instance, migration_2003)
