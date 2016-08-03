@@ -21,9 +21,7 @@ from oslo_utils import timeutils
 import routes
 import six
 from six.moves import range
-import webob
 import webob.dec
-import webob.request
 
 from nova.api import auth as api_auth
 from nova.api import openstack as openstack_api
