@@ -224,6 +224,7 @@ class GetVlanIdAndVswitchForPortgroupTestCase(test.NoDBTestCase):
         port_group_spec = fake.DataObject()
         port_group_spec.name = 'port_group_name'
         port_group_spec.vlanId = 100
+        port_group_spec.vswitchName = 'vswitch_name'
 
         port_group = fake.DataObject()
         port_group.vswitch = 'vswitch_name'
