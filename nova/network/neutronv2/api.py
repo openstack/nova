@@ -2247,7 +2247,7 @@ class API(base_api.NetworkAPI):
         search_opts = {'device_id': instance.uuid,
                        'tenant_id': instance.project_id}
         data = neutron.list_ports(**search_opts)
-        pci_mapping = self._get_pci_mapping_for_migration(context, instance)
+        pci_mapping = None
         port_updates = []
         ports = data['ports']
         for p in ports:
@@ -2263,6 +2263,10 @@ class API(base_api.NetworkAPI):
             # allocated.
             vnic_type = p.get('binding:vnic_type')
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
+                if not pci_mapping:
+                    pci_mapping = self._get_pci_mapping_for_migration(context,
+                        instance)
+
                 binding_profile = p.get('binding:profile', {})
                 pci_slot = binding_profile.get('pci_slot')
                 new_dev = pci_mapping.get(pci_slot)
@@ -2288,7 +2292,8 @@ class API(base_api.NetworkAPI):
                     neutron.update_port(port_id, {'port': updates})
                 except Exception:
                     with excutils.save_and_reraise_exception():
-                        LOG.exception(_LE("Unable to update host of port %s"),
+                        LOG.exception(_LE("Unable to update binding details "
+                                          "for port %s"),
                                       port_id, instance=instance)
 
     def update_instance_vnic_index(self, context, instance, vif, index):
