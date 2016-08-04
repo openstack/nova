@@ -27,6 +27,7 @@ import string
 import uuid
 
 from oslo_log import log as logging
+from oslo_messaging import exceptions as oslo_exceptions
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
@@ -3365,10 +3366,19 @@ class API(base.Base):
             # Some old instances can still have no RequestSpec object attached
             # to them, we need to support the old way
             request_spec = None
-        self.compute_task_api.live_migrate_instance(context, instance,
+        try:
+            self.compute_task_api.live_migrate_instance(context, instance,
                 host_name, block_migration=block_migration,
                 disk_over_commit=disk_over_commit,
                 request_spec=request_spec)
+        except oslo_exceptions.MessagingTimeout as messaging_timeout:
+            with excutils.save_and_reraise_exception():
+                # NOTE(pkoniszewski): It is possible that MessagingTimeout
+                # occurs, but LM will still be in progress, so write
+                # instance fault to database
+                compute_utils.add_instance_fault_from_exc(context,
+                                                          instance,
+                                                          messaging_timeout)
 
     @check_instance_lock
     @check_instance_cell

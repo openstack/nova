@@ -19,6 +19,7 @@ import datetime
 import iso8601
 import mock
 from mox3 import mox
+from oslo_messaging import exceptions as oslo_exceptions
 from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 from oslo_utils import fixture as utils_fixture
@@ -1871,6 +1872,30 @@ class _ComputeAPIUnitTestMixIn(object):
         paused_state = dict(vm_state=vm_states.PAUSED)
         instance = self._create_instance_obj(params=paused_state)
         self._live_migrate_instance(instance)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_live_migrate_messaging_timeout(self, _save, _action, get_spec,
+                                            add_instance_fault_from_exc):
+        instance = self._create_instance_obj()
+        if self.cell_type == 'api':
+            api = self.compute_api.cells_rpcapi
+        else:
+            api = conductor.api.ComputeTaskAPI
+
+        with mock.patch.object(api, 'live_migrate_instance',
+                               side_effect=oslo_exceptions.MessagingTimeout):
+            self.assertRaises(oslo_exceptions.MessagingTimeout,
+                              self.compute_api.live_migrate,
+                              self.context, instance,
+                              host_name='fake_dest_host',
+                              block_migration=True, disk_over_commit=True)
+            add_instance_fault_from_exc.assert_called_once_with(
+                self.context,
+                instance,
+                mock.ANY)
 
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
