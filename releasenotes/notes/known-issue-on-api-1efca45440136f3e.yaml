@@ -1,0 +1,8 @@
+---
+issues:
+  - When using Neutron extension 'port_security' and booting an
+    instance on a network with 'port_security_enabled=False' the Nova
+    API response says there is a 'default' security group attached to
+    the instance which is incorrect. However when listing security groups
+    for the instance there are none listed, which is correct. The API
+    response will be fixed separately with a microversion.

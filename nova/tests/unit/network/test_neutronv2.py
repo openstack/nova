@@ -223,6 +223,7 @@ class TestNeutronv2Base(test.TestCase):
                            'tenant_id': 'my_tenantid'})
         self.nets3 = self.nets2 + [{'id': 'my_netid3',
                                     'name': 'my_netname3',
+                                    'subnets': ['mysubnid3'],
                                     'tenant_id': 'my_tenantid'}]
         self.nets4 = [{'id': 'his_netid4',
                       'name': 'his_netname4',
@@ -230,6 +231,7 @@ class TestNeutronv2Base(test.TestCase):
         # A network request with external networks
         self.nets5 = self.nets1 + [{'id': 'the-external-one',
                                     'name': 'out-of-this-world',
+                                    'subnets': ['mysubnid5'],
                                     'router:external': True,
                                     'tenant_id': 'should-be-an-admin'}]
         # A network request with a duplicate
@@ -248,7 +250,8 @@ class TestNeutronv2Base(test.TestCase):
         self.nets9 = []
         # A network that is both shared and external
         self.nets10 = [{'id': 'net_id', 'name': 'net_name',
-                        'router:external': True, 'shared': True}]
+                        'router:external': True, 'shared': True,
+                        'subnets': ['mysubnid10']}]
         # A network with non-blank dns_domain to test _update_port_dns_name
         self.nets11 = [{'id': 'my_netid1',
                       'name': 'my_netname1',
@@ -1104,6 +1107,16 @@ class TestNeutronv2(TestNeutronv2Base):
                      for net in (self.nets3[1], self.nets3[0], self.nets3[2])])
         self._allocate_for_instance(net_idx=3,
                                     requested_networks=requested_networks)
+
+    def test_allocate_for_instance_with_no_subnet_defined(self):
+        # net_id=4 does not specify subnet and does not set the option
+        # port_security_disabled to True, so Neutron will not been
+        # able to associate the default security group to the port
+        # requested to be created. We expect an exception to be
+        # raised.
+        self.assertRaises(exception.SecurityGroupCannotBeApplied,
+                          self._allocate_for_instance, net_idx=4,
+                          _break='post_list_networks')
 
     def test_allocate_for_instance_with_invalid_network_id(self):
         requested_networks = objects.NetworkRequestList(
@@ -3608,7 +3621,8 @@ class TestNeutronv2WithMock(test.TestCase):
             objects = [objects.NetworkRequest(port_id='fake-port1'),
                        objects.NetworkRequest(port_id='fake-port2'),
                        objects.NetworkRequest(port_id='fail-port')])
-        mock_avail_nets.return_value = [{'id': 'net-1'}]
+        mock_avail_nets.return_value = [{'id': 'net-1',
+                                         'subnets': ['subnet1']}]
 
         self.api.allocate_for_instance(mock.sentinel.ctx,
                                   mock_inst,
@@ -3725,7 +3739,8 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')
-        mock_avail_nets.return_value = [{'id': 'net-1'}]
+        mock_avail_nets.return_value = [{'id': 'net-1',
+                                         'subnets': ['subnet1']}]
         mock_nc.create_port.return_value = {'port': {'id': 'fake_id',
                             'tenant_id': mock_inst.project_id,
                             'binding:vif_type': 'binding_failed'}}
@@ -4221,3 +4236,233 @@ class TestNeutronClientForAdminScenarios(test.NoDBTestCase):
 
     def test_get_client_for_admin_context_with_id(self):
         self._test_get_client_for_admin(use_id=True, admin_context=True)
+
+
+class TestNeutronPortSecurity(test.NoDBTestCase):
+
+    @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
+    @mock.patch.object(neutronapi.API, '_update_port_dns_name')
+    @mock.patch.object(neutronapi.API, '_create_port')
+    @mock.patch.object(neutronapi.API, '_populate_neutron_extension_values')
+    @mock.patch.object(neutronapi.API, '_check_external_network_attach')
+    @mock.patch.object(neutronapi.API, '_process_security_groups')
+    @mock.patch.object(neutronapi.API, '_get_available_networks')
+    @mock.patch.object(neutronapi.API, '_process_requested_networks')
+    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_no_security_groups_requested(
+            self, mock_get_client, mock_has_port_binding_extension,
+            mock_process_requested_networks, mock_get_available_networks,
+            mock_process_security_groups, mock_check_external_network_attach,
+            mock_populate_neutron_extension_values, mock_create_port,
+            mock_update_port_dns_name, mock_get_instance_nw_info):
+        nets = [
+            {'id': 'net1',
+             'name': 'net_name1',
+             'subnets': ['mysubnid1'],
+             'port_security_enabled': True},
+            {'id': 'net2',
+             'name': 'net_name2',
+             'subnets': ['mysubnid2'],
+             'port_security_enabled': True}]
+        onets = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id='net1'),
+            objects.NetworkRequest(network_id='net2')])
+
+        instance = objects.Instance(
+            project_id=1, availability_zone='nova', uuid='uuid1')
+        secgroups = ['default']  # Nova API provides the 'default'
+
+        mock_process_requested_networks.return_value = [
+            None, ['net1', 'net2'], onets, None]
+        mock_get_available_networks.return_value = nets
+        mock_process_security_groups.return_value = []
+
+        api = neutronapi.API()
+        api.allocate_for_instance(
+            'context', instance, requested_networks=onets,
+            security_groups=secgroups)
+
+        mock_process_security_groups.assert_called_once_with(
+            instance, mock.ANY, [])
+        mock_create_port.assert_has_calls([
+            mock.call(
+                mock.ANY, instance,
+                u'net1', {'port':
+                          {'device_owner': u'compute:nova',
+                           'device_id': 'uuid1'}},
+                None, [], None, None),
+            mock.call(
+                mock.ANY, instance,
+                u'net2', {'port':
+                          {'device_owner': u'compute:nova',
+                           'device_id': 'uuid1'}},
+                None, [], None, None)])
+
+    @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
+    @mock.patch.object(neutronapi.API, '_update_port_dns_name')
+    @mock.patch.object(neutronapi.API, '_create_port')
+    @mock.patch.object(neutronapi.API, '_populate_neutron_extension_values')
+    @mock.patch.object(neutronapi.API, '_check_external_network_attach')
+    @mock.patch.object(neutronapi.API, '_process_security_groups')
+    @mock.patch.object(neutronapi.API, '_get_available_networks')
+    @mock.patch.object(neutronapi.API, '_process_requested_networks')
+    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_security_groups_requested(
+            self, mock_get_client, mock_has_port_binding_extension,
+            mock_process_requested_networks, mock_get_available_networks,
+            mock_process_security_groups, mock_check_external_network_attach,
+            mock_populate_neutron_extension_values, mock_create_port,
+            mock_update_port_dns_name, mock_get_instance_nw_info):
+        nets = [
+            {'id': 'net1',
+             'name': 'net_name1',
+             'subnets': ['mysubnid1'],
+             'port_security_enabled': True},
+            {'id': 'net2',
+             'name': 'net_name2',
+             'subnets': ['mysubnid2'],
+             'port_security_enabled': True}]
+        onets = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id='net1'),
+            objects.NetworkRequest(network_id='net2')])
+
+        instance = objects.Instance(
+            project_id=1, availability_zone='nova', uuid='uuid1')
+        secgroups = ['default', 'secgrp1', 'secgrp2']
+
+        mock_process_requested_networks.return_value = [
+            None, ['net1', 'net2'], onets, None]
+        mock_get_available_networks.return_value = nets
+        mock_process_security_groups.return_value = ['secgrp-uuid1',
+                                                     'secgrp-uuid2']
+
+        api = neutronapi.API()
+        api.allocate_for_instance(
+            'context', instance, requested_networks=onets,
+            security_groups=secgroups)
+
+        mock_process_security_groups.assert_called_once_with(
+            instance, mock.ANY, ['secgrp1', 'secgrp2'])
+        mock_create_port.assert_has_calls([
+            mock.call(
+                mock.ANY, instance,
+                u'net1', {'port':
+                          {'device_owner': u'compute:nova',
+                           'device_id': 'uuid1'}},
+                None, ['secgrp-uuid1', 'secgrp-uuid2'], None, None),
+            mock.call(
+                mock.ANY, instance,
+                u'net2', {'port':
+                          {'device_owner': u'compute:nova',
+                           'device_id': 'uuid1'}},
+                None, ['secgrp-uuid1', 'secgrp-uuid2'], None, None)])
+
+    @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
+    @mock.patch.object(neutronapi.API, '_update_port_dns_name')
+    @mock.patch.object(neutronapi.API, '_create_port')
+    @mock.patch.object(neutronapi.API, '_populate_neutron_extension_values')
+    @mock.patch.object(neutronapi.API, '_check_external_network_attach')
+    @mock.patch.object(neutronapi.API, '_process_security_groups')
+    @mock.patch.object(neutronapi.API, '_get_available_networks')
+    @mock.patch.object(neutronapi.API, '_process_requested_networks')
+    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_port_security_disabled_no_security_groups_requested(
+            self, mock_get_client, mock_has_port_binding_extension,
+            mock_process_requested_networks, mock_get_available_networks,
+            mock_process_security_groups, mock_check_external_network_attach,
+            mock_populate_neutron_extension_values, mock_create_port,
+            mock_update_port_dns_name, mock_get_instance_nw_info):
+        nets = [
+            {'id': 'net1',
+             'name': 'net_name1',
+             'subnets': ['mysubnid1'],
+             'port_security_enabled': False},
+            {'id': 'net2',
+             'name': 'net_name2',
+             'subnets': ['mysubnid2'],
+             'port_security_enabled': False}]
+        onets = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id='net1'),
+            objects.NetworkRequest(network_id='net2')])
+
+        instance = objects.Instance(
+            project_id=1, availability_zone='nova', uuid='uuid1')
+        secgroups = ['default']  # Nova API provides the 'default'
+
+        mock_process_requested_networks.return_value = [
+            None, ['net1', 'net2'], onets, None]
+        mock_get_available_networks.return_value = nets
+        mock_process_security_groups.return_value = []
+
+        api = neutronapi.API()
+        api.allocate_for_instance(
+            'context', instance, requested_networks=onets,
+            security_groups=secgroups)
+
+        mock_process_security_groups.assert_called_once_with(
+            instance, mock.ANY, [])
+        mock_create_port.assert_has_calls([
+            mock.call(
+                mock.ANY, instance,
+                u'net1', {'port':
+                          {'device_owner': u'compute:nova',
+                           'device_id': 'uuid1'}},
+                None, [], None, None),
+            mock.call(
+                mock.ANY, instance,
+                u'net2', {'port':
+                          {'device_owner': u'compute:nova',
+                           'device_id': 'uuid1'}},
+                None, [], None, None)])
+
+    @mock.patch.object(neutronapi.API, 'get_instance_nw_info')
+    @mock.patch.object(neutronapi.API, '_update_port_dns_name')
+    @mock.patch.object(neutronapi.API, '_create_port')
+    @mock.patch.object(neutronapi.API, '_populate_neutron_extension_values')
+    @mock.patch.object(neutronapi.API, '_check_external_network_attach')
+    @mock.patch.object(neutronapi.API, '_process_security_groups')
+    @mock.patch.object(neutronapi.API, '_get_available_networks')
+    @mock.patch.object(neutronapi.API, '_process_requested_networks')
+    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_port_security_disabled_and_security_groups_requested(
+            self, mock_get_client, mock_has_port_binding_extension,
+            mock_process_requested_networks, mock_get_available_networks,
+            mock_process_security_groups, mock_check_external_network_attach,
+            mock_populate_neutron_extension_values, mock_create_port,
+            mock_update_port_dns_name, mock_get_instance_nw_info):
+        nets = [
+            {'id': 'net1',
+             'name': 'net_name1',
+             'subnets': ['mysubnid1'],
+             'port_security_enabled': True},
+            {'id': 'net2',
+             'name': 'net_name2',
+             'subnets': ['mysubnid2'],
+             'port_security_enabled': False}]
+        onets = objects.NetworkRequestList(objects=[
+            objects.NetworkRequest(network_id='net1'),
+            objects.NetworkRequest(network_id='net2')])
+
+        instance = objects.Instance(
+            project_id=1, availability_zone='nova', uuid='uuid1')
+        secgroups = ['default', 'secgrp1', 'secgrp2']
+
+        mock_process_requested_networks.return_value = [
+            None, ['net1', 'net2'], onets, None]
+        mock_get_available_networks.return_value = nets
+        mock_process_security_groups.return_value = ['secgrp-uuid1',
+                                                     'secgrp-uuid2']
+
+        api = neutronapi.API()
+        self.assertRaises(
+            exception.SecurityGroupCannotBeApplied,
+            api.allocate_for_instance,
+            'context', instance, requested_networks=onets,
+            security_groups=secgroups)
+
+        mock_process_security_groups.assert_called_once_with(
+            instance, mock.ANY, ['secgrp1', 'secgrp2'])
