@@ -151,9 +151,8 @@ def fetch_raw_image(context, target, image_id, max_size=0):
     pass
 
 
-def get_instance_path(instance, forceold=False, relative=False):
-    return libvirt_utils.get_instance_path(instance, forceold=forceold,
-                                           relative=relative)
+def get_instance_path(instance, relative=False):
+    return libvirt_utils.get_instance_path(instance, relative=relative)
 
 
 def get_instance_path_at_destination(instance, migrate_data=None):
