@@ -1088,3 +1088,47 @@ class CellV2CommandsTestCase(test.TestCase):
         self.assertEqual('none:///', cell_mapping.transport_url)
         self.assertEqual('fake://netloc/nova_api_cell0',
                          cell_mapping.database_connection)
+
+    def test_migrate_single_command(self):
+        ctxt = context.RequestContext()
+        CONF.set_default('connection',
+                         'fake://netloc/nova_api',
+                         group='api_database')
+        values = {
+                'vcpus': 4,
+                'memory_mb': 4096,
+                'local_gb': 1024,
+                'vcpus_used': 2,
+                'memory_mb_used': 2048,
+                'local_gb_used': 512,
+                'hypervisor_type': 'Hyper-Dan-VM-ware',
+                'hypervisor_version': 1001,
+                'cpu_info': 'Schmintel i786',
+            }
+        for i in range(3):
+            host = 'host%s' % i
+            compute_node = objects.ComputeNode(ctxt, host=host, **values)
+            compute_node.create()
+
+        transport_url = "fake://guest:devstack@127.0.0.1:9999/"
+        cell_uuid = uuidutils.generate_uuid()
+        with mock.patch.object(uuidutils, 'generate_uuid',
+                return_value=cell_uuid):
+            self.commands.simple_cell_setup(transport_url)
+
+        # Check cell0 from default
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
+                objects.CellMapping.CELL0_UUID)
+        self.assertEqual('cell0', cell_mapping.name)
+        self.assertEqual('none:///', cell_mapping.transport_url)
+        self.assertEqual('fake://netloc/nova_api_cell0',
+                         cell_mapping.database_connection)
+
+        # Verify the cell mapping
+        cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+        self.assertEqual(transport_url, cell_mapping.transport_url)
+        # Verify the host mappings
+        for i in range(3):
+            host = 'host%s' % i
+            host_mapping = objects.HostMapping.get_by_host(ctxt, host)
+            self.assertEqual(cell_mapping.uuid, host_mapping.cell_mapping.uuid)
