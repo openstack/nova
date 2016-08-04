@@ -1109,7 +1109,7 @@ class LibvirtDriver(driver.ComputeDriver):
         root_helper = utils.get_root_helper()
         return connector.get_connector_properties(
             root_helper, CONF.my_block_storage_ip,
-            CONF.libvirt.iscsi_use_multipath,
+            CONF.libvirt.volume_use_multipath,
             enforce_multipath=True,
             host=CONF.host)
 

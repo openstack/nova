@@ -1,0 +1,4 @@
+---
+upgrade:
+  - The libvirt option 'iscsi_use_multipath' has been renamed to
+    'volume_use_multipath'.
