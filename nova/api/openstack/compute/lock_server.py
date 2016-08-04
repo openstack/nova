@@ -33,8 +33,10 @@ class LockServerController(wsgi.Controller):
     def _lock(self, req, id, body):
         """Lock a server instance."""
         context = req.environ['nova.context']
-        context.can(ls_policies.POLICY_ROOT % 'lock')
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(ls_policies.POLICY_ROOT % 'lock',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         self.compute_api.lock(context, instance)
 
     @wsgi.response(202)
