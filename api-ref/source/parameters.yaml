@@ -2262,8 +2262,10 @@ image_status:
   type: string
 imageRef:
   description: |
-    The image reference, as a UUID or full URL, for the image to use for your server
-    instance.
+    The UUID of the image to use for your server instance.
+    This is not required in case of boot from volume.
+    In all other cases it is required and must be a valid UUID
+    otherwise API will return 400.
   in: body
   required: true
   type: string

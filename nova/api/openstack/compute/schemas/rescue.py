@@ -22,7 +22,7 @@ rescue = {
             'type': ['object', 'null'],
             'properties': {
                 'adminPass': parameter_types.admin_password,
-                'rescue_image_ref': parameter_types.image_ref,
+                'rescue_image_ref': parameter_types.image_id,
             },
             'additionalProperties': False,
         },

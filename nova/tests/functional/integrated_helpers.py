@@ -120,24 +120,11 @@ class _IntegratedTestBase(test.TestCase):
     def get_invalid_image(self):
         return str(uuid.uuid4())
 
-    def _get_any_image_href(self):
-        image = self.api.get_images()[0]
-        LOG.debug("Image: %s" % image)
-
-        if self._image_ref_parameter in image:
-            image_href = image[self._image_ref_parameter]
-        else:
-            image_href = image['id']
-            image_href = 'http://fake.server/%s' % image_href
-        return image_href
-
     def _build_minimal_create_server_request(self):
         server = {}
 
-        image_href = self._get_any_image_href()
-
         # We now have a valid imageId
-        server[self._image_ref_parameter] = image_href
+        server[self._image_ref_parameter] = self.api.get_images()[0]['id']
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[0]
@@ -181,19 +168,11 @@ class _IntegratedTestBase(test.TestCase):
 
     def _build_server(self, flavor_id):
         server = {}
-
-        image_href = self._get_any_image_href()
         image = self.api.get_images()[0]
         LOG.debug("Image: %s" % image)
 
-        if self._image_ref_parameter in image:
-            image_href = image[self._image_ref_parameter]
-        else:
-            image_href = image['id']
-            image_href = 'http://fake.server/%s' % image_href
-
         # We now have a valid imageId
-        server[self._image_ref_parameter] = image_href
+        server[self._image_ref_parameter] = image['id']
 
         # Set a valid flavorId
         flavor = self.api.get_flavor(flavor_id)
@@ -243,19 +222,8 @@ class InstanceHelperMixin(object):
                                              flavor_id=None):
         server = {}
 
-        if image_uuid:
-            image_href = 'http://fake.server/%s' % image_uuid
-        else:
-            image = api.get_images()[0]
-
-            if 'imageRef' in image:
-                image_href = image['imageRef']
-            else:
-                image_href = image['id']
-                image_href = 'http://fake.server/%s' % image_href
-
         # We now have a valid imageId
-        server['imageRef'] = image_href
+        server['imageRef'] = image_uuid or api.get_images()[0]['id']
 
         if not flavor_id:
             # Set a valid flavorId

@@ -338,15 +338,6 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_instance_with_image_href_uses_uuid(self):
-        info = dict(image_href_in_call=None)
-
-        def rebuild(self2, context, instance, image_href, *args, **kwargs):
-            info['image_href_in_call'] = image_href
-
-        self.stub_out('nova.db.instance_get',
-                fakes.fake_instance_get(vm_state=vm_states.ACTIVE))
-        self.stubs.Set(compute_api.API, 'rebuild', rebuild)
-
         # proper local hrefs must start with 'http://localhost/v2/'
         body = {
             'rebuild': {
@@ -354,8 +345,9 @@ class ServerActionsControllerTestV21(test.TestCase):
             },
         }
 
-        self.controller._action_rebuild(self.req, FAKE_UUID, body=body)
-        self.assertEqual(info['image_href_in_call'], self.image_uuid)
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
 
     def test_rebuild_accepted_minimum_pass_disabled(self):
         # run with enable_instance_password disabled to verify adminPass
@@ -517,7 +509,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                 "imageRef": "foo",
             },
         }
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=body)
 

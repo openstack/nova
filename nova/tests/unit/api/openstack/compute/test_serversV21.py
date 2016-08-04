@@ -1576,7 +1576,6 @@ class ServersControllerDeleteTest(ControllerTest):
 class ServersControllerRebuildInstanceTest(ControllerTest):
 
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-    image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
 
     def setUp(self):
         super(ServersControllerRebuildInstanceTest, self).setUp()
@@ -1599,7 +1598,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.body = {
             'rebuild': {
                 'name': 'new_name',
-                'imageRef': self.image_href,
+                'imageRef': self.image_uuid,
                 'metadata': {
                     'open': 'stack',
                 },
@@ -1608,6 +1607,29 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.req = fakes.HTTPRequest.blank('/fake/servers/a/action')
         self.req.method = 'POST'
         self.req.headers["content-type"] = "application/json"
+
+    def test_rebuild_server_with_image_not_uuid(self):
+        self.body['rebuild']['imageRef'] = 'not-uuid'
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID,
+                          body=self.body)
+
+    def test_rebuild_server_with_image_as_full_url(self):
+        image_href = ('http://localhost/v2/fake/images/'
+            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
+        self.body['rebuild']['imageRef'] = image_href
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID,
+                          body=self.body)
+
+    def test_rebuild_server_with_image_as_empty_string(self):
+        self.body['rebuild']['imageRef'] = ''
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID,
+                          body=self.body)
 
     def test_rebuild_instance_name_with_spaces_in_the_middle(self):
         self.body['rebuild']['name'] = 'abc   def'
@@ -1756,7 +1778,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_rebuild_bad_personality(self):
         body = {
             "rebuild": {
-                "imageRef": self.image_href,
+                "imageRef": self.image_uuid,
                 "personality": [{
                     "path": "/path/to/file",
                     "contents": "INVALID b64",
@@ -1771,7 +1793,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_rebuild_personality(self):
         body = {
             "rebuild": {
-                "imageRef": self.image_href,
+                "imageRef": self.image_uuid,
                 "personality": [{
                     "path": "/path/to/file",
                     "contents": base64.b64encode("Test String"),
@@ -2442,10 +2464,9 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self._test_create_instance,
                           flavor=1324)
 
-    def test_create_server_bad_image_href(self):
-        image_href = 1
+    def test_create_server_bad_image_uuid(self):
         self.body['server']['min_count'] = 1
-        self.body['server']['imageRef'] = image_href,
+        self.body['server']['imageRef'] = 1,
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create,
@@ -2510,23 +2531,24 @@ class ServersControllerCreateTest(test.TestCase):
                 "Flavor's disk is too small for requested image."):
             self.controller.create(self.req, body=self.body)
 
-    def test_create_instance_image_ref_is_bookmark(self):
-        image_href = 'http://localhost/fake/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
-        self.req.body = jsonutils.dump_as_bytes(self.body)
-        res = self.controller.create(self.req, body=self.body).obj
+    def test_create_instance_with_image_non_uuid(self):
+        self.body['server']['imageRef'] = 'not-uuid'
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req, body=self.body)
 
-        server = res['server']
-        self.assertEqual(FAKE_UUID, server['id'])
-
-    def test_create_instance_image_ref_is_invalid(self):
-        image_uuid = 'this_is_not_a_valid_uuid'
-        image_href = 'http://localhost/fake/images/%s' % image_uuid
-        flavor_ref = 'http://localhost/fake/flavors/3'
+    def test_create_instance_with_image_as_full_url(self):
+        image_href = ('http://localhost/v2/fake/images/'
+            '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6')
         self.body['server']['imageRef'] = image_href
-        self.body['server']['flavorRef'] = flavor_ref
-        self.req.body = jsonutils.dump_as_bytes(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+        self.assertRaises(exception.ValidationError,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    def test_create_instance_with_image_as_empty_string(self):
+        self.body['server']['imageRef'] = ''
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
                           self.req, body=self.body)
 
     def test_create_instance_no_key_pair(self):
@@ -2687,10 +2709,7 @@ class ServersControllerCreateTest(test.TestCase):
         # test with admin passwords disabled See lp bug 921814
         self.flags(enable_instance_password=False)
 
-        # proper local hrefs must start with 'http://localhost/v2/'
         self.flags(enable_instance_password=False)
-        image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2699,50 +2718,36 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_name_too_long(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = 'X' * 256
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError, self.controller.create,
                           self.req, body=self.body)
 
     def test_create_instance_name_with_spaces_in_the_middle(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = 'abc    def'
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.controller.create(self.req, body=self.body)
 
     def test_create_instance_name_with_leading_trailing_spaces(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = '   abc    def   '
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_name_with_leading_trailing_spaces_in_compat_mode(
             self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = '   abc    def   '
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.req.set_legacy_v2()
         self.controller.create(self.req, body=self.body)
 
     def test_create_instance_name_all_blank_spaces(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v2/images/%s' % image_uuid
         flavor_ref = 'http://localhost/fake/flavors/3'
         body = {
             'server': {
                 'name': ' ' * 64,
-                'imageRef': image_href,
+                'imageRef': image_uuid,
                 'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
@@ -2759,9 +2764,6 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, req, body=body)
 
     def test_create_az_with_leading_trailing_spaces(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['availability_zone'] = '  zone1  '
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
@@ -2769,10 +2771,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_az_with_leading_trailing_spaces_in_compat_mode(
             self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = '   abc    def   '
-        self.body['server']['imageRef'] = image_href
         self.body['server']['availability_zones'] = '  zone1  '
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.req.set_legacy_v2()
@@ -2781,9 +2780,6 @@ class ServersControllerCreateTest(test.TestCase):
             self.controller.create(self.req, body=self.body)
 
     def test_create_instance(self):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2798,14 +2794,12 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.stubs.Set(keypairs.Keypairs, 'server_create',
                        fake_keypair_server_create)
-        # proper local hrefs must start with 'http://localhost/v2/'
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v2/images/%s' % image_uuid
         flavor_ref = 'http://localhost/123/flavors/3'
         body = {
             'server': {
                 'name': 'server_test',
-                'imageRef': image_href,
+                'imageRef': image_uuid,
                 'flavorRef': flavor_ref,
                 'metadata': {
                     'hello': 'world',
@@ -2823,9 +2817,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_pass_disabled(self):
         self.flags(enable_instance_password=False)
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
@@ -2842,8 +2833,6 @@ class ServersControllerCreateTest(test.TestCase):
                                                    'cpuset': None,
                                                    'memsize': 0,
                                                    'memtotal': 0})
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
@@ -2860,8 +2849,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_too_much_metadata(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata']['vote'] = 'fiddletown'
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPForbidden,
@@ -2869,8 +2856,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_metadata_key_too_long(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {('a' * 260): '12345'}
 
         self.req.body = jsonutils.dump_as_bytes(self.body)
@@ -2879,8 +2864,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_metadata_value_too_long(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {'key1': ('a' * 260)}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
@@ -2888,8 +2871,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_metadata_key_blank(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {'': 'abcd'}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
@@ -2897,8 +2878,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_metadata_not_dict(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = 'string'
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
@@ -2906,8 +2885,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_metadata_key_not_string(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {1: 'test'}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
@@ -2915,8 +2892,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_metadata_value_not_string(self):
         self.flags(quota_metadata_items=1)
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         self.body['server']['metadata'] = {'test': ['a', 'list']}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
@@ -2928,8 +2903,6 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params)
 
     def test_create_instance_invalid_key_name(self):
-        image_href = 'http://localhost/v2/images/2'
-        self.body['server']['imageRef'] = image_href
         self.body['server']['key_name'] = 'nonexistentkey'
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2944,18 +2917,14 @@ class ServersControllerCreateTest(test.TestCase):
         self._check_admin_password_len(res["server"])
 
     def test_create_instance_invalid_flavor_href(self):
-        image_href = 'http://localhost/v2/images/2'
         flavor_ref = 'http://localhost/v2/flavors/asdf'
-        self.body['server']['imageRef'] = image_href
         self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_invalid_flavor_id_int(self):
-        image_href = 'http://localhost/v2/images/2'
         flavor_ref = -1
-        self.body['server']['imageRef'] = image_href
         self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2969,19 +2938,9 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_bad_flavor_href(self):
-        image_href = 'http://localhost/v2/images/2'
         flavor_ref = 'http://localhost/v2/flavors/17'
-        self.body['server']['imageRef'] = image_href
         self.body['server']['flavorRef'] = flavor_ref
         self.req.body = jsonutils.dump_as_bytes(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, body=self.body)
-
-    def test_create_instance_bad_href(self):
-        image_href = 'asdf'
-        self.body['server']['imageRef'] = image_href
-        self.req.body = jsonutils.dump_as_bytes(self.body)
-
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
@@ -3345,9 +3304,6 @@ class ServersControllerCreateTest(test.TestCase):
 
 class ServersControllerCreateTestV219(ServersControllerCreateTest):
     def _create_instance_req(self, set_desc, desc=None):
-        # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
-        self.body['server']['imageRef'] = image_href
         if set_desc:
             self.body['server']['description'] = desc
         self.req.body = jsonutils.dump_as_bytes(self.body)

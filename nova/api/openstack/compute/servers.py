@@ -874,8 +874,7 @@ class ServersController(wsgi.Controller):
         if not image_href and create_kwargs.get('block_device_mapping'):
             return ''
         elif image_href:
-            return common.image_uuid_from_href(six.text_type(image_href),
-                                               'imageRef')
+            return image_href
         else:
             msg = _("Missing imageRef attribute")
             raise exc.HTTPBadRequest(explanation=msg)
@@ -909,7 +908,6 @@ class ServersController(wsgi.Controller):
         rebuild_dict = body['rebuild']
 
         image_href = rebuild_dict["imageRef"]
-        image_href = common.image_uuid_from_href(image_href, 'imageRef')
 
         password = self._get_server_admin_password(rebuild_dict)
 

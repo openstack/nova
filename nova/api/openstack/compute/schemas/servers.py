@@ -25,7 +25,12 @@ base_create = {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
-                'imageRef': parameter_types.image_ref,
+                # NOTE(gmann): In case of boot from volume, imageRef was
+                # allowed as the empty string also So keeping the same
+                # behavior and allow empty string in case of boot from
+                # volume only. Python code make sure empty string is
+                # not alowed for other cases.
+                'imageRef': parameter_types.image_id_or_empty_string,
                 'flavorRef': parameter_types.flavor_ref,
                 'adminPass': parameter_types.admin_password,
                 'metadata': parameter_types.metadata,
@@ -108,7 +113,7 @@ base_rebuild = {
             'type': 'object',
             'properties': {
                 'name': parameter_types.name,
-                'imageRef': parameter_types.image_ref,
+                'imageRef': parameter_types.image_id,
                 'adminPass': parameter_types.admin_password,
                 'metadata': parameter_types.metadata,
                 'preserve_ephemeral': parameter_types.boolean,
