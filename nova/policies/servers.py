@@ -22,14 +22,15 @@ SERVERS = 'os_compute_api:servers:%s'
 rules = [
     policy.RuleDefault(SERVERS % 'index', RULE_AOO),
     policy.RuleDefault(SERVERS % 'detail', RULE_AOO),
-    policy.RuleDefault(SERVERS % 'detail:get_all_tenants', RULE_AOO),
-    policy.RuleDefault(SERVERS % 'index:get_all_tenants', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'detail:get_all_tenants',
+                       base.RULE_ADMIN_API),
+    policy.RuleDefault(SERVERS % 'index:get_all_tenants', base.RULE_ADMIN_API),
     policy.RuleDefault(SERVERS % 'show', RULE_AOO),
     # the details in host_status are pretty sensitive, only admins
     # should do that by default.
     policy.RuleDefault(SERVERS % 'show:host_status', base.RULE_ADMIN_API),
     policy.RuleDefault(SERVERS % 'create', RULE_AOO),
-    policy.RuleDefault(SERVERS % 'create:forced_host', RULE_AOO),
+    policy.RuleDefault(SERVERS % 'create:forced_host', base.RULE_ADMIN_API),
     policy.RuleDefault(SERVERS % 'create:attach_volume', RULE_AOO),
     policy.RuleDefault(SERVERS % 'create:attach_network', RULE_AOO),
     policy.RuleDefault(SERVERS % 'delete', RULE_AOO),
