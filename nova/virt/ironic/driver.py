@@ -1142,22 +1142,34 @@ class IronicDriver(virt_driver.ComputeDriver):
     def network_binding_host_id(self, context, instance):
         """Get host ID to associate with network ports.
 
-        This defines the binding:host_id parameter to the port-create
-        calls for Neutron. If using a flat network, use the default behavior
-        and allow the port to bind immediately. If using separate networks
-        for the control plane and tenants, return None here to indicate
-        that the port should not yet be bound; Ironic will make a port-update
-        call to Neutron later to tell Neutron to bind the port.
+        This defines the binding:host_id parameter to the port-create calls for
+        Neutron. If using the neutron network interface (separate networks for
+        the control plane and tenants), return None here to indicate that the
+        port should not yet be bound; Ironic will make a port-update call to
+        Neutron later to tell Neutron to bind the port. Otherwise, use the
+        default behavior and allow the port to be bound immediately.
+
+        NOTE: the late binding is important for security. If an ML2 mechanism
+        manages to connect the tenant network to the baremetal machine before
+        deployment is done (e.g. port-create time), then the tenant potentially
+        has access to the deploy agent, which may contain firmware blobs or
+        secrets. ML2 mechanisms may be able to connect the port without the
+        switchport info that comes from ironic, if they store that switchport
+        info for some reason. As such, we should *never* pass binding:host_id
+        in the port-create call when using the 'neutron' network_interface,
+        because a null binding:host_id indicates to Neutron that it should
+        not connect the port yet.
 
         :param context:  request context
         :param instance: nova.objects.instance.Instance that the network
                          ports will be associated with
-        :returns: a string representing the host ID
+        :returns: a string representing the host ID, or None
         """
 
-        node = self._get_node(instance.node)
-        if getattr(node, 'network_provider', 'none') == 'none':
-            # flat network, go ahead and allow the port to be bound
-            return super(IronicDriver, self).network_binding_host_id(
-                context, instance)
-        return None
+        node = self.ironicclient.call('node.get', instance.node,
+                                      fields=['network_interface'])
+        if node.network_interface == 'neutron':
+            return None
+        # flat network, go ahead and allow the port to be bound
+        return super(IronicDriver, self).network_binding_host_id(
+            context, instance)

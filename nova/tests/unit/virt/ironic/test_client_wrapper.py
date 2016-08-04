@@ -74,7 +74,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'ironic_url': CONF.ironic.api_endpoint,
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.8'}
+                    'os_ironic_api_version': '1.20'}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(ironic_client, 'get_client')
@@ -87,7 +87,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'ironic_url': CONF.ironic.api_endpoint,
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.8'}
+                    'os_ironic_api_version': '1.20'}
         mock_ir_cli.assert_called_once_with(1, **expected)
 
     @mock.patch.object(ironic_client, 'get_client')
@@ -101,7 +101,7 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
                     'ironic_url': CONF.ironic.api_endpoint,
                     'max_retries': CONF.ironic.api_max_retries,
                     'retry_interval': CONF.ironic.api_retry_interval,
-                    'os_ironic_api_version': '1.8',
+                    'os_ironic_api_version': '1.20',
                     'os_cacert': 'fake-cafile',
                     'ca_file': 'fake-cafile'}
         mock_ir_cli.assert_called_once_with(1, **expected)
