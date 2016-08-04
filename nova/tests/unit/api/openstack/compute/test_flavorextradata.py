@@ -59,9 +59,6 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorExtraDataTestV21, self).setUp()
-        ext = ('nova.api.openstack.compute.contrib'
-              '.flavorextradata.Flavorextradata')
-        self.flags(osapi_compute_extension=[ext])
         self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
                                         fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, 'get_all_flavors_sorted_list',

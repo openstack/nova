@@ -64,10 +64,6 @@ class ServerUsageTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         self.stub_out('nova.compute.api.API.get', fake_compute_get)
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Server_usage'])
         return_server = fakes.fake_instance_get()
         self.stub_out('nova.db.instance_get_by_uuid', return_server)
 

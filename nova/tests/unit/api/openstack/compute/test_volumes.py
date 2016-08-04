@@ -133,10 +133,6 @@ class BootFromVolumeTest(test.TestCase):
         fakes.stub_out_nw_api(self)
         self._block_device_mapping_seen = None
         self._legacy_bdm_seen = True
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Volumes', 'Block_device_mapping_v2_boot'])
 
     def _get_fake_compute_api_create(self):
         def _fake_compute_api_create(cls, context, instance_type,
@@ -230,10 +226,6 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.stubs.Set(cinder.API, "delete", fakes.stub_volume_delete)
         self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
         self.stubs.Set(cinder.API, "get_all", fakes.stub_volume_get_all)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Volumes'])
 
         self.context = context.get_admin_context()
 

@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The config options 'osapi_compute_ext_list' and 'osapi_compute_extension'
+    were deprecated in mitaka. Hence these options were completely removed in
+    newton, as v2 API is removed and v2.1 API doesn't provide the option of
+    configuring extensions.

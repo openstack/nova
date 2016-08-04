@@ -66,9 +66,6 @@ class FlavorRxtxTestV21(test.NoDBTestCase):
 
     def setUp(self):
         super(FlavorRxtxTestV21, self).setUp()
-        ext = ('nova.api.openstack.compute.contrib'
-              '.flavor_rxtx.Flavor_rxtx')
-        self.flags(osapi_compute_extension=[ext])
         fakes.stub_out_nw_api(self)
         self.stubs.Set(flavors, "get_all_flavors_sorted_list",
                        fake_get_all_flavors_sorted_list)
