@@ -1,8 +1,3 @@
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
