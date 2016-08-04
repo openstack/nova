@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
