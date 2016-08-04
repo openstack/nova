@@ -751,6 +751,7 @@ class ResourceTracker(object):
                         migration)
                 numa_topology = self._get_migration_context_resource(
                     'numa_topology', instance)
+                # Allocate pci device(s) for the instance.
                 sign = 1
             else:
                 # instance record already has new flavor, hold space for a
@@ -766,6 +767,8 @@ class ResourceTracker(object):
                     migration)
             numa_topology = self._get_migration_context_resource(
                 'numa_topology', instance)
+            # Allocate pci device(s) for the instance.
+            sign = 1
 
         elif outbound and not record:
             # instance migrated, but record usage for a possible revert:
