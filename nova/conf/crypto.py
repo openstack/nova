@@ -1,7 +1,3 @@
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-
-
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
