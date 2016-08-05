@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # Copyright 2016 OpenStack Foundation
@@ -30,24 +23,14 @@ s3_opts = [
                deprecated_reason='EC2 API related options are not supported.',
                default='/tmp',
                help="""
-Parent directory for tempdir used for image
-decryption
-
-Possible values:
-
-* Any directory path, /tmp is default
+Parent directory for tempdir used for image decryption
 """),
     cfg.StrOpt('s3_host',
                deprecated_for_removal=True,
                deprecated_reason='EC2 API related options are not supported.',
                default='$my_ip',
                help="""
-Hostname or IP for OpenStack to use when
-accessing the S3 API
-
-Possible values:
-
-* IP address or Hostname
+Hostname or IP for OpenStack to use when accessing the S3 API
 """),
     cfg.PortOpt('s3_port',
                deprecated_for_removal=True,
@@ -77,8 +60,7 @@ Port used when accessing the S3 API. It should be in the range of
                 deprecated_reason='EC2 API related options are not supported.',
                 default=False,
                 help="""
-Whether to affix the tenant id to the
-access key when downloading from S3
+Whether to affix the tenant id to the access key when downloading from S3
 """),
 ]
 
