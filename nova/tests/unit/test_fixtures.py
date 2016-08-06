@@ -25,6 +25,7 @@ from oslo_utils import uuidutils
 import testtools
 
 from nova.compute import rpcapi as compute_rpcapi
+from nova import conductor
 from nova.db.sqlalchemy import api as session
 from nova import exception
 from nova.objects import base as obj_base
@@ -452,3 +453,17 @@ class TestAllServicesCurrentFixture(testtools.TestCase):
                          service_obj.Service.get_minimum_version(
                              None, 'nova-compute'))
         self.assertFalse(mock_db.called)
+
+
+class TestNoopConductorFixture(testtools.TestCase):
+    @mock.patch('nova.conductor.api.ComputeTaskAPI.resize_instance')
+    def test_task_api_not_called(self, mock_resize):
+        self.useFixture(fixtures.NoopConductorFixture())
+        conductor.ComputeTaskAPI().resize_instance()
+        self.assertFalse(mock_resize.called)
+
+    @mock.patch('nova.conductor.api.API.wait_until_ready')
+    def test_api_not_called(self, mock_wait):
+        self.useFixture(fixtures.NoopConductorFixture())
+        conductor.API().wait_until_ready()
+        self.assertFalse(mock_wait.called)

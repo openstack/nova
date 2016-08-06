@@ -789,3 +789,21 @@ class NeutronFixture(fixtures.Fixture):
         self.test.stub_out(
             'nova.network.neutronv2.api.get_client',
             lambda *args, **kwargs: mock_neutron_client)
+
+
+class _NoopConductor(object):
+    def __getattr__(self, key):
+        def _noop_rpc(*args, **kwargs):
+            return None
+        return _noop_rpc
+
+
+class NoopConductorFixture(fixtures.Fixture):
+    """Stub out the conductor API to do nothing"""
+
+    def setUp(self):
+        super(NoopConductorFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.conductor.ComputeTaskAPI', _NoopConductor))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.conductor.API', _NoopConductor))
