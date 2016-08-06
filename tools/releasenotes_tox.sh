@@ -6,6 +6,7 @@ sphinx-build -a -E -W \
     -d releasenotes/build/doctrees \
     -b html \
     releasenotes/source releasenotes/build/html
+BUILD_RESULT=$?
 
 UNCOMMITTED_NOTES=$(git status --porcelain | \
     awk '$1 == "M" && $2 ~ /releasenotes\/notes/ {print $2}')
