@@ -17,6 +17,8 @@ import mock
 from oslo_utils import timeutils
 from oslo_versionedobjects import fixture
 
+from nova.network import model as network_model
+from nova.notifications import base as notification_base
 from nova.notifications.objects import base as notification
 from nova import objects
 from nova.objects import base
@@ -328,3 +330,36 @@ def get_extra_data(obj_class):
         extra_data += (schema_data,)
 
     return extra_data
+
+
+class TestInstanceNotification(test.NoDBTestCase):
+    @mock.patch('nova.notifications.objects.instance.'
+                'InstanceUpdateNotification._emit')
+    def test_send_version_instance_update_uses_flavor(self, mock_emit):
+        # Make sure that the notification payload chooses the values in
+        # instance.flavor.$value instead of instance.$value
+        test_keys = ['memory_mb', 'vcpus', 'root_gb', 'ephemeral_gb']
+        flavor_values = {k: 123 for k in test_keys}
+        instance_values = {k: 456 for k in test_keys}
+        flavor = objects.Flavor(**flavor_values)
+        info_cache = objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo())
+        instance = objects.Instance(
+            flavor=flavor,
+            info_cache=info_cache,
+            **instance_values)
+        payload = {
+            'bandwidth': {},
+            'audit_period_ending': timeutils.utcnow(),
+            'audit_period_beginning': timeutils.utcnow(),
+        }
+        notification_base._send_versioned_instance_update(
+            mock.MagicMock(),
+            instance,
+            payload,
+            'host',
+            'compute')
+        payload = mock_emit.call_args_list[0][1]['payload']['nova_object.data']
+        flavor_payload = payload['flavor']['nova_object.data']
+        data = {k: flavor_payload[k] for k in test_keys}
+        self.assertEqual(flavor_values, data)
