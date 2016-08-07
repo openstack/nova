@@ -1855,6 +1855,58 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
         upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig1)
 
 
+class TestUpdateUsageFromInstance(BaseTestCase):
+
+    def setUp(self):
+        super(TestUpdateUsageFromInstance, self).setUp()
+        self._setup_rt()
+        self.rt.compute_node = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.instance = _INSTANCE_FIXTURES[0].obj_clone()
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage')
+    def test_building(self, mock_update_usage):
+        self.instance.vm_state = vm_states.BUILDING
+        self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance)
+
+        mock_update_usage.assert_called_once_with(
+            self.rt._get_usage_dict(self.instance), sign=1)
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage')
+    def test_shelve_offloading(self, mock_update_usage):
+        self.instance.vm_state = vm_states.SHELVED_OFFLOADED
+        self.rt.tracked_instances = {
+            self.instance.uuid: obj_base.obj_to_primitive(self.instance)
+        }
+        self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance)
+
+        mock_update_usage.assert_called_once_with(
+            self.rt._get_usage_dict(self.instance), sign=-1)
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage')
+    def test_unshelving(self, mock_update_usage):
+        self.instance.vm_state = vm_states.SHELVED_OFFLOADED
+        self.rt._update_usage_from_instance(mock.sentinel.ctx, self.instance)
+
+        mock_update_usage.assert_called_once_with(
+            self.rt._get_usage_dict(self.instance), sign=1)
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage')
+    def test_deleted(self, mock_update_usage):
+        self.instance.vm_state = vm_states.DELETED
+        self.rt.tracked_instances = {
+                self.instance.uuid: obj_base.obj_to_primitive(self.instance)
+        }
+        self.rt._update_usage_from_instance(mock.sentinel.ctx,
+                                            self.instance, True)
+
+        mock_update_usage.assert_called_once_with(
+            self.rt._get_usage_dict(self.instance), sign=-1)
+
+
 class TestInstanceInResizeState(test.NoDBTestCase):
     def test_active_suspending(self):
         instance = objects.Instance(vm_state=vm_states.ACTIVE,
