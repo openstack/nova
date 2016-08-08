@@ -579,24 +579,6 @@ class _MoveClaimTestCase(BaseTrackerTestCase):
         self._assert(0, 'vcpus_used')
         self.assertEqual(0, len(self.tracker.tracked_migrations))
 
-    @mock.patch('nova.objects.Instance.save')
-    @mock.patch.object(objects.Migration, 'save')
-    def test_existing_migration(self, save_mock, save_inst_mock):
-        migration = objects.Migration(self.context, id=42,
-                                      instance_uuid=self.instance.uuid,
-                                      source_compute='fake-other-compute',
-                                      source_node='fake-other-node',
-                                      status='accepted',
-                                      migration_type='evacuation')
-        self.claim_method(self.context, self.instance, self.instance_type,
-                          migration=migration)
-        self.assertEqual(self.tracker.host, migration.dest_compute)
-        self.assertEqual(self.tracker.nodename, migration.dest_node)
-        self.assertEqual("pre-migrating", migration.status)
-        self.assertEqual(1, len(self.tracker.tracked_migrations))
-        save_mock.assert_called_once_with()
-        save_inst_mock.assert_called_once_with()
-
 
 class ResizeClaimTestCase(_MoveClaimTestCase):
     def setUp(self):
@@ -606,7 +588,3 @@ class ResizeClaimTestCase(_MoveClaimTestCase):
 
     def test_move_type_not_tracked(self):
         self.skipTest("Resize_claim does already sets the move_type.")
-
-    def test_existing_migration(self):
-        self.skipTest("Resize_claim does not support having existing "
-                      "migration record.")
