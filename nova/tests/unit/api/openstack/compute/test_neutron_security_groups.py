@@ -512,10 +512,6 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
                        'get_instances_security_groups_bindings',
                        (test_security_groups.
                        fake_get_instances_security_groups_bindings))
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Security_groups'])
 
     def _make_request(self, url, body=None):
         req = webob.Request.blank(url)

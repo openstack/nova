@@ -84,10 +84,6 @@ class KeypairsTestV21(test.TestCase):
                       db_key_pair_create)
         self.stub_out("nova.db.key_pair_destroy",
                       db_key_pair_destroy)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Keypairs'])
         self._setup_app_and_controller()
 
         self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)

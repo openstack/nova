@@ -1312,10 +1312,6 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(compute.api.API, 'create', fake_compute_create)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Security_groups'])
         self.app = self._setup_app()
 
     def _setup_app(self):
