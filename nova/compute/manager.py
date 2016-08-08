@@ -4254,6 +4254,14 @@ class ComputeManager(manager.Manager):
         :param image_id: an image id to snapshot to.
         :param clean_shutdown: give the GuestOS a chance to stop
         """
+
+        @utils.synchronized(instance.uuid)
+        def do_shelve_instance():
+            self._shelve_instance(context, instance, image_id, clean_shutdown)
+        do_shelve_instance()
+
+    def _shelve_instance(self, context, instance, image_id,
+                         clean_shutdown):
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
@@ -4288,8 +4296,8 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance, 'shelve.end')
 
         if CONF.shelved_offload_time == 0:
-            self.shelve_offload_instance(context, instance,
-                                         clean_shutdown=False)
+            self._shelve_offload_instance(context, instance,
+                                          clean_shutdown=False)
 
     @wrap_exception()
     @reverts_task_state
@@ -4306,6 +4314,13 @@ class ComputeManager(manager.Manager):
         :param instance: nova.objects.instance.Instance
         :param clean_shutdown: give the GuestOS a chance to stop
         """
+
+        @utils.synchronized(instance.uuid)
+        def do_shelve_offload_instance():
+            self._shelve_offload_instance(context, instance, clean_shutdown)
+        do_shelve_offload_instance()
+
+    def _shelve_offload_instance(self, context, instance, clean_shutdown):
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
 
