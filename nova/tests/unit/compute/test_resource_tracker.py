@@ -1351,6 +1351,51 @@ class StatsInvalidTypeTestCase(BaseTrackerTestCase):
                           context=self.context)
 
 
+class UpdateUsageFromInstanceTestCase(BaseTrackerTestCase):
+
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage')
+    def test_building(self, mock_update_usage):
+        instance = self._fake_instance_obj()
+        instance.vm_state = vm_states.BUILDING
+        self.tracker._update_usage_from_instance(self.context, instance)
+
+        mock_update_usage.assert_called_once_with(instance, sign=1)
+
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage')
+    def test_shelve_offloading(self, mock_update_usage):
+        instance = self._fake_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        self.tracker.tracked_instances = {}
+        self.tracker.tracked_instances[
+            instance.uuid] = obj_base.obj_to_primitive(instance)
+        self.tracker._update_usage_from_instance(self.context, instance)
+
+        mock_update_usage.assert_called_once_with(instance, sign=-1)
+
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage')
+    def test_unshelving(self, mock_update_usage):
+        instance = self._fake_instance_obj()
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        self.tracker._update_usage_from_instance(self.context, instance)
+
+        mock_update_usage.assert_called_once_with(instance, sign=1)
+
+    @mock.patch.object(resource_tracker.ResourceTracker,
+                       '_update_usage')
+    def test_deleted(self, mock_update_usage):
+        instance = self._fake_instance_obj()
+        instance.vm_state = vm_states.DELETED
+        self.tracker.tracked_instances = {}
+        self.tracker.tracked_instances[
+            instance.uuid] = obj_base.obj_to_primitive(instance)
+        self.tracker._update_usage_from_instance(self.context, instance, True)
+
+        mock_update_usage.assert_called_once_with(instance, sign=-1)
+
+
 class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
 
     @mock.patch.object(resource_tracker.ResourceTracker,

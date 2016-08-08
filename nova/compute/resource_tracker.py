@@ -869,9 +869,10 @@ class ResourceTracker(object):
 
         uuid = instance['uuid']
         is_new_instance = uuid not in self.tracked_instances
-        is_removed_instance = (
-                is_removed or
-                instance['vm_state'] in vm_states.ALLOW_RESOURCE_REMOVAL)
+        # NOTE(sfinucan): Both brand new instances as well as instances that
+        # are being unshelved will have is_new_instance == True
+        is_removed_instance = not is_new_instance and (is_removed or
+            instance['vm_state'] in vm_states.ALLOW_RESOURCE_REMOVAL)
 
         if is_new_instance:
             self.tracked_instances[uuid] = obj_base.obj_to_primitive(instance)
