@@ -4321,14 +4321,18 @@ class ComputeManager(manager.Manager):
                 block_device_info)
 
         instance.power_state = current_power_state
-        instance.host = None
-        instance.node = None
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.task_state = None
         instance.save(expected_task_state=[task_states.SHELVING,
                                            task_states.SHELVING_OFFLOADING])
-        # NOTE(ndipanov): This frees the resources with the resource_tracker
+
+        # NOTE(ndipanov): Free resources from the resource tracker
         self._update_resource_tracker(context, instance)
+
+        # NOTE(sfinucan): RPC calls should no longer be attempted against this
+        # instance, so ensure any calls result in errors
+        self._nil_out_instance_obj_host_and_node(instance)
+        instance.save(expected_task_state=None)
 
         self._delete_scheduler_instance_info(context, instance.uuid)
         self._notify_about_instance_usage(context, instance,
