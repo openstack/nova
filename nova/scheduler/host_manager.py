@@ -385,7 +385,7 @@ class HostManager(object):
         """
         if aggregate.id in self.aggs_by_id:
             del self.aggs_by_id[aggregate.id]
-        for host in aggregate.hosts:
+        for host in self.host_aggregates_map:
             if aggregate.id in self.host_aggregates_map[host]:
                 self.host_aggregates_map[host].remove(aggregate.id)
 

@@ -582,6 +582,43 @@ class HostManagerTestCase(test.NoDBTestCase):
         host_state = self.host_manager.host_state_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
+    @mock.patch.object(nova.objects.InstanceList, 'get_by_host',
+                       return_value=objects.InstanceList())
+    @mock.patch.object(host_manager.HostState, '_update_from_compute_node')
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    @mock.patch.object(objects.ServiceList, 'get_by_binary')
+    def test_get_all_host_states_corrupt_aggregates_info(self,
+                                                         svc_get_by_binary,
+                                                         cn_get_all,
+                                                         update_from_cn,
+                                                         mock_get_by_host):
+        """Regression test for bug 1605804
+
+        A host can be in multiple host-aggregates at the same time. When a
+        host gets removed from an aggregate in thread A and this aggregate
+        gets deleted in thread B, there can be a race-condition where the
+        mapping data in the host_manager can get out of sync for a moment.
+        This test simulates this condition for the bug-fix.
+        """
+        host_a = 'host_a'
+        host_b = 'host_b'
+        svc_get_by_binary.return_value = [objects.Service(host=host_a),
+                                          objects.Service(host=host_b)]
+        cn_get_all.return_value = [
+            objects.ComputeNode(host=host_a, hypervisor_hostname=host_a),
+            objects.ComputeNode(host=host_b, hypervisor_hostname=host_b)]
+
+        aggregate = objects.Aggregate(id=1)
+        aggregate.hosts = [host_a, host_b]
+        aggr_list = objects.AggregateList()
+        aggr_list.objects = [aggregate]
+        self.host_manager.update_aggregates(aggr_list)
+
+        aggregate.hosts = [host_a]
+        self.host_manager.delete_aggregate(aggregate)
+
+        self.host_manager.get_all_host_states('fake-context')
+
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
     @mock.patch('nova.objects.InstanceList.get_by_host')
