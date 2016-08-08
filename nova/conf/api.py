@@ -1,6 +1,3 @@
-# needs:check_opt_group_and_type
-
-
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -101,10 +98,6 @@ reference.
     A list of vendordata providers, with StaticJSON and DynamicJSON being
     current options.
 
-* Services that use this:
-
-    ``nova-api``
-
 * Related options:
 
     vendordata_dynamic_targets
@@ -132,10 +125,6 @@ REST services ssl certificates against.
 
     An empty string, or a path to a valid certificate file
 
-* Services that use this:
-
-    ``nova-api``
-
 * Related options:
 
     vendordata_providers
@@ -155,10 +144,6 @@ Maximum wait time for an external REST service to connect.
     timeout). Note that instance start may be blocked during this wait time,
     so this value should be kept small.
 
-* Services that use this:
-
-    ``nova-api``
-
 * Related options:
 
     vendordata_providers
@@ -168,6 +153,7 @@ Maximum wait time for an external REST service to connect.
 """),
     cfg.IntOpt('vendordata_dynamic_read_timeout',
                default=5,
+               min=0,
                help="""
 Maximum wait time for an external REST service to return data once connected.
 
@@ -175,10 +161,6 @@ Maximum wait time for an external REST service to return data once connected.
 
     Any integer. Note that instance start is blocked during this wait time,
     so this value should be kept small.
-
-* Services that use this:
-
-    ``nova-api``
 
 * Related options:
 
