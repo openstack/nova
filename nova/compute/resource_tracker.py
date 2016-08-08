@@ -67,6 +67,15 @@ def _instance_in_resize_state(instance):
     return False
 
 
+def _is_trackable_migration(migration):
+    # Only look at resize/migrate migration and evacuation records
+    # NOTE(danms): RT should probably examine live migration
+    # records as well and do something smart. However, ignore
+    # those for now to avoid them being included in below calculations.
+    return migration.migration_type in ('resize', 'migration',
+                                        'evacuation')
+
+
 class ResourceTracker(object):
     """Compute helper class for keeping track of resource usage as instances
     are built and destroyed.
@@ -706,14 +715,6 @@ class ResourceTracker(object):
                 self.compute_node, usage, free)
         self.compute_node.numa_topology = updated_numa_topology
 
-    def _is_trackable_migration(self, migration):
-        # Only look at resize/migrate migration and evacuation records
-        # NOTE(danms): RT should probably examine live migration
-        # records as well and do something smart. However, ignore
-        # those for now to avoid them being included in below calculations.
-        return migration.migration_type in ('resize', 'migration',
-                                            'evacuation')
-
     def _get_migration_context_resource(self, resource, instance,
                                         prefix='new_'):
         migration_context = instance.migration_context
@@ -726,7 +727,7 @@ class ResourceTracker(object):
         """Update usage for a single migration.  The record may
         represent an incoming or outbound migration.
         """
-        if not self._is_trackable_migration(migration):
+        if not _is_trackable_migration(migration):
             return
 
         uuid = migration.instance_uuid
