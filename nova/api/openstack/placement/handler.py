@@ -26,14 +26,29 @@ method.
 import routes
 import webob
 
+from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement import util
+from nova import exception
 
 
 # URLs and Handlers
+# NOTE(cdent): When adding URLs here, do not use regex patterns in
+# the path parameters (e.g. {uuid:[0-9a-zA-Z-]+}) as that will lead
+# to 404s that are controlled outside of the individual resources
+# and thus do not include specific information on the why of the 404.
 ROUTE_DECLARATIONS = {
     '/': {
         'GET': root.home,
+    },
+    '/resource_providers': {
+        'GET': resource_provider.list_resource_providers,
+        'POST': resource_provider.create_resource_provider
+    },
+    '/resource_providers/{uuid}': {
+        'GET': resource_provider.get_resource_provider,
+        'DELETE': resource_provider.delete_resource_provider,
+        'PUT': resource_provider.update_resource_provider
     },
 }
 
@@ -56,7 +71,7 @@ def dispatch(environ, start_response, mapper):
 
 
 def handle_405(environ, start_response):
-    """Return a 405 response as required.
+    """Return a 405 response when method is not allowed.
 
     If _methods are in routing_args, send an allow header listing
     the methods that are possible on the provided URL.
@@ -111,4 +126,12 @@ class PlacementHandler(object):
                 raise webob.exc.HTTPForbidden(
                     'admin required',
                     json_formatter=util.json_error_formatter)
-        return dispatch(environ, start_response, self._map)
+        try:
+            return dispatch(environ, start_response, self._map)
+        # Trap the small number of nova exceptions that aren't
+        # caught elsewhere and transform them into webob.exc.
+        # These are common exceptions raised when making calls against
+        # nova.objects in the handlers.
+        except exception.NotFound as exc:
+            raise webob.exc.HTTPNotFound(
+                exc, json_formatter=util.json_error_formatter)

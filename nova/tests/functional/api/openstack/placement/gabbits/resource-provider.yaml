@@ -1,0 +1,200 @@
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+
+tests:
+
+- name: what is at resource providers
+  GET: /resource_providers
+  response_json_paths:
+      $.resource_providers: []
+
+- name: non admin forbidden
+  GET: /resource_providers
+  request_headers:
+      x-auth-token: user
+      accept: application/json
+  status: 403
+  response_json_paths:
+      $.errors[0].title: Forbidden
+
+- name: non admin forbidden non json
+  GET: /resource_providers
+  request_headers:
+      x-auth-token: user
+      accept: text/plain
+  status: 403
+  response_strings:
+      - admin required
+
+- name: post new resource provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+  response_forbidden_headers:
+      - content-type
+
+- name: try to create same all again
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 409
+  response_strings:
+      - Conflicting resource provider already exists
+
+- name: try to create same name again
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: ada30fb5-566d-4fe1-b43b-28a9e988790c
+  status: 409
+  response_strings:
+      - Conflicting resource provider already exists
+
+- name: confirm the correct post
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      content-type: application/json
+  response_json_paths:
+      $.uuid: $ENVIRON['RP_UUID']
+      $.name: $ENVIRON['RP_NAME']
+      $.generation: 0
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+
+- name: get resource provider works with no accept
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  response_headers:
+      content-type: /application/json/
+  response_json_paths:
+      $.uuid: $ENVIRON['RP_UUID']
+
+- name: list one resource providers
+  GET: /resource_providers
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+      $.resource_providers[0].name: $ENVIRON['RP_NAME']
+      $.resource_providers[0].generation: 0
+      $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.resource_providers[0].links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+
+- name: update a resource provider
+  PUT: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']
+  request_headers:
+      content-type: application/json
+  data:
+      name: new name
+  status: 200
+  response_headers:
+      content-type: /application/json/
+  response_forbidden_headers:
+      - location
+  response_json_paths:
+      $.generation: 0
+      $.name: new name
+      $.uuid: $ENVIRON['RP_UUID']
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+
+- name: check the name from that update
+  GET: $LAST_URL
+  response_json_paths:
+      $.name: new name
+
+- name: update a provider poorly
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      badfield: new name
+  status: 400
+  response_strings:
+      - 'JSON does not validate'
+
+- name: create a new provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: cow
+  status: 201
+
+- name: try to rename that provider to existing name
+  PUT: $LOCATION
+  request_headers:
+      content-type: application/json
+  data:
+      name: new name
+  status: 409
+
+- name: fail to put that provider with uuid
+  PUT: $LAST_URL
+  request_headers:
+      content-type: application/json
+  data:
+      name: second new name
+      uuid: 7d4275fc-8b40-4995-85e2-74fcec2cb3b6
+  status: 400
+  response_strings:
+      - Additional properties are not allowed
+
+- name: delete resource provider
+  DELETE: $LAST_URL
+  status: 204
+
+- name: 404 on deleted provider
+  DELETE: $LAST_URL
+  status: 404
+
+- name: fail to get a provider
+  GET: /resource_providers/random_sauce
+  status: 404
+
+- name: post resource provider no uuid
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: a name
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+
+- name: post malformed json as json
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data: '{"foo": }'
+  status: 400
+  response_strings:
+      - 'Malformed JSON:'
+
+- name: post bad uuid in resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: my bad rp
+      uuid: this is not a uuid
+  status: 400
+  response_strings:
+      - "Failed validating 'format'"
