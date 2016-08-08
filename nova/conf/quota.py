@@ -52,7 +52,7 @@ Possible values:
  * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_floating_ips',
-               min=0,
+               min=-1,
                default=10,
                help="""
 The number of floating IPs allowed per project. Floating IPs are not allocated
@@ -62,6 +62,7 @@ the OpenStack administrator to attach to their instances.
 Possible values:
 
  * 10 (default) or any positive integer.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_fixed_ips',
                min=-1,
@@ -89,7 +90,7 @@ Possible values:
  * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_injected_files',
-               min=0,
+               min=-1,
                default=5,
                help="""
 The number of injected files allowed. It allow users to customize the
@@ -101,9 +102,10 @@ injection, any existing files that match specified files are renamed to include
 Possible values:
 
  * 5 (default) or any positive integer.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_injected_file_content_bytes',
-               min=0,
+               min=-1,
                default=10 * 1024,
                help="""
 The number of bytes allowed per injected file.
@@ -111,8 +113,10 @@ The number of bytes allowed per injected file.
 Possible values:
 
  * 10240 (default) or any positive integer representing number of bytes.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_injected_file_path_length',
+               min=-1,
                default=255,
                help="""
 The maximum allowed injected file path length.
@@ -120,9 +124,10 @@ The maximum allowed injected file path length.
 Possible values:
 
  * 255 (default) or any positive integer.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_security_groups',
-               min=0,
+               min=-1,
                default=10,
                help="""
 The number of security groups per project.
@@ -130,9 +135,10 @@ The number of security groups per project.
 Possible values:
 
  * 10 (default) or any positive integer.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_security_group_rules',
-               min=0,
+               min=-1,
                default=20,
                help="""
 The number of security rules per security group. The associated rules in each
@@ -141,9 +147,10 @@ security group control the traffic to instances in the group.
 Possible values:
 
  * 20 (default) or any positive integer.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_key_pairs',
-               min=0,
+               min=-1,
                default=100,
                help="""
 The maximum number of key pairs allowed per user. Users can create at least one
@@ -153,6 +160,7 @@ belong to that project.
 Possible values:
 
  * 100 (default) or any positive integer.
+ * -1 : treated as unlimited.
 """),
     cfg.IntOpt('quota_server_groups',
                min=-1,
