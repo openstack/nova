@@ -11,12 +11,37 @@
 #    under the License.
 """Utility methods for placement API."""
 
+import functools
 from oslo_middleware import request_id
 import webob
 
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.microversion
+
+
+def check_accept(*types):
+    """If accept is set explicitly, try to follow it.
+
+    If there is no match for the incoming accept header
+    send a 406 response code.
+
+    If accept is not set send our usual content-type in
+    response.
+    """
+    def decorator(f):
+        @functools.wraps(f)
+        def decorated_function(req):
+            if req.accept:
+                best_match = req.accept.best_match(types)
+                if not best_match:
+                    type_string = ', '.join(types)
+                    raise webob.exc.HTTPNotAcceptable(
+                        'Only %s is provided' % type_string,
+                        json_formatter=json_error_formatter)
+            return f(req)
+        return decorated_function
+    return decorator
 
 
 def json_error_formatter(body, status, title, environ):
@@ -49,6 +74,25 @@ def json_error_formatter(body, status, title, environ):
         error_dict['min_version'] = microversion.max_version_string()
 
     return {'errors': [error_dict]}
+
+
+def require_content(content_type):
+    """Decorator to require a content type in a handler."""
+    def decorator(f):
+        @functools.wraps(f)
+        def decorated_function(req):
+            if req.content_type != content_type:
+                # webob's unset content_type is the empty string so
+                # set it the error message content to 'None' to make
+                # a useful message in that case.
+                raise webob.exc.HTTPUnsupportedMediaType(
+                    'The media type %s is not supported, use %s'
+                    % (req.content_type or 'None', content_type),
+                    json_formatter=json_error_formatter)
+            else:
+                return f(req)
+        return decorated_function
+    return decorator
 
 
 def wsgi_path_item(environ, name):
