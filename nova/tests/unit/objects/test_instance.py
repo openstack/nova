@@ -23,6 +23,8 @@ from oslo_utils import timeutils
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
@@ -1191,6 +1193,22 @@ class _TestInstanceObject(object):
         self.flags(instance_name_template='foo-%(uuid)s')
         self.assertEqual('foo-%s' % db_inst['uuid'], inst.name)
         self.assertFalse(inst.obj_attr_is_set('fault'))
+
+    def test_name_blank_if_no_id_pre_scheduling(self):
+        # inst.id is not set and can't be lazy loaded
+        inst = objects.Instance(context=self.context,
+                                vm_state=vm_states.BUILDING,
+                                task_state=task_states.SCHEDULING)
+        self.assertEqual('', inst.name)
+
+    def test_name_uuid_if_no_id_post_scheduling(self):
+        # inst.id is not set and can't be lazy loaded
+
+        inst = objects.Instance(context=self.context,
+                                uuid=uuids.instance,
+                                vm_state=vm_states.ACTIVE,
+                                task_state=None)
+        self.assertEqual(uuids.instance, inst.name)
 
     def test_from_db_object_not_overwrite_info_cache(self):
         info_cache = instance_info_cache.InstanceInfoCache()

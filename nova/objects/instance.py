@@ -25,6 +25,8 @@ from sqlalchemy.orm import joinedload
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
@@ -273,6 +275,21 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             try:
                 base_name = CONF.instance_name_template % info
             except KeyError:
+                base_name = self.uuid
+        except exception.ObjectActionError:
+            # This indicates self.id was not set and could not be lazy loaded.
+            # What this means is the instance has not been persisted to a db
+            # yet, which should indicate it has not been scheduled yet. In this
+            # situation it will have a blank name.
+            if (self.vm_state == vm_states.BUILDING and
+                    self.task_state == task_states.SCHEDULING):
+                base_name = ''
+            else:
+                # If the vm/task states don't indicate that it's being booted
+                # then we have a bug here. Log an error and attempt to return
+                # the uuid which is what an error above would return.
+                LOG.error(_LE('Could not lazy-load instance.id while '
+                              'attempting to generate the instance name.'))
                 base_name = self.uuid
         return base_name
 
