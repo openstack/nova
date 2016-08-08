@@ -1982,12 +1982,22 @@ class CPUPinningNotSupported(Invalid):
 
 
 class CPUPinningInvalid(Invalid):
-    msg_fmt = _("Cannot pin/unpin cpus %(requested)s from the following "
-                "pinned set %(pinned)s")
+    msg_fmt = _("CPU set to pin %(requested)s must be a subset of "
+                "free CPU set %(free)s")
+
+
+class CPUUnpinningInvalid(Invalid):
+    msg_fmt = _("CPU set to unpin %(requested)s must be a subset of "
+                "pinned CPU set %(pinned)s")
 
 
 class CPUPinningUnknown(Invalid):
-    msg_fmt = _("CPU set to pin/unpin %(requested)s must be a subset of "
+    msg_fmt = _("CPU set to pin %(requested)s must be a subset of "
+                "known CPU set %(cpuset)s")
+
+
+class CPUUnpinningUnknown(Invalid):
+    msg_fmt = _("CPU set to unpin %(requested)s must be a subset of "
                 "known CPU set %(cpuset)s")
 
 
