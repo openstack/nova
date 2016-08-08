@@ -23,7 +23,6 @@ from nova.conf import api
 # from nova.conf import api_database
 from nova.conf import availability_zone
 # from nova.conf import aws
-from nova.conf import barbican
 from nova.conf import base
 from nova.conf import cache
 from nova.conf import cells
@@ -99,7 +98,6 @@ api.register_opts(CONF)
 # api_database.register_opts(CONF)
 availability_zone.register_opts(CONF)
 # aws.register_opts(CONF)
-barbican.register_opts(CONF)
 base.register_opts(CONF)
 cache.register_opts(CONF)
 cells.register_opts(CONF)
