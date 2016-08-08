@@ -36,8 +36,10 @@ class PauseServerController(wsgi.Controller):
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
         ctxt = req.environ['nova.context']
-        ctxt.can(ps_policies.POLICY_ROOT % 'pause')
         server = common.get_instance(self.compute_api, ctxt, id)
+        ctxt.can(ps_policies.POLICY_ROOT % 'pause',
+                 target={'user_id': server.user_id,
+                         'project_id': server.project_id})
         try:
             self.compute_api.pause(ctxt, server)
         except exception.InstanceIsLocked as e:
