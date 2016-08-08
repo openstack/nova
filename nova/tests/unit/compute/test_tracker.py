@@ -1780,6 +1780,127 @@ class TestResize(BaseTestCase):
         self.assertEqual(request, pci_req_mock.return_value.requests[0])
         alloc_mock.assert_called_once_with(instance)
 
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_resize_claim_two_instances(self, get_mock, migr_mock, get_cn_mock,
+            pci_mock, instance_pci_mock):
+        # Issue two resize claims against a destination host with no prior
+        # instances on it and validate that the accounting for resources is
+        # correct.
+        self.flags(reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
+        self._setup_rt()
+
+        get_mock.return_value = []
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+
+        self.rt.update_available_resource(mock.sentinel.ctx)
+
+        # Instance #1 is resizing to instance type 2 which has 2 vCPUs, 256MB
+        # RAM and 5GB root disk.
+        instance1 = _INSTANCE_FIXTURES[0].obj_clone()
+        instance1.id = 1
+        instance1.uuid = uuids.instance1
+        instance1.task_state = task_states.RESIZE_MIGRATING
+        instance1.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        migration1 = objects.Migration(
+            id=1,
+            instance_uuid=instance1.uuid,
+            source_compute="other-host",
+            dest_compute=_HOSTNAME,
+            source_node="other-node",
+            dest_node=_NODENAME,
+            old_instance_type_id=1,
+            new_instance_type_id=2,
+            migration_type='resize',
+            status='migrating',
+            instance=instance1,
+        )
+        mig_context_obj1 = objects.MigrationContext(
+            instance_uuid=instance1.uuid,
+            migration_id=1,
+            new_numa_topology=None,
+            old_numa_topology=None,
+        )
+        instance1.migration_context = mig_context_obj1
+        flavor1 = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+
+        # Instance #2 is resizing to instance type 1 which has 1 vCPU, 128MB
+        # RAM and 1GB root disk.
+        instance2 = _INSTANCE_FIXTURES[0].obj_clone()
+        instance2.id = 2
+        instance2.uuid = uuids.instance2
+        instance2.task_state = task_states.RESIZE_MIGRATING
+        instance2.old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance2.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1]
+
+        migration2 = objects.Migration(
+            id=2,
+            instance_uuid=instance2.uuid,
+            source_compute="other-host",
+            dest_compute=_HOSTNAME,
+            source_node="other-node",
+            dest_node=_NODENAME,
+            old_instance_type_id=2,
+            new_instance_type_id=1,
+            migration_type='resize',
+            status='migrating',
+            instance=instance1,
+        )
+        mig_context_obj2 = objects.MigrationContext(
+            instance_uuid=instance2.uuid,
+            migration_id=2,
+            new_numa_topology=None,
+            old_numa_topology=None,
+        )
+        instance2.migration_context = mig_context_obj2
+        flavor2 = _INSTANCE_TYPE_OBJ_FIXTURES[1]
+
+        expected = self.rt.compute_node.obj_clone()
+        expected.vcpus_used = (expected.vcpus_used +
+                               flavor1.vcpus +
+                               flavor2.vcpus)
+        expected.memory_mb_used = (expected.memory_mb_used +
+                                   flavor1.memory_mb +
+                                   flavor2.memory_mb)
+        expected.free_ram_mb = expected.memory_mb - expected.memory_mb_used
+        expected.local_gb_used = (expected.local_gb_used +
+                                 (flavor1.root_gb +
+                                  flavor1.ephemeral_gb +
+                                  flavor2.root_gb +
+                                  flavor2.ephemeral_gb))
+        expected.free_disk_gb = (expected.free_disk_gb -
+                                (flavor1.root_gb +
+                                 flavor1.ephemeral_gb +
+                                 flavor2.root_gb +
+                                 flavor2.ephemeral_gb))
+
+        # not using mock.sentinel.ctx because resize_claim calls #elevated
+        ctx = mock.MagicMock()
+
+        with test.nested(
+            mock.patch('nova.compute.resource_tracker.ResourceTracker'
+                       '._create_migration',
+                       side_effect=[migration1, migration2]),
+            mock.patch('nova.objects.MigrationContext',
+                       side_effect=[mig_context_obj1, mig_context_obj2]),
+            mock.patch('nova.objects.Instance.save'),
+        ) as (create_mig_mock, ctxt_mock, inst_save_mock):
+            self.rt.resize_claim(ctx, instance1, flavor1)
+            self.rt.resize_claim(ctx, instance2, flavor2)
+        self.assertTrue(obj_base.obj_equal_prims(expected,
+                                                 self.rt.compute_node))
+        self.assertEqual(2, len(self.rt.tracked_migrations),
+                         "Expected 2 tracked migrations but got %s"
+                         % self.rt.tracked_migrations)
+
 
 class TestRebuild(BaseTestCase):
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
