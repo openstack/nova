@@ -57,7 +57,6 @@ Nova Specific Commandments
 - [N344] Python 3: do not use dict.iteritems.
 - [N345] Python 3: do not use dict.iterkeys.
 - [N346] Python 3: do not use dict.itervalues.
-- [N347] Provide enough help text for config options
 - [N348] Deprecated library function os.popen()
 - [N349] Check for closures in tests which are not used
 - [N350] Policy registration should be in the central location ``nova/policies/``
