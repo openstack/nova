@@ -20,11 +20,13 @@ from oslo_utils import units
 from nova.compute import arch
 from nova.compute import claims
 from nova.compute import hv_type
+from nova.compute.monitors import base as monitor_base
 from nova.compute import power_state
 from nova.compute import resource_tracker
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
+from nova import context
 from nova import exception as exc
 from nova import objects
 from nova.objects import base as obj_base
@@ -1958,3 +1960,74 @@ class TestSetInstanceHostAndNode(BaseTestCase):
 def _update_compute_node(node, **kwargs):
     for key, value in kwargs.items():
         setattr(node, key, value)
+
+
+class ComputeMonitorTestCase(BaseTestCase):
+    def setUp(self):
+        super(ComputeMonitorTestCase, self).setUp()
+        self._setup_rt()
+        self.info = {}
+        self.context = context.RequestContext(mock.sentinel.user_id,
+                                              mock.sentinel.project_id)
+
+    def test_get_host_metrics_none(self):
+        self.rt.monitors = []
+        metrics = self.rt._get_host_metrics(self.context, _NODENAME)
+        self.assertEqual(len(metrics), 0)
+
+    @mock.patch.object(resource_tracker.LOG, 'warning')
+    def test_get_host_metrics_exception(self, mock_LOG_warning):
+        monitor = mock.MagicMock()
+        monitor.populate_metrics.side_effect = Exception
+        self.rt.monitors = [monitor]
+        metrics = self.rt._get_host_metrics(self.context, _NODENAME)
+        mock_LOG_warning.assert_called_once_with(
+            u'Cannot get the metrics from %(mon)s; error: %(exc)s', mock.ANY)
+        self.assertEqual(0, len(metrics))
+
+    @mock.patch('nova.rpc.get_notifier')
+    def test_get_host_metrics(self, rpc_mock):
+        class FakeCPUMonitor(monitor_base.MonitorBase):
+
+            NOW_TS = timeutils.utcnow()
+
+            def __init__(self, *args):
+                super(FakeCPUMonitor, self).__init__(*args)
+                self.source = 'FakeCPUMonitor'
+
+            def get_metric_names(self):
+                return set(["cpu.frequency"])
+
+            def populate_metrics(self, monitor_list):
+                metric_object = objects.MonitorMetric()
+                metric_object.name = 'cpu.frequency'
+                metric_object.value = 100
+                metric_object.timestamp = self.NOW_TS
+                metric_object.source = self.source
+                monitor_list.objects.append(metric_object)
+
+        self.rt.monitors = [FakeCPUMonitor(None)]
+
+        metrics = self.rt._get_host_metrics(self.context, _NODENAME)
+        rpc_mock.assert_called_once_with(service='compute', host=_NODENAME)
+
+        expected_metrics = [
+            {
+                'timestamp': FakeCPUMonitor.NOW_TS.isoformat(),
+                'name': 'cpu.frequency',
+                'value': 100,
+                'source': 'FakeCPUMonitor'
+            },
+        ]
+
+        payload = {
+            'metrics': expected_metrics,
+            'host': _HOSTNAME,
+            'host_ip': '1.1.1.1',
+            'nodename': _NODENAME,
+        }
+
+        rpc_mock.return_value.info.assert_called_once_with(
+            self.context, 'compute.metrics.update', payload)
+
+        self.assertEqual(metrics, expected_metrics)

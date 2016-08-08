@@ -20,16 +20,13 @@ import uuid
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
-from oslo_utils import timeutils
 
-from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker
 from nova.compute import vm_states
 from nova import context
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
-from nova import rpc
 from nova import test
 from nova.tests.unit.pci import fakes as pci_fakes
 from nova.tests import uuidsentinel
@@ -613,83 +610,3 @@ class ResizeClaimTestCase(_MoveClaimTestCase):
     def test_existing_migration(self):
         self.skipTest("Resize_claim does not support having existing "
                       "migration record.")
-
-
-class ComputeMonitorTestCase(BaseTestCase):
-    def setUp(self):
-        super(ComputeMonitorTestCase, self).setUp()
-        self.tracker = self._tracker()
-        self.node_name = 'nodename'
-        self.user_id = 'fake'
-        self.project_id = 'fake'
-        self.info = {}
-        self.context = context.RequestContext(self.user_id,
-                                              self.project_id)
-
-    def test_get_host_metrics_none(self):
-        self.tracker.monitors = []
-        metrics = self.tracker._get_host_metrics(self.context,
-                                                 self.node_name)
-        self.assertEqual(len(metrics), 0)
-
-    @mock.patch.object(resource_tracker.LOG, 'warning')
-    def test_get_host_metrics_exception(self, mock_LOG_warning):
-        monitor = mock.MagicMock()
-        monitor.populate_metrics.side_effect = Exception
-        self.tracker.monitors = [monitor]
-        metrics = self.tracker._get_host_metrics(self.context,
-                                                 self.node_name)
-        mock_LOG_warning.assert_called_once_with(
-            u'Cannot get the metrics from %(mon)s; error: %(exc)s', mock.ANY)
-        self.assertEqual(0, len(metrics))
-
-    def test_get_host_metrics(self):
-        class FakeCPUMonitor(monitor_base.MonitorBase):
-
-            NOW_TS = timeutils.utcnow()
-
-            def __init__(self, *args):
-                super(FakeCPUMonitor, self).__init__(*args)
-                self.source = 'FakeCPUMonitor'
-
-            def get_metric_names(self):
-                return set(["cpu.frequency"])
-
-            def populate_metrics(self, monitor_list):
-                metric_object = objects.MonitorMetric()
-                metric_object.name = 'cpu.frequency'
-                metric_object.value = 100
-                metric_object.timestamp = self.NOW_TS
-                metric_object.source = self.source
-                monitor_list.objects.append(metric_object)
-
-        self.tracker.monitors = [FakeCPUMonitor(None)]
-        mock_notifier = mock.Mock()
-
-        with mock.patch.object(rpc, 'get_notifier',
-                               return_value=mock_notifier) as mock_get:
-            metrics = self.tracker._get_host_metrics(self.context,
-                                                     self.node_name)
-            mock_get.assert_called_once_with(service='compute',
-                                             host=self.node_name)
-
-        expected_metrics = [
-            {
-                'timestamp': FakeCPUMonitor.NOW_TS.isoformat(),
-                'name': 'cpu.frequency',
-                'value': 100,
-                'source': 'FakeCPUMonitor'
-            },
-        ]
-
-        payload = {
-            'metrics': expected_metrics,
-            'host': self.tracker.host,
-            'host_ip': CONF.my_ip,
-            'nodename': self.node_name
-        }
-
-        mock_notifier.info.assert_called_once_with(
-            self.context, 'compute.metrics.update', payload)
-
-        self.assertEqual(metrics, expected_metrics)
