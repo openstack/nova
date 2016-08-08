@@ -157,12 +157,9 @@ Related options:
 * novncproxy_base_url
 """)
 
-# TODO(sfinucan): This should be a PortOpt
-novncproxy_port = cfg.IntOpt(
+novncproxy_port = cfg.PortOpt(
     'novncproxy_port',
     default=6080,
-    min=1,
-    max=65535,
     deprecated_group='DEFAULT',
     help="""
 Port that the noVNC console proxy should bind to.
@@ -248,12 +245,9 @@ Related options:
 * xvpvncproxy_base_url
 """)
 
-# TODO(sfinucan): This should be a PortOpt
-xvpvncproxy_port = cfg.IntOpt(
+xvpvncproxy_port = cfg.PortOpt(
     'xvpvncproxy_port',
     default=6081,
-    min=1,
-    max=65535,
     deprecated_group='DEFAULT',
     help="""
 Port that the XVP VNC console proxy should bind to.

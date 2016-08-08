@@ -45,9 +45,7 @@ Possible Values:
     --remote_debug-host <IP address where the debugger is running>
 """)
 
-port = cfg.IntOpt('port',
-    min=1,
-    max=65535,
+port = cfg.PortOpt('port',
     help="""
 Debug port to connect to. This command line parameter allows you to specify
 the port you want to use to connect to a nova service via a debugger running

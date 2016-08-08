@@ -55,10 +55,8 @@ Host on which to listen for incoming requests
 """)
 
 
-html5proxy_port_opt = cfg.IntOpt('html5proxy_port',
+html5proxy_port_opt = cfg.PortOpt('html5proxy_port',
         default=6082,
-        min=1,
-        max=65535,
         help="""
 Port on which to listen for incoming requests
 """)
