@@ -1579,19 +1579,27 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
 
     def setUp(self):
         super(ServersControllerRebuildInstanceTest, self).setUp()
+        self.req = fakes.HTTPRequest.blank('/fake/servers/a/action')
+        self.req.method = 'POST'
+        self.req.headers["content-type"] = "application/json"
+        self.req_user_id = self.req.environ['nova.context'].user_id
+        self.req_project_id = self.req.environ['nova.context'].project_id
 
         def fake_get(ctrl, ctxt, uuid):
             if uuid == 'test_inst':
                 raise webob.exc.HTTPNotFound(explanation='fakeout')
             return fakes.stub_instance_obj(None,
                                            vm_state=vm_states.ACTIVE,
-                                           project_id='fake')
+                                           project_id=self.req_project_id,
+                                           user_id=self.req_user_id)
 
         self.useFixture(
             fixtures.MonkeyPatch('nova.api.openstack.compute.servers.'
                                  'ServersController._get_instance',
                                  fake_get))
-        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE)
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                          project_id=self.req_project_id,
+                                          user_id=self.req_user_id)
         self.stubs.Set(compute_api.API, 'get',
                        lambda api, *a, **k: fake_get(*a, **k))
 
@@ -1604,9 +1612,6 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                 },
             },
         }
-        self.req = fakes.HTTPRequest.blank('/fake/servers/a/action')
-        self.req.method = 'POST'
-        self.req.headers["content-type"] = "application/json"
 
     def test_rebuild_server_with_image_not_uuid(self):
         self.body['rebuild']['imageRef'] = 'not-uuid'
@@ -1894,7 +1899,9 @@ class ServersControllerRebuildTestV219(ServersControllerRebuildInstanceTest):
 
     def _rebuild_server(self, set_desc, desc):
         fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
-                                          display_description=desc)
+                                          display_description=desc,
+                                          project_id=self.req_project_id,
+                                          user_id=self.req_user_id)
         self.stubs.Set(compute_api.API, 'get',
                        lambda api, *a, **k: fake_get(*a, **k))
 
@@ -4296,6 +4303,52 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
         self._common_policy_check(
             rule, rule_name, self.controller._resize, self.req,
             FAKE_UUID, flavor_id)
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rebuild_policy_failed(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:servers:rebuild"
+        rule = {rule_name: "project:non_fake"}
+        body = {'rebuild': {'imageRef': self.image_uuid}}
+        self._common_policy_check(
+            rule, rule_name, self.controller._action_rebuild,
+            self.req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rebuild_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:servers:rebuild"
+        rule = {rule_name: "user_id:%(user_id)s"}
+        body = {'rebuild': {'imageRef': self.image_uuid}}
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        self._common_policy_check(
+            rule, rule_name, self.controller._action_rebuild,
+            self.req, FAKE_UUID, body=body)
+
+    @mock.patch('nova.api.openstack.compute.views.servers.ViewBuilder.show')
+    @mock.patch('nova.compute.api.API.rebuild')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rebuild_overridden_policy_pass_with_same_user(self,
+                                                           get_instance_mock,
+                                                           rebuild_mock,
+                                                           view_show_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:rebuild"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'rebuild': {'imageRef': self.image_uuid,
+                            'adminPass': 'dumpy_password'}}
+        self.controller._action_rebuild(self.req, fakes.FAKE_UUID, body=body)
+        rebuild_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                             instance,
+                                             self.image_uuid,
+                                             'dumpy_password')
 
     def test_create_image_policy_failed(self):
         rule_name = "os_compute_api:servers:create_image"
