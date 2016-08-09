@@ -504,3 +504,25 @@ class AttachInterfacesPolicyEnforcementv21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % self.rule_name,
             exc.format_message())
+
+    def test_attach_interfaces_create_policy_failed(self):
+        self.policy.set_rules({self.rule_name: "@",
+                               'os_compute_api:os-attach-interfaces:create':
+                               "!"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.create, self.req, fakes.FAKE_UUID, body={})
+        self.assertEqual(
+            "Policy doesn't allow os_compute_api:os-attach-interfaces:create "
+            "to be performed.", exc.format_message())
+
+    def test_attach_interfaces_delete_policy_failed(self):
+        self.policy.set_rules({self.rule_name: "@",
+                               'os_compute_api:os-attach-interfaces:delete':
+                               "!"})
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller.delete, self.req, fakes.FAKE_UUID, FAKE_PORT_ID1)
+        self.assertEqual(
+            "Policy doesn't allow os_compute_api:os-attach-interfaces:delete "
+            "to be performed.", exc.format_message())
