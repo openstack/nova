@@ -42,11 +42,13 @@ from nova.compute import vm_states
 import nova.conf
 from nova import context as nova_context
 from nova import exception
+from nova import hash_ring
 from nova.i18n import _
 from nova.i18n import _LE
 from nova.i18n import _LI
 from nova.i18n import _LW
 from nova import objects
+from nova import servicegroup
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
 from nova.virt import firewall
@@ -143,6 +145,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             default='nova.virt.firewall.NoopFirewallDriver')
         self.node_cache = {}
         self.node_cache_time = 0
+        self.servicegroup_api = servicegroup.API()
+        self._refresh_hash_ring(nova_context.get_admin_context())
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
 
@@ -516,12 +520,44 @@ class IronicDriver(virt_driver.ComputeDriver):
         except ironic.exc.NotFound:
             return False
 
+    def _refresh_hash_ring(self, ctxt):
+        service_list = objects.ServiceList.get_all_computes_by_hv_type(
+            ctxt, self._get_hypervisor_type())
+        services = set()
+        for svc in service_list:
+            is_up = self.servicegroup_api.service_is_up(svc)
+            if is_up:
+                services.add(svc.host)
+        # NOTE(jroll): always make sure this service is in the list, because
+        # only services that have something registered in the compute_nodes
+        # table will be here so far, and we might be brand new.
+        services.add(CONF.host)
+
+        self.hash_ring = hash_ring.HashRing(services)
+
     def _refresh_cache(self):
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
         # pagination until there're no more values to be returned.
+        ctxt = nova_context.get_admin_context()
+        self._refresh_hash_ring(ctxt)
+        instances = objects.InstanceList.get_uuids_by_host(ctxt, CONF.host)
         node_cache = {}
+
         for node in self._get_node_list(detail=True, limit=0):
-            node_cache[node.uuid] = node
+            # NOTE(jroll): we always manage the nodes for instances we manage
+            if node.instance_uuid in instances:
+                node_cache[node.uuid] = node
+
+            # NOTE(jroll): check if the node matches us in the hash ring, and
+            # does not have an instance_uuid (which would imply the node has
+            # an instance managed by another compute service).
+            # Note that this means nodes with an instance that was deleted in
+            # nova while the service was down, and not yet reaped, will not be
+            # reported until the periodic task cleans it up.
+            elif (node.instance_uuid is None and
+                  CONF.host in self.hash_ring.get_hosts(node.uuid)):
+                node_cache[node.uuid] = node
+
         self.node_cache = node_cache
         self.node_cache_time = time.time()
 
