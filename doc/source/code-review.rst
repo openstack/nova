@@ -139,13 +139,8 @@ A config option should be checked for:
   (e.g. timeouts or so) describe the unit which is used (seconds, megabyte,
   mebibyte, ...).
 
-* A long description which shows the impact and scope. The operators should
+* A long description which explains the impact and scope. The operators should
   know the expected change in the behavior of Nova if they tweak this.
-
-* Hints which services will consume this config option. Operators/Deployers
-  should not be forced to read the code to know which one of the services will
-  change its behavior nor should they set this in every ``nova.conf`` file to
-  be sure.
 
 * Descriptions/Validations for the possible values.
 
@@ -155,8 +150,10 @@ A config option should be checked for:
     * If this is a StrOpt, list any possible regex validations, or provide a
       list of acceptable and/or prohibited values.
 
-* Interdependencies to other options. If other config options have to be
-  considered when this config option gets changed, is this described?
+Previously used sections which explained which services consume a specific
+config option and which options are related to each other got dropped
+because they are too hard to maintain:
+http://lists.openstack.org/pipermail/openstack-dev/2016-May/095538.html
 
 Third Party Tests
 =================
