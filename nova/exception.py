@@ -638,14 +638,6 @@ class PreserveEphemeralNotSupported(Invalid):
                 "preserving ephemeral partitions.")
 
 
-# NOTE(jruzicka): ImageNotFound is not a valid EC2 error code.
-class ImageNotFoundEC2(ImageNotFound):
-    msg_fmt = _("Image %(image_id)s could not be found. The nova EC2 API "
-                "assigns image ids dynamically when they are listed for the "
-                "first time. Have you listed image ids since adding this "
-                "image?")
-
-
 class ProjectNotFound(NotFound):
     msg_fmt = _("Project %(project_id)s could not be found.")
 
