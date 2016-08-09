@@ -1,0 +1,5 @@
+---
+other:
+  - |
+    network_allocate_retries config param now allows only
+    positive integer values or 0.
