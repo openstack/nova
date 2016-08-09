@@ -2,7 +2,8 @@
 
 function run_tempest {
     local message=$1
-    sudo -H -u tempest tox -eall -- --concurrency=$TEMPEST_CONCURRENCY live_migration
+    local tempest_regex=$2
+    sudo -H -u tempest tox -eall -- --concurrency=$TEMPEST_CONCURRENCY $tempest_regex
     exitcode=$?
     if [[ $exitcode -ne 0 ]]; then
       die $LINENO "$message failure"
