@@ -517,10 +517,10 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_all_by_resource_provider(context, rp_uuid):
-        return context.session.query(db_api.models.Inventory).\
-            join(db_api.models.Inventory.resource_provider).\
+        return context.session.query(models.Inventory).\
+            join(models.Inventory.resource_provider).\
             options(contains_eager('resource_provider')).\
-            filter(db_api.models.ResourceProvider.uuid == rp_uuid).all()
+            filter(models.ResourceProvider.uuid == rp_uuid).all()
 
     @base.remotable_classmethod
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
