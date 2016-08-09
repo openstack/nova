@@ -283,7 +283,7 @@ class TestNotificationObjectVersions(test.NoDBTestCase):
 
     def test_versions(self):
         checker = fixture.ObjectVersionChecker(
-            base.NovaObjectRegistry.obj_classes())
+            test_objects.get_nova_objects())
         notification_object_data.update(test_objects.object_data)
         expected, actual = checker.test_hashes(notification_object_data)
         self.assertEqual(expected, actual,

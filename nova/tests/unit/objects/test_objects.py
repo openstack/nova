@@ -1206,10 +1206,31 @@ object_data = {
 }
 
 
+def get_nova_objects():
+    """Get Nova versioned objects
+
+    This returns a dict of versioned objects which are
+    in the Nova project namespace only. ie excludes
+    objects from os-vif and other 3rd party modules
+
+    :return: a dict mapping class names to lists of versioned objects
+    """
+
+    all_classes = base.NovaObjectRegistry.obj_classes()
+    nova_classes = {}
+    for name in all_classes:
+        objclasses = all_classes[name]
+        if (objclasses[0].OBJ_PROJECT_NAMESPACE !=
+            base.NovaObject.OBJ_PROJECT_NAMESPACE):
+            continue
+        nova_classes[name] = objclasses
+    return nova_classes
+
+
 class TestObjectVersions(test.NoDBTestCase):
     def test_versions(self):
         checker = fixture.ObjectVersionChecker(
-            base.NovaObjectRegistry.obj_classes())
+            get_nova_objects())
         fingerprints = checker.get_hashes()
 
         if os.getenv('GENERATE_HASHES'):
