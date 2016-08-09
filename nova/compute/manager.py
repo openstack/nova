@@ -4177,6 +4177,7 @@ class ComputeManager(manager.Manager):
 
     def _shelve_instance(self, context, instance, image_id,
                          clean_shutdown):
+        LOG.info(_LI('Shelving'), instance=instance)
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period=True)
         self._notify_about_instance_usage(context, instance, 'shelve.start')
@@ -4242,6 +4243,7 @@ class ComputeManager(manager.Manager):
         do_shelve_offload_instance()
 
     def _shelve_offload_instance(self, context, instance, clean_shutdown):
+        LOG.info(_LI('Shelve offloading'), instance=instance)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
 
@@ -4257,6 +4259,10 @@ class ComputeManager(manager.Manager):
                 block_device_info)
 
         instance.power_state = current_power_state
+        # NOTE(mriedem): The vm_state has to be set before updating the
+        # resource tracker, see vm_states.ALLOW_RESOURCE_REMOVAL. The host/node
+        # values cannot be nulled out until after updating the resource tracker
+        # though.
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.task_state = None
         instance.save(expected_task_state=[task_states.SHELVING,
@@ -4313,6 +4319,7 @@ class ComputeManager(manager.Manager):
 
     def _unshelve_instance(self, context, instance, image, filter_properties,
                            node):
+        LOG.info(_LI('Unshelving'), instance=instance)
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
         instance.task_state = task_states.SPAWNING
         instance.save()
