@@ -824,9 +824,13 @@ class ResourceTracker(object):
             # filter to most recently updated migration for each instance:
             other_migration = filtered.get(uuid, None)
             # NOTE(claudiub): In Python 3, you cannot compare NoneTypes.
-            if (not other_migration or (
-                    migration.updated_at and other_migration.updated_at and
-                    migration.updated_at >= other_migration.updated_at)):
+            if other_migration:
+                om = other_migration
+                other_time = om.updated_at or om.created_at
+                migration_time = migration.updated_at or migration.created_at
+                if migration_time > other_time:
+                    filtered[uuid] = migration
+            else:
                 filtered[uuid] = migration
 
         for migration in filtered.values():

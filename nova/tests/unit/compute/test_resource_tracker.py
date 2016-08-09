@@ -2056,6 +2056,7 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
         instance = objects.Instance(vm_state=vm_states.RESIZED,
                                     task_state=None)
         ts1 = timeutils.utcnow()
+        ts0 = ts1 - datetime.timedelta(seconds=10)
         ts2 = ts1 + datetime.timedelta(seconds=10)
 
         migrations = [
@@ -2064,6 +2065,7 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
                               dest_compute=_HOSTNAME,
                               dest_node=_NODENAME,
                               instance_uuid=uuids.instance,
+                              created_at=ts0,
                               updated_at=ts1,
                               instance=instance),
             objects.Migration(source_compute=_HOSTNAME,
@@ -2071,6 +2073,7 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
                               dest_compute=_HOSTNAME,
                               dest_node=_NODENAME,
                               instance_uuid=uuids.instance,
+                              created_at=ts0,
                               updated_at=ts2,
                               instance=instance)
         ]
@@ -2080,10 +2083,7 @@ class TestUpdateUsageFromMigrations(BaseTestCase):
         upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig2)
 
         upd_mock.reset_mock()
-        mig1.updated_at = None
-
-        # For some reason, the code thinks None should always take
-        # precedence over any datetime in the updated_at attribute...
+        mig2.updated_at = None
         self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list)
         upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig1)
 
