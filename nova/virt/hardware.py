@@ -25,7 +25,7 @@ import six
 import nova.conf
 from nova import context
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LI
 from nova import objects
 from nova.objects import fields
 from nova.objects import instance as obj_instance
@@ -842,6 +842,13 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
             host_cell.free_siblings, instance_cell, host_cell.id,
             max(map(len, host_cell.siblings)))
     else:
+        if (instance_cell.cpu_thread_policy ==
+                fields.CPUThreadAllocationPolicy.REQUIRE):
+            LOG.info(_LI("Host does not support hyperthreading or "
+                         "hyperthreading is disabled, but 'require' "
+                         "threads policy was requested."))
+            return
+
         # Straightforward to pin to available cpus when there is no
         # hyperthreading on the host
         free_cpus = [set([cpu]) for cpu in host_cell.free_cpus]

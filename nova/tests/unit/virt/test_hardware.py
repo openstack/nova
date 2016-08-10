@@ -2263,6 +2263,22 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         got_pinning = {x: x for x in range(0, 4)}
         self.assertEqual(got_pinning, inst_pin.cpu_pinning)
 
+    def test_get_pinning_require_policy_no_siblings(self):
+        host_pin = objects.NUMACell(
+                id=0,
+                cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                memory=4096, memory_usage=0,
+                pinned_cpus=set([]),
+                siblings=[],
+                mempages=[])
+        inst_pin = objects.InstanceNUMACell(
+                cpuset=set([0, 1, 2, 3]),
+                memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.REQUIRE)
+        inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
+        self.assertIsNone(inst_pin)
+
     def test_get_pinning_require_policy_too_few_siblings(self):
         host_pin = objects.NUMACell(
                 id=0,
