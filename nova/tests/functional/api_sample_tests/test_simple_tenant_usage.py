@@ -51,6 +51,15 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
                                                 urllib.urlencode(self.query)))
         self._verify_response('simple-tenant-usage-get', {}, response, 200)
 
+    def test_get_tenants_usage_with_detail(self):
+        # Get all tenants usage information with detail.
+        query = self.query.copy()
+        query.update({'detailed': 1})
+        response = self._do_get('os-simple-tenant-usage?%s' % (
+                                                urllib.urlencode(query)))
+        self._verify_response('simple-tenant-usage-get-detail', {},
+                              response, 200)
+
     def test_get_tenant_usage_details(self):
         # Get api sample to get specific tenant usage request.
         tenant_id = astb.PROJECT_ID
