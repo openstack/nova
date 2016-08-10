@@ -26,7 +26,6 @@ from nova.compute.monitors import base as monitor_base
 from nova.compute import resource_tracker
 from nova.compute import vm_states
 from nova import context
-from nova import exception
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
@@ -743,43 +742,3 @@ class UpdateUsageFromInstanceTestCase(BaseTrackerTestCase):
 
         mock_update_usage.assert_called_once_with(
             self.tracker._get_usage_dict(instance), sign=-1)
-
-
-class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
-
-    @mock.patch.object(resource_tracker.ResourceTracker,
-                       '_update_usage_from_migration')
-    def test_no_migrations(self, mock_update_usage):
-        migrations = []
-        self.tracker._update_usage_from_migrations(self.context, migrations)
-        self.assertFalse(mock_update_usage.called)
-
-    @mock.patch.object(resource_tracker.ResourceTracker,
-                       '_update_usage_from_migration')
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_instance_not_found(self, mock_get_instance, mock_update_usage):
-        mock_get_instance.side_effect = exception.InstanceNotFound(
-            instance_id='some_id',
-        )
-        migration = objects.Migration(
-            context=self.context,
-            instance_uuid='some_uuid',
-        )
-        self.tracker._update_usage_from_migrations(self.context, [migration])
-        mock_get_instance.assert_called_once_with(self.context, 'some_uuid')
-        self.assertFalse(mock_update_usage.called)
-
-    @mock.patch.object(resource_tracker.ResourceTracker,
-                       '_update_usage_from_migration')
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_update_usage_called(self, mock_get_instance, mock_update_usage):
-        instance = self._fake_instance_obj()
-        mock_get_instance.return_value = instance
-        migration = objects.Migration(
-            context=self.context,
-            instance_uuid=instance.uuid,
-        )
-        self.tracker._update_usage_from_migrations(self.context, [migration])
-        mock_get_instance.assert_called_once_with(self.context, instance.uuid)
-        mock_update_usage.assert_called_once_with(
-            self.context, instance, migration)

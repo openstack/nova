@@ -1782,6 +1782,31 @@ class TestResize(BaseTestCase):
 class TestUpdateUsageFromMigrations(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage_from_migration')
+    def test_no_migrations(self, mock_update_usage):
+        migrations = []
+        self._setup_rt()
+        self.rt._update_usage_from_migrations(mock.sentinel.ctx, migrations)
+        self.assertFalse(mock_update_usage.called)
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage_from_migration')
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    def test_instance_not_found(self, mock_get_instance, mock_update_usage):
+        mock_get_instance.side_effect = exc.InstanceNotFound(
+            instance_id='some_id',
+        )
+        migration = objects.Migration(
+            context=mock.sentinel.ctx,
+            instance_uuid='some_uuid',
+        )
+        self._setup_rt()
+        self.rt._update_usage_from_migrations(mock.sentinel.ctx, [migration])
+        mock_get_instance.assert_called_once_with(mock.sentinel.ctx,
+                                                  'some_uuid')
+        self.assertFalse(mock_update_usage.called)
+
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage_from_migration')
     def test_duplicate_migrations_filtered(self, upd_mock):
         # The wrapper function _update_usage_from_migrations() looks at the
         # list of migration objects returned from
