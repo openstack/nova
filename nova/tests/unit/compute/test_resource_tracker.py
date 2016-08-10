@@ -783,19 +783,3 @@ class UpdateUsageFromMigrationsTestCase(BaseTrackerTestCase):
         mock_get_instance.assert_called_once_with(self.context, instance.uuid)
         mock_update_usage.assert_called_once_with(
             self.context, instance, migration)
-
-    @mock.patch.object(resource_tracker.ResourceTracker,
-                       '_update_usage_from_migration')
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_flavor_not_found(self, mock_get_instance, mock_update_usage):
-        mock_update_usage.side_effect = exception.FlavorNotFound(flavor_id='')
-        instance = self._fake_instance_obj()
-        mock_get_instance.return_value = instance
-        migration = objects.Migration(
-            context=self.context,
-            instance_uuid=instance.uuid,
-        )
-        self.tracker._update_usage_from_migrations(self.context, [migration])
-        mock_get_instance.assert_called_once_with(self.context, instance.uuid)
-        mock_update_usage.assert_called_once_with(
-            self.context, instance, migration)
