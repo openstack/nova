@@ -1932,25 +1932,6 @@ class TestMoveClaim(BaseTestCase):
         self.assertTrue(obj_base.obj_equal_prims(expected,
                                                  src_rt.compute_node))
 
-    def test_update_available_resources_migration_no_context(self, pci_mock,
-            inst_list_mock, inst_by_uuid, migr_mock, inst_save_mock):
-        """When migrating onto older nodes - it is possible for the
-        migration_context record to be missing. Confirm resource audit works
-        regardless.
-        """
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
-                            inst_save_mock)
-        migr_obj = _MIGRATION_FIXTURES['source-and-dest']
-        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
-        self.instance.migration_context = None
-
-        expected = copy.deepcopy(self.rt.compute_node)
-        self.adjust_expected(expected, self.flavor)
-
-        self.audit(self.rt, [], [migr_obj], self.instance)
-        self.assertTrue(obj_base.obj_equal_prims(expected,
-                                                 self.rt.compute_node))
-
     def test_dupe_filter(self, pci_mock, inst_list_mock, inst_by_uuid,
             migr_mock, inst_save_mock):
         self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
