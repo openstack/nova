@@ -14,7 +14,6 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
-import webob
 
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -32,7 +31,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_path_version_v2(self):
         # Test URL path specifying v2 returns v2 content.
-        req = webob.Request.blank('/v2/')
+        req = fakes.HTTPRequest.blank('/v2/')
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',),
                                                   v2_compatible=True))
@@ -43,7 +42,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_content_type_version_v2(self):
         # Test Content-Type specifying v2 returns v2 content.
-        req = webob.Request.blank('/')
+        req = fakes.HTTPRequest.blank('/')
         req.content_type = "application/json;version=2"
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',),
@@ -55,7 +54,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_accept_version_v2(self):
         # Test Accept header specifying v2 returns v2 content.
-        req = webob.Request.blank('/')
+        req = fakes.HTTPRequest.blank('/')
         req.accept = "application/json;version=2"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',),
                                                   v2_compatible=True))
@@ -67,7 +66,7 @@ class UrlmapTest(test.NoDBTestCase):
     def test_path_content_type(self):
         # Test URL path specifying JSON returns JSON content.
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175.json'
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.accept = "application/xml"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('images',)))
         self.assertEqual(200, res.status_int)
@@ -79,7 +78,7 @@ class UrlmapTest(test.NoDBTestCase):
     def test_accept_content_type(self):
         # Test Accept header specifying JSON returns JSON content.
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175'
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.accept = "application/xml;q=0.8, application/json"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('images',)))
         self.assertEqual(200, res.status_int)
@@ -90,7 +89,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_path_version_v21(self):
         # Test URL path specifying v2.1 returns v2.1 content.
-        req = webob.Request.blank('/v2.1/')
+        req = fakes.HTTPRequest.blank('/v2.1/')
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
         self.assertEqual(200, res.status_int)
@@ -100,7 +99,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_content_type_version_v21(self):
         # Test Content-Type specifying v2.1 returns v2 content.
-        req = webob.Request.blank('/')
+        req = fakes.HTTPRequest.blank('/')
         req.content_type = "application/json;version=2.1"
         req.accept = "application/json"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
@@ -111,7 +110,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_accept_version_v21(self):
         # Test Accept header specifying v2.1 returns v2.1 content.
-        req = webob.Request.blank('/')
+        req = fakes.HTTPRequest.blank('/')
         req.accept = "application/json;version=2.1"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))
         self.assertEqual(200, res.status_int)
@@ -121,7 +120,7 @@ class UrlmapTest(test.NoDBTestCase):
 
     def test_accept_content_type_v21(self):
         # Test Accept header specifying JSON returns JSON content.
-        req = webob.Request.blank('/')
+        req = fakes.HTTPRequest.blank('/')
         req.content_type = "application/json;version=2.1"
         req.accept = "application/xml;q=0.8, application/json"
         res = req.get_response(fakes.wsgi_app_v21(init_only=('versions',)))

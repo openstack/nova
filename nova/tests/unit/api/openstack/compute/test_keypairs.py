@@ -287,7 +287,8 @@ class KeypairsTestV21(test.TestCase):
         self.stub_out('nova.api.openstack.wsgi.Request.get_db_instance',
                       fakes.fake_compute_get())
 
-        req = webob.Request.blank(self.base_url + '/servers/' + uuids.server)
+        req = fakes.HTTPRequest.blank(
+            self.base_url + '/servers/' + uuids.server)
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(self.app_server)
         self.assertEqual(response.status_int, 200)

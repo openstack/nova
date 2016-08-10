@@ -22,7 +22,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from six.moves import http_client as httplib
 from six.moves import StringIO
-import webob
 
 from nova.api.openstack.compute import limits as limits_v21
 from nova.api.openstack.compute import views
@@ -174,7 +173,7 @@ class FakeHttplibConnection(object):
         if not headers:
             headers = {}
 
-        req = webob.Request.blank(path)
+        req = fakes.HTTPRequest.blank(path)
         req.method = method
         req.headers = headers
         req.host = self.host
