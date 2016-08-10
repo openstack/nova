@@ -85,7 +85,7 @@ from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
-from nova.virt.disk import api as disk
+from nova.virt.disk import api as disk_api
 from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
@@ -285,7 +285,7 @@ _fake_cpu_info = {
     "features": ["feature1", "feature2"]
 }
 
-eph_default_ext = utils.get_hash_str(disk._DEFAULT_FILE_SYSTEM)[:7]
+eph_default_ext = utils.get_hash_str(disk_api._DEFAULT_FILE_SYSTEM)[:7]
 
 
 def eph_name(size):
@@ -699,7 +699,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         def fake_extend(image, size, use_cow=False):
             pass
 
-        self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
+        self.stubs.Set(libvirt_driver.disk_api, 'extend', fake_extend)
 
         self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
                        imagebackend.Image._get_driver_format)
@@ -14064,8 +14064,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self._test_get_device_name_for_instance(new_bdm, '/dev/fda')
 
     def test_is_supported_fs_format(self):
-        supported_fs = [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
-                        disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
+        supported_fs = [disk_api.FS_FORMAT_EXT2, disk_api.FS_FORMAT_EXT3,
+                        disk_api.FS_FORMAT_EXT4, disk_api.FS_FORMAT_XFS]
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         for fs in supported_fs:
             self.assertTrue(drvr.is_supported_fs_format(fs))

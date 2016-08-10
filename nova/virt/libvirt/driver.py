@@ -87,7 +87,7 @@ from nova import version
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import diagnostics
-from nova.virt.disk import api as disk
+from nova.virt.disk import api as disk_api
 from nova.virt.disk.vfs import guestfs
 from nova.virt import driver
 from nova.virt import firewall
@@ -782,7 +782,7 @@ class LibvirtDriver(driver.ComputeDriver):
                   'root device: %(rootfs_dev)s',
                   {'dir': container_dir, 'rootfs_dev': rootfs_dev},
                   instance=instance)
-        disk.teardown_container(container_dir, rootfs_dev)
+        disk_api.teardown_container(container_dir, rootfs_dev)
 
     def _destroy(self, instance, attempt=1):
         try:
@@ -2874,8 +2874,8 @@ class LibvirtDriver(driver.ComputeDriver):
             libvirt_utils.create_image('raw', target, '%dG' % ephemeral_size)
 
         # Run as root only for block devices.
-        disk.mkfs(os_type, fs_label, target, run_as_root=is_block_dev,
-                  specified_fs=specified_fs)
+        disk_api.mkfs(os_type, fs_label, target, run_as_root=is_block_dev,
+                      specified_fs=specified_fs)
 
     @staticmethod
     def _create_swap(target, swap_mb, context=None):
@@ -2991,10 +2991,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if any((key, net, metadata, admin_pass, files)):
             img_id = instance.image_ref
             try:
-                disk.inject_data(injection_image.get_model(self._conn),
-                                 key, net, metadata, admin_pass, files,
-                                 partition=target_partition,
-                                 mandatory=('files',))
+                disk_api.inject_data(injection_image.get_model(self._conn),
+                                     key, net, metadata, admin_pass, files,
+                                     partition=target_partition,
+                                     mandatory=('files',))
             except Exception as e:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_LE('Error injecting data into image '
@@ -3086,10 +3086,11 @@ class LibvirtDriver(driver.ComputeDriver):
                             'instance is not supported'), instance=instance)
 
         # Lookup the filesystem type if required
-        os_type_with_default = disk.get_fs_type_for_os_type(instance.os_type)
+        os_type_with_default = disk_api.get_fs_type_for_os_type(
+            instance.os_type)
         # Generate a file extension based on the file system
         # type and the mkfs commands configured if any
-        file_extension = disk.get_file_extension_for_os_type(
+        file_extension = disk_api.get_file_extension_for_os_type(
                                                           os_type_with_default)
 
         ephemeral_gb = instance.flavor.ephemeral_gb
@@ -4740,8 +4741,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         container_dir = os.path.join(inst_path, 'rootfs')
         fileutils.ensure_tree(container_dir)
-        rootfs_dev = disk.setup_container(image_model,
-                                          container_dir=container_dir)
+        rootfs_dev = disk_api.setup_container(image_model,
+                                              container_dir=container_dir)
 
         try:
             # Save rootfs device to disconnect it when deleting the instance
@@ -4770,9 +4771,9 @@ class LibvirtDriver(driver.ComputeDriver):
             # rootfs mounted in the host namespace
             LOG.debug('Attempting to unmount container filesystem: %s',
                       container_dir, instance=instance)
-            disk.clean_lxc_namespace(container_dir=container_dir)
+            disk_api.clean_lxc_namespace(container_dir=container_dir)
         else:
-            disk.teardown_container(container_dir=container_dir)
+            disk_api.teardown_container(container_dir=container_dir)
 
     @contextlib.contextmanager
     def _lxc_disk_handler(self, instance, image_meta,
@@ -6840,7 +6841,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if disk_type in ("qcow2", "ploop"):
                 backing_file = libvirt_utils.get_disk_backing_file(path)
-                virt_size = disk.get_disk_size(path)
+                virt_size = disk_api.get_disk_size(path)
                 over_commit_size = int(virt_size) - dk_size
             else:
                 backing_file = ""
@@ -7199,15 +7200,15 @@ class LibvirtDriver(driver.ComputeDriver):
         converted = False
         if (size and
             image.format == imgmodel.FORMAT_QCOW2 and
-            disk.can_resize_image(image.path, size) and
-            disk.is_image_extendable(image)):
+            disk_api.can_resize_image(image.path, size) and
+            disk_api.is_image_extendable(image)):
             self._disk_qcow2_to_raw(image.path)
             converted = True
             image = imgmodel.LocalFileImage(image.path,
                                             imgmodel.FORMAT_RAW)
 
         if size:
-            disk.extend(image, size)
+            disk_api.extend(image, size)
 
         if converted:
             # back to qcow2 (no backing_file though) so that snapshot
@@ -7744,5 +7745,5 @@ class LibvirtDriver(driver.ComputeDriver):
         return block_device.prepend_dev(disk_info['dev'])
 
     def is_supported_fs_format(self, fs_type):
-        return fs_type in [disk.FS_FORMAT_EXT2, disk.FS_FORMAT_EXT3,
-                           disk.FS_FORMAT_EXT4, disk.FS_FORMAT_XFS]
+        return fs_type in [disk_api.FS_FORMAT_EXT2, disk_api.FS_FORMAT_EXT3,
+                           disk_api.FS_FORMAT_EXT4, disk_api.FS_FORMAT_XFS]
