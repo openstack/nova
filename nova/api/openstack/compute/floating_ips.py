@@ -226,7 +226,7 @@ class FloatingIPActionController(wsgi.Controller):
             LOG.warning(
                 _LW('Info cache is %r during associate with no nw_info cache'),
                     instance.info_cache, instance=instance)
-            msg = _('No nw_info cache associated with instance')
+            msg = _('Instance network is not ready yet')
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
         fixed_ips = cached_nwinfo.fixed_ips()
