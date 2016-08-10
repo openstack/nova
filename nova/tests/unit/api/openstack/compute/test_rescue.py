@@ -21,6 +21,7 @@ import nova.conf
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 CONF = nova.conf.CONF
 UUID = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
@@ -36,8 +37,8 @@ def unrescue(self, context, instance):
 
 
 def fake_compute_get(*args, **kwargs):
-
-    return {'id': 1, 'uuid': UUID}
+    return fake_instance.fake_instance_obj(args[1], id=1,
+                                           uuid=UUID, **kwargs)
 
 
 class RescueTestV21(test.NoDBTestCase):
@@ -162,8 +163,12 @@ class RescueTestV21(test.NoDBTestCase):
                           self.fake_req, UUID, body=body)
 
     @mock.patch('nova.compute.api.API.rescue')
-    def test_rescue_with_image_specified(self, mock_compute_api_rescue):
-        instance = fake_compute_get()
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rescue_with_image_specified(
+        self, get_instance_mock, mock_compute_api_rescue):
+        instance = fake_instance.fake_instance_obj(
+            self.fake_req.environ['nova.context'])
+        get_instance_mock.return_value = instance
         body = {"rescue": {"adminPass": "ABC123",
             "rescue_image_ref": self.image_uuid}}
         resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
@@ -176,8 +181,12 @@ class RescueTestV21(test.NoDBTestCase):
             rescue_image_ref=self.image_uuid)
 
     @mock.patch('nova.compute.api.API.rescue')
-    def test_rescue_without_image_specified(self, mock_compute_api_rescue):
-        instance = fake_compute_get()
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rescue_without_image_specified(
+        self, get_instance_mock, mock_compute_api_rescue):
+        instance = fake_instance.fake_instance_obj(
+            self.fake_req.environ['nova.context'])
+        get_instance_mock.return_value = instance
         body = {"rescue": {"adminPass": "ABC123"}}
 
         resp_json = self.controller._rescue(self.fake_req, UUID, body=body)
@@ -217,7 +226,10 @@ class RescuePolicyEnforcementV21(test.NoDBTestCase):
         self.controller = rescue_v21.RescueController()
         self.req = fakes.HTTPRequest.blank('')
 
-    def test_rescue_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rescue_policy_failed(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         rule_name = "os_compute_api:os-rescue"
         self.policy.set_rules({rule_name: "project:non_fake"})
         body = {"rescue": {"adminPass": "AABBCC112233"}}
@@ -228,6 +240,41 @@ class RescuePolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rescue_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:os-rescue"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._rescue, self.req,
+                                fakes.FAKE_UUID, body=body)
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.rescue')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_lock_overridden_policy_pass_with_same_user(self,
+                                                        get_instance_mock,
+                                                        rescue_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:os-rescue"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {"rescue": {"adminPass": "AABBCC112233"}}
+        self.controller._rescue(self.req, fakes.FAKE_UUID, body=body)
+        rescue_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                            instance,
+                                            rescue_password='AABBCC112233',
+                                            rescue_image_ref=None)
 
     def test_unrescue_policy_failed(self):
         rule_name = "os_compute_api:os-rescue"

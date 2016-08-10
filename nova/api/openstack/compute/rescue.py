@@ -46,7 +46,6 @@ class RescueController(wsgi.Controller):
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
-        context.can(rescue_policies.BASE_POLICY_NAME)
 
         if body['rescue'] and 'adminPass' in body['rescue']:
             password = body['rescue']['adminPass']
@@ -54,6 +53,9 @@ class RescueController(wsgi.Controller):
             password = utils.generate_password()
 
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(rescue_policies.BASE_POLICY_NAME,
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         rescue_image_ref = None
         if body['rescue']:
             rescue_image_ref = body['rescue'].get('rescue_image_ref')
