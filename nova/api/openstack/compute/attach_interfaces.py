@@ -91,6 +91,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         """Attach an interface to an instance."""
         context = req.environ['nova.context']
         context.can(ai_policies.BASE_POLICY_NAME)
+        context.can(ai_policies.POLICY_ROOT % 'create')
 
         network_id = None
         port_id = None
@@ -145,6 +146,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']
         context.can(ai_policies.BASE_POLICY_NAME)
+        context.can(ai_policies.POLICY_ROOT % 'delete')
         port_id = id
 
         instance = common.get_instance(self.compute_api, context, server_id)

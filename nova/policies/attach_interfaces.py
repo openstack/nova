@@ -29,6 +29,14 @@ attach_interfaces_policies = [
     policy.RuleDefault(
         name=POLICY_ROOT % 'discoverable',
         check_str=base.RULE_ANY),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'create',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description='Controls who can attach an interface to an instance'),
+    policy.RuleDefault(
+        name=POLICY_ROOT % 'delete',
+        check_str=base.RULE_ADMIN_OR_OWNER,
+        description='Controls who can detach an interface from an instance'),
 ]
 
 

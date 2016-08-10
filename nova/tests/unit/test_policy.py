@@ -342,6 +342,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:servers:create_image:allow_volume_backed",
 "os_compute_api:os-admin-password",
 "os_compute_api:os-attach-interfaces",
+"os_compute_api:os-attach-interfaces:create",
+"os_compute_api:os-attach-interfaces:delete",
 "os_compute_api:os-certificates:create",
 "os_compute_api:os-certificates:show",
 "os_compute_api:os-consoles:create",
