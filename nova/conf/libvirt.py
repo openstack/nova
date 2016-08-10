@@ -4,7 +4,6 @@
 # needs:fix_opt_description_indentation
 # needs:fix_opt_registration_consistency
 
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -532,14 +531,11 @@ Then event statistics data can be collected from libvirt.  The minimum
 libvirt version is 2.0.0. For more information about `Performance monitoring
 events`, refer https://libvirt.org/formatdomain.html#elementsPerf .
 
-* Possible values:
-    A string list.
-    For example:
-    ``enabled_perf_events = cmt, mbml, mbmt``
-
-    The supported events list can be found in
-    https://libvirt.org/html/libvirt-libvirt-domain.html , which
-    you may need to search key words ``VIR_PERF_PARAM_*``
+Possible values:
+* A string list. For example: ``enabled_perf_events = cmt, mbml, mbmt``
+  The supported events list can be found in
+  https://libvirt.org/html/libvirt-libvirt-domain.html ,
+  which you may need to search key words ``VIR_PERF_PARAM_*``
 """),
 ]
 
@@ -794,13 +790,14 @@ libvirt_volume_vzstorage_opts = [
     cfg.StrOpt('vzstorage_mount_point_base',
                default=paths.state_path_def('mnt'),
                help="""
-Directory where the Virtuozzo Storage clusters are mounted on the compute node.
+Directory where the Virtuozzo Storage clusters are mounted on the compute
+node.
 
 This option defines non-standard mountpoint for Vzstorage cluster.
 
-* Related options:
+Related options:
 
-    vzstorage_mount_* group of parameters
+* vzstorage_mount_* group of parameters
 """
               ),
     cfg.StrOpt('vzstorage_mount_user',
@@ -810,9 +807,9 @@ Mount owner user name.
 
 This option defines the owner user of Vzstorage cluster mountpoint.
 
-* Related options:
+Related options:
 
-    vzstorage_mount_* group of parameters
+* vzstorage_mount_* group of parameters
 """
               ),
     cfg.StrOpt('vzstorage_mount_group',
@@ -822,9 +819,9 @@ Mount owner group name.
 
 This option defines the owner group of Vzstorage cluster mountpoint.
 
-* Related options:
+Related options:
 
-    vzstorage_mount_* group of parameters
+* vzstorage_mount_* group of parameters
 """
               ),
     cfg.StrOpt('vzstorage_mount_perms',
@@ -837,9 +834,9 @@ in the format similar to one of chmod(1) utility, like this: 0770.
 It consists of one to four digits ranging from 0 to 7, with missing
 lead digits assumed to be 0's.
 
-* Related options:
+Related options:
 
-    vzstorage_mount_* group of parameters
+* vzstorage_mount_* group of parameters
 """
               ),
     cfg.StrOpt('vzstorage_log_path',
@@ -851,9 +848,9 @@ This option defines the log of cluster operations,
 it should include "%(cluster_name)s" template to separate
 logs from multiple shares.
 
-* Related options:
+Related options:
 
-    vzstorage_mount_opts may include more detailed logging options.
+* vzstorage_mount_opts may include more detailed logging options.
 """
               ),
     cfg.StrOpt('vzstorage_cache_path',
@@ -875,9 +872,9 @@ vstorage-hwflush-check(1) utility.
 This option defines the path which should include "%(cluster_name)s"
 template to separate caches from multiple shares.
 
-* Related options:
+Related options:
 
-    vzstorage_mount_opts may include more detailed cache options.
+* vzstorage_mount_opts may include more detailed cache options.
 """
               ),
     cfg.ListOpt('vzstorage_mount_opts',
@@ -892,9 +889,9 @@ Format is a python string representation of arguments list, like:
 Shouldn\'t include -c, -l, -C, -u, -g and -m as those have
 explicit vzstorage_* options.
 
-* Related options:
+Related options:
 
-    All other vzstorage_* options
+* All other vzstorage_* options
 """
               ),
 ]
