@@ -1,5 +1,3 @@
-# needs:check_deprecation_status
-
 # Copyright (c) 2010 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -61,8 +59,8 @@ Possible values:
         default='127.0.0.1',
         deprecated_group='DEFAULT',
         help="""
-The IP address on which an instance should listen to for incoming VNC
-connection requests on this node.
+The IP address or hostname on which an instance should listen to for
+incoming VNC connection requests on this node.
 """),
 
     cfg.StrOpt(
@@ -70,7 +68,7 @@ connection requests on this node.
         default='127.0.0.1',
         deprecated_group='DEFAULT',
         help="""
-Private, internal IP address of VNC console proxy.
+Private, internal IP address or hostname of VNC console proxy.
 
 The VNC proxy is an OpenStack component that enables compute service
 users to access their instances through VNC clients.
@@ -105,7 +103,7 @@ Related options:
         default='0.0.0.0',
         deprecated_group='DEFAULT',
         help="""
-IP address that the XVP VNC console proxy should bind to.
+IP address or hostname that the XVP VNC console proxy should bind to.
 
 The VNC proxy is an OpenStack component that enables compute service
 users to access their instances through VNC clients. Xen provides
