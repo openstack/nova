@@ -370,6 +370,7 @@ Related options:
     cfg.BoolOpt("share_dhcp_address",
             default=False,
             deprecated_for_removal=True,
+            deprecated_since='2014.2',
             help="""
 THIS VALUE SHOULD BE SET WHEN CREATING THE NETWORK.
 

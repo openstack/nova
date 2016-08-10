@@ -28,8 +28,9 @@ _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 db_driver_opt = cfg.StrOpt(
         'db_driver',
         default='nova.db',
-        help='DEPRECATED: The driver to use for database access',
-        deprecated_for_removal=True)
+        deprecated_for_removal=True,
+        deprecated_since='13.0.0',
+        help='The driver to use for database access')
 
 
 # NOTE(markus_z): We cannot simply do:

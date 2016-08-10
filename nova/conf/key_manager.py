@@ -42,6 +42,7 @@ barbican_opts = [
     cfg.StrOpt("catalog_info",
                default="key-manager:barbican:public",
                deprecated_for_removal=True,
+               deprecated_since="14.0.0",
                deprecated_reason="This option have been moved to the "
                                  "Castellan library",
                help="""
@@ -51,6 +52,7 @@ catalog. Format is: separated values of the form:
 """),
     cfg.StrOpt("endpoint_template",
                deprecated_for_removal=True,
+               deprecated_since="14.0.0",
                deprecated_reason="This option have been moved to the "
                                  "Castellan library",
                help="""
@@ -60,6 +62,7 @@ http://localhost:9311/v1/%(project_id)s
 """),
     cfg.StrOpt("os_region_name",
                deprecated_for_removal=True,
+               deprecated_since="14.0.0",
                deprecated_reason="This option have been moved to the "
                                  "Castellan library",
                help='Region name of this node'),

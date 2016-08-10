@@ -46,12 +46,14 @@ ironic_options = [
     cfg.StrOpt(
         'admin_username',
         deprecated_for_removal=True,
+        deprecated_since='14.0.0',
         help='Ironic keystone admin name. '
              'Use ``username`` instead.'),
     cfg.StrOpt(
         'admin_password',
         secret=True,
         deprecated_for_removal=True,
+        deprecated_since='14.0.0',
         help='Ironic keystone admin password. '
              'Use ``password`` instead.'),
     cfg.StrOpt(
