@@ -74,7 +74,19 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         for key, req in six.iteritems(instance_type.extra_specs):
             # Either not scope format, or in capabilities scope
             scope = key.split(':')
-            if len(scope) > 1:
+            # If key does not have a namespace, the scope's size is 1, check
+            # whether host_state contains the key as an attribute. If not,
+            # ignore it. If it contains, deal with it in the same way as
+            # 'capabilities:key'. This is for backward-compatible.
+            # If the key has a namespace, the scope's size will be bigger than
+            # 1, check that whether the namespace is 'capabilities'. If not,
+            # ignore it.
+            if len(scope) == 1:
+                stats = getattr(host_state, 'stats', {})
+                has_attr = hasattr(host_state, key) or key in stats
+                if not has_attr:
+                    continue
+            else:
                 if scope[0] != "capabilities":
                     continue
                 else:
@@ -95,8 +107,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, spec_obj):
         """Return a list of hosts that can create instance_type."""
         instance_type = spec_obj.flavor
-        if not self._satisfies_extra_specs(host_state,
-                instance_type):
+        if not self._satisfies_extra_specs(host_state, instance_type):
             LOG.debug("%(host_state)s fails instance_type extra_specs "
                       "requirements", {'host_state': host_state})
             return False
