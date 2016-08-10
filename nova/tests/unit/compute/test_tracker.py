@@ -11,8 +11,10 @@
 #    under the License.
 
 import copy
+import datetime
 
 import mock
+from oslo_utils import timeutils
 from oslo_utils import units
 
 from nova.compute import arch
@@ -30,6 +32,7 @@ from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova import test
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
+from nova.tests import uuidsentinel as uuids
 
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
@@ -1776,6 +1779,57 @@ class TestResize(BaseTestCase):
         alloc_mock.assert_called_once_with(instance)
 
 
+class TestUpdateUsageFromMigrations(BaseTestCase):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update_usage_from_migration')
+    def test_duplicate_migrations_filtered(self, upd_mock):
+        # The wrapper function _update_usage_from_migrations() looks at the
+        # list of migration objects returned from
+        # MigrationList.get_in_progress_by_host_and_node() and ensures that
+        # only the most recent migration record for an instance is used in
+        # determining the usage records. Here we pass multiple migration
+        # objects for a single instance and ensure that we only call the
+        # _update_usage_from_migration() (note: not migration*s*...) once with
+        # the migration object with greatest updated_at value. We also pass
+        # some None values for various updated_at attributes to exercise some
+        # of the code paths in the filtering logic.
+        self._setup_rt()
+
+        instance = objects.Instance(vm_state=vm_states.RESIZED,
+                                    task_state=None)
+        ts1 = timeutils.utcnow()
+        ts2 = ts1 + datetime.timedelta(seconds=10)
+
+        migrations = [
+            objects.Migration(source_compute=_HOSTNAME,
+                              source_node=_NODENAME,
+                              dest_compute=_HOSTNAME,
+                              dest_node=_NODENAME,
+                              instance_uuid=uuids.instance,
+                              updated_at=ts1,
+                              instance=instance),
+            objects.Migration(source_compute=_HOSTNAME,
+                              source_node=_NODENAME,
+                              dest_compute=_HOSTNAME,
+                              dest_node=_NODENAME,
+                              instance_uuid=uuids.instance,
+                              updated_at=ts2,
+                              instance=instance)
+        ]
+        mig1, mig2 = migrations
+        mig_list = objects.MigrationList(objects=migrations)
+        self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list)
+        upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig2)
+
+        upd_mock.reset_mock()
+        mig1.updated_at = None
+
+        # For some reason, the code thinks None should always take
+        # precedence over any datetime in the updated_at attribute...
+        self.rt._update_usage_from_migrations(mock.sentinel.ctx, mig_list)
+        upd_mock.assert_called_once_with(mock.sentinel.ctx, instance, mig1)
+
+
 @mock.patch('nova.objects.Instance.save')
 @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
 @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -1931,20 +1985,6 @@ class TestMoveClaim(BaseTestCase):
         self.audit(src_rt, [], [src_migr], src_instance)
         self.assertTrue(obj_base.obj_equal_prims(expected,
                                                  src_rt.compute_node))
-
-    def test_dupe_filter(self, pci_mock, inst_list_mock, inst_by_uuid,
-            migr_mock, inst_save_mock):
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock,
-                            inst_save_mock)
-
-        migr_obj = _MIGRATION_FIXTURES['source-and-dest']
-        # This is good enough to prevent a lazy-load; value is unimportant
-        migr_obj['updated_at'] = None
-        self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
-        self.instance.migration_context = (
-            _MIGRATION_CONTEXT_FIXTURES[self.instance.uuid])
-        self.audit(self.rt, [], [migr_obj, migr_obj], self.instance)
-        self.assertEqual(1, len(self.rt.tracked_migrations))
 
 
 class TestInstanceInResizeState(test.NoDBTestCase):
