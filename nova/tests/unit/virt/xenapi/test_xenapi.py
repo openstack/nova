@@ -2088,7 +2088,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         stats = self.conn.host_state.get_host_stats(False)
         # Values from fake.create_local_srs (ext SR)
         self.assertEqual(stats['disk_total'], 40000)
-        self.assertEqual(stats['disk_used'], 20000)
+        self.assertEqual(stats['disk_used'], 0)
         # Values from fake._plugin_xenhost_host_data
         self.assertEqual(stats['host_memory_total'], 10)
         self.assertEqual(stats['host_memory_overhead'], 20)
@@ -2212,6 +2212,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.mox.StubOutWithMock(vm_utils, 'scan_default_sr')
         self.mox.StubOutWithMock(vm_utils, 'list_vms')
         self.mox.StubOutWithMock(self.conn._session, 'call_xenapi')
+        self.mox.StubOutWithMock(host.HostState, 'get_disk_used')
         data = {'disk_total': 0,
                 'disk_used': 0,
                 'disk_available': 0,
@@ -2232,6 +2233,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
             vm_utils.list_vms(self.conn._session).AndReturn([])
             self.conn._session.call_xenapi('SR.get_record', "ref").AndReturn(
                 sr_rec)
+            host.HostState.get_disk_used("ref").AndReturn((0, 0))
             if i == 2:
                 # On the third call (the second below) change the hostname
                 data = dict(data, host_hostname='bar')
@@ -2241,6 +2243,72 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEqual('foo', stats['hypervisor_hostname'])
         stats = self.conn.host_state.get_host_stats(refresh=True)
         self.assertEqual('foo', stats['hypervisor_hostname'])
+
+
+@mock.patch.object(host.HostState, 'update_status')
+class XenAPIHostStateTestCase(stubs.XenAPITestBaseNoDB):
+
+    def _test_get_disk_used(self, vdis, attached_vbds):
+        session = mock.MagicMock()
+        host_state = host.HostState(session)
+
+        sr_ref = 'sr_ref'
+
+        session.SR.get_VDIs.return_value = vdis.keys()
+        session.VDI.get_virtual_size.side_effect = \
+            lambda vdi_ref: vdis[vdi_ref]['virtual_size']
+        session.VDI.get_physical_utilisation.side_effect = \
+            lambda vdi_ref: vdis[vdi_ref]['physical_utilisation']
+        session.VDI.get_VBDs.side_effect = \
+            lambda vdi_ref: vdis[vdi_ref]['VBDs']
+        session.VBD.get_currently_attached.side_effect = \
+            lambda vbd_ref: vbd_ref in attached_vbds
+
+        disk_used = host_state.get_disk_used(sr_ref)
+        session.SR.get_VDIs.assert_called_once_with(sr_ref)
+        return disk_used
+
+    def test_get_disk_used_virtual(self, mock_update_status):
+        # Both VDIs are attached
+        attached_vbds = ['vbd_1', 'vbd_2']
+        vdis = {
+            'vdi_1': {'physical_utilisation': 1,
+                      'virtual_size': 100,
+                      'VBDs': ['vbd_1']},
+            'vdi_2': {'physical_utilisation': 1,
+                      'virtual_size': 100,
+                      'VBDs': ['vbd_2']}
+        }
+        disk_used = self._test_get_disk_used(vdis, attached_vbds)
+        self.assertEqual((200, 2), disk_used)
+
+    def test_get_disk_used_physical(self, mock_update_status):
+        # Neither VDIs are attached
+        attached_vbds = []
+        vdis = {
+            'vdi_1': {'physical_utilisation': 1,
+                      'virtual_size': 100,
+                      'VBDs': ['vbd_1']},
+            'vdi_2': {'physical_utilisation': 1,
+                      'virtual_size': 100,
+                      'VBDs': ['vbd_2']}
+        }
+        disk_used = self._test_get_disk_used(vdis, attached_vbds)
+        self.assertEqual((2, 2), disk_used)
+
+    def test_get_disk_used_both(self, mock_update_status):
+        # One VDI is attached
+        attached_vbds = ['vbd_1']
+        vdis = {
+            'vdi_1': {'physical_utilisation': 1,
+                      'virtual_size': 100,
+                      'VBDs': ['vbd_1']},
+            'vdi_2': {'physical_utilisation': 1,
+                      'virtual_size': 100,
+                      'VBDs': ['vbd_2']}
+        }
+        disk_used = self._test_get_disk_used(vdis, attached_vbds)
+        self.assertEqual((101, 2), disk_used)
 
 
 class ToSupportedInstancesTestCase(test.NoDBTestCase):
