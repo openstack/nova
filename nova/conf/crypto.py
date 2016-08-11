@@ -29,13 +29,13 @@ crypto_opts = [
 Filename of root CA (Certificate Authority). This is a container format
 and includes root certificates.
 
-* Possible values:
+Possible values:
 
-    Any file name containing root CA, cacert.pem is default
+* Any file name containing root CA, cacert.pem is default
 
-* Related options:
+Related options:
 
-    ca_path
+* ca_path
 """),
     cfg.StrOpt("key_file",
         default=os.path.join("private", "cakey.pem"),
@@ -43,9 +43,9 @@ and includes root certificates.
         help="""
 Filename of a private key.
 
-* Related options:
+Related options:
 
-    keys_path
+* keys_path
 """),
     cfg.StrOpt("crl_file",
         default="crl.pem",
@@ -55,9 +55,9 @@ Filename of root Certificate Revocation List (CRL). This is a list of
 certificates that have been revoked, and therefore, entities presenting
 those (revoked) certificates should no longer be trusted.
 
-* Related options:
+Related options:
 
-    ca_path
+* ca_path
 """),
     cfg.StrOpt("keys_path",
         default=paths.state_path_def("keys"),
@@ -65,9 +65,9 @@ those (revoked) certificates should no longer be trusted.
         help="""
 Directory path where keys are located.
 
-* Related options:
+Related options:
 
-    key_file
+* key_file
 """),
     cfg.StrOpt("ca_path",
         default=paths.state_path_def("CA"),
@@ -75,17 +75,14 @@ Directory path where keys are located.
         help="""
 Directory path where root CA is located.
 
-* Related options:
+Related options:
 
-    ca_file
+* ca_file
 """),
     cfg.BoolOpt("use_project_ca",
         default=False,
         deprecated_group="DEFAULT",
-        help="""
-Option to enable/disable use of CA for each project.
-
-"""),
+        help="Option to enable/disable use of CA for each project."),
     cfg.StrOpt("user_cert_subject",
         default="/C=US/ST=California/O=OpenStack/"
                 "OU=NovaDev/CN=%.16s-%.16s-%s",
@@ -93,7 +90,6 @@ Option to enable/disable use of CA for each project.
         help="""
 Subject for certificate for users, %s for
 project, user, timestamp
-
 """),
     cfg.StrOpt("project_cert_subject",
         default="/C=US/ST=California/O=OpenStack/"
@@ -102,7 +98,6 @@ project, user, timestamp
         help="""
 Subject for certificate for projects, %s for
 project, timestamp
-
 """),
 ]
 
