@@ -6854,7 +6854,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
                 filterref = './devices/interface/filterref'
                 vif = network_info[0]
-                nic_id = vif['address'].replace(':', '')
+                nic_id = vif['address'].lower().replace(':', '')
                 fw = firewall.NWFilterFirewall(drvr)
                 instance_filter_name = fw._instance_filter_name(instance_ref,
                                                                 nic_id)
