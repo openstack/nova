@@ -40,9 +40,9 @@ metadata_opts = [
             default=("1.0 2007-01-19 2007-03-01 2007-08-29 2007-10-10 "
                      "2007-12-15 2008-02-01 2008-09-01"),
             help="""
-When gathering the existing metadata for a config drive, the EC2-style metadata
-is returned for all versions that don't appear in this option. As of the
-Liberty release, the available versions are:
+When gathering the existing metadata for a config drive, the EC2-style
+metadata is returned for all versions that don't appear in this option.
+As of the Liberty release, the available versions are:
 
 * 1.0
 * 2007-01-19
@@ -54,8 +54,8 @@ Liberty release, the available versions are:
 * 2008-09-01
 * 2009-04-04
 
-The option is in the format of a single string, with each version separated by
-a space.
+The option is in the format of a single string, with each version separated
+by a space.
 
 Possible values:
 
@@ -78,12 +78,13 @@ Possible values:
                 help="""
 A list of vendordata providers.
 
-vendordata providers are how deployers can provide metadata via configdrive and
-metadata that is specific to their deployment. There are currently two
+vendordata providers are how deployers can provide metadata via configdrive
+and metadata that is specific to their deployment. There are currently two
 supported providers: StaticJSON and DynamicJSON.
 
 StaticJSON reads a JSON file configured by the flag vendordata_jsonfile_path
-and places the JSON from that file into vendor_data.json and vendor_data2.json.
+and places the JSON from that file into vendor_data.json and
+vendor_data2.json.
 
 DynamicJSON is configured via the vendordata_dynamic_targets flag, which is
 documented separately. For each of the endpoints specified in that flag, a
@@ -93,17 +94,17 @@ For more information on the requirements for implementing a vendordata
 dynamic endpoint, please see the vendordata.rst file in the nova developer
 reference.
 
-* Possible values:
+Possible values:
 
-    A list of vendordata providers, with StaticJSON and DynamicJSON being
-    current options.
+* A list of vendordata providers, with StaticJSON and DynamicJSON being
+  current options.
 
-* Related options:
+Related options:
 
-    vendordata_dynamic_targets
-    vendordata_dynamic_ssl_certfile
-    vendordata_dynamic_connect_timeout
-    vendordata_dynamic_read_timeout
+* vendordata_dynamic_targets
+* vendordata_dynamic_ssl_certfile
+* vendordata_dynamic_connect_timeout
+* vendordata_dynamic_read_timeout
 """),
     cfg.ListOpt('vendordata_dynamic_targets',
                 default=[],
@@ -118,19 +119,19 @@ is documented in the vendordata.rst file in the nova developer reference.
     cfg.StrOpt('vendordata_dynamic_ssl_certfile',
                default='',
                help="""
-Path to an optional certificate file or CA bundle to verify dynamic vendordata
-REST services ssl certificates against.
+Path to an optional certificate file or CA bundle to verify dynamic
+vendordata REST services ssl certificates against.
 
-* Possible values:
+Possible values:
 
-    An empty string, or a path to a valid certificate file
+* An empty string, or a path to a valid certificate file
 
-* Related options:
+Related options:
 
-    vendordata_providers
-    vendordata_dynamic_targets
-    vendordata_dynamic_connect_timeout
-    vendordata_dynamic_read_timeout
+* vendordata_providers
+* vendordata_dynamic_targets
+* vendordata_dynamic_connect_timeout
+* vendordata_dynamic_read_timeout
 """),
     cfg.IntOpt('vendordata_dynamic_connect_timeout',
                default=5,
@@ -138,18 +139,18 @@ REST services ssl certificates against.
                help="""
 Maximum wait time for an external REST service to connect.
 
-* Possible values:
+Possible values:
 
-    Any integer with a value greater than three (the TCP packet retransmission
-    timeout). Note that instance start may be blocked during this wait time,
-    so this value should be kept small.
+* Any integer with a value greater than three (the TCP packet retransmission
+  timeout). Note that instance start may be blocked during this wait time,
+  so this value should be kept small.
 
-* Related options:
+Related options:
 
-    vendordata_providers
-    vendordata_dynamic_targets
-    vendordata_dynamic_ssl_certfile
-    vendordata_dynamic_read_timeout
+* vendordata_providers
+* vendordata_dynamic_targets
+* vendordata_dynamic_ssl_certfile
+* vendordata_dynamic_read_timeout
 """),
     cfg.IntOpt('vendordata_dynamic_read_timeout',
                default=5,
@@ -157,27 +158,27 @@ Maximum wait time for an external REST service to connect.
                help="""
 Maximum wait time for an external REST service to return data once connected.
 
-* Possible values:
+Possible values:
 
-    Any integer. Note that instance start is blocked during this wait time,
-    so this value should be kept small.
+* Any integer. Note that instance start is blocked during this wait time,
+  so this value should be kept small.
 
-* Related options:
+Related options:
 
-    vendordata_providers
-    vendordata_dynamic_targets
-    vendordata_dynamic_ssl_certfile
-    vendordata_dynamic_connect_timeout
+* vendordata_providers
+* vendordata_dynamic_targets
+* vendordata_dynamic_ssl_certfile
+* vendordata_dynamic_connect_timeout
 """),
     cfg.IntOpt("metadata_cache_expiration",
             default=15,
             min=0,
             help="""
-This option is the time (in seconds) to cache metadata. When set to 0, metadata
-caching is disabled entirely; this is generally not recommended for performance
-reasons. Increasing this setting should improve response times of the metadata
-API when under heavy load. Higher values may increase memory usage, and result
-in longer times for host metadata changes to take effect.
+This option is the time (in seconds) to cache metadata. When set to 0,
+metadata caching is disabled entirely; this is generally not recommended for
+performance reasons. Increasing this setting should improve response times
+of the metadata API when under heavy load. Higher values may increase memory
+usage, and result in longer times for host metadata changes to take effect.
 """),
 ]
 
@@ -187,8 +188,8 @@ file_opts = [
 Cloud providers may store custom data in vendor data file that will then be
 available to the instances via the metadata service, and to the rendering of
 config-drive. The default class for this, JsonFileVendorData, loads this
-information from a JSON file, whose path is configured by this option. If there
-is no path set by this option, the class returns an empty dictionary.
+information from a JSON file, whose path is configured by this option. If
+there is no path set by this option, the class returns an empty dictionary.
 
 Possible values:
 
@@ -217,8 +218,9 @@ Possible values:
 """),
     cfg.StrOpt("osapi_glance_link_prefix",
             help="""
-This string is prepended to the normal URL that is returned in links to Glance
-resources. If it is empty (the default), the URLs are returned unchanged.
+This string is prepended to the normal URL that is returned in links to
+Glance resources. If it is empty (the default), the URLs are returned
+unchanged.
 
 Possible values:
 
@@ -231,8 +233,8 @@ allow_instance_snapshots_opts = [
         default=True,
         help="""
 Operators can turn off the ability for a user to take snapshots of their
-instances by setting this option to False. When disabled, any attempt to take a
-snapshot will result in a HTTP 400 response ("Bad Request").
+instances by setting this option to False. When disabled, any attempt to
+take a snapshot will result in a HTTP 400 response ("Bad Request").
 """)
 ]
 
@@ -330,8 +332,8 @@ enable_inst_pw_opts = [
         help="""
 Enables returning of the instance password by the relevant server API calls
 such as create, rebuild, evacuate, or rescue. If the hypervisor does not
-support password injection, then the password returned will not be correct, so
-if your hypervisor does not support password injection, set this to False.
+support password injection, then the password returned will not be correct,
+so if your hypervisor does not support password injection, set this to False.
 """)
 ]
 ALL_OPTS = (auth_opts +
