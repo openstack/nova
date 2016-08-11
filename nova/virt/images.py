@@ -78,7 +78,7 @@ def convert_image(source, dest, in_format, out_format, run_as_root=False):
     """Convert image to other format."""
     if in_format is None:
         raise RuntimeError("convert_image without input format is a security"
-                           "risk")
+                           " risk")
     _convert_image(source, dest, in_format, out_format, run_as_root)
 
 
