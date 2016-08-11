@@ -35,9 +35,11 @@ class SuspendServerController(wsgi.Controller):
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server."""
         context = req.environ['nova.context']
-        context.can(ss_policies.POLICY_ROOT % 'suspend')
         try:
             server = common.get_instance(self.compute_api, context, id)
+            context.can(ss_policies.POLICY_ROOT % 'suspend',
+                        target={'user_id': server.user_id,
+                                'project_id': server.project_id})
             self.compute_api.suspend(context, server)
         except exception.InstanceUnknownCell as e:
             raise exc.HTTPNotFound(explanation=e.format_message())

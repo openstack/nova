@@ -12,12 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova.api.openstack.compute import suspend_server as \
     suspend_server_v21
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack.compute import admin_only_action_common
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 class SuspendServerTestsV21(admin_only_action_common.CommonTests):
@@ -58,7 +61,10 @@ class SuspendServerPolicyEnforcementV21(test.NoDBTestCase):
         self.controller = suspend_server_v21.SuspendServerController()
         self.req = fakes.HTTPRequest.blank('')
 
-    def test_suspend_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_suspend_policy_failed(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         rule_name = "os_compute_api:os-suspend-server:suspend"
         self.policy.set_rules({rule_name: "project:non_fake"})
         exc = self.assertRaises(
@@ -68,6 +74,38 @@ class SuspendServerPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_suspend_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:os-suspend-server:suspend"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._suspend, self.req,
+                                fakes.FAKE_UUID, body={'suspend': {}})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.suspend')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_suspend_overridden_policy_pass_with_same_user(self,
+                                                        get_instance_mock,
+                                                        suspend_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:os-suspend-server:suspend"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        self.controller._suspend(self.req, fakes.FAKE_UUID,
+                                 body={'suspend': {}})
+        suspend_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                          instance)
 
     def test_resume_policy_failed(self):
         rule_name = "os_compute_api:os-suspend-server:resume"
