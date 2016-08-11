@@ -153,7 +153,8 @@ class NovaProxyRequestHandlerBase(object):
             if tsock:
                 tsock.shutdown(socket.SHUT_RDWR)
                 tsock.close()
-                self.vmsg(_("%(host)s:%(port)s: Target closed") %
+                self.vmsg(_("%(host)s:%(port)s: "
+                          "Websocket client or target closed") %
                           {'host': host, 'port': port})
             raise
 
