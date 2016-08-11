@@ -7638,6 +7638,60 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                           self.context, instance_ref, 'dest',
                           False, migrate_data, guest, [])
 
+    def test_live_migration_parallels_no_new_xml(self):
+        self.flags(virt_type='parallels', group='libvirt')
+        self.flags(enabled=False, group='vnc')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        instance_dict = dict(self.test_instance)
+        instance_dict.update({'host': 'fake',
+                              'power_state': power_state.RUNNING,
+                              'vm_state': vm_states.ACTIVE})
+        instance = objects.Instance(**instance_dict)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            block_migration=False)
+        dom_mock = mock.MagicMock()
+        guest = libvirt_guest.Guest(dom_mock)
+        drvr._live_migration_operation(self.context, instance, 'dest',
+                                       False, migrate_data, guest, [])
+        # when new xml is not passed we fall back to migrateToURI
+        dom_mock.migrateToURI.assert_called_once_with(
+            drvr._live_migration_uri('dest'),
+            flags=0, bandwidth=0)
+
+    @mock.patch.object(utils, 'spawn')
+    @mock.patch.object(host.Host, 'get_guest')
+    @mock.patch.object(fakelibvirt.Connection, '_mark_running')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_live_migration_monitor')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_live_migration_copy_disk_paths')
+    def test_live_migration_parallels_no_migrate_disks(self,
+                                                       mock_copy_disk_paths,
+                                                       mock_monitor,
+                                                       mock_running,
+                                                       mock_guest,
+                                                       mock_thread):
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        instance_dict = dict(self.test_instance)
+        instance_dict.update({'host': 'fake',
+                              'power_state': power_state.RUNNING,
+                              'vm_state': vm_states.ACTIVE})
+        instance = objects.Instance(**instance_dict)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            block_migration=True)
+        dom = fakelibvirt.Domain(drvr._get_connection(), '<domain/>', True)
+        guest = libvirt_guest.Guest(dom)
+        mock_guest.return_value = guest
+        drvr._live_migration(self.context, instance, 'dest',
+                             lambda: None, lambda: None, True,
+                             migrate_data)
+        self.assertFalse(mock_copy_disk_paths.called)
+        mock_thread.assert_called_once_with(
+            drvr._live_migration_operation,
+            self.context, instance, 'dest', True,
+            migrate_data, guest, [])
+
     def test_live_migration_update_volume_xml(self):
         self.compute = manager.ComputeManager()
         instance_dict = dict(self.test_instance)
@@ -7798,9 +7852,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ('xen', 'xenmigr://%s/system'),
             ('kvm', 'qemu+tcp://%s/system'),
             ('qemu', 'qemu+tcp://%s/system'),
+            ('parallels', 'parallels+tcp://%s/system'),
             # anything else will return None
             ('lxc', None),
-            ('parallels', None),
         )
         dest = 'destination'
         for hyperv, uri in hypervisor_uri_map:
@@ -9419,6 +9473,17 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         # Assert that we did nothing
         self.assertEqual({}, fake_backend.created_disks)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_fetch_instance_kernel_ramdisk')
+    def test_create_images_and_backing_parallels(self, mock_fetch):
+        self.flags(virt_type='parallels', group='libvirt')
+        instance = objects.Instance(**self.test_instance)
+        instance.vm_mode = fields.VMMode.EXE
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        drvr._create_images_and_backing(self.context, instance,
+                                        '/fake/instance/dir', None)
+        self.assertFalse(mock_fetch.called)
 
     def _generate_target_ret(self, target_connect_addr=None):
         target_ret = {
