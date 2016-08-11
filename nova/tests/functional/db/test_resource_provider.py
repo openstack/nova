@@ -47,8 +47,7 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ResourceProviderBaseCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
+        self.useFixture(fixtures.Database(database='placement'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
     def _make_allocation(self, rp_uuid=None):
@@ -369,8 +368,7 @@ class ResourceProviderListTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ResourceProviderListTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
+        self.useFixture(fixtures.Database(database='placement'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
     def test_get_all_by_filters(self):
