@@ -495,7 +495,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
     def test_admin_only_rules(self):
         for rule in self.admin_only_rules:
             self.assertRaises(exception.PolicyNotAuthorized, policy.authorize,
-                              self.non_admin_context, rule, self.target)
+                              self.non_admin_context, rule,
+                              {'project_id': 'fake', 'user_id': 'fake'})
             policy.authorize(self.admin_context, rule, self.target)
 
     def test_non_admin_only_rules(self):
