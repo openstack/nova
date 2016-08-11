@@ -33,6 +33,7 @@ from nova.tests.unit.db import fakes as db_fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_network
 from nova.tests.unit import test_flavors
+from nova.tests import uuidsentinel
 
 CONF = conf.CONF
 
@@ -1132,3 +1133,31 @@ class CellV2CommandsTestCase(test.TestCase):
             host = 'host%s' % i
             host_mapping = objects.HostMapping.get_by_host(ctxt, host)
             self.assertEqual(cell_mapping.uuid, host_mapping.cell_mapping.uuid)
+
+    def test_instance_verify_no_mapping(self):
+        r = self.commands.verify_instance(uuidsentinel.instance)
+        self.assertEqual(1, r)
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_instance_verify_has_only_instance_mapping(self, mock_get):
+        im = objects.InstanceMapping(cell_mapping=None)
+        mock_get.return_value = im
+        r = self.commands.verify_instance(uuidsentinel.instance)
+        self.assertEqual(2, r)
+
+    @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
+    def test_instance_verify_has_all_mappings(self, mock_get):
+        cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cel)
+        im = objects.InstanceMapping(cell_mapping=cm)
+        mock_get.return_value = im
+        r = self.commands.verify_instance(uuidsentinel.instance)
+        self.assertEqual(0, r)
+
+    def test_instance_verify_bad_uuid(self):
+        self.assertEqual(16, self.commands.verify_instance(''))
+
+    def test_instance_verify_quiet(self):
+        # NOTE(danms): This will hit the first use of the say() wrapper
+        # and reasonably verify that path
+        self.assertEqual(1, self.commands.verify_instance(uuidsentinel.foo,
+                                                          quiet=True))
