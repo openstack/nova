@@ -26,6 +26,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova import exception
+from nova.i18n import _
 from nova.network import model
 
 
@@ -200,6 +201,7 @@ def _nova_to_osvif_network(network):
 
     netobj = objects.network.Network(
         id=network['id'],
+        bridge_interface=network.get_meta("bridge_interface"),
         subnets=_nova_to_osvif_subnets(network['subnets']))
 
     if network["bridge"] is not None:
@@ -209,14 +211,14 @@ def _nova_to_osvif_network(network):
 
     if network.get_meta("multi_host") is not None:
         netobj.multi_host = network.get_meta("multi_host")
-    if network.get_meta("should_provide_bridge") is not None:
+    if network.get_meta("should_create_bridge") is not None:
         netobj.should_provide_bridge = \
-            network.get_meta("should_provide_bridge")
-    if network.get_meta("bridge_interface") is not None:
-        netobj.bridge_interface = network.get_meta("bridge_interface")
-    if network.get_meta("should_provide_vlan") is not None:
-        netobj.should_provide_vlan = network.get_meta("should_provide_vlan")
-    if network.get_meta("vlan") is not None:
+            network.get_meta("should_create_bridge")
+    if network.get_meta("should_create_vlan") is not None:
+        netobj.should_provide_vlan = network.get_meta("should_create_vlan")
+        if network.get_meta("vlan") is None:
+            raise exception.NovaException(_("Missing vlan number in %s") %
+                                          network)
         netobj.vlan = network.get_meta("vlan")
 
     return netobj

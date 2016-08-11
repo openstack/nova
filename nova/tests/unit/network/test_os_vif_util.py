@@ -326,6 +326,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         expect = osv_objects.network.Network(
             id="b82c1929-051e-481d-8110-4669916c7915",
             bridge="br0",
+            bridge_interface=None,
             subnets=osv_objects.subnet.SubnetList(
                 objects=[
                     osv_objects.subnet.Subnet(
@@ -348,8 +349,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             id="b82c1929-051e-481d-8110-4669916c7915",
             bridge="br0",
             multi_host=True,
-            should_provide_bridge=True,
-            should_provide_vlan=True,
+            should_create_bridge=True,
+            should_create_vlan=True,
             bridge_interface="eth0",
             vlan=1729,
             subnets=[
@@ -397,6 +398,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
 
         expect = osv_objects.network.Network(
             id="b82c1929-051e-481d-8110-4669916c7915",
+            bridge_interface=None,
             label="Demo Net",
             subnets=osv_objects.subnet.SubnetList(
                 objects=[
@@ -414,6 +416,22 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         actual = os_vif_util._nova_to_osvif_network(network)
 
         self.assertObjEqual(expect, actual)
+
+    def test_nova_to_osvif_network_labeled_no_vlan(self):
+        network = model.Network(
+            id="b82c1929-051e-481d-8110-4669916c7915",
+            label="Demo Net",
+            should_create_vlan=True,
+            subnets=[
+                model.Subnet(cidr="192.168.1.0/24",
+                             gateway=model.IP(
+                                 address="192.168.1.254",
+                                 type='gateway')),
+            ])
+
+        self.assertRaises(exception.NovaException,
+                          os_vif_util._nova_to_osvif_network,
+                          network)
 
     def test_nova_to_osvif_vif_linux_bridge(self):
         vif = model.VIF(
@@ -441,6 +459,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
                 id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
                 label="Demo Net",
                 subnets=osv_objects.subnet.SubnetList(
                     objects=[])))
@@ -475,6 +494,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
                 id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
                 label="Demo Net",
                 subnets=osv_objects.subnet.SubnetList(
                     objects=[])))
@@ -510,6 +530,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
                 id="b82c1929-051e-481d-8110-4669916c7915",
+                bridge_interface=None,
                 label="Demo Net",
                 subnets=osv_objects.subnet.SubnetList(
                     objects=[])))
