@@ -912,9 +912,10 @@ class ServersController(wsgi.Controller):
         password = self._get_server_admin_password(rebuild_dict)
 
         context = req.environ['nova.context']
-        context.can(server_policies.SERVERS % 'rebuild')
         instance = self._get_server(context, req, id)
-
+        context.can(server_policies.SERVERS % 'rebuild',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         attr_map = {
             'name': 'display_name',
             'description': 'display_description',

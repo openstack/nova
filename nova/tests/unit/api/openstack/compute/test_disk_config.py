@@ -15,6 +15,7 @@
 
 import datetime
 
+import mock
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
@@ -353,11 +354,20 @@ class DiskConfigTestCaseV21(test.TestCase):
         self.assertEqual(jsonutils.loads(expected_msg),
                          jsonutils.loads(res.body))
 
-    def _test_rebuild_server_disk_config(self, uuid, disk_config):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def _test_rebuild_server_disk_config(self, uuid, disk_config,
+                                         get_instance_mock):
         req = fakes.HTTPRequest.blank(
             '/fake/servers/%s/action' % uuid)
         req.method = 'POST'
         req.content_type = 'application/json'
+        auto_disk_config = (disk_config == 'AUTO')
+        instance = fakes.stub_instance_obj(
+                       req.environ['nova.context'],
+                       project_id=req.environ['nova.context'].project_id,
+                       user_id=req.environ['nova.context'].user_id,
+                       auto_disk_config=auto_disk_config)
+        get_instance_mock.return_value = instance
         body = {"rebuild": {
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   API_DISK_CONFIG: disk_config
@@ -397,11 +407,18 @@ class DiskConfigTestCaseV21(test.TestCase):
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, 'AUTO')
 
-    def test_rebuild_server_with_auto_disk_config(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_rebuild_server_with_auto_disk_config(self, get_instance_mock):
         req = fakes.HTTPRequest.blank(
             '/fake/servers/%s/action' % AUTO_INSTANCE_UUID)
         req.method = 'POST'
         req.content_type = 'application/json'
+        instance = fakes.stub_instance_obj(
+                       req.environ['nova.context'],
+                       project_id=req.environ['nova.context'].project_id,
+                       user_id=req.environ['nova.context'].user_id,
+                       auto_disk_config=True)
+        get_instance_mock.return_value = instance
         body = {"rebuild": {
                   'imageRef': 'cedef40a-ed67-4d10-800e-17455edce175',
                   API_DISK_CONFIG: 'AUTO'

@@ -112,12 +112,14 @@ class ServerActionsControllerTestV21(test.TestCase):
             compute_api.API.rebuild(context, mox.IgnoreArg(), image_ref,
                                     mox.IgnoreArg())
 
-    def _stub_instance_get(self, uuid=None):
+    def _stub_instance_get(self, context, uuid=None):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         if uuid is None:
             uuid = uuidutils.generate_uuid()
         instance = fake_instance.fake_db_instance(
-            id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None)
+            id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None,
+            project_id=context.project_id,
+            user_id=context.user_id)
         instance = objects.Instance._from_db_object(
             self.context, objects.Instance(), instance)
 
@@ -134,7 +136,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         if compute_api_args_map is None:
             compute_api_args_map = {}
 
-        instance = self._stub_instance_get()
+        instance = self._stub_instance_get(self.req.environ['nova.context'])
         args, kwargs = compute_api_args_map.get(action, ((), {}))
 
         getattr(compute_api.API, method)(self.context, instance,
