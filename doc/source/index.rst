@@ -214,6 +214,14 @@ Module Reference
 .. toctree::
    :hidden:
 
+Metadata
+========
+
+.. toctree::
+    :maxdepth: 1
+
+    vendordata
+
 Indices and tables
 ==================
 

@@ -1,0 +1,8 @@
+---
+features:
+  - This release includes a new implementation of the
+    vendordata metadata system. Please see the blueprint
+    at http://specs.openstack.org/openstack/nova-specs/specs/newton/approved/vendordata-reboot.html
+    for a detailed description. There is also
+    documentation in the Nova source tree in
+    vendordata.rst.
