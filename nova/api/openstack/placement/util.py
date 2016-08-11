@@ -27,8 +27,11 @@ def json_error_formatter(body, status, title, environ):
     """
     # Clear out the html that webob sneaks in.
     body = webob.exc.strip_tags(body)
+    # Get status code out of status message. webob's error formatter
+    # only passes entire status string.
+    status_code = int(status.split(None, 1)[0])
     error_dict = {
-        'status': status,
+        'status': status_code,
         'title': title,
         'detail': body
     }
@@ -41,10 +44,7 @@ def json_error_formatter(body, status, title, environ):
     # microversion parsing failed so we need to include microversion
     # min and max information in the error response.
     microversion = nova.api.openstack.placement.microversion
-    # Get status code out of status message. webob's error formatter
-    # only passes entire status string.
-    code = status.split(None, 1)[0]
-    if code == '406' and microversion.MICROVERSION_ENVIRON not in environ:
+    if status_code == 406 and microversion.MICROVERSION_ENVIRON not in environ:
         error_dict['max_version'] = microversion.max_version_string()
         error_dict['min_version'] = microversion.max_version_string()
 
