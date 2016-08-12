@@ -261,6 +261,12 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     opt.value = instance.uuid
     extra_config.append(opt)
 
+    # enable to provide info needed by udev to generate /dev/disk/by-id
+    opt = client_factory.create('ns0:OptionValue')
+    opt.key = "disk.EnableUUID"
+    opt.value = True
+    extra_config.append(opt)
+
     port_index = 0
     for vif_info in vif_infos:
         if vif_info['iface_id']:
