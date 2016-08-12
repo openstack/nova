@@ -1108,7 +1108,9 @@ class ServersController(wsgi.Controller):
         """Trigger crash dump in an instance"""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        context.can(server_policies.SERVERS % 'trigger_crash_dump', instance)
+        context.can(server_policies.SERVERS % 'trigger_crash_dump',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         try:
             self.compute_api.trigger_crash_dump(context, instance)
         except exception.InstanceInvalidState as state_error:
