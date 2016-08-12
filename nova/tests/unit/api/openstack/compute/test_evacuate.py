@@ -236,11 +236,26 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
     def setUp(self):
         super(EvacuatePolicyEnforcementv21, self).setUp()
         self.controller = evacuate_v21.EvacuateController()
+        self.req = fakes.HTTPRequest.blank('')
+        req_context = self.req.environ['nova.context']
+        self.stub_out('nova.compute.api.HostAPI.service_get_by_compute_host',
+                       fake_service_get_by_compute_host)
 
-    def test_evacuate_policy_failed(self):
+        def fake_get_instance(self, context, id):
+            return fake_instance.fake_instance_obj(
+                req_context,
+                project_id=req_context.project_id,
+                user_id=req_context.user_id)
+
+        self.stub_out(
+            'nova.api.openstack.common.get_instance', fake_get_instance)
+
+    def test_evacuate_policy_failed_with_other_project(self):
         rule_name = "os_compute_api:os-evacuate"
-        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
         req = fakes.HTTPRequest.blank('')
+        # Change the project_id in request context.
+        req.environ['nova.context'].project_id = 'other-project'
         body = {'evacuate': {'host': 'my-host',
                              'onSharedStorage': 'False',
                              'adminPass': 'MyNewPass'
@@ -252,6 +267,51 @@ class EvacuatePolicyEnforcementv21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate_overridden_policy_pass_with_same_project(self,
+                                                               evacuate_mock):
+        rule_name = "os_compute_api:os-evacuate"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        self.controller._evacuate(self.req, fakes.FAKE_UUID, body=body)
+        evacuate_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, 'my-host', False,
+                                              'MyNewPass', None)
+
+    def test_evacuate_overridden_policy_failed_with_other_user(self):
+        rule_name = "os_compute_api:os-evacuate"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        req = fakes.HTTPRequest.blank('')
+        # Change the user_id in request context.
+        req.environ['nova.context'].user_id = 'other-user'
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._evacuate, req,
+                                fakes.FAKE_UUID, body=body)
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate_overridden_policy_pass_with_same_user(self,
+                                                        evacuate_mock):
+        rule_name = "os_compute_api:os-evacuate"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'evacuate': {'host': 'my-host',
+                             'onSharedStorage': 'False',
+                             'adminPass': 'MyNewPass'
+                             }}
+        self.controller._evacuate(self.req, fakes.FAKE_UUID, body=body)
+        evacuate_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, 'my-host', False,
+                                              'MyNewPass', None)
 
 
 class EvacuateTestV214(EvacuateTestV21):
