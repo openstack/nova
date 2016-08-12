@@ -1095,6 +1095,19 @@ block_migration:
   in: body
   required: true
   type: boolean
+  max_version: 2.24
+block_migration_2_25:
+  description: |
+    Migrates local disks by using block migration. Set to ``auto`` which means
+    nova will detect whether source and destination hosts on shared storage. if they are
+    on shared storage, the live-migration won't be block migration. Otherwise the block
+    migration will be executed. Set to ``True``, means the request will fail when the
+    source or destination host uses shared storage. Set to ``False`` means the request
+    will fail when the source and destination hosts are not on the shared storage.
+  in: body
+  required: true
+  type: string
+  min_version: 2.25
 boot_index:
   description: |
     Defines the order in which a hypervisor tries devices when it attempts to boot
@@ -1413,6 +1426,7 @@ disk_over_commit:
   in: body
   required: true
   type: boolean
+  max_version: 2.25
 display_description:
   description: |
     The volume description.
