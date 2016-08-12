@@ -30,8 +30,6 @@ from nova.tests import uuidsentinel as uuids
 
 
 class ServerStartStopTestV21(test.TestCase):
-    start_policy = "os_compute_api:servers:start"
-    stop_policy = "os_compute_api:servers:stop"
 
     def setUp(self):
         super(ServerStartStopTestV21, self).setUp()
@@ -50,17 +48,6 @@ class ServerStartStopTestV21(test.TestCase):
         body = dict(start="")
         self.controller._start_server(self.req, uuids.instance, body)
         start_mock.assert_called_once_with(mock.ANY, mock.ANY)
-
-    def test_start_policy_failed(self):
-        rules = {
-            self.start_policy: "project_id:non_fake"
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        body = dict(start="")
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._start_server,
-                                self.req, uuids.instance, body)
-        self.assertIn(self.start_policy, exc.format_message())
 
     @mock.patch.object(compute_api.API, 'start',
                        side_effect=exception.InstanceNotReady(
@@ -92,17 +79,6 @@ class ServerStartStopTestV21(test.TestCase):
         body = dict(stop="")
         self.controller._stop_server(self.req, uuids.instance, body)
         stop_mock.assert_called_once_with(mock.ANY, mock.ANY)
-
-    def test_stop_policy_failed(self):
-        rules = {
-            self.stop_policy: "project_id:non_fake"
-        }
-        policy.set_rules(oslo_policy.Rules.from_dict(rules))
-        body = dict(stop="")
-        exc = self.assertRaises(exception.PolicyNotAuthorized,
-                                self.controller._stop_server,
-                                self.req, uuids.instance, body)
-        self.assertIn(self.stop_policy, exc.format_message())
 
     @mock.patch.object(compute_api.API, 'stop',
                        side_effect=exception.InstanceNotReady(
@@ -144,3 +120,101 @@ class ServerStartStopTestV21(test.TestCase):
         body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, self.req, uuids.instance, body)
+
+
+class ServerStartStopPolicyEnforcementV21(test.TestCase):
+    start_policy = "os_compute_api:servers:start"
+    stop_policy = "os_compute_api:servers:stop"
+
+    def setUp(self):
+        super(ServerStartStopPolicyEnforcementV21, self).setUp()
+        ext_info = extension_info.LoadedExtensionInfo()
+        self.controller = server_v21.ServersController(
+                          extension_info=ext_info)
+        self.req = fakes.HTTPRequest.blank('')
+        self.stub_out(
+            'nova.db.instance_get_by_uuid',
+            fakes.fake_instance_get(
+                project_id=self.req.environ['nova.context'].project_id))
+
+    def test_start_policy_failed(self):
+        rules = {
+            self.start_policy: "project_id:non_fake"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        body = dict(start="")
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._start_server,
+                                self.req, uuids.instance, body)
+        self.assertIn(self.start_policy, exc.format_message())
+
+    def test_start_overridden_policy_failed_with_other_user_in_same_project(
+        self):
+        rules = {
+            self.start_policy: "user_id:%(user_id)s"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        body = dict(start="")
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._start_server,
+                                self.req, uuids.instance, body)
+        self.assertIn(self.start_policy, exc.format_message())
+
+    @mock.patch('nova.compute.api.API.start')
+    def test_start_overridden_policy_pass_with_same_user(self, start_mock):
+        rules = {
+            self.start_policy: "user_id:%(user_id)s"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        body = dict(start="")
+        self.controller._start_server(self.req, uuids.instance, body)
+        start_mock.assert_called_once_with(mock.ANY, mock.ANY)
+
+    def test_stop_policy_failed_with_other_project(self):
+        rules = {
+            self.stop_policy: "project_id:%(project_id)s"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        body = dict(stop="")
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._stop_server,
+                                self.req, uuids.instance, body)
+        self.assertIn(self.stop_policy, exc.format_message())
+
+    @mock.patch('nova.compute.api.API.stop')
+    def test_stop_overridden_policy_pass_with_same_project(self, stop_mock):
+        rules = {
+            self.stop_policy: "project_id:%(project_id)s"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        body = dict(stop="")
+        self.controller._stop_server(self.req, uuids.instance, body)
+        stop_mock.assert_called_once_with(mock.ANY, mock.ANY)
+
+    def test_stop_overridden_policy_failed_with_other_user_in_same_project(
+        self):
+        rules = {
+            self.stop_policy: "user_id:%(user_id)s"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        body = dict(stop="")
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._stop_server,
+                                self.req, uuids.instance, body)
+        self.assertIn(self.stop_policy, exc.format_message())
+
+    @mock.patch('nova.compute.api.API.stop')
+    def test_stop_overridden_policy_pass_with_same_user(self, stop_mock):
+        rules = {
+            self.stop_policy: "user_id:%(user_id)s"
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+        body = dict(stop="")
+        self.controller._stop_server(self.req, uuids.instance, body)
+        stop_mock.assert_called_once_with(mock.ANY, mock.ANY)

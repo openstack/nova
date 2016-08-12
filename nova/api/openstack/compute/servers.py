@@ -1083,7 +1083,9 @@ class ServersController(wsgi.Controller):
         """Stop an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
-        context.can(server_policies.SERVERS % 'stop', instance)
+        context.can(server_policies.SERVERS % 'stop',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)

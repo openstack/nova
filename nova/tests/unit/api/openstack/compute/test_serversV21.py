@@ -4203,15 +4203,6 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             self.req, FAKE_UUID, body={})
 
     @mock.patch.object(servers.ServersController, '_get_instance')
-    def test_stop_policy_failed(self, _get_instance_mock):
-        _get_instance_mock.return_value = None
-        rule_name = "os_compute_api:servers:stop"
-        rule = {rule_name: "project:non_fake"}
-        self._common_policy_check(
-            rule, rule_name, self.controller._stop_server,
-            self.req, FAKE_UUID, body={})
-
-    @mock.patch.object(servers.ServersController, '_get_instance')
     def test_trigger_crash_dump_policy_failed(self, _get_instance_mock):
         _get_instance_mock.return_value = None
         rule_name = "os_compute_api:servers:trigger_crash_dump"
