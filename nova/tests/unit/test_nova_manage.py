@@ -1090,7 +1090,7 @@ class CellV2CommandsTestCase(test.TestCase):
         self.assertEqual('fake://netloc/nova_api_cell0',
                          cell_mapping.database_connection)
 
-    def test_migrate_single_command(self):
+    def _test_migrate_simple_command(self):
         ctxt = context.RequestContext()
         CONF.set_default('connection',
                          'fake://netloc/nova_api',
@@ -1112,10 +1112,12 @@ class CellV2CommandsTestCase(test.TestCase):
             compute_node.create()
 
         transport_url = "fake://guest:devstack@127.0.0.1:9999/"
-        cell_uuid = uuidutils.generate_uuid()
+        cell_uuid = uuidsentinel.cell
         with mock.patch.object(uuidutils, 'generate_uuid',
                 return_value=cell_uuid):
-            self.commands.simple_cell_setup(transport_url)
+            r = self.commands.simple_cell_setup(transport_url)
+
+        self.assertEqual(0, r)
 
         # Check cell0 from default
         cell_mapping = objects.CellMapping.get_by_uuid(ctxt,
@@ -1133,6 +1135,15 @@ class CellV2CommandsTestCase(test.TestCase):
             host = 'host%s' % i
             host_mapping = objects.HostMapping.get_by_host(ctxt, host)
             self.assertEqual(cell_mapping.uuid, host_mapping.cell_mapping.uuid)
+
+    def test_simple_command_single(self):
+        self._test_migrate_simple_command()
+
+    def test_simple_command_multiple(self):
+        self._test_migrate_simple_command()
+        with mock.patch.object(self.commands, '_map_cell_and_hosts') as m:
+            self._test_migrate_simple_command()
+            self.assertFalse(m.called)
 
     def test_instance_verify_no_mapping(self):
         r = self.commands.verify_instance(uuidsentinel.instance)
