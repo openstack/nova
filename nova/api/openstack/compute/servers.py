@@ -1067,7 +1067,6 @@ class ServersController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         context.can(server_policies.SERVERS % 'start', instance)
-        LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
@@ -1088,7 +1087,6 @@ class ServersController(wsgi.Controller):
         context.can(server_policies.SERVERS % 'stop',
                     target={'user_id': instance.user_id,
                             'project_id': instance.project_id})
-        LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
