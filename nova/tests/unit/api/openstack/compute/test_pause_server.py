@@ -75,11 +75,14 @@ class PauseServerPolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     @mock.patch('nova.api.openstack.common.get_instance')
-    def test_pause_policy_failed(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+    def test_pause_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
         rule_name = "os_compute_api:os-pause-server:pause"
-        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller._pause, self.req, fakes.FAKE_UUID,

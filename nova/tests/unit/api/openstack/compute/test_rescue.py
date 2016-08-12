@@ -227,12 +227,15 @@ class RescuePolicyEnforcementV21(test.NoDBTestCase):
         self.req = fakes.HTTPRequest.blank('')
 
     @mock.patch('nova.api.openstack.common.get_instance')
-    def test_rescue_policy_failed(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+    def test_rescue_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
         rule_name = "os_compute_api:os-rescue"
-        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
         body = {"rescue": {"adminPass": "AABBCC112233"}}
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller._rescue, self.req, fakes.FAKE_UUID,

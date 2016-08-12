@@ -4666,12 +4666,15 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
                                             instance, '1')
 
     @mock.patch('nova.api.openstack.common.get_instance')
-    def test_rebuild_policy_failed(self, get_instance_mock):
-        get_instance_mock.return_value = (
-            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+    def test_rebuild_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
         rule_name = "os_compute_api:servers:rebuild"
-        rule = {rule_name: "project:non_fake"}
+        rule = {rule_name: "project_id:%(project_id)s"}
         body = {'rebuild': {'imageRef': self.image_uuid}}
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         self._common_policy_check(
             rule, rule_name, self.controller._action_rebuild,
             self.req, FAKE_UUID, body=body)
