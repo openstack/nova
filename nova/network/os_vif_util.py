@@ -135,8 +135,10 @@ def _nova_to_osvif_route(route):
     """
 
     obj = objects.route.Route(
-        cidr=route['cidr'],
-        interface=route['interface'])
+        cidr=route['cidr'])
+
+    if route['interface'] is not None:
+        obj.interface = route['interface']
 
     if (route['gateway'] is not None and
         route['gateway']['address'] is not None):

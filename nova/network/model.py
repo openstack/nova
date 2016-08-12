@@ -227,6 +227,7 @@ class Route(Model):
 
         self['cidr'] = cidr
         self['gateway'] = gateway
+        # FIXME(mriedem): Is this actually used? It's never set.
         self['interface'] = interface
 
         self._set_meta(kwargs)
