@@ -22,6 +22,7 @@ from nova import context
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 class FakeRequest(object):
@@ -44,11 +45,12 @@ class DeferredDeleteExtensionTestV21(test.NoDBTestCase):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         self.mox.StubOutWithMock(compute_api.API, 'force_delete')
 
-        fake_instance = 'fake_instance'
+        instance = fake_instance.fake_instance_obj(
+            self.fake_req.environ['nova.context'])
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
-                            expected_attrs=None).AndReturn(fake_instance)
-        compute_api.API.force_delete(self.fake_context, fake_instance)
+                            expected_attrs=None).AndReturn(instance)
+        compute_api.API.force_delete(self.fake_context, instance)
 
         self.mox.ReplayAll()
         res = self.extension._force_delete(self.fake_req, self.fake_uuid,
@@ -156,9 +158,15 @@ class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
 
-    def test_force_delete_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_force_delete_policy_failed_with_other_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         rule_name = "os_compute_api:os-deferred-delete"
-        self.policy.set_rules({rule_name: "project:non_fake"})
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         exc = self.assertRaises(
             exception.PolicyNotAuthorized,
             self.controller._force_delete, self.req, fakes.FAKE_UUID,
@@ -166,3 +174,50 @@ class DeferredDeletePolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    @mock.patch('nova.compute.api.API.force_delete')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_force_delete_overridden_policy_pass_with_same_project(
+        self, get_instance_mock, force_delete_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:os-deferred-delete"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        self.controller._force_delete(self.req, fakes.FAKE_UUID,
+                                      body={'forceDelete': {}})
+        force_delete_mock.assert_called_once_with(
+            self.req.environ['nova.context'], instance)
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_force_delete_overridden_policy_failed_with_other_user(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:os-deferred-delete"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._force_delete, self.req,
+                                fakes.FAKE_UUID, body={'forceDelete': {}})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.force_delete')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_force_delete_overridden_policy_pass_with_same_user(self,
+                                                        get_instance_mock,
+                                                        force_delete_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:os-deferred-delete"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        self.controller._force_delete(self.req, fakes.FAKE_UUID,
+                                      body={'forceDelete': {}})
+        force_delete_mock.assert_called_once_with(
+            self.req.environ['nova.context'], instance)

@@ -56,8 +56,10 @@ class DeferredDeleteController(wsgi.Controller):
     def _force_delete(self, req, id, body):
         """Force delete of instance before deferred cleanup."""
         context = req.environ["nova.context"]
-        context.can(dd_policies.BASE_POLICY_NAME)
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(dd_policies.BASE_POLICY_NAME,
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         try:
             self.compute_api.force_delete(context, instance)
         except exception.InstanceIsLocked as e:
