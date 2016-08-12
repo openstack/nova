@@ -4287,13 +4287,64 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             rule, rule_name, self.controller._action_reboot,
             self.req, FAKE_UUID, body=body)
 
-    def test_resize_policy_failed(self):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_resize_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         rule_name = "os_compute_api:servers:resize"
-        rule = {rule_name: "project:non_fake"}
-        flavor_id = 1
+        rule = {rule_name: "project_id:%(project_id)s"}
+        body = {'resize': {'flavorRef': '1'}}
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         self._common_policy_check(
-            rule, rule_name, self.controller._resize, self.req,
-            FAKE_UUID, flavor_id)
+            rule, rule_name, self.controller._action_resize, self.req,
+            FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.resize')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_resize_overridden_policy_pass_with_same_project(self,
+                                                             get_instance_mock,
+                                                             resize_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:resize"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        body = {'resize': {'flavorRef': '1'}}
+        self.controller._action_resize(self.req, fakes.FAKE_UUID, body=body)
+        resize_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                            instance, '1')
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_resize_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:servers:resize"
+        rule = {rule_name: "user_id:%(user_id)s"}
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        body = {'resize': {'flavorRef': '1'}}
+        self._common_policy_check(
+            rule, rule_name, self.controller._action_resize, self.req,
+            FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.resize')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_resize_overridden_policy_pass_with_same_user(self,
+                                                        get_instance_mock,
+                                                        resize_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:resize"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'resize': {'flavorRef': '1'}}
+        self.controller._action_resize(self.req, fakes.FAKE_UUID, body=body)
+        resize_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                            instance, '1')
 
     @mock.patch('nova.api.openstack.common.get_instance')
     def test_rebuild_policy_failed(self, get_instance_mock):
