@@ -719,7 +719,10 @@ class ServersController(wsgi.Controller):
 
         ctxt = req.environ['nova.context']
         update_dict = {}
-        ctxt.can(server_policies.SERVERS % 'update')
+        instance = self._get_server(ctxt, req, id, is_detail=True)
+        ctxt.can(server_policies.SERVERS % 'update',
+                 target={'user_id': instance.user_id,
+                         'project_id': instance.project_id})
 
         server = body['server']
 
@@ -733,7 +736,6 @@ class ServersController(wsgi.Controller):
 
         helpers.translate_attributes(helpers.UPDATE, server, update_dict)
 
-        instance = self._get_server(ctxt, req, id, is_detail=True)
         try:
             # NOTE(mikal): this try block needs to stay because save() still
             # might throw an exception.
