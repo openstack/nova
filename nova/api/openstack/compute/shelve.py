@@ -38,9 +38,11 @@ class ShelveController(wsgi.Controller):
     def _shelve(self, req, id, body):
         """Move an instance into shelved mode."""
         context = req.environ["nova.context"]
-        context.can(shelve_policies.POLICY_ROOT % 'shelve')
 
         instance = common.get_instance(self.compute_api, context, id)
+        context.can(shelve_policies.POLICY_ROOT % 'shelve',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         try:
             self.compute_api.shelve(context, instance)
         except exception.InstanceUnknownCell as e:
