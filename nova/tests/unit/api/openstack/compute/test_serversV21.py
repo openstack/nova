@@ -4203,15 +4203,73 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             self.req, FAKE_UUID, body={})
 
     @mock.patch.object(servers.ServersController, '_get_instance')
-    def test_trigger_crash_dump_policy_failed(self, _get_instance_mock):
-        _get_instance_mock.return_value = None
+    def test_trigger_crash_dump_policy_failed_with_other_project(
+        self, _get_instance_mock):
+        _get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
         rule_name = "os_compute_api:servers:trigger_crash_dump"
-        rule = {rule_name: "project:non_fake"}
+        rule = {rule_name: "project_id:%(project_id)s"}
         self.req.api_version_request =\
             api_version_request.APIVersionRequest('2.17')
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         self._common_policy_check(
             rule, rule_name, self.controller._action_trigger_crash_dump,
             self.req, FAKE_UUID, body={'trigger_crash_dump': None})
+
+    @mock.patch('nova.compute.api.API.trigger_crash_dump')
+    @mock.patch.object(servers.ServersController, '_get_instance')
+    def test_trigger_crash_dump_overridden_policy_pass_with_same_project(
+        self, _get_instance_mock, trigger_crash_dump_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
+        _get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:trigger_crash_dump"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        self.req.api_version_request = (
+            api_version_request.APIVersionRequest('2.17'))
+        self.controller._action_trigger_crash_dump(
+            self.req, fakes.FAKE_UUID, body={'trigger_crash_dump': None})
+        trigger_crash_dump_mock.assert_called_once_with(
+            self.req.environ['nova.context'], instance)
+
+    @mock.patch.object(servers.ServersController, '_get_instance')
+    def test_trigger_crash_dump_overridden_policy_failed_with_other_user(
+        self, _get_instance_mock):
+        _get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:servers:trigger_crash_dump"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        self.req.api_version_request = (
+            api_version_request.APIVersionRequest('2.17'))
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._action_trigger_crash_dump,
+                                self.req,
+                                fakes.FAKE_UUID,
+                                body={'trigger_crash_dump': None})
+        self.assertEqual(
+                      "Policy doesn't allow %s to be performed." % rule_name,
+                      exc.format_message())
+
+    @mock.patch('nova.compute.api.API.trigger_crash_dump')
+    @mock.patch.object(servers.ServersController, '_get_instance')
+    def test_trigger_crash_dump_overridden_policy_pass_with_same_user(
+        self, _get_instance_mock, trigger_crash_dump_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        _get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:trigger_crash_dump"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        self.req.api_version_request = (
+            api_version_request.APIVersionRequest('2.17'))
+        self.controller._action_trigger_crash_dump(
+            self.req, fakes.FAKE_UUID, body={'trigger_crash_dump': None})
+        trigger_crash_dump_mock.assert_called_once_with(
+            self.req.environ['nova.context'], instance)
 
     def test_index_policy_failed(self):
         rule_name = "os_compute_api:servers:index"
