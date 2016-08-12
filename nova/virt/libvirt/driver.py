@@ -3887,7 +3887,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             guest_cpu_numa_config.cells):
                         if guest_config_cell.id == host_cell.id:
                             node = numa_memnodes[guest_node_id]
-                            node.cellid = guest_config_cell.id
+                            node.cellid = guest_node_id
                             node.nodeset = [host_cell.id]
                             node.mode = "strict"
 
