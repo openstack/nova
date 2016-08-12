@@ -811,8 +811,10 @@ class ServersController(wsgi.Controller):
     def _resize(self, req, instance_id, flavor_id, **kwargs):
         """Begin the resize process with given instance/flavor."""
         context = req.environ["nova.context"]
-        context.can(server_policies.SERVERS % 'resize')
         instance = self._get_server(context, req, instance_id)
+        context.can(server_policies.SERVERS % 'resize',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
