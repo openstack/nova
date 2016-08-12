@@ -264,7 +264,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
                                           instance_info=instance_info,
-                                          properties=props)
+                                          properties=props,
+                                          resource_class='foo')
 
         result = self.driver._node_resource(node)
 
@@ -276,7 +277,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
                     "disk_available_least",
                     "supported_instances",
                     "stats",
-                    "numa_topology"]
+                    "numa_topology", "resource_class"]
         wantkeys.sort()
         gotkeys = result.keys()
         gotkeys.sort()
@@ -297,6 +298,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
+        self.assertEqual('foo', result['resource_class'])
         self.assertIsNone(result['numa_topology'])
 
     def test__node_resource(self):
