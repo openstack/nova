@@ -1781,6 +1781,91 @@ class TestResize(BaseTestCase):
         alloc_mock.assert_called_once_with(instance)
 
 
+class TestRebuild(BaseTestCase):
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
+                return_value=objects.InstancePCIRequests(requests=[]))
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
+    def test_rebuild_claim(self, get_mock, migr_mock, get_cn_mock, pci_mock,
+            instance_pci_mock):
+        # Rebuild an instance, emulating an evacuate command issued against the
+        # original instance. The rebuild operation uses the resource tracker's
+        # _move_claim() method, but unlike with resize_claim(), rebuild_claim()
+        # passes in a pre-created Migration object from the destination compute
+        # manager.
+        self.flags(reserved_host_disk_mb=0,
+                   reserved_host_memory_mb=0)
+
+        # Starting state for the destination node of the rebuild claim is the
+        # normal compute node fixture containing a single active running VM
+        # having instance type #1.
+        virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+        virt_resources.update(vcpus_used=1,
+                              memory_mb_used=128,
+                              local_gb_used=1)
+        self._setup_rt(virt_resources=virt_resources)
+
+        get_mock.return_value = _INSTANCE_FIXTURES
+        migr_mock.return_value = []
+        get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+
+        self.rt.update_available_resource(mock.sentinel.ctx)
+
+        # Now emulate the evacuate command by calling rebuild_claim() on the
+        # resource tracker as the compute manager does, supplying a Migration
+        # object that corresponds to the evacuation.
+        migration = objects.Migration(
+            mock.sentinel.ctx,
+            id=1,
+            instance_uuid=uuids.rebuilding_instance,
+            source_compute='fake-other-compute',
+            source_node='fake-other-node',
+            status='accepted',
+            migration_type='evacuation'
+        )
+        instance = objects.Instance(
+            id=1,
+            host=None,
+            node=None,
+            uuid='abef5b54-dea6-47b8-acb2-22aeb1b57919',
+            memory_mb=_INSTANCE_TYPE_FIXTURES[2]['memory_mb'],
+            vcpus=_INSTANCE_TYPE_FIXTURES[2]['vcpus'],
+            root_gb=_INSTANCE_TYPE_FIXTURES[2]['root_gb'],
+            ephemeral_gb=_INSTANCE_TYPE_FIXTURES[2]['ephemeral_gb'],
+            numa_topology=None,
+            pci_requests=None,
+            pci_devices=None,
+            instance_type_id=2,
+            vm_state=vm_states.ACTIVE,
+            power_state=power_state.RUNNING,
+            task_state=task_states.REBUILDING,
+            os_type='fake-os',
+            project_id='fake-project',
+            flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+            old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+            new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+        )
+
+        # not using mock.sentinel.ctx because resize_claim calls #elevated
+        ctx = mock.MagicMock()
+
+        with test.nested(
+            mock.patch('nova.objects.Migration.save'),
+            mock.patch('nova.objects.Instance.save'),
+        ) as (mig_save_mock, inst_save_mock):
+            self.rt.rebuild_claim(ctx, instance, migration=migration)
+
+        self.assertEqual(_HOSTNAME, migration.dest_compute)
+        self.assertEqual(_NODENAME, migration.dest_node)
+        self.assertEqual("pre-migrating", migration.status)
+        self.assertEqual(1, len(self.rt.tracked_migrations))
+        mig_save_mock.assert_called_once_with()
+        inst_save_mock.assert_called_once_with()
+
+
 class TestUpdateUsageFromMigrations(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage_from_migration')
