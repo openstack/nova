@@ -321,13 +321,22 @@ class DiskConfigTestCaseV21(test.TestCase):
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, 'MANUAL')
 
-    def _test_update_server_disk_config(self, uuid, disk_config):
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def _test_update_server_disk_config(self, uuid, disk_config,
+                                        get_instance_mock):
         req = fakes.HTTPRequest.blank(
             '/fake/servers/%s' % uuid)
         req.method = 'PUT'
         req.content_type = 'application/json'
         body = {'server': {API_DISK_CONFIG: disk_config}}
         req.body = jsonutils.dump_as_bytes(body)
+        auto_disk_config = (disk_config == 'AUTO')
+        instance = fakes.stub_instance_obj(
+                       req.environ['nova.context'],
+                       project_id=req.environ['nova.context'].project_id,
+                       user_id=req.environ['nova.context'].user_id,
+                       auto_disk_config=auto_disk_config)
+        get_instance_mock.return_value = instance
         res = req.get_response(self.app)
         server_dict = jsonutils.loads(res.body)['server']
         self.assertDiskConfig(server_dict, disk_config)

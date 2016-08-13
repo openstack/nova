@@ -1952,22 +1952,23 @@ class ServersControllerRebuildTestV219(ServersControllerRebuildInstanceTest):
 
 class ServersControllerUpdateTest(ControllerTest):
 
-    def _get_request(self, body=None, options=None):
-        if options:
-            fake_get = fakes.fake_compute_get(**options)
-            self.stubs.Set(compute_api.API, 'get',
-                           lambda api, *a, **k: fake_get(*a, **k))
+    def _get_request(self, body=None):
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
         req.content_type = 'application/json'
         req.body = jsonutils.dump_as_bytes(body)
+        fake_get = fakes.fake_compute_get(
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
+        self.stub_out('nova.compute.api.API.get',
+                      lambda api, *a, **k: fake_get(*a, **k))
         return req
 
     def test_update_server_all_attributes(self):
         body = {'server': {
                   'name': 'server_test',
                }}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -1975,7 +1976,7 @@ class ServersControllerUpdateTest(ControllerTest):
 
     def test_update_server_name(self):
         body = {'server': {'name': 'server_test'}}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -1983,7 +1984,7 @@ class ServersControllerUpdateTest(ControllerTest):
 
     def test_update_server_name_too_long(self):
         body = {'server': {'name': 'x' * 256}}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
 
@@ -1999,13 +2000,8 @@ class ServersControllerUpdateTest(ControllerTest):
                           req, FAKE_UUID, body=body)
 
     def test_update_server_name_with_spaces_in_the_middle(self):
-        self.stub_out('nova.db.instance_get',
-                fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': 'abc   def'}}
-        req.body = jsonutils.dump_as_bytes(body)
+        req = self._get_request(body)
         self.controller.update(req, FAKE_UUID, body=body)
 
     def test_update_server_name_with_leading_trailing_spaces(self):
@@ -2020,13 +2016,8 @@ class ServersControllerUpdateTest(ControllerTest):
                           self.controller.update, req, FAKE_UUID, body=body)
 
     def test_update_server_name_with_leading_trailing_spaces_compat_mode(self):
-        self.stub_out('nova.db.instance_get',
-                fakes.fake_instance_get(name='server_test'))
-        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
-        req.method = 'PUT'
-        req.content_type = 'application/json'
         body = {'server': {'name': '  abc   def  '}}
-        req.body = jsonutils.dump_as_bytes(body)
+        req = self._get_request(body)
         req.set_legacy_v2()
         self.controller.update(req, FAKE_UUID, body=body)
 
@@ -2058,7 +2049,10 @@ class ServersControllerUpdateTest(ControllerTest):
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
         body = {'server': {'name': 'server_test'}}
-        req = self._get_request(body)
+        req = fakes.HTTPRequest.blank('/fake/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        req.body = jsonutils.dump_as_bytes(body)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body=body)
 
@@ -2076,7 +2070,7 @@ class ServersControllerUpdateTest(ControllerTest):
         rule = {'compute:update': 'role:admin'}
         policy.set_rules(oslo_policy.Rules.from_dict(rule))
         body = {'server': {'name': 'server_test'}}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         self.assertRaises(exception.PolicyNotAuthorized,
                 self.controller.update, req, FAKE_UUID, body=body)
 
@@ -2168,10 +2162,9 @@ class ServersControllerTriggerCrashDumpTest(ControllerTest):
 
 
 class ServersControllerUpdateTestV219(ServersControllerUpdateTest):
-    def _get_request(self, body=None, options=None):
+    def _get_request(self, body=None):
         req = super(ServersControllerUpdateTestV219, self)._get_request(
-            body=body,
-            options=options)
+            body=body)
         req.api_version_request = api_version_request.APIVersionRequest('2.19')
         return req
 
@@ -2208,7 +2201,7 @@ class ServersControllerUpdateTestV219(ServersControllerUpdateTest):
                   'name': 'server_test',
                   'description': 'server_desc'
                }}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         res_dict = self.controller.update(req, FAKE_UUID, body=body)
 
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
@@ -2217,14 +2210,14 @@ class ServersControllerUpdateTestV219(ServersControllerUpdateTest):
 
     def test_update_server_description_too_long(self):
         body = {'server': {'description': 'x' * 256}}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
 
     def test_update_server_description_invalid(self):
         # Invalid non-printable control char in the desc.
         body = {'server': {'description': "123\0d456"}}
-        req = self._get_request(body, {'name': 'server_test'})
+        req = self._get_request(body)
         self.assertRaises(exception.ValidationError, self.controller.update,
                           req, FAKE_UUID, body=body)
 
@@ -4371,13 +4364,62 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
         soft_delete_mock.assert_called_once_with(
             self.req.environ['nova.context'], instance)
 
-    def test_update_policy_failed(self):
+    @mock.patch.object(common, 'get_instance')
+    def test_update_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
         rule_name = "os_compute_api:servers:update"
-        rule = {rule_name: "project:non_fake"}
+        rule = {rule_name: "project_id:%(project_id)s"}
+        body = {'server': {'name': 'server_test'}}
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
+        self._common_policy_check(
+            rule, rule_name, self.controller.update, self.req,
+            FAKE_UUID, body=body)
+
+    @mock.patch('nova.api.openstack.compute.views.servers.ViewBuilder.show')
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch.object(common, 'get_instance')
+    def test_update_overridden_policy_pass_with_same_project(
+        self, get_instance_mock, save_mock, view_show_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:update"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        body = {'server': {'name': 'server_test'}}
+        self.controller.update(self.req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch.object(common, 'get_instance')
+    def test_update_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:servers:update"
+        rule = {rule_name: "user_id:%(user_id)s"}
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
         body = {'server': {'name': 'server_test'}}
         self._common_policy_check(
             rule, rule_name, self.controller.update, self.req,
             FAKE_UUID, body=body)
+
+    @mock.patch('nova.api.openstack.compute.views.servers.ViewBuilder.show')
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch.object(common, 'get_instance')
+    def test_update_overridden_policy_pass_with_same_user(self,
+                                                          get_instance_mock,
+                                                          save_mock,
+                                                          view_show_mock):
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:update"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'server': {'name': 'server_test'}}
+        self.controller.update(self.req, fakes.FAKE_UUID, body=body)
 
     def test_confirm_resize_policy_failed(self):
         rule_name = "os_compute_api:servers:confirm_resize"
