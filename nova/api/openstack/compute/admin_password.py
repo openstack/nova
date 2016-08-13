@@ -43,10 +43,12 @@ class AdminPasswordController(wsgi.Controller):
     @validation.schema(admin_password.change_password)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
-        context.can(ap_policies.BASE_POLICY_NAME)
+        instance = common.get_instance(self.compute_api, context, id)
+        context.can(ap_policies.BASE_POLICY_NAME,
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         password = body['changePassword']['adminPass']
-        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.set_admin_password(context, instance, password)
         except exception.InstanceUnknownCell as e:

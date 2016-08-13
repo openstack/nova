@@ -20,10 +20,16 @@ from nova.api.openstack.compute import admin_password as admin_password_v21
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_instance
 
 
 def fake_get(self, context, id, expected_attrs=None):
-    return {'uuid': id}
+    return fake_instance.fake_instance_obj(
+        context,
+        uuid=id,
+        project_id=context.project_id,
+        user_id=context.user_id,
+        expected_attrs=expected_attrs)
 
 
 def fake_set_admin_password(self, context, instance, password=None):
@@ -155,15 +161,64 @@ class AdminPasswordPolicyEnforcementV21(test.NoDBTestCase):
         super(AdminPasswordPolicyEnforcementV21, self).setUp()
         self.controller = admin_password_v21.AdminPasswordController()
         self.req = fakes.HTTPRequest.blank('')
+        req_context = self.req.environ['nova.context']
 
-    def test_change_password_policy_failed(self):
-        rule_name = "os_compute_api:os-admin-password"
-        rule = {rule_name: "project:non_fake"}
-        self.policy.set_rules(rule)
-        body = {'changePassword': {'adminPass': '1234pass'}}
+        def fake_get_instance(self, context, id):
+            return fake_instance.fake_instance_obj(
+                req_context,
+                uuid=id,
+                project_id=req_context.project_id,
+                user_id=req_context.user_id)
+
+        self.stub_out(
+            'nova.api.openstack.common.get_instance', fake_get_instance)
+
+    def _common_policy_check(self, rules, rule_name, func, *arg, **kwarg):
+        self.policy.set_rules(rules)
         exc = self.assertRaises(
-            exception.PolicyNotAuthorized, self.controller.change_password,
-            self.req, fakes.FAKE_UUID, body=body)
+            exception.PolicyNotAuthorized, func, *arg, **kwarg)
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
+
+    def test_change_password_policy_failed_with_other_project(self):
+        rule_name = "os_compute_api:os-admin-password"
+        rule = {rule_name: "project_id:%(project_id)s"}
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        # Change the project_id in request context.
+        req = fakes.HTTPRequest.blank('')
+        req.environ['nova.context'].project_id = 'other-project'
+        self._common_policy_check(
+            rule, rule_name, self.controller.change_password,
+            req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.set_admin_password')
+    def test_change_password_overridden_policy_pass_with_same_project(
+        self, password_mock):
+        rule_name = "os_compute_api:os-admin-password"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        self.controller.change_password(self.req, fakes.FAKE_UUID, body=body)
+        password_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, '1234pass')
+
+    def test_change_password_overridden_policy_failed_with_other_user(self):
+        rule_name = "os_compute_api:os-admin-password"
+        rule = {rule_name: "user_id:%(user_id)s"}
+        # Change the user_id in request context.
+        req = fakes.HTTPRequest.blank('')
+        req.environ['nova.context'].user_id = 'other-user'
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        self._common_policy_check(
+            rule, rule_name, self.controller.change_password,
+            req, fakes.FAKE_UUID, body=body)
+
+    @mock.patch('nova.compute.api.API.set_admin_password')
+    def test_change_password_overridden_policy_pass_with_same_user(
+        self, password_mock):
+        rule_name = "os_compute_api:os-admin-password"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        body = {'changePassword': {'adminPass': '1234pass'}}
+        self.controller.change_password(self.req, fakes.FAKE_UUID, body=body)
+        password_mock.assert_called_once_with(self.req.environ['nova.context'],
+                                              mock.ANY, '1234pass')
