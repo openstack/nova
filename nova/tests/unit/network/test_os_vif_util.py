@@ -140,8 +140,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             model.Route(cidr="10.0.0.0/8",
                         gateway=model.IP(
                             address="10.0.0.1",
-                            type='gateway'),
-                        interface="eth1"),
+                            type='gateway')),
         ]
 
         expect = osv_objects.route.RouteList(
@@ -152,8 +151,7 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                     interface="eth0"),
                 osv_objects.route.Route(
                     cidr="10.0.0.0/8",
-                    gateway="10.0.0.1",
-                    interface="eth1"),
+                    gateway="10.0.0.1"),
             ])
 
         actual = os_vif_util._nova_to_osvif_routes(routes)
