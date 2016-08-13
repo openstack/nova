@@ -1419,6 +1419,48 @@ class CellV2Commands(object):
         # partial work so 0 is appropriate.
         return 0
 
+    @args('--uuid', metavar='<uuid>', dest='uuid', required=True,
+          help=_('The instance UUID to verify'))
+    @args('--quiet', action='store_true', dest='quiet',
+          help=_('Do not print anything'))
+    def verify_instance(self, uuid, quiet=False):
+        """Verify instance mapping to a cell.
+
+        This command is useful to determine if the cellsv2 environment is
+        properly setup, specifically in terms of the cell, host, and instance
+        mapping records required.
+
+        This prints one of three strings (and exits with a code) indicating
+        whether the instance is successfully mapped to a cell (0), is unmapped
+        due to an incomplete upgrade (1), or unmapped due to normally transient
+        state (2).
+        """
+        if not uuid:
+            print(_('Must specify --uuid'))
+            return 16
+
+        def say(string):
+            if not quiet:
+                print(string)
+
+        ctxt = context.RequestContext()
+        try:
+            mapping = objects.InstanceMapping.get_by_instance_uuid(
+                ctxt, uuid)
+        except exception.InstanceMappingNotFound:
+            say('Instance %s is not mapped to a cell '
+                '(upgrade is incomplete)' % uuid)
+            return 1
+        if mapping.cell_mapping is None:
+            say('Instance %s is not mapped to a cell' % uuid)
+            return 2
+        else:
+            say('Instance %s is in cell: %s (%s)' % (
+                uuid,
+                mapping.cell_mapping.name,
+                mapping.cell_mapping.uuid))
+            return 0
+
 
 CATEGORIES = {
     'account': AccountCommands,
