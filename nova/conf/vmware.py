@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,7 +15,18 @@
 
 from oslo_config import cfg
 
-vmware_group = cfg.OptGroup('vmware', title='VMWare Options')
+vmware_group = cfg.OptGroup('vmware',
+                            title='VMWare Options',
+                            help="""
+Related options:
+Following options must be set in order to launch VMware-based
+virtual machines.
+
+* compute_driver: Must use vmwareapi.VMwareVCDriver.
+* vmware.host_username
+* vmware.host_password
+* vmware.cluster_name
+""")
 
 vmwareapi_vif_opts = [
     cfg.StrOpt('vlan_interface',
@@ -89,50 +93,117 @@ This option is ignored if serial_port_service_uri is not specified.
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               help='Hostname or IP address for connection to VMware '
-                    'vCenter host.'),
+               help="""
+Hostname or IP address for connection to VMware vCenter host."""),
     cfg.PortOpt('host_port',
                 default=443,
-                help='Port for connection to VMware vCenter host.'),
+                help="Port for connection to VMware vCenter host."),
     cfg.StrOpt('host_username',
-               help='Username for connection to VMware vCenter host.'),
+               help="Username for connection to VMware vCenter host."),
     cfg.StrOpt('host_password',
-               help='Password for connection to VMware vCenter host.',
-               secret=True),
+               secret=True,
+               help="Password for connection to VMware vCenter host."),
     cfg.StrOpt('ca_file',
-               help='Specify a CA bundle file to use in verifying the '
-                    'vCenter server certificate.'),
+               help="""
+Specifies the CA bundle file to be used in verifying the vCenter
+server certificate.
+"""),
     cfg.BoolOpt('insecure',
                 default=False,
-                help='If true, the vCenter server certificate is not '
-                     'verified. If false, then the default CA truststore is '
-                     'used for verification. This option is ignored if '
-                     '"ca_file" is set.'),
+                help="""
+If true, the vCenter server certificate is not verified. If false,
+then the default CA truststore is used for verification.
+
+Related options:
+* ca_file: This option is ignored if "ca_file" is set.
+"""),
     cfg.StrOpt('cluster_name',
-               help='Name of a VMware Cluster ComputeResource.'),
+               help="Name of a VMware Cluster ComputeResource."),
     cfg.StrOpt('datastore_regex',
-               help='Regex to match the name of a datastore.'),
+               help="""
+Regular expression pattern to match the name of datastore.
+
+The datastore_regex setting specifies the datastores to use with
+Compute. For example, datastore_regex="nas.*" selects all the data
+stores that have a name starting with "nas".
+
+NOTE: If no regex is given, it just picks the datastore with the
+most freespace.
+
+Possible values:
+
+* Any matching regular expression to a datastore must be given
+"""),
     cfg.FloatOpt('task_poll_interval',
                  default=0.5,
-                 help='The interval used for polling of remote tasks.'),
+                 help="""
+Time interval in seconds to poll remote tasks invoked on
+VMware VC server.
+"""),
     cfg.IntOpt('api_retry_count',
+               min=0,
                default=10,
-               help='The number of times we retry on failures, e.g., '
-                    'socket error, etc.'),
+               help="""
+Number of times VMware vCenter server API must be retried on connection
+failures, e.g. socket error, etc.
+"""),
     cfg.PortOpt('vnc_port',
                 default=5900,
-                help='VNC starting port'),
+                help="""
+This option specifies VNC starting port.
+
+Every VM created by ESX host has an option of enabling VNC client
+for remote connection. Above option 'vnc_port' helps you to set
+default starting port for the VNC client.
+
+Possible values:
+
+* Any valid port number within 5900 -(5900 + vnc_port_total)
+
+Related options:
+Below options should be set to enable VNC client.
+* vnc.enabled = True
+* vnc_port_total
+"""),
     cfg.IntOpt('vnc_port_total',
+               min=0,
                default=10000,
-               help='Total number of VNC ports'),
+               help="""
+Total number of VNC ports.
+"""),
     cfg.BoolOpt('use_linked_clone',
                 default=True,
-                help='Whether to use linked clone'),
+                help="""
+This option enables/disables the use of linked clone.
+
+The ESX hypervisor requires a copy of the VMDK file in order to boot
+up a virtual machine. The compute driver must download the VMDK via
+HTTP from the OpenStack Image service to a datastore that is visible
+to the hypervisor and cache it. Subsequent virtual machines that need
+the VMDK use the cached version and don't have to copy the file again
+from the OpenStack Image service.
+
+If set to false, even with a cached VMDK, there is still a copy
+operation from the cache location to the hypervisor file directory
+in the shared datastore. If set to true, the above copy operation
+is avoided as it creates copy of the virtual machine that shares
+virtual disks with its parent VM.
+"""),
     cfg.StrOpt('wsdl_location',
-               help='Optional VIM Service WSDL Location '
-                    'e.g http://<server>/vimService.wsdl. '
-                    'Optional over-ride to default location for bug '
-                    'work-arounds')
+               help="""
+This option specifies VIM Service WSDL Location
+
+If vSphere API versions 5.1 and later is being used, this section can
+be ignored. If version is less than 5.1, WSDL files must be hosted
+locally and their location must be specified in the above section.
+
+Optional over-ride to default location for bug work-arounds.
+
+Possible values:
+
+* http://<server>/vimService.wsdl
+* file:///opt/stack/vmware/SDK/wsdl/vim25/vimService.wsdl
+""")
 ]
 
 spbm_opts = [
