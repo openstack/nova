@@ -695,8 +695,10 @@ class ServersController(wsgi.Controller):
         rebuild_schema['properties']['rebuild']['properties'].update(schema)
 
     def _delete(self, context, req, instance_uuid):
-        context.can(server_policies.SERVERS % 'delete')
         instance = self._get_server(context, req, instance_uuid)
+        context.can(server_policies.SERVERS % 'delete',
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
         if CONF.reclaim_instance_interval:
             try:
                 self.compute_api.soft_delete(context, instance)

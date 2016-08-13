@@ -1506,14 +1506,17 @@ class ServersControllerDeleteTest(ControllerTest):
         fakes.stub_out_instance_quota(self, 0, 10)
         req = fakes.HTTPRequestV21.blank('/fake/servers/%s' % uuid)
         req.method = 'DELETE'
+        fake_get = fakes.fake_compute_get(
+            uuid=uuid,
+            vm_state=vm_states.ACTIVE,
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
+        self.stub_out('nova.compute.api.API.get',
+                      lambda api, *a, **k: fake_get(*a, **k))
         return req
 
     def _delete_server_instance(self, uuid=FAKE_UUID):
         req = self._create_delete_request(uuid)
-        fake_get = fakes.fake_compute_get(uuid=uuid,
-                                          vm_state=vm_states.ACTIVE)
-        self.stubs.Set(compute_api.API, 'get',
-                       lambda api, *a, **k: fake_get(*a, **k))
         self.controller.delete(req, uuid)
 
     def test_delete_server_instance(self):
@@ -1543,8 +1546,11 @@ class ServersControllerDeleteTest(ControllerTest):
 
     def test_delete_server_instance_while_resize(self):
         req = self._create_delete_request(FAKE_UUID)
-        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
-                                          task_state=task_states.RESIZE_PREP)
+        fake_get = fakes.fake_compute_get(
+            vm_state=vm_states.ACTIVE,
+            task_state=task_states.RESIZE_PREP,
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
         self.stubs.Set(compute_api.API, 'get',
                        lambda api, *a, **k: fake_get(*a, **k))
 
@@ -1557,7 +1563,10 @@ class ServersControllerDeleteTest(ControllerTest):
 
         self.server_delete_called = False
 
-        fake_get = fakes.fake_compute_get(launched_at=None)
+        fake_get = fakes.fake_compute_get(
+            launched_at=None,
+            project_id=req.environ['nova.context'].project_id,
+            user_id=req.environ['nova.context'].user_id)
         self.stubs.Set(compute_api.API, 'get',
                        lambda api, *a, **k: fake_get(*a, **k))
 
@@ -4307,11 +4316,60 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
         self._common_policy_check(
             rule, rule_name, self.controller.show, self.req, FAKE_UUID)
 
-    def test_delete_policy_failed(self):
+    @mock.patch.object(common, 'get_instance')
+    def test_delete_policy_failed_with_other_project(self, get_instance_mock):
+        get_instance_mock.return_value = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'])
         rule_name = "os_compute_api:servers:delete"
-        rule = {rule_name: "project:non_fake"}
+        rule = {rule_name: "project_id:%(project_id)s"}
+        # Change the project_id in request context.
+        self.req.environ['nova.context'].project_id = 'other-project'
         self._common_policy_check(
             rule, rule_name, self.controller.delete, self.req, FAKE_UUID)
+
+    @mock.patch('nova.compute.api.API.soft_delete')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_delete_overridden_policy_pass_with_same_project(self,
+                                                             get_instance_mock,
+                                                             soft_delete_mock):
+        self.flags(reclaim_instance_interval=3600)
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            project_id=self.req.environ['nova.context'].project_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:delete"
+        self.policy.set_rules({rule_name: "project_id:%(project_id)s"})
+        self.controller.delete(self.req, fakes.FAKE_UUID)
+        soft_delete_mock.assert_called_once_with(
+            self.req.environ['nova.context'], instance)
+
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_delete_overridden_policy_failed_with_other_user_in_same_project(
+        self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
+        rule_name = "os_compute_api:servers:delete"
+        rule = {rule_name: "user_id:%(user_id)s"}
+        # Change the user_id in request context.
+        self.req.environ['nova.context'].user_id = 'other-user'
+        self._common_policy_check(
+            rule, rule_name, self.controller.delete, self.req, FAKE_UUID)
+
+    @mock.patch('nova.compute.api.API.soft_delete')
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_delete_overridden_policy_pass_with_same_user(self,
+                                                        get_instance_mock,
+                                                        soft_delete_mock):
+        self.flags(reclaim_instance_interval=3600)
+        instance = fake_instance.fake_instance_obj(
+            self.req.environ['nova.context'],
+            user_id=self.req.environ['nova.context'].user_id)
+        get_instance_mock.return_value = instance
+        rule_name = "os_compute_api:servers:delete"
+        self.policy.set_rules({rule_name: "user_id:%(user_id)s"})
+        self.controller.delete(self.req, fakes.FAKE_UUID)
+        soft_delete_mock.assert_called_once_with(
+            self.req.environ['nova.context'], instance)
 
     def test_update_policy_failed(self):
         rule_name = "os_compute_api:servers:update"
