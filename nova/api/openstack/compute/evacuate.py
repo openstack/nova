@@ -82,7 +82,10 @@ class EvacuateController(wsgi.Controller):
         to a new one.
         """
         context = req.environ["nova.context"]
-        context.can(evac_policies.BASE_POLICY_NAME)
+        instance = common.get_instance(self.compute_api, context, id)
+        context.can(evac_policies.BASE_POLICY_NAME,
+                    target={'user_id': instance.user_id,
+                            'project_id': instance.project_id})
 
         evacuate_body = body["evacuate"]
         host = evacuate_body.get("host")
@@ -109,7 +112,6 @@ class EvacuateController(wsgi.Controller):
                 msg = _("Compute host %s not found.") % host
                 raise exc.HTTPNotFound(explanation=msg)
 
-        instance = common.get_instance(self.compute_api, context, id)
         if instance.host == host:
             msg = _("The target host can't be the same one.")
             raise exc.HTTPBadRequest(explanation=msg)
