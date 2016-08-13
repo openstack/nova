@@ -1205,12 +1205,16 @@ class CellV2Commands(object):
           dest='transport_url',
           help='The transport url for the cell message queue')
     def simple_cell_setup(self, transport_url):
+        try:
+            self.map_cell0()
+        except db_exc.DBDuplicateEntry:
+            print('Already setup, nothing to do.')
+            return 0
         cell_uuid = self._map_cell_and_hosts(transport_url)
         if cell_uuid is None:
             # There are no compute hosts which means no cell_mapping was
             # created. This should also mean that there are no instances.
             return 1
-        self.map_cell0()
         self.map_instances(cell_uuid)
         return 0
 
