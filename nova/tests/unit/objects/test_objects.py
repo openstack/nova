@@ -1182,7 +1182,7 @@ object_data = {
     'RequestSpec': '1.7-5ff3e9df208bf25f8215f1b87624970d',
     'ResourceClass': '1.0-e6b367e2cf1733c5f3526f20a3286fe9',
     'ResourceClassList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
-    'ResourceProvider': '1.1-7bbcd5ea1c51782692f55489ab08dea6',
+    'ResourceProvider': '1.2-7bbcd5ea1c51782692f55489ab08dea6',
     'ResourceProviderList': '1.0-82bd48d8d0f7913bbe7266f3835c81bf',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
