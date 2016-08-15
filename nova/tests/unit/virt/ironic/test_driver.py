@@ -21,7 +21,7 @@ from oslo_config import cfg
 from oslo_service import loopingcall
 from oslo_utils import uuidutils
 import six
-from testtools.matchers import HasLength
+from testtools import matchers
 
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state as nova_states
@@ -581,7 +581,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         response = self.driver.list_instances()
         mock_call.assert_called_with("node.list", associated=True, limit=0)
         self.assertFalse(mock_inst_by_uuid.called)
-        self.assertThat(response, HasLength(0))
+        self.assertThat(response, matchers.HasLength(0))
 
     @mock.patch.object(cw.IronicClientWrapper, 'call')
     def test_list_instance_uuids(self, mock_call):
