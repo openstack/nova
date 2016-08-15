@@ -887,6 +887,12 @@ class CellV2CommandsTestCase(test.TestCase):
             host = 'host%s' % i
             compute_node = objects.ComputeNode(ctxt, host=host, **values)
             compute_node.create()
+
+        # NOTE(danms): Create a second node on one compute to make sure
+        # we handle that case
+        compute_node = objects.ComputeNode(ctxt, host='host0', **values)
+        compute_node.create()
+
         # Only create 2 existing HostMappings out of 3
         for i in range(2):
             host = 'host%s' % i
@@ -903,7 +909,7 @@ class CellV2CommandsTestCase(test.TestCase):
         # Verify the output
         output = sys.stdout.getvalue().strip()
         expected = ''
-        for i in range(2):
+        for i in [0, 1, 0]:
             expected += ('Host host%s is already mapped to cell %s\n' %
                          (i, cell_mapping_uuid))
         # The expected CellMapping UUID for the last host should be the same

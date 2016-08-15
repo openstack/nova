@@ -1353,13 +1353,13 @@ class CellV2Commands(object):
         if not compute_nodes:
             print(_('No hosts found to map to cell, exiting.'))
             return None
-        missing_nodes = []
+        missing_nodes = set()
         for compute_node in compute_nodes:
             try:
                 host_mapping = objects.HostMapping.get_by_host(
                     ctxt, compute_node.host)
             except exception.HostMappingNotFound:
-                missing_nodes.append(compute_node)
+                missing_nodes.add(compute_node.host)
             else:
                 if verbose:
                     print(_(
@@ -1387,9 +1387,9 @@ class CellV2Commands(object):
                 database_connection=CONF.database.connection)
             cell_mapping.create()
         # Pull the hosts from the cell database and create the host mappings
-        for compute_node in missing_nodes:
+        for compute_host in missing_nodes:
             host_mapping = objects.HostMapping(
-                ctxt, host=compute_node.host, cell_mapping=cell_mapping)
+                ctxt, host=compute_host, cell_mapping=cell_mapping)
             host_mapping.create()
         if verbose:
             print(cell_mapping_uuid)
