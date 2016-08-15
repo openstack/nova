@@ -1,5 +1,3 @@
-# needs:fix_opt_description
-
 # Copyright 2016 Huawei Technology corp.
 # All Rights Reserved.
 #
@@ -18,8 +16,6 @@
 from oslo_config import cfg
 
 
-# TODO(johngarbutt) all of these opitions only work with nova-network.
-# We need to find a good way to document that.
 floating_ip_opts = [
     cfg.StrOpt('default_floating_pool',
         default='nova',
@@ -36,7 +32,7 @@ If this option is not set, then 'nova' is used as default floating pool.
 
 Possible values:
 
-    * Any string representing a floating IP pool name
+* Any string representing a floating IP pool name
 """),
     cfg.BoolOpt('auto_assign_floating_ip',
         default=False,
@@ -60,7 +56,11 @@ When a floating IP is deallocated, its DNS entry will automatically be deleted.
 
 Possible values:
 
-    * Full Python path to the class to be used
+* Full Python path to the class to be used
+
+Related options:
+
+* use_neutron: this options only works with nova-network.
 """),
     cfg.StrOpt('instance_dns_manager',
         default='nova.network.noop_dns_driver.NoopDNSDriver',
@@ -76,15 +76,22 @@ nova will remove the DNS entries.
 
 Possible values:
 
-    * Full Python path to the class to be used
+* Full Python path to the class to be used
+
+Related options:
+
+* use_neutron: this options only works with nova-network.
 """),
-    # TODO(aunnam): remove default
     cfg.StrOpt('instance_dns_domain',
         default='',
         help="""
 If specified, Nova checks if the availability_zone of every instance matches
 what the database says the availability_zone should be for the specified
 dns_domain.
+
+Related options:
+
+* use_neutron: this options only works with nova-network.
 """)
 ]
 
