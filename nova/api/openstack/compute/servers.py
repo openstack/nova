@@ -331,6 +331,7 @@ class ServersController(wsgi.Controller):
 
         expected_attrs = ['pci_devices']
         if is_detail:
+            expected_attrs.append('services')
             if api_version_request.is_supported(req, '2.26'):
                 expected_attrs.append("tags")
 
