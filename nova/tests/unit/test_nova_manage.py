@@ -1370,6 +1370,62 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(from_cli,
                          self.commands._validate_transport_url(from_cli))
 
+    def test_create_cell_use_params(self):
+        ctxt = context.get_context()
+        kwargs = dict(
+            name='fake-name',
+            transport_url='fake-transport-url',
+            database_connection='fake-db-connection')
+        status = self.commands.create_cell(verbose=True, **kwargs)
+        self.assertEqual(0, status)
+        cell2_uuid = self.output.getvalue().strip()
+        self.commands.create_cell(**kwargs)
+        cell2 = objects.CellMapping.get_by_uuid(ctxt, cell2_uuid)
+        self.assertEqual(kwargs['name'], cell2.name)
+        self.assertEqual(kwargs['database_connection'],
+                         cell2.database_connection)
+        self.assertEqual(kwargs['transport_url'], cell2.transport_url)
+
+    def test_create_cell_use_config_values(self):
+        settings = dict(
+            transport_url='fake-conf-transport-url',
+            database_connection='fake-conf-db-connection')
+        self.flags(connection=settings['database_connection'],
+                   group='database')
+        self.flags(transport_url=settings['transport_url'])
+        ctxt = context.get_context()
+
+        status = self.commands.create_cell(verbose=True)
+        self.assertEqual(0, status)
+        cell1_uuid = self.output.getvalue().strip()
+        cell1 = objects.CellMapping.get_by_uuid(ctxt, cell1_uuid)
+        self.assertIsNone(cell1.name)
+        self.assertEqual(settings['database_connection'],
+                         cell1.database_connection)
+        self.assertEqual(settings['transport_url'], cell1.transport_url)
+
+    def test_create_cell_failed_if_non_unique(self):
+        kwargs = dict(
+            name='fake-name',
+            transport_url='fake-transport-url',
+            database_connection='fake-db-connection')
+        status1 = self.commands.create_cell(verbose=True, **kwargs)
+        status2 = self.commands.create_cell(verbose=True, **kwargs)
+        self.assertEqual(0, status1)
+        self.assertEqual(2, status2)
+        self.assertIn('exists', self.output.getvalue())
+
+    def test_create_cell_failed_if_no_transport_url(self):
+        status = self.commands.create_cell()
+        self.assertEqual(1, status)
+        self.assertIn('--transport-url', self.output.getvalue())
+
+    def test_create_cell_failed_if_no_database_connection(self):
+        self.flags(connection=None, group='database')
+        status = self.commands.create_cell(transport_url='fake-transport-url')
+        self.assertEqual(1, status)
+        self.assertIn('--database_connection', self.output.getvalue())
+
 
 class TestNovaManageMain(test.NoDBTestCase):
     """Tests the nova-manage:main() setup code."""
