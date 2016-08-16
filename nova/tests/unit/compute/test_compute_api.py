@@ -3868,8 +3868,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(ephemeral_size, bdms[2].volume_size)
 
     @mock.patch.object(compute_api.API, '_get_instances_by_filters')
-    def test_tenant_to_project_conversion(self, mock_get):
-        mock_get.return_value = []
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    def test_tenant_to_project_conversion(self, mock_cell_map_get, mock_get):
+        mock_cell_map_get.side_effect = exception.CellMappingNotFound(
+                                                                uuid='fake')
+        mock_get.return_value = objects.InstanceList(objects=[])
         api = compute_api.API()
         api.get_all(self.context, search_opts={'tenant_id': 'foo'})
         filters = mock_get.call_args_list[0][0][1]
@@ -4240,6 +4243,209 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   'system_metadata',
                                                   'security_groups',
                                                   'info_cache'])
+
+    def _list_of_instances(self, length=1):
+        instances = []
+        for i in range(length):
+            instances.append(
+                fake_instance.fake_instance_obj(self.context, objects.Instance,
+                                                uuid=uuidutils.generate_uuid())
+            )
+        return instances
+
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_get_all_includes_build_requests(self, mock_cell_mapping_get,
+                                             mock_buildreq_get):
+
+        build_req_instances = self._list_of_instances(2)
+        build_reqs = [objects.BuildRequest(self.context, instance=instance)
+                      for instance in build_req_instances]
+        mock_buildreq_get.return_value = objects.BuildRequestList(self.context,
+            objects=build_reqs)
+
+        cell_instances = self._list_of_instances(2)
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances)
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=None, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_buildreq_get.assert_called_once_with(
+                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                sort_keys=['baz'], sort_dirs=['desc'])
+            mock_inst_get.assert_called_once_with(
+                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
+            for i, instance in enumerate(build_req_instances + cell_instances):
+                self.assertEqual(instance, instances[i])
+
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_get_all_includes_build_requests_filter_dupes(self,
+            mock_cell_mapping_get, mock_buildreq_get):
+
+        build_req_instances = self._list_of_instances(2)
+        build_reqs = [objects.BuildRequest(self.context, instance=instance)
+                      for instance in build_req_instances]
+        mock_buildreq_get.return_value = objects.BuildRequestList(self.context,
+            objects=build_reqs)
+
+        cell_instances = self._list_of_instances(2)
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            # Insert one of the build_req_instances here so it shows up twice
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=build_req_instances[:1] + cell_instances)
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=None, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_buildreq_get.assert_called_once_with(
+                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                sort_keys=['baz'], sort_dirs=['desc'])
+            mock_inst_get.assert_called_once_with(
+                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
+            for i, instance in enumerate(build_req_instances + cell_instances):
+                self.assertEqual(instance, instances[i])
+
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_get_all_build_requests_decrement_limit(self,
+                                                    mock_cell_mapping_get,
+                                                    mock_buildreq_get):
+
+        build_req_instances = self._list_of_instances(2)
+        build_reqs = [objects.BuildRequest(self.context, instance=instance)
+                      for instance in build_req_instances]
+        mock_buildreq_get.return_value = objects.BuildRequestList(self.context,
+            objects=build_reqs)
+
+        cell_instances = self._list_of_instances(2)
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances)
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=10, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_buildreq_get.assert_called_once_with(
+                self.context, {'foo': 'bar'}, limit=10, marker='fake-marker',
+                sort_keys=['baz'], sort_dirs=['desc'])
+            mock_inst_get.assert_called_once_with(
+                self.context, {'foo': 'bar'}, limit=8, marker='fake-marker',
+                expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
+            for i, instance in enumerate(build_req_instances + cell_instances):
+                self.assertEqual(instance, instances[i])
+
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
+                       return_value=objects.BuildRequestList(objects=[]))
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    def test_get_all_includes_cell0(self, mock_cell_mapping_get,
+                                    mock_buildreq_get, mock_target_cell):
+
+        cell0_instances = self._list_of_instances(2)
+        cell_instances = self._list_of_instances(2)
+
+        cell_mapping = objects.CellMapping()
+        mock_cell_mapping_get.return_value = cell_mapping
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            mock_inst_get.side_effect = [objects.InstanceList(
+                                             self.context,
+                                             objects=cell0_instances),
+                                         objects.InstanceList(
+                                             self.context,
+                                             objects=cell_instances)]
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=10, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_target_cell.assert_called_once_with(self.context,
+                                                     cell_mapping)
+            inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
+                                        limit=10, marker='fake-marker',
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc']),
+                              mock.call(self.context, {'foo': 'bar'},
+                                        limit=8, marker='fake-marker',
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc'])
+                              ]
+            self.assertEqual(2, mock_inst_get.call_count)
+            mock_inst_get.assert_has_calls(inst_get_calls)
+            for i, instance in enumerate(cell0_instances + cell_instances):
+                self.assertEqual(instance, instances[i])
+
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    def test_get_all_includes_build_request_cell0(self, mock_cell_mapping_get,
+                                    mock_buildreq_get, mock_target_cell):
+
+        build_req_instances = self._list_of_instances(2)
+        build_reqs = [objects.BuildRequest(self.context, instance=instance)
+                      for instance in build_req_instances]
+        mock_buildreq_get.return_value = objects.BuildRequestList(self.context,
+            objects=build_reqs)
+
+        cell0_instances = self._list_of_instances(2)
+        cell_instances = self._list_of_instances(2)
+
+        cell_mapping = objects.CellMapping()
+        mock_cell_mapping_get.return_value = cell_mapping
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            mock_inst_get.side_effect = [objects.InstanceList(
+                                             self.context,
+                                             objects=cell0_instances),
+                                         objects.InstanceList(
+                                             self.context,
+                                             objects=cell_instances)]
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=10, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_target_cell.assert_called_once_with(self.context,
+                                                     cell_mapping)
+            inst_get_calls = [mock.call(self.context, {'foo': 'bar'},
+                                        limit=8, marker='fake-marker',
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc']),
+                              mock.call(self.context, {'foo': 'bar'},
+                                        limit=6, marker='fake-marker',
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc'])
+                              ]
+            self.assertEqual(2, mock_inst_get.call_count)
+            mock_inst_get.assert_has_calls(inst_get_calls)
+            for i, instance in enumerate(build_req_instances +
+                                         cell0_instances +
+                                         cell_instances):
+                self.assertEqual(instance, instances[i])
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
