@@ -189,7 +189,7 @@ class FakePciDevice(object):
     <iommuGroup number='%(group_id)d'>
  <address domain='0x0000' bus='0x81' slot='0x%(slot)s' function='0x%(dev)d'/>
     </iommuGroup>
-    <numa node='0'/>
+    <numa node='%(numa_node)s'/>
     <pci-express>
       <link validity='cap' port='0' speed='5' width='8'/>
       <link validity='sta' speed='5' width='8'/>
@@ -197,7 +197,7 @@ class FakePciDevice(object):
   </capability>
 </device>"""
 
-    def __init__(self, dev_type, vf_ratio, group, dev, product_id):
+    def __init__(self, dev_type, vf_ratio, group, dev, product_id, numa_node):
         """Populate pci devices
 
         :param dev_type: (string) Indicates the type of the device (PF, VF)
@@ -205,6 +205,7 @@ class FakePciDevice(object):
         :param group: (int) iommu group id
         :param dev: (int) function number of the device
         :param product_id: (int) Device product ID
+        :param numa_node: (int) NUMA node of the device
         """
         addr_templ = ("  <address domain='0x0000' bus='0x81' slot='0x%(slot)s'"
                       " function='0x%(dev)d'/>")
@@ -218,7 +219,7 @@ class FakePciDevice(object):
                          'prod': product_id, 'group_id': group,
                          'functions': '\n'.join(pf_caps), 'slot': 0,
                          'cap_type': PF_CAP_TYPE, 'prod_name': PF_PROD_NAME,
-                         'driver': PF_DRIVER_NAME}
+                         'driver': PF_DRIVER_NAME, 'numa_node': numa_node}
         elif dev_type == 'VF':
             vf_caps = [addr_templ % {'dev': int(dev / vf_ratio),
                                      'slot': PF_SLOT}]
@@ -226,7 +227,7 @@ class FakePciDevice(object):
                          'prod': product_id, 'group_id': group,
                          'functions': '\n'.join(vf_caps), 'slot': VF_SLOT,
                          'cap_type': VF_CAP_TYPE, 'prod_name': VF_PROD_NAME,
-                         'driver': VF_DRIVER_NAME}
+                         'driver': VF_DRIVER_NAME, 'numa_node': numa_node}
 
     def XMLDesc(self, flags):
         return self.pci_dev
@@ -238,7 +239,8 @@ class HostPciSRIOVDevicesInfo(object):
         self.sriov_devices = {}
 
     def create_pci_devices(self, vf_product_id=1515, pf_product_id=1528,
-                            num_pfs=2, num_vfs=8, group=47):
+                           num_pfs=2, num_vfs=8, group=47, numa_node=None,
+                           total_numa_nodes=2):
         """Populate pci devices
 
         :param vf_product_id: (int) Product ID of the Virtual Functions
@@ -246,7 +248,12 @@ class HostPciSRIOVDevicesInfo(object):
         :param num_pfs: (int) The number of the Physical Functions
         :param num_vfs: (int) The number of the Virtual Functions
         :param group: (int) Initial group id
+        :param numa_node: (int) NUMA node of the device, if set all of the
+                          device will be created in the provided node
+        :param total_numa_nodes: (int) total number of NUMA nodes
         """
+        def _calc_numa_node(dev):
+            return dev % total_numa_nodes if numa_node is None else numa_node
 
         vf_ratio = num_vfs / num_pfs
 
@@ -257,7 +264,8 @@ class HostPciSRIOVDevicesInfo(object):
                                                              'dev': dev}
             self.sriov_devices[pci_dev_name] = FakePciDevice('PF', vf_ratio,
                                                              dev_group, dev,
-                                                             pf_product_id)
+                                                             pf_product_id,
+                                                        _calc_numa_node(dev))
 
         # Generate VFs
         for dev in range(num_vfs):
@@ -266,7 +274,8 @@ class HostPciSRIOVDevicesInfo(object):
                                                              'dev': dev}
             self.sriov_devices[pci_dev_name] = FakePciDevice('VF', vf_ratio,
                                                              dev_group, dev,
-                                                             vf_product_id)
+                                                             vf_product_id,
+                                                        _calc_numa_node(dev))
 
     def get_all_devices(self):
         return self.sriov_devices.keys()
