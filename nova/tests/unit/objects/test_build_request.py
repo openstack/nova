@@ -125,3 +125,30 @@ class TestBuildRequestObject(test_objects._LocalTest,
 class TestRemoteBuildRequestObject(test_objects._RemoteTest,
                                    _TestBuildRequestObject):
     pass
+
+
+class _TestBuildRequestListObject(object):
+    @mock.patch.object(build_request.BuildRequestList, '_get_all_from_db')
+    def test_get_all(self, get_all):
+        fake_reqs = [fake_build_request.fake_db_req() for x in range(2)]
+        get_all.return_value = fake_reqs
+
+        req_objs = build_request.BuildRequestList.get_all(self.context)
+
+        self.assertEqual(2, len(req_objs))
+        for i in range(2):
+            self.assertEqual(fake_reqs[i]['instance_uuid'],
+                             req_objs[i].instance_uuid)
+            self.assertEqual(fake_reqs[i]['project_id'],
+                             req_objs[i].project_id)
+            self.assertIsInstance(req_objs[i].instance, objects.Instance)
+
+
+class TestBuildRequestListObject(test_objects._LocalTest,
+                                 _TestBuildRequestListObject):
+    pass
+
+
+class TestRemoteBuildRequestListObject(test_objects._RemoteTest,
+                                       _TestBuildRequestListObject):
+    pass
