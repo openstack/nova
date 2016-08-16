@@ -1205,6 +1205,17 @@ class CellV2Commands(object):
           dest='transport_url',
           help='The transport url for the cell message queue')
     def simple_cell_setup(self, transport_url):
+        """Simple cellsv2 setup.
+
+        This simplified command is for use by existing non-cells users to
+        configure the default environment. If you are using CellsV1, this
+        will not work for you. Returns 0 if setup is completed (or has
+        already been done), 1 if no hosts are reporting (and this cannot
+        be mapped) and 2 if run in a CellsV1 environment.
+        """
+        if CONF.cells.enable:
+            print('CellsV1 users cannot use this simplified setup command')
+            return 2
         try:
             self.map_cell0()
         except db_exc.DBDuplicateEntry:
