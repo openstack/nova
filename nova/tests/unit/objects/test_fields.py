@@ -187,13 +187,13 @@ class TestImageSignatureTypes(TestField):
 
     def test_hashes(self):
         for hash_name in list(signature_utils.HASH_METHODS.keys()):
-            self.assertIn(hash_name, self.hash_field.hashes)
+            self.assertIn(hash_name, self.hash_field.ALL)
 
     def test_key_types(self):
         key_type_dict = signature_utils.SignatureKeyType._REGISTERED_TYPES
         key_types = list(key_type_dict.keys())
         for key_type in key_types:
-            self.assertIn(key_type, self.key_type_field.key_types)
+            self.assertIn(key_type, self.key_type_field.ALL)
 
 
 class TestResourceClass(TestField):
