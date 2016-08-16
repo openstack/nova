@@ -1,0 +1,8 @@
+---
+upgrade:
+  - Default value of live_migration_tunnelled config option in
+    libvirt section has been changed to False. After upgrading
+    nova to Newton all live migrations will be non-tunnelled
+    unless live_migration_tunnelled is explicitly set to True.
+    It means that, by default, the migration traffic will not
+    go through libvirt and therefore will no longer be encrypted.
