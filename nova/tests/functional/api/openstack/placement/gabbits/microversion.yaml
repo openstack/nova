@@ -71,3 +71,9 @@ tests:
   status: 400
   response_strings:
       - "invalid version string: 1.2.3"
+
+- name: error in application produces microversion headers
+  POST: /
+  status: 405
+  response_headers:
+      openstack-api-version: placement 1.0
