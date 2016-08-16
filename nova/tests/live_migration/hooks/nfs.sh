@@ -21,7 +21,10 @@ function nfs_setup {
 
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "exportfs -a"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m service -a "name=nfs-kernel-server state=restarted"
-    $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m service -a "name=idmapd state=restarted"
+    GetDistro
+    if [[ ! ${DISTRO} =~ (xenial) ]]; then
+        $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m service -a "name=idmapd state=restarted"
+    fi
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p tcp --dport 111 -j ACCEPT"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p udp --dport 111 -j ACCEPT"
     $ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m shell -a "iptables -A INPUT -p tcp --dport 2049 -j ACCEPT"
