@@ -24,3 +24,8 @@ class ServerDiagnosticsSamplesJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('servers/%s/diagnostics' % uuid)
         self._verify_response('server-diagnostics-get-resp', {},
                               response, 200)
+
+
+class ServerDiagnosticsSamplesJsonTestV248(ServerDiagnosticsSamplesJsonTest):
+    microversion = '2.48'
+    scenarios = [('v2_48', {'api_major_version': 'v2.1'})]

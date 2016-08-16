@@ -114,6 +114,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              rather than a link.  If the user is prevented from retrieving
              the flavor extra-specs by policy, simply omit the field from
              the output.
+    * 2.48 - Standardize VM diagnostics info.
 """
 
 # The minimum and maximum versions of the API supported
@@ -122,7 +123,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.47"
+_MAX_API_VERSION = "2.48"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

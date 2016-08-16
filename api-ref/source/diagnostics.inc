@@ -31,11 +31,38 @@ Request
 Response
 --------
 
-The response format for diagnostics is backend hypervisor specific,
-and not well defined. This should be considered a debug interface
-only, and not relied upon by programmatic tools.
+Starting from **microversion 2.48** diagnostics response is standardized
+across all virt drivers. The response should be considered a debug interface
+only and not relied upon by programmatic tools. All response fields are listed
+below. If the virt driver is unable to provide a specific field then this field
+will be reported as ``None`` in the response.
+
+.. rest_parameters:: parameters.yaml
+
+  - config_drive: config_drive_diagnostics
+  - state: vm_state_diagnostics
+  - driver: driver_diagnostics
+  - hypervisor: hypervisor_diagnostics
+  - hypervisor_os: hypervisor_os_diagnostics
+  - uptime: uptime_diagnostics
+  - num_cpus: num_cpus_diagnostics
+  - num_disks: num_disks_diagnostics
+  - num_nics: num_nics_diagnostics
+  - memory_details: memory_details_diagnostics
+  - cpu_details: cpu_details_diagnostics
+  - disk_details: disk_details_diagnostics
+  - nic_details: nic_details_diagnostics
 
 **Example Server diagnostics**
+
+.. literalinclude:: ../../doc/api_samples/os-server-diagnostics/v2.48/server-diagnostics-get-resp.json
+   :language: javascript
+
+.. warning::
+   Before **microversion 2.48** the response format for diagnostics was not
+   well defined. Each hypervisor had its own format.
+
+**Example Old Server diagnostics**
 
 Below is an example of diagnostics for a libvirt based instance. The unit of the return
 value is hypervisor specific, but in this case the unit of vnet1_rx* and

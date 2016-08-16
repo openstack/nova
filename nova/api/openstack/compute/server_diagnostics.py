@@ -15,19 +15,25 @@
 
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.views import server_diagnostics
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.i18n import _
 from nova.policies import server_diagnostics as sd_policies
 
 
 class ServerDiagnosticsController(wsgi.Controller):
-    def __init__(self):
+    _view_builder_class = server_diagnostics.ViewBuilder
+
+    def __init__(self, *args, **kwargs):
+        super(ServerDiagnosticsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((404, 409, 501))
+    @extensions.expected_errors((400, 404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         context.can(sd_policies.BASE_POLICY_NAME)
@@ -35,16 +41,27 @@ class ServerDiagnosticsController(wsgi.Controller):
         instance = common.get_instance(self.compute_api, context, server_id)
 
         try:
-            # NOTE(gmann): To make V21 same as V2 API, this method will call
-            # 'get_diagnostics' instead of 'get_instance_diagnostics'.
-            # In future, 'get_instance_diagnostics' needs to be called to
-            # provide VM diagnostics in a defined format for all driver.
-            # BP - https://blueprints.launchpad.net/nova/+spec/v3-diagnostics.
+            if api_version_request.is_supported(req, min_version='2.48'):
+                diagnostics = self.compute_api.get_instance_diagnostics(
+                    context, instance)
+                return self._view_builder.instance_diagnostics(diagnostics)
+
             return self.compute_api.get_diagnostics(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics', server_id)
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceDiagnosticsNotSupported:
+            # NOTE(snikitin): During upgrade we may face situation when env
+            # has new API and old compute. New compute returns a
+            # Diagnostics object. Old compute returns a dictionary. So we
+            # can't perform a request correctly if compute is too old.
+            msg = _('Compute node is too old. You must complete the '
+                    'upgrade process to be able to get a standardized '
+                    'diagnostics data which is available since v2.48. However '
+                    'you still able to get a diagnostics data in old format '
+                    'which is available till v2.47.')
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         except NotImplementedError:
             common.raise_feature_not_supported()
