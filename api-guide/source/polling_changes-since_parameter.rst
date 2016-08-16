@@ -16,7 +16,7 @@ nothing has changed since the *``changes-since``* time, an empty list is
 returned. If data has changed, only the items changed since the
 specified time are returned in the response. For example, performing a
 **GET** against
-https://api.servers.openstack.org/v2/224532/servers?\ *``changes-since``*\ =2015-01-24T17:08Z
+https://api.servers.openstack.org/v2.1/servers?\ *``changes-since``*\ =2015-01-24T17:08Z
 would list all servers that have changed since Mon, 24 Jan 2015 17:08:00
 UTC.
 
