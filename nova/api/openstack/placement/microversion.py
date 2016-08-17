@@ -21,7 +21,9 @@ import collections
 import microversion_parse
 import webob
 
-from nova.api.openstack.placement import util
+# NOTE(cdent): avoid cyclical import conflict between util and
+# microversion
+import nova.api.openstack.placement.util
 
 
 SERVICE_TYPE = 'placement'
@@ -71,6 +73,7 @@ class MicroversionMiddleware(object):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        util = nova.api.openstack.placement.util
         try:
             req.environ[MICROVERSION_ENVIRON] = extract_version(
                 req.headers)

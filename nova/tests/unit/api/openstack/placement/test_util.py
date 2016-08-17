@@ -14,10 +14,60 @@
 
 
 from oslo_middleware import request_id
+import webob
 
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
 from nova import test
+
+
+class TestCheckAccept(test.NoDBTestCase):
+    """Confirm behavior of util.check_accept."""
+
+    @staticmethod
+    @util.check_accept('application/json', 'application/vnd.openstack')
+    def handler(req):
+        """Fake handler to test decorator."""
+        return True
+
+    def test_fail_no_match(self):
+        req = webob.Request.blank('/')
+        req.accept = 'text/plain'
+
+        error = self.assertRaises(webob.exc.HTTPNotAcceptable,
+                                  self.handler, req)
+        self.assertEqual(
+            'Only application/json, application/vnd.openstack is provided',
+            str(error))
+
+    def test_fail_complex_no_match(self):
+        req = webob.Request.blank('/')
+        req.accept = 'text/html;q=0.9,text/plain,application/vnd.aws;q=0.8'
+
+        error = self.assertRaises(webob.exc.HTTPNotAcceptable,
+                                  self.handler, req)
+        self.assertEqual(
+            'Only application/json, application/vnd.openstack is provided',
+            str(error))
+
+    def test_success_no_accept(self):
+        req = webob.Request.blank('/')
+        self.assertTrue(self.handler(req))
+
+    def test_success_simple_match(self):
+        req = webob.Request.blank('/')
+        req.accept = 'application/json'
+        self.assertTrue(self.handler(req))
+
+    def test_success_complex_any_match(self):
+        req = webob.Request.blank('/')
+        req.accept = 'application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        self.assertTrue(self.handler(req))
+
+    def test_success_complex_lower_quality_match(self):
+        req = webob.Request.blank('/')
+        req.accept = 'application/xml;q=0.9,application/vnd.openstack;q=0.8'
+        self.assertTrue(self.handler(req))
 
 
 class TestJSONErrorFormatter(test.NoDBTestCase):
@@ -93,3 +143,37 @@ class TestJSONErrorFormatter(test.NoDBTestCase):
                          result['errors'][0]['max_version'])
         self.assertEqual(microversion.min_version_string(),
                          result['errors'][0]['min_version'])
+
+
+class TestRequireContent(test.NoDBTestCase):
+    """Confirm behavior of util.require_accept."""
+
+    @staticmethod
+    @util.require_content('application/json')
+    def handler(req):
+        """Fake handler to test decorator."""
+        return True
+
+    def test_fail_no_content_type(self):
+        req = webob.Request.blank('/')
+
+        error = self.assertRaises(webob.exc.HTTPUnsupportedMediaType,
+                                  self.handler, req)
+        self.assertEqual(
+            'The media type None is not supported, use application/json',
+            str(error))
+
+    def test_fail_wrong_content_type(self):
+        req = webob.Request.blank('/')
+        req.content_type = 'text/plain'
+
+        error = self.assertRaises(webob.exc.HTTPUnsupportedMediaType,
+                                  self.handler, req)
+        self.assertEqual(
+            'The media type text/plain is not supported, use application/json',
+            str(error))
+
+    def test_success_content_type(self):
+        req = webob.Request.blank('/')
+        req.content_type = 'application/json'
+        self.assertTrue(self.handler(req))
