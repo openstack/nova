@@ -7505,6 +7505,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
                 initial_xml)
         vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
+                             miguri=None,
                              dxml=target_xml,
                              flags=mox.IgnoreArg(),
                              bandwidth=_bandwidth).AndRaise(
@@ -7624,6 +7625,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                            guest, [])
             test_mock.migrateToURI2.assert_called_once_with(
                 'qemu+tcp://127.0.0.2/system',
+                miguri='tcp://127.0.0.2',
                 dxml=mupdate(), flags=0, bandwidth=0)
 
     def test_update_volume_xml(self):
@@ -7709,6 +7711,39 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
             self.assertEqual(forced_uri % dest, drvr._live_migration_uri(dest))
+
+    def test_migrate_uri(self):
+        hypervisor_uri_map = (
+            ('xen', None),
+            ('kvm', 'tcp://%s'),
+            ('qemu', 'tcp://%s'),
+        )
+        dest = 'destination'
+        for hyperv, uri in hypervisor_uri_map:
+            self.flags(virt_type=hyperv, group='libvirt')
+            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+            if uri is not None:
+                uri = uri % dest
+            self.assertEqual(uri, drvr._migrate_uri(dest))
+
+    def test_migrate_uri_forced_live_migration_uri(self):
+        dest = 'destination'
+        self.flags(virt_type='kvm', group='libvirt')
+
+        forced_uri = 'qemu+tcp://user:pass@%s/system'
+        self.flags(live_migration_uri=forced_uri, group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual('tcp://%s' % dest, drvr._migrate_uri(dest))
+
+    def test_migrate_uri_forced_live_migration_inboud_addr(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        addresses = ('127.0.0.1', '127.0.0.1:4444',
+                     '0:0:0:0:0:0:0:1', '[0:0:0:0:0:0:0:1]:4444')
+        for dest in addresses:
+            self.assertEqual('tcp://%s' % dest, drvr._migrate_uri(dest))
 
     def test_update_volume_xml_no_serial(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7849,7 +7884,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
         mock_migrate.assert_called_once_with(
-                drvr._live_migration_uri('dest'),
+                drvr._live_migration_uri('dest'), miguri=None,
                 dxml=target_xml, flags=mock.ANY, bandwidth=bandwidth)
 
     def test_live_migration_uses_migrateToURI_without_dest_listen_addrs(self):
@@ -7914,6 +7949,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         dom = fakelibvirt.virDomain
         guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         instance = objects.Instance(**self.test_instance)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
@@ -7950,6 +7986,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         dom = fakelibvirt.virDomain
         guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
         drvr._parse_migration_flags()
         instance = objects.Instance(**self.test_instance)
         drvr._live_migration_operation(self.context, instance, 'dest',
@@ -7978,6 +8015,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
         ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
         vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
+                             miguri=None,
                              dxml=mox.IgnoreArg(),
                              flags=mox.IgnoreArg(),
                              bandwidth=_bandwidth).AndRaise(
