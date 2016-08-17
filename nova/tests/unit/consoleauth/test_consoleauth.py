@@ -52,7 +52,7 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         # Test that tokens expire correctly.
         self.useFixture(test.TimeOverride())
         token = u'mytok'
-        self.flags(console_token_ttl=1)
+        self.flags(token_ttl=1, group='consoleauth')
 
         self._stub_validate_console_port(True)
 
@@ -121,7 +121,7 @@ class ConsoleauthTestCase(test.NoDBTestCase):
     def test_delete_expired_tokens(self):
         self.useFixture(test.TimeOverride())
         token = u'mytok'
-        self.flags(console_token_ttl=1)
+        self.flags(token_ttl=1, group='consoleauth')
 
         self._stub_validate_console_port(True)
 

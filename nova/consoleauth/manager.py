@@ -52,7 +52,7 @@ class ConsoleAuthManager(manager.Manager):
     @property
     def mc(self):
         if self._mc is None:
-            self._mc = cache_utils.get_client(CONF.console_token_ttl)
+            self._mc = cache_utils.get_client(CONF.consoleauth.token_ttl)
         return self._mc
 
     @property
