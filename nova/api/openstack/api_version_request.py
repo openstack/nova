@@ -90,6 +90,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.35 - Adds keypairs pagination support.
     * 2.36 - Deprecates all the API which proxy to another service and fping
              API.
+    * 2.37 - Adds support for auto-allocating networking, otherwise known as
+             "Get me a Network". Also enforces server.networks.uuid to be in
+             UUID format.
 """
 
 # The minimum and maximum versions of the API supported
@@ -98,7 +101,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.36"
+_MAX_API_VERSION = "2.37"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # All the proxy APIs which related network, images and baremetal

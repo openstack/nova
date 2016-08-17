@@ -52,6 +52,7 @@ class ServersPreSchedulingTestCase(test.TestCase):
                 'name': 'foo',
                 'imageRef': image_ref,
                 'flavorRef': '1',
+                'networks': 'none',
             }
         }
         create_resp = self.api.api_post('servers', body)
@@ -68,6 +69,7 @@ class ServersPreSchedulingTestCase(test.TestCase):
                 'name': 'foo',
                 'imageRef': image_ref,
                 'flavorRef': '1',
+                'networks': 'none',
             }
         }
         create_resp = self.api.api_post('servers', body)
