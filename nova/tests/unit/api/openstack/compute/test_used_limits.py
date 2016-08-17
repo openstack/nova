@@ -16,6 +16,7 @@
 import mock
 import six
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import used_limits \
         as used_limits_v21
 from nova.api.openstack import wsgi
@@ -30,6 +31,8 @@ class FakeRequest(object):
     def __init__(self, context, reserved=False):
         self.environ = {'nova.context': context}
         self.reserved = reserved
+
+        self.api_version_request = api_version_request.min_api_version()
         self.GET = {'reserved': 1} if reserved else {}
 
 
