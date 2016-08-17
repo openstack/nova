@@ -56,7 +56,6 @@ from six.moves import builtins
 from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
-from nova.compute import cpumodel
 from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
@@ -5717,7 +5716,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         for f in ('cmt', 'mbm_local', 'mbm_total'):
             feature = vconfig.LibvirtConfigGuestCPUFeature()
             feature.name = f
-            feature.policy = cpumodel.POLICY_REQUIRE
+            feature.policy = fields.CPUFeaturePolicy.REQUIRE
             features.append(feature)
 
         caps.host.cpu.features = set(features)
@@ -16961,25 +16960,25 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         feature1 = vconfig.LibvirtConfigGuestCPUFeature()
         feature2 = vconfig.LibvirtConfigGuestCPUFeature()
         feature1.name = 'sse'
-        feature1.policy = cpumodel.POLICY_REQUIRE
+        feature1.policy = fields.CPUFeaturePolicy.REQUIRE
         feature2.name = 'aes'
-        feature2.policy = cpumodel.POLICY_REQUIRE
+        feature2.policy = fields.CPUFeaturePolicy.REQUIRE
 
         cpu.features = set([feature1, feature2])
-        cpu.mode = cpumodel.MODE_CUSTOM
+        cpu.mode = fields.CPUMode.CUSTOM
         cpu.sockets = 1
         cpu.cores = 2
         cpu.threads = 4
         vcpu_model = drv._cpu_config_to_vcpu_model(cpu, None)
-        self.assertEqual(cpumodel.MATCH_EXACT, vcpu_model.match)
-        self.assertEqual(cpumodel.MODE_CUSTOM, vcpu_model.mode)
+        self.assertEqual(fields.CPUMatch.EXACT, vcpu_model.match)
+        self.assertEqual(fields.CPUMode.CUSTOM, vcpu_model.mode)
         self.assertEqual(4, vcpu_model.topology.threads)
         self.assertEqual(set(['sse', 'aes']),
                          set([f.name for f in vcpu_model.features]))
 
-        cpu.mode = cpumodel.MODE_HOST_MODEL
+        cpu.mode = fields.CPUMode.HOST_MODEL
         vcpu_model_1 = drv._cpu_config_to_vcpu_model(cpu, vcpu_model)
-        self.assertEqual(cpumodel.MODE_HOST_MODEL, vcpu_model.mode)
+        self.assertEqual(fields.CPUMode.HOST_MODEL, vcpu_model.mode)
         self.assertEqual(vcpu_model, vcpu_model_1)
 
     @mock.patch.object(lvm, 'get_volume_size', return_value=10)
@@ -17066,24 +17065,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def test_vcpu_model_to_config(self):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        feature = objects.VirtCPUFeature(policy=cpumodel.POLICY_REQUIRE,
-                                         name='sse')
-        feature_1 = objects.VirtCPUFeature(policy=cpumodel.POLICY_FORBID,
-                                           name='aes')
+        feature = objects.VirtCPUFeature(
+            policy=fields.CPUFeaturePolicy.REQUIRE, name='sse')
+        feature_1 = objects.VirtCPUFeature(
+            policy=fields.CPUFeaturePolicy.FORBID, name='aes')
         topo = objects.VirtCPUTopology(sockets=1, cores=2, threads=4)
-        vcpu_model = objects.VirtCPUModel(mode=cpumodel.MODE_HOST_MODEL,
+        vcpu_model = objects.VirtCPUModel(mode=fields.CPUMode.HOST_MODEL,
                                           features=[feature, feature_1],
                                           topology=topo)
 
         cpu = drv._vcpu_model_to_cpu_config(vcpu_model)
-        self.assertEqual(cpumodel.MODE_HOST_MODEL, cpu.mode)
+        self.assertEqual(fields.CPUMode.HOST_MODEL, cpu.mode)
         self.assertEqual(1, cpu.sockets)
         self.assertEqual(4, cpu.threads)
         self.assertEqual(2, len(cpu.features))
         self.assertEqual(set(['sse', 'aes']),
                          set([f.name for f in cpu.features]))
-        self.assertEqual(set([cpumodel.POLICY_REQUIRE,
-                              cpumodel.POLICY_FORBID]),
+        self.assertEqual(set([fields.CPUFeaturePolicy.REQUIRE,
+                              fields.CPUFeaturePolicy.FORBID]),
                          set([f.policy for f in cpu.features]))
 
     def test_trigger_crash_dump(self):

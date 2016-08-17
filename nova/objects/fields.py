@@ -18,8 +18,6 @@ import re
 from oslo_versionedobjects import fields
 import six
 
-# TODO(berrange) Temporary import for CPU* classes
-from nova.compute import cpumodel
 # TODO(berrange) Temporary import for HVType class
 from nova.compute import hv_type
 # TODO(berrange) Temporary import for VMMode class
@@ -282,21 +280,32 @@ class CPUThreadAllocationPolicy(BaseNovaEnum):
 
 
 class CPUMode(BaseNovaEnum):
-    # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
-    # into fields on this class
-    ALL = cpumodel.ALL_CPUMODES
+
+    CUSTOM = 'custom'
+    HOST_MODEL = 'host-model'
+    HOST_PASSTHROUGH = 'host-passthrough'
+
+    ALL = (CUSTOM, HOST_MODEL, HOST_PASSTHROUGH)
 
 
 class CPUMatch(BaseNovaEnum):
-    # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
-    # into fields on this class
-    ALL = cpumodel.ALL_MATCHES
+
+    MINIMUM = 'minimum'
+    EXACT = 'exact'
+    STRICT = 'strict'
+
+    ALL = (MINIMUM, EXACT, STRICT)
 
 
 class CPUFeaturePolicy(BaseNovaEnum):
-    # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
-    # into fields on this class
-    ALL = cpumodel.ALL_POLICIES
+
+    FORCE = 'force'
+    REQUIRE = 'require'
+    OPTIONAL = 'optional'
+    DISABLE = 'disable'
+    FORBID = 'forbid'
+
+    ALL = (FORCE, REQUIRE, OPTIONAL, DISABLE, FORBID)
 
 
 class DiskBus(BaseNovaEnum):
