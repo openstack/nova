@@ -83,27 +83,6 @@ libvirt_general_opts = [
                     '(which is dependent on virt_type) '
                     '(any included "%s" is replaced with '
                     'the migration target hostname)'),
-    cfg.StrOpt('live_migration_flag',
-               default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
-                       'VIR_MIGRATE_LIVE, VIR_MIGRATE_TUNNELLED',
-               help='Migration flags to be set for live migration',
-               deprecated_for_removal=True,
-               deprecated_reason='The correct live migration flags can be '
-                                 'inferred from the new '
-                                 'live_migration_tunnelled config option. '
-                                 'live_migration_flag will be removed to '
-                                 'avoid potential misconfiguration.'),
-    cfg.StrOpt('block_migration_flag',
-               default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
-                       'VIR_MIGRATE_LIVE, VIR_MIGRATE_TUNNELLED, '
-                       'VIR_MIGRATE_NON_SHARED_INC',
-               help='Migration flags to be set for block migration',
-               deprecated_for_removal=True,
-               deprecated_reason='The correct block migration flags can be '
-                                 'inferred from the new '
-                                 'live_migration_tunnelled config option. '
-                                 'block_migration_flag will be removed to '
-                                 'avoid potential misconfiguration.'),
     cfg.BoolOpt('live_migration_tunnelled',
                 default=False,
                 help='Whether to use tunnelled migration, where migration '

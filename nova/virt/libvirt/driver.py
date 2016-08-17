@@ -534,82 +534,32 @@ class LibvirtDriver(driver.ComputeDriver):
                      'qemu_ver': self._version_to_string(
                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
 
-    def _check_required_migration_flags(self, migration_flags, config_name):
-        if CONF.libvirt.virt_type == 'xen':
-            if (migration_flags & libvirt.VIR_MIGRATE_PEER2PEER) != 0:
-                LOG.warning(_LW('Removing the VIR_MIGRATE_PEER2PEER flag from '
-                                '%(config_name)s because peer-to-peer '
-                                'migrations are not supported by the "xen" '
-                                'virt type'),
-                            {'config_name': config_name})
-                migration_flags &= ~libvirt.VIR_MIGRATE_PEER2PEER
-        else:
-            if (migration_flags & libvirt.VIR_MIGRATE_PEER2PEER) == 0:
-                LOG.warning(_LW('Adding the VIR_MIGRATE_PEER2PEER flag to '
-                                '%(config_name)s because direct migrations '
-                                'are not supported by the %(virt_type)s '
-                                'virt type'),
-                            {'config_name': config_name,
-                             'virt_type': CONF.libvirt.virt_type})
-                migration_flags |= libvirt.VIR_MIGRATE_PEER2PEER
+    def _prepare_migration_flags(self):
+        migration_flags = 0
 
-        if (migration_flags & libvirt.VIR_MIGRATE_UNDEFINE_SOURCE) == 0:
-            LOG.warning(_LW('Adding the VIR_MIGRATE_UNDEFINE_SOURCE flag to '
-                            '%(config_name)s because, without it, migrated '
-                            'VMs will remain defined on the source host'),
-                        {'config_name': config_name})
-            migration_flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
+        migration_flags |= libvirt.VIR_MIGRATE_LIVE
 
-        if (migration_flags & libvirt.VIR_MIGRATE_PERSIST_DEST) != 0:
-            LOG.warning(_LW('Removing the VIR_MIGRATE_PERSIST_DEST flag from '
-                            '%(config_name)s as Nova ensures the VM is '
-                            'persisted on the destination host'),
-                        {'config_name': config_name})
-            migration_flags &= ~libvirt.VIR_MIGRATE_PERSIST_DEST
+        # Adding p2p flag only if xen is not in use, because xen does not
+        # support p2p migrations
+        if CONF.libvirt.virt_type != 'xen':
+            migration_flags |= libvirt.VIR_MIGRATE_PEER2PEER
 
-        return migration_flags
+        # Adding VIR_MIGRATE_UNDEFINE_SOURCE because, without it, migrated
+        # instance will remain defined on the source host
+        migration_flags |= libvirt.VIR_MIGRATE_UNDEFINE_SOURCE
 
-    def _check_block_migration_flags(self, live_migration_flags,
-                                     block_migration_flags):
-        if (live_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) != 0:
-            LOG.warning(_LW('Removing the VIR_MIGRATE_NON_SHARED_INC flag '
-                            'from the live_migration_flag config option '
-                            'because it will cause all live-migrations to be '
-                            'block-migrations instead.'))
-            live_migration_flags &= ~libvirt.VIR_MIGRATE_NON_SHARED_INC
+        live_migration_flags = block_migration_flags = migration_flags
 
-        if (block_migration_flags & libvirt.VIR_MIGRATE_NON_SHARED_INC) == 0:
-            LOG.warning(_LW('Adding the VIR_MIGRATE_NON_SHARED_INC flag to '
-                            'the block_migration_flag config option, '
-                            'otherwise all block-migrations will be '
-                            'live-migrations instead.'))
-            block_migration_flags |= libvirt.VIR_MIGRATE_NON_SHARED_INC
+        # Adding VIR_MIGRATE_NON_SHARED_INC, otherwise all block-migrations
+        # will be live-migrations instead
+        block_migration_flags |= libvirt.VIR_MIGRATE_NON_SHARED_INC
 
         return (live_migration_flags, block_migration_flags)
 
-    def _handle_live_migration_tunnelled(self, migration_flags, config_name):
-        if CONF.libvirt.live_migration_tunnelled is None:
-            return migration_flags
-
-        if CONF.libvirt.live_migration_tunnelled:
-            if (migration_flags & libvirt.VIR_MIGRATE_TUNNELLED) == 0:
-                LOG.warning(_LW('The %(config_name)s config option does not '
-                                'contain the VIR_MIGRATE_TUNNELLED flag but '
-                                'the live_migration_tunnelled is set to True '
-                                'which causes VIR_MIGRATE_TUNNELLED to be '
-                                'set'),
-                            {'config_name': config_name})
+    def _handle_live_migration_tunnelled(self, migration_flags):
+        if (CONF.libvirt.live_migration_tunnelled is None or
+                CONF.libvirt.live_migration_tunnelled):
             migration_flags |= libvirt.VIR_MIGRATE_TUNNELLED
-        else:
-            if (migration_flags & libvirt.VIR_MIGRATE_TUNNELLED) != 0:
-                LOG.warning(_LW('The %(config_name)s config option contains '
-                                'the VIR_MIGRATE_TUNNELLED flag but the '
-                                'live_migration_tunnelled is set to False '
-                                'which causes VIR_MIGRATE_TUNNELLED to be '
-                                'unset'),
-                            {'config_name': config_name})
-            migration_flags &= ~libvirt.VIR_MIGRATE_TUNNELLED
-
         return migration_flags
 
     def _is_post_copy_available(self):
@@ -618,31 +568,24 @@ class LibvirtDriver(driver.ComputeDriver):
             return True
         return False
 
-    def _handle_live_migration_post_copy(self, migration_flags,
-                                         config_name):
+    def _handle_live_migration_post_copy(self, migration_flags):
         if CONF.libvirt.live_migration_permit_post_copy:
             if self._is_post_copy_available():
                 migration_flags |= libvirt.VIR_MIGRATE_POSTCOPY
             else:
                 LOG.info(_LI('The live_migration_permit_post_copy is set '
                              'to True, but it is not supported.'))
-        elif self._is_post_copy_available():
-            migration_flags &= ~libvirt.VIR_MIGRATE_POSTCOPY
         return migration_flags
 
-    def _handle_live_migration_auto_converge(self, migration_flags,
-                                             config_name):
+    def _handle_live_migration_auto_converge(self, migration_flags):
         if self._host.has_min_version(lv_ver=MIN_LIBVIRT_AUTO_CONVERGE_VERSION,
                                       hv_ver=MIN_QEMU_AUTO_CONVERGE):
             if (self._is_post_copy_available() and
                     (migration_flags & libvirt.VIR_MIGRATE_POSTCOPY) != 0):
-                migration_flags &= ~libvirt.VIR_MIGRATE_AUTO_CONVERGE
                 LOG.info(_LI('The live_migration_permit_post_copy is set to '
                              'True and post copy live migration is available '
                              'so auto-converge will not be in use.'))
-            elif not CONF.libvirt.live_migration_permit_auto_converge:
-                migration_flags &= ~libvirt.VIR_MIGRATE_AUTO_CONVERGE
-            else:
+            elif CONF.libvirt.live_migration_permit_auto_converge:
                 migration_flags |= libvirt.VIR_MIGRATE_AUTO_CONVERGE
         elif CONF.libvirt.live_migration_permit_auto_converge:
             LOG.info(_LI('The live_migration_permit_auto_converge is set '
@@ -650,45 +593,23 @@ class LibvirtDriver(driver.ComputeDriver):
         return migration_flags
 
     def _parse_migration_flags(self):
-        def str2sum(str_val):
-            logical_sum = 0
-            for s in [i.strip() for i in str_val.split(',') if i]:
-                try:
-                    logical_sum |= getattr(libvirt, s)
-                except AttributeError:
-                    LOG.warning(_LW("Ignoring unknown libvirt live migration "
-                                    "flag '%(flag)s'"), {'flag': s})
-            return logical_sum
-
-        live_migration_flags = str2sum(CONF.libvirt.live_migration_flag)
-        block_migration_flags = str2sum(CONF.libvirt.block_migration_flag)
-
-        live_config_name = 'live_migration_flag'
-        block_config_name = 'block_migration_flag'
-
-        live_migration_flags = self._check_required_migration_flags(
-            live_migration_flags, live_config_name)
-        block_migration_flags = self._check_required_migration_flags(
-            block_migration_flags, block_config_name)
-
         (live_migration_flags,
-         block_migration_flags) = self._check_block_migration_flags(
-             live_migration_flags, block_migration_flags)
+            block_migration_flags) = self._prepare_migration_flags()
 
         live_migration_flags = self._handle_live_migration_tunnelled(
-            live_migration_flags, live_config_name)
+            live_migration_flags)
         block_migration_flags = self._handle_live_migration_tunnelled(
-            block_migration_flags, block_config_name)
+            block_migration_flags)
 
         live_migration_flags = self._handle_live_migration_post_copy(
-            live_migration_flags, live_config_name)
+            live_migration_flags)
         block_migration_flags = self._handle_live_migration_post_copy(
-            block_migration_flags, block_config_name)
+            block_migration_flags)
 
         live_migration_flags = self._handle_live_migration_auto_converge(
-            live_migration_flags, live_config_name)
+            live_migration_flags)
         block_migration_flags = self._handle_live_migration_auto_converge(
-            block_migration_flags, block_config_name)
+            block_migration_flags)
 
         self._live_migration_flags = live_migration_flags
         self._block_migration_flags = block_migration_flags

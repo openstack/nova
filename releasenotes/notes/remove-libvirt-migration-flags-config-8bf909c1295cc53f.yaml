@@ -1,0 +1,9 @@
+---
+upgrade:
+  - The 'live_migration_flag' and 'block_migration_flag' options in libvirt
+    section that were deprecated in Mitaka have been completely removed in
+    Newton, because nova automatically sets correct migration flags. New config
+    options has been added to retain possibility to turn tunnelling,
+    auto-converge and post-copy on/off, respectively named
+    `live_migration_tunnelled`, `live_migration_permit_auto_converge` and
+    `live_migration_permit_post_copy`.
