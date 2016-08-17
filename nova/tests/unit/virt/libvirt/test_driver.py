@@ -2741,15 +2741,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance_topology = objects.InstanceNUMATopology(
             cells=[
                 objects.InstanceNUMACell(
-                    id=1, cpuset=set([0, 1]),
+                    id=2, cpuset=set([0, 1]),
                     memory=1024, pagesize=2048),
                 objects.InstanceNUMACell(
-                    id=2, cpuset=set([2, 3]),
+                    id=3, cpuset=set([2, 3]),
                     memory=1024, pagesize=2048)])
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        flavor = objects.Flavor(memory_mb=2048, vcpus=2, root_gb=496,
+        flavor = objects.Flavor(memory_mb=2048, vcpus=4, root_gb=496,
                                 ephemeral_gb=8128, swap=33550336, name='fake',
                                 extra_specs={
                                     "hw:cpu_realtime": "yes",
@@ -2779,7 +2779,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                   return_value=caps),
                 mock.patch.object(
                     hardware, 'get_vcpu_pin_set',
-                    return_value=set([2, 3, 4, 5])),
+                    return_value=set([4, 5, 6, 7])),
                 mock.patch.object(host.Host, 'get_online_cpus',
                                   return_value=set(range(8))),
                 ):
@@ -2810,8 +2810,21 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             self.assertEqual(1, len(cfg.cputune.vcpusched))
             self.assertEqual("fifo", cfg.cputune.vcpusched[0].scheduler)
+
+            # Ensure vCPUs 0-1 are pinned on host CPUs 4-5 and 2-3 are
+            # set on host CPUs 6-7 according the realtime mask ^0-1
+            self.assertEqual(set([4, 5]), cfg.cputune.vcpupin[0].cpuset)
+            self.assertEqual(set([4, 5]), cfg.cputune.vcpupin[1].cpuset)
+            self.assertEqual(set([6, 7]), cfg.cputune.vcpupin[2].cpuset)
+            self.assertEqual(set([6, 7]), cfg.cputune.vcpupin[3].cpuset)
+
+            # We ensure that emulator threads are pinned on host CPUs
+            # 4-5 which are "normal" vCPUs
+            self.assertEqual(set([4, 5]), cfg.cputune.emulatorpin.cpuset)
+
+            # We ensure that the vCPUs RT are 2-3 set to the host CPUs
+            # which are 6, 7
             self.assertEqual(set([2, 3]), cfg.cputune.vcpusched[0].vcpus)
-            self.assertEqual(set([0, 1]), cfg.cputune.emulatorpin.cpuset)
 
     def test_get_cpu_numa_config_from_instance(self):
         topology = objects.InstanceNUMATopology(cells=[
