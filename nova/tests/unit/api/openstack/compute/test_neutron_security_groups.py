@@ -17,7 +17,6 @@ import uuid
 
 import mock
 from neutronclient.common import exceptions as n_exc
-from neutronclient.neutron import v2_0 as neutronv20
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -331,18 +330,6 @@ class TestNeutronSecurityGroupsV21(
         req = fakes.HTTPRequest.blank('/v2/fake/servers/%s/action' %
                                       UUID_SERVER)
         self.manager._removeSecurityGroup(req, UUID_SERVER, body)
-
-    def test_get_raises_no_unique_match_error(self):
-
-        def fake_find_resourceid_by_name_or_id(client, param, name,
-                                               project_id=None):
-            raise n_exc.NeutronClientNoUniqueMatch()
-
-        self.stubs.Set(neutronv20, 'find_resourceid_by_name_or_id',
-                       fake_find_resourceid_by_name_or_id)
-        security_group_api = self.controller.security_group_api
-        self.assertRaises(exception.NoUniqueMatch, security_group_api.get,
-                          context.get_admin_context(), 'foobar')
 
     def test_get_instances_security_groups_bindings(self):
         servers = [{'id': test_security_groups.FAKE_UUID1},
@@ -885,3 +872,23 @@ class MockClient(object):
                        'one or more ports still in use on the network'
                        % network)
             raise n_exc.NeutronClientException(message=msg, status_code=409)
+
+    def find_resource(self, resource, name_or_id, project_id=None,
+                      cmd_resource=None, parent_id=None, fields=None):
+        if resource == 'security_group':
+            # lookup first by unique id
+            sg = self._fake_security_groups.get(name_or_id)
+            if sg:
+                return sg
+            # lookup by name, raise an exception on duplicates
+            res = None
+            for sg in self._fake_security_groups.values():
+                if sg['name'] == name_or_id:
+                    if res:
+                        raise n_exc.NeutronClientNoUniqueMatch(
+                            resource=resource, name=name_or_id)
+                    res = sg
+            if res:
+                return res
+        raise n_exc.NotFound("Fake %s '%s' not found." %
+                             (resource, name_or_id))
