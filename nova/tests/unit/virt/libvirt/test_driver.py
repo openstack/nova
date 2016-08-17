@@ -13907,96 +13907,22 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         for fs in supported_fs:
             self.assertFalse(drvr.is_supported_fs_format(fs))
 
-    def test_post_live_migration_at_destination_with_block_device_info(self):
-        # Preparing mocks
-        mock_domain = self.mox.CreateMock(fakelibvirt.virDomain)
-        self.resultXML = None
+    @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_post_live_migration_at_destination(
+            self, mock_get_guest, mock_write_instance_config):
+        instance = objects.Instance(id=1, uuid=uuids.instance)
+        dom = mock.MagicMock()
+        dom.XMLDesc.return_value = "<domain></domain>"
+        guest = libvirt_guest.Guest(dom)
 
-        def fake_getLibVersion():
-            return fakelibvirt.FAKE_LIBVIRT_VERSION
-
-        def fake_getCapabilities():
-            return """
-            <capabilities>
-                <host>
-                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
-                    <cpu>
-                      <arch>x86_64</arch>
-                      <model>Penryn</model>
-                      <vendor>Intel</vendor>
-                      <topology sockets='1' cores='2' threads='1'/>
-                      <feature name='xtpr'/>
-                    </cpu>
-                </host>
-            </capabilities>
-            """
-
-        def fake_to_xml(context, instance, network_info, disk_info,
-                        image_meta=None, rescue=None,
-                        block_device_info=None, write_to_disk=False):
-            if image_meta is None:
-                image_meta = objects.ImageMeta.from_dict({})
-            conf = drvr._get_guest_config(instance, network_info, image_meta,
-                                          disk_info, rescue, block_device_info)
-            self.resultXML = conf.to_xml()
-            return self.resultXML
-
-        def fake_get_domain(instance):
-            return mock_domain
-
-        def fake_baselineCPU(cpu, flag):
-            return """<cpu mode='custom' match='exact'>
-                        <model fallback='allow'>Westmere</model>
-                        <vendor>Intel</vendor>
-                        <feature policy='require' name='aes'/>
-                      </cpu>
-                   """
-
-        network_info = _fake_network_info(self, 1)
-        self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
-                                      getCapabilities=fake_getCapabilities,
-                                      getVersion=lambda: 1005001,
-                                      listDefinedDomains=lambda: [],
-                                      numOfDomains=lambda: 0,
-                                      baselineCPU=fake_baselineCPU)
-        instance_ref = self.test_instance
-        instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
-        instance = objects.Instance(**instance_ref)
-
-        self.mox.ReplayAll()
+        mock_get_guest.return_value = guest
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(drvr,
-                       '_get_guest_xml',
-                       fake_to_xml)
-        self.stubs.Set(host.Host,
-                       'get_domain',
-                       fake_get_domain)
-        bdm = objects.BlockDeviceMapping(
-            self.context,
-            **fake_block_device.FakeDbBlockDeviceDict(
-                {'id': 1, 'guest_format': None,
-                 'boot_index': 0,
-                 'source_type': 'volume',
-                 'destination_type': 'volume',
-                 'device_name': '/dev/vda',
-                 'disk_bus': 'virtio',
-                 'device_type': 'disk',
-                 'delete_on_termination': False}))
-        block_device_info = {'block_device_mapping':
-                driver_block_device.convert_volumes([bdm])}
-        block_device_info['block_device_mapping'][0]['connection_info'] = (
-                {'driver_volume_type': 'iscsi'})
-        with test.nested(
-                mock.patch.object(
-                    driver_block_device.DriverVolumeBlockDevice, 'save'),
-                mock.patch.object(objects.Instance, 'save')
-        ) as (mock_volume_save, mock_instance_save):
-            drvr.post_live_migration_at_destination(
-                    self.context, instance, network_info, True,
-                    block_device_info=block_device_info)
-            self.assertIn('fake', self.resultXML)
-            mock_volume_save.assert_called_once_with()
+        drvr.post_live_migration_at_destination(mock.ANY, instance, mock.ANY)
+
+        mock_write_instance_config.assert_called_once_with(
+            "<domain></domain>")
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
@@ -15591,7 +15517,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
-                        block_device_info=None, write_to_disk=False):
+                        block_device_info=None):
             return ""
 
         def fake_plug_vifs(instance, network_info):
@@ -16439,7 +16365,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_get_domain.return_value = fake_dom
         mock_load_file.return_value = "fake_unrescue_xml"
         unrescue_xml_path = os.path.join('/path', 'unrescue.xml')
-        xml_path = os.path.join('/path', 'libvirt.xml')
         rescue_file = os.path.join('/path', 'rescue.file')
         rescue_dir = os.path.join('/path', 'rescue.dir')
 
@@ -16467,7 +16392,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                       mock_rmtree, mock_isdir, mock_lvm_disks,
                       mock_remove_volumes, mock_glob):
             drvr.unrescue(instance, None)
-            mock_write.assert_called_once_with(xml_path, "fake_unrescue_xml")
             mock_destroy.assert_called_once_with(instance)
             mock_create.assert_called_once_with("fake_unrescue_xml",
                                                  fake_dom)
