@@ -656,6 +656,18 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.LiveMigrationURINotAvailable(virt_type=virt_type)
         return uri % dest
 
+    @staticmethod
+    def _migrate_uri(dest):
+        uri = None
+        # Only QEMU live migrations supports migrate-uri parameter
+        virt_type = CONF.libvirt.virt_type
+        if virt_type in ('qemu', 'kvm'):
+            # QEMU accept two schemes: tcp and rdma.  By default
+            # libvirt build the URI using the remote hostname and the
+            # tcp schema.
+            uri = 'tcp://%s' % dest
+        return uri
+
     def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
         try:
@@ -5863,9 +5875,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._check_graphics_addresses_can_live_migrate(listen_addrs)
                 self._verify_serial_console_is_disabled()
 
+            # NOTE(aplanas) migrate_uri will have a value only in the
+            # case that `live_migration_inbound_addr` parameter is
+            # set, and we propose a non tunneled migration.
+            migrate_uri = None
             if ('target_connect_addr' in migrate_data and
                     migrate_data.target_connect_addr is not None):
                 dest = migrate_data.target_connect_addr
+                if (migration_flags &
+                    libvirt.VIR_MIGRATE_TUNNELLED == 0):
+                    migrate_uri = self._migrate_uri(dest)
 
             new_xml_str = None
             params = None
@@ -5897,6 +5916,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     params.pop('migrate_disks')
 
             guest.migrate(self._live_migration_uri(dest),
+                          migrate_uri=migrate_uri,
                           flags=migration_flags,
                           params=params,
                           domain_xml=new_xml_str,

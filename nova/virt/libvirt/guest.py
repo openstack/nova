@@ -523,11 +523,12 @@ class Guest(object):
         """
         self._domain.suspend()
 
-    def migrate(self, destination, params=None, flags=0, domain_xml=None,
-                bandwidth=0):
+    def migrate(self, destination, migrate_uri=None, params=None, flags=0,
+                domain_xml=None, bandwidth=0):
         """Migrate guest object from its current host to the destination
 
         :param destination: URI of host destination where guest will be migrate
+        :param migrate_uri: URI for invoking the migration
         :param flags: May be one of more of the following:
            VIR_MIGRATE_LIVE Do not pause the VM during migration
            VIR_MIGRATE_PEER2PEER Direct connection between source &
@@ -563,11 +564,15 @@ class Guest(object):
                 destination, flags=flags, bandwidth=bandwidth)
         else:
             if params:
+                if migrate_uri:
+                    # In migrateToURI3 this paramenter is searched in
+                    # the `params` dict
+                    params['migrate_uri'] = migrate_uri
                 self._domain.migrateToURI3(
                     destination, params=params, flags=flags)
             else:
                 self._domain.migrateToURI2(
-                    destination, dxml=domain_xml,
+                    destination, miguri=migrate_uri, dxml=domain_xml,
                     flags=flags, bandwidth=bandwidth)
 
     def abort_job(self):
