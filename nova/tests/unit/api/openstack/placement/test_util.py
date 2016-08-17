@@ -18,7 +18,9 @@ import webob
 
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
+from nova import objects
 from nova import test
+from nova.tests import uuidsentinel
 
 
 class TestCheckAccept(test.NoDBTestCase):
@@ -177,3 +179,27 @@ class TestRequireContent(test.NoDBTestCase):
         req = webob.Request.blank('/')
         req.content_type = 'application/json'
         self.assertTrue(self.handler(req))
+
+
+class TestPlacementURLs(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestPlacementURLs, self).setUp()
+        self.resource_provider = objects.ResourceProvider(
+            name=uuidsentinel.rp_name,
+            uuid=uuidsentinel.rp_uuid)
+
+    def test_resource_provider_url(self):
+        environ = {}
+        expected_url = '/resource_providers/%s' % uuidsentinel.rp_uuid
+        self.assertEqual(expected_url, util.resource_provider_url(
+            environ, self.resource_provider))
+
+    def test_resource_provider_url_prefix(self):
+        # SCRIPT_NAME represents the mount point of a WSGI
+        # application when it is hosted at a path/prefix.
+        environ = {'SCRIPT_NAME': '/placement'}
+        expected_url = ('/placement/resource_providers/%s'
+                        % uuidsentinel.rp_uuid)
+        self.assertEqual(expected_url, util.resource_provider_url(
+            environ, self.resource_provider))

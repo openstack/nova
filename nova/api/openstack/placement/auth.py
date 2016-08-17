@@ -12,6 +12,7 @@
 
 
 from oslo_context import context
+from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
 from oslo_middleware import request_id
 import webob.dec
@@ -55,6 +56,11 @@ class NoAuthMiddleware(Middleware):
         return self.application
 
 
+@enginefacade.transaction_context_provider
+class RequestContext(context.RequestContext):
+    pass
+
+
 class PlacementKeystoneContext(Middleware):
     """Make a request context from keystone headers."""
 
@@ -62,7 +68,7 @@ class PlacementKeystoneContext(Middleware):
     def __call__(self, req):
         req_id = req.environ.get(request_id.ENV_REQUEST_ID)
 
-        ctx = context.RequestContext.from_environ(
+        ctx = RequestContext.from_environ(
             req.environ, request_id=req_id)
 
         if ctx.user is None:

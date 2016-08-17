@@ -12,12 +12,26 @@
 """Utility methods for placement API."""
 
 import functools
+import jsonschema
 from oslo_middleware import request_id
+from oslo_utils import uuidutils
 import webob
 
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.microversion
+
+
+# NOTE(cdent): This registers a FormatChecker on the jsonschema
+# module. Do not delete this code! Although it appears that nothing
+# is using the decorated method it is being used in JSON schema
+# validations to check uuid formatted strings. The addition of a uuid
+# format checker is an implicit result of loading the util module.
+# Since util.json_error_formatter # needs to be imported when jsonschema
+# is doing validation this works.
+@jsonschema.FormatChecker.cls_checks('uuid')
+def _validate_uuid_format(instance):
+    return uuidutils.is_uuid_like(instance)
 
 
 def check_accept(*types):
@@ -93,6 +107,16 @@ def require_content(content_type):
                 return f(req)
         return decorated_function
     return decorator
+
+
+def resource_provider_url(environ, resource_provider):
+    """Produce the URL for a resource provider.
+
+    If SCRIPT_NAME is present, it is the mount point of the placement
+    WSGI app.
+    """
+    prefix = environ.get('SCRIPT_NAME', '')
+    return '%s/resource_providers/%s' % (prefix, resource_provider.uuid)
 
 
 def wsgi_path_item(environ, name):

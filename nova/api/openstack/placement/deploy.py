@@ -17,13 +17,17 @@ from oslo_middleware import request_id
 from nova.api.openstack.placement import auth
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
+from nova import objects
 
-# TODO(cdent): register objects here as this is our startup place,
-# but only once we start using them.
 
 # TODO(cdent): NAME points to the config project being used, so for
 # now this is "nova" but we probably want "placement" eventually.
 NAME = "nova"
+
+
+# Make sure that objects are registered for this running of the
+# placement API.
+objects.register_all()
 
 
 def deploy(conf, project_name):
