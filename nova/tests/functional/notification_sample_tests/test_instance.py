@@ -37,15 +37,13 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-delete-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-delete-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
@@ -81,8 +79,7 @@ class TestInstanceNotificationSample(
         self.assertEqual(7, len(instance_updates))
         create_steps = [
             # nothing -> scheduling
-            {'reservation_id':
-                notification_sample_base.NotificationSampleTestBase.ANY,
+            {'reservation_id': server['reservation_id'],
              'uuid': server['id'],
              'host': None,
              'node': None,
@@ -205,15 +202,13 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-power_on-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-power_on-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
@@ -231,15 +226,13 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-shelve-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-shelve-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
@@ -255,15 +248,13 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-suspend-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-suspend-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
@@ -278,15 +269,13 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-pause-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-pause-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
@@ -303,15 +292,13 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-resize-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-resize-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
@@ -328,14 +315,12 @@ class TestInstanceNotificationSample(
         self._verify_notification(
             'instance-restore-start',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-restore-end',
             replacements={
-                'reservation_id':
-                    notification_sample_base.NotificationSampleTestBase.ANY,
+                'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

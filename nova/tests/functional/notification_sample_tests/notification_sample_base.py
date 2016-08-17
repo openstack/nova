@@ -152,17 +152,24 @@ class NotificationSampleTestBase(test.TestCase,
             image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
             flavor_id=flavor_id)
 
+        extra_params['return_reservation_id'] = True
+
         if extra_params:
             server.update(extra_params)
 
         post = {'server': server}
         created_server = self.api.post_server(post)
+        reservation_id = created_server['reservation_id']
+        created_server = self.api.get_servers(
+            detail=False,
+            search_opts={'reservation_id': reservation_id})[0]
+
         self.assertTrue(created_server['id'])
 
         # Wait for it to finish being created
         found_server = self._wait_for_state_change(self.api, created_server,
                                                    expected_status)
-
+        found_server['reservation_id'] = reservation_id
         return found_server
 
     def _wait_until_deleted(self, server):
