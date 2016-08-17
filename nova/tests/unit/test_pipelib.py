@@ -53,7 +53,7 @@ class PipelibTest(test.TestCase):
         _do_test()
 
     def test_setup_security_group(self):
-        group_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
+        group_name = "%s%s" % (self.project, CONF.cloudpipe.vpn_key_suffix)
 
         # First attempt, does not exist (thus its created)
         res1_group = self.cloudpipe.setup_security_group(self.context)
@@ -64,7 +64,7 @@ class PipelibTest(test.TestCase):
         self.assertEqual(res1_group, res2_group)
 
     def test_setup_key_pair(self):
-        key_name = "%s%s" % (self.project, CONF.vpn_key_suffix)
+        key_name = "%s%s" % (self.project, CONF.cloudpipe.vpn_key_suffix)
         with utils.tempdir() as tmpdir:
             self.flags(keys_path=tmpdir, group='crypto')
 
