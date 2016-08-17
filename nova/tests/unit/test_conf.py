@@ -16,9 +16,11 @@ import os
 import tempfile
 
 import fixtures
+import mock
 from oslo_config import cfg
 
 import nova.conf.virt
+from nova import config
 from nova import test
 
 
@@ -80,3 +82,18 @@ class ConfTest(test.NoDBTestCase):
         # a dict.
         actual = [{'node': '0', 'size': '2048', 'count': '64'}]
         self.assertEqual(actual, self.conf.reserved_huge_pages)
+
+
+class TestParseArgs(test.NoDBTestCase):
+
+    @mock.patch.object(config.log, 'register_options')
+    def test_parse_args_glance_debug_false(self, register_options):
+        self.flags(debug=False, group='glance')
+        config.parse_args([], configure_db=False, init_rpc=False)
+        self.assertIn('glanceclient=WARN', config.CONF.default_log_levels)
+
+    @mock.patch.object(config.log, 'register_options')
+    def test_parse_args_glance_debug_true(self, register_options):
+        self.flags(debug=True, group='glance')
+        config.parse_args([], configure_db=False, init_rpc=False)
+        self.assertIn('glanceclient=DEBUG', config.CONF.default_log_levels)
