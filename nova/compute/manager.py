@@ -1123,7 +1123,7 @@ class ComputeManager(manager.Manager):
     def init_host(self):
         """Initialization for a standalone compute service."""
 
-        if CONF.pci_passthrough_whitelist:
+        if CONF.pci.passthrough_whitelist:
             # Simply loading the PCI passthrough whitelist will do a bunch of
             # validation that would otherwise wait until the PciDevTracker is
             # constructed when updating available resources for the compute
@@ -1131,7 +1131,7 @@ class ComputeManager(manager.Manager):
             # So load up the whitelist when starting the compute service to
             # flush any invalid configuration early so we can kill the service
             # if the configuration is wrong.
-            whitelist.Whitelist(CONF.pci_passthrough_whitelist)
+            whitelist.Whitelist(CONF.pci.passthrough_whitelist)
 
         self.driver.init_host(host=self.host)
         context = nova.context.get_admin_context()

@@ -16,9 +16,15 @@
 
 from oslo_config import cfg
 
+pci_group = cfg.OptGroup(
+    name='pci',
+    title='PCI passthrough options')
+
 pci_opts = [
-    cfg.MultiStrOpt('pci_alias',
+    cfg.MultiStrOpt('alias',
         default=[],
+        deprecated_name='pci_alias',
+        deprecated_group='DEFAULT',
         help="""
 An alias for a PCI passthrough device requirement.
 
@@ -29,7 +35,7 @@ Possible Values:
 
 * A list of JSON values which describe the aliases. For example:
 
-    pci_alias = {
+    alias = {
       "name": "QuickAssist",
       "product_id": "0443",
       "vendor_id": "8086",
@@ -45,8 +51,10 @@ Possible Values:
   * "device_type": Type of PCI device. Valid values are: "type-PCI",
     "type-PF" and "type-VF".
 """),
-    cfg.MultiStrOpt('pci_passthrough_whitelist',
+    cfg.MultiStrOpt('passthrough_whitelist',
         default=[],
+        deprecated_name='pci_passthrough_whitelist',
+        deprecated_group='DEFAULT',
         help="""
 White list of PCI devices available to VMs.
 
@@ -76,38 +84,37 @@ Possible values:
 
   Valid examples are:
 
-    pci_passthrough_whitelist = {"devname":"eth0",
-                                 "physical_network":"physnet"}
-    pci_passthrough_whitelist = {"address":"*:0a:00.*"}
-    pci_passthrough_whitelist = {"address":":0a:00.",
-                                 "physical_network":"physnet1"}
-    pci_passthrough_whitelist = {"vendor_id":"1137",
-                                 "product_id":"0071"}
-    pci_passthrough_whitelist = {"vendor_id":"1137",
-                                 "product_id":"0071",
-                                 "address": "0000:0a:00.1",
-                                 "physical_network":"physnet1"}
+    passthrough_whitelist = {"devname":"eth0",
+                             "physical_network":"physnet"}
+    passthrough_whitelist = {"address":"*:0a:00.*"}
+    passthrough_whitelist = {"address":":0a:00.",
+                             "physical_network":"physnet1"}
+    passthrough_whitelist = {"vendor_id":"1137",
+                             "product_id":"0071"}
+    passthrough_whitelist = {"vendor_id":"1137",
+                             "product_id":"0071",
+                             "address": "0000:0a:00.1",
+                             "physical_network":"physnet1"}
 
   The following are invalid, as they specify mutually exclusive options:
 
-    pci_passthrough_whitelist = {"devname":"eth0",
-                                 "physical_network":"physnet",
-                                 "address":"*:0a:00.*"}
+    passthrough_whitelist = {"devname":"eth0",
+                             "physical_network":"physnet",
+                             "address":"*:0a:00.*"}
 
 * A JSON list of JSON dictionaries corresponding to the above format. For
   example:
 
-    pci_passthrough_whitelist = [{"product_id":"0001", "vendor_id":"8086"},
-                                 {"product_id":"0002", "vendor_id":"8086"}]
+    passthrough_whitelist = [{"product_id":"0001", "vendor_id":"8086"},
+                             {"product_id":"0002", "vendor_id":"8086"}]
 """)
 ]
 
 
 def register_opts(conf):
-    conf.register_opts(pci_opts)
+    conf.register_group(pci_group)
+    conf.register_opts(pci_opts, group=pci_group)
 
 
 def list_opts():
-    # TODO(sfinucan): This should be moved into the PCI group and
-    # oslo_config.cfg.OptGroup used
-    return {'DEFAULT': pci_opts}
+    return {pci_group: pci_opts}

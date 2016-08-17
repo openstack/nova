@@ -2730,11 +2730,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertIn('appears to not be owned by this host', msg[0][0])
 
     def test_init_host_pci_passthrough_whitelist_validation_failure(self):
-        # Tests that we fail init_host if there is a pci_passthrough_whitelist
+        # Tests that we fail init_host if there is a pci.passthrough_whitelist
         # configured incorrectly.
-        self.flags(pci_passthrough_whitelist=[
+        self.flags(passthrough_whitelist=[
             # it's invalid to specify both in the same devspec
-            jsonutils.dumps({'address': 'foo', 'devname': 'bar'})])
+            jsonutils.dumps({'address': 'foo', 'devname': 'bar'})],
+            group='pci')
         self.assertRaises(exception.PciDeviceInvalidDeviceName,
                           self.compute.init_host)
 

@@ -45,13 +45,14 @@ def get_pci_dev_info(pci_obj, property, max, hex_value):
 class PciAddress(object):
     """Manages the address fields of the whitelist.
 
-    This class checks the address fields of the pci_passthrough_whitelist
+    This class checks the address fields of the pci.passthrough_whitelist
     configuration option, validating the address fields.
     Example config are:
 
-        | pci_passthrough_whitelist = {"address":"*:0a:00.*",
-        |                         "physical_network":"physnet1"}
-        | pci_passthrough_whitelist = {"vendor_id":"1137","product_id":"0071"}
+        | [pci]
+        | passthrough_whitelist = {"address":"*:0a:00.*",
+        |                          "physical_network":"physnet1"}
+        | passthrough_whitelist = {"vendor_id":"1137","product_id":"0071"}
 
     This function class will validate the address fields, check for wildcards,
     and insert wildcards where the field is left blank.
