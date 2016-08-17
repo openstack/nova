@@ -2277,8 +2277,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             are in place.
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   instance.image_meta,
-                                  block_device_info=block_device_info,
-                                  write_to_disk=True)
+                                  block_device_info=block_device_info)
 
         if context.auth_token is not None:
             # NOTE (rmk): Re-populate any missing backing files.
@@ -2515,8 +2514,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            network_info=network_info,
                            admin_pass=rescue_password)
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
-                                  image_meta, rescue=rescue_images,
-                                  write_to_disk=True)
+                                  image_meta, rescue=rescue_images)
         self._destroy(instance)
         self._create_domain(xml, post_xml_callback=gen_confdrive)
 
@@ -2525,9 +2523,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         instance_dir = libvirt_utils.get_instance_path(instance)
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
-        xml_path = os.path.join(instance_dir, 'libvirt.xml')
         xml = libvirt_utils.load_file(unrescue_xml_path)
-        libvirt_utils.write_to_file(xml_path, xml)
         guest = self._host.get_guest(instance)
 
         # TODO(sahid): We are converting all calls from a
@@ -2575,8 +2571,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         xml = self._get_guest_xml(context, instance, network_info,
                                   disk_info, image_meta,
-                                  block_device_info=block_device_info,
-                                  write_to_disk=True)
+                                  block_device_info=block_device_info)
         self._create_domain_and_network(
             context, xml, instance, network_info, disk_info,
             block_device_info=block_device_info,
@@ -4604,7 +4599,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_guest_xml(self, context, instance, network_info, disk_info,
                        image_meta, rescue=None,
-                       block_device_info=None, write_to_disk=False):
+                       block_device_info=None):
         # NOTE(danms): Stringifying a NetworkInfo will take a lock. Do
         # this ahead of time so that we don't acquire it while also
         # holding the logging lock.
@@ -4624,11 +4619,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                       disk_info, rescue, block_device_info,
                                       context)
         xml = conf.to_xml()
-
-        if write_to_disk:
-            instance_dir = libvirt_utils.get_instance_path(instance)
-            xml_path = os.path.join(instance_dir, 'libvirt.xml')
-            libvirt_utils.write_to_file(xml_path, xml)
 
         LOG.debug('End _get_guest_xml xml=%(xml)s',
                   {'xml': xml}, instance=instance)
@@ -6684,17 +6674,10 @@ class LibvirtDriver(driver.ComputeDriver):
         :param network_info: instance network information
         :param block_migration: if true, post operation of block_migration.
         """
-        # Define migrated instance, otherwise, suspend/destroy does not work.
-        # In case of block migration, destination does not have
-        # libvirt.xml
-        disk_info = blockinfo.get_disk_info(
-            CONF.libvirt.virt_type, instance,
-            instance.image_meta, block_device_info)
-        xml = self._get_guest_xml(context, instance,
-                                  network_info, disk_info,
-                                  instance.image_meta,
-                                  block_device_info=block_device_info,
-                                  write_to_disk=True)
+        guest = self._host.get_guest(instance)
+
+        # Make sure we define the migrated instance in libvirt
+        xml = guest.get_xml_desc()
         self._host.write_instance_config(xml)
 
     def _get_instance_disk_info(self, instance_name, xml,
@@ -7238,8 +7221,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         xml = self._get_guest_xml(context, instance, network_info,
                                   block_disk_info, image_meta,
-                                  block_device_info=block_device_info,
-                                  write_to_disk=True)
+                                  block_device_info=block_device_info)
         # NOTE(mriedem): vifs_already_plugged=True here, regardless of whether
         # or not we've migrated to another host, because we unplug VIFs locally
         # and the status change in the port might go undetected by the neutron
