@@ -24,7 +24,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 
-from nova.compute import hv_type
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova.compute import vm_states
@@ -288,7 +287,7 @@ def to_supported_instances(host_capabilities):
             guestarch = obj_fields.Architecture.canonicalize(guestarch)
             ostype = vm_mode.canonicalize(ostype)
 
-            result.append((guestarch, hv_type.XEN, ostype))
+            result.append((guestarch, obj_fields.HVType.XEN, ostype))
         except ValueError:
             LOG.warning(_LW("Failed to extract instance support from %s"),
                         capability)

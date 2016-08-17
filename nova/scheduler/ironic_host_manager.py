@@ -21,10 +21,10 @@ This host manager will consume all cpu's, disk space, and
 ram from a host / node as it is supporting Baremetal hosts, which can not be
 subdivided into multiple instances.
 """
-from nova.compute import hv_type
 import nova.conf
 from nova import context as context_module
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.scheduler import host_manager
 
 CONF = nova.conf.CONF
@@ -78,7 +78,7 @@ class IronicHostManager(host_manager.HostManager):
     @staticmethod
     def _is_ironic_compute(compute):
         ht = compute.hypervisor_type if 'hypervisor_type' in compute else None
-        return ht == hv_type.IRONIC
+        return ht == obj_fields.HVType.IRONIC
 
     def _load_filters(self):
         if CONF.filter_scheduler.use_baremetal_filters:

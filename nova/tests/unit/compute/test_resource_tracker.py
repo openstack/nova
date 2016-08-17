@@ -19,7 +19,6 @@ from oslo_utils import timeutils
 from oslo_utils import units
 
 from nova.compute import claims
-from nova.compute import hv_type
 from nova.compute.monitors import base as monitor_base
 from nova.compute import power_state
 from nova.compute import resource_tracker
@@ -80,7 +79,7 @@ _COMPUTE_NODE_FIXTURES = [
         supported_hv_specs=[
             objects.HVSpec.from_list([
                 obj_fields.Architecture.I686,
-                hv_type.KVM,
+                obj_fields.HVType.KVM,
                 vm_mode.HVM])
         ],
         metrics=None,

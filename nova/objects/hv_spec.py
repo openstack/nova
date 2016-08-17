@@ -15,7 +15,6 @@
 
 from oslo_utils import versionutils
 
-from nova.compute import hv_type
 from nova.objects import base
 from nova.objects import fields
 
@@ -48,5 +47,5 @@ class HVSpec(base.NovaObject):
         super(HVSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
         if (target_version < (1, 1) and 'hv_type' in primitive and
-            hv_type.VIRTUOZZO == primitive['hv_type']):
-            primitive['hv_type'] = hv_type.PARALLELS
+                fields.HVType.VIRTUOZZO == primitive['hv_type']):
+            primitive['hv_type'] = fields.HVType.PARALLELS

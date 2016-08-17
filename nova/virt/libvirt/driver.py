@@ -61,7 +61,6 @@ from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
-from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -5040,7 +5039,7 @@ class LibvirtDriver(driver.ComputeDriver):
             for dt in g.domtype:
                 instance_cap = (
                     fields.Architecture.canonicalize(g.arch),
-                    hv_type.canonicalize(dt),
+                    fields.HVType.canonicalize(dt),
                     vm_mode.canonicalize(g.ostype))
                 instance_caps.append(instance_cap)
 

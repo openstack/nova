@@ -34,7 +34,6 @@ import six
 import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
-from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -98,7 +97,7 @@ def _get_nodes_supported_instances(cpu_arch=None):
     if not cpu_arch:
         return []
     return [(cpu_arch,
-             hv_type.BAREMETAL,
+             obj_fields.HVType.BAREMETAL,
              vm_mode.HVM)]
 
 
