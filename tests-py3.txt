@@ -32,7 +32,6 @@ nova.tests.unit.api.openstack.compute.test_versions.VersionsTestV21WithV2Compati
 nova.tests.unit.api.openstack.compute.test_volumes.BootFromVolumeTest
 nova.tests.unit.api.openstack.compute.test_volumes.VolumeApiTestV21
 nova.tests.unit.api.test_compute_req_id.RequestIdTest
-nova.tests.unit.api.test_validator.ValidatorTestCase
 nova.tests.unit.api.test_wsgi.Test
 nova.tests.unit.compute.test_compute.ComputeAPITestCase.test_create_with_base64_user_data
 nova.tests.unit.compute.test_compute.ComputeTestCase.test_finish_resize_with_volumes
