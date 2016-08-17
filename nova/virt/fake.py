@@ -32,7 +32,6 @@ from oslo_utils import versionutils
 
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_mode
 import nova.conf
 from nova.console import type as ctype
 from nova import exception
@@ -149,7 +148,7 @@ class FakeDriver(driver.ComputeDriver):
             'supported_instances': [(
                 obj_fields.Architecture.X86_64,
                 obj_fields.HVType.FAKE,
-                vm_mode.HVM)],
+                obj_fields.VMMode.HVM)],
             'numa_topology': None,
           }
         self._mounts = {}

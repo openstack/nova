@@ -18,8 +18,6 @@ import re
 from oslo_versionedobjects import fields
 import six
 
-# TODO(berrange) Temporary import for VMMode class
-from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
@@ -541,17 +539,79 @@ class VIFModel(BaseNovaEnum):
 
 
 class VMMode(BaseNovaEnum):
-    # TODO(berrange): move all constants out of 'nova.compute.vm_mode'
-    # into fields on this class
-    ALL = vm_mode.ALL
+    """Represents possible vm modes for instances.
+
+    Compute instance VM modes represent the host/guest ABI used for the
+    virtual machine or container. Individual hypervisors may support
+    multiple different vm modes per host. Available VM modes for a
+    hypervisor driver may also vary according to the architecture it is
+    running on.
+    """
+    HVM = 'hvm'  # Native ABI (aka fully virtualized)
+    XEN = 'xen'  # Xen 3.0 paravirtualized
+    UML = 'uml'  # User Mode Linux paravirtualized
+    EXE = 'exe'  # Executables in containers
+
+    ALL = (HVM, XEN, UML, EXE)
 
     def coerce(self, obj, attr, value):
         try:
-            value = vm_mode.canonicalize(value)
+            value = self.canonicalize(value)
         except exception.InvalidVirtualMachineMode:
             msg = _("Virtual machine mode '%s' is not valid") % value
             raise ValueError(msg)
+
         return super(VMMode, self).coerce(obj, attr, value)
+
+    @classmethod
+    def get_from_instance(cls, instance):
+        """Get the vm mode for an instance
+
+        :param instance: instance object to query
+
+        :returns: canonicalized vm mode for the instance
+        """
+        mode = instance.vm_mode
+
+        return cls.canonicalize(mode)
+
+    @classmethod
+    def is_valid(cls, name):
+        """Check if a string is a valid vm mode
+
+        :param name: vm mode name to validate
+
+        :returns: True if @name is valid
+        """
+        return name in cls.ALL
+
+    @classmethod
+    def canonicalize(cls, mode):
+        """Canonicalize the vm mode
+
+        :param name: vm mode name to canonicalize
+
+        :returns: a canonical vm mode name
+        """
+        if mode is None:
+            return None
+
+        mode = mode.lower()
+
+        # For compatibility with pre-Folsom deployments
+        if mode == 'pv':
+            mode = cls.XEN
+
+        if mode == 'hv':
+            mode = cls.HVM
+
+        if mode == 'baremetal':
+            mode = cls.HVM
+
+        if not cls.is_valid(mode):
+            raise exception.InvalidVirtualMachineMode(vmmode=mode)
+
+        return mode
 
 
 class WatchdogAction(BaseNovaEnum):

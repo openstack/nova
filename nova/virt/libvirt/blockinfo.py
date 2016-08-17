@@ -76,7 +76,6 @@ from oslo_config import cfg
 import six
 
 from nova import block_device
-from nova.compute import vm_mode
 from nova import exception
 from nova.i18n import _
 from nova.objects import base as obj_base
@@ -248,8 +247,8 @@ def get_disk_bus_for_device_type(instance,
     elif virt_type == "lxc":
         return "lxc"
     elif virt_type == "xen":
-        guest_vm_mode = vm_mode.get_from_instance(instance)
-        if guest_vm_mode == vm_mode.HVM:
+        guest_vm_mode = obj_fields.VMMode.get_from_instance(instance)
+        if guest_vm_mode == obj_fields.VMMode.HVM:
             return "ide"
         else:
             return "xen"

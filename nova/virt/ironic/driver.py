@@ -36,7 +36,6 @@ import six.moves.urllib.parse as urlparse
 from nova.api.metadata import base as instance_metadata
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_mode
 from nova.compute import vm_states
 import nova.conf
 from nova.console import type as console_type
@@ -98,7 +97,7 @@ def _get_nodes_supported_instances(cpu_arch=None):
         return []
     return [(cpu_arch,
              obj_fields.HVType.BAREMETAL,
-             vm_mode.HVM)]
+             obj_fields.VMMode.HVM)]
 
 
 def _log_ironic_polling(what, node, instance):

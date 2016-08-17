@@ -25,6 +25,7 @@ from nova.network import model as network_model
 from nova.objects import fields
 from nova import signature_utils
 from nova import test
+from nova.tests.unit import fake_instance
 from nova import utils
 
 
@@ -265,6 +266,62 @@ class TestHVType(TestField):
         self.assertRaises(exception.InvalidHypervisorVirtType,
                           fields.HVType.canonicalize,
                           'wibble')
+
+
+class TestVMMode(TestField):
+    def _fake_object(self, updates):
+        return fake_instance.fake_instance_obj(None, **updates)
+
+    def test_case(self):
+        inst = self._fake_object(dict(vm_mode='HVM'))
+        mode = fields.VMMode.get_from_instance(inst)
+        self.assertEqual(mode, 'hvm')
+
+    def test_legacy_pv(self):
+        inst = self._fake_object(dict(vm_mode='pv'))
+        mode = fields.VMMode.get_from_instance(inst)
+        self.assertEqual(mode, 'xen')
+
+    def test_legacy_hv(self):
+        inst = self._fake_object(dict(vm_mode='hv'))
+        mode = fields.VMMode.get_from_instance(inst)
+        self.assertEqual(mode, 'hvm')
+
+    def test_bogus(self):
+        inst = self._fake_object(dict(vm_mode='wibble'))
+        self.assertRaises(exception.Invalid,
+                          fields.VMMode.get_from_instance,
+                          inst)
+
+    def test_good(self):
+        inst = self._fake_object(dict(vm_mode='hvm'))
+        mode = fields.VMMode.get_from_instance(inst)
+        self.assertEqual(mode, 'hvm')
+
+    def test_canonicalize_pv_compat(self):
+        mode = fields.VMMode.canonicalize('pv')
+        self.assertEqual(fields.VMMode.XEN, mode)
+
+    def test_canonicalize_hv_compat(self):
+        mode = fields.VMMode.canonicalize('hv')
+        self.assertEqual(fields.VMMode.HVM, mode)
+
+    def test_canonicalize_baremetal_compat(self):
+        mode = fields.VMMode.canonicalize('baremetal')
+        self.assertEqual(fields.VMMode.HVM, mode)
+
+    def test_canonicalize_hvm(self):
+        mode = fields.VMMode.canonicalize('hvm')
+        self.assertEqual(fields.VMMode.HVM, mode)
+
+    def test_canonicalize_none(self):
+        mode = fields.VMMode.canonicalize(None)
+        self.assertIsNone(mode)
+
+    def test_canonicalize_invalid(self):
+        self.assertRaises(exception.InvalidVirtualMachineMode,
+                          fields.VMMode.canonicalize,
+                          'invalid')
 
 
 class TestImageSignatureTypes(TestField):

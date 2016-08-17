@@ -26,7 +26,6 @@ from lxml import etree
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 
-from nova.compute import vm_mode
 import nova.conf
 from nova.i18n import _
 from nova.i18n import _LI
@@ -360,7 +359,8 @@ def find_disk(virt_dom):
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
         disk_path = os.path.join(disk_path, 'disk')
-    elif CONF.libvirt.virt_type == 'parallels' and os_type == vm_mode.EXE:
+    elif (CONF.libvirt.virt_type == 'parallels' and
+          os_type == obj_fields.VMMode.EXE):
         filesystem = domain.find('devices/filesystem')
         driver = filesystem.find('driver')
 
