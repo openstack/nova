@@ -452,8 +452,10 @@ class CellsManager(manager.Manager):
                                                        False, filters)
         migrations = []
         for response in responses:
-            migrations += response.value_or_raise()
-        return migrations
+            # response.value_or_raise returns MigrationList objects.
+            # MigrationList.objects returns the list of Migration objects.
+            migrations.extend(response.value_or_raise().objects)
+        return objects.MigrationList(objects=migrations)
 
     def instance_update_from_api(self, ctxt, instance, expected_vm_state,
                         expected_task_state, admin_state_reset):
