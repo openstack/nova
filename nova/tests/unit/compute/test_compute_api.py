@@ -3550,8 +3550,8 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects, 'BuildRequest')
-        @mock.patch.object(objects.InstanceMapping, 'create')
-        def do_test(_mock_inst_mapping_create, mock_build_req,
+        @mock.patch.object(objects, 'InstanceMapping')
+        def do_test(mock_inst_mapping, mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
                 _mock_ensure_default, mock_inst, mock_check_num_inst_quota):
             quota_mock = mock.MagicMock()
@@ -3567,6 +3567,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_inst.side_effect = inst_mocks
             build_req_mocks = [mock.MagicMock() for i in range(max_count)]
             mock_build_req.side_effect = build_req_mocks
+            inst_map_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_inst_mapping.side_effect = inst_map_mocks
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
             flavor = self._create_flavor()
@@ -3616,12 +3618,18 @@ class _ComputeAPIUnitTestMixIn(object):
                               shutdown_terminate, instance_group,
                               check_server_group_quota, filter_properties,
                               None)
-            # First instance is created and destroyed
+            # First instance, build_req, mapping is created and destroyed
             self.assertTrue(inst_mocks[0].create.called)
             self.assertTrue(inst_mocks[0].destroy.called)
-            # Second instance is not created nor destroyed
+            self.assertTrue(build_req_mocks[0].create.called)
+            self.assertTrue(build_req_mocks[0].destroy.called)
+            self.assertTrue(inst_map_mocks[0].create.called)
+            self.assertTrue(inst_map_mocks[0].destroy.called)
+            # Second instance, build_req, mapping is not created nor destroyed
             self.assertFalse(inst_mocks[1].create.called)
             self.assertFalse(inst_mocks[1].destroy.called)
+            self.assertFalse(build_req_mocks[1].destroy.called)
+            self.assertFalse(inst_map_mocks[1].destroy.called)
 
         do_test()
 
