@@ -1151,6 +1151,10 @@ class CellV2CommandsTestCase(test.TestCase):
             self._test_migrate_simple_command()
             self.assertFalse(m.called)
 
+    def test_simple_command_cellsv1(self):
+        self.flags(enable=True, group='cells')
+        self.assertEqual(2, self.commands.simple_cell_setup('foo'))
+
     def test_instance_verify_no_mapping(self):
         r = self.commands.verify_instance(uuidsentinel.instance)
         self.assertEqual(1, r)
