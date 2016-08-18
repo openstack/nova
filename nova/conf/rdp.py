@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -22,10 +15,21 @@
 
 from oslo_config import cfg
 
+rdp_group = cfg.OptGroup(
+    'rdp',
+    title='RDP options',
+    help="""
+Options under this group enable and configure Remote Desktop Protocol (
+RDP) related features.
 
-enabled = cfg.BoolOpt('enabled',
-                      default=False,
-                      help="""
+This group is only relevant to Hyper-V users.
+"""
+)
+
+RDP_OPTS = [
+    cfg.BoolOpt('enabled',
+        default=False,
+        help="""
 Enable Remote Desktop Protocol (RDP) related features.
 
 Hyper-V, unlike the majority of the hypervisors employed on Nova compute
@@ -36,18 +40,13 @@ console access for virtual machines created by Hyper-V.
 **Note:** RDP should only be enabled on compute nodes that support the Hyper-V
 virtualization platform.
 
-Possible values:
-
-* True: Enables the feature
-* False: Disables the feature
-
 Related options:
 
 * ``compute_driver``: Must be hyperv.
 
-""")
+"""),
 
-html5_proxy_base_url = cfg.StrOpt('html5_proxy_base_url',
+    cfg.StrOpt('html5_proxy_base_url',
         default='http://127.0.0.1:6083/',
         help="""
 The URL an end user would use to connect to the RDP HTML5 console proxy.
@@ -68,28 +67,27 @@ Possible values:
 
 * <scheme>://<ip-address>:<port-number>/
 
-The scheme must be identical to the scheme configured for the RDP HTML5
-console proxy service.
+  The scheme must be identical to the scheme configured for the RDP HTML5
+  console proxy service.
 
-The IP address must be identical to the address on which the RDP HTML5 console
-proxy service is listening.
+  The IP address must be identical to the address on which the RDP HTML5
+  console proxy service is listening.
 
-The port must be identical to the port on which the RDP HTML5 console proxy
-service is listening.
+  The port must be identical to the port on which the RDP HTML5 console proxy
+  service is listening.
 
 Related options:
 
 * ``rdp.enabled``: Must be set to ``True`` for ``html5_proxy_base_url`` to be
-                   effective.
-""")
-
-ALL_OPTS = [enabled,
-            html5_proxy_base_url]
+  effective.
+"""),
+]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS, group="rdp")
+    conf.register_group(rdp_group)
+    conf.register_opts(RDP_OPTS, rdp_group)
 
 
 def list_opts():
-    return {"rdp": ALL_OPTS}
+    return {rdp_group: RDP_OPTS}
