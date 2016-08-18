@@ -25,11 +25,35 @@ class TestInstanceNotificationSample(
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
 
-    def test_create_delete_server(self):
+    def test_instance_action(self):
+        # A single test case is used to test most of the instance action
+        # notifications to avoid booting up an instance for every action
+        # separately.
+        # Every instance action test function shall make sure that after the
+        # function the instance is in active state and usable by other actions.
+        # Therefore some action especially delete cannot be used here as
+        # recovering from that action would mean to recreate the instance and
+        # that would go against the whole purpose of this optimization
+
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
 
-        # TODO(gibi) verify instance.create notifications here when transformed
+        actions = [
+            self._test_power_on_server,
+            self._test_restore_server,
+            self._test_suspend_server,
+            self._test_pause_server,
+            self._test_shelve_server,
+            self._test_resize_server,
+        ]
+
+        for action in actions:
+            fake_notifier.reset()
+            action(server)
+
+    def test_create_delete_server(self):
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
@@ -188,9 +212,7 @@ class TestInstanceNotificationSample(
         self._verify_instance_update_steps(delete_steps, instance_updates,
                                            initial=replacements)
 
-    def test_create_poweron_server(self):
-        server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+    def _test_power_on_server(self, server):
         self.api.post_server_action(server['id'], {'os-stop': {}})
         self._wait_for_state_change(self.api, server,
                                     expected_status='SHUTOFF')
@@ -212,10 +234,7 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def test_create_shelve_server(self):
-        server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
-
+    def _test_shelve_server(self, server):
         self.flags(shelved_offload_time = -1)
 
         self.api.post_server_action(server['id'], {'shelve': {}})
@@ -236,10 +255,11 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def test_create_suspend_server(self):
-        server = self._boot_a_server(
-                extra_params={'networks':
-                                  [{'port': self.neutron.port_1['id']}]})
+        post = {'unshelve': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+    def _test_suspend_server(self, server):
         post = {'suspend': {}}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'SUSPENDED')
@@ -258,10 +278,11 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def test_create_pause_server(self):
-        server = self._boot_a_server(
-                extra_params={'networks':
-                                  [{'port': self.neutron.port_1['id']}]})
+        post = {'resume': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+    def _test_pause_server(self, server):
         self.api.post_server_action(server['id'], {'pause': {}})
         self._wait_for_state_change(self.api, server, 'PAUSED')
 
@@ -279,10 +300,11 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def test_create_resize_server(self):
-        server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        post = {'unpause': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
+    def _test_resize_server(self, server):
         self.flags(allow_resize_to_same_host=True)
         post = {'resize': {'flavorRef': '2'}}
         self.api.post_server_action(server['id'], post)
@@ -302,10 +324,12 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def test_delete_restore_server(self):
+        post = {'revertResize': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+    def _test_restore_server(self, server):
         self.flags(reclaim_instance_interval=30)
-        server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self.api.delete_server(server['id'])
         self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
         self.api.post_server_action(server['id'], {'restore': {}})
@@ -324,3 +348,5 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        self.flags(reclaim_instance_interval=0)
