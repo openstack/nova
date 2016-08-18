@@ -18,29 +18,69 @@ Feature Classification
 This document aims to define how we describe features listed in the
 :doc:`support-matrix`.
 
+.. warning:: Please note: this is a work in progress!
+
 Aims
 ====
 
 Our users want the features they rely on to be reliable and always continue
 to solve for their use case.
-When things break, users request that we solve their issues quickly.
-It would be better if we never had those regressions in the first place.
+The feature classification matrix should help identify which features are
+complete and ready to use, and which should be used with caution.
 
-We are taking a two-pronged approach:
+An additional benefit, is we have a clear list of things where we need help
+to complete the feature, its testing and its documentation.
 
-* Tell our users what features are complete, well-documented, and are kept
-  stable by good tests. They will get a good experience if they stick to
-  using those features.
-  Please note that the tests are specific to particular combinations of
-  technologies. A deployment's choice of storage, networking and
-  hypervisor makes a big difference to what features will work.
+Below is a matrix for a selection of important verticals:
 
-* Get help for the features that are not in the above state, and warn our
-  users about the risks of using those features before they are ready.
-  It should make it much clearer how to help improve the feature.
+* :ref:`matrix-gp`
+* :ref:`matrix-nfv`
+* :ref:`matrix-hpc`
 
-Concepts
-========
+For more details on the concepts in each matrix,
+please see :ref:`notes-on-concepts`.
+
+.. _matrix-gp:
+
+General Purpose Cloud Features
+===============================
+
+This is a summary of the key features dev/test clouds, and other similar
+general purpose clouds need, and it describes their current state.
+
+Below there are sections on NFV and HPC specific features. These look at
+specific features and scenarios that are important to those more specific
+sets of use cases.
+
+.. feature_matrix:: feature_matrix_gp.ini
+
+.. _matrix-nfv:
+
+NFV Cloud Features
+==================
+
+Network Function Virtualization (NFV) is about virtualizing network node
+functions into building blocks that may connect, or chain together to
+create a particular service. It is common for this workloads needing
+bare metal like performance, i.e. low latency and close to line speed
+performance.
+
+.. feature_matrix:: feature_matrix_nfv.ini
+
+.. _matrix-hpc:
+
+HPC Cloud Features
+==================
+
+High Performance Compute (HPC) cloud have some specific needs that are covered
+in this set of features.
+
+.. feature_matrix:: feature_matrix_hpc.ini
+
+.. _notes-on-concepts:
+
+Notes on Concepts
+=================
 
 Some definitions to help understand the later part of the document.
 
@@ -151,22 +191,3 @@ The eventual goal is to automate this list from some third party CI reporting
 system, but so we can make progress, this will be a manual inspection that is
 documented by an hand written ini file. Ideally, this will be reviewed every
 milestone.
-
-Feature Group Definitions
-=========================
-
-This is a look at features targeted at application developers, and the current
-state of each feature, independent of the specific deployment.
-
-Please note: this is still a work in progress!
-
-Key TODOs:
-
-* use new API docs as a template for the feature groups, into ini file
-* add lists of tempest UUIDs for each group
-* link from hypervisor support matrix into feature group maturity ratings
-* add maturity rating into the feature groups, with a justification, which
-  is likely to include lints to API docs, etc
-* replace tick and cross in support matrix with "deployment ratings"
-* eventually generate the tick and cross from live, historical, CI results
-

@@ -1,0 +1,32 @@
+.fm_maturity_complete,
+.fm_impl_complete {
+    color: rgb(0, 120, 0);
+    font-weight: normal;
+}
+
+.fm_maturity_deprecated,
+.fm_impl_missing {
+    color: rgb(120, 0, 0);
+    font-weight: normal;
+}
+
+.fm_maturity_experimental,
+.fm_impl_partial {
+    color: rgb(170, 170, 0);
+    font-weight: normal;
+}
+
+.fm_maturity_incomplete,
+.fm_impl_unknown {
+    color: rgb(170, 170, 170);
+    font-weight: normal;
+}
+
+.fm_impl_summary {
+    font-size: 2em;
+}
+
+.fm_cli {
+    font-family: monospace;
+    background-color: #F5F5F5;
+}
