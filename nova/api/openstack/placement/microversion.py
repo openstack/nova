@@ -75,8 +75,7 @@ class MicroversionMiddleware(object):
     def __call__(self, req):
         util = nova.api.openstack.placement.util
         try:
-            req.environ[MICROVERSION_ENVIRON] = extract_version(
-                req.headers)
+            microversion = extract_version(req.headers)
         except ValueError as exc:
             raise webob.exc.HTTPNotAcceptable(
                 'Invalid microversion: %s' % exc,
@@ -85,10 +84,20 @@ class MicroversionMiddleware(object):
             raise webob.exc.HTTPBadRequest(
                 'Invalid microversion: %s' % exc,
                 json_formatter=util.json_error_formatter)
-        response = req.get_response(self.application)
-        response.headers.add(Version.HEADER,
-                             '%s %s' % (SERVICE_TYPE,
-                                        req.environ[MICROVERSION_ENVIRON]))
+
+        req.environ[MICROVERSION_ENVIRON] = microversion
+        microversion_header = '%s %s' % (SERVICE_TYPE, microversion)
+
+        try:
+            response = req.get_response(self.application)
+        except webob.exc.HTTPError as exc:
+            # If there was an error in the application we still need
+            # to send the microversion header, so add the header and
+            # re-raise the exception.
+            exc.headers.add(Version.HEADER, microversion_header)
+            raise exc
+
+        response.headers.add(Version.HEADER, microversion_header)
         response.headers.add('vary', Version.HEADER)
         return response
 
