@@ -1866,6 +1866,23 @@ class TestRebuild(BaseTestCase):
         inst_save_mock.assert_called_once_with()
 
 
+class TestUpdateUsageFromMigration(test.NoDBTestCase):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_get_instance_type')
+    def test_unsupported_move_type(self, get_mock):
+        rt = resource_tracker.ResourceTracker(mock.sentinel.ctx,
+                                              mock.sentinel.virt_driver,
+                                              _HOSTNAME)
+        migration = objects.Migration(migration_type='live-migration')
+        # For same-node migrations, the RT's _get_instance_type() method is
+        # called if there is a migration that is trackable. Here, we want to
+        # ensure that this method isn't called for live-migration migrations.
+        rt._update_usage_from_migration(mock.sentinel.ctx,
+                                        mock.sentinel.instance,
+                                        migration)
+        self.assertFalse(get_mock.called)
+
+
 class TestUpdateUsageFromMigrations(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update_usage_from_migration')
@@ -2116,3 +2133,19 @@ class ComputeMonitorTestCase(BaseTestCase):
             self.context, 'compute.metrics.update', payload)
 
         self.assertEqual(metrics, expected_metrics)
+
+
+class TestIsTrackableMigration(test.NoDBTestCase):
+    def test_true(self):
+        mig = objects.Migration()
+        for mig_type in ('resize', 'migration', 'evacuation'):
+            mig.migration_type = mig_type
+
+            self.assertTrue(resource_tracker._is_trackable_migration(mig))
+
+    def test_false(self):
+        mig = objects.Migration()
+        for mig_type in ('live-migration',):
+            mig.migration_type = mig_type
+
+            self.assertFalse(resource_tracker._is_trackable_migration(mig))
