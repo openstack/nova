@@ -1785,7 +1785,20 @@ class API(base_api.NetworkAPI):
         fip = self._get_floating_ip_by_address(client, address)
         if not fip['port_id']:
             return None
-        port = self._show_port(context, fip['port_id'], neutron_client=client)
+
+        try:
+            port = self._show_port(context, fip['port_id'],
+                                   neutron_client=client)
+        except exception.PortNotFound:
+            # NOTE: Here is a potential race condition between _show_port() and
+            # _get_floating_ip_by_address(). fip['port_id'] shows a port which
+            # is the server instance's. At _get_floating_ip_by_address(),
+            # Neutron returns the list which includes the instance. Just after
+            # that, the deletion of the instance happens and Neutron returns
+            # 404 on _show_port().
+            LOG.debug('The port(%s) is not found', fip['port_id'])
+            return None
+
         return port['device_id']
 
     def get_vifs_by_instance(self, context, instance):

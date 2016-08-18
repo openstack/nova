@@ -4254,6 +4254,18 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_delete_ports.assert_called_once_with(
             ntrn, instance, [uuids.created_port_id])
 
+    @mock.patch('nova.network.neutronv2.api.API._get_floating_ip_by_address',
+                return_value={"port_id": "1"})
+    @mock.patch('nova.network.neutronv2.api.API._show_port',
+                side_effect=exception.PortNotFound(port_id='1'))
+    def test_get_instance_id_by_floating_address_port_not_found(self,
+                                                                mock_show,
+                                                                mock_get):
+        api = neutronapi.API()
+        fip = api.get_instance_id_by_floating_address(self.context,
+                                                      '172.24.4.227')
+        self.assertIsNone(fip)
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
