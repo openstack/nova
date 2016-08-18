@@ -88,12 +88,15 @@ IPV4Network = fields.IPV4Network
 IPV6Network = fields.IPV6Network
 
 
-class Architecture(Enum):
+class BaseNovaEnum(Enum):
+    def __init__(self, **kwargs):
+        super(BaseNovaEnum, self).__init__(valid_values=self.__class__.ALL)
+
+
+class Architecture(BaseNovaEnum):
     # TODO(berrange): move all constants out of 'nova.compute.arch'
     # into fields on this class
-    def __init__(self, **kwargs):
-        super(Architecture, self).__init__(
-            valid_values=arch.ALL, **kwargs)
+    ALL = arch.ALL
 
     def coerce(self, obj, attr, value):
         try:
@@ -104,7 +107,7 @@ class Architecture(Enum):
         return super(Architecture, self).coerce(obj, attr, value)
 
 
-class BlockDeviceDestinationType(Enum):
+class BlockDeviceDestinationType(BaseNovaEnum):
     """Represents possible destination_type values for a BlockDeviceMapping."""
 
     LOCAL = 'local'
@@ -112,12 +115,8 @@ class BlockDeviceDestinationType(Enum):
 
     ALL = (LOCAL, VOLUME)
 
-    def __init__(self):
-        super(BlockDeviceDestinationType, self).__init__(
-            valid_values=BlockDeviceDestinationType.ALL)
 
-
-class BlockDeviceSourceType(Enum):
+class BlockDeviceSourceType(BaseNovaEnum):
     """Represents the possible source_type values for a BlockDeviceMapping."""
 
     BLANK = 'blank'
@@ -127,12 +126,8 @@ class BlockDeviceSourceType(Enum):
 
     ALL = (BLANK, IMAGE, SNAPSHOT, VOLUME)
 
-    def __init__(self):
-        super(BlockDeviceSourceType, self).__init__(
-            valid_values=BlockDeviceSourceType.ALL)
 
-
-class BlockDeviceType(Enum):
+class BlockDeviceType(BaseNovaEnum):
     """Represents possible device_type values for a BlockDeviceMapping."""
 
     CDROM = 'cdrom'
@@ -143,35 +138,23 @@ class BlockDeviceType(Enum):
 
     ALL = (CDROM, DISK, FLOPPY, FS, LUN)
 
-    def __init__(self):
-        super(BlockDeviceType, self).__init__(
-            valid_values=BlockDeviceType.ALL)
 
-
-class ConfigDrivePolicy(Enum):
+class ConfigDrivePolicy(BaseNovaEnum):
     OPTIONAL = "optional"
     MANDATORY = "mandatory"
 
     ALL = (OPTIONAL, MANDATORY)
 
-    def __init__(self):
-        super(ConfigDrivePolicy, self).__init__(
-            valid_values=ConfigDrivePolicy.ALL)
 
-
-class CPUAllocationPolicy(Enum):
+class CPUAllocationPolicy(BaseNovaEnum):
 
     DEDICATED = "dedicated"
     SHARED = "shared"
 
     ALL = (DEDICATED, SHARED)
 
-    def __init__(self):
-        super(CPUAllocationPolicy, self).__init__(
-            valid_values=CPUAllocationPolicy.ALL)
 
-
-class CPUThreadAllocationPolicy(Enum):
+class CPUThreadAllocationPolicy(BaseNovaEnum):
 
     # prefer (default): The host may or may not have hyperthreads. This
     #  retains the legacy behavior, whereby siblings are preferred when
@@ -190,36 +173,26 @@ class CPUThreadAllocationPolicy(Enum):
 
     ALL = (PREFER, ISOLATE, REQUIRE)
 
-    def __init__(self):
-        super(CPUThreadAllocationPolicy, self).__init__(
-            valid_values=CPUThreadAllocationPolicy.ALL)
 
-
-class CPUMode(Enum):
+class CPUMode(BaseNovaEnum):
     # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
     # into fields on this class
-    def __init__(self, **kwargs):
-        super(CPUMode, self).__init__(
-            valid_values=cpumodel.ALL_CPUMODES, **kwargs)
+    ALL = cpumodel.ALL_CPUMODES
 
 
-class CPUMatch(Enum):
+class CPUMatch(BaseNovaEnum):
     # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
     # into fields on this class
-    def __init__(self, **kwargs):
-        super(CPUMatch, self).__init__(
-            valid_values=cpumodel.ALL_MATCHES, **kwargs)
+    ALL = cpumodel.ALL_MATCHES
 
 
-class CPUFeaturePolicy(Enum):
+class CPUFeaturePolicy(BaseNovaEnum):
     # TODO(berrange): move all constants out of 'nova.compute.cpumodel'
     # into fields on this class
-    def __init__(self, **kwargs):
-        super(CPUFeaturePolicy, self).__init__(
-            valid_values=cpumodel.ALL_POLICIES, **kwargs)
+    ALL = cpumodel.ALL_POLICIES
 
 
-class DiskBus(Enum):
+class DiskBus(BaseNovaEnum):
 
     FDC = "fdc"
     IDE = "ide"
@@ -233,29 +206,19 @@ class DiskBus(Enum):
 
     ALL = (FDC, IDE, SATA, SCSI, USB, VIRTIO, XEN, LXC, UML)
 
-    def __init__(self):
-        super(DiskBus, self).__init__(
-            valid_values=DiskBus.ALL)
 
-
-class FirmwareType(Enum):
+class FirmwareType(BaseNovaEnum):
 
     UEFI = "uefi"
     BIOS = "bios"
 
     ALL = (UEFI, BIOS)
 
-    def __init__(self):
-        super(FirmwareType, self).__init__(
-            valid_values=FirmwareType.ALL)
 
-
-class HVType(Enum):
+class HVType(BaseNovaEnum):
     # TODO(berrange): move all constants out of 'nova.compute.hv_type'
     # into fields on this class
-    def __init__(self):
-        super(HVType, self).__init__(
-            valid_values=hv_type.ALL)
+    ALL = hv_type.ALL
 
     def coerce(self, obj, attr, value):
         try:
@@ -266,37 +229,24 @@ class HVType(Enum):
         return super(HVType, self).coerce(obj, attr, value)
 
 
-class ImageSignatureHashType(Enum):
+class ImageSignatureHashType(BaseNovaEnum):
     # Represents the possible hash methods used for image signing
-    def __init__(self):
-        self.hashes = ('SHA-224', 'SHA-256', 'SHA-384', 'SHA-512')
-        super(ImageSignatureHashType, self).__init__(
-            valid_values=self.hashes
-        )
+    ALL = ('SHA-224', 'SHA-256', 'SHA-384', 'SHA-512')
 
 
-class ImageSignatureKeyType(Enum):
+class ImageSignatureKeyType(BaseNovaEnum):
     # Represents the possible keypair types used for image signing
-    def __init__(self):
-        self.key_types = (
-            'DSA', 'ECC_SECT571K1', 'ECC_SECT409K1', 'ECC_SECT571R1',
-            'ECC_SECT409R1', 'ECC_SECP521R1', 'ECC_SECP384R1', 'RSA-PSS'
-        )
-        super(ImageSignatureKeyType, self).__init__(
-            valid_values=self.key_types
-        )
+    ALL = ('DSA', 'ECC_SECT571K1', 'ECC_SECT409K1', 'ECC_SECT571R1',
+           'ECC_SECT409R1', 'ECC_SECP521R1', 'ECC_SECP384R1', 'RSA-PSS'
+           )
 
 
-class OSType(Enum):
+class OSType(BaseNovaEnum):
 
     LINUX = "linux"
     WINDOWS = "windows"
 
     ALL = (LINUX, WINDOWS)
-
-    def __init__(self):
-        super(OSType, self).__init__(
-            valid_values=OSType.ALL)
 
     def coerce(self, obj, attr, value):
         # Some code/docs use upper case or initial caps
@@ -305,7 +255,7 @@ class OSType(Enum):
         return super(OSType, self).coerce(obj, attr, value)
 
 
-class ResourceClass(Enum):
+class ResourceClass(BaseNovaEnum):
     """Classes of resources provided to consumers."""
 
     VCPU = 'VCPU'
@@ -324,10 +274,6 @@ class ResourceClass(Enum):
     ALL = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF, NUMA_SOCKET,
            NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB, IPV4_ADDRESS)
 
-    def __init__(self):
-        super(ResourceClass, self).__init__(
-            valid_values=ResourceClass.ALL)
-
     @classmethod
     def index(cls, value):
         """Return an index into the Enum given a value."""
@@ -339,18 +285,14 @@ class ResourceClass(Enum):
         return cls.ALL[index]
 
 
-class RNGModel(Enum):
+class RNGModel(BaseNovaEnum):
 
     VIRTIO = "virtio"
 
     ALL = (VIRTIO,)
 
-    def __init__(self):
-        super(RNGModel, self).__init__(
-            valid_values=RNGModel.ALL)
 
-
-class SCSIModel(Enum):
+class SCSIModel(BaseNovaEnum):
 
     BUSLOGIC = "buslogic"
     IBMVSCSI = "ibmvscsi"
@@ -362,10 +304,6 @@ class SCSIModel(Enum):
 
     ALL = (BUSLOGIC, IBMVSCSI, LSILOGIC, LSISAS1068,
            LSISAS1078, VIRTIO_SCSI, VMPVSCSI)
-
-    def __init__(self):
-        super(SCSIModel, self).__init__(
-            valid_values=SCSIModel.ALL)
 
     def coerce(self, obj, attr, value):
         # Some compat for strings we'd see in the legacy
@@ -379,7 +317,7 @@ class SCSIModel(Enum):
         return super(SCSIModel, self).coerce(obj, attr, value)
 
 
-class SecureBoot(Enum):
+class SecureBoot(BaseNovaEnum):
 
     REQUIRED = "required"
     DISABLED = "disabled"
@@ -387,11 +325,8 @@ class SecureBoot(Enum):
 
     ALL = (REQUIRED, DISABLED, OPTIONAL)
 
-    def __init__(self):
-        super(SecureBoot, self).__init__(valid_values=SecureBoot.ALL)
 
-
-class VideoModel(Enum):
+class VideoModel(BaseNovaEnum):
 
     CIRRUS = "cirrus"
     QXL = "qxl"
@@ -401,12 +336,8 @@ class VideoModel(Enum):
 
     ALL = (CIRRUS, QXL, VGA, VMVGA, XEN)
 
-    def __init__(self):
-        super(VideoModel, self).__init__(
-            valid_values=VideoModel.ALL)
 
-
-class VIFModel(Enum):
+class VIFModel(BaseNovaEnum):
 
     LEGACY_VALUES = {"virtuale1000":
                      network_model.VIF_MODEL_E1000,
@@ -422,9 +353,7 @@ class VIFModel(Enum):
                      network_model.VIF_MODEL_VMXNET3,
                     }
 
-    def __init__(self):
-        super(VIFModel, self).__init__(
-            valid_values=network_model.VIF_MODEL_ALL)
+    ALL = network_model.VIF_MODEL_ALL
 
     def _get_legacy(self, value):
         return value
@@ -437,12 +366,10 @@ class VIFModel(Enum):
         return super(VIFModel, self).coerce(obj, attr, value)
 
 
-class VMMode(Enum):
+class VMMode(BaseNovaEnum):
     # TODO(berrange): move all constants out of 'nova.compute.vm_mode'
     # into fields on this class
-    def __init__(self):
-        super(VMMode, self).__init__(
-            valid_values=vm_mode.ALL)
+    ALL = vm_mode.ALL
 
     def coerce(self, obj, attr, value):
         try:
@@ -453,7 +380,7 @@ class VMMode(Enum):
         return super(VMMode, self).coerce(obj, attr, value)
 
 
-class WatchdogAction(Enum):
+class WatchdogAction(BaseNovaEnum):
 
     NONE = "none"
     PAUSE = "pause"
@@ -462,12 +389,8 @@ class WatchdogAction(Enum):
 
     ALL = (NONE, PAUSE, POWEROFF, RESET)
 
-    def __init__(self):
-        super(WatchdogAction, self).__init__(
-            valid_values=WatchdogAction.ALL)
 
-
-class MonitorMetricType(Enum):
+class MonitorMetricType(BaseNovaEnum):
 
     CPU_FREQUENCY = "cpu.frequency"
     CPU_USER_TIME = "cpu.user.time"
@@ -497,12 +420,8 @@ class MonitorMetricType(Enum):
         NUMA_MEM_BW_CURRENT,
     )
 
-    def __init__(self):
-        super(MonitorMetricType, self).__init__(
-            valid_values=MonitorMetricType.ALL)
 
-
-class HostStatus(Enum):
+class HostStatus(BaseNovaEnum):
 
     UP = "UP"  # The nova-compute is up.
     DOWN = "DOWN"  # The nova-compute is forced_down.
@@ -512,12 +431,8 @@ class HostStatus(Enum):
 
     ALL = (UP, DOWN, MAINTENANCE, UNKNOWN, NONE)
 
-    def __init__(self):
-        super(HostStatus, self).__init__(
-            valid_values=HostStatus.ALL)
 
-
-class PciDeviceStatus(Enum):
+class PciDeviceStatus(BaseNovaEnum):
 
     AVAILABLE = "available"
     CLAIMED = "claimed"
@@ -530,12 +445,8 @@ class PciDeviceStatus(Enum):
     ALL = (AVAILABLE, CLAIMED, ALLOCATED, REMOVED, DELETED, UNAVAILABLE,
            UNCLAIMABLE)
 
-    def __init__(self):
-        super(PciDeviceStatus, self).__init__(
-            valid_values=PciDeviceStatus.ALL)
 
-
-class PciDeviceType(Enum):
+class PciDeviceType(BaseNovaEnum):
 
     # NOTE(jaypipes): It's silly that the word "type-" is in these constants,
     # but alas, these were the original constant strings used...
@@ -545,12 +456,8 @@ class PciDeviceType(Enum):
 
     ALL = (STANDARD, SRIOV_PF, SRIOV_VF)
 
-    def __init__(self):
-        super(PciDeviceType, self).__init__(
-            valid_values=PciDeviceType.ALL)
 
-
-class DiskFormat(Enum):
+class DiskFormat(BaseNovaEnum):
     RBD = "rbd"
     LVM = "lvm"
     QCOW2 = "qcow2"
@@ -563,23 +470,15 @@ class DiskFormat(Enum):
 
     ALL = (RBD, LVM, QCOW2, RAW, PLOOP, VHD, VMDK, VDI, ISO)
 
-    def __init__(self):
-        super(DiskFormat, self).__init__(
-            valid_values=DiskFormat.ALL)
 
-
-class PointerModelType(Enum):
+class PointerModelType(BaseNovaEnum):
 
     USBTABLET = "usbtablet"
 
     ALL = (USBTABLET)
 
-    def __init__(self):
-        super(PointerModelType, self).__init__(
-            valid_values=PointerModelType.ALL)
 
-
-class NotificationPriority(Enum):
+class NotificationPriority(BaseNovaEnum):
     AUDIT = 'audit'
     CRITICAL = 'critical'
     DEBUG = 'debug'
@@ -590,24 +489,16 @@ class NotificationPriority(Enum):
 
     ALL = (AUDIT, CRITICAL, DEBUG, INFO, ERROR, SAMPLE, WARN)
 
-    def __init__(self):
-        super(NotificationPriority, self).__init__(
-            valid_values=NotificationPriority.ALL)
 
-
-class NotificationPhase(Enum):
+class NotificationPhase(BaseNovaEnum):
     START = 'start'
     END = 'end'
     ERROR = 'error'
 
     ALL = (START, END, ERROR)
 
-    def __init__(self):
-        super(NotificationPhase, self).__init__(
-            valid_values=NotificationPhase.ALL)
 
-
-class NotificationAction(Enum):
+class NotificationAction(BaseNovaEnum):
     UPDATE = 'update'
     EXCEPTION = 'exception'
     DELETE = 'delete'
@@ -630,12 +521,8 @@ class NotificationAction(Enum):
            SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, ADD_FIXED_IP,
            POWER_OFF, SHELVE, RESUME, RESTORE)
 
-    def __init__(self):
-        super(NotificationAction, self).__init__(
-            valid_values=NotificationAction.ALL)
 
-
-class InstanceState(Enum):
+class InstanceState(BaseNovaEnum):
     # TODO(gibi): this is currently a copy of nova.compute.vm_states, remove
     # the duplication
     ACTIVE = 'active'
@@ -654,12 +541,8 @@ class InstanceState(Enum):
     ALL = (ACTIVE, BUILDING, PAUSED, SUSPENDED, STOPPED, RESCUED, RESIZED,
            SOFT_DELETED, DELETED, ERROR, SHELVED, SHELVED_OFFLOADED)
 
-    def __init__(self):
-        super(InstanceState, self).__init__(
-            valid_values=InstanceState.ALL)
 
-
-class InstanceTaskState(Enum):
+class InstanceTaskState(BaseNovaEnum):
     # TODO(gibi): this is currently a copy of nova.compute.task_states, remove
     # the duplication
     SCHEDULING = 'scheduling'
@@ -717,12 +600,8 @@ class InstanceTaskState(Enum):
            SHELVING, SHELVING_IMAGE_PENDING_UPLOAD, SHELVING_IMAGE_UPLOADING,
            SHELVING_OFFLOADING, UNSHELVING)
 
-    def __init__(self):
-        super(InstanceTaskState, self).__init__(
-            valid_values=InstanceTaskState.ALL)
 
-
-class InstancePowerState(Enum):
+class InstancePowerState(BaseNovaEnum):
     # TODO(gibi): this is currently a copy of nova.compute.power_state, remove
     # the duplication
     NOSTATE = 'pending'
@@ -742,10 +621,6 @@ class InstancePowerState(Enum):
     }
 
     ALL = (NOSTATE, RUNNING, PAUSED, SHUTDOWN, CRASHED, SUSPENDED)
-
-    def __init__(self):
-        super(InstancePowerState, self).__init__(
-            valid_values=InstancePowerState.ALL)
 
     def coerce(self, obj, attr, value):
         try:
