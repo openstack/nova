@@ -1,6 +1,3 @@
-# needs:check_deprecation_status
-
-
 # Copyright 2015 OpenStack Foundation
 # All Rights Reserved.
 #
@@ -18,17 +15,18 @@
 
 from oslo_config import cfg
 
+api_opts_group = cfg.OptGroup(name="osapi_v21", title="API v2.1 Options")
 
 api_opts = [
     cfg.ListOpt("extensions_blacklist",
         default=[],
         deprecated_for_removal=True,
         deprecated_since="12.0.0",
+        deprecated_reason="""
+API extensions are now part of the standard API. API extensions should be
+disabled using policy, rather than via these configuration options.""",
         help="""
-This option is a list of all of the v2.1 API extensions to never load. However,
-it will be removed in the near future, after which all the functionality
-that was previously in extensions will be part of the standard API, and thus
-always accessible.
+This option is a list of all of the v2.1 API extensions to never load.
 
 Possible values:
 
@@ -44,13 +42,14 @@ Related options:
         default=[],
         deprecated_for_removal=True,
         deprecated_since="12.0.0",
+        deprecated_reason="""
+API extensions are now part of the standard API. API extensions should be
+disabled using policy, rather than via these configuration options.""",
         help="""
 This is a list of extensions. If it is empty, then *all* extensions except
 those specified in the extensions_blacklist option will be loaded. If it is not
 empty, then only those extensions in this list will be loaded, provided that
-they are also not in the extensions_blacklist option. Once this deprecated
-option is removed, after which the all the functionality that was previously in
-extensions will be part of the standard API, and thus always accessible.
+they are also not in the extensions_blacklist option.
 
 Possible values:
 
@@ -65,6 +64,11 @@ Related options:
     cfg.StrOpt("project_id_regex",
         deprecated_for_removal=True,
         deprecated_since="13.0.0",
+        deprecated_reason="""
+Recent versions of nova constrain project IDs to hexadecimal characters and
+dashes. If your installation uses IDs outside of this range, you should use
+this option to provide your own regex and give you time to migrate offending
+projects to valid IDs before the next release.""",
         help="""
 This option is a string representing a regular expression (regex) that matches
 the project_id as contained in URLs. If not set, it will match normal UUIDs
@@ -75,8 +79,6 @@ Possible values:
 * A string representing any legal regular expression
 """),
 ]
-
-api_opts_group = cfg.OptGroup(name="osapi_v21", title="API v2.1 Options")
 
 
 def register_opts(conf):
