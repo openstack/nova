@@ -19,10 +19,10 @@ import fixtures
 import mock
 
 from nova import block_device
-from nova.compute import arch
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit import fake_block_device
 import nova.tests.unit.image.fake
@@ -722,23 +722,23 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_bus(self):
         instance = objects.Instance(**self.test_instance)
         expected = (
-                (arch.X86_64, 'disk', 'virtio'),
-                (arch.X86_64, 'cdrom', 'ide'),
-                (arch.X86_64, 'floppy', 'fdc'),
-                (arch.PPC, 'disk', 'virtio'),
-                (arch.PPC, 'cdrom', 'scsi'),
-                (arch.PPC64, 'disk', 'virtio'),
-                (arch.PPC64, 'cdrom', 'scsi'),
-                (arch.PPCLE, 'disk', 'virtio'),
-                (arch.PPCLE, 'cdrom', 'scsi'),
-                (arch.PPC64LE, 'disk', 'virtio'),
-                (arch.PPC64LE, 'cdrom', 'scsi'),
-                (arch.S390, 'disk', 'virtio'),
-                (arch.S390, 'cdrom', 'scsi'),
-                (arch.S390X, 'disk', 'virtio'),
-                (arch.S390X, 'cdrom', 'scsi'),
-                (arch.AARCH64, 'disk', 'virtio'),
-                (arch.AARCH64, 'cdrom', 'scsi')
+                (obj_fields.Architecture.X86_64, 'disk', 'virtio'),
+                (obj_fields.Architecture.X86_64, 'cdrom', 'ide'),
+                (obj_fields.Architecture.X86_64, 'floppy', 'fdc'),
+                (obj_fields.Architecture.PPC, 'disk', 'virtio'),
+                (obj_fields.Architecture.PPC, 'cdrom', 'scsi'),
+                (obj_fields.Architecture.PPC64, 'disk', 'virtio'),
+                (obj_fields.Architecture.PPC64, 'cdrom', 'scsi'),
+                (obj_fields.Architecture.PPCLE, 'disk', 'virtio'),
+                (obj_fields.Architecture.PPCLE, 'cdrom', 'scsi'),
+                (obj_fields.Architecture.PPC64LE, 'disk', 'virtio'),
+                (obj_fields.Architecture.PPC64LE, 'cdrom', 'scsi'),
+                (obj_fields.Architecture.S390, 'disk', 'virtio'),
+                (obj_fields.Architecture.S390, 'cdrom', 'scsi'),
+                (obj_fields.Architecture.S390X, 'disk', 'virtio'),
+                (obj_fields.Architecture.S390X, 'cdrom', 'scsi'),
+                (obj_fields.Architecture.AARCH64, 'disk', 'virtio'),
+                (obj_fields.Architecture.AARCH64, 'cdrom', 'scsi')
                 )
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         for guestarch, dev, res in expected:

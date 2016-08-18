@@ -56,7 +56,6 @@ from six.moves import builtins
 from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
-from nova.compute import arch
 from nova.compute import cpumodel
 from nova.compute import manager
 from nova.compute import power_state
@@ -912,12 +911,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               arch.PPC64)) - 1)
+                               fields.Architecture.PPC64)) - 1)
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               arch.PPC64)))
-    @mock.patch.object(arch, "from_host", return_value=arch.PPC64)
+                               fields.Architecture.PPC64)))
+    @mock.patch.object(fields.Architecture, "from_host",
+                       return_value=fields.Architecture.PPC64)
     def test_min_version_ppc_old_libvirt(self, mock_libv, mock_qemu,
                                          mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -928,12 +928,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               arch.PPC64)))
+                               fields.Architecture.PPC64)))
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               arch.PPC64)) - 1)
-    @mock.patch.object(arch, "from_host", return_value=arch.PPC64)
+                               fields.Architecture.PPC64)) - 1)
+    @mock.patch.object(fields.Architecture, "from_host",
+                       return_value=fields.Architecture.PPC64)
     def test_min_version_ppc_old_qemu(self, mock_libv, mock_qemu,
                                       mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -944,12 +945,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               arch.PPC64)))
+                               fields.Architecture.PPC64)))
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               arch.PPC64)))
-    @mock.patch.object(arch, "from_host", return_value=arch.PPC64)
+                               fields.Architecture.PPC64)))
+    @mock.patch.object(fields.Architecture, "from_host",
+                       return_value=fields.Architecture.PPC64)
     def test_min_version_ppc_ok(self, mock_libv, mock_qemu, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
@@ -957,12 +959,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               arch.S390X)) - 1)
+                               fields.Architecture.S390X)) - 1)
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               arch.S390X)))
-    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
+                               fields.Architecture.S390X)))
+    @mock.patch.object(fields.Architecture, "from_host",
+                       return_value=fields.Architecture.S390X)
     def test_min_version_s390_old_libvirt(self, mock_libv, mock_qemu,
                                           mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -973,12 +976,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               arch.S390X)))
+                               fields.Architecture.S390X)))
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               arch.S390X)) - 1)
-    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
+                               fields.Architecture.S390X)) - 1)
+    @mock.patch.object(fields.Architecture, "from_host",
+                       return_value=fields.Architecture.S390X)
     def test_min_version_s390_old_qemu(self, mock_libv, mock_qemu,
                                        mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -989,12 +993,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               arch.S390X)))
+                               fields.Architecture.S390X)))
     @mock.patch.object(fakelibvirt.Connection, 'getVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               arch.S390X)))
-    @mock.patch.object(arch, "from_host", return_value=arch.S390X)
+                               fields.Architecture.S390X)))
+    @mock.patch.object(fields.Architecture, "from_host",
+                       return_value=fields.Architecture.S390X)
     def test_min_version_s390_ok(self, mock_libv, mock_qemu, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
@@ -1764,7 +1769,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         def fake_get_host_capabilities(**args):
             cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = arch.ARMV7
+            cpu.arch = fields.Architecture.ARMV7
 
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
@@ -1986,7 +1991,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2018,7 +2023,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2131,7 +2136,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2179,7 +2184,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2268,7 +2273,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
             host.HV_DRIVER_QEMU,
-            arch.X86_64,
+            fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
             None)
 
@@ -2281,7 +2286,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
             host.HV_DRIVER_QEMU,
-            arch.PPC64LE,
+            fields.Architecture.PPC64LE,
             exception.NUMATopologyUnsupported,
             None)
 
@@ -2294,7 +2299,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
             host.HV_DRIVER_QEMU,
-            arch.X86_64,
+            fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
             None)
 
@@ -2321,7 +2326,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION) - 1,
             host.HV_DRIVER_QEMU,
-            arch.X86_64,
+            fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
             None)
 
@@ -2334,7 +2339,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
             host.HV_DRIVER_QEMU,
-            arch.S390,
+            fields.Architecture.S390,
             exception.NUMATopologyUnsupported,
             None)
 
@@ -2345,7 +2350,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 libvirt_driver.MIN_LIBVIRT_NUMA_VERSION),
             versionutils.convert_version_to_int((4, 5, 0)),
             'XEN',
-            arch.X86_64,
+            fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
             None)
 
@@ -2358,7 +2363,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION),
             host.HV_DRIVER_QEMU,
-            arch.X86_64,
+            fields.Architecture.X86_64,
             exception.MemoryPagesUnsupported,
             2048)
 
@@ -2371,7 +2376,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             versionutils.convert_version_to_int(
                 libvirt_driver.MIN_QEMU_NUMA_HUGEPAGE_VERSION) - 1,
             host.HV_DRIVER_QEMU,
-            arch.X86_64,
+            fields.Architecture.X86_64,
             exception.NUMATopologyUnsupported,
             2048)
 
@@ -2389,7 +2394,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology(kb_mem=4194304)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2435,7 +2440,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = None
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2484,7 +2489,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2562,7 +2567,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2638,7 +2643,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology(
             sockets_per_cell=4, cores_per_socket=3, threads_per_core=2)
 
@@ -2716,7 +2721,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2790,7 +2795,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -2933,7 +2938,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         mock_caps.return_value = caps
@@ -2952,10 +2957,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
     def test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa):
-        for each_arch in [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64,
-                          arch.AARCH64]:
+        for arch in [fields.Architecture.I686,
+                     fields.Architecture.X86_64,
+                     fields.Architecture.AARCH64,
+                     fields.Architecture.PPC64LE,
+                     fields.Architecture.PPC64]:
             self._test_does_want_hugepages(
-                mock_caps, mock_hp, mock_numa, each_arch)
+                mock_caps, mock_hp, mock_numa, arch)
 
     def _test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa,
                                   architecture):
@@ -2999,12 +3007,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance_ref,
                                             image_meta)
         hpet_map = {
-            arch.X86_64: True,
-            arch.I686: True,
-            arch.PPC: False,
-            arch.PPC64: False,
-            arch.ARMV7: False,
-            arch.AARCH64: False,
+            fields.Architecture.X86_64: True,
+            fields.Architecture.I686: True,
+            fields.Architecture.PPC: False,
+            fields.Architecture.PPC64: False,
+            fields.Architecture.ARMV7: False,
+            fields.Architecture.AARCH64: False,
             }
 
         for guestarch, expect_hpet in hpet_map.items():
@@ -3040,7 +3048,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host, 'has_min_version')
     def test_get_guest_config_windows(self, mock_version, mock_get_arch):
         mock_version.return_value = False
-        mock_get_arch.return_value = arch.I686
+        mock_get_arch.return_value = fields.Architecture.I686
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
@@ -3067,7 +3075,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(host.Host, 'has_min_version')
     def test_get_guest_config_windows_timer(self, mock_version, mock_get_arch):
         mock_version.return_value = True
-        mock_get_arch.return_value = arch.I686
+        mock_get_arch.return_value = fields.Architecture.I686
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref['os_type'] = 'windows'
@@ -3252,7 +3260,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
 
         with mock.patch.object(drvr._host,
                                'has_min_version', return_value=True):
@@ -3625,9 +3633,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.flags(enabled=True, group='serial_console')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-        expected = {arch.X86_64: vconfig.LibvirtConfigGuestSerial,
-                    arch.S390: vconfig.LibvirtConfigGuestConsole,
-                    arch.S390X: vconfig.LibvirtConfigGuestConsole}
+        expected = {
+          fields.Architecture.X86_64: vconfig.LibvirtConfigGuestSerial,
+          fields.Architecture.S390: vconfig.LibvirtConfigGuestConsole,
+          fields.Architecture.S390X: vconfig.LibvirtConfigGuestConsole}
 
         caps = drvr._host.get_capabilities()
 
@@ -3645,7 +3654,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.hardware.get_number_of_serial_ports',
                 return_value=4)
     @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',
-                       side_effect=[arch.X86_64, arch.S390, arch.S390X])
+                       side_effect=[fields.Architecture.X86_64,
+                                    fields.Architecture.S390,
+                                    fields.Architecture.S390X])
     def test_create_serial_console_devices_with_limit_exceeded_based_on_arch(
             self, mock_get_arch, mock_get_port_number):
         self.flags(enabled=True, group='serial_console')
@@ -4002,14 +4013,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[4].type, "xen")
 
     @mock.patch.object(libvirt_driver.libvirt_utils, 'get_arch',
-                       return_value=arch.S390X)
+                       return_value=fields.Architecture.S390X)
     def test_get_guest_config_with_type_kvm_on_s390(self, mock_get_arch):
         self.flags(enabled=False, group='vnc')
         self.flags(virt_type='kvm',
                    use_usb_tablet=False,
                    group='libvirt')
 
-        self._stub_host_capabilities_cpu_arch(arch.S390X)
+        self._stub_host_capabilities_cpu_arch(fields.Architecture.S390X)
 
         instance_ref = objects.Instance(**self.test_instance)
 
@@ -5185,7 +5196,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_guest_config_armv7(self, mock_numa, mock_storage):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = arch.ARMV7
+            cpu.arch = fields.Architecture.ARMV7
 
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
@@ -5217,7 +5228,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     def test_get_guest_config_aarch64(self, mock_numa, mock_storage):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
-            cpu.arch = arch.AARCH64
+            cpu.arch = fields.Architecture.AARCH64
 
             caps = vconfig.LibvirtConfigCaps()
             caps.host = vconfig.LibvirtConfigCapsHost()
@@ -5251,7 +5262,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps.host.cpu = vconfig.LibvirtConfigGuestCPU()
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        host_cpu_archs = (arch.S390, arch.S390X)
+        host_cpu_archs = (fields.Architecture.S390, fields.Architecture.S390X)
         for host_cpu_arch in host_cpu_archs:
             caps.host.cpu.arch = host_cpu_arch
             os_mach_type = drvr._get_machine_type(image_meta, caps)
@@ -5336,7 +5347,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                                             instance_ref,
                                             image_meta)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-        expected = (arch.PPC64, arch.PPC)
+        expected = (fields.Architecture.PPC64, fields.Architecture.PPC)
         for guestarch in expected:
             with mock.patch.object(libvirt_driver.libvirt_utils,
                                    'get_arch',
@@ -5658,7 +5669,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         mock_get_caps.return_value = caps
@@ -5699,7 +5710,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         features = []
@@ -5727,7 +5738,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
 
         self._test_get_guest_with_perf(caps, [])
 
@@ -5740,7 +5751,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         self._test_get_guest_with_perf(caps, [])
@@ -5836,10 +5847,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # power doesn't have support to ide, and so libvirt translate
         # all ide calls to scsi
 
-        expected = {arch.PPC: ("cdrom", "scsi", "sda"),
-                    arch.PPC64: ("cdrom", "scsi", "sda"),
-                    arch.PPC64LE: ("cdrom", "scsi", "sda"),
-                    arch.AARCH64: ("cdrom", "scsi", "sda")}
+        expected = {fields.Architecture.PPC: ("cdrom", "scsi", "sda"),
+                    fields.Architecture.PPC64: ("cdrom", "scsi", "sda"),
+                    fields.Architecture.PPC64LE: ("cdrom", "scsi", "sda"),
+                    fields.Architecture.AARCH64: ("cdrom", "scsi", "sda")}
 
         expec_val = expected.get(blockinfo.libvirt_utils.get_arch({}),
                                   ("cdrom", "ide", "hda"))
@@ -5854,10 +5865,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # power doesn't have support to ide, and so libvirt translate
         # all ide calls to scsi
 
-        expected = {arch.PPC: ("cdrom", "scsi", "sda"),
-                    arch.PPC64: ("cdrom", "scsi", "sda"),
-                    arch.PPC64LE: ("cdrom", "scsi", "sda"),
-                    arch.AARCH64: ("cdrom", "scsi", "sda")}
+        expected = {fields.Architecture.PPC: ("cdrom", "scsi", "sda"),
+                    fields.Architecture.PPC64: ("cdrom", "scsi", "sda"),
+                    fields.Architecture.PPC64LE: ("cdrom", "scsi", "sda"),
+                    fields.Architecture.AARCH64: ("cdrom", "scsi", "sda")}
 
         swap = {'device_name': '/dev/vdc',
                 'swap_size': 1}
@@ -6240,7 +6251,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 drvr.detach_volume(connection_info, instance, '/dev/vdc')
 
                 mock_get_domain.assert_called_with(instance)
-                mock_dom.detachDeviceFlags.assert_called_with("""<disk type="file" device="disk">
+                mock_dom.detachDeviceFlags.assert_called_with(
+                    """<disk type="file" device="disk">
   <source file="/path/to/fake-volume"/>
   <target bus="virtio" dev="vdc"/>
 </disk>
@@ -6914,7 +6926,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': jsonutils.dumps({
             "vendor": "AMD",
-            "arch": arch.I686,
+            "arch": fields.Architecture.I686,
             "features": ["sse3"],
             "model": "Opteron_G3",
             "topology": {"cores": 2, "threads": 1, "sockets": 4}
@@ -12293,7 +12305,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cpu = vconfig.LibvirtConfigCPU()
             cpu.model = "Opteron_G4"
             cpu.vendor = "AMD"
-            cpu.arch = arch.X86_64
+            cpu.arch = fields.Architecture.X86_64
 
             cpu.cells = 1
             cpu.cores = 2
@@ -12309,13 +12321,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
-            guest.arch = arch.X86_64
+            guest.arch = fields.Architecture.X86_64
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = vm_mode.HVM
-            guest.arch = arch.I686
+            guest.arch = fields.Architecture.I686
             guest.domtype = ["kvm"]
             caps.guests.append(guest)
 
@@ -12327,7 +12339,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         want = {"vendor": "AMD",
                 "features": set(["extapic", "3dnow"]),
                 "model": "Opteron_G4",
-                "arch": arch.X86_64,
+                "arch": fields.Architecture.X86_64,
                 "topology": {"cells": 1, "cores": 2, "threads": 1,
                              "sockets": 4}}
         got = drvr._get_cpu_info()
@@ -12562,7 +12574,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = arch.X86_64
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = self._fake_caps_numa_topology()
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -12637,7 +12649,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = arch.X86_64
+        caps.host.cpu.arch = fields.Architecture.X86_64
         caps.host.topology = None
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -13461,13 +13473,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = 'hvm'
-            guest.arch = arch.X86_64
+            guest.arch = fields.Architecture.X86_64
             guest.domtype = ['kvm', 'qemu']
             caps.guests.append(guest)
 
             guest = vconfig.LibvirtConfigGuest()
             guest.ostype = 'hvm'
-            guest.arch = arch.I686
+            guest.arch = fields.Architecture.I686
             guest.domtype = ['kvm']
             caps.guests.append(guest)
 
@@ -13476,9 +13488,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
-        want = [(arch.X86_64, 'kvm', 'hvm'),
-                (arch.X86_64, 'qemu', 'hvm'),
-                (arch.I686, 'kvm', 'hvm')]
+        want = [(fields.Architecture.X86_64, 'kvm', 'hvm'),
+                (fields.Architecture.X86_64, 'qemu', 'hvm'),
+                (fields.Architecture.I686, 'kvm', 'hvm')]
         got = drvr._get_instance_capabilities()
         self.assertEqual(want, got)
 
@@ -15048,8 +15060,8 @@ class HostStateTestCase(test.NoDBTestCase):
                  "fxsr", "clflush", "pse36", "pat", "cmov", "mca", "pge",
                  "mtrr", "sep", "apic"],
                  "topology": {"cores": "1", "threads": "1", "sockets": "1"}}
-    instance_caps = [(arch.X86_64, "kvm", "hvm"),
-                     (arch.I686, "kvm", "hvm")]
+    instance_caps = [(fields.Architecture.X86_64, "kvm", "hvm"),
+                     (fields.Architecture.I686, "kvm", "hvm")]
     pci_devices = [{
         "dev_id": "pci_0000_04_00_3",
         "address": "0000:04:10.3",
@@ -15141,7 +15153,7 @@ class HostStateTestCase(test.NoDBTestCase):
         cpu_info = jsonutils.loads(stats["cpu_info"])
         self.assertEqual(cpu_info,
                 {"vendor": "Intel", "model": "pentium",
-                 "arch": arch.I686,
+                 "arch": fields.Architecture.I686,
                  "features": ["ssse3", "monitor", "pni", "sse2", "sse",
                               "fxsr", "clflush", "pse36", "pat", "cmov",
                               "mca", "pge", "mtrr", "sep", "apic"],

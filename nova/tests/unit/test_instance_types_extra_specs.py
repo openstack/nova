@@ -14,9 +14,9 @@
 Unit Tests for instance types extra specs code
 """
 
-from nova.compute import arch
 from nova import context
 from nova import objects
+from nova.objects import fields
 from nova import test
 
 
@@ -32,7 +32,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                                 root_gb=1690,
                                 ephemeral_gb=2000,
                                 flavorid=105)
-        self.specs = dict(cpu_arch=arch.X86_64,
+        self.specs = dict(cpu_arch=fields.Architecture.X86_64,
                           cpu_model="Nehalem",
                           xpu_arch="fermi",
                           xpus="2",

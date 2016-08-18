@@ -34,7 +34,6 @@ import six
 import testtools
 
 from nova.compute import api as compute_api
-from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
@@ -47,6 +46,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import base
+from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.db import fakes as db_fakes
@@ -2276,18 +2276,20 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
             host.to_supported_instances(None))
 
     def test_return_value(self):
-        self.assertEqual([(arch.X86_64, hv_type.XEN, 'xen')],
-             host.to_supported_instances([u'xen-3.0-x86_64']))
+        self.assertEqual(
+            [(obj_fields.Architecture.X86_64, hv_type.XEN, 'xen')],
+            host.to_supported_instances([u'xen-3.0-x86_64']))
 
     def test_invalid_values_do_not_break(self):
-        self.assertEqual([(arch.X86_64, hv_type.XEN, 'xen')],
-             host.to_supported_instances([u'xen-3.0-x86_64', 'spam']))
+        self.assertEqual(
+            [(obj_fields.Architecture.X86_64, hv_type.XEN, 'xen')],
+            host.to_supported_instances([u'xen-3.0-x86_64', 'spam']))
 
     def test_multiple_values(self):
         self.assertEqual(
             [
-                (arch.X86_64, hv_type.XEN, 'xen'),
-                (arch.I686, hv_type.XEN, 'hvm')
+                (obj_fields.Architecture.X86_64, hv_type.XEN, 'xen'),
+                (obj_fields.Architecture.I686, hv_type.XEN, 'hvm')
             ],
             host.to_supported_instances([u'xen-3.0-x86_64', 'hvm-3.0-x86_32'])
         )

@@ -26,11 +26,11 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import units
 
-from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import vm_mode
 import nova.conf
 from nova.i18n import _
+from nova.objects import fields as obj_fields
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import pathutils
 
@@ -157,9 +157,10 @@ class HostOps(object):
                'hypervisor_hostname': platform.node(),
                'vcpus_used': 0,
                'cpu_info': jsonutils.dumps(cpu_info),
-               'supported_instances':
-                   [(arch.I686, hv_type.HYPERV, vm_mode.HVM),
-                    (arch.X86_64, hv_type.HYPERV, vm_mode.HVM)],
+               'supported_instances': [
+                   (obj_fields.Architecture.I686, hv_type.HYPERV, vm_mode.HVM),
+                   (obj_fields.Architecture.X86_64, hv_type.HYPERV,
+                    vm_mode.HVM)],
                'numa_topology': None,
                }
 

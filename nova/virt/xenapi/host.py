@@ -24,7 +24,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import six
 
-from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -33,6 +32,7 @@ from nova import context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
+from nova.objects import fields as obj_fields
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
@@ -285,7 +285,7 @@ def to_supported_instances(host_capabilities):
 
             ostype, _version, guestarch = capability.split("-")
 
-            guestarch = arch.canonicalize(guestarch)
+            guestarch = obj_fields.Architecture.canonicalize(guestarch)
             ostype = vm_mode.canonicalize(ostype)
 
             result.append((guestarch, hv_type.XEN, ostype))

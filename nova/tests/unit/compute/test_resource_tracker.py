@@ -18,7 +18,6 @@ from oslo_config import cfg
 from oslo_utils import timeutils
 from oslo_utils import units
 
-from nova.compute import arch
 from nova.compute import claims
 from nova.compute import hv_type
 from nova.compute.monitors import base as monitor_base
@@ -31,6 +30,7 @@ from nova import context
 from nova import exception as exc
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import fields as obj_fields
 from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova import test
@@ -78,7 +78,10 @@ _COMPUTE_NODE_FIXTURES = [
         disk_available_least=0,
         host_ip='1.1.1.1',
         supported_hv_specs=[
-            objects.HVSpec.from_list([arch.I686, hv_type.KVM, vm_mode.HVM])
+            objects.HVSpec.from_list([
+                obj_fields.Architecture.I686,
+                hv_type.KVM,
+                vm_mode.HVM])
         ],
         metrics=None,
         pci_device_pools=None,

@@ -20,8 +20,8 @@ Constants used in ops classes
 from os_win import constants
 from oslo_utils import units
 
-from nova.compute import arch
 from nova.compute import power_state
+from nova.objects import fields as obj_fields
 
 HYPERV_POWER_STATE = {
     constants.HYPERV_VM_STATE_DISABLED: power_state.SHUTDOWN,
@@ -32,13 +32,13 @@ HYPERV_POWER_STATE = {
 }
 
 WMI_WIN32_PROCESSOR_ARCHITECTURE = {
-    constants.ARCH_I686: arch.I686,
-    constants.ARCH_MIPS: arch.MIPS,
-    constants.ARCH_ALPHA: arch.ALPHA,
-    constants.ARCH_PPC: arch.PPC,
-    constants.ARCH_ARMV7: arch.ARMV7,
-    constants.ARCH_IA64: arch.IA64,
-    constants.ARCH_X86_64: arch.X86_64,
+    constants.ARCH_I686: obj_fields.Architecture.I686,
+    constants.ARCH_MIPS: obj_fields.Architecture.MIPS,
+    constants.ARCH_ALPHA: obj_fields.Architecture.ALPHA,
+    constants.ARCH_PPC: obj_fields.Architecture.PPC,
+    constants.ARCH_ARMV7: obj_fields.Architecture.ARMV7,
+    constants.ARCH_IA64: obj_fields.Architecture.IA64,
+    constants.ARCH_X86_64: obj_fields.Architecture.X86_64,
 }
 
 

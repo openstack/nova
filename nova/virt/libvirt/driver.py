@@ -61,7 +61,6 @@ from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
-from nova.compute import arch
 from nova.compute import hv_type
 from nova.compute import power_state
 from nova.compute import task_states
@@ -299,18 +298,21 @@ MIN_LIBVIRT_POSTCOPY_VERSION = (1, 3, 3)
 # qemu postcopy support
 MIN_QEMU_POSTCOPY_VERSION = (2, 5, 0)
 
-MIN_LIBVIRT_OTHER_ARCH = {arch.S390: MIN_LIBVIRT_KVM_S390_VERSION,
-                          arch.S390X: MIN_LIBVIRT_KVM_S390_VERSION,
-                          arch.PPC: MIN_LIBVIRT_KVM_PPC64_VERSION,
-                          arch.PPC64: MIN_LIBVIRT_KVM_PPC64_VERSION,
-                          arch.PPC64LE: MIN_LIBVIRT_KVM_PPC64_VERSION,
-                         }
-MIN_QEMU_OTHER_ARCH = {arch.S390: MIN_QEMU_S390_VERSION,
-                       arch.S390X: MIN_QEMU_S390_VERSION,
-                       arch.PPC: MIN_QEMU_PPC64_VERSION,
-                       arch.PPC64: MIN_QEMU_PPC64_VERSION,
-                       arch.PPC64LE: MIN_QEMU_PPC64_VERSION,
-                      }
+MIN_LIBVIRT_OTHER_ARCH = {
+    fields.Architecture.S390: MIN_LIBVIRT_KVM_S390_VERSION,
+    fields.Architecture.S390X: MIN_LIBVIRT_KVM_S390_VERSION,
+    fields.Architecture.PPC: MIN_LIBVIRT_KVM_PPC64_VERSION,
+    fields.Architecture.PPC64: MIN_LIBVIRT_KVM_PPC64_VERSION,
+    fields.Architecture.PPC64LE: MIN_LIBVIRT_KVM_PPC64_VERSION,
+}
+
+MIN_QEMU_OTHER_ARCH = {
+    fields.Architecture.S390: MIN_QEMU_S390_VERSION,
+    fields.Architecture.S390X: MIN_QEMU_S390_VERSION,
+    fields.Architecture.PPC: MIN_QEMU_PPC64_VERSION,
+    fields.Architecture.PPC64: MIN_QEMU_PPC64_VERSION,
+    fields.Architecture.PPC64LE: MIN_QEMU_PPC64_VERSION,
+}
 
 # perf events support
 MIN_LIBVIRT_PERF_VERSION = (2, 0, 0)
@@ -460,7 +462,8 @@ class LibvirtDriver(driver.ComputeDriver):
         caps = self._host.get_capabilities()
         hostarch = caps.host.cpu.arch
         if (CONF.libvirt.virt_type not in ('qemu', 'kvm') or
-            hostarch not in (arch.I686, arch.X86_64)):
+            hostarch not in (fields.Architecture.I686,
+                             fields.Architecture.X86_64)):
             LOG.warning(_LW('The libvirt driver is not tested on '
                          '%(type)s/%(arch)s by the OpenStack project and '
                          'thus its quality can not be ensured. For more '
@@ -535,7 +538,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'version': self._version_to_string(
                             NEXT_MIN_QEMU_VERSION)})
 
-        kvm_arch = arch.from_host()
+        kvm_arch = fields.Architecture.from_host()
         if (CONF.libvirt.virt_type in ('kvm', 'qemu') and
             kvm_arch in MIN_LIBVIRT_OTHER_ARCH and
                 not self._host.has_min_version(
@@ -1008,7 +1011,7 @@ class LibvirtDriver(driver.ComputeDriver):
         tree = etree.fromstring(xml)
 
         # The 'serial' device is the base for x86 platforms. Other platforms
-        # (e.g. kvm on system z = arch.S390X) can only use 'console' devices.
+        # (e.g. kvm on system z = S390X) can only use 'console' devices.
         xpath_mode = "[@mode='%s']" % mode if mode else ""
         serial_tcp = "./devices/serial[@type='tcp']/source" + xpath_mode
         console_tcp = "./devices/console[@type='tcp']/source" + xpath_mode
@@ -3696,13 +3699,14 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             # For ARM systems we will default to vexpress-a15 for armv7
             # and virt for aarch64
-            if caps.host.cpu.arch == arch.ARMV7:
+            if caps.host.cpu.arch == fields.Architecture.ARMV7:
                 mach_type = "vexpress-a15"
 
-            if caps.host.cpu.arch == arch.AARCH64:
+            if caps.host.cpu.arch == fields.Architecture.AARCH64:
                 mach_type = "virt"
 
-            if caps.host.cpu.arch in (arch.S390, arch.S390X):
+            if caps.host.cpu.arch in (fields.Architecture.S390,
+                                      fields.Architecture.S390X):
                 mach_type = 's390-ccw-virtio'
 
             # If set in the config, use that as the default.
@@ -4061,7 +4065,8 @@ class LibvirtDriver(driver.ComputeDriver):
         clk.add_timer(tmrtc)
 
         guestarch = libvirt_utils.get_arch(image_meta)
-        if guestarch in (arch.I686, arch.X86_64):
+        if guestarch in (fields.Architecture.I686,
+                         fields.Architecture.X86_64):
             # NOTE(rfolco): HPET is a hardware timer for x86 arch.
             # qemu -no-hpet is not supported on non-x86 targets.
             tmhpet = vconfig.LibvirtConfigGuestTimer()
@@ -4084,7 +4089,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _set_features(self, guest, os_type, caps, virt_type):
         if virt_type == "xen":
             # PAE only makes sense in X86
-            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
+            if caps.host.cpu.arch in (fields.Architecture.I686,
+                                      fields.Architecture.X86_64):
                 guest.features.append(vconfig.LibvirtConfigGuestFeaturePAE())
 
         if (virt_type not in ("lxc", "uml", "parallels", "xen") or
@@ -4125,7 +4131,9 @@ class LibvirtDriver(driver.ComputeDriver):
             video.type = 'xen'
         elif CONF.libvirt.virt_type == 'parallels':
             video.type = 'vga'
-        elif guestarch in (arch.PPC, arch.PPC64, arch.PPC64LE):
+        elif guestarch in (fields.Architecture.PPC,
+                           fields.Architecture.PPC64,
+                           fields.Architecture.PPC64LE):
             # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
             # so use 'vga' instead when running on Power hardware.
             video.type = 'vga'
@@ -4247,7 +4255,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _has_uefi_support(self):
         # This means that the host can support uefi booting for guests
-        supported_archs = [arch.X86_64, arch.AARCH64]
+        supported_archs = [fields.Architecture.X86_64,
+                           fields.Architecture.AARCH64]
         caps = self._host.get_capabilities()
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_UEFI_VERSION) and
@@ -4288,7 +4297,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if guest.os_type == vm_mode.HVM:
                 guest.os_loader = CONF.libvirt.xen_hvmloader_path
         elif virt_type in ("kvm", "qemu"):
-            if caps.host.cpu.arch in (arch.I686, arch.X86_64):
+            if caps.host.cpu.arch in (fields.Architecture.I686,
+                                      fields.Architecture.X86_64):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
@@ -4344,7 +4354,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 num_ports = hardware.get_number_of_serial_ports(
                     flavor, image_meta)
 
-                if guest_arch in (arch.S390, arch.S390X):
+                if guest_arch in (fields.Architecture.S390,
+                                  fields.Architecture.S390X):
                     console_cls = vconfig.LibvirtConfigGuestConsole
                 else:
                     console_cls = vconfig.LibvirtConfigGuestSerial
@@ -4365,7 +4376,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # client app is connected. Thus we can't get away
                 # with a single type=pty console. Instead we have
                 # to configure two separate consoles.
-                if guest_arch in (arch.S390, arch.S390X):
+                if guest_arch in (fields.Architecture.S390,
+                                  fields.Architecture.S390X):
                     consolelog = vconfig.LibvirtConfigGuestConsole()
                     consolelog.target_type = "sclplm"
                 else:
@@ -4373,7 +4385,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 consolelog.type = "file"
                 consolelog.source_path = log_path
                 guest.add_device(consolelog)
-            if caps.host.cpu.arch in (arch.S390, arch.S390X):
+            if caps.host.cpu.arch in (fields.Architecture.S390,
+                                      fields.Architecture.S390X):
                 consolepty = vconfig.LibvirtConfigGuestConsole()
                 consolepty.target_type = "sclp"
             else:
@@ -5026,7 +5039,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for g in caps.guests:
             for dt in g.domtype:
                 instance_cap = (
-                    arch.canonicalize(g.arch),
+                    fields.Architecture.canonicalize(g.arch),
                     hv_type.canonicalize(dt),
                     vm_mode.canonicalize(g.ostype))
                 instance_caps.append(instance_cap)
@@ -5182,10 +5195,12 @@ class LibvirtDriver(driver.ComputeDriver):
                     self._bad_libvirt_numa_version_warn = True
                 return False
 
-        support_matrix = {(arch.I686, arch.X86_64,
-                           arch.AARCH64): MIN_LIBVIRT_NUMA_VERSION,
-                          (arch.PPC64,
-                           arch.PPC64LE): MIN_LIBVIRT_NUMA_VERSION_PPC}
+        support_matrix = {
+            (fields.Architecture.I686,
+             fields.Architecture.X86_64,
+             fields.Architecture.AARCH64): MIN_LIBVIRT_NUMA_VERSION,
+            (fields.Architecture.PPC64,
+             fields.Architecture.PPC64LE): MIN_LIBVIRT_NUMA_VERSION_PPC}
         caps = self._host.get_capabilities()
         is_supported = False
         for archs, libvirt_ver in support_matrix.items():
@@ -5199,8 +5214,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_hugepage_support(self):
         # This means that the host can support multiple values for the size
         # field in LibvirtConfigGuestMemoryBackingPage
-        supported_archs = [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64,
-                           arch.AARCH64]
+        supported_archs = [fields.Architecture.I686,
+                           fields.Architecture.X86_64,
+                           fields.Architecture.AARCH64,
+                           fields.Architecture.PPC64LE,
+                           fields.Architecture.PPC64]
         caps = self._host.get_capabilities()
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,

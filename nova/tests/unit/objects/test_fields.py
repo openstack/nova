@@ -13,11 +13,14 @@
 #    under the License.
 
 import datetime
+import os
 
 import iso8601
+import mock
 from oslo_versionedobjects import exception as ovo_exc
 import six
 
+from nova import exception
 from nova.network import model as network_model
 from nova.objects import fields
 from nova import signature_utils
@@ -175,6 +178,56 @@ class TestEnum(TestField):
     def test_with_empty_values(self):
         self.assertRaises(ovo_exc.EnumRequiresValidValuesError,
                           fields.EnumField, [])
+
+
+class TestArchitecture(TestField):
+    @mock.patch.object(os, 'uname')
+    def test_host(self, mock_uname):
+        mock_uname.return_value = (
+            'Linux',
+            'localhost.localdomain',
+            '3.14.8-200.fc20.x86_64',
+            '#1 SMP Mon Jun 16 21:57:53 UTC 2014',
+            'i686'
+        )
+
+        self.assertEqual(fields.Architecture.I686,
+                         fields.Architecture.from_host())
+
+    def test_valid_string(self):
+        self.assertTrue(fields.Architecture.is_valid('x86_64'))
+
+    def test_valid_constant(self):
+        self.assertTrue(fields.Architecture.is_valid(
+            fields.Architecture.X86_64))
+
+    def test_valid_bogus(self):
+        self.assertFalse(fields.Architecture.is_valid('x86_64wibble'))
+
+    def test_canonicalize_i386(self):
+        self.assertEqual(fields.Architecture.I686,
+                         fields.Architecture.canonicalize('i386'))
+
+    def test_canonicalize_amd64(self):
+        self.assertEqual(fields.Architecture.X86_64,
+                         fields.Architecture.canonicalize('amd64'))
+
+    def test_canonicalize_case(self):
+        self.assertEqual(fields.Architecture.X86_64,
+                         fields.Architecture.canonicalize('X86_64'))
+
+    def test_canonicalize_compat_xen1(self):
+        self.assertEqual(fields.Architecture.I686,
+                         fields.Architecture.canonicalize('x86_32'))
+
+    def test_canonicalize_compat_xen2(self):
+        self.assertEqual(fields.Architecture.I686,
+                         fields.Architecture.canonicalize('x86_32p'))
+
+    def test_canonicalize_bogus(self):
+        self.assertRaises(exception.InvalidArchitectureName,
+                          fields.Architecture.canonicalize,
+                          'x86_64wibble')
 
 
 class TestImageSignatureTypes(TestField):

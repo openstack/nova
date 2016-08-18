@@ -49,7 +49,6 @@ from sqlalchemy import sql
 from sqlalchemy import Table
 
 from nova import block_device
-from nova.compute import arch
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -6495,12 +6494,13 @@ class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(agent_build, all_agent_builds[0])
 
     def test_agent_build_get_by_triple(self):
-        agent_build = db.agent_build_create(self.ctxt, {'hypervisor': 'kvm',
-                                'os': 'FreeBSD', 'architecture': arch.X86_64})
-        self.assertIsNone(db.agent_build_get_by_triple(self.ctxt, 'kvm',
-                                                        'FreeBSD', 'i386'))
+        agent_build = db.agent_build_create(
+            self.ctxt, {'hypervisor': 'kvm', 'os': 'FreeBSD',
+                        'architecture': fields.Architecture.X86_64})
+        self.assertIsNone(db.agent_build_get_by_triple(
+            self.ctxt, 'kvm', 'FreeBSD', 'i386'))
         self._assertEqualObjects(agent_build, db.agent_build_get_by_triple(
-                                    self.ctxt, 'kvm', 'FreeBSD', arch.X86_64))
+            self.ctxt, 'kvm', 'FreeBSD', fields.Architecture.X86_64))
 
     def test_agent_build_destroy(self):
         agent_build = db.agent_build_create(self.ctxt, {})
@@ -6527,14 +6527,14 @@ class AgentBuildTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_agent_build_exists(self):
         values = {'hypervisor': 'kvm', 'os': 'FreeBSD',
-                  'architecture': arch.X86_64}
+                  'architecture': fields.Architecture.X86_64}
         db.agent_build_create(self.ctxt, values)
         self.assertRaises(exception.AgentBuildExists, db.agent_build_create,
                           self.ctxt, values)
 
     def test_agent_build_get_all_by_hypervisor(self):
         values = {'hypervisor': 'kvm', 'os': 'FreeBSD',
-                  'architecture': arch.X86_64}
+                  'architecture': fields.Architecture.X86_64}
         created = db.agent_build_create(self.ctxt, values)
         actual = db.agent_build_get_all(self.ctxt, hypervisor='kvm')
         self._assertEqualListsOfObjects([created], actual)

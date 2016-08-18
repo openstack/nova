@@ -15,7 +15,7 @@
 from lxml import etree
 from oslo_utils import units
 
-from nova.compute import arch
+from nova.objects import fields as obj_fields
 from nova import test
 from nova.tests.unit import matchers
 from nova.virt.libvirt import config
@@ -330,7 +330,7 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigCPU()
         obj.model = "Penryn"
         obj.vendor = "Intel"
-        obj.arch = arch.X86_64
+        obj.arch = obj_fields.Architecture.X86_64
 
         obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
         obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
@@ -350,7 +350,7 @@ class LibvirtConfigCPUTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigCPU()
         obj.model = "Penryn"
         obj.vendor = "Intel"
-        obj.arch = arch.X86_64
+        obj.arch = obj_fields.Architecture.X86_64
 
         obj.add_feature(config.LibvirtConfigCPUFeature("mtrr"))
         obj.add_feature(config.LibvirtConfigCPUFeature("apic"))
@@ -401,7 +401,7 @@ class LibvirtConfigGuestCPUTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuestCPU()
         obj.model = "Penryn"
         obj.vendor = "Intel"
-        obj.arch = arch.X86_64
+        obj.arch = obj_fields.Architecture.X86_64
         obj.mode = "custom"
 
         obj.add_feature(config.LibvirtConfigGuestCPUFeature("mtrr"))

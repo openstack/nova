@@ -26,12 +26,12 @@ from lxml import etree
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 
-from nova.compute import arch
 from nova.compute import vm_mode
 import nova.conf
 from nova.i18n import _
 from nova.i18n import _LI
 from nova.i18n import _LW
+from nova.objects import fields as obj_fields
 from nova import utils
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
@@ -498,7 +498,7 @@ def get_arch(image_meta):
         if image_arch is not None:
             return image_arch
 
-    return arch.from_host()
+    return obj_fields.Architecture.from_host()
 
 
 def is_mounted(mount_path, source=None):
