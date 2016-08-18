@@ -1,8 +1,4 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
 # needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
 
 
 # Copyright (c) 2013 Intel, Inc.
@@ -23,10 +19,10 @@
 
 from oslo_config import cfg
 
-pci_alias_opt = cfg.MultiStrOpt(
-    'pci_alias',
-    default=[],
-    help="""
+pci_opts = [
+    cfg.MultiStrOpt('pci_alias',
+        default=[],
+        help="""
 An alias for a PCI passthrough device requirement.
 
 This allows users to specify the alias in the extra_spec for a flavor, without
@@ -50,20 +46,10 @@ Possible Values:
   * "product_id"
   * "vendor_id"
   * "device_type"
-
-Services which consume this:
-
-* nova-api
-* nova-compute
-
-Related options:
-
-* None""")
-
-pci_passthrough_whitelist_opt = cfg.MultiStrOpt(
-    'pci_passthrough_whitelist',
-    default=[],
-    help="""
+"""),
+    cfg.MultiStrOpt('pci_passthrough_whitelist',
+        default=[],
+        help="""
 White list of PCI devices available to VMs.
 
 Possible values:
@@ -103,24 +89,15 @@ Possible values:
 
     pci_passthrough_whitelist = [{"product_id":"0001", "vendor_id":"8086"},
                                  {"product_id":"0002", "vendor_id":"8086"}]
-
-Services which consume this:
-
-* nova-compute
-
-Related options:
-
-* None""")
-
-ALL_OPTS = [pci_alias_opt,
-            pci_passthrough_whitelist_opt]
+""")
+]
 
 
 def register_opts(conf):
-    conf.register_opts(ALL_OPTS)
+    conf.register_opts(pci_opts)
 
 
 def list_opts():
     # TODO(sfinucan): This should be moved into the PCI group and
     # oslo_config.cfg.OptGroup used
-    return {'DEFAULT': ALL_OPTS}
+    return {'DEFAULT': pci_opts}
