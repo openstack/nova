@@ -1907,8 +1907,18 @@ class API(base_api.NetworkAPI):
         This api call was added to allow this to be done in one operation
         if using neutron.
         """
-        self._release_floating_ip(context, floating_ip['address'],
-                                  raise_if_associated=False)
+
+        @base_api.refresh_cache
+        def _release_floating_ip_and_refresh_cache(self, context, instance,
+                                                   floating_ip):
+            self._release_floating_ip(context, floating_ip['address'],
+                                      raise_if_associated=False)
+        if instance:
+            _release_floating_ip_and_refresh_cache(self, context, instance,
+                                                   floating_ip)
+        else:
+            self._release_floating_ip(context, floating_ip['address'],
+                                      raise_if_associated=False)
 
     def _release_floating_ip(self, context, address,
                              raise_if_associated=True):
