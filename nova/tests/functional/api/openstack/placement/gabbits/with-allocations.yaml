@@ -1,0 +1,25 @@
+
+fixtures:
+    - AllocationFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+
+tests:
+
+- name: confirm inventories
+  GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  response_json_paths:
+      $.inventories.DISK_GB.total: 2048
+      $.inventories.DISK_GB.reserved: 0
+
+- name: get usages
+  GET: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_headers:
+      # use a regex here because charset, which is not only not
+      # required but superfluous, is present
+      content-type: /application/json/
+  response_json_paths:
+      $.resource_provider_generation: 1
+      $.usages.DISK_GB: 1024
