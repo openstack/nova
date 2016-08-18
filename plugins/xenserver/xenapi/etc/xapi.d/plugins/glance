@@ -193,8 +193,7 @@ def _upload_tarball_v1(staging_path, image_id, glance_host, glance_port,
 
 def _upload_tarball_by_url_v1(staging_path, image_id, glance_endpoint,
                               extra_headers, properties):
-    """
-    Create a tarball of the image and then stream that into Glance v1
+    """Create a tarball of the image and then stream that into Glance v1
     using chunked-transfer-encoded HTTP.
     """
     # NOTE(johngarbutt) By default, there is no timeout.
@@ -320,26 +319,26 @@ def _update_image_meta_v2(conn, image_id, extra_headers, properties):
     headers = {'Content-Type': 'application/openstack-images-v2.1-json-patch'}
     headers.update(**extra_headers)
 
-    for key, value in properties.iteritems():
+    for key, value in properties.items():
         prop = {"path": "/%s" % key.replace('_', '-'),
                 "value": key,
                 "op": "add"}
         body.append(prop)
     body = json.dumps(body)
-    conn.request('PATCH', '/v2/images/%s' % image_id, body=body, headers=headers)
+    conn.request('PATCH', '/v2/images/%s' % image_id,
+                 body=body, headers=headers)
     resp = conn.getresponse()
     resp.read()
 
     if resp.status == httplib.OK:
         return
-    logging.error("Image meta was not updated. Status: %s, Reason: %s" %
-                 (resp.status, resp.reason))
+    logging.error("Image meta was not updated. Status: %s, Reason: %s" % (
+        resp.status, resp.reason))
 
 
 def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
                               extra_headers, properties):
-    """
-    Create a tarball of the image and then stream that into Glance v2
+    """Create a tarball of the image and then stream that into Glance v2
     using chunked-transfer-encoded HTTP.
     """
     # NOTE(johngarbutt) By default, there is no timeout.
@@ -364,7 +363,7 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
 
     try:
         conn = _create_connection(parts[0], parts[1])
-    except Exception, error:
+    except Exception, error:  # noqa
         raise RetryableError(error)
 
     try:
@@ -398,7 +397,7 @@ def _upload_tarball_by_url_v2(staging_path, image_id, glance_endpoint,
             callback_data['bytes_written'] += chunk_len
             try:
                 conn.send("%x\r\n%s\r\n" % (chunk_len, chunk))
-            except Exception, error:
+            except Exception, error:  # noqa
                 logging.exception('Failed to upload when sending chunks')
                 raise RetryableError(error)
 

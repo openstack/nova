@@ -271,6 +271,7 @@ def _ip_link_del_dev(args):
     cmd_args = ['ip', 'link', 'delete', device_name]
     return _run_command(cmd_args)
 
+
 def _ip_link_add_veth_pair(args):
     dev1_name = pluginlib.exists(args, 'dev1_name')
     dev2_name = pluginlib.exists(args, 'dev2_name')
