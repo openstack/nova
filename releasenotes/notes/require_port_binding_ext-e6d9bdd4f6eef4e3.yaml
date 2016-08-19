@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    Nova now has a hard requirement that the Port Binding extension is
+    enabled in the Neutron service. This simplifies the logic between
+    Nova and Neutron.

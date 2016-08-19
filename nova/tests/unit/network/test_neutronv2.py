@@ -453,6 +453,10 @@ class TestNeutronv2Base(test.TestCase):
 
         api = neutronapi.API()
         self.mox.StubOutWithMock(api, 'get_instance_nw_info')
+        self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
+        self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
+
+        bind_host_id = kwargs.get('bind_host_id') or None
 
         has_extra_dhcp_opts = False
         dhcp_options = kwargs.get('dhcp_options')
@@ -468,9 +472,11 @@ class TestNeutronv2Base(test.TestCase):
         nets = self.nets[net_idx - 1]
         ports = {}
         fixed_ips = {}
+
         macs = kwargs.pop('macs', None)
         if macs:
             macs = set(macs)
+
         req_net_ids = []
         ordered_networks = []
         self._stub_allocate_for_instance_show_port(nets, ports, fixed_ips,
@@ -499,8 +505,9 @@ class TestNeutronv2Base(test.TestCase):
         self._stub_allocate_for_instance_create_port(
             ordered_networks, fixed_ips, nets)
 
-        has_portbinding = self._stub_allocate_for_instance_port_binding(
-            api, kwargs.get('portbinding'), has_dns_extension)
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
 
         preexisting_port_ids = []
         ports_in_requested_net_order = []
@@ -524,26 +531,16 @@ class TestNeutronv2Base(test.TestCase):
             # here then skip it safely not continuing with a None Network
             else:
                 continue
-            if has_portbinding:
-                port_req_body['port'][neutronapi.BINDING_HOST_ID] = (
-                    self.instance.get('host'))
-            if has_dns_extension and not network.get('dns_domain'):
-                port_req_body['port']['dns_name'] = self.instance.hostname
-            if not has_portbinding and not has_dns_extension:
-                api._populate_neutron_extension_values(mox.IgnoreArg(),
-                    self.instance, mox.IgnoreArg(),
-                    mox.IgnoreArg(), network=network,
-                    neutron=self.moxed_client,
-                    bind_host_id=None).AndReturn(None)
-            elif has_portbinding:
-                # since _populate_neutron_extension_values() will call
-                # _has_port_binding_extension()
-                api._has_port_binding_extension(mox.IgnoreArg(),
-                    neutron=self.moxed_client).\
-                    AndReturn(has_portbinding)
-            else:
-                api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
-                    neutron=self.moxed_client)
+
+            api._populate_neutron_extension_values(mox.IgnoreArg(),
+                                                   self.instance,
+                                                   mox.IgnoreArg(),
+                                                   mox.IgnoreArg(),
+                                                   network=network,
+                                                   neutron=self.moxed_client,
+                                                   bind_host_id=bind_host_id).\
+                                                   AndReturn(None)
+
             if macs:
                 port_req_body['port']['mac_address'] = macs.pop()
             if has_extra_dhcp_opts:
@@ -567,13 +564,12 @@ class TestNeutronv2Base(test.TestCase):
             new_mac = port_req_body['port'].get('mac_address')
             if new_mac:
                 update_port_res['port']['mac_address'] = new_mac
+
             self.moxed_client.update_port(port_id,
                                           MyComparator(port_req_body)
                                           ).AndReturn(update_port_res)
 
-            if has_portbinding and has_dns_extension:
-                api._has_port_binding_extension(mox.IgnoreArg()).\
-                    AndReturn(has_portbinding)
+            if has_dns_extension:
                 if net_idx == 11:
                     port_req_body_dns = {
                         'port': {
@@ -601,36 +597,6 @@ class TestNeutronv2Base(test.TestCase):
                                 ).AndReturn(self._returned_nw_info)
         self.mox.ReplayAll()
         return api
-
-    def _stub_allocate_for_instance_port_binding(self, api, portbinding,
-            has_dns_extension):
-        if portbinding:
-            neutronapi.get_client(mox.IgnoreArg()).AndReturn(
-                self.moxed_client)
-        neutronapi.get_client(
-            mox.IgnoreArg(), admin=True).AndReturn(
-            self.moxed_client)
-        has_portbinding = False
-        if portbinding:
-            has_portbinding = True
-            api.extensions[constants.PORTBINDING_EXT] = 1
-            self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
-            api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
-                neutron=self.moxed_client)
-            self.mox.StubOutWithMock(api, '_has_port_binding_extension')
-            api._has_port_binding_extension(mox.IgnoreArg(),
-                neutron=self.moxed_client,
-                refresh_cache=True).AndReturn(has_portbinding)
-        elif has_dns_extension:
-            self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
-            api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
-                neutron=self.moxed_client)
-        else:
-            self.mox.StubOutWithMock(api, '_refresh_neutron_extensions_cache')
-            api._refresh_neutron_extensions_cache(mox.IgnoreArg(),
-                neutron=self.moxed_client)
-            self.mox.StubOutWithMock(api, '_populate_neutron_extension_values')
-        return has_portbinding
 
     def _stub_allocate_for_instance_show_port(self, nets, ports, fixed_ips,
             macs, req_net_ids, ordered_networks, **kwargs):
@@ -1319,11 +1285,10 @@ class TestNeutronv2(TestNeutronv2Base):
 
     @mock.patch(
         'nova.network.neutronv2.api.API._populate_neutron_extension_values')
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.API._create_ports_for_instance')
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
     def test_allocate_for_instance_ex1(self, mock_unbind, mock_create_ports,
-            mock_has_port_binding, mock_populate):
+            mock_populate):
         """verify we will delete created ports
         if we fail to allocate all net resources.
 
@@ -1340,7 +1305,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.list_networks(
             id=[uuids.my_netid1, uuids.my_netid2]).AndReturn(
             {'networks': self.nets2})
-        mock_has_port_binding.return_value = False
         mock_create_ports.return_value = [
             (request, (getattr(uuids, 'portid_%s' % request.network_id)))
             for request in requested_networks
@@ -1577,7 +1541,10 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.list_ports(
             device_id=self.instance.uuid).AndReturn(
                 {'ports': ret_data})
-        self.moxed_client.list_extensions().AndReturn({'extensions': []})
+
+        neutronapi.get_client(
+            mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
         if requested_networks:
             for net, fip, port, request_id in requested_networks:
                 self.moxed_client.update_port(port)
@@ -1637,11 +1604,12 @@ class TestNeutronv2(TestNeutronv2Base):
         mock_preexisting.return_value = []
         port_data = self.port_data1
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
+            self.moxed_client)
         self.moxed_client.list_ports(
             device_id=self.instance.uuid).AndReturn(
                 {'ports': port_data})
 
-        self.moxed_client.list_extensions().AndReturn({'extensions': []})
         NeutronNotFound = exceptions.NeutronClientException(status_code=404)
         for port in reversed(port_data):
             self.moxed_client.delete_port(port['id']).AndRaise(
@@ -3926,7 +3894,6 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_update_port_bindings_for_instance_same_host(self,
                                                          get_client_mock):
         instance = fake_instance.fake_instance_obj(self.context)
-        self.api._has_port_binding_extension = mock.Mock(return_value=True)
 
         # We test two ports, one with the same host as the host passed in and
         # one where binding:host_id isn't set, so we update that port.
@@ -3951,7 +3918,6 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_update_port_bindings_for_instance_with_pci(self,
                                             get_client_mock,
                                             get_pci_device_devspec_mock):
-        self.api._has_port_binding_extension = mock.Mock(return_value=True)
 
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
@@ -4009,7 +3975,6 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_update_port_bindings_for_instance_with_pci_fail(self,
                                             get_client_mock,
                                             get_pci_device_devspec_mock):
-        self.api._has_port_binding_extension = mock.Mock(return_value=True)
 
         devspec = mock.Mock()
         devspec.get_tags.return_value = {'physical_network': 'physnet1'}
@@ -4282,43 +4247,32 @@ class TestNeutronv2WithMock(test.TestCase):
         result = self.api._get_preexisting_port_ids(instance)
         self.assertEqual(['2', '3'], result, "Invalid preexisting ports")
 
-    def _test_unbind_ports_get_client(self, mock_neutron,
-                                      mock_has_ext, has_ext=False):
+    def _test_unbind_ports_get_client(self, mock_neutron):
         mock_ctx = mock.Mock(is_admin=False)
-        mock_has_ext.return_value = has_ext
         ports = ["1", "2", "3"]
 
         self.api._unbind_ports(mock_ctx, ports, mock_neutron)
 
         get_client_calls = []
-        get_client_calls.append(mock.call(mock_ctx)
-                                if not has_ext else
-                                mock.call(mock_ctx, admin=True))
+        get_client_calls.append(mock.call(mock_ctx, admin=True))
 
-        if has_ext:
-            self.assertEqual(1, mock_neutron.call_count)
-            mock_neutron.assert_has_calls(get_client_calls, True)
-        else:
-            self.assertEqual(0, mock_neutron.call_count)
+        self.assertEqual(1, mock_neutron.call_count)
+        mock_neutron.assert_has_calls(get_client_calls, True)
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.get_client')
     def test_unbind_ports_get_client_binding_extension(self,
-                                                       mock_neutron,
-                                                       mock_has_ext):
-        self._test_unbind_ports_get_client(mock_neutron, mock_has_ext, True)
+                                                       mock_neutron):
+        self._test_unbind_ports_get_client(mock_neutron)
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.get_client')
-    def test_unbind_ports_get_client(self, mock_neutron, mock_has_ext):
-        self._test_unbind_ports_get_client(mock_neutron, mock_has_ext)
+    def test_unbind_ports_get_client(self, mock_neutron):
+        self._test_unbind_ports_get_client(mock_neutron)
 
-    def _test_unbind_ports(self, mock_neutron, mock_has_ext, has_ext=False):
+    def _test_unbind_ports(self, mock_neutron):
         mock_client = mock.Mock()
         mock_update_port = mock.Mock()
         mock_client.update_port = mock_update_port
         mock_ctx = mock.Mock(is_admin=False)
-        mock_has_ext.return_value = has_ext
         mock_neutron.return_value = mock_client
         ports = ["1", "2", "3"]
 
@@ -4326,9 +4280,8 @@ class TestNeutronv2WithMock(test.TestCase):
         api._unbind_ports(mock_ctx, ports, mock_client)
 
         body = {'port': {'device_id': '', 'device_owner': ''}}
-        if has_ext:
-            body['port'][neutronapi.BINDING_HOST_ID] = None
-            body['port'][neutronapi.BINDING_PROFILE] = {}
+        body['port'][neutronapi.BINDING_HOST_ID] = None
+        body['port'][neutronapi.BINDING_PROFILE] = {}
         update_port_calls = []
         for p in ports:
             update_port_calls.append(mock.call(p, body))
@@ -4336,24 +4289,20 @@ class TestNeutronv2WithMock(test.TestCase):
         self.assertEqual(3, mock_update_port.call_count)
         mock_update_port.assert_has_calls(update_port_calls)
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.get_client')
-    def test_unbind_ports_binding_ext(self, mock_neutron, mock_has_ext):
-        self._test_unbind_ports(mock_neutron, mock_has_ext, True)
+    def test_unbind_ports_binding_ext(self, mock_neutron):
+        self._test_unbind_ports(mock_neutron)
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.get_client')
-    def test_unbind_ports(self, mock_neutron, mock_has_ext):
-        self._test_unbind_ports(mock_neutron, mock_has_ext, False)
+    def test_unbind_ports(self, mock_neutron):
+        self._test_unbind_ports(mock_neutron)
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
-    def test_unbind_ports_no_port_ids(self, mock_has_ext):
+    def test_unbind_ports_no_port_ids(self):
         # Tests that None entries in the ports list are filtered out.
         mock_client = mock.Mock()
         mock_update_port = mock.Mock()
         mock_client.update_port = mock_update_port
         mock_ctx = mock.Mock(is_admin=False)
-        mock_has_ext.return_value = True
 
         api = neutronapi.API()
         api._unbind_ports(mock_ctx, [None], mock_client, mock_client)
@@ -4366,7 +4315,6 @@ class TestNeutronv2WithMock(test.TestCase):
                 '_check_external_network_attach')
     @mock.patch('nova.network.neutronv2.api.LOG')
     @mock.patch('nova.network.neutronv2.api.API._unbind_ports')
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.API.'
                 '_populate_neutron_extension_values')
     @mock.patch('nova.network.neutronv2.api.API._get_available_networks')
@@ -4376,7 +4324,6 @@ class TestNeutronv2WithMock(test.TestCase):
                                           mock_ntrn,
                                           mock_avail_nets,
                                           mock_ext_vals,
-                                          mock_has_pbe,
                                           mock_unbind,
                                           mock_log,
                                           mock_cena,
@@ -4402,7 +4349,7 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_inst = mock.Mock(project_id="proj-1",
                               availability_zone='zone-1',
                               uuid='inst-1')
-        mock_has_pbe.return_value = False
+
         nw_req = objects.NetworkRequestList(
             objects = [objects.NetworkRequest(port_id=uuids.portid_1),
                        objects.NetworkRequest(port_id=uuids.portid_2),
@@ -4420,20 +4367,17 @@ class TestNeutronv2WithMock(test.TestCase):
 
     @mock.patch('nova.network.neutronv2.api._filter_hypervisor_macs')
     @mock.patch('nova.network.neutronv2.api.API._validate_requested_port_ids')
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.API._get_available_networks')
     @mock.patch('nova.network.neutronv2.api.get_client')
     def test_allocate_port_for_instance_no_networks(self,
                                                     mock_getclient,
                                                     mock_avail_nets,
-                                                    mock_has_pbe,
                                                     mock_validate_port_ids,
                                                     mock_filter_macs):
         """Tests that if no networks are requested and no networks are
         available, we fail with InterfaceAttachFailedNoNetwork.
         """
         instance = fake_instance.fake_instance_obj(self.context)
-        mock_has_pbe.return_value = False
         mock_validate_port_ids.return_value = ({}, [])
         mock_filter_macs.return_value = None
         mock_avail_nets.return_value = []
@@ -4548,7 +4492,6 @@ class TestNeutronv2WithMock(test.TestCase):
 
     @mock.patch('nova.network.neutronv2.api.API.'
                 '_check_external_network_attach')
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.API.'
                 '_populate_neutron_extension_values')
     @mock.patch('nova.network.neutronv2.api.API._get_available_networks')
@@ -4556,9 +4499,7 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_port_binding_failed_created_port(self, mock_ntrn,
                                           mock_avail_nets,
                                           mock_ext_vals,
-                                          mock_has_pbe,
                                           mock_cena):
-        mock_has_pbe.return_value = True
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
         mock_inst = mock.Mock(project_id="proj-1",
@@ -4579,12 +4520,9 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_nc.delete_port.assert_called_once_with(uuids.portid_1)
 
     @mock.patch('nova.network.neutronv2.api.API._show_port')
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension')
     @mock.patch('nova.network.neutronv2.api.get_client')
     def test_port_binding_failed_with_request(self, mock_ntrn,
-                                          mock_has_pbe,
                                           mock_show_port):
-        mock_has_pbe.return_value = True
         mock_nc = mock.Mock()
         mock_ntrn.return_value = mock_nc
         mock_inst = mock.Mock(project_id="proj-1",
@@ -4657,16 +4595,16 @@ class TestNeutronv2WithMock(test.TestCase):
     def test_unbind_ports_reset_dns_name(self):
         neutron = mock.Mock()
         port_client = mock.Mock()
-        with mock.patch.object(self.api, '_has_port_binding_extension',
-                               return_value=False):
-            self.api.extensions = [constants.DNS_INTEGRATION]
-            ports = [uuids.port_id]
-            self.api._unbind_ports(self.context, ports, neutron, port_client)
-            port_req_body = {'port': {'device_id': '',
-                                      'device_owner': '',
-                                      'dns_name': ''}}
-            port_client.update_port.assert_called_once_with(
-                uuids.port_id, port_req_body)
+        self.api.extensions = [constants.DNS_INTEGRATION]
+        ports = [uuids.port_id]
+        self.api._unbind_ports(self.context, ports, neutron, port_client)
+        port_req_body = {'port': {'binding:host_id': None,
+                                  'binding:profile': {},
+                                  'device_id': '',
+                                  'device_owner': '',
+                                  'dns_name': ''}}
+        port_client.update_port.assert_called_once_with(
+            uuids.port_id, port_req_body)
 
     def test_make_floating_ip_obj(self):
         self._test_make_floating_ip_obj()
@@ -4732,8 +4670,6 @@ class TestNeutronv2WithMock(test.TestCase):
         self.assertEqual(expected_floating.obj_to_primitive(),
                          actual_obj.obj_to_primitive())
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension',
-                return_value=True)
     @mock.patch('nova.network.neutronv2.api.API.'
                 '_populate_neutron_extension_values')
     @mock.patch('nova.network.neutronv2.api.API._update_port',
@@ -4751,8 +4687,7 @@ class TestNeutronv2WithMock(test.TestCase):
             mock_vif_destroy,
             mock_vif_create,
             mock_update_port,
-            mock_populate_ext_values,
-            mock_has_port_binding_extension):
+            mock_populate_ext_values):
         """Makes sure we rollback ports and VIFs if we fail updating ports"""
         instance = fake_instance.fake_instance_obj(self.context)
         ntrn = mock.Mock(spec='neutronclient.v2_0.client.Client')
@@ -4801,30 +4736,32 @@ class TestNeutronv2WithMock(test.TestCase):
                                                       '172.24.4.227')
         self.assertIsNone(fip)
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension',
-                return_value=False)
     @mock.patch.object(neutronapi.LOG, 'exception')
-    def test_unbind_ports_portnotfound(self, mock_log, mock_ext):
+    def test_unbind_ports_portnotfound(self, mock_log):
         api = neutronapi.API()
         neutron_client = mock.Mock()
         neutron_client.update_port = mock.Mock(
             side_effect=exceptions.PortNotFoundClient)
-        api._unbind_ports(self.context, [uuids.port_id], neutron_client)
+        api._unbind_ports(self.context, [uuids.port_id],
+                          neutron_client, neutron_client)
         neutron_client.update_port.assert_called_once_with(
-            uuids.port_id, {'port': {'device_id': '', 'device_owner': ''}})
+            uuids.port_id, {'port': {
+                'device_id': '', 'device_owner': '',
+                'binding:profile': {}, 'binding:host_id': None}})
         mock_log.assert_not_called()
 
-    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension',
-                return_value=False)
     @mock.patch.object(neutronapi.LOG, 'exception')
-    def test_unbind_ports_unexpected_error(self, mock_log, mock_ext):
+    def test_unbind_ports_unexpected_error(self, mock_log):
         api = neutronapi.API()
         neutron_client = mock.Mock()
         neutron_client.update_port = mock.Mock(
             side_effect=test.TestingException)
-        api._unbind_ports(self.context, [uuids.port_id], neutron_client)
+        api._unbind_ports(self.context, [uuids.port_id],
+                          neutron_client, neutron_client)
         neutron_client.update_port.assert_called_once_with(
-            uuids.port_id, {'port': {'device_id': '', 'device_owner': ''}})
+            uuids.port_id, {'port': {
+                'device_id': '', 'device_owner': '',
+                'binding:profile': {}, 'binding:host_id': None}})
         self.assertTrue(mock_log.called)
 
     @mock.patch.object(neutronapi, 'get_client')
@@ -4921,7 +4858,9 @@ class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 class TestNeutronv2Portbinding(TestNeutronv2Base):
 
     def test_allocate_for_instance_portbinding(self):
-        self._allocate_for_instance(1, portbinding=True,
+        neutronapi.get_client(mox.IgnoreArg()).AndReturn(
+            self.moxed_client)
+        self._allocate_for_instance(1,
                                     bind_host_id=self.instance.get('host'))
 
     def test_populate_neutron_extension_values_binding(self):
@@ -4929,7 +4868,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         neutronapi.get_client(mox.IgnoreArg()).AndReturn(
                 self.moxed_client)
         self.moxed_client.list_extensions().AndReturn(
-            {'extensions': [{'name': constants.PORTBINDING_EXT}]})
+            {'extensions': []})
         self.mox.ReplayAll()
         host_id = 'my_host_id'
         instance = {'host': host_id}
@@ -5094,22 +5033,11 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         api._populate_pci_mac_address(instance, 42, port_req_body)
         self.assertEqual(port_req_body, req)
 
-    def _test_update_port_binding_false(self, func_name, *args):
-        api = neutronapi.API()
-        func = getattr(api, func_name)
-        self.mox.StubOutWithMock(api, '_has_port_binding_extension')
-        api._has_port_binding_extension(mox.IgnoreArg(),
-                                        refresh_cache=True).AndReturn(False)
-        self.mox.ReplayAll()
-        func(*args)
-
     def _test_update_port_binding_true(self, expected_bind_host,
                                        func_name, *args):
         api = neutronapi.API()
         func = getattr(api, func_name)
-        self.mox.StubOutWithMock(api, '_has_port_binding_extension')
-        api._has_port_binding_extension(mox.IgnoreArg(),
-                                        refresh_cache=True).AndReturn(True)
+
         neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         search_opts = {'device_id': self.instance['uuid'],
@@ -5127,9 +5055,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                          func_name, *args):
         api = neutronapi.API()
         func = getattr(api, func_name)
-        self.mox.StubOutWithMock(api, '_has_port_binding_extension')
-        api._has_port_binding_extension(mox.IgnoreArg(),
-                                        refresh_cache=True).AndReturn(True)
+
         neutronapi.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         search_opts = {'device_id': self.instance['uuid'],
@@ -5145,12 +5071,6 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           func,
                           *args)
-
-    def test_migrate_instance_finish_binding_false(self):
-        instance = fake_instance.fake_instance_obj(self.context)
-        self._test_update_port_binding_false('migrate_instance_finish',
-                                             self.context, instance,
-                                             {'dest_compute': uuids.fake})
 
     def test_migrate_instance_finish_binding_true(self):
         migration = {'source_compute': self.instance.get('host'),
@@ -5171,12 +5091,6 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                                               self.context,
                                               instance,
                                               migration)
-
-    def test_setup_instance_network_on_host_false(self):
-        instance = fake_instance.fake_instance_obj(self.context)
-        self._test_update_port_binding_false(
-            'setup_instance_network_on_host', self.context, instance,
-            'fake_host')
 
     def test_setup_instance_network_on_host_true(self):
         instance = self._fake_instance_object(self.instance)
@@ -5625,7 +5539,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
         available_macs = ["mac1", "mac2"]
 
         mock_neutron.list_extensions.return_value = {"extensions": [
-            {"name": "asdf"}, {"name": constants.PORTBINDING_EXT}]}
+            {"name": "asdf"}]}
         port1 = {"port": {"id": uuids.port1, "mac_address": "mac1r"}}
         port2 = {"port": {"id": uuids.port2, "mac_address": "mac2r"}}
         mock_admin.update_port.side_effect = [port1, port2]
@@ -5697,11 +5611,15 @@ class TestNeutronv2NeutronHostnameDNS(TestNeutronv2Base):
 
 
 class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
+    def setUp(self):
+        super(TestNeutronv2NeutronHostnameDNSPortbinding, self).setUp()
+        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
+            self.moxed_client)
 
     def test_allocate_for_instance_create_port(self):
         # The port's dns_name attribute should be set by the port create
         # request in allocate_for_instance
-        self._allocate_for_instance(1, portbinding=True, dns_extension=True,
+        self._allocate_for_instance(1, dns_extension=True,
                                     bind_host_id=self.instance.get('host'))
 
     def test_allocate_for_instance_with_requested_port(self):
@@ -5710,7 +5628,6 @@ class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
         self._allocate_for_instance(net_idx=1, dns_extension=True,
-                                    portbinding=True,
                                     bind_host_id=self.instance.get('host'),
                                     requested_networks=requested_networks)
 
@@ -5719,7 +5636,7 @@ class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
         # request in _update_port_dns_name. This should happen only when the
         # port binding extension is enabled and the port's network has a
         # non-blank dns_domain attribute
-        self._allocate_for_instance(11, portbinding=True, dns_extension=True,
+        self._allocate_for_instance(11, dns_extension=True,
                                     bind_host_id=self.instance.get('host'))
 
     def test_allocate_for_instance_with_requested_port_with_dns_domain(self):
@@ -5730,7 +5647,6 @@ class TestNeutronv2NeutronHostnameDNSPortbinding(TestNeutronv2Base):
         requested_networks = objects.NetworkRequestList(
             objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
         self._allocate_for_instance(net_idx=11, dns_extension=True,
-                                    portbinding=True,
                                     bind_host_id=self.instance.get('host'),
                                     requested_networks=requested_networks)
 
@@ -5838,11 +5754,10 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
     @mock.patch.object(neutronapi.API, '_get_available_networks')
     @mock.patch.object(neutronapi, '_filter_hypervisor_macs')
     @mock.patch.object(neutronapi.API, '_validate_requested_port_ids')
-    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
     @mock.patch.object(neutronapi, 'get_client')
     @mock.patch('nova.objects.VirtualInterface')
     def test_no_security_groups_requested(
-            self, mock_vif, mock_get_client, mock_has_port_binding_extension,
+            self, mock_vif, mock_get_client,
             mock_validate_requested_port_ids, mock_filter_macs,
             mock_get_available_networks, mock_process_security_groups,
             mock_check_external_network_attach,
@@ -5892,11 +5807,10 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
     @mock.patch.object(neutronapi.API, '_get_available_networks')
     @mock.patch.object(neutronapi, '_filter_hypervisor_macs')
     @mock.patch.object(neutronapi.API, '_validate_requested_port_ids')
-    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
     @mock.patch.object(neutronapi, 'get_client')
     @mock.patch('nova.objects.VirtualInterface')
     def test_security_groups_requested(
-            self, mock_vif, mock_get_client, mock_has_port_binding_extension,
+            self, mock_vif, mock_get_client,
             mock_validate_requested_port_ids, mock_filter_macs,
             mock_get_available_networks, mock_process_security_groups,
             mock_check_external_network_attach,
@@ -5948,11 +5862,10 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
     @mock.patch.object(neutronapi.API, '_get_available_networks')
     @mock.patch.object(neutronapi, '_filter_hypervisor_macs')
     @mock.patch.object(neutronapi.API, '_validate_requested_port_ids')
-    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
     @mock.patch.object(neutronapi, 'get_client')
     @mock.patch('nova.objects.VirtualInterface')
     def test_port_security_disabled_no_security_groups_requested(
-            self, mock_vif, mock_get_client, mock_has_port_binding_extension,
+            self, mock_vif, mock_get_client,
             mock_validate_requested_port_ids, mock_filter_macs,
             mock_get_available_networks, mock_process_security_groups,
             mock_check_external_network_attach,
@@ -6002,11 +5915,10 @@ class TestNeutronPortSecurity(test.NoDBTestCase):
     @mock.patch.object(neutronapi.API, '_get_available_networks')
     @mock.patch.object(neutronapi, '_filter_hypervisor_macs')
     @mock.patch.object(neutronapi.API, '_validate_requested_port_ids')
-    @mock.patch.object(neutronapi.API, '_has_port_binding_extension')
     @mock.patch.object(neutronapi, 'get_client')
     @mock.patch('nova.objects.VirtualInterface')
     def test_port_security_disabled_and_security_groups_requested(
-            self, mock_vif, mock_get_client, mock_has_port_binding_extension,
+            self, mock_vif, mock_get_client,
             mock_validate_requested_port_ids, mock_filter_macs,
             mock_get_available_networks, mock_process_security_groups,
             mock_check_external_network_attach,
@@ -6246,8 +6158,6 @@ class TestNeutronv2AutoAllocateNetwork(test.NoDBTestCase):
             return [model.VIF(id=uuids.port_id)]
 
         @mock.patch('nova.network.neutronv2.api.get_client', return_value=ntrn)
-        @mock.patch.object(self.api, '_has_port_binding_extension',
-                           return_value=True)
         @mock.patch.object(self.api, '_auto_allocate_network',
                            return_value=fake_network)
         @mock.patch.object(self.api, '_check_external_network_attach')
@@ -6270,7 +6180,6 @@ class TestNeutronv2AutoAllocateNetwork(test.NoDBTestCase):
                     populate_ext_values_mock,
                     check_external_net_attach_mock,
                     auto_allocate_mock,
-                    has_port_binding_mock,
                     get_client_mock):
             instance = fake_instance.fake_instance_obj(self.context)
             net_req = objects.NetworkRequest(
