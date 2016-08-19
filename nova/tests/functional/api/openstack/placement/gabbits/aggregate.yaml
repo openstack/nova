@@ -1,0 +1,104 @@
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        openstack-api-version: placement latest
+
+vars:
+    - &agg_1 f918801a-5e54-4bee-9095-09a9d0c786b8
+    - &agg_2 a893eb5c-e2a0-4251-ab26-f71d3b0cfc0b
+
+tests:
+- name: get aggregates for bad resource provider
+  GET: /resource_providers/6984bb2d-830d-4c8d-ac64-c5a8103664be/aggregates
+  status: 404
+
+- name: put aggregates for bad resource provider
+  PUT: /resource_providers/6984bb2d-830d-4c8d-ac64-c5a8103664be/aggregates
+  data: []
+  status: 404
+
+- name: post new resource provider
+  POST: /resource_providers
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+
+- name: get empty aggregates
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  response_json_paths:
+      $.aggregates: []
+
+- name: aggregates 404 for out of date microversion get
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers:
+      openstack-api-version: placement 1.0
+  status: 404
+
+- name: aggregates 404 for out of date microversion put
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  request_headers:
+      openstack-api-version: placement 1.0
+  status: 404
+
+- name: put some aggregates
+  PUT: $LAST_URL
+  data:
+      - *agg_1
+      - *agg_2
+  status: 200
+  response_headers:
+      content-type: /application/json/
+  response_json_paths:
+      $.aggregates[0]: *agg_1
+      $.aggregates[1]: *agg_2
+
+- name: get those aggregates
+  GET: $LAST_URL
+  response_json_paths:
+      $.aggregates.`len`: 2
+
+- name: clear those aggregates
+  PUT: $LAST_URL
+  data: []
+  status: 200
+  response_json_paths:
+      $.aggregates: []
+
+- name: get empty aggregates again
+  GET: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+  response_json_paths:
+      $.aggregates: []
+
+- name: put non json
+  PUT: $LAST_URL
+  data: '{"bad", "not json"}'
+  status: 400
+  response_strings:
+      - Malformed JSON
+
+- name: put invalid json not array
+  PUT: $LAST_URL
+  data:
+      aggregates:
+          - *agg_1
+          - *agg_2
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: put invalid json not uuids
+  PUT: $LAST_URL
+  data:
+      - harry
+      - sally
+  status: 400
+  response_strings:
+      - JSON does not validate

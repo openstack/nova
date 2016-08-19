@@ -17,3 +17,12 @@ Nova 14.0.0 (Newton). This contains the following routes:
 * /resource_providers/inventories
 * /resource_providers/usages
 * /allocations
+
+1.1
+___
+
+The 1.1 version adds support for associating aggregates with
+resource providers with ``GET`` and ``PUT`` methods on one new
+route:
+
+* /resource_providers/{uuid}/aggregates
