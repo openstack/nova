@@ -12,6 +12,7 @@
 
 import six
 import sqlalchemy as sa
+from sqlalchemy import func
 from sqlalchemy.orm import contains_eager
 
 from nova.db.sqlalchemy import api as db_api
@@ -21,6 +22,7 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
+_ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
 
@@ -42,11 +44,26 @@ def _delete_inventory_from_provider(conn, rp, to_delete):
     """Deletes any inventory records from the supplied provider and set() of
     resource class identifiers.
 
+    If there are allocations for any of the inventories to be deleted raise
+    InventoryInUse exception.
+
     :param conn: DB connection to use.
     :param rp: Resource provider from which to delete inventory.
     :param to_delete: set() containing resource class IDs for records to
                       delete.
     """
+    allocation_query = sa.select(
+        [_ALLOC_TBL.c.resource_class_id.label('resource_class')]).where(
+             sa.and_(_ALLOC_TBL.c.resource_provider_id == rp.id,
+                     _ALLOC_TBL.c.resource_class_id.in_(to_delete))
+         ).group_by(_ALLOC_TBL.c.resource_class_id)
+    allocations = conn.execute(allocation_query).fetchall()
+    if allocations:
+        resource_classes = ', '.join([fields.ResourceClass.from_index(
+            allocation.resource_class) for allocation in allocations])
+        raise exception.InventoryInUse(resource_classes=resource_classes,
+                                       resource_provider=rp.uuid)
+
     del_stmt = _INV_TBL.delete().where(sa.and_(
             _INV_TBL.c.resource_provider_id == rp.id,
             _INV_TBL.c.resource_class_id.in_(to_delete)))
@@ -66,8 +83,9 @@ def _add_inventory_to_provider(conn, rp, inv_list, to_add):
     for res_class in to_add:
         inv_record = inv_list.find(res_class)
         if inv_record.capacity <= 0:
-            raise exception.ObjectActionError(
-                action='add inventory', reason='invalid resource capacity')
+            raise exception.InvalidInventoryCapacity(
+                resource_class=fields.ResourceClass.from_index(res_class),
+                resource_provider=rp.uuid)
         ins_stmt = _INV_TBL.insert().values(
                 resource_provider_id=rp.id,
                 resource_class_id=res_class,
@@ -92,8 +110,19 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
     for res_class in to_update:
         inv_record = inv_list.find(res_class)
         if inv_record.capacity <= 0:
-            raise exception.ObjectActionError(
-                action='update inventory', reason='invalid resource capacity')
+            raise exception.InvalidInventoryCapacity(
+                resource_class=fields.ResourceClass.from_index(res_class),
+                resource_provider=rp.uuid)
+        allocation_query = sa.select(
+            [func.sum(_ALLOC_TBL.c.used).label('usage')]).\
+            where(sa.and_(
+                _ALLOC_TBL.c.resource_provider_id == rp.id,
+                _ALLOC_TBL.c.resource_class_id == res_class))
+        allocations = conn.execute(allocation_query).first()
+        if allocations and allocations['usage'] > inv_record.capacity:
+            raise exception.InvalidInventoryNewCapacityExceeded(
+                resource_class=fields.ResourceClass.from_index(res_class),
+                resource_provider=rp.uuid)
         upd_stmt = _INV_TBL.update().where(sa.and_(
                 _INV_TBL.c.resource_provider_id == rp.id,
                 _INV_TBL.c.resource_class_id == res_class)).values(
