@@ -1,0 +1,5 @@
+---
+upgrade:
+  - The ivs-ctl command has been added to the rootwrap filters in
+    compute.filters. Deployments needing support for BigSwitch no longer need
+    to add the filters manually nor include network.filters at installation.

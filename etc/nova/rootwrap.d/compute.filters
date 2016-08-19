@@ -86,6 +86,9 @@ tunctl: CommandFilter, tunctl, root
 # nova/network/linux_net.py: 'ovs-vsctl', ....
 ovs-vsctl: CommandFilter, ovs-vsctl, root
 
+# nova/network/linux_net.py: 'ivs-ctl', ....
+ivs-ctl: CommandFilter, ivs-ctl, root
+
 # nova/virt/libvirt/vif.py: 'vrouter-port-control', ...
 vrouter-port-control: CommandFilter, vrouter-port-control, root
 
