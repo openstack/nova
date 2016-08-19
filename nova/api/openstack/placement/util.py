@@ -58,6 +58,13 @@ def check_accept(*types):
     return decorator
 
 
+def inventory_url(environ, resource_provider, resource_class=None):
+    url = '%s/inventories' % resource_provider_url(environ, resource_provider)
+    if resource_class:
+        url = '%s/%s' % (url, resource_class)
+    return url
+
+
 def json_error_formatter(body, status, title, environ):
     """A json_formatter for webob exceptions.
 
