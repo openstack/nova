@@ -1490,6 +1490,23 @@ class ServersControllerTestV226(ControllerTest):
         self._test_get_servers_allows_tag_filters('not-tags-any')
 
 
+class ServerControllerTestV238(ControllerTest):
+    wsgi_api_version = '2.38'
+
+    def _test_invalid_status(self, is_admin):
+        req = fakes.HTTPRequest.blank('/fake/servers/detail?status=invalid',
+                                      version=self.wsgi_api_version,
+                                      use_admin_context=is_admin)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.detail, req)
+
+    def test_list_servers_detail_invalid_status_for_admin(self):
+        self._test_invalid_status(True)
+
+    def test_list_servers_detail_invalid_status_for_non_admin(self):
+        self._test_invalid_status(False)
+
+
 class ServersControllerDeleteTest(ControllerTest):
 
     def setUp(self):
