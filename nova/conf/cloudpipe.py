@@ -1,5 +1,3 @@
-# needs:check_opt_group_and_type
-
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -55,6 +53,7 @@ Possible values:
 * Any valid path to a cloudpipe instance boot script template
 
 Related options:
+
 Following options are required to configure cloudpipe-managed
 OpenVPN server.
 * dmz_net
@@ -75,9 +74,9 @@ Possible values:
 * Any valid IPv4/IPV6 address
 
 Related options:
-dmz_net is pushed into bootscript.template to configure
-cloudpipe-managed OpenVPN server
-* boot_script_template
+
+* boot_script_template - dmz_net is pushed into bootscript.template
+to configure cloudpipe-managed OpenVPN server
 """),
     cfg.IPOpt(
         'dmz_mask',
@@ -90,9 +89,9 @@ Possible values:
 * Any valid IPv4/IPV6 netmask
 
 Related options:
-dmz_net and dmz_mask is pushed into bootscript.template to configure
-cloudpipe-managed OpenVPN server
-* dmz_net
+
+* dmz_net - dmz_net and dmz_mask is pushed into bootscript.template
+to configure cloudpipe-managed OpenVPN server
 * boot_script_template
 """),
 
