@@ -1,6 +1,3 @@
-# needs:check_opt_group_and_type
-
-
 # Copyright (c) 2013 Intel, Inc.
 # Copyright (c) 2013 OpenStack Foundation
 # All Rights Reserved.
