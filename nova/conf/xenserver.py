@@ -186,58 +186,146 @@ xenapi_vm_utils_opts = [
     cfg.StrOpt('cache_images',
                default='all',
                choices=('all', 'some', 'none'),
-               help='Cache glance images locally. `all` will cache all'
-                    ' images, `some` will only cache images that have the'
-                    ' image_property `cache_in_nova=True`, and `none` turns'
-                    ' off caching entirely'),
+               help="""
+Cache glance images locally.
+
+The value for this option must be choosen from the choices listed
+here. Configuring a value other than these will default to 'all'.
+
+Note: There is nothing that deletes these images.
+
+Possible values:
+
+* `all`: will cache all images.
+* `some`: will only cache images that have the
+  image_property `cache_in_nova=True`.
+* `none`: turns off caching entirely.
+"""),
     cfg.IntOpt('image_compression_level',
                min=1,
                max=9,
-               help='Compression level for images, e.g., 9 for gzip -9.'
-                    ' Range is 1-9, 9 being most compressed but most CPU'
-                    ' intensive on dom0.'),
+               help="""
+Compression level for images.
+
+By setting this option we can configure the gzip compression level.
+This option sets GZIP environment variable before spawning tar -cz
+to force the compression level. It defaults to none, which means the
+GZIP environment variable is not set and the default (usually -6)
+is used.
+
+Possible values:
+
+* Range is 1-9, e.g., 9 for gzip -9, 9 being most
+  compressed but most CPU intensive on dom0.
+* Any values out of this range will default to None.
+"""),
     cfg.StrOpt('default_os_type',
                default='linux',
-               help='Default OS type'),
+               help='Default OS type used when uploading an image to glance'),
     cfg.IntOpt('block_device_creation_timeout',
                default=10,
-               help='Time to wait for a block device to be created'),
+               min=1,
+               help='Time in secs to wait for a block device to be created'),
     cfg.IntOpt('max_kernel_ramdisk_size',
                default=16 * units.Mi,
-               help='Maximum size in bytes of kernel or ramdisk images'),
+               help="""
+Maximum size in bytes of kernel or ramdisk images.
+
+Specifying the maximum size of kernel or ramdisk will avoid copying
+large files to dom0 and fill up /boot/guest.
+"""),
     cfg.StrOpt('sr_matching_filter',
                default='default-sr:true',
-               help='Filter for finding the SR to be used to install guest '
-                    'instances on. To use the Local Storage in default '
-                    'XenServer/XCP installations set this flag to '
-                    'other-config:i18n-key=local-storage. To select an SR '
-                    'with a different matching criteria, you could set it to '
-                    'other-config:my_favorite_sr=true. On the other hand, to '
-                    'fall back on the Default SR, as displayed by XenCenter, '
-                    'set this flag to: default-sr:true'),
+               help="""
+Filter for finding the SR to be used to install guest instances on.
+
+Possible values:
+
+* To use the Local Storage in default XenServer/XCP installations
+  set this flag to other-config:i18n-key=local-storage.
+* To select an SR with a different matching criteria, you could
+  set it to other-config:my_favorite_sr=true.
+* To fall back on the Default SR, as displayed by XenCenter,
+  set this flag to: default-sr:true.
+"""),
     cfg.BoolOpt('sparse_copy',
                 default=True,
-                help='Whether to use sparse_copy for copying data on a '
-                     'resize down (False will use standard dd). This speeds '
-                     'up resizes down considerably since large runs of zeros '
-                     'won\'t have to be rsynced'),
+                help="""
+Whether to use sparse_copy for copying data on a resize down.
+(False will use standard dd). This speeds up resizes down
+considerably since large runs of zeros won't have to be rsynced.
+"""),
     cfg.IntOpt('num_vbd_unplug_retries',
                default=10,
-               help='Maximum number of retries to unplug VBD. if <=0, '
-                    'should try once and no retry'),
+               min=0,
+               help="""
+Maximum number of retries to unplug VBD.
+If set to 0, should try once, no retries.
+"""),
     cfg.StrOpt('torrent_images',
                default='none',
                choices=('all', 'some', 'none'),
-               help='Whether or not to download images via Bit Torrent.'),
+               help="""
+Whether or not to download images via Bit Torrent.
+
+The value for this option must be choosen from the choices listed
+here. Configuring a value other than these will default to 'none'.
+
+Possible values:
+
+* `all`: will download all images.
+* `some`: will only download images that have the image_property
+          `bittorrent=true'.
+* `none`: will turnoff downloading images via Bit Torrent.
+"""),
     cfg.StrOpt('ipxe_network_name',
-               help='Name of network to use for booting iPXE ISOs'),
+               help="""
+Name of network to use for booting iPXE ISOs.
+
+An iPXE ISO is a specially crafted ISO which supports iPXE booting.
+This feature gives a means to roll your own image.
+
+By default this option is not set. Enable this option to
+boot an iPXE ISO.
+
+Related Options:
+
+* `ipxe_boot_menu_url`
+* `ipxe_mkisofs_cmd`
+"""),
     cfg.StrOpt('ipxe_boot_menu_url',
-               help='URL to the iPXE boot menu'),
+               help="""
+URL to the iPXE boot menu.
+
+An iPXE ISO is a specially crafted ISO which supports iPXE booting.
+This feature gives a means to roll your own image.
+
+By default this option is not set. Enable this option to
+boot an iPXE ISO.
+
+Related Options:
+
+* `ipxe_network_name`
+* `ipxe_mkisofs_cmd`
+"""),
     cfg.StrOpt('ipxe_mkisofs_cmd',
                default='mkisofs',
-               help='Name and optionally path of the tool used for '
-                    'ISO image creation'),
-    ]
+               help="""
+Name and optionally path of the tool used for ISO image creation.
+
+An iPXE ISO is a specially crafted ISO which supports iPXE booting.
+This feature gives a means to roll your own image.
+
+Note: By default `mkisofs` is not present in the Dom0, so the
+package can either be manually added to Dom0 or include the
+`mkisofs` binary in the image itself.
+
+Related Options:
+
+* `ipxe_network_name`
+* `ipxe_boot_menu_url`
+"""),
+]
 
 
 xenapi_opts = [
