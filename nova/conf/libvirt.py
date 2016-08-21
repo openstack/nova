@@ -42,37 +42,198 @@ libvirt hypervisor driver to be used within an OpenStack deployment.
 
 libvirt_general_opts = [
     cfg.StrOpt('rescue_image_id',
-               help='Rescue ami image. This will not be used if an image id '
-                    'is provided by the user.'),
+               help="""
+The ID of the image to boot from to rescue data from a corrupted instance.
+
+If the rescue REST API operation doesn't provide an ID of an image to
+use, the image which is referenced by this ID is used. If this
+option is not set, the image from the instance is used.
+
+Possible values:
+
+* An ID of an image or nothing. If it points to an *Amazon Machine
+  Image* (AMI), consider to set the config options ``rescue_kernel_id``
+  and ``rescue_ramdisk_id`` too. If nothing is set, the image of the instance
+  is used.
+
+Related options:
+
+* ``rescue_kernel_id``: If the chosen rescue image allows the separate
+  definition of its kernel disk, the value of this option is used,
+  if specified. This is the case when *Amazon*'s AMI/AKI/ARI image
+  format is used for the rescue image.
+* ``rescue_ramdisk_id``: If the chosen rescue image allows the separate
+  definition of its RAM disk, the value of this option is used if,
+  specified. This is the case when *Amazon*'s AMI/AKI/ARI image
+  format is used for the rescue image.
+"""),
     cfg.StrOpt('rescue_kernel_id',
-               help='Rescue aki image'),
+               help="""
+The ID of the kernel (AKI) image to use with the rescue image.
+
+If the chosen rescue image allows the separate definition of its kernel
+disk, the value of this option is used, if specified. This is the case
+when *Amazon*'s AMI/AKI/ARI image format is used for the rescue image.
+
+Possible values:
+
+* An ID of an kernel image or nothing. If nothing is specified, the kernel
+  disk from the instance is used if it was launched with one.
+
+Related options:
+
+* ``rescue_image_id``: If that option points to an image in *Amazon*'s
+  AMI/AKI/ARI image format, it's useful to use ``rescue_kernel_id`` too.
+"""),
     cfg.StrOpt('rescue_ramdisk_id',
-               help='Rescue ari image'),
+               help="""
+The ID of the RAM disk (ARI) image to use with the rescue image.
+
+If the chosen rescue image allows the separate definition of its RAM
+disk, the value of this option is used, if specified. This is the case
+when *Amazon*'s AMI/AKI/ARI image format is used for the rescue image.
+
+Possible values:
+
+* An ID of a RAM disk image or nothing. If nothing is specified, the RAM
+  disk from the instance is used if it was launched with one.
+
+Related options:
+
+* ``rescue_image_id``: If that option points to an image in *Amazon*'s
+  AMI/AKI/ARI image format, it's useful to use ``rescue_ramdisk_id`` too.
+"""),
     cfg.StrOpt('virt_type',
                default='kvm',
                choices=('kvm', 'lxc', 'qemu', 'uml', 'xen', 'parallels'),
-               help='Libvirt domain type'),
+               help="""
+Describes the virtualization type (or so called domain type) libvirt should
+use.
+
+The choice of this type must match the underlying virtualization strategy
+you have chosen for this host.
+
+Possible values:
+
+* See the predefined set of case-sensitive values.
+
+Related options:
+
+* ``connection_uri``: depends on this
+* ``disk_prefix``: depends on this
+* ``cpu_mode``: depends on this
+* ``cpu_model``: depends on this
+"""),
     cfg.StrOpt('connection_uri',
                default='',
-               help='Override the default libvirt URI '
-                    '(which is dependent on virt_type)'),
+               help="""
+Overrides the default libvirt URI of the chosen virtualization type.
+
+If set, Nova will use this URI to connect to libvirt.
+
+Possible values:
+
+* An URI like ``qemu:///system`` or ``xen+ssh://oirase/`` for example.
+  This is only necessary if the URI differs to the commonly known URIs
+  for the chosen virtualization type.
+
+Related options:
+
+* ``virt_type``: Influences what is used as default value here.
+"""),
     cfg.BoolOpt('inject_password',
                 default=False,
-                help='Inject the admin password at boot time, '
-                     'without an agent.'),
+                help="""
+Allow the injection of an admin password for instance only at ``create`` and
+``rebuild`` process.
+
+There is no agent needed within the image to do this. If *libguestfs* is
+available on the host, it will be used. Otherwise *nbd* is used. The file
+system of the image will be mounted and the admin password, which is provided
+in the REST API call will be injected as password for the root user. If no
+root user is available, the instance won't be launched and an error is thrown.
+Be aware that the injection is *not* possible when the instance gets launched
+from a volume.
+
+Possible values:
+
+* True: Allows the injection.
+* False (default): Disallows the injection. Any via the REST API provided
+admin password will be silently ignored.
+
+Related options:
+
+* ``inject_partition``: That option will decide about the discovery and usage
+  of the file system. It also can disable the injection at all.
+"""),
     cfg.BoolOpt('inject_key',
                 default=False,
-                help='Inject the ssh public key at boot time'),
+                help="""
+Allow the injection of an SSH key at boot time.
+
+There is no agent needed within the image to do this. If *libguestfs* is
+available on the host, it will be used. Otherwise *nbd* is used. The file
+system of the image will be mounted and the SSH key, which is provided
+in the REST API call will be injected as SSH key for the root user and
+appended to the ``authorized_keys`` of that user. The SELinux context will
+be set if necessary. Be aware that the injection is *not* possible when the
+instance gets launched from a volume.
+
+This config option will enable directly modifying the instance disk and does
+not affect what cloud-init may do using data from config_drive option or the
+metadata service.
+
+Related options:
+
+* ``inject_partition``: That option will decide about the discovery and usage
+  of the file system. It also can disable the injection at all.
+"""),
     cfg.IntOpt('inject_partition',
                default=-2,
-               help='The partition to inject to : '
-                    '-2 => disable, -1 => inspect (libguestfs only), '
-                    '0 => not partitioned, >0 => partition number'),
+               min=-2,
+               help="""
+Determines the way how the file system is chosen to inject data into it.
+
+*libguestfs* will be used a first solution to inject data. If that's not
+available on the host, the image will be locally mounted on the host as a
+fallback solution. If libguestfs is not able to determine the root partition
+(because there are more or less than one root partition) or cannot mount the
+file system it will result in an error and the instance won't be boot.
+
+Possible values:
+
+* -2 => disable the injection of data.
+* -1 => find the root partition with the file system to mount with libguestfs
+*  0 => The image is not partitioned
+* >0 => The number of the partition to use for the injection
+
+Related options:
+
+* ``inject_key``: If this option allows the injection of a SSH key it depends
+  on value greater or equal to -1 for ``inject_partition``.
+* ``inject_password``: If this option allows the injection of an admin password
+  it depends on value greater or equal to -1 for ``inject_partition``.
+* ``guestfs`` You can enable the debug log level of libguestfs with this
+  config option. A more verbose output will help in debugging issues.
+* ``virt_type``: If you use ``lxc`` as virt_type it will be treated as a
+  single partition image
+"""),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 deprecated_for_removal=True,
-                help='(Deprecated, please see pointer_model) Sync virtual and '
-                     'real mouse cursors in Windows VMs'),
+                help="""
+Enable a mouse cursor within a graphical VNC or SPICE sessions.
+
+This will only be taken into account if the VM is fully virtualized and VNC
+and/or SPICE is enabled. If the node doesn't support a graphical framebuffer,
+then it is valid to set this to False.
+
+Related options:
+* ``[vnc]enabled``: If VNC is enabled, ``use_usb_tablet`` will have an effect.
+* ``[spice]enabled`` + ``[spice].agent_enabled``: If SPICE is enabled and the
+  spice agent is disabled, the config value of ``use_usb_tablet`` will have
+  an effect.
+"""),
     cfg.StrOpt('live_migration_inbound_addr',
                help='Live migration target ip or hostname '
                     '(if this option is set to None, which is the default, '
@@ -176,9 +337,23 @@ Related options:
                choices=('raw', 'qcow2', 'vmdk', 'vdi'),
                help='Snapshot image format. Defaults to same as source image'),
     cfg.StrOpt('disk_prefix',
-               help='Override the default disk prefix for the devices attached'
-                    ' to a server, which is dependent on virt_type. '
-                    '(valid options are: sd, xvd, uvd, vd)'),
+               help="""
+Override the default disk prefix for the devices attached to an instance.
+
+If set, this is used to identify a free disk device name for a bus.
+
+Possible values:
+
+* Any prefix which will result in a valid disk device name like 'sda' or 'hda'
+  for example. This is only necessary if the device names differ to the
+  commonly known device name prefixes for a virtualization type such as: sd,
+  xvd, uvd, vd.
+
+Related options:
+
+* ``virt_type``: Influences which device type is used, which determines
+  the default disk prefix.
+"""),
     cfg.IntOpt('wait_soft_reboot_seconds',
                default=120,
                help='Number of seconds to wait for instance to shut down after'
@@ -186,16 +361,39 @@ Related options:
                     ' if instance does not shutdown within this window.'),
     cfg.StrOpt('cpu_mode',
                choices=('host-model', 'host-passthrough', 'custom', 'none'),
-               help='Set to "host-model" to clone the host CPU feature flags; '
-                    'to "host-passthrough" to use the host CPU model exactly; '
-                    'to "custom" to use a named CPU model; '
-                    'to "none" to not set any CPU model. '
-                    'If virt_type="kvm|qemu", it will default to '
-                    '"host-model", otherwise it will default to "none"'),
+               help="""
+Is used to set the CPU mode an instance should have.
+
+If virt_type="kvm|qemu", it will default to "host-model", otherwise it will
+default to "none".
+
+Possible values:
+
+* ``host-model``: Clones the host CPU feature flags.
+* ``host-passthrough``: Use the host CPU model exactly;
+* ``custom``: Use a named CPU model;
+* ``none``: Not set any CPU model.
+
+Related options:
+
+* ``cpu_model``: If ``custom`` is used for ``cpu_mode``, set this config
+  option too, otherwise this would result in an error and the instance won't
+  be launched.
+"""),
     cfg.StrOpt('cpu_model',
-               help='Set to a named libvirt CPU model (see names listed '
-                    'in /usr/share/libvirt/cpu_map.xml). Only has effect if '
-                    'cpu_mode="custom" and virt_type="kvm|qemu"'),
+               help="""
+Set the name of the libvirt CPU model the instance should use.
+
+Possible values:
+
+* The names listed in /usr/share/libvirt/cpu_map.xml
+
+Related options:
+
+* ``cpu_mode``: Don't set this when ``cpu_mode`` is NOT set to ``custom``.
+  This would result in an error and the instance won't be launched.
+* ``virt_type``: Only the virtualization types ``kvm`` and ``qemu`` use this.
+"""),
     cfg.StrOpt('snapshots_directory',
                default='$instances_path/snapshots',
                help='Location where libvirt driver will store snapshots '
