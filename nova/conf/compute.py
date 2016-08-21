@@ -254,52 +254,128 @@ defaulted to 1.0'.
 compute_manager_opts = [
     cfg.StrOpt('console_host',
                default=socket.gethostname(),
-               help='Console proxy host to use to connect '
-                    'to instances on this host.'),
+               sample_default="socket.gethostname()",
+               help="""
+Console proxy host to be used to connect to instances on this host. It is the
+publicly visible name for the console host.
+
+Possible values:
+
+* Current hostname (default) or any string representing hostname.
+"""),
     cfg.StrOpt('default_access_ip_network_name',
-               help='Name of network to use to set access IPs for instances'),
+               help="""
+Name of the network to be used to set access IPs for instances. If there are
+multiple IPs to choose from, an arbitrary one will be chosen.
+
+Possible values:
+
+* None (default)
+* Any string representing network name.
+"""),
     cfg.BoolOpt('defer_iptables_apply',
                 default=False,
-                help='Whether to batch up the application of IPTables rules'
-                     ' during a host restart and apply all at the end of the'
-                     ' init phase'),
+                help="""
+Whether to batch up the application of IPTables rules during a host restart
+and apply all at the end of the init phase.
+"""),
+
     cfg.StrOpt('instances_path',
                default=paths.state_path_def('instances'),
-               help='Where instances are stored on disk'),
+               sample_default="$state_path/instances",
+               help="""
+Specifies where instances are stored on the hypervisor's disk.
+It can point to locally attached storage or a directory on NFS.
+
+Possible values:
+
+* $state_path/instances where state_path is a config option that specifies
+  the top-level directory for maintaining nova's state. (default) or
+  Any string representing directory path.
+"""),
     cfg.BoolOpt('instance_usage_audit',
                 default=False,
-                help="Generate periodic compute.instance.exists"
-                     " notifications"),
+                help="""
+This option enables periodic compute.instance.exists notifications. Each
+compute node must be configured to generate system usage data. These
+notifications are consumed by OpenStack Telemetry service.
+"""),
     cfg.IntOpt('live_migration_retry_count',
+               min=0,
                default=30,
-               help="Number of 1 second retries needed in live_migration"),
+               help="""
+Maximum number of 1 second retries in live_migration. It specifies number
+of retries to iptables when it complains. It happens when an user continously
+sends live-migration request to same host leading to concurrent request
+to iptables.
+
+Possible values:
+
+* Any positive integer representing retry count.
+"""),
     cfg.BoolOpt('resume_guests_state_on_host_boot',
                 default=False,
-                help='Whether to start guests that were running before the '
-                     'host rebooted'),
+                help="""
+This option specifies whether to start guests that were running before the
+host rebooted. It ensures that all of the instances on a Nova compute node
+resume their state each time the compute node boots or restarts.
+"""),
     cfg.IntOpt('network_allocate_retries',
+               min=0,
                default=0,
-               help="Number of times to retry network allocation on failures",
-               min=0),
+               help="""
+Number of times to retry network allocation. It is required to attempt network
+allocation retries if the virtual interface plug fails.
+
+Possible values:
+
+* Any positive integer representing retry count.
+"""),
     cfg.IntOpt('max_concurrent_builds',
+               min=0,
                default=10,
-               help='Maximum number of instance builds to run concurrently'),
+               help="""
+Limits the maximum number of instance builds to run concurrently by
+nova-compute. Compute service can attempt to build an infinite number of
+instances, if asked to do so. This limit is enforced to avoid building
+unlimited instance concurrently on a compute node. This value can be set
+per compute node.
+
+Possible Values:
+
+* 0 : treated as unlimited.
+* Any positive integer representing maximum concurrent builds.
+"""),
     cfg.IntOpt('max_concurrent_live_migrations',
                default=1,
-               help='Maximum number of live migrations to run concurrently. '
-                    'This limit is enforced to avoid outbound live migrations '
-                    'overwhelming the host/network and causing failures. It '
-                    'is not recommended that you change this unless you are '
-                    'very sure that doing so is safe and stable in your '
-                    'environment.'),
+               help="""
+Maximum number of live migrations to run concurrently. This limit is enforced
+to avoid outbound live migrations overwhelming the host/network and causing
+failures. It is not recommended that you change this unless you are very sure
+that doing so is safe and stable in your environment.
+
+Possible values:
+
+* 0 : treated as unlimited.
+* Negative value defaults to 0.
+* Any positive integer representing maximum number of live migrations
+  to run concurrently.
+"""),
     cfg.IntOpt('block_device_allocate_retries',
                default=60,
-               help='Number of times to retry block device '
-                    'allocation on failures.\n'
-                    'Starting with Liberty, Cinder can use image volume '
-                    'cache. This may help with block device allocation '
-                    'performance. Look at the cinder '
-                    'image_volume_cache_enabled configuration option.')
+               help="""
+Number of times to retry block device allocation on failures. Starting with
+Liberty, Cinder can use image volume cache. This may help with block device
+allocation performance. Look at the cinder image_volume_cache_enabled
+configuration option.
+
+Possible values:
+
+* 60 (default)
+* If value is 0, then one attempt is made.
+* Any negative value is treated as 0.
+* For any value > 0, total attempts are (value + 1)
+""")
 ]
 
 interval_opts = [
