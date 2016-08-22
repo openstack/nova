@@ -6775,6 +6775,33 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          "is_volume_backed": False},
                         matchers.DictMatches(return_value.to_legacy_dict()))
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_shared_storage_test_file',
+                       return_value='fake')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_fills_listen_addrs(
+            self, mock_cpu, mock_test_file, mock_svc):
+        # Tests that check_can_live_migrate_destination returns the listen
+        # addresses required by check_can_live_migrate_source.
+        self.flags(vncserver_listen='192.0.2.12', group='vnc')
+        self.flags(server_listen='198.51.100.34', group='spice')
+        self.flags(proxyclient_address='203.0.113.56', group='serial_console')
+
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'cpu_info': 'asdf', 'disk_available_least': 1}
+        result = drvr.check_can_live_migrate_destination(
+            self.context, instance_ref, compute_info, compute_info)
+
+        self.assertEqual('192.0.2.12',
+                         str(result.graphics_listen_addr_vnc))
+        self.assertEqual('198.51.100.34',
+                         str(result.graphics_listen_addr_spice))
+        self.assertEqual('203.0.113.56',
+                         str(result.serial_listen_addr))
+
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_create_shared_storage_test_file',
                        return_value='fake')
@@ -9367,6 +9394,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             instance_relative_path='foo',
             is_shared_block_storage=False,
             is_shared_instance_path=False,
+            graphics_listen_addr_vnc='127.0.0.1',
+            graphics_listen_addr_spice='127.0.0.1',
+            serial_listen_addr='127.0.0.1',
         )
         result = drvr.pre_live_migration(
             c, instance, vol, nw_info, None,
@@ -9450,10 +9480,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}
             ]}
         )
-        self.assertEqual({'graphics_listen_addrs': {'spice': '127.0.0.1',
-                                                    'vnc': '127.0.0.1'},
+        self.assertEqual({'graphics_listen_addrs': {'spice': None,
+                                                    'vnc': None},
                           'target_connect_addr': None,
-                          'serial_listen_addr': '127.0.0.1',
+                          'serial_listen_addr': None,
                           'volume': {}}, res_data['pre_live_migration_result'])
 
     def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
@@ -9510,10 +9540,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ret = drvr.pre_live_migration(c, inst_ref, vol, nw_info, None,
                                           migrate_data)
             target_ret = {
-            'graphics_listen_addrs': {'spice': '127.0.0.1',
-                                      'vnc': '127.0.0.1'},
+            'graphics_listen_addrs': {'spice': None,
+                                      'vnc': None},
             'target_connect_addr': None,
-            'serial_listen_addr': '127.0.0.1',
+            'serial_listen_addr': None,
             'volume': {
             '12345': {'connection_info': {u'data': {'device_path':
               u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'},
