@@ -16,7 +16,7 @@ made through V2.1 microversions.
 
 This document covers how to write plugins for the v2.1 framework. A
 `microversions specific document
-<http://docs.openstack.org/developer/nova/devref/api_microversions.html>`_
+<http://docs.openstack.org/developer/nova/api_microversion_dev.html>`_
 covers the details around what is required for the microversions
 part. It does not cover V2 plugins which should no longer be developed.
 
