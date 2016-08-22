@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright (c) 2016 Intel, Inc.
 # Copyright (c) 2013 OpenStack Foundation
 # All Rights Reserved.
@@ -24,9 +17,11 @@
 from oslo_config import cfg
 
 
-consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',
-    default='consoleauth',
-    help="""
+consoleauth_opts = [
+    # TODO(aunnam): This option needs to be deprecated
+    cfg.StrOpt('consoleauth_topic',
+        default='consoleauth',
+        help="""
 This option allows you to change the message topic used by nova-consoleauth
 service when communicating via the AMQP server. Nova Console Authentication
 server authenticates nova consoles. Users can then access their instances
@@ -36,24 +31,24 @@ communicate with nova-consoleauth to get a VNC console.
 Possible Values:
 
   * 'consoleauth' (default) or Any string representing topic exchange name.
-""")
-
-console_token_ttl = cfg.IntOpt('console_token_ttl',
-    default=600,
-    min=0,
-    help="""
+"""),
+    cfg.IntOpt('console_token_ttl',
+        default=600,
+        min=0,
+        help="""
 This option indicates the lifetime of a console auth token. A console auth
 token is used in authorizing console access for a user. Once the auth token
 time to live count has elapsed, the token is considered expired. Expired
 tokens are then deleted.
 """)
-
-CONSOLEAUTH_OPTS = [consoleauth_topic_opt, console_token_ttl]
+]
 
 
 def register_opts(conf):
-    conf.register_opts(CONSOLEAUTH_OPTS)
+    conf.register_opts(consoleauth_opts)
 
 
 def list_opts():
-    return {'DEFAULT': CONSOLEAUTH_OPTS}
+    # TODO(aunnam): This should be moved into the consoleauth group and
+    # oslo_config.cfg.OptGroup used
+    return {'DEFAULT': consoleauth_opts}
