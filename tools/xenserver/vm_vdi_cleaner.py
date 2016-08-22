@@ -130,7 +130,7 @@ def print_xen_object(obj_type, obj, indent_level=0, spaces_per_indent=4):
         name_label = obj["name_label"]
     except KeyError:
         name_label = ""
-    msg = "%(obj_type)s (%(uuid)s) '%(name_label)s'" % locals()
+    msg = "%s (%s) '%s'" % (obj_type, uuid, name_label)
     indent = " " * spaces_per_indent * indent_level
     print("".join([indent, msg]))
 

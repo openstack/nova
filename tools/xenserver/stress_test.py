@@ -31,40 +31,39 @@ def run(cmd):
 
 @contextlib.contextmanager
 def server_built(server_name, image_name, flavor=1, cleanup=True):
-    run("nova boot --image=%(image_name)s --flavor=%(flavor)s"
-        " --poll %(server_name)s" % locals())
+    run("nova boot --image=%s --flavor=%s"
+        " --poll %s" % (image_name, flavor, server_name))
     try:
         yield
     finally:
         if cleanup:
-            run("nova delete %(server_name)s" % locals())
+            run("nova delete %s" % server_name)
 
 
 @contextlib.contextmanager
 def snapshot_taken(server_name, snapshot_name, cleanup=True):
-    run("nova image-create %(server_name)s %(snapshot_name)s"
-        " --poll" % locals())
+    run("nova image-create %s %s"
+        " --poll" % (server_name, snapshot_name))
     try:
         yield
     finally:
         if cleanup:
-            run("nova image-delete %(snapshot_name)s" % locals())
+            run("nova image-delete %s" % snapshot_name)
 
 
 def migrate_server(server_name):
-    run("nova migrate %(server_name)s --poll" % locals())
+    run("nova migrate %s --poll" % server_name)
 
-    cmd = "nova list | grep %(server_name)s | awk '{print $6}'" % locals()
+    cmd = "nova list | grep %s | awk '{print $6}'" % server_name
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     stdout, stderr = proc.communicate()
     status = stdout.strip()
     if status.upper() != 'VERIFY_RESIZE':
-        sys.stderr.write("Server %(server_name)s failed to rebuild"\
-                          % locals())
+        sys.stderr.write("Server %s failed to rebuild" % server_name)
         return False
 
     # Confirm the resize
-    run("nova resize-confirm %(server_name)s" % locals())
+    run("nova resize-confirm %s" % server_name)
     return True
 
 
@@ -83,15 +82,14 @@ def test_migrate(context):
 
 
 def rebuild_server(server_name, snapshot_name):
-    run("nova rebuild %(server_name)s %(snapshot_name)s --poll" % locals())
+    run("nova rebuild %s %s --poll" % (server_name, snapshot_name))
 
-    cmd = "nova list | grep %(server_name)s | awk '{print $6}'" % locals()
+    cmd = "nova list | grep %s | awk '{print $6}'" % server_name
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, shell=True)
     stdout, stderr = proc.communicate()
     status = stdout.strip()
     if status != 'ACTIVE':
-        sys.stderr.write("Server %(server_name)s failed to rebuild"\
-                         % locals())
+        sys.stderr.write("Server %s failed to rebuild" % server_name)
         return False
 
     return True
@@ -156,8 +154,7 @@ def main():
         finally:
             if args.cleanup:
                 for dom0_ip in dom0_ips:
-                    run("ssh root@%(dom0_ip)s %(dom0_cleanup_script)s"
-                        % locals())
+                    run("ssh root@%s %s" % (dom0_ip, dom0_cleanup_script))
 
     success = all(results)
     result = "SUCCESS" if success else "FAILED"
