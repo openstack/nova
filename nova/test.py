@@ -462,7 +462,7 @@ class ContainKeyValue(object):
 
     The ContainKeyValue class is a helper for use with the
     mock.assert_*() method that lets you assert that a particular
-    dict contain a key/value paire. It enables strict check than
+    dict contain a key/value pair. It enables strict check than
     the built in mock.ANY helper, and is the equivalent of the
     mox.ContainsKeyValue() function from the legacy mox library
 
