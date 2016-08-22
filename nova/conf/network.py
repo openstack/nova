@@ -756,13 +756,6 @@ ldap_dns_opts = [
                      'Statement of Authority'),
 ]
 
-security_group_opts = [
-    cfg.StrOpt('security_group_api',
-                default='nova',
-                help='DEPRECATED: Full class name of the security API class',
-                deprecated_for_removal=True),
-]
-
 driver_opts = [
     cfg.StrOpt('network_driver',
                default='nova.network.linux_net',
@@ -780,14 +773,13 @@ rpcapi_opts = [
 ]
 
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
-                   + security_group_opts + rpcapi_opts + driver_opts)
+                   + rpcapi_opts + driver_opts)
 
 
 def register_opts(conf):
     conf.register_opts(linux_net_opts)
     conf.register_opts(network_opts)
     conf.register_opts(ldap_dns_opts)
-    conf.register_opts(security_group_opts)
     conf.register_opts(driver_opts)
     conf.register_opts(rpcapi_opts)
 

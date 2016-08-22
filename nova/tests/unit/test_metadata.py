@@ -291,7 +291,7 @@ class MetadataTestCase(test.TestCase):
         self._test_security_groups()
 
     def test_neutron_security_groups(self):
-        self.flags(security_group_api='neutron')
+        self.flags(use_neutron=True)
         self._test_security_groups()
 
     def test_local_hostname_fqdn(self):

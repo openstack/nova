@@ -50,7 +50,7 @@ class TestSecurityGroupDefaultRulesNeutronV21(test.TestCase):
                       SecurityGroupDefaultRulesController)
 
     def setUp(self):
-        self.flags(security_group_api='neutron')
+        self.flags(use_neutron=True)
         super(TestSecurityGroupDefaultRulesNeutronV21, self).setUp()
         self.controller = self.controller_cls()
 
