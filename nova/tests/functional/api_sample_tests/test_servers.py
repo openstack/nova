@@ -15,6 +15,7 @@
 
 import base64
 
+from nova.api.openstack import api_version_request as avr
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -26,6 +27,21 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 
     user_data_contents = '#!/bin/bash\n/bin/su\necho "I am in you!"\n'
     user_data = base64.b64encode(user_data_contents)
+
+    common_req_names = [
+        (None, '2.36', 'server-create-req'),
+        ('2.37', None, 'server-create-req-v237')
+    ]
+
+    def _get_request_name(self, use_common):
+        if not use_common:
+            return 'server-create-req'
+
+        api_version = self.microversion or '2.1'
+        for min, max, name in self.common_req_names:
+            if avr.APIVersionRequest(api_version).matches(
+                    avr.APIVersionRequest(min), avr.APIVersionRequest(max)):
+                return name
 
     def _post_server(self, use_common_server_api_samples=True):
         # param use_common_server_api_samples: Boolean to set whether tests use
@@ -51,7 +67,8 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
-            response = self._do_post('servers', 'server-create-req', subs)
+            response = self._do_post('servers', self._get_request_name(
+                use_common_server_api_samples), subs)
             status = self._verify_response('server-create-resp', subs,
                                            response, 202)
             return status
