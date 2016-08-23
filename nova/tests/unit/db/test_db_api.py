@@ -8611,6 +8611,60 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(expected_bw_usage, bw_usage,
                                  ignored_keys=self._ignored_keys)
 
+    def _create_bw_usage(self, context, uuid, mac, start_period, bw_in, bw_out,
+                         last_ctr_in, last_ctr_out, id, last_refreshed=None):
+        with sqlalchemy_api.get_context_manager(context).writer.using(context):
+            bwusage = models.BandwidthUsage()
+            bwusage.start_period = start_period
+            bwusage.uuid = uuid
+            bwusage.mac = mac
+            bwusage.last_refreshed = last_refreshed
+            bwusage.bw_in = bw_in
+            bwusage.bw_out = bw_out
+            bwusage.last_ctr_in = last_ctr_in
+            bwusage.last_ctr_out = last_ctr_out
+            bwusage.id = id
+            bwusage.save(context.session)
+
+    def test_bw_usage_update_exactly_one_record(self):
+        now = timeutils.utcnow()
+        start_period = now - datetime.timedelta(seconds=10)
+        uuid = 'fake_uuid'
+
+        # create two equal bw_usages with IDs 1 and 2
+        for id in range(1, 3):
+            bw_usage = {'uuid': uuid,
+                        'mac': 'fake_mac',
+                        'start_period': start_period,
+                        'bw_in': 100,
+                        'bw_out': 200,
+                        'last_ctr_in': 12345,
+                        'last_ctr_out': 67890,
+                        'last_refreshed': now,
+                        'id': id}
+            self._create_bw_usage(self.ctxt, **bw_usage)
+
+        # check that we have two equal bw_usages
+        self.assertEqual(
+            2, len(db.bw_usage_get_by_uuids(self.ctxt, [uuid], start_period)))
+
+        # update 'last_ctr_in' field in one bw_usage
+        updated_bw_usage = {'uuid': uuid,
+                            'mac': 'fake_mac',
+                            'start_period': start_period,
+                            'bw_in': 100,
+                            'bw_out': 200,
+                            'last_ctr_in': 54321,
+                            'last_ctr_out': 67890,
+                            'last_refreshed': now}
+        result = db.bw_usage_update(
+            self.ctxt, update_cells=False, **updated_bw_usage)
+
+        # check that only bw_usage with ID 1 was updated
+        self.assertEqual(1, result['id'])
+        self._assertEqualObjects(updated_bw_usage, result,
+                                 ignored_keys=self._ignored_keys)
+
     def test_bw_usage_get(self):
         now = timeutils.utcnow()
         start_period = now - datetime.timedelta(seconds=10)

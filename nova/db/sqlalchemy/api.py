@@ -5482,11 +5482,15 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
               'last_ctr_out': last_ctr_out,
               'bw_in': bw_in,
               'bw_out': bw_out}
+    # NOTE(pkholkin): order_by() is needed here to ensure that the
+    # same record is updated every time. It can be removed after adding
+    # unique constraint to this model.
     bw_usage = model_query(context, models.BandwidthUsage,
             read_deleted='yes').\
                     filter_by(start_period=ts_values['start_period']).\
                     filter_by(uuid=uuid).\
-                    filter_by(mac=mac).first()
+                    filter_by(mac=mac).\
+                    order_by(asc(models.BandwidthUsage.id)).first()
 
     if bw_usage:
         bw_usage.update(values)
@@ -5501,12 +5505,8 @@ def bw_usage_update(context, uuid, mac, start_period, bw_in, bw_out,
     bwusage.bw_out = bw_out
     bwusage.last_ctr_in = last_ctr_in
     bwusage.last_ctr_out = last_ctr_out
-    try:
-        bwusage.save(context.session)
-    except db_exc.DBDuplicateEntry:
-        # NOTE(sirp): Possible race if two greenthreads attempt to create
-        # the usage entry at the same time. First one wins.
-        pass
+    bwusage.save(context.session)
+
     return bwusage
 
 
