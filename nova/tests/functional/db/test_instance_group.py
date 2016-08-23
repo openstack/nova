@@ -18,6 +18,7 @@ from nova.db.sqlalchemy import api as db_api
 from nova import exception
 from nova import objects
 from nova.objects import base
+from nova.objects import instance_group
 from nova import test
 from nova.tests import uuidsentinel as uuids
 
@@ -183,3 +184,57 @@ class InstanceGroupObjectTestCase(test.TestCase):
         self.assertEqual(2, len(get_groups))
         self.assertTrue(base.obj_equal_prims(create_group, get_groups[0]))
         ovo_fixture.compare_obj(self, get_groups[1], db_group)
+
+    def test_migrate_instance_groups(self):
+        self._api_group(name='apigroup')
+        orig_main_models = []
+        orig_main_models.append(self._main_group(name='maingroup1'))
+        orig_main_models.append(self._main_group(name='maingroup2'))
+        orig_main_models.append(self._main_group(name='maingroup3'))
+
+        total, done = instance_group.migrate_instance_groups_to_api_db(
+                        self.context, 2)
+        self.assertEqual(2, total)
+        self.assertEqual(2, done)
+
+        # This only fetches from the api db
+        api_groups = objects.InstanceGroupList._get_from_db(self.context)
+        self.assertEqual(3, len(api_groups))
+
+        # This only fetches from the main db
+        main_groups = db_api.instance_group_get_all(self.context)
+        self.assertEqual(1, len(main_groups))
+
+        self.assertEqual((1, 1),
+                         instance_group.migrate_instance_groups_to_api_db(
+                                self.context, 100))
+        self.assertEqual((0, 0),
+                         instance_group.migrate_instance_groups_to_api_db(
+                                self.context, 100))
+
+        # Verify the api_models have all their attributes set properly
+        api_models = objects.InstanceGroupList._get_from_db(self.context)
+        # Filter out the group that was created in the api db originally
+        api_models = [x for x in api_models if x.name != 'apigroup']
+        key_func = lambda model: model.uuid
+        api_models = sorted(api_models, key=key_func)
+        orig_main_models = sorted(orig_main_models, key=key_func)
+        ignore_fields = ('id', 'hosts', 'deleted', 'deleted_at', 'created_at',
+                         'updated_at')
+        for i in range(len(api_models)):
+            for field in instance_group.InstanceGroup.fields:
+                if field not in ignore_fields:
+                    self.assertEqual(orig_main_models[i][field],
+                                     api_models[i][field])
+
+    def test_migrate_instance_groups_skips_existing(self):
+        self._api_group(uuid=uuids.group)
+        self._main_group(uuid=uuids.group)
+        total, done = instance_group.migrate_instance_groups_to_api_db(
+                        self.context, 100)
+        self.assertEqual(1, total)
+        self.assertEqual(1, done)
+        total, done = instance_group.migrate_instance_groups_to_api_db(
+                        self.context, 100)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)

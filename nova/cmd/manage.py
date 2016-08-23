@@ -83,6 +83,7 @@ from nova import objects
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
+from nova.objects import instance_group as instance_group_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import request_spec
 from nova import quota
@@ -791,6 +792,7 @@ class DbCommands(object):
         keypair_obj.migrate_keypairs_to_api_db,
         aggregate_obj.migrate_aggregates,
         aggregate_obj.migrate_aggregate_reset_autoincrement,
+        instance_group_obj.migrate_instance_groups_to_api_db,
     )
 
     def __init__(self):
