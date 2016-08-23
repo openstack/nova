@@ -221,7 +221,7 @@ request body to boot a server from a volume.
 Include the ``key_name`` parameter in the create request body to add a
 keypair to the server when you create it. To create a keypair, make a
 `create keypair
-<http://developer.openstack.org/api-ref-compute-v2.1.html#createKeypair>`__
+<http://developer.openstack.org/api-ref/compute/#create-or-import-keypair>`__
 request.
 
 .. note:: Starting with microversion 2.37 the ``networks`` field is required.

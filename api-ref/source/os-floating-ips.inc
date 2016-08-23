@@ -23,16 +23,16 @@ The cloud administrator configures a pool of floating IP addresses in
 OpenStack Compute. The project quota defines the maximum number of
 floating IP addresses that you can allocate to the project. After you
 `allocate a floating IP
-address <http://developer.openstack.org/api-ref-compute-v2.1.html#createFloatingIP>`__
+address <http://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
 for a project, you can:
 
 -  `Add (associate) the floating IP
-   address <http://developer.openstack.org/api-ref-compute-v2.1.html#addFloatingIp>`__
+   address <http://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
    with an instance in the project. You can associate only one floating
    IP address with an instance at a time.
 
 -  `Remove (disassociate) the floating IP
-   address <http://developer.openstack.org/api-ref-compute-v2.1.html#removeFloatingIp>`__
+   address <http://developer.openstack.org/api-ref/compute/#delete-deallocate-floating-ip-address>`__
    from an instance in the project.
 
 -  Delete, or deallocate, a floating IP from the project, which

@@ -37,7 +37,7 @@ A pool of floating IP addresses, configured by the cloud administrator,
 is available in OpenStack Compute. The project quota defines the maximum
 number of floating IP addresses that you can allocate to the project.
 After you `create (allocate) a floating IPaddress
-<http://developer.openstack.org/api-ref-compute-v2.1.html#createFloatingIP>`__
+<http://developer.openstack.org/api-ref/compute/#create-allocate-floating-ip-address>`__
 for a project, you can associate that address with the server. Specify
 the ``addFloatingIp`` action in the request body.
 
