@@ -2748,7 +2748,7 @@ links:
   description: |
     Links to the resources in question. See `API Guide / Links and
     References
-    <http://docs.openstack.org/developer/nova/v2/links_and_references.html>`_
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
     for more info.
   in: body
   required: true
