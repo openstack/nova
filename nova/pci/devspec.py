@@ -130,7 +130,6 @@ class PciDeviceSpec(object):
     def __init__(self, dev_spec):
         self.tags = dev_spec
         self._init_dev_details()
-        self.dev_count = 0
 
     def _init_dev_details(self):
         self.vendor_id = self.tags.pop("vendor_id", ANY)
