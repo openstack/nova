@@ -72,19 +72,8 @@ def _import_modules(module_names):
     return imported_modules
 
 
-def _process_old_opts(configs):
-    """Convert old-style 2-tuple configs to dicts."""
-    if isinstance(configs, tuple):
-        configs = [configs]
-    return {label: options for label, options in configs}
-
-
 def _append_config_options(imported_modules, config_options):
     for mod in imported_modules:
         configs = mod.list_opts()
-        # TODO(markus_z): Remove this compatibility shim once all list_opts()
-        # functions have been updated to return dicts.
-        if not isinstance(configs, dict):
-            configs = _process_old_opts(configs)
         for key, val in configs.items():
             config_options[key].extend(val)
