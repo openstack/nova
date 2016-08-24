@@ -189,20 +189,20 @@ class RemoteFilesystemDriver(object):
 class SshDriver(RemoteFilesystemDriver):
 
     def create_file(self, host, dst_path, on_execute, on_completion):
-        utils.execute('ssh', host, 'touch', dst_path,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'touch', dst_path,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def remove_file(self, host, dst, on_execute, on_completion):
-        utils.execute('ssh', host, 'rm', dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'rm', dst,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def create_dir(self, host, dst_path, on_execute, on_completion):
-        utils.execute('ssh', host, 'mkdir', '-p', dst_path,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'mkdir', '-p', dst_path,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def remove_dir(self, host, dst, on_execute, on_completion):
-        utils.execute('ssh', host, 'rm', '-rf', dst,
-                      on_execute=on_execute, on_completion=on_completion)
+        utils.ssh_execute(host, 'rm', '-rf', dst,
+                          on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
         utils.execute('scp', src, dst,
