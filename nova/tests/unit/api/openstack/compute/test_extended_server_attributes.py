@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
 import webob
@@ -129,6 +130,17 @@ class ExtendedServerAttributesTestV21(test.TestCase):
                                     host='host-%s' % (i + 1),
                                     node='node-%s' % (i + 1),
                                     instance_name=NAME_FMT % (i + 1))
+
+    @mock.patch.object(compute.api.API, 'get_all')
+    def test_detail_empty_instance_list_invalid_status(self,
+                                                       mock_get_all_method):
+        mock_get_all_method.return_value = objects.InstanceList(objects=[])
+
+        url = "%s%s" % (self.fake_url, '/servers/detail?status=invalid_status')
+        res = self._make_request(url)
+        # check status code 200 with empty instance list
+        self.assertEqual(200, res.status_int)
+        self.assertEqual(0, len(self._get_servers(res.body)))
 
     def test_no_instance_passthrough_404(self):
 

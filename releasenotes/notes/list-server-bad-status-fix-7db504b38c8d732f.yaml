@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixed bug #1579706: "Listing nova instances with invalid status raises 500
+    InternalServerError for admin user". Now passing an invalid status as a
+    filter will return an empty list. A subsequent patch will then correct this
+    to raise a 400 Bad Request when an invalid status is received.
