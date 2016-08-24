@@ -221,6 +221,9 @@ class ServersController(wsgi.Controller):
 
         # Verify search by 'status' contains a valid status.
         # Convert it to filter by vm_state or task_state for compute_api.
+        # For non-admin user, vm_state and task_state are filtered through
+        # remove_invalid_options function, based on value of status field.
+        # Set value to vm_state and task_state to make search simple.
         search_opts.pop('status', None)
         if 'status' in req.GET.keys():
             statuses = req.GET.getall('status')
