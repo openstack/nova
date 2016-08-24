@@ -387,6 +387,17 @@ class IptablesManager(object):
         end = lines[start:].index('COMMIT') + start + 2
         return (start, end)
 
+    @staticmethod
+    def create_rules_from_regexp(criterion, new_filter):
+        if not criterion:
+            return [], new_filter
+        regex = re.compile(criterion)
+        temp_filter = [line for line in new_filter if regex.search(line)]
+        for rule_str in temp_filter:
+            new_filter = [s for s in new_filter
+                          if s.strip() != rule_str.strip()]
+        return temp_filter, new_filter
+
     def _modify_rules(self, current_lines, table, table_name):
         unwrapped_chains = table.unwrapped_chains
         chains = sorted(table.chains)
@@ -404,24 +415,10 @@ class IptablesManager(object):
         new_filter = [line for line in current_lines
                       if binary_name not in line]
 
-        top_rules = []
-        bottom_rules = []
-
-        if CONF.iptables_top_regex:
-            regex = re.compile(CONF.iptables_top_regex)
-            temp_filter = [line for line in new_filter if regex.search(line)]
-            for rule_str in temp_filter:
-                new_filter = [s for s in new_filter
-                              if s.strip() != rule_str.strip()]
-            top_rules = temp_filter
-
-        if CONF.iptables_bottom_regex:
-            regex = re.compile(CONF.iptables_bottom_regex)
-            temp_filter = [line for line in new_filter if regex.search(line)]
-            for rule_str in temp_filter:
-                new_filter = [s for s in new_filter
-                              if s.strip() != rule_str.strip()]
-            bottom_rules = temp_filter
+        top_rules, new_filter = self.create_rules_from_regexp(
+            CONF.iptables_top_regex, new_filter)
+        bottom_rules, new_filter = self.create_rules_from_regexp(
+            CONF.iptables_bottom_regex, new_filter)
 
         seen_chains = False
         rules_index = 0
