@@ -2141,6 +2141,7 @@ host_status:
   in: body
   required: true
   type: string
+  min_version: 2.16
 host_status_body:
   description: |
     The status of the current host, either 'enabled' or 'disabled'.
