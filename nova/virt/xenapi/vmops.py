@@ -47,7 +47,6 @@ from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import objects
-from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova import utils
 from nova.virt import configdrive
@@ -2245,11 +2244,6 @@ class VMOps(object):
             if not self._is_xsm_sr_check_relaxed():
                 raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
-
-        if not isinstance(dest_check_data, migrate_data_obj.LiveMigrateData):
-            obj = objects.XenapiLiveMigrateData()
-            obj.from_legacy_dict(dest_check_data)
-            dest_check_data = obj
 
         if ('block_migration' in dest_check_data and
                 dest_check_data.block_migration):
