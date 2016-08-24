@@ -25,15 +25,16 @@ from nova.virt.xenapi.client import session
 
 
 class SessionTestCase(stubs.XenAPITestBaseNoDB):
+    @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     def test_session_passes_version(self, mock_verify, mock_version,
-                                    create_session):
+                                    create_session, mock_platform_version):
         sess = mock.Mock()
         create_session.return_value = sess
         mock_version.return_value = ('version', 'brand')
-
+        mock_platform_version.return_value = (2, 1, 0)
         session.XenAPISession('http://someserver', 'username', 'password')
 
         expected_version = '%s %s %s' % (version.vendor_string(),
@@ -43,21 +44,25 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
                                                     expected_version,
                                                     'OpenStack')
 
+    @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch('eventlet.timeout.Timeout')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
     @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
     def test_session_login_with_timeout(self, mock_verify, mock_version,
-                                        create_session, mock_timeout):
+                                        create_session, mock_timeout,
+                                        mock_platform_version):
         self.flags(connection_concurrent=2, group='xenserver')
         sess = mock.Mock()
         create_session.return_value = sess
         mock_version.return_value = ('version', 'brand')
+        mock_platform_version.return_value = (2, 1, 0)
 
         session.XenAPISession('http://someserver', 'username', 'password')
         self.assertEqual(2, sess.login_with_password.call_count)
         self.assertEqual(2, mock_timeout.call_count)
 
+    @mock.patch.object(session.XenAPISession, '_get_platform_version')
     @mock.patch('eventlet.timeout.Timeout')
     @mock.patch.object(session.XenAPISession, '_create_session')
     @mock.patch.object(session.XenAPISession, '_get_product_version_and_brand')
@@ -66,7 +71,8 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
     @mock.patch.object(session.XenAPISession, '_get_host_ref')
     def test_session_raises_exception(self, mock_ref, mock_uuid,
                                       mock_verify, mock_version,
-                                      create_session, mock_timeout):
+                                      create_session, mock_timeout,
+                                      mock_platform_version):
         import XenAPI
         self.flags(connection_concurrent=2, group='xenserver')
         sess = mock.Mock()
@@ -76,10 +82,68 @@ class SessionTestCase(stubs.XenAPITestBaseNoDB):
         sess.login_with_password.side_effect = [
                 XenAPI.Failure(['HOST_IS_SLAVE', 'master']), None, None]
         mock_version.return_value = ('version', 'brand')
+        mock_platform_version.return_value = (2, 1, 0)
 
         session.XenAPISession('http://slave', 'username', 'password')
         self.assertEqual(3, sess.login_with_password.call_count)
         self.assertEqual(3, mock_timeout.call_count)
+
+    @mock.patch.object(session.XenAPISession, 'call_plugin')
+    @mock.patch.object(session.XenAPISession, '_get_software_version')
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    def test_relax_xsm_sr_check_true(self, mock_create_session,
+                                    mock_verify_plugin_version,
+                                    mock_get_software_version,
+                                    mock_call_plugin):
+        sess = mock.Mock()
+        mock_create_session.return_value = sess
+        mock_get_software_version.return_value = {'product_version': '6.5.0',
+                                                  'product_brand': 'XenServer',
+                                                  'platform_version': '1.9.0'}
+        # mark relax-xsm-sr-check=True in /etc/xapi.conf
+        mock_call_plugin.return_value = "True"
+        xenapi_sess = session.XenAPISession(
+                                'http://someserver', 'username', 'password')
+        self.assertTrue(xenapi_sess.is_xsm_sr_check_relaxed())
+
+    @mock.patch.object(session.XenAPISession, 'call_plugin')
+    @mock.patch.object(session.XenAPISession, '_get_software_version')
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    def test_relax_xsm_sr_check_XS65_missing(self, mock_create_session,
+                                        mock_verify_plugin_version,
+                                        mock_get_software_version,
+                                        mock_call_plugin):
+        sess = mock.Mock()
+        mock_create_session.return_value = sess
+        mock_get_software_version.return_value = {'product_version': '6.5.0',
+                                                  'product_brand': 'XenServer',
+                                                  'platform_version': '1.9.0'}
+        # mark no relax-xsm-sr-check setting in /etc/xapi.conf
+        mock_call_plugin.return_value = ""
+        xenapi_sess = session.XenAPISession(
+                            'http://someserver', 'username', 'password')
+        self.assertFalse(xenapi_sess.is_xsm_sr_check_relaxed())
+
+    @mock.patch.object(session.XenAPISession, 'call_plugin')
+    @mock.patch.object(session.XenAPISession, '_get_software_version')
+    @mock.patch.object(session.XenAPISession, '_verify_plugin_version')
+    @mock.patch.object(session.XenAPISession, '_create_session')
+    def test_relax_xsm_sr_check_XS7_missing(self, mock_create_session,
+                                        mock_verify_plugin_version,
+                                        mock_get_software_version,
+                                        mock_call_plugin):
+        sess = mock.Mock()
+        mock_create_session.return_value = sess
+        mock_get_software_version.return_value = {'product_version': '7.0.0',
+                                                  'product_brand': 'XenServer',
+                                                  'platform_version': '2.1.0'}
+        # mark no relax-xsm-sr-check in /etc/xapi.conf
+        mock_call_plugin.return_value = ""
+        xenapi_sess = session.XenAPISession(
+                            'http://someserver', 'username', 'password')
+        self.assertTrue(xenapi_sess.is_xsm_sr_check_relaxed())
 
 
 class ApplySessionHelpersTestCase(stubs.XenAPITestBaseNoDB):

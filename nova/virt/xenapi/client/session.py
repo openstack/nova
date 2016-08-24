@@ -94,8 +94,9 @@ class XenAPISession(object):
         self.host_ref = self._get_host_ref()
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
-
         self._verify_plugin_version()
+        self.platform_version = self._get_platform_version()
+        self._cached_xsm_sr_relaxed = None
 
         apply_session_helpers(self)
 
@@ -173,6 +174,15 @@ class XenAPISession(object):
                                                         product_version_str)
 
         return product_version, product_brand
+
+    def _get_platform_version(self):
+        """Return a tuple of (major, minor, rev) for the host version"""
+        software_version = self._get_software_version()
+        platform_version_str = software_version.get('platform_version',
+                                                    '0.0.0')
+        platform_version = versionutils.convert_version_to_tuple(
+                                                        platform_version_str)
+        return platform_version
 
     def _get_software_version(self):
         return self.call_xenapi('host.get_software_version', self.host_ref)
@@ -365,3 +375,19 @@ class XenAPISession(object):
             yield conn
         finally:
             conn.close()
+
+    def is_xsm_sr_check_relaxed(self):
+        if self._cached_xsm_sr_relaxed is None:
+            config_value = self.call_plugin('config_file', 'get_val',
+                                            key='relax-xsm-sr-check')
+            if not config_value:
+                version_str = '.'.join(str(v) for v in self.platform_version)
+                if versionutils.is_compatible('2.1.0', version_str,
+                                              same_major=False):
+                    self._cached_xsm_sr_relaxed = True
+                else:
+                    self._cached_xsm_sr_relaxed = False
+            else:
+                self._cached_xsm_sr_relaxed = config_value.lower() == 'true'
+
+        return self._cached_xsm_sr_relaxed

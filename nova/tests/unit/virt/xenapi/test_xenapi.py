@@ -3512,10 +3512,11 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(self.conn._vmops, "_get_iscsi_srs",
                        fake_get_iscsi_srs)
 
-        def fake_make_plugin_call(plugin, method, **args):
-            return "true"
-        self.stubs.Set(self.conn._vmops, "_make_plugin_call",
-                       fake_make_plugin_call)
+        def fake_is_xsm_sr_check_relaxed():
+            return True
+        self.stubs.Set(self.conn._vmops._session,
+                       'is_xsm_sr_check_relaxed',
+                       fake_is_xsm_sr_check_relaxed)
 
         dest_check_data = objects.XenapiLiveMigrateData(
             block_migration=True,
@@ -3539,10 +3540,11 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(self.conn._vmops, "_get_iscsi_srs",
                        fake_get_iscsi_srs)
 
-        def fake_make_plugin_call(plugin, method, **args):
-            return {'returncode': 'error', 'message': 'Plugin not found'}
-        self.stubs.Set(self.conn._vmops, "_make_plugin_call",
-                       fake_make_plugin_call)
+        def fake_is_xsm_sr_check_relaxed():
+            return False
+        self.stubs.Set(self.conn._vmops._session,
+                       'is_xsm_sr_check_relaxed',
+                       fake_is_xsm_sr_check_relaxed)
 
         self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_source,

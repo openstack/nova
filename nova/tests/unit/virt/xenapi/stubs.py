@@ -56,12 +56,15 @@ def stubout_instance_snapshot(stubs):
 
 
 def stubout_session(stubs, cls, product_version=(5, 6, 2),
-                    product_brand='XenServer', **opt_args):
+                    product_brand='XenServer', platform_version=(1, 9, 0),
+                    **opt_args):
     """Stubs out methods from XenAPISession."""
     stubs.Set(session.XenAPISession, '_create_session',
               lambda s, url: cls(url, **opt_args))
     stubs.Set(session.XenAPISession, '_get_product_version_and_brand',
               lambda s: (product_version, product_brand))
+    stubs.Set(session.XenAPISession, '_get_platform_version',
+              lambda s: platform_version)
 
 
 def stubout_get_this_vm_uuid(stubs):
