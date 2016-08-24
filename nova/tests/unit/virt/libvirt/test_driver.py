@@ -79,6 +79,7 @@ import nova.tests.unit.image.fake
 from nova.tests.unit import matchers
 from nova.tests.unit.objects import test_pci_device
 from nova.tests.unit.objects import test_vcpu_model
+from nova.tests.unit.virt.libvirt import fake_imagebackend
 from nova.tests.unit.virt.libvirt import fake_libvirt_utils
 from nova.tests.unit.virt.libvirt import fakelibvirt
 from nova.tests import uuidsentinel as uuids
@@ -9240,15 +9241,15 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ])
 
     def test_create_images_and_backing_disk_info_none(self):
+        instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(drvr, '_fetch_instance_kernel_ramdisk')
+        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
 
-        drvr._fetch_instance_kernel_ramdisk(self.context, self.test_instance,
-                                            fallback_from_host=None)
-        self.mox.ReplayAll()
-
-        drvr._create_images_and_backing(self.context, self.test_instance,
+        drvr._create_images_and_backing(self.context, instance,
                                         "/fake/instance/dir", None)
+
+        # Assert that we did nothing
+        self.assertEqual({}, fake_backend.created_disks)
 
     def _generate_target_ret(self, target_connect_addr=None):
         target_ret = {
@@ -9977,14 +9978,54 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             shutil.rmtree(os.path.join(CONF.instances_path,
                                        CONF.image_cache_subdirectory_name))
 
-    def test_spawn_without_image_meta(self):
-        self.create_image_called = False
+    # Methods called directly by spawn()
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_guest_xml')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_create_domain_and_network')
+    @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
+    # Methods called by _create_configdrive via post_xml_callback
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
+    @mock.patch.object(instance_metadata, 'InstanceMetadata')
+    def test_spawn_with_config_drive(self, mock_instance_metadata,
+                                     mock_build_device_metadata,
+                                     mock_get_info,
+                                     mock_create_domain_and_network,
+                                     mock_get_guest_xml):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        instance.config_drive = 'True'
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
+        instance_info = hardware.InstanceInfo(state=power_state.RUNNING)
+
+        mock_build_device_metadata.return_value = None
+
+        def fake_create_domain_and_network(
+                context, xml, instance, network_info, disk_info,
+                block_device_info=None, power_on=True, reboot=False,
+                vifs_already_plugged=False, post_xml_callback=None):
+            # The config disk should be created by this callback, so we need
+            # to execute it.
+            post_xml_callback()
+
+        fake_backend = self.useFixture(
+            fake_imagebackend.ImageBackendFixture(exists=lambda _: False))
+
+        mock_get_info.return_value = instance_info
+        mock_create_domain_and_network.side_effect = \
+            fake_create_domain_and_network
+
+        drvr.spawn(self.context, instance,
+                   image_meta, [], None)
+
+        # We should have imported 'disk.config'
+        config_disk = fake_backend.disks['disk.config']
+        config_disk.import_file.assert_called_once_with(instance, mock.ANY,
+                                                        'disk.config')
+
+    def test_spawn_without_image_meta(self):
         def fake_none(*args, **kwargs):
             return
-
-        def fake_create_image(*args, **kwargs):
-            self.create_image_called = True
 
         def fake_get_info(instance):
             return hardware.InstanceInfo(state=power_state.RUNNING)
@@ -9995,19 +10036,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr, '_get_guest_xml', fake_none)
-        self.stubs.Set(drvr, '_create_image', fake_create_image)
         self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None)
-        self.assertTrue(self.create_image_called)
+        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
 
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None)
-        self.assertTrue(self.create_image_called)
+        drvr.spawn(self.context, instance, image_meta, [], None)
+
+        # We should have created a root disk and an ephemeral disk
+        self.assertEqual(['disk', 'disk.local'],
+                         sorted(fake_backend.created_disks.keys()))
 
     def test_spawn_from_volume_calls_cache(self):
         self.cache_called_for_disk = False
@@ -10186,12 +10226,11 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(drvr, '_get_guest_xml', fake_none)
-        self.stubs.Set(drvr, '_create_image', fake_none)
         self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
 
-        drvr._conn.nodeDeviceLookupByName = \
-                    fake_node_device_lookup_by_name
+        mock_connection = mock.MagicMock(
+            nodeDeviceLookupByName=fake_node_device_lookup_by_name)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 'my_fake_image'
@@ -10201,44 +10240,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None)
+        self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        with mock.patch.object(drvr, '_get_connection',
+                               return_value=mock_connection):
+            drvr.spawn(self.context, instance, image_meta, [], None)
 
     def _test_create_image_plain(self, os_type='', filename='', mkfs=False):
         gotFiles = []
-
-        def fake_image(self, instance, name, image_type=''):
-            class FakeImage(imagebackend.Image):
-                def __init__(self, instance, name, is_block_dev=False):
-                    self.path = os.path.join(instance['name'], name)
-                    self.is_block_dev = is_block_dev
-
-                def create_image(self, prepare_template, base,
-                                 size, *args, **kwargs):
-                    pass
-
-                def resize_image(self, size):
-                    pass
-
-                def cache(self, fetch_func, filename, size=None,
-                          *args, **kwargs):
-                    gotFiles.append({'filename': filename,
-                                     'size': size})
-
-                def snapshot(self, name):
-                    pass
-
-            return FakeImage(instance, name)
 
         def fake_none(*args, **kwargs):
             return
 
         def fake_get_info(instance):
             return hardware.InstanceInfo(state=power_state.RUNNING)
-
-        # Stop 'libvirt_driver._create_image' touching filesystem
-        self.stubs.Set(nova.virt.libvirt.imagebackend.Backend, "image",
-                       fake_image)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
@@ -10257,6 +10272,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta)
+
+        self.useFixture(
+            fake_imagebackend.ImageBackendFixture(got_files=gotFiles))
+
         drvr._create_image(context, instance, disk_info['mapping'])
         drvr._get_guest_xml(self.context, instance, None,
                             disk_info, image_meta)
@@ -10303,34 +10322,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         gotFiles = []
 
-        outer = self
-
-        def fake_image(self, instance, name, image_type=''):
-            class FakeImage(imagebackend.Image):
-                def __init__(self, instance, name, is_block_dev=False):
-                    self.path = os.path.join(instance['name'], name)
-                    self.is_block_dev = is_block_dev
-
-                def create_image(self, prepare_template, base,
-                                 size, *args, **kwargs):
-                    pass
-
-                def cache(self, fetch_func, filename, size=None,
-                          *args, **kwargs):
-                    gotFiles.append({'filename': filename,
-                                     'size': size})
-                    if filename in (kernel_fname, ramdisk_fname):
-                        outer.assertEqual(fetch_func,
-                                fake_libvirt_utils.fetch_raw_image)
-
-                def resize_image(self, size):
-                    pass
-
-                def snapshot(self, name):
-                    pass
-
-            return FakeImage(instance, name)
-
         instance_ref = self.test_instance
         instance_ref['image_ref'] = uuids.instance_id
         instance_ref['kernel_id'] = uuids.kernel_id
@@ -10340,19 +10331,29 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
+        fake_backend = self.useFixture(
+            fake_imagebackend.ImageBackendFixture(got_files=gotFiles))
+
         with test.nested(
-            mock.patch.object(nova.virt.libvirt.imagebackend.Backend,
-              "image", fake_image),
             mock.patch.object(driver, '_get_guest_xml'),
             mock.patch.object(driver, '_create_domain_and_network'),
             mock.patch.object(driver, 'get_info',
               return_value=[hardware.InstanceInfo(state=power_state.RUNNING)])
-            ):
+        ):
             image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                                 instance,
                                                 image_meta)
             driver._create_image(context, instance, disk_info['mapping'])
+
+        # Assert that kernel and ramdisk were fetched with fetch_raw_image
+        # and no size
+        for name, disk in six.iteritems(fake_backend.disks):
+            cache = disk.cache
+            if name in ('kernel', 'ramdisk'):
+                cache.assert_called_once_with(
+                    context=context, filename=mock.ANY, image_id=mock.ANY,
+                    fetch_func=fake_libvirt_utils.fetch_raw_image)
 
         wantFiles = [
             {'filename': kernel_fname,
@@ -10366,47 +10367,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             ]
         self.assertEqual(wantFiles, gotFiles)
 
-    def _create_image_helper(self, callback, suffix='',
+    def _create_image_helper(self, callback, exists=None, suffix='',
                              test_create_configdrive=False):
-        gotFiles = []
-        imported_files = []
-
-        def fake_image(self, instance, name, image_type=''):
-            class FakeImage(imagebackend.Image):
-                def __init__(self, instance, name, is_block_dev=False):
-                    self.path = os.path.join(instance['name'], name)
-                    self.is_block_dev = is_block_dev
-
-                def create_image(self, prepare_template, base,
-                                 size, *args, **kwargs):
-                    pass
-
-                def resize_image(self, size):
-                    pass
-
-                def cache(self, fetch_func, filename, size=None,
-                          *args, **kwargs):
-                    gotFiles.append({'filename': filename,
-                                     'size': size})
-
-                def import_file(self, instance, local_filename,
-                                remote_filename):
-                    imported_files.append((local_filename, remote_filename))
-
-                def snapshot(self, name):
-                    pass
-
-            return FakeImage(instance, name)
 
         def fake_none(*args, **kwargs):
             return
 
         def fake_get_info(instance):
             return hardware.InstanceInfo(state=power_state.RUNNING)
-
-        # Stop 'libvirt_driver._create_image' touching filesystem
-        self.stubs.Set(nova.virt.libvirt.imagebackend.Backend, "image",
-                       fake_image)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
@@ -10429,6 +10397,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta)
+
+        gotFiles = []
+        imported_files = []
+        self.useFixture(fake_imagebackend.ImageBackendFixture(
+            got_files=gotFiles, imported_files=imported_files, exists=exists))
+
         if test_create_configdrive:
             drvr._create_configdrive(context, instance)
         else:
@@ -10465,37 +10439,10 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # Ensure that we create a config drive and then import it into the
         # image backend store
         _, imported_files = self._create_image_helper(
-                enable_configdrive, test_create_configdrive=True)
+            enable_configdrive, exists=lambda name: False,
+            test_create_configdrive=True)
         self.assertTrue(imported_files[0][0].endswith('/disk.config'))
         self.assertEqual('disk.config', imported_files[0][1])
-
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_configdrive')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_image')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
-    @mock.patch('nova.virt.libvirt.guest.Guest')
-    @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
-    def test_spawn_with_config_drive(self, mock_timer, mock_guest, mock_disk,
-                                     mock_idisk, mock_guest_xml,
-                                     mock_create_image, mock_info,
-                                     mock_create):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        instance = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
-        with test.nested(
-            mock.patch.object(drvr, '_create_images_and_backing'),
-            mock.patch.object(drvr, 'plug_vifs'),
-            mock.patch.object(drvr, '_build_device_metadata',
-                              return_value=None),
-            mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
-            mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter'),
-            mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')):
-            drvr.spawn(self.context, instance,
-                       image_meta, [], None)
-            self.assertTrue(mock_create.called)
 
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache',
                        side_effect=exception.ImageNotFound(image_id='fake-id'))
@@ -10543,18 +10490,20 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(nova.virt.libvirt.imagebackend.Image, 'cache')
     def test_create_image_resize_snap_backend(self, mock_cache):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        drvr.image_backend = mock.Mock()
-        drvr.image_backend.image.return_value = drvr.image_backend
         instance = objects.Instance(**self.test_instance)
         instance.task_state = task_states.RESIZE_FINISH
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             image_meta)
-        with mock.patch.object(drvr.image_backend, 'create_snap') as mock_crt:
-            drvr._create_image(self.context, instance, disk_info['mapping'])
-            mock_crt.assert_called_once_with(
-                    libvirt_utils.RESIZE_SNAPSHOT_NAME)
+
+        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
+
+        drvr._create_image(self.context, instance, disk_info['mapping'])
+
+        # Assert we called create_snap on the root disk
+        fake_backend.disks['disk'].create_snap.assert_called_once_with(
+            libvirt_utils.RESIZE_SNAPSHOT_NAME)
 
     @mock.patch.object(utils, 'execute')
     def test_create_ephemeral_specified_fs(self, mock_exec):
@@ -16223,8 +16172,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.drvr,
                                      '_get_existing_domain_xml')
         self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
-        self.mox.StubOutWithMock(imagebackend.Backend, 'image')
-        self.mox.StubOutWithMock(imagebackend.Image, 'cache')
         self.mox.StubOutWithMock(self.drvr, '_get_guest_xml')
         self.mox.StubOutWithMock(self.drvr, '_destroy')
         self.mox.StubOutWithMock(self.drvr, '_create_domain')
@@ -16232,14 +16179,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                         mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-
-        mock_backend = mock.MagicMock()
-        imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
-                                        ).AndReturn(mock_backend.kernel)
-        imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
-                                        ).AndReturn(mock_backend.ramdisk)
-        imagebackend.Backend.image(instance, 'disk.rescue', 'default'
-                                        ).AndReturn(mock_backend.root)
 
         image_meta = objects.ImageMeta.from_dict(
             {'id': uuids.image_id, 'name': 'fake'})
@@ -16258,14 +16197,26 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         rescue_password = 'fake_password'
 
-        self.drvr.rescue(self.context, instance,
-                    network_info, image_meta, rescue_password)
+        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture(
+            exists=lambda name: name != 'disk.config.rescue'))
+
+        self.drvr.rescue(self.context, instance, network_info, image_meta,
+                         rescue_password)
         self.mox.VerifyAll()
 
+        disks = fake_backend.created_disks
+        self.assertEqual(3, len(disks))
+        expected_types = {
+            'kernel.rescue': 'raw',
+            'ramdisk.rescue': 'raw',
+            'disk.rescue': 'default'
+        }
         # cache() should have been called on the 3 disk backends
-        for backend in (mock_backend.kernel, mock_backend.ramdisk,
-                        mock_backend.root):
-            self.assertTrue(backend.cache.called)
+        for name in ('kernel', 'ramdisk', 'disk'):
+            name = name + '.rescue'
+            disk = disks[name]
+            self.assertTrue(disk.cache.called)
+            self.assertEqual(expected_types[name], disk.image_type)
 
     @mock.patch.object(libvirt_utils, 'get_instance_path')
     @mock.patch.object(libvirt_utils, 'load_file')
@@ -16351,8 +16302,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.drvr,
                                     '_get_existing_domain_xml')
         self.mox.StubOutWithMock(libvirt_utils, 'write_to_file')
-        self.mox.StubOutWithMock(imagebackend.Backend, 'image')
-        self.mox.StubOutWithMock(imagebackend.Image, 'cache')
         self.mox.StubOutWithMock(instance_metadata.InstanceMetadata,
                                                             '__init__')
         self.mox.StubOutWithMock(self.drvr, '_get_guest_xml')
@@ -16360,16 +16309,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.drvr._get_existing_domain_xml(mox.IgnoreArg(),
                     mox.IgnoreArg()).MultipleTimes().AndReturn(dummyxml)
         libvirt_utils.write_to_file(mox.IgnoreArg(), mox.IgnoreArg())
-
-        mock_backend = mock.MagicMock()
-        imagebackend.Backend.image(instance, 'kernel.rescue', 'raw'
-                                    ).AndReturn(mock_backend.kernel)
-        imagebackend.Backend.image(instance, 'ramdisk.rescue', 'raw'
-                                    ).AndReturn(mock_backend.ramdisk)
-        imagebackend.Backend.image(instance, 'disk.rescue', 'default'
-                                    ).AndReturn(mock_backend.root)
-        imagebackend.Backend.image(instance, 'disk.config.rescue', 'raw'
-                                   ).AndReturn(mock_backend.config)
 
         instance_metadata.InstanceMetadata.__init__(mox.IgnoreArg(),
                                             content=mox.IgnoreArg(),
@@ -16390,10 +16329,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         rescue_password = 'fake_password'
 
-        mock_backend.config.exists.return_value = False
+        fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture(
+            exists=lambda name: name != 'disk.config.rescue'))
 
-        self.drvr.rescue(self.context, instance, network_info,
-                                                image_meta, rescue_password)
+        self.drvr.rescue(self.context, instance, network_info, image_meta,
+                         rescue_password)
+
         self.mox.VerifyAll()
 
         mock_add.assert_any_call(mock.ANY)
@@ -16401,13 +16342,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                 configdrive_path))]
         mock_make.assert_has_calls(expected_call)
 
+        disks = fake_backend.created_disks
+        self.assertEqual(4, len(disks))
+        expected_types = {
+            'kernel.rescue': 'raw',
+            'ramdisk.rescue': 'raw',
+            'disk.rescue': 'default'
+        }
         # cache() should have been called on the 3 non-config disk backends
-        for backend in (mock_backend.kernel, mock_backend.ramdisk,
-                        mock_backend.root):
-            self.assertTrue(backend.cache.called)
+        for name in ('kernel', 'ramdisk', 'disk'):
+            name = name + '.rescue'
+            disk = disks[name]
+            self.assertTrue(disk.cache.called)
+            self.assertEqual(expected_types[name], disk.image_type)
+
+        self.assertEqual('raw', disks['disk.config.rescue'].image_type)
 
         # import_file() should have been called for the config disk
-        self.assertTrue(mock_backend.config.import_file.called)
+        self.assertTrue(disks['disk.config.rescue'].import_file.called)
 
     @mock.patch('shutil.rmtree')
     @mock.patch('nova.utils.execute')
