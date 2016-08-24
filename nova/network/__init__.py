@@ -14,12 +14,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
 from oslo_utils import importutils
 
 import nova.conf
-
-LOG = logging.getLogger(__name__)
 
 NOVA_NET_API = 'nova.network.api.API'
 NEUTRON_NET_API = 'nova.network.neutronv2.api.API'
