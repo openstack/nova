@@ -5121,6 +5121,8 @@ class ComputeManager(manager.Manager):
         """
         is_volume_backed = compute_utils.is_volume_backed_instance(ctxt,
                                                                       instance)
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
         got_migrate_data_object = isinstance(dest_check_data,
                                              migrate_data_obj.LiveMigrateData)
         if not got_migrate_data_object:
@@ -5154,6 +5156,8 @@ class ComputeManager(manager.Manager):
 
         """
         LOG.debug('pre_live_migration data is %s', migrate_data)
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
         got_migrate_data_object = isinstance(migrate_data,
                                              migrate_data_obj.LiveMigrateData)
         if not got_migrate_data_object:
@@ -5192,7 +5196,8 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.end",
                      network_info=network_info)
-
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
         if not got_migrate_data_object and migrate_data:
             migrate_data = migrate_data.to_legacy_dict(
                 pre_migration_result=True)
@@ -5585,6 +5590,8 @@ class ComputeManager(manager.Manager):
         instance.progress = 0
         instance.save(expected_task_state=[task_states.MIGRATING])
 
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
         if isinstance(migrate_data, dict):
             migration = migrate_data.pop('migration', None)
             migrate_data = \
@@ -5654,6 +5661,8 @@ class ComputeManager(manager.Manager):
             #             from remote volumes if necessary
             block_device_info = self._get_instance_block_device_info(context,
                                                                      instance)
+            # TODO(tdurakov): remove dict to object conversion once RPC API
+            # version is bumped to 5.x
             if isinstance(migrate_data, dict):
                 migrate_data = \
                     migrate_data_obj.LiveMigrateData.detect_implementation(
