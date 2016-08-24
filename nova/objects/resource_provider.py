@@ -14,6 +14,7 @@ import six
 import sqlalchemy as sa
 from sqlalchemy import func
 from sqlalchemy.orm import contains_eager
+from sqlalchemy import sql
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
@@ -632,3 +633,63 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             context, rp_uuid)
         return base.obj_make_list(
             context, cls(context), objects.Allocation, db_allocation_list)
+
+
+@base.NovaObjectRegistry.register
+class Usage(base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'resource_class': fields.ResourceClassField(read_only=True),
+        'usage': fields.NonNegativeIntegerField(),
+    }
+
+    @staticmethod
+    def _from_db_object(context, target, source):
+        for field in target.fields:
+            if field not in ('resource_class'):
+                setattr(target, field, source[field])
+
+        if 'resource_class' not in target:
+            target.resource_class = (
+                target.fields['resource_class'].from_index(
+                    source['resource_class_id']))
+
+        target._context = context
+        target.obj_reset_changes()
+        return target
+
+
+@base.NovaObjectRegistry.register
+class UsageList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'objects': fields.ListOfObjectsField('Usage'),
+    }
+
+    @staticmethod
+    @db_api.placement_context_manager.reader
+    def _get_all_by_resource_provider_uuid(context, rp_uuid):
+        query = (context.session.query(models.Inventory.resource_class_id,
+                 func.coalesce(func.sum(models.Allocation.used), 0))
+                 .join(models.ResourceProvider,
+                       models.Inventory.resource_provider_id ==
+                       models.ResourceProvider.id)
+                 .outerjoin(models.Allocation,
+                            sql.and_(models.Inventory.resource_provider_id ==
+                                     models.Allocation.resource_provider_id,
+                                     models.Inventory.resource_class_id ==
+                                     models.Allocation.resource_class_id))
+                 .filter(models.ResourceProvider.uuid == rp_uuid)
+                 .group_by(models.Inventory.resource_class_id))
+        result = [dict(resource_class_id=item[0], usage=item[1])
+                  for item in query.all()]
+        return result
+
+    @base.remotable_classmethod
+    def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
+        usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
+        return base.obj_make_list(context, cls(context), Usage, usage_list)
