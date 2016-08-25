@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -188,15 +188,6 @@ msgstr ""
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "NetworkModel je v poli %s vyžadováno"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"Jedinečné ID dané každému souborovému systému. Tato hodnota je nastavena v "
-"Glance a zde dohodnuta, aby operátoři věděli že pracují se stejným "
-"souborovým systémem."
 
 #, python-format
 msgid ""
@@ -452,14 +443,6 @@ msgstr "Počet CPU %(cpuset)s není přidělen k žádným uzlům"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "Připnutí CPU není hostitelem podporováno: %(reason)s"
 
-#, python-format
-msgid ""
-"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
-"%(cpuset)s"
-msgstr ""
-"CPU nastaveno na připnutí/odepnutí %(requested)s musí být podsadou známé "
-"sady CPU %(cpuset)s"
-
 msgid "Can not add access to a public flavor."
 msgstr "Nelze zpřístupnit veřejnou konfiguraci"
 
@@ -545,13 +528,6 @@ msgstr "Nelze najít obraz ke znovu sestavení"
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr ""
 "Nelze připojit Scality SOFS, zkontrolujte záznam systému pro možné chyby"
-
-#, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"Nelze připnout/odepnout cpu %(requested)s z následující připnuté sady "
-"%(pinned)s"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -1297,9 +1273,6 @@ msgstr ""
 "Přístup ke konfiguraci nelze nalézt pro kombinaci %(flavor_id)s / "
 "%(project_id)s."
 
-msgid "Flavor for vpn instances"
-msgstr "Konfigurace pro instance vpn"
-
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
@@ -1503,16 +1476,6 @@ msgstr ""
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "Obraz %(image_id)s nemohl být nalezen."
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"Obraz %(image_id)s nemohl být nalezen. Nova EC2 API přiděluje id obrazům "
-"dynamicky, při jejich prvním uvedení. Uvedli jste id obrazu od přidání "
-"tohoto obrazu?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1887,9 +1850,6 @@ msgstr "Neplatný název pole: %s"
 msgid "Invalid fixed IP Address %s in request"
 msgstr "Neplatná pevná IP adresa %s v požadavku"
 
-msgid "Invalid flavorRef provided."
-msgstr "Zadáno neplatné flavorRef."
-
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "Neplatná plovoucí IP adresa %s v požadavku"
@@ -2144,13 +2104,6 @@ msgid "Link Local address is not found.:%s"
 msgstr "Adresa místního spojení nenalezena.: %s"
 
 msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"Seznam souborových systémů které jsou nastaveny v tomto v části url souboru "
-"obrazu:<název položky seznamu>"
-
-msgid ""
 "Live migration can not be used without shared storage except a booted from "
 "volume VM which does not have a local disk."
 msgstr ""
@@ -2361,9 +2314,6 @@ msgstr ""
 msgid "Must supply a positive value for max_rows"
 msgstr "Musíte zadat kladnou hodnotu pro maximum řádků"
 
-msgid "Netmask to push into openvpn config"
-msgstr "Síťovou masku kterou odeslat do nastavení openvpn"
-
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
 msgstr "Síť \"%(val)s\" není v poli %(attr)s platná"
@@ -2432,9 +2382,6 @@ msgstr ""
 #, python-format
 msgid "Network set host failed for network %(network_id)s."
 msgstr "Nastavení hostitele sítě selhalo u sítě %(network_id)s."
-
-msgid "Network to push into openvpn config"
-msgstr "Síť kterou odeslat do nastavení openvpn"
 
 msgid "New volume must be detached in order to swap."
 msgstr "Pro výměnu musí být nový svazek odpojen."
@@ -2551,9 +2498,6 @@ msgstr "Nenalezeny žádné sítě"
 
 msgid "No nova entries in syslog!"
 msgstr "Žádné položky nova v záznamu systému!"
-
-msgid "No nw_info cache associated with instance"
-msgstr "K instanci není přidružena žádná mezipaměť informací o síti"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2886,10 +2830,6 @@ msgid ""
 msgstr ""
 "Kvóta pro uživatele %(user_id)s v projektu %(project_id)s nemohla být "
 "nalezena."
-
-#, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "Limit kvóty %(limit)s pro %(resource)s musí být -1 nebo větší."
 
 #, python-format
 msgid ""
@@ -3228,14 +3168,6 @@ msgstr "Velikost směru řazení převyšuje velikost klíče řazení"
 msgid "Sort key supplied was not valid."
 msgstr "Zadaný klíč řazení byl neplatný."
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"zadaná pevná IP adresa '%(addr)s' nemůže být použita s portem '%(port)s': "
-"port již má přidělenu pevnou IP adresu."
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "Zadaná pevná adresa není k instanci přidělena"
 
@@ -3281,9 +3213,6 @@ msgstr "Úkol %(task_name)s již je spuštěn na hostiteli %(host)s"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "Úkol %(task_name)s není spuštěn na hostiteli %(host)s"
-
-msgid "Template for cloudpipe instance boot script"
-msgstr "Šablona pro zaváděcí skript instance cloudpipe"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -3396,9 +3325,6 @@ msgstr "Počet zadaných portů: %(ports)d přesahuje limit: %(quota)d"
 
 msgid "The only partition should be partition 1."
 msgstr "Jediným oddílem by měl být oddíl 1."
-
-msgid "The path at which the file system is mounted."
-msgstr "Cesta na které je souborový systém připojen."
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."

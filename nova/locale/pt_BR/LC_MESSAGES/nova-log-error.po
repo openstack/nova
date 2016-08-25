@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -862,18 +862,6 @@ msgid "No compute node record for host %s"
 msgstr "Nenhum registro de nó de cálculo para o host %s"
 
 #, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "Nenhum acesso de BD permitido em nova-compute: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "Nenhum acesso de BD permitido em nova-dhcpbridge: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "Nenhum acesso de BD permitido em nova-network: %s"
-
-#, python-format
 msgid "No load handler for %s"
 msgstr "Nenhum manipulador de carga para %s"
 
@@ -1073,10 +1061,6 @@ msgstr "Não é possível configurar o conjunto: %s"
 
 msgid "Unable to unplug VBD"
 msgstr "Não é possível desconectar o VBD"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "Não é possível atualizar o host da porta %s"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."

@@ -11,9 +11,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -211,15 +211,6 @@ msgstr ""
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "Un modello di rete è richiesto nel campo %s"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"Un ID univoco assegnato a ciascun file system. Questo è il valore impostato "
-"in Glance e qui concordato, in modo che l'operatore sappia che sta lavorando "
-"con lo stesso file system."
 
 #, python-format
 msgid ""
@@ -518,14 +509,6 @@ msgstr "Il numero CPU %(cpuset)s non è assegnato a nessun nodo"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "Blocco CPU non supportato dall'host: %(reason)s"
 
-#, python-format
-msgid ""
-"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
-"%(cpuset)s"
-msgstr ""
-"Serie CPU per blocco/sblocco %(requested)s deve essere una sottoserie di una "
-"serie CPU nota%(cpuset)s"
-
 msgid "Can not add access to a public flavor."
 msgstr "Impossibile aggiungere l'accesso a una versione pubblica."
 
@@ -637,13 +620,6 @@ msgstr ""
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "Impossibile montare Scality SOFS, controllare il syslog per gli errori"
-
-#, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"Impossibile bloccare/sbloccare le cpu %(requested)s dal seguente insieme "
-"bloccato %(pinned)s"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -1446,9 +1422,6 @@ msgstr ""
 "Impossibile trovare l'accesso a flavor per la combinazione %(flavor_id)s / "
 "%(project_id)s."
 
-msgid "Flavor for vpn instances"
-msgstr "Flavor per le istanze vpn"
-
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
@@ -1663,17 +1636,6 @@ msgstr ""
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "Impossibile trovare l'immagine %(image_id)s."
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"Impossibile trovare l'immagine %(image_id)s. Nova EC2 API assegna gli id "
-"immagine dinamicamente quando vengono elencati per la prima volta. Gli id "
-"immagine sono stati elencati dal momento in cui è stata aggiunta questa "
-"immagine?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -2077,9 +2039,6 @@ msgstr "Nome campo non valido: %s"
 msgid "Invalid fixed IP Address %s in request"
 msgstr "Indirizzo IP fisso non valido %s nella richiesta"
 
-msgid "Invalid flavorRef provided."
-msgstr "flavorRef specificato non è valido."
-
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "IP mobile non valido %s nella richiesta"
@@ -2342,13 +2301,6 @@ msgstr "Riga %(linenum)d : %(line)s"
 msgid "Link Local address is not found.:%s"
 msgstr "L'indirizzo Link Local non è stato trovato.:%s"
 
-msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"Elenco di file system configurati in questo file nelle sezioni "
-"image_file_url:<nome voce di elenco>"
-
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr "L'elenco di interfacce virtuali non è supportato da questo cloud."
 
@@ -2604,9 +2556,6 @@ msgstr "È necessario fornire un valore positivo per max_number"
 msgid "Must supply a positive value for max_rows"
 msgstr "È necessario fornire un valore positivo per max_rows"
 
-msgid "Netmask to push into openvpn config"
-msgstr "Netmask da inserire nella configurazione openvpn"
-
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
 msgstr "La rete \"%(val)s\" non è valida nel campo %(attr)s"
@@ -2679,9 +2628,6 @@ msgstr ""
 #, python-format
 msgid "Network set host failed for network %(network_id)s."
 msgstr "Impostazione host di rete non riuscita per la rete %(network_id)s."
-
-msgid "Network to push into openvpn config"
-msgstr "La rete da inserire nella configurazione openvpn"
 
 msgid "New volume must be detached in order to swap."
 msgstr "Il nuovo volume deve essere scollegato per lo scambio."
@@ -2817,9 +2763,6 @@ msgstr "Non è stata trovata alcuna rete"
 
 msgid "No nova entries in syslog!"
 msgstr "Nessuna voce nova in syslog!"
-
-msgid "No nw_info cache associated with instance"
-msgstr "Nessuna nw_info della cache associata all'istanza"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -3193,11 +3136,6 @@ msgid ""
 msgstr ""
 "Impossibile trovare la quota per l'utente %(user_id)s nel progetto "
 "%(project_id)s."
-
-#, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr ""
-"Il limite della quota %(limit)s per %(resource)s deve essere -1 o maggiore."
 
 #, python-format
 msgid ""
@@ -3577,14 +3515,6 @@ msgstr ""
 msgid "Sort key supplied was not valid."
 msgstr "La chiave di ordinamento fornita non è valida."
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"L'IP fisso specificato '%(addr)s' non può essere utilizzata con la porta "
-"'%(port)s': la porta ha già un IP fisso assegnato."
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "L'indirizzo fisso specificato non è stato assegnato all'istanza"
 
@@ -3632,9 +3562,6 @@ msgstr "L'attività %(task_name)s è già in esecuzione nell'host %(host)s"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "L'attività %(task_name)s non è in esecuzione nell'host %(host)s"
-
-msgid "Template for cloudpipe instance boot script"
-msgstr "Template per lo script di avvio dell'istanza cloudpipe"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -3753,9 +3680,6 @@ msgstr ""
 
 msgid "The only partition should be partition 1."
 msgstr "L'unica partizione dovrebbe essere la partizione 1."
-
-msgid "The path at which the file system is mounted."
-msgstr "Il percorso in cui il file system viene montato."
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."

@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -152,15 +152,6 @@ msgstr "İstemci CPU modeli istenirken CPU modeli ismi ayarlanmamalı"
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "%s alanında bir AğModeli gerekli"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"Her dosya sistemine verilen benzersiz bir kimlik.  Bu değer Glance içinde "
-"ayarlanır ve burada kabul edilir böylece işleten aynı dosya sistemiyle "
-"karşılaştığını bilir."
 
 #, python-format
 msgid ""
@@ -469,13 +460,6 @@ msgstr "VDI'ya okuma/yazma yapılırken SR(Saklama deposu) bulunamadı."
 
 msgid "Cannot find image for rebuild"
 msgstr "Yeniden kurulum için imaj dosyası bulunamadı."
-
-#, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"%(requested)s işlemcileri %(pinned)s iğnelenmiş kümeden iğnelenemiyor/"
-"ayrılamıyor"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -1125,9 +1109,6 @@ msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr ""
 "Nitelik erişimi %(flavor_id)s / %(project_id)s katışımı için bulunamadı."
 
-msgid "Flavor for vpn instances"
-msgstr "Vpn sunucular için nitelik"
-
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
@@ -1270,16 +1251,6 @@ msgstr "IPv6 ağ maskesi \"%s\" bir ağ maskesi ya da integral ön ek olmalı"
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "%(image_id)s imaj kaynak dosyası bulunamadı."
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"%(image_id)s imajı bulunamadı. Nova EC2 API'si imaj kimliklerini otomatik "
-"olarak ilk defa listelendiklerinde atar. Bu imajı eklediğinizden beri imaj "
-"kimliklerini listelediniz mi?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1629,9 +1600,6 @@ msgstr "Geçersiz alan ismi: %s"
 msgid "Invalid fixed IP Address %s in request"
 msgstr "İstekte %s geçersiz sabit IP Adresi"
 
-msgid "Invalid flavorRef provided."
-msgstr "Geçersiz örnek türü sağlayıcısı"
-
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "İstekte geçersiz değişken IP %s"
@@ -1874,13 +1842,6 @@ msgid "Link Local address is not found.:%s"
 msgstr "Yerel adres bağlantısı bulunamadı.:%s"
 
 msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"Bu dosyada image_file_url:<list entry name> kısımlarında yapılandırılmış "
-"dosya sistemleri listesi"
-
-msgid ""
 "Live migration of instances with config drives is not supported in libvirt "
 "unless libvirt instance path and drive data is shared across compute nodes."
 msgstr ""
@@ -2064,9 +2025,6 @@ msgstr ""
 msgid "Must supply a positive value for max_rows"
 msgstr "max_rows için pozitif bir değer verilmeli"
 
-msgid "Netmask to push into openvpn config"
-msgstr "Openvpn yapılandırmasına gönderilecek ağ maskesi"
-
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
 msgstr "Ağ \"%(val)s\" %(attr)s alanında geçerli değil"
@@ -2133,9 +2091,6 @@ msgstr ""
 #, python-format
 msgid "Network set host failed for network %(network_id)s."
 msgstr "%(network_id)s ağı için ağ istemci ayarlaması başarısız."
-
-msgid "Network to push into openvpn config"
-msgstr "Openvpn yapılandırmasına gönderilecek ağ"
 
 msgid "New volume must be detached in order to swap."
 msgstr ""
@@ -2243,9 +2198,6 @@ msgstr "Ağ bulunamadı"
 
 msgid "No nova entries in syslog!"
 msgstr "Syslog'da nova girdisi yok!"
-
-msgid "No nw_info cache associated with instance"
-msgstr "Sunucu ile ilişkilendirilmiş nw_info zulası yok"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2549,10 +2501,6 @@ msgstr ""
 "%(project_id)s projesindeki %(user_id)s kullanıcısı için kota bulunamadı."
 
 #, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "%(resource)s için kota sınırı %(limit)s -1 ya da daha büyük olmalı."
-
-#, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
@@ -2850,14 +2798,6 @@ msgstr "Sıralama yönü boyutu sııralama anahtarı boyutunu geçiyor"
 msgid "Sort key supplied was not valid."
 msgstr "Verilen sıralama anahtarı geçerli değil."
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"Belirtilen Sabit IP '%(addr)s' '%(port)s' bağlantı noktası ile kullanılamaz: "
-"bağlantı noktasının zaten ayrılmış Sabit IP'si var."
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "Belirtilen sabit adres sunucuya atanmamış"
 
@@ -2900,9 +2840,6 @@ msgstr "Görev %(task_name)s zaten %(host)s istemcisi üstünde çalışıyor"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "Görev %(task_name)s %(host)s istemcisi üzerinde çalışmıyor"
-
-msgid "Template for cloudpipe instance boot script"
-msgstr "Cloudpipe sunucusu ön yükleme betiği için şablon"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -2999,9 +2936,6 @@ msgstr ""
 
 msgid "The only partition should be partition 1."
 msgstr "Tek bölüm bölüm 1 olmalı."
-
-msgid "The path at which the file system is mounted."
-msgstr "Dosya sisteminin bağlı olduğu yol."
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."

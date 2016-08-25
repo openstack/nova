@@ -11,9 +11,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -207,15 +207,6 @@ msgstr "ホスト CPU モデルの要求時に CPU モデル名は設定でき�
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "フィールド %s に NetworkModel が必要です"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"固有の ID が各ファイルシステムに割り当てられました。この値は Glance に設定さ"
-"れ、ファイルシステムと関連付けされるため、オペレーターはこの IDでファイルシス"
-"テムを識別できます。"
 
 #, python-format
 msgid ""
@@ -510,14 +501,6 @@ msgstr "CPU 番号 %(cpuset)s はノードに割り当てられていません"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "ホストは CPU の固定を行うことができません: %(reason)s"
 
-#, python-format
-msgid ""
-"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
-"%(cpuset)s"
-msgstr ""
-"固定/固定解除 %(requested)s の設定が行われる CPU は、既知の CPU セット "
-"%(cpuset)s のサブセットである必要があります"
-
 msgid "Can not add access to a public flavor."
 msgstr "パブリックフレーバーにアクセスを追加できません"
 
@@ -625,12 +608,6 @@ msgstr "設定 %(conf)s からスケジューラードライバーをロード�
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "Scality SOFS をマウントできません。syslog でエラーを確認してください"
-
-#, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"固定されたセット %(pinned)s から CPU %(requested)s を固定/固定解除できません"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -1425,9 +1402,6 @@ msgstr ""
 "%(flavor_id)s / %(project_id)s の組み合わせに対応するフレーバーアクセスが見つ"
 "かりません。"
 
-msgid "Flavor for vpn instances"
-msgstr "VPN インスタンスのフレーバー"
-
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
@@ -1644,16 +1618,6 @@ msgstr ""
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "イメージ %(image_id)s が見つかりませんでした。"
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"イメージ %(image_id)s が見つかりませんでした。Nova EC2 API は、イメージ ID の"
-"初回リスト時に、ID を動的に割り当てます。このイメージの追加後に、イメージ ID "
-"をリストしましたか?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -2059,9 +2023,6 @@ msgstr "フィールド名が無効です: %s"
 msgid "Invalid fixed IP Address %s in request"
 msgstr "リクエストに無効な Fixed IP アドレス %s が含まれています"
 
-msgid "Invalid flavorRef provided."
-msgstr "無効な flavorRef が指定されました。"
-
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "リクエストに無効な Floating IP %s が含まれています"
@@ -2318,13 +2279,6 @@ msgstr "行 %(linenum)d : %(line)s"
 #, python-format
 msgid "Link Local address is not found.:%s"
 msgstr "リンクローカルアドレスが見つかりません: %s"
-
-msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"このファイルの image_file_url:<list entry name> セクションで設定されている"
-"ファイルシステムのリスト"
 
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr "このクラウドでは仮想インターフェースの一覧表示を行うことができません。"
@@ -2585,9 +2539,6 @@ msgstr "max_number には正の値を指定する必要があります"
 msgid "Must supply a positive value for max_rows"
 msgstr "max_rows には正の値を指定する必要があります"
 
-msgid "Netmask to push into openvpn config"
-msgstr "openvpn の設定に入れるネットマスクの値"
-
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
 msgstr "ネットワーク \"%(val)s\" のフィールド %(attr)s が有効ではありません"
@@ -2663,9 +2614,6 @@ msgid "Network set host failed for network %(network_id)s."
 msgstr ""
 "ネットワーク %(network_id)s においてネットワークが設定したホストで障害が発生"
 "しました。"
-
-msgid "Network to push into openvpn config"
-msgstr "openvpn の設定に入れるネットワークの値"
 
 msgid "New volume must be detached in order to swap."
 msgstr "スワップを行うには、新規ボリュームを切断する必要があります。"
@@ -2798,9 +2746,6 @@ msgstr "ネットワークが見つかりません"
 
 msgid "No nova entries in syslog!"
 msgstr "syslog 内に nova 項目がありません。"
-
-msgid "No nw_info cache associated with instance"
-msgstr "インスタンスに nw_info キャッシュが関連付けられていません"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -3178,10 +3123,6 @@ msgstr ""
 "でした。"
 
 #, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "%(resource)s のクォータ上限 %(limit)s は -1 以上でなければなりません。"
-
-#, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
@@ -3555,14 +3496,6 @@ msgstr "ソート方向の数がソートキーの数より多いです"
 msgid "Sort key supplied was not valid."
 msgstr "指定されたソートキーが無効でした。"
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"指定された Fixed IP '%(addr)s' は、ポート '%(port)s' と一緒には使用できませ"
-"ん。ポートには既に Fixed IP が割り振られています。"
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "指定された固定アドレスはインスタンスに割り当てられていません"
 
@@ -3612,9 +3545,6 @@ msgstr "タスク %(task_name)s はホスト %(host)s 上で既に実行中で�
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "タスク %(task_name)s はホスト %(host)s 上で実行されていません"
-
-msgid "Template for cloudpipe instance boot script"
-msgstr "cloudpipe インスタンスのブートスクリプト用テンプレート"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -3734,9 +3664,6 @@ msgstr "定義したポート %(ports)d の数が上限 %(quota)d を超えて�
 
 msgid "The only partition should be partition 1."
 msgstr "唯一のパーティションはパーティション 1 でなければなりません。"
-
-msgid "The path at which the file system is mounted."
-msgstr "ファイルシステムがマウントされているパス。"
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."

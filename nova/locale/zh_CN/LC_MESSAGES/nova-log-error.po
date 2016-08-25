@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -705,18 +705,6 @@ msgid "No compute node record for host %s"
 msgstr "没有host %s 的计算节点记录"
 
 #, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "nova-compute: %s 中不允许访问数据库"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "nova-dhcpbridge: %s 中不允许访问数据库"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "nova-network: %s中不允许访问数据库"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "未保存对 %s 的处理"
 
@@ -884,10 +872,6 @@ msgstr "不能建立池：%s"
 
 msgid "Unable to unplug VBD"
 msgstr "不能拔出VBD"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "无法更新端口 %s 的主机"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."

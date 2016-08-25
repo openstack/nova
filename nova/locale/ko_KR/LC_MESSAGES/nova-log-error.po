@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -842,18 +842,6 @@ msgid "No compute node record for host %s"
 msgstr "%s 호스트의 컴퓨트 노드 레코드가 없음"
 
 #, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "nova-compute에서 db 액세스가 허용되지 않음: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "nova-dhcpbridge에서 db 액세스가 허용되지 않음: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "nova-network에서 db 액세스가 허용되지 않음: %s"
-
-#, python-format
 msgid "No load handler for %s"
 msgstr "%s의 핸들러가 로드되지 않음"
 
@@ -1044,10 +1032,6 @@ msgstr "풀을 설정할 수 없음: %s."
 
 msgid "Unable to unplug VBD"
 msgstr "VBD 플러그를 해제할 수 없음"
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "%s 포트의 호스트를 업데이트할 수 없음"
 
 #, python-format
 msgid "Unable to update instance VNIC index for port %s."
