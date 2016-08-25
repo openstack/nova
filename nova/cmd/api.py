@@ -47,8 +47,6 @@ def main():
         # NOTE(mriedem): This is needed for caching the nova-compute service
         # version which is looked up when a server create request is made with
         # network id of 'auto' or 'none'.
-        # TODO(mriedem): Remove this in Ocata when all computes should be
-        # at least Newton.
         objects.Service.enable_min_version_cache()
     log = logging.getLogger(__name__)
 
