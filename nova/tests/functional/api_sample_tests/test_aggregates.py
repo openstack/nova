@@ -20,7 +20,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
     ADMIN_API = True
     sample_dir = "os-aggregates"
 
-    def test_aggregate_create(self):
+    def _test_aggregate_create(self):
         subs = {
             "aggregate_id": '(?P<id>\d+)'
         }
@@ -28,18 +28,31 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         return self._verify_response('aggregate-post-resp',
                                      subs, response, 200)
 
+    def test_aggregate_create(self):
+        self._test_aggregate_create()
+
+    def _test_add_host(self, aggregate_id, host):
+        subs = {
+            "host_name": host
+        }
+        response = self._do_post('os-aggregates/%s/action' % aggregate_id,
+                                 'aggregate-add-host-post-req', subs)
+        self._verify_response('aggregates-add-host-post-resp', subs,
+                              response, 200)
+
     def test_list_aggregates(self):
-        self.test_aggregate_create()
+        aggregate_id = self._test_aggregate_create()
+        self._test_add_host(aggregate_id, self.compute.host)
         response = self._do_get('os-aggregates')
         self._verify_response('aggregates-list-get-resp', {}, response, 200)
 
     def test_aggregate_get(self):
-        agg_id = self.test_aggregate_create()
+        agg_id = self._test_aggregate_create()
         response = self._do_get('os-aggregates/%s' % agg_id)
         self._verify_response('aggregates-get-resp', {}, response, 200)
 
     def test_add_metadata(self):
-        agg_id = self.test_aggregate_create()
+        agg_id = self._test_aggregate_create()
         response = self._do_post('os-aggregates/%s/action' % agg_id,
                                  'aggregate-metadata-post-req',
                                  {'action': 'set_metadata'})
@@ -47,14 +60,8 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                               response, 200)
 
     def test_add_host(self):
-        aggregate_id = self.test_aggregate_create()
-        subs = {
-            "host_name": self.compute.host,
-        }
-        response = self._do_post('os-aggregates/%s/action' % aggregate_id,
-                                 'aggregate-add-host-post-req', subs)
-        self._verify_response('aggregates-add-host-post-resp', subs,
-                              response, 200)
+        aggregate_id = self._test_aggregate_create()
+        self._test_add_host(aggregate_id, self.compute.host)
 
     def test_remove_host(self):
         self.test_add_host()
@@ -67,7 +74,7 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
                               subs, response, 200)
 
     def test_update_aggregate(self):
-        aggregate_id = self.test_aggregate_create()
+        aggregate_id = self._test_aggregate_create()
         response = self._do_put('os-aggregates/%s' % aggregate_id,
                                   'aggregate-update-post-req', {})
         self._verify_response('aggregate-update-post-resp',

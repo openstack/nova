@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ================================
@@ -47,7 +46,8 @@ Create Aggregate
 
 .. rest_method:: POST /os-aggregates
 
-Creates an aggregate in an availability zone.
+Creates an aggregate. If specifying an option availability_zone, the aggregate is
+created as an availability zone and the availability zone is visible to normal users.
 
 Normal response codes: 200
 
@@ -131,6 +131,8 @@ Update Aggregate
 .. rest_method:: PUT /os-aggregates/{aggregate_id}
 
 Updates either or both the name and availability zone for an aggregate.
+If the aggregate to be updated has host that already in the given
+availablility zone, the request will fail with 400 error.
 
 Normal response codes: 200
 
@@ -193,6 +195,8 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful POST action.
 
 Add Host
 ========
@@ -299,7 +303,7 @@ Create Or Update Aggregate Metadata
 
 Creates or replaces metadata for an aggregate.
 
-Specify the ``set_metadata`` action in the request body.
+Specify the ``set_metadata`` action and metadata info in the request body.
 
 Normal response codes: 200
 
