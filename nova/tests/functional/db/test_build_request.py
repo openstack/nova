@@ -10,9 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import functools
-
-from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 
 from nova import context
@@ -22,7 +19,6 @@ from nova.objects import build_request
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_build_request
-from nova.tests.unit.objects import test_objects
 
 
 class BuildRequestTestCase(test.NoDBTestCase):
@@ -53,52 +49,21 @@ class BuildRequestTestCase(test.NoDBTestCase):
                 self.instance_uuid)
 
     def test_get_by_uuid(self):
-        req = self._create_req()
-        db_req = self.build_req_obj._get_by_instance_uuid_from_db(self.context,
-                self.instance_uuid)
-
-        obj_comp = functools.partial(objects.base.obj_equal_prims,
-                ignore=['deleted', 'deleted_at', 'created_at',
-                    'updated_at'])
-
-        def date_comp(db_val, obj_val):
-            # We have this separate comparison method because compare_obj below
-            # assumes that db datetimes are tz unaware. That's normally true
-            # but not when they're part of a serialized object and not a
-            # dedicated datetime column.
-            self.assertEqual(db_val.replace(tzinfo=None),
-                             obj_val.replace(tzinfo=None))
+        expected_req = self._create_req()
+        req_obj = self.build_req_obj.get_by_instance_uuid(self.context,
+                                                          self.instance_uuid)
 
         for key in self.build_req_obj.fields.keys():
-            expected = getattr(req, key)
-            db_value = db_req[key]
-            if key in ['created_at', 'updated_at']:
-                # Objects store tz aware datetimes but the db does not.
-                expected = expected.replace(tzinfo=None)
-            elif key == 'instance':
-                db_instance = objects.Instance.obj_from_primitive(
-                        jsonutils.loads(db_value))
-                test_objects.compare_obj(self, expected, db_instance,
-                        # These objects are not loaded in the test instance
-                        allow_missing=['pci_requests', 'numa_topology',
-                            'pci_devices', 'security_groups', 'info_cache',
-                            'ec2_ids', 'migration_context', 'metadata',
-                            'vcpu_model', 'services', 'system_metadata',
-                            'tags', 'fault', 'device_metadata'],
-                        comparators={'flavor': obj_comp,
-                                     'created_at': date_comp,
-                                     'keypairs': obj_comp})
+            expected = getattr(expected_req, key)
+            db_value = getattr(req_obj, key)
+            if key == 'instance':
+                objects.base.obj_equal_prims(expected, db_value)
                 continue
             elif key == 'block_device_mappings':
-                db_bdms = objects.BlockDeviceMappingList.obj_from_primitive(
-                    jsonutils.loads(db_value))
-                self.assertEqual(1, len(db_bdms))
+                self.assertEqual(1, len(db_value))
                 # Can't compare list objects directly, just compare the single
                 # item they contain.
-                test_objects.compare_obj(self, expected[0], db_bdms[0],
-                                         allow_missing=['instance'],
-                                         comparators={'created_at': date_comp,
-                                                      'updated_at': date_comp})
+                objects.base.obj_equal_prims(expected[0], db_value[0])
                 continue
             self.assertEqual(expected, db_value)
 

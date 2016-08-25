@@ -28,6 +28,8 @@ def fake_db_req(**updates):
     instance_uuid = uuidutils.generate_uuid()
     instance = fake_instance.fake_instance_obj(ctxt, objects.Instance,
             uuid=instance_uuid)
+    # This will always be set this way for an instance at build time
+    instance.host = None
     block_devices = objects.BlockDeviceMappingList(
         objects=[fake_block_device.fake_bdm_object(
             context,
