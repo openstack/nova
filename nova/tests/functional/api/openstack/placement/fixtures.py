@@ -18,6 +18,8 @@ from oslo_utils import uuidutils
 from nova.api.openstack.placement import deploy
 from nova import conf
 from nova import config
+from nova import context
+from nova import objects
 from nova.tests import fixtures
 
 
@@ -66,3 +68,34 @@ class APIFixture(fixture.GabbiFixture):
         self.main_db_fixture.cleanup()
         if self.conf:
             self.conf.reset()
+
+
+class AllocationFixture(APIFixture):
+    """An APIFixture that has some pre-made Allocations."""
+
+    def start_fixture(self):
+        super(AllocationFixture, self).start_fixture()
+        self.context = context.get_admin_context()
+        # Stealing from the super
+        rp_name = os.environ['RP_NAME']
+        rp_uuid = os.environ['RP_UUID']
+        rp = objects.ResourceProvider(
+            self.context, name=rp_name, uuid=rp_uuid)
+        rp.create()
+        inventory = objects.Inventory(
+            self.context, resource_provider=rp,
+            resource_class='DISK_GB', total=2048)
+        inventory.obj_set_defaults()
+        rp.add_inventory(inventory)
+        allocation = objects.Allocation(
+            self.context, resource_provider=rp,
+            resource_class='DISK_GB',
+            consumer_id=uuidutils.generate_uuid(),
+            used=512)
+        allocation.create()
+        allocation = objects.Allocation(
+            self.context, resource_provider=rp,
+            resource_class='DISK_GB',
+            consumer_id=uuidutils.generate_uuid(),
+            used=512)
+        allocation.create()

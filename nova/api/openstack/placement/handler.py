@@ -29,6 +29,7 @@ import webob
 from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
+from nova.api.openstack.placement.handlers import usage
 from nova.api.openstack.placement import util
 from nova import exception
 
@@ -60,6 +61,9 @@ ROUTE_DECLARATIONS = {
         'GET': inventory.get_inventory,
         'PUT': inventory.update_inventory,
         'DELETE': inventory.delete_inventory
+    },
+    '/resource_providers/{uuid}/usages': {
+        'GET': usage.list_usages
     },
 }
 
