@@ -38,10 +38,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         self.client = scheduler_report_client.SchedulerReportClient()
 
     @mock.patch.object(objects.ComputeNode, 'save')
-    @mock.patch.object(objects.ComputeNode, 'create_inventory')
-    @mock.patch.object(objects.ComputeNode, 'update_inventory')
-    def test_update_resource_stats_saves(self, mock_update,
-                                         mock_create, mock_save):
+    def test_update_resource_stats_saves(self, mock_save):
         cn = objects.ComputeNode(context=self.context)
         cn.host = 'fakehost'
         cn.hypervisor_hostname = 'fakenode'
@@ -50,29 +47,8 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
               "product_id": "foo",
               "count": 1,
               "a": "b"}])
-        mock_update.return_value = True
         self.client.update_resource_stats(cn)
         mock_save.assert_called_once_with()
-        mock_update.assert_called_once_with()
-        self.assertFalse(mock_create.called)
-
-    @mock.patch.object(objects.ComputeNode, 'save')
-    @mock.patch.object(objects.ComputeNode, 'create_inventory')
-    @mock.patch.object(objects.ComputeNode, 'update_inventory')
-    def test_update_resource_stats_creates(self, mock_update,
-                                           mock_create, mock_save):
-        cn = objects.ComputeNode(context=self.context)
-        cn.host = 'fakehost'
-        cn.hypervisor_hostname = 'fakenode'
-        cn.pci_device_pools = pci_device_pool.from_pci_stats(
-            [{"vendor_id": "foo",
-              "product_id": "foo",
-              "count": 1,
-              "a": "b"}])
-        mock_update.return_value = False
-        self.client.update_resource_stats(cn)
-        mock_save.assert_called_once_with()
-        mock_create.assert_called_once_with()
 
 
 class SchedulerQueryClientTestCase(test.NoDBTestCase):
