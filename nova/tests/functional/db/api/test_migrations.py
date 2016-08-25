@@ -58,7 +58,7 @@ class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
     def migrate_engine(self):
         return self.engine
 
-    def get_engine(self):
+    def get_engine(self, context=None):
         return self.migrate_engine
 
     def get_metadata(self):

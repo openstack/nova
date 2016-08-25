@@ -143,7 +143,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                                return_value=engine):
             sa_migration.db_sync()
 
-    def get_engine(self):
+    def get_engine(self, context=None):
         return self.migrate_engine
 
     def get_metadata(self):
