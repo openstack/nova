@@ -38,7 +38,7 @@ class PathUtils(pathutils.PathUtils):
     def get_instances_dir(self, remote_server=None):
         local_instance_path = os.path.normpath(CONF.instances_path)
 
-        if remote_server:
+        if remote_server and not local_instance_path.startswith(r'\\'):
             if CONF.hyperv.instances_path_share:
                 path = CONF.hyperv.instances_path_share
             else:

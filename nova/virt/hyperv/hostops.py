@@ -17,7 +17,6 @@
 Management class for host operations.
 """
 import datetime
-import os
 import platform
 import time
 
@@ -41,6 +40,7 @@ LOG = logging.getLogger(__name__)
 
 class HostOps(object):
     def __init__(self):
+        self._diskutils = utilsfactory.get_diskutils()
         self._hostutils = utilsfactory.get_hostutils()
         self._pathutils = pathutils.PathUtils()
 
@@ -80,9 +80,10 @@ class HostOps(object):
         free_mem_mb = free_mem_kb // 1024
         return (total_mem_mb, free_mem_mb, total_mem_mb - free_mem_mb)
 
-    def _get_local_hdd_info_gb(self):
-        drive = os.path.splitdrive(self._pathutils.get_instances_dir())[0]
-        (size, free_space) = self._hostutils.get_volume_info(drive)
+    def _get_storage_info_gb(self):
+        instances_dir = self._pathutils.get_instances_dir()
+        (size, free_space) = self._diskutils.get_disk_capacity(
+            instances_dir)
 
         total_gb = size // units.Gi
         free_gb = free_space // units.Gi
@@ -138,7 +139,7 @@ class HostOps(object):
 
         (total_hdd_gb,
          free_hdd_gb,
-         used_hdd_gb) = self._get_local_hdd_info_gb()
+         used_hdd_gb) = self._get_storage_info_gb()
 
         cpu_info = self._get_cpu_info()
         cpu_topology = cpu_info['topology']

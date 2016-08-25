@@ -44,6 +44,7 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self._hostops = hostops.HostOps()
         self._hostops._hostutils = mock.MagicMock()
         self._hostops._pathutils = mock.MagicMock()
+        self._hostops._diskutils = mock.MagicMock()
 
     def test_get_cpu_info(self):
         mock_processors = mock.MagicMock()
@@ -90,13 +91,14 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
         self._hostops._hostutils.get_memory_info.assert_called_once_with()
         self.assertEqual((2, 1, 1), response)
 
-    def test_get_local_hdd_info_gb(self):
+    def test_get_storage_info_gb(self):
         self._hostops._pathutils.get_instances_dir.return_value = ''
-        self._hostops._hostutils.get_volume_info.return_value = (2 * units.Gi,
-                                                                 1 * units.Gi)
-        response = self._hostops._get_local_hdd_info_gb()
+        self._hostops._diskutils.get_disk_capacity.return_value = (
+            2 * units.Gi, 1 * units.Gi)
+
+        response = self._hostops._get_storage_info_gb()
         self._hostops._pathutils.get_instances_dir.assert_called_once_with()
-        self._hostops._hostutils.get_volume_info.assert_called_once_with('')
+        self._hostops._diskutils.get_disk_capacity.assert_called_once_with('')
         self.assertEqual((2, 1, 1), response)
 
     def test_get_hypervisor_version(self):
@@ -135,16 +137,16 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
     @mock.patch.object(hostops.HostOps, '_get_cpu_info')
     @mock.patch.object(hostops.HostOps, '_get_memory_info')
     @mock.patch.object(hostops.HostOps, '_get_hypervisor_version')
-    @mock.patch.object(hostops.HostOps, '_get_local_hdd_info_gb')
+    @mock.patch.object(hostops.HostOps, '_get_storage_info_gb')
     @mock.patch('platform.node')
     def test_get_available_resource(self, mock_node,
-                                    mock_get_local_hdd_info_gb,
+                                    mock_get_storage_info_gb,
                                     mock_get_hypervisor_version,
                                     mock_get_memory_info, mock_get_cpu_info,
                                     mock_get_gpu_info):
-        mock_get_local_hdd_info_gb.return_value = (mock.sentinel.LOCAL_GB,
-                                                   mock.sentinel.LOCAL_GB_FREE,
-                                                   mock.sentinel.LOCAL_GB_USED)
+        mock_get_storage_info_gb.return_value = (mock.sentinel.LOCAL_GB,
+                                                 mock.sentinel.LOCAL_GB_FREE,
+                                                 mock.sentinel.LOCAL_GB_USED)
         mock_get_memory_info.return_value = (mock.sentinel.MEMORY_MB,
                                              mock.sentinel.MEMORY_MB_FREE,
                                              mock.sentinel.MEMORY_MB_USED)
