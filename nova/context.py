@@ -91,11 +91,6 @@ class RequestContext(context.RequestContext):
 
         super(RequestContext, self).__init__(is_admin=is_admin, **kwargs)
 
-        # FIXME(dims): user_id and project_id duplicate information that is
-        # already present in the oslo_context's RequestContext. We need to
-        # get rid of them.
-        self.user_id = user_id
-        self.project_id = project_id
         self.read_deleted = read_deleted
         self.remote_address = remote_address
         if not timestamp:
@@ -152,6 +147,25 @@ class RequestContext(context.RequestContext):
 
     read_deleted = property(_get_read_deleted, _set_read_deleted,
                             _del_read_deleted)
+
+    # FIXME(dims): user_id and project_id duplicate information that is
+    # already present in the oslo_context's RequestContext. We need to
+    # get rid of them.
+    @property
+    def project_id(self):
+        return self.tenant
+
+    @project_id.setter
+    def project_id(self, value):
+        self.tenant = value
+
+    @property
+    def user_id(self):
+        return self.user
+
+    @user_id.setter
+    def user_id(self, value):
+        self.user = value
 
     def to_dict(self):
         values = super(RequestContext, self).to_dict()
