@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -199,14 +199,6 @@ msgstr "호스트 CPU 모델이 요청될 때 CPU 모델 이름이 설정되지 
 #, python-format
 msgid "A NetworkModel is required in field %s"
 msgstr "NetworkModel이 필드 %s에 필요함"
-
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"각 파일 시스템에 제공된 고유한 ID. 이 값은 글랜스에 설정되고 허용되므로 운영"
-"자가 동일한 파일 시스템을 처리하고 있음을 알 수 있습니다. "
 
 #, python-format
 msgid ""
@@ -487,14 +479,6 @@ msgstr "CPU 번호 %(cpuset)s이(가) 어느 노드에도 지정되지 않았음
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "CPU 고정이 호스트에서 지원되지 않음: %(reason)s"
 
-#, python-format
-msgid ""
-"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
-"%(cpuset)s"
-msgstr ""
-"%(requested)s을(를) 고정/고정 해제할 CPU 세트는 알려진 CPU 세트 %(cpuset)s의 "
-"서브세트여야 함"
-
 msgid "Can not add access to a public flavor."
 msgstr "공용 플레이버에 대한 액세스를 추가할 수 없습니다. "
 
@@ -599,12 +583,6 @@ msgstr "%(conf)s 구성에서 스케줄러 드라이버를 로드할 수 없습�
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "스케일 SOFS를 마운트할 수 없음. syslog에서 오류 확인"
-
-#, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr ""
-"다음 고정 세트의 cpus %(requested)s을(를) 고정/고정 해제할 수 없음.%(pinned)s"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -1371,9 +1349,6 @@ msgstr ""
 "%(flavor_id)s / %(project_id)s 조합에 대한 플레이버 액세스를 찾을 수 없습니"
 "다. "
 
-msgid "Flavor for vpn instances"
-msgstr "vpn 인스턴스에 대한 플레이버"
-
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
@@ -1582,16 +1557,6 @@ msgstr "IPv6 넷마스크 \"%s\"은(는) 넷마스크이거나 적분 접두부�
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "%(image_id)s 이미지를 찾을 수 없습니다. "
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"%(image_id)s 이미지를 찾을 수 없습니다. Nova EC2 API는 이미지 ID가 처음 나열"
-"될 때 동적으로 해당 ID를 지정합니다. 이 이미지를 추가한 이후 이미지를 나열했"
-"습니까?"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1982,9 +1947,6 @@ msgstr "잘못된 필드 이름: %s"
 msgid "Invalid fixed IP Address %s in request"
 msgstr "요청에서 올바르지 않은 고정 IP 주소 %s"
 
-msgid "Invalid flavorRef provided."
-msgstr "올바르지 않은 flavorRef가 제공되었습니다. "
-
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "요청에서 올바르지 않은 부동 IP %s"
@@ -2238,12 +2200,6 @@ msgstr "행 %(linenum)d : %(line)s"
 msgid "Link Local address is not found.:%s"
 msgstr "링크 로컬 주소를 찾을 수 없음.:%s"
 
-msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr ""
-"이 파일의 image_file_url:<list entry name> 섹션에서 구성된 파일 시스템 목록"
-
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr "이 클라우드에서는 가상 인터페이스 나열이 지원되지 않습니다. "
 
@@ -2495,9 +2451,6 @@ msgstr "max_number에 양의 값을 제공해야 함"
 msgid "Must supply a positive value for max_rows"
 msgstr "최대 행 값으로 양수를 제공해야 합니다. "
 
-msgid "Netmask to push into openvpn config"
-msgstr "openvpn 구성에 푸시할 넷마스크"
-
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
 msgstr "네트워크 \"%(val)s\"이(가) 필드 %(attr)s에서 올바르지 않음"
@@ -2568,9 +2521,6 @@ msgstr ""
 #, python-format
 msgid "Network set host failed for network %(network_id)s."
 msgstr "%(network_id)s 네트워크에 대해 네트워크 세트 호스트가 실패했습니다. "
-
-msgid "Network to push into openvpn config"
-msgstr "openvpn 구성에 푸시할 네트워크"
 
 msgid "New volume must be detached in order to swap."
 msgstr "스왑하려면 새 볼륨을 분리해야 합니다."
@@ -2704,9 +2654,6 @@ msgstr "네트워크를 찾을 수 없음"
 
 msgid "No nova entries in syslog!"
 msgstr "syslog에 nova 항목이 없음!"
-
-msgid "No nw_info cache associated with instance"
-msgstr "인스턴스와 연관된 nw_info 캐시가 없음"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -3078,10 +3025,6 @@ msgstr ""
 "다."
 
 #, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "%(resource)s의 할당량 한계 %(limit)s은(는) -1 이상이어야 합니다. "
-
-#, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
@@ -3437,14 +3380,6 @@ msgstr "정렬 방향 크기가 정렬 키 크기를 초과함"
 msgid "Sort key supplied was not valid."
 msgstr "제공되는 정렬 키가 올바르지 않습니다. "
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"지정된 고정 IP '%(addr)s'을(를) '%(port)s' 포트와 함께 사용할 수 없음: 포트"
-"에 이미 고정 IP가 할당되어 있습니다."
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "지정된 고정 주소가 인스턴스에 연관되지 않음"
 
@@ -3490,9 +3425,6 @@ msgstr "%(task_name)s 태스크가 이미 %(host)s 호스트에서 실행 중임
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "%(task_name)s 태스크가 %(host)s 호스트에서 실행 중이 아님"
-
-msgid "Template for cloudpipe instance boot script"
-msgstr "cloudpipe 인스턴스 부트 스크립트를 위한 템플리트"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -3605,9 +3537,6 @@ msgstr "정의된 포트 수 %(ports)d이(가) 한계를 초과함: %(quota)d"
 
 msgid "The only partition should be partition 1."
 msgstr "유일한 파티션은 파티션 1이어야 합니다."
-
-msgid "The path at which the file system is mounted."
-msgstr "파일 시스템이 마운트되는 경로입니다."
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."

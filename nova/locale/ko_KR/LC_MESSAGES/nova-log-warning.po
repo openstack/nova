@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -74,30 +74,6 @@ msgstr "%s이(가) 이미 마운트되었음"
 #, python-format
 msgid "%s swap image was used by instance but no back files existing!"
 msgstr "인스턴스에서 %s 스왑 이미지가 사용되었지만 지원 파일이 없습니다!"
-
-msgid ""
-"Adding the VIR_MIGRATE_NON_SHARED_INC flag to the block_migration_flag "
-"config option, otherwise all block-migrations will be live-migrations "
-"instead."
-msgstr ""
-"block_migration_flag  구성 옵션에 VIR_MIGRATE_NON_SHARED_INC 플래그를 추가합"
-"니다. 그렇지 않으면 모든 블록 마이그레이션이 라이브 마이그레이션이 됩니다."
-
-#, python-format
-msgid ""
-"Adding the VIR_MIGRATE_PEER2PEER flag to %(config_name)s because direct "
-"migrations are not supported by the %(virt_type)s virt type"
-msgstr ""
-"%(virt_type)s 가상 유형에서 직접 마이그레이션을 지원하지 않으므로 "
-"%(config_name)s에 VIR_MIGRATE_PEER2PEER 플래그 추가"
-
-#, python-format
-msgid ""
-"Adding the VIR_MIGRATE_UNDEFINE_SOURCE flag to %(config_name)s because, "
-"without it, migrated VMs will remain defined on the source host"
-msgstr ""
-"VIR_MIGRATE_UNDEFINE_SOURCE 플래그가 없으면 마이그레이션된 VM이 소스 호스트"
-"에 정의된 상태로 남아 있으므로 %(config_name)s에 이 플래그 추가"
 
 #, python-format
 msgid "Address |%(address)s| is not allocated"
@@ -653,10 +629,6 @@ msgid "Ignoring the invalid elements of the option %(name)s: %(options)s"
 msgstr "%(name)s: %(options)s 옵션의 올바르지 않은 요소 무시"
 
 #, python-format
-msgid "Ignoring unknown libvirt live migration flag '%(flag)s'"
-msgstr "알 수 없는 libvirt 라이브 마이그레이션 플래그 '%(flag)s' 무시"
-
-#, python-format
 msgid "Ignoring volume cleanup failure due to %s"
 msgstr "%s(으)로 인한 볼륨 정리 장애 무시"
 
@@ -1110,30 +1082,6 @@ msgstr ""
 msgid "Removed %(num)d duplicate rules for floating IP %(float)s"
 msgstr "Floating IP %(float)s에 대한 %(num)d개의 중복 규칙을 제거함"
 
-msgid ""
-"Removing the VIR_MIGRATE_NON_SHARED_INC flag from the live_migration_flag "
-"config option because it will cause all live-migrations to be block-"
-"migrations instead."
-msgstr ""
-"모든 라이브 마이그레이션이 블록 마이그레이션이 되므로  live_migration_flag  "
-"구성 옵션에서 VIR_MIGRATE_NON_SHARED_INC 플래그를 제거합니다."
-
-#, python-format
-msgid ""
-"Removing the VIR_MIGRATE_PEER2PEER flag from %(config_name)s because peer-to-"
-"peer migrations are not supported by the \"xen\" virt type"
-msgstr ""
-"\"xen\" 가상 유형에서 피어 투 피어 마이그레이션을 지원하지 않으므로 "
-"%(config_name)s에서 VIR_MIGRATE_PEER2PEER 플래그 제거"
-
-#, python-format
-msgid ""
-"Removing the VIR_MIGRATE_PERSIST_DEST flag from %(config_name)s as Nova "
-"ensures the VM is persisted on the destination host"
-msgstr ""
-"Nova에서 VM이 대상 호스트에 지속되는지 확인하므로 %(config_name)s에서 "
-"VIR_MIGRATE_PERSIST_DEST 플래그 제거"
-
 #, python-format
 msgid ""
 "Report interval must be less than service down time. Current config: "
@@ -1229,26 +1177,6 @@ msgstr ""
 "Tenant_id %(tenant_id)s이(가) %(instance_id)s 인스턴스의 tenant_id와 일치하"
 "지 않습니다 ."
 
-#, python-format
-msgid ""
-"The %(config_name)s config option contains the VIR_MIGRATE_TUNNELLED flag "
-"but the live_migration_tunnelled is set to False which causes "
-"VIR_MIGRATE_TUNNELLED to be unset"
-msgstr ""
-"%(config_name)s 구성 옵션에 VIR_MIGRATE_TUNNELLED 플래그가 포함되어 있지만 "
-"live_migration_tunnelled가 Flase로 설정되어 있으므로,  VIR_MIGRATE_TUNNELLED"
-"가 설정 해제됨"
-
-#, python-format
-msgid ""
-"The %(config_name)s config option does not contain the VIR_MIGRATE_TUNNELLED "
-"flag but the live_migration_tunnelled is set to True which causes "
-"VIR_MIGRATE_TUNNELLED to be set"
-msgstr ""
-"%(config_name)s 구성 옵션에 VIR_MIGRATE_TUNNELLED 플래그가 포함되어 있지 않지"
-"만 live_migration_tunnelled가 True로 설정되어 있으므로,  "
-"VIR_MIGRATE_TUNNELLED가 설정됨"
-
 msgid ""
 "The TrustedFilter is considered experimental by the OpenStack project "
 "because it receives much less testing than the rest of Nova. This may change "
@@ -1337,14 +1265,6 @@ msgid ""
 "Treating negative config value (%(retries)s) for 'glance.num_retries' as 0."
 msgstr ""
 " 'glance.num_retries'의 음의 구성 값 (%(retries)s)은(는) 0으로 처리합니다."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
-"as 0."
-msgstr ""
-"'network_allocate_retries'의 음의 구성 값 (%(retries)s)은(는) 0으로 처리합니"
-"다."
 
 #, python-format
 msgid ""

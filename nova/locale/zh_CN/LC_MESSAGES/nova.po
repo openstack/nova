@@ -29,16 +29,17 @@
 # 颜海峰 <yanheven@gmail.com>, 2014
 # English translations for nova.
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
+# zzxwill <zzxwill@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-03-22 10:23+0000\n"
-"Last-Translator: Linda <duleish@cn.ibm.com>\n"
+"PO-Revision-Date: 2016-08-23 02:11+0000\n"
+"Last-Translator: zzxwill <zzxwill@gmail.com>\n"
 "Language: zh-CN\n"
 "Language-Team: Chinese (China)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
@@ -218,14 +219,6 @@ msgstr "当请求主机 CPU 模型时，不应该设置 CPU 模型名称"
 msgid "A NetworkModel is required in field %s"
 msgstr "在字段%s中网络模型是必须的"
 
-msgid ""
-"A unique ID given to each file system.  This is value is set in Glance and "
-"agreed upon here so that the operator knowns they are dealing with the same "
-"file system."
-msgstr ""
-"对每个文件系统给定唯一的ID。在Glance中设置这个值，并且与这里的一致，这样操作"
-"者知道他们在处理同一个文件系统。"
-
 #, python-format
 msgid ""
 "API Version String %(version)s is of invalid format. Must be of format "
@@ -349,6 +342,9 @@ msgstr "尝试覆盖一个已存在的值。"
 #, python-format
 msgid "Attribute not supported: %(attr)s"
 msgstr "属性不受支持: %(attr)s"
+
+msgid "Bad Request - Invalid Parameters"
+msgstr "错误请求——参数无效"
 
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
@@ -483,12 +479,6 @@ msgstr "CPU 编号 %(cpuset)s 未分配为任何节点"
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "主机不支持CPU 绑定：%(reason)s"
 
-#, python-format
-msgid ""
-"CPU set to pin/unpin %(requested)s must be a subset of known CPU set "
-"%(cpuset)s"
-msgstr "锁定/取消锁定%(requested)s的CPU集合必须是已知CPU %(cpuset)s集合的子集"
-
 msgid "Can not add access to a public flavor."
 msgstr "不能添加访问到公共云主机类型。"
 
@@ -589,11 +579,6 @@ msgstr "无法通过配置 %(conf)s 装入调度程序驱动器。"
 
 msgid "Cannot mount Scality SOFS, check syslog for errors"
 msgstr "无法安装 Scality SOFS，请检查系统日志以获取错误"
-
-#, python-format
-msgid ""
-"Cannot pin/unpin cpus %(requested)s from the following pinned set %(pinned)s"
-msgstr "无法从以下已锁定集锁定/取消锁定 cpu %(requested)s：%(pinned)s"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -893,6 +878,10 @@ msgstr "检测到具有标识 %(vlan)d 的现有 vlan"
 #, python-format
 msgid "Device '%(device)s' not found."
 msgstr "找不到设备“%(device)s”。"
+
+#, python-format
+msgid "Device detach failed for %(device)s: %(reason)s"
+msgstr "对 %(device)s 执行设备拆离失败：%(reason)s)"
 
 #, python-format
 msgid ""
@@ -1313,9 +1302,6 @@ msgstr "项目 %(project_id)s已经拥有对于云主机类型 %(flavor_id)s的�
 msgid "Flavor access not found for %(flavor_id)s / %(project_id)s combination."
 msgstr "项目%(project_id)s中未发现云主机类型%(flavor_id)s。"
 
-msgid "Flavor for vpn instances"
-msgstr "用于VPN实例的云主机类型"
-
 msgid ""
 "Flavor id can only contain letters from A-Z (both cases), periods, dashes, "
 "underscores and spaces."
@@ -1404,6 +1390,9 @@ msgstr "找不到对应主机 %(host)s 的浮动 IP。"
 
 msgid "Floating IP pool not found."
 msgstr "找不到浮动 IP 池。"
+
+msgid "Forbidden"
+msgstr "禁止"
 
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
@@ -1517,15 +1506,6 @@ msgstr "IPv6网络掩码 \"%s\" 必须是一个网络掩码或者完整的前缀
 #, python-format
 msgid "Image %(image_id)s could not be found."
 msgstr "镜像 %(image_id)s 没有找到。"
-
-#, python-format
-msgid ""
-"Image %(image_id)s could not be found. The nova EC2 API assigns image ids "
-"dynamically when they are listed for the first time. Have you listed image "
-"ids since adding this image?"
-msgstr ""
-"找不到映像 %(image_id)s。当第一次列示映像标识时，Nova EC2 API 会动态分配这些"
-"映像标识。自从添加此映像以来，您已列示映像标识吗？"
 
 #, python-format
 msgid "Image %(image_id)s is not active."
@@ -1903,9 +1883,6 @@ msgstr "无效字段名：%s"
 msgid "Invalid fixed IP Address %s in request"
 msgstr "请求中无效固定IP地址%s"
 
-msgid "Invalid flavorRef provided."
-msgstr "提供了无效的flavorRef。"
-
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "请求中无效浮动IP %s"
@@ -2153,11 +2130,6 @@ msgstr "行%(linenum)d : %(line)s"
 msgid "Link Local address is not found.:%s"
 msgstr "本地IP地址没有找到：%s"
 
-msgid ""
-"List of file systems that are configured in this file in the image_file_url:"
-"<list entry name> sections"
-msgstr "列出在文件的 image_file_url:<list entry name>段配置的文件系统"
-
 msgid "Listing virtual interfaces is not supported by this cloud."
 msgstr "此云不支持列示虚拟接口。"
 
@@ -2392,9 +2364,6 @@ msgstr "必须对 max_number 提供正值"
 msgid "Must supply a positive value for max_rows"
 msgstr "必须为最大行max_rows提供一个正数"
 
-msgid "Netmask to push into openvpn config"
-msgstr "子网掩码已存入openvpn配置"
-
 #, python-format
 msgid "Network \"%(val)s\" is not valid in field %(attr)s"
 msgstr "在字段%(attr)s中网络\"%(val)s\"不是一个有效值"
@@ -2460,9 +2429,6 @@ msgstr "网络需要关联的 port_security_enabled 和子网，以便应用安�
 #, python-format
 msgid "Network set host failed for network %(network_id)s."
 msgstr "网络为网络%(network_id)s设置主机失败。"
-
-msgid "Network to push into openvpn config"
-msgstr "网络地址已存入openvpn配置"
 
 msgid "New volume must be detached in order to swap."
 msgstr "为了进行交换，新卷必须断开。"
@@ -2594,9 +2560,6 @@ msgstr "没有找到网络"
 
 msgid "No nova entries in syslog!"
 msgstr "在系统日志中找不到Nova输出"
-
-msgid "No nw_info cache associated with instance"
-msgstr "不存在任何与实例关联的 nw_info 高速缓存"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2954,10 +2917,6 @@ msgid ""
 msgstr "无法在项目 %(project_id)s 中为用户 %(user_id)s 找到配额。"
 
 #, python-format
-msgid "Quota limit %(limit)s for %(resource)s must be -1 or greater."
-msgstr "资源%(resource)s的配额限制%(limit)s 必须为-1或更大。"
-
-#, python-format
 msgid ""
 "Quota limit %(limit)s for %(resource)s must be greater than or equal to "
 "already used and reserved %(minimum)s."
@@ -3293,13 +3252,6 @@ msgstr "分类大小超过分类关键值大小"
 msgid "Sort key supplied was not valid."
 msgstr "提供的排序键无效。"
 
-#, python-format
-msgid ""
-"Specified Fixed IP '%(addr)s' cannot be used with port '%(port)s': port "
-"already has a Fixed IP allocated."
-msgstr ""
-"指定的固定IP '%(addr)s'不能使用端口'%(port)s'：端口已经分配给一个固定IP。"
-
 msgid "Specified fixed address not assigned to instance"
 msgstr "指定的固定IP地址没有分配给实例"
 
@@ -3345,9 +3297,6 @@ msgstr "任务 %(task_name)s 已在主机 %(host)s 上运行"
 #, python-format
 msgid "Task %(task_name)s is not running on host %(host)s"
 msgstr "任务 %(task_name)s 未在主机 %(host)s 上运行"
-
-msgid "Template for cloudpipe instance boot script"
-msgstr "cloudpipe实例的启动脚本模板"
 
 #, python-format
 msgid "The CA file for %(project)s could not be found"
@@ -3453,9 +3402,6 @@ msgstr "定义的端口数量：%(ports)d 超过限制：%(quota)d"
 
 msgid "The only partition should be partition 1."
 msgstr "唯一的分区应该是分区1。"
-
-msgid "The path at which the file system is mounted."
-msgstr "文件系统挂接的路径。"
 
 #, python-format
 msgid "The provided RNG device path: (%(path)s) is not present on the host."

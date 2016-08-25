@@ -6,9 +6,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:14+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -927,14 +927,6 @@ msgid ""
 msgstr ""
 "'glance.num_retries' için negatif yapılandırma değeri (%(retries)s) 0 olarak "
 "ele alınıyor."
-
-#, python-format
-msgid ""
-"Treating negative config value (%(retries)s) for 'network_allocate_retries' "
-"as 0."
-msgstr ""
-"'network_allocate_retries' için (%(retries)s) negatif yapılandırma değeri 0 "
-"olarak ele alınıyor."
 
 #, python-format
 msgid ""

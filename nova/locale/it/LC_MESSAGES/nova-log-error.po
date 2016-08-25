@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev274\n"
+"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-02 00:03+0000\n"
+"POT-Creation-Date: 2016-08-25 06:15+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -624,18 +624,6 @@ msgid "Neutron error creating port on network %s"
 msgstr "Errore di Neutron durante la creazione della porta su rete %s"
 
 #, python-format
-msgid "No db access allowed in nova-compute: %s"
-msgstr "Nessun accesso db consentito in nova-compute: %s"
-
-#, python-format
-msgid "No db access allowed in nova-dhcpbridge: %s"
-msgstr "Nessun accesso db consentito in nova-dhcpbridge: %s"
-
-#, python-format
-msgid "No db access allowed in nova-network: %s"
-msgstr "Nessun accesso db consentito in nova-network: %s"
-
-#, python-format
 msgid "No save handler for %s"
 msgstr "Nessun handler di salvataggio per %s"
 
@@ -757,10 +745,6 @@ msgstr "Impossibile recuperare le policy di storage con nome: %s"
 #, python-format
 msgid "Unable to set up pool: %s."
 msgstr "Impossibile configurare il pool: %s."
-
-#, python-format
-msgid "Unable to update host of port %s"
-msgstr "Impossibile aggiornare l'host con porta %s"
 
 msgid "Unexpected build failure, not rescheduling build."
 msgstr ""
