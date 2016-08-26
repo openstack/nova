@@ -26,7 +26,7 @@ There is an API for end users to list the outcome of Server Actions,
 referencing the requested action by request id.
 
 For more details, please see:
-http://developer.openstack.org/api-ref-compute-v2.1.html#os-instance-actions-v2.1
+http://developer.openstack.org/api-ref/compute/#servers-run-an-action-servers-action
 
 Logs
 ----
