@@ -136,7 +136,7 @@ NIC_NAME_LEN = 14
 class Model(dict):
     """Defines some necessary structures for most of the network models."""
     def __repr__(self):
-        return self.__class__.__name__ + '(' + dict.__repr__(self) + ')'
+        return jsonutils.dumps(self)
 
     def _set_meta(self, kwargs):
         # pull meta out of kwargs if it's there
