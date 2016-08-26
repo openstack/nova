@@ -5113,7 +5113,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_hugepage_support(self):
         # This means that the host can support multiple values for the size
         # field in LibvirtConfigGuestMemoryBackingPage
-        supported_archs = [arch.I686, arch.X86_64]
+        supported_archs = [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64]
         caps = self._host.get_capabilities()
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,
