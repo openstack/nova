@@ -199,7 +199,7 @@ class HostInfo(object):
         self.disabled_cpus_list = cpu_disabled or []
 
     @classmethod
-    def _gen_numa_topology(self, cpu_nodes, cpu_sockets, cpu_cores,
+    def _gen_numa_topology(cls, cpu_nodes, cpu_sockets, cpu_cores,
                            cpu_threads, kb_mem, numa_mempages_list=None):
 
         topology = vconfig.LibvirtConfigCapsNUMATopology()
