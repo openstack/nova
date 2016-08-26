@@ -3867,6 +3867,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             exception.UnableToAutoAllocateNetwork(
                 project_id=self.context.project_id))
 
+    def test_spawn_network_fixed_ip_not_valid_on_host_failure(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.FixedIpInvalidOnHost(port_id='fake-port-id'))
+
     def test_build_and_run_no_more_fixedips_exception(self):
         self._test_build_and_run_spawn_exceptions(
             exception.NoMoreFixedIps("error messge"))

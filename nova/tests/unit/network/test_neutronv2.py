@@ -3408,6 +3408,23 @@ class TestNeutronv2WithMock(test.TestCase):
                           instance, port_uuid, port_req_body)
         update_port_mock.assert_called_once_with(port_uuid, port_req_body)
 
+    @mock.patch.object(client.Client, 'update_port',
+        side_effect=exceptions.HostNotCompatibleWithFixedIpsClient())
+    def test_update_port_for_instance_fixed_ips_invalid(self,
+                                                        update_port_mock):
+        port_uuid = uuids.port
+        instance = objects.Instance(uuid=uuids.instance)
+        port_req_body = {'port': {
+                            'id': port_uuid,
+                            'mac_address': 'XX:XX:XX:XX:XX:XX',
+                            'network_id': uuids.network_id}}
+
+        self.assertRaises(exception.FixedIpInvalidOnHost,
+                          self.api._update_port,
+                          neutronapi.get_client(self.context),
+                          instance, port_uuid, port_req_body)
+        update_port_mock.assert_called_once_with(port_uuid, port_req_body)
+
     @mock.patch.object(client.Client, 'update_port')
     def test_update_port_for_instance_binding_failure(self,
             update_port_mock):

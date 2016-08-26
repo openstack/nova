@@ -866,6 +866,11 @@ class FixedIpInvalid(Invalid):
     msg_fmt = _("Fixed IP address %(address)s is invalid.")
 
 
+class FixedIpInvalidOnHost(Invalid):
+    msg_fmt = _("The fixed IP associated with port %(port_id)s is not "
+                "compatible with the host.")
+
+
 class NoMoreFixedIps(NovaException):
     msg_fmt = _("No fixed IP addresses available for network: %(net)s")
 
