@@ -1089,22 +1089,29 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, self.instance,
                           instance_type, all_mappings)
 
-    def test_validate_bdm_media_service_exceptions(self):
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_availability_zone')
+    @mock.patch.object(cinder.API, 'reserve_volume',
+                       side_effect=exception.InvalidVolume(reason='error'))
+    def test_validate_bdm_media_service_invalid_volume(self, mock_reserve_vol,
+                                                       mock_check_av_zone,
+                                                       mock_get):
+        volume_id = uuids.volume_id
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
         bdms = [fake_block_device.FakeDbBlockDeviceDict({
-                         'id': 1,
-                         'no_device': None,
-                         'source_type': 'volume',
-                         'destination_type': 'volume',
-                         'snapshot_id': None,
-                         'volume_id': uuids.volume_id,
-                         'device_name': 'vda',
-                         'boot_index': 0,
-                         'delete_on_termination': False}, anon=True)]
-        bdms = block_device_obj.block_device_make_list_from_dicts(
-                 self.context, bdms)
+                        'id': 1,
+                        'no_device': None,
+                        'source_type': 'volume',
+                        'destination_type': 'volume',
+                        'snapshot_id': None,
+                        'volume_id': volume_id,
+                        'device_name': 'vda',
+                        'boot_index': 0,
+                        'delete_on_termination': False}, anon=True)]
+        bdms = block_device_obj.block_device_make_list_from_dicts(self.context,
+                                                                  bdms)
 
-        # First we test a list of invalid status values that should result
+        # We test a list of invalid status values that should result
         # in an InvalidVolume exception being raised.
         status_values = (
             # First two check that the status is 'available'.
@@ -1116,45 +1123,76 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         for status, attach_status in status_values:
             if attach_status == 'attached':
-                def fake_volume_get(self, ctxt, volume_id):
-                    return {'id': volume_id,
-                            'status': status,
-                            'attach_status': attach_status,
-                            'multiattach': False,
-                            'attachments': {}}
+                mock_get.return_value = {'id': volume_id,
+                                         'status': status,
+                                         'attach_status': attach_status,
+                                         'multiattach': False,
+                                         'attachments': {}}
+
             else:
-                def fake_volume_get(self, ctxt, volume_id):
-                    return {'id': volume_id,
-                            'status': status,
-                            'attach_status': attach_status,
-                            'multiattach': False}
-            self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
+                mock_get.return_value = {'id': volume_id,
+                                         'status': status,
+                                         'attach_status': attach_status,
+                                         'multiattach': False}
+
             self.assertRaises(exception.InvalidVolume,
                               self.compute_api._validate_bdm,
                               self.context, self.instance,
                               instance_type, bdms)
+            mock_get.assert_called_with(self.context, volume_id)
 
-        # Now we test a 404 case that results in InvalidBDMVolume.
-        def fake_volume_get_not_found(self, context, volume_id):
-            raise exception.VolumeNotFound(volume_id)
+    @mock.patch.object(cinder.API, 'get')
+    def test_validate_bdm_media_service_volume_not_found(self, mock_get):
+        volume_id = uuids.volume_id
+        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        bdms = [fake_block_device.FakeDbBlockDeviceDict({
+                         'id': 1,
+                         'no_device': None,
+                         'source_type': 'volume',
+                         'destination_type': 'volume',
+                         'snapshot_id': None,
+                         'volume_id': volume_id,
+                         'device_name': 'vda',
+                         'boot_index': 0,
+                         'delete_on_termination': False}, anon=True)]
+        bdms = block_device_obj.block_device_make_list_from_dicts(self.context,
+                                                                  bdms)
 
-        self.stub_out('nova.volume.cinder.API.get', fake_volume_get_not_found)
+        mock_get.side_effect = exception.VolumeNotFound(volume_id)
         self.assertRaises(exception.InvalidBDMVolume,
                           self.compute_api._validate_bdm,
                           self.context, self.instance,
                           instance_type, bdms)
 
-        # Check that the volume status is 'available' and attach_status is
-        # 'detached' and accept the request if so
-        def fake_volume_get_ok(self, context, volume_id):
-            return {'id': volume_id,
-                    'status': 'available',
-                    'attach_status': 'detached',
-                    'multiattach': False}
-        self.stub_out('nova.volume.cinder.API.get', fake_volume_get_ok)
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_availability_zone')
+    def test_validate_bdm_media_service_valid(self, mock_check_av_zone,
+                                              mock_get):
+        volume_id = uuids.volume_id
+        instance_type = {'swap': 1, 'ephemeral_gb': 1}
+        bdms = [fake_block_device.FakeDbBlockDeviceDict({
+                         'id': 1,
+                         'no_device': None,
+                         'source_type': 'volume',
+                         'destination_type': 'volume',
+                         'snapshot_id': None,
+                         'volume_id': volume_id,
+                         'device_name': 'vda',
+                         'boot_index': 0,
+                         'delete_on_termination': False}, anon=True)]
+        bdms = block_device_obj.block_device_make_list_from_dicts(self.context,
+                                                                  bdms)
+        volume = {'id': volume_id,
+                  'status': 'available',
+                  'attach_status': 'detached',
+                  'multiattach': False}
 
+        mock_get.return_value = volume
         self.compute_api._validate_bdm(self.context, self.instance,
                                        instance_type, bdms)
+        mock_get.assert_called_once_with(self.context, volume_id)
+        mock_check_av_zone.assert_called_once_with(self.context, volume,
+                                                   self.instance)
 
     def test_volume_snapshot_create(self):
         self.assertRaises(messaging.ExpectedException,
