@@ -49,13 +49,11 @@ class APIFixture(fixture.GabbiFixture):
         config.parse_args([], default_config_files=None, configure_db=False,
                           init_rpc=False)
 
-        self.placement_db_fixture = fixtures.Database('placement')
         # NOTE(cdent): api and main database are not used but we still need
         # to manage them to make the fixtures work correctly and not cause
         # conflicts with other tests in the same process.
         self.api_db_fixture = fixtures.Database('api')
         self.main_db_fixture = fixtures.Database('main')
-        self.placement_db_fixture.reset()
         self.api_db_fixture.reset()
         self.main_db_fixture.reset()
 
@@ -63,7 +61,6 @@ class APIFixture(fixture.GabbiFixture):
         os.environ['RP_NAME'] = uuidutils.generate_uuid()
 
     def stop_fixture(self):
-        self.placement_db_fixture.cleanup()
         self.api_db_fixture.cleanup()
         self.main_db_fixture.cleanup()
         if self.conf:

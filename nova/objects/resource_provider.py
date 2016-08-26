@@ -165,7 +165,7 @@ def _increment_provider_generation(conn, rp):
     return new_generation
 
 
-@db_api.placement_context_manager.writer
+@db_api.api_context_manager.writer
 def _add_inventory(context, rp, inventory):
     """Add one Inventory that wasn't already on the provider."""
     resource_class_id = fields.ResourceClass.index(inventory.resource_class)
@@ -177,7 +177,7 @@ def _add_inventory(context, rp, inventory):
         rp.generation = _increment_provider_generation(conn, rp)
 
 
-@db_api.placement_context_manager.writer
+@db_api.api_context_manager.writer
 def _update_inventory(context, rp, inventory):
     """Update an inventory already on the provider."""
     resource_class_id = fields.ResourceClass.index(inventory.resource_class)
@@ -189,7 +189,7 @@ def _update_inventory(context, rp, inventory):
         rp.generation = _increment_provider_generation(conn, rp)
 
 
-@db_api.placement_context_manager.writer
+@db_api.api_context_manager.writer
 def _delete_inventory(context, rp, resource_class_id):
     """Delete up to one Inventory of the given resource_class id."""
 
@@ -202,7 +202,7 @@ def _delete_inventory(context, rp, resource_class_id):
         rp.generation = _increment_provider_generation(conn, rp)
 
 
-@db_api.placement_context_manager.writer
+@db_api.api_context_manager.writer
 def _set_inventory(context, rp, inv_list):
     """Given an InventoryList object, replaces the inventory of the
     resource provider in a safe, atomic fashion using the resource
@@ -329,7 +329,7 @@ class ResourceProvider(base.NovaObject):
         self.obj_reset_changes()
 
     @staticmethod
-    @db_api.placement_context_manager.writer
+    @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
         db_rp = models.ResourceProvider()
         db_rp.update(updates)
@@ -337,7 +337,7 @@ class ResourceProvider(base.NovaObject):
         return db_rp
 
     @staticmethod
-    @db_api.placement_context_manager.writer
+    @db_api.api_context_manager.writer
     def _delete(context, _id):
         # Don't delete the resource provider if it has allocations.
         rp_allocations = context.session.query(models.Allocation).\
@@ -354,7 +354,7 @@ class ResourceProvider(base.NovaObject):
             raise exception.NotFound()
 
     @staticmethod
-    @db_api.placement_context_manager.writer
+    @db_api.api_context_manager.writer
     def _update_in_db(context, id, updates):
         db_rp = context.session.query(models.ResourceProvider).filter_by(
             id=id).first()
@@ -370,7 +370,7 @@ class ResourceProvider(base.NovaObject):
         return resource_provider
 
     @staticmethod
-    @db_api.placement_context_manager.reader
+    @db_api.api_context_manager.reader
     def _get_by_uuid_from_db(context, uuid):
         result = context.session.query(models.ResourceProvider).filter_by(
             uuid=uuid).first()
@@ -393,7 +393,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
     )
 
     @staticmethod
-    @db_api.placement_context_manager.reader
+    @db_api.api_context_manager.reader
     def _get_all_by_filters_from_db(context, filters):
         if not filters:
             filters = {}
@@ -460,7 +460,7 @@ class _HasAResourceProvider(base.NovaObject):
         return target
 
 
-@db_api.placement_context_manager.writer
+@db_api.api_context_manager.writer
 def _create_inventory_in_db(context, updates):
     db_inventory = models.Inventory()
     db_inventory.update(updates)
@@ -468,7 +468,7 @@ def _create_inventory_in_db(context, updates):
     return db_inventory
 
 
-@db_api.placement_context_manager.writer
+@db_api.api_context_manager.writer
 def _update_inventory_in_db(context, id_, updates):
     result = context.session.query(
         models.Inventory).filter_by(id=id_).update(updates)
@@ -551,7 +551,7 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
                 return inv_rec
 
     @staticmethod
-    @db_api.placement_context_manager.reader
+    @db_api.api_context_manager.reader
     def _get_all_by_resource_provider(context, rp_uuid):
         return context.session.query(models.Inventory).\
             join(models.Inventory.resource_provider).\
@@ -580,7 +580,7 @@ class Allocation(_HasAResourceProvider):
     }
 
     @staticmethod
-    @db_api.placement_context_manager.writer
+    @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
         db_allocation = models.Allocation()
         db_allocation.update(updates)
@@ -588,7 +588,7 @@ class Allocation(_HasAResourceProvider):
         return db_allocation
 
     @staticmethod
-    @db_api.placement_context_manager.writer
+    @db_api.api_context_manager.writer
     def _destroy(context, id):
         result = context.session.query(models.Allocation).filter_by(
             id=id).delete()
@@ -619,7 +619,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db_api.placement_context_manager.reader
+    @db_api.api_context_manager.reader
     def _get_allocations_from_db(context, rp_uuid):
         query = (context.session.query(models.Allocation)
                  .join(models.Allocation.resource_provider)
@@ -671,7 +671,7 @@ class UsageList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db_api.placement_context_manager.reader
+    @db_api.api_context_manager.reader
     def _get_all_by_resource_provider_uuid(context, rp_uuid):
         query = (context.session.query(models.Inventory.resource_class_id,
                  func.coalesce(func.sum(models.Allocation.used), 0))

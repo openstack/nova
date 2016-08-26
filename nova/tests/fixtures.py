@@ -43,7 +43,7 @@ from nova.tests.functional.api import client
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
 CONF = cfg.CONF
-DB_SCHEMA = {'main': "", 'api': "", 'placement': ""}
+DB_SCHEMA = {'main': "", 'api': ""}
 SESSION_CONFIGURED = False
 
 
@@ -221,7 +221,7 @@ class Database(fixtures.Fixture):
     def __init__(self, database='main', connection=None):
         """Create a database fixture.
 
-        :param database: The type of database, 'main', 'api' or 'placement'
+        :param database: The type of database, 'main' or 'api'
         :param connection: The connection string to use
         """
         super(Database, self).__init__()
@@ -242,8 +242,6 @@ class Database(fixtures.Fixture):
                 self.get_engine = session.get_engine
         elif database == 'api':
             self.get_engine = session.get_api_engine
-        elif database == 'placement':
-            self.get_engine = session.get_placement_engine
 
     def _cache_schema(self):
         global DB_SCHEMA
@@ -277,7 +275,7 @@ class DatabaseAtVersion(fixtures.Fixture):
         """Create a database fixture.
 
         :param version: Max version to sync to (or None for current)
-        :param database: The type of database, 'main', 'api', 'placement'
+        :param database: The type of database, 'main' or 'api'
         """
         super(DatabaseAtVersion, self).__init__()
         self.database = database
@@ -286,8 +284,6 @@ class DatabaseAtVersion(fixtures.Fixture):
             self.get_engine = session.get_engine
         elif database == 'api':
             self.get_engine = session.get_api_engine
-        elif database == 'placement':
-            self.get_engine = session.get_placement_engine
 
     def cleanup(self):
         engine = self.get_engine()
