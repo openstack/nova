@@ -29,33 +29,20 @@ import subprocess
 import sys
 import warnings
 
-# TODO(Graham Hayes): Remove the following block of code when os-api-ref is
-# using openstackdocstheme
+import openstackdocstheme  # noqa
+import os_api_ref  # noqa
 
-import os_api_ref
+extensions = [
+    'os_api_ref',
+]
 
-if getattr(os_api_ref, 'THEME', 'olsosphinx') == 'openstackdocstheme':
-    # We are on the new version with openstackdocstheme support
 
-    extensions = [
-        'os_api_ref',
-    ]
-
-    import openstackdocstheme  # noqa
-
-    html_theme = 'openstackdocs'
-    html_theme_path = [openstackdocstheme.get_html_theme_path()]
-    html_theme_options = {
-        "sidebar_mode": "toc",
-    }
-
-else:
-    # We are on the old version without openstackdocstheme support
-
-    extensions = [
-        'os_api_ref',
-        'oslosphinx',
-    ]
+html_theme = 'openstackdocs'
+html_theme_path = [openstackdocstheme.get_html_theme_path()]
+html_theme_options = {
+    "sidebar_mode": "toc",
+}
+html_context = {'bug_project': 'nova', 'bug_tag': 'api-ref'}
 
 # End temporary block
 
