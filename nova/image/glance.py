@@ -938,6 +938,8 @@ def _translate_image_exception(image_id, exc_value):
     if isinstance(exc_value, glanceclient.exc.BadRequest):
         return exception.ImageBadRequest(image_id=image_id,
                                          response=six.text_type(exc_value))
+    if isinstance(exc_value, glanceclient.exc.HTTPOverLimit):
+        return exception.ImageQuotaExceeded(image_id=image_id)
     return exc_value
 
 
