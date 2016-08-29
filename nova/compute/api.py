@@ -915,6 +915,8 @@ class API(base.Base):
         self.security_group_api.ensure_default(context)
         LOG.debug("Going to run %s instances...", num_instances)
         instances = []
+        instance_mappings = []
+        build_requests = []
         try:
             for i in range(num_instances):
                 # Create a uuid for the instance so we can store the
@@ -948,6 +950,7 @@ class API(base.Base):
                         project_id=instance.project_id,
                         block_device_mappings=block_device_mapping)
                 build_request.create()
+                build_requests.append(build_request)
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
                 # for it need to instead look for the RequestSpec.
@@ -959,6 +962,7 @@ class API(base.Base):
                 inst_mapping.project_id = context.project_id
                 inst_mapping.cell_mapping = None
                 inst_mapping.create()
+                instance_mappings.append(inst_mapping)
                 # TODO(alaski): Cast to conductor here which will call the
                 # scheduler and defer instance creation until the scheduler
                 # has picked a cell/host. Set the instance_mapping to the cell
@@ -1002,6 +1006,16 @@ class API(base.Base):
                         try:
                             instance.destroy()
                         except exception.ObjectActionError:
+                            pass
+                    for instance_mapping in instance_mappings:
+                        try:
+                            instance_mapping.destroy()
+                        except exception.InstanceMappingNotFound:
+                            pass
+                    for build_request in build_requests:
+                        try:
+                            build_request.destroy()
+                        except exception.BuildRequestNotFound:
                             pass
                 finally:
                     quotas.rollback()
