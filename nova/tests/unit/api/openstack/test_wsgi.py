@@ -159,7 +159,7 @@ class RequestTest(MicroversionedTest):
         request = wsgi.Request.blank('/')
         accepted = 'nb-no'
         request.headers = {'Accept-Language': accepted}
-        self.assertIs(request.best_match_language(), None)
+        self.assertIsNone(request.best_match_language())
 
     def test_no_lang_header(self):
         self.stubs.Set(i18n, 'get_available_languages',
@@ -168,7 +168,7 @@ class RequestTest(MicroversionedTest):
         request = wsgi.Request.blank('/')
         accepted = ''
         request.headers = {'Accept-Language': accepted}
-        self.assertIs(request.best_match_language(), None)
+        self.assertIsNone(request.best_match_language())
 
     def test_api_version_request_header_none(self):
         request = wsgi.Request.blank('/')
