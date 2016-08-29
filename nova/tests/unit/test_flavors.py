@@ -377,10 +377,10 @@ class CreateInstanceTypeTest(test.TestCase):
 
     def test_flavorid_populated(self):
         flavor1 = flavors.create('flavor1', 64, 1, 120)
-        self.assertIsNot(None, flavor1.flavorid)
+        self.assertIsNotNone(flavor1.flavorid)
 
         flavor2 = flavors.create('flavor2', 64, 1, 120, flavorid='')
-        self.assertIsNot(None, flavor2.flavorid)
+        self.assertIsNotNone(flavor2.flavorid)
 
         flavor3 = flavors.create('flavor3', 64, 1, 120, flavorid='foo')
         self.assertEqual('foo', flavor3.flavorid)
@@ -388,7 +388,7 @@ class CreateInstanceTypeTest(test.TestCase):
     def test_default_values(self):
         flavor1 = flavors.create('flavor1', 64, 1, 120)
 
-        self.assertIsNot(None, flavor1.flavorid)
+        self.assertIsNotNone(flavor1.flavorid)
         self.assertEqual(flavor1.ephemeral_gb, 0)
         self.assertEqual(flavor1.swap, 0)
         self.assertEqual(flavor1.rxtx_factor, 1.0)
