@@ -255,8 +255,7 @@ class IptablesFirewallTestCase(test.NoDBTestCase):
         self.fw.prepare_instance_filter(instance_ref, network_model)
         self.fw.apply_instance_filter(instance_ref, network_model)
 
-        in_rules = filter(lambda l: not l.startswith('#'),
-                          self.in_rules)
+        in_rules = [l for l in self.in_rules if not l.startswith('#')]
         for rule in in_rules:
             if 'nova' not in rule:
                 self.assertIn(rule, self.out_rules,
