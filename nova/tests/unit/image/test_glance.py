@@ -305,6 +305,11 @@ class TestExceptionTranslations(test.NoDBTestCase):
         out_exc = glance._translate_image_exception('123', in_exc)
         self.assertIsInstance(out_exc, exception.ImageNotFound)
 
+    def test_client_httpoverlimit_converts_to_imagequotaexceeded(self):
+        in_exc = glanceclient.exc.HTTPOverLimit('123')
+        out_exc = glance._translate_image_exception('123', in_exc)
+        self.assertIsInstance(out_exc, exception.ImageQuotaExceeded)
+
 
 class TestGlanceSerializer(test.NoDBTestCase):
     def test_serialize(self):
