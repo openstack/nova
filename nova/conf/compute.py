@@ -189,6 +189,7 @@ Possible values
 allocation_ratio_opts = [
     cfg.FloatOpt('cpu_allocation_ratio',
         default=0.0,
+        min=0.0,
         help="""
 This option helps you specify virtual CPU to physical CPU allocation
 ratio which affects all CPU filters.
@@ -208,6 +209,7 @@ and defaulted to 16.0'.
 """),
     cfg.FloatOpt('ram_allocation_ratio',
         default=0.0,
+        min=0.0,
         help="""
 This option helps you specify virtual RAM to physical RAM
 allocation ratio which affects all RAM filters.
@@ -227,6 +229,7 @@ defaulted to 1.5.
 """),
     cfg.FloatOpt('disk_allocation_ratio',
         default=0.0,
+        min=0.0,
         help="""
 This option helps you specify virtual disk to physical disk
 allocation ratio used by the disk_filter.py script to determine if

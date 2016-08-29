@@ -14,6 +14,7 @@ import copy
 import datetime
 
 import mock
+from oslo_config import cfg
 from oslo_utils import timeutils
 from oslo_utils import units
 
@@ -38,6 +39,7 @@ from nova.tests import uuidsentinel as uuids
 
 _HOSTNAME = 'fake-host'
 _NODENAME = 'fake-node'
+CONF = cfg.CONF
 
 _VIRT_DRIVER_AVAIL_RESOURCES = {
     'vcpus': 4,
@@ -2270,3 +2272,20 @@ class TestIsTrackableMigration(test.NoDBTestCase):
             mig.migration_type = mig_type
 
             self.assertFalse(resource_tracker._is_trackable_migration(mig))
+
+
+class OverCommitTestCase(BaseTestCase):
+    def test_cpu_allocation_ratio_none_negative(self):
+        self.assertRaises(ValueError,
+                          CONF.set_default, 'cpu_allocation_ratio', -1.0,
+                          enforce_type=True)
+
+    def test_ram_allocation_ratio_none_negative(self):
+        self.assertRaises(ValueError,
+                          CONF.set_default, 'ram_allocation_ratio', -1.0,
+                          enforce_type=True)
+
+    def test_disk_allocation_ratio_none_negative(self):
+        self.assertRaises(ValueError,
+                          CONF.set_default, 'disk_allocation_ratio', -1.0,
+                          enforce_type=True)
