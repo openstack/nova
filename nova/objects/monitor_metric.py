@@ -49,7 +49,7 @@ class MonitorMetric(base.NovaObject):
         super(MonitorMetric, self).obj_make_compatible(primitive,
                                                        target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
-        if target_version < (1, 1) and 'numa_nodes_values' in primitive:
+        if target_version < (1, 1) and 'numa_membw_values' in primitive:
             del primitive['numa_membw_values']
 
     # NOTE(jaypipes): This method exists to convert the object to the
