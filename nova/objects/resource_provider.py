@@ -544,7 +544,11 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
                           string.
         """
         if isinstance(res_class, six.string_types):
-            res_class = fields.ResourceClass.index(res_class)
+            try:
+                res_class = fields.ResourceClass.index(res_class)
+            except ValueError:
+                raise exception.NotFound("No such resource class '%s'" %
+                                         res_class)
 
         for inv_rec in self.objects:
             if fields.ResourceClass.index(inv_rec.resource_class) == res_class:

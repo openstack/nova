@@ -435,6 +435,12 @@ class TestInventory(test_objects._LocalTest):
         self.assertIsNotNone(found)
         self.assertEqual(24, found.total)
 
+        # Use an invalid string...
+        error = self.assertRaises(exception.NotFound,
+                                  inv_list.find,
+                                  'HOUSE')
+        self.assertIn('No such resource class', str(error))
+
 
 class _TestAllocationNoDB(object):
     @mock.patch('nova.objects.Allocation._create_in_db',
