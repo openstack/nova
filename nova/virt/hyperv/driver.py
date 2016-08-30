@@ -236,7 +236,7 @@ class HyperVDriver(driver.ComputeDriver):
         self.destroy(context, instance, network_info, block_device_info)
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         self._livemigrationops.pre_live_migration(context, instance,
                                                   block_device_info,
                                                   network_info)

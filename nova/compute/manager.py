@@ -5151,7 +5151,7 @@ class ComputeManager(manager.Manager):
         :param context: security context
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
-        :param migrate_data: if not None, it is a dict which holds data
+        :param migrate_data: A dict or LiveMigrateData object holding data
                              required for live migration without shared
                              storage.
 

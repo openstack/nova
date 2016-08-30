@@ -791,7 +791,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, disk_info, migrate_data=None):
+                           network_info, disk_info, migrate_data):
         """Prepare an instance for live migration
 
         :param context: security context

@@ -1417,11 +1417,6 @@ class LiveMigrateTestCase(VMOpsTestBase):
         self.assertEqual(result.sr_uuid_map, sr_uuid_map)
         mock_connect.assert_called_once_with("bdi")
 
-    def test_pre_live_migration_raises_with_no_data(self):
-        self.assertRaises(exception.InvalidParameterValue,
-                self.vmops.pre_live_migration,
-                None, None, "bdi", None, None, None)
-
 
 class LiveMigrateFakeVersionTestCase(VMOpsTestBase):
     @mock.patch.object(vmops.VMOps, '_pv_device_reported')
