@@ -14,14 +14,18 @@
 #    under the License.
 
 import os
+import tempfile
 import time
 
 from os_win.utils import pathutils
+from oslo_log import log as logging
 
 import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.virt.hyperv import constants
+
+LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 
@@ -169,3 +173,25 @@ class PathUtils(pathutils.PathUtils):
 
     def get_age_of_file(self, file_name):
         return time.time() - os.path.getmtime(file_name)
+
+    def check_dirs_shared_storage(self, src_dir, dest_dir):
+        # Check if shared storage is being used by creating a temporary
+        # file at the destination path and checking if it exists at the
+        # source path.
+        LOG.debug("Checking if %(src_dir)s and %(dest_dir)s point "
+                  "to the same location.",
+                  dict(src_dir=src_dir, dest_dir=dest_dir))
+        with tempfile.NamedTemporaryFile(dir=dest_dir) as tmp_file:
+            src_path = os.path.join(src_dir,
+                                    os.path.basename(tmp_file.name))
+
+            shared_storage = os.path.exists(src_path)
+        return shared_storage
+
+    def check_remote_instances_dir_shared(self, dest):
+        # Checks if the instances dir from a remote host points
+        # to the same storage location as the local instances dir.
+        local_inst_dir = self.get_instances_dir()
+        remote_inst_dir = self.get_instances_dir(dest)
+        return self.check_dirs_shared_storage(local_inst_dir,
+                                              remote_inst_dir)

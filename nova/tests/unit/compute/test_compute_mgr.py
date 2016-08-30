@@ -5034,6 +5034,22 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
+    def test_live_migration_cleanup_flags_block_migrate_hyperv(self):
+        migrate_data = objects.HyperVLiveMigrateData(
+            is_shared_instance_path=False)
+        do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
+            migrate_data)
+        self.assertTrue(do_cleanup)
+        self.assertTrue(destroy_disks)
+
+    def test_live_migration_cleanup_flags_shared_hyperv(self):
+        migrate_data = objects.HyperVLiveMigrateData(
+            is_shared_instance_path=True)
+        do_cleanup, destroy_disks = self.compute._live_migration_cleanup_flags(
+            migrate_data)
+        self.assertFalse(do_cleanup)
+        self.assertFalse(destroy_disks)
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):
