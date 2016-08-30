@@ -14,7 +14,6 @@
 #    under the License.
 
 from oslo_serialization import jsonutils
-import webob
 
 from nova import compute
 from nova import exception
@@ -58,7 +57,7 @@ class ExtendedStatusTestV21(test.TestCase):
         pass
 
     def _make_request(self, url):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app_v21(
             init_only=('servers',

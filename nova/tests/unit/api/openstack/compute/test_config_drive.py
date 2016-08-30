@@ -18,7 +18,6 @@ import datetime
 import mock
 from oslo_config import cfg
 from oslo_serialization import jsonutils
-import webob
 
 from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
@@ -58,7 +57,7 @@ class ConfigDriveTestV21(test.TestCase):
         # extensions modifying the server objects.
         self.stub_out('nova.api.openstack.wsgi.Request.get_db_instance',
                       fakes.fake_compute_get())
-        req = webob.Request.blank(self.base_url + uuids.sentinel)
+        req = fakes.HTTPRequest.blank(self.base_url + uuids.sentinel)
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(self.app)
         self.assertEqual(response.status_int, 200)

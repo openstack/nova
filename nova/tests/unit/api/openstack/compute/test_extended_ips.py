@@ -15,7 +15,6 @@
 
 from oslo_serialization import jsonutils
 import six
-import webob
 
 from nova import compute
 from nova import objects
@@ -109,7 +108,7 @@ class ExtendedIpsTestV21(test.TestCase):
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
 
     def _make_request(self, url):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(fakes.wsgi_app_v21(init_only=('servers',)))
         return res

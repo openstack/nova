@@ -1319,7 +1319,7 @@ class SecurityGroupsOutputTestV21(test.TestCase):
         return fakes.wsgi_app_v21(init_only=('os-security-groups', 'servers'))
 
     def _make_request(self, url, body=None):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         if body:
             req.method = 'POST'
             req.body = encodeutils.safe_encode(self._encode_body(body))

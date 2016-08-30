@@ -501,7 +501,7 @@ class TestNeutronSecurityGroupsOutputTest(TestNeutronSecurityGroupsTestCase):
                        fake_get_instances_security_groups_bindings))
 
     def _make_request(self, url, body=None):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         if body:
             req.method = 'POST'
             req.body = encodeutils.safe_encode(self._encode_body(body))

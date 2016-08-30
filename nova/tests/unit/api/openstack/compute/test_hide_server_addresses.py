@@ -15,7 +15,6 @@
 
 from oslo_serialization import jsonutils
 import six
-import webob
 
 from nova import compute
 from nova.compute import vm_states
@@ -53,7 +52,7 @@ class HideServerAddressesTestV21(test.TestCase):
         self._setup_wsgi()
 
     def _make_request(self, url):
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Accept'] = self.content_type
         res = req.get_response(self.wsgi_app)
         return res

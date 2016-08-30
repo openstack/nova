@@ -207,13 +207,14 @@ class FakeRequestContext(context.RequestContext):
 
 class HTTPRequest(os_wsgi.Request):
 
-    @staticmethod
-    def blank(*args, **kwargs):
-        kwargs['base_url'] = 'http://localhost/v2'
+    @classmethod
+    def blank(cls, *args, **kwargs):
+        defaults = {'base_url': 'http://localhost/v2'}
         use_admin_context = kwargs.pop('use_admin_context', False)
         project_id = kwargs.pop('project_id', 'fake')
         version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
-        out = os_wsgi.Request.blank(*args, **kwargs)
+        defaults.update(kwargs)
+        out = super(HTTPRequest, cls).blank(*args, **defaults)
         out.environ['nova.context'] = FakeRequestContext(
             user_id='fake_user',
             project_id=project_id,
@@ -222,21 +223,8 @@ class HTTPRequest(os_wsgi.Request):
         return out
 
 
-class HTTPRequestV21(os_wsgi.Request):
-
-    @staticmethod
-    def blank(*args, **kwargs):
-        kwargs['base_url'] = 'http://localhost/v2'
-        use_admin_context = kwargs.pop('use_admin_context', False)
-        project_id = kwargs.pop('project_id', 'fake')
-        version = kwargs.pop('version', os_wsgi.DEFAULT_API_VERSION)
-        out = os_wsgi.Request.blank(*args, **kwargs)
-        out.api_version_request = api_version.APIVersionRequest(version)
-        out.environ['nova.context'] = FakeRequestContext(
-            user_id='fake_user',
-            project_id=project_id,
-            is_admin=use_admin_context)
-        return out
+class HTTPRequestV21(HTTPRequest):
+    pass
 
 
 class TestRouter(wsgi.Router):

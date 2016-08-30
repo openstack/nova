@@ -16,7 +16,6 @@
 import datetime
 
 from oslo_serialization import jsonutils
-import webob
 
 from nova.compute import flavors
 from nova import test
@@ -85,7 +84,7 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
         }
 
         url = self.base_url + '/1'
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
@@ -116,7 +115,7 @@ class FlavorExtraDataTestV21(test.NoDBTestCase):
         ]
 
         url = self.base_url + '/detail'
-        req = webob.Request.blank(url)
+        req = fakes.HTTPRequest.blank(url)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
