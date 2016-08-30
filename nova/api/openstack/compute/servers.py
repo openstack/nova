@@ -1171,11 +1171,11 @@ class ServersController(wsgi.Controller):
                             'project_id': instance.project_id})
         try:
             self.compute_api.trigger_crash_dump(context, instance)
+        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'trigger_crash_dump', id)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
-            raise webob.exc.HTTPConflict(explanation=e.format_message())
         except exception.TriggerCrashDumpNotSupported as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
