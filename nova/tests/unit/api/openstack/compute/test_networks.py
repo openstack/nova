@@ -314,6 +314,26 @@ class NetworkCreateExceptionsTestV21(test.TestCase):
                           self.controller.create, self.req,
                           body=self.new_network)
 
+    def test_network_create_vlan_conflict(self):
+
+        @staticmethod
+        def get_all(context):
+            ret = objects.NetworkList(context=context, objects=[])
+            net = objects.Network(cidr='10.0.0.0/24', vlan=100)
+            ret.objects.append(net)
+            return ret
+
+        def fake_create(context):
+            raise exception.DuplicateVlan(vlan=100)
+
+        self.stub_out('nova.objects.NetworkList.get_all', get_all)
+        self.stub_out('nova.objects.Network.create', fake_create)
+
+        self.new_network['network']['cidr'] = '20.0.0.0/24'
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller.create, self.req,
+                          body=self.new_network)
+
 
 class NetworksTestV21(test.NoDBTestCase):
     validation_error = exception.ValidationError
