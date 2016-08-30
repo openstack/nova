@@ -147,7 +147,7 @@ class _TestInstanceObject(object):
         exp_cols.remove('migration_context')
         exp_cols.remove('keypairs')
         exp_cols.remove('device_metadata')
-        exp_cols = list(filter(lambda x: 'flavor' not in x, exp_cols))
+        exp_cols = [exp_col for exp_col in exp_cols if 'flavor' not in exp_col]
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model',
                          'extra.migration_context', 'extra.keypairs',

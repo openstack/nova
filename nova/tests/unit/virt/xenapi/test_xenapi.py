@@ -2728,8 +2728,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         return secgroup
 
     def _validate_security_group(self):
-        in_rules = filter(lambda l: not l.startswith('#'),
-                          self._in_rules)
+        in_rules = [l for l in self._in_rules if not l.startswith('#')]
         for rule in in_rules:
             if 'nova' not in rule:
                 self.assertIn(rule, self._out_rules,
