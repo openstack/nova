@@ -1748,6 +1748,10 @@ class API(base.Base):
                             "%s.end" % delete_type,
                             system_metadata=instance.system_metadata)
                     quotas.commit()
+                    LOG.info(_LI('Instance deleted and does not have host '
+                                 'field, its vm_state is %(state)s.'),
+                                 {'state': instance.vm_state},
+                                 instance=instance)
                     return
                 except exception.ObjectActionError:
                     instance.refresh()
