@@ -39,6 +39,7 @@ from nova.api.metadata import base
 from nova.api.metadata import handler
 from nova.api.metadata import password
 from nova.api.metadata import vendordata
+from nova.api.metadata import vendordata_dynamic
 from nova import block_device
 from nova.compute import flavors
 from nova.conductor import api as conductor_api
@@ -834,9 +835,9 @@ class OpenStackMetadataTestCase(test.TestCase):
         for k, v in mydata.items():
             self.assertEqual(vd[k], v)
 
-    @mock.patch.object(requests, 'request')
-    def test_vendor_data_response_vendordata2(self, request_mock):
-        request_mock.return_value.status_code = requests.codes.OK
+    def _test_vendordata2_response_inner(self, request_mock, response_code,
+                                         include_rest_result=True):
+        request_mock.return_value.status_code = response_code
         request_mock.return_value.text = '{"color": "blue"}'
 
         with utils.tempdir() as tmpdir:
@@ -871,7 +872,91 @@ class OpenStackMetadataTestCase(test.TestCase):
             vd = jsonutils.loads(mdinst.lookup(vdpath))
             self.assertEqual('10.0.0.1', vd['static'].get('ldap'))
             self.assertEqual('10.0.0.2', vd['static'].get('ad'))
-            self.assertEqual('blue', vd['web'].get('color'))
+
+            if include_rest_result:
+                self.assertEqual('blue', vd['web'].get('color'))
+            else:
+                self.assertEqual({}, vd['web'])
+
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_ok(self, request_mock):
+        self._test_vendordata2_response_inner(request_mock,
+                                              requests.codes.OK)
+
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_created(self, request_mock):
+        self._test_vendordata2_response_inner(request_mock,
+                                              requests.codes.CREATED)
+
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_accepted(self, request_mock):
+        self._test_vendordata2_response_inner(request_mock,
+                                              requests.codes.ACCEPTED)
+
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_no_content(self, request_mock):
+        self._test_vendordata2_response_inner(request_mock,
+                                              requests.codes.NO_CONTENT,
+                                              include_rest_result=False)
+
+    def _test_vendordata2_response_inner_exceptional(
+            self, request_mock, log_mock, exc):
+        request_mock.side_effect = exc('Ta da!')
+
+        with utils.tempdir() as tmpdir:
+            jsonfile = os.path.join(tmpdir, 'test.json')
+            with open(jsonfile, 'w') as f:
+                f.write(jsonutils.dumps({'ldap': '10.0.0.1',
+                                         'ad': '10.0.0.2'}))
+
+            self.flags(vendordata_providers=['StaticJSON', 'DynamicJSON'],
+                       vendordata_jsonfile_path=jsonfile,
+                       vendordata_dynamic_targets=[
+                           'web@http://fake.com/foobar']
+                       )
+
+            inst = self.instance.obj_clone()
+            mdinst = fake_InstanceMetadata(self, inst)
+
+            # verify the new format as well
+            vdpath = "/openstack/2016-10-06/vendor_data2.json"
+            vd = jsonutils.loads(mdinst.lookup(vdpath))
+            self.assertEqual('10.0.0.1', vd['static'].get('ldap'))
+            self.assertEqual('10.0.0.2', vd['static'].get('ad'))
+
+            # and exception should result in nothing being added, but no error
+            self.assertEqual({}, vd['web'])
+            self.assertTrue(log_mock.called)
+
+    @mock.patch.object(vendordata_dynamic.LOG, 'warning')
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_type_error(self, request_mock,
+                                                         log_mock):
+        self._test_vendordata2_response_inner_exceptional(
+                request_mock, log_mock, TypeError)
+
+    @mock.patch.object(vendordata_dynamic.LOG, 'warning')
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_value_error(self, request_mock,
+                                                          log_mock):
+        self._test_vendordata2_response_inner_exceptional(
+                request_mock, log_mock, ValueError)
+
+    @mock.patch.object(vendordata_dynamic.LOG, 'warning')
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_request_error(self,
+                                                            request_mock,
+                                                            log_mock):
+        self._test_vendordata2_response_inner_exceptional(
+                request_mock, log_mock, requests.exceptions.RequestException)
+
+    @mock.patch.object(vendordata_dynamic.LOG, 'warning')
+    @mock.patch.object(requests, 'request')
+    def test_vendor_data_response_vendordata2_ssl_error(self,
+                                                        request_mock,
+                                                        log_mock):
+        self._test_vendordata2_response_inner_exceptional(
+                request_mock, log_mock, requests.exceptions.SSLError)
 
     def test_network_data_presence(self):
         inst = self.instance.obj_clone()
