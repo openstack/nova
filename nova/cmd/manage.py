@@ -1478,6 +1478,39 @@ class CellV2Commands(object):
                 mapping.cell_mapping.uuid))
             return 0
 
+    @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          help='If provided only this cell will be searched for new hosts to '
+               'map.')
+    def discover_hosts(self, cell_uuid=None):
+        """Searches cells, or a single cell, and maps found hosts.
+
+        When a new host is added to a deployment it will add a service entry
+        to the db it's configured to use. This command will check the db for
+        each cell, or a single one if passed in, and map any hosts which are
+        not currently mapped. If a host is already mapped nothing will be done.
+        """
+        ctxt = context.RequestContext()
+
+        if cell_uuid:
+            cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
+        else:
+            cell_mappings = objects.CellMappingList.get_all(context)
+
+        for cell_mapping in cell_mappings:
+            # TODO(alaski): Factor this into helper method on CellMapping
+            if cell_mapping.uuid == cell_mapping.CELL0_UUID:
+                continue
+            with context.target_cell(ctxt, cell_mapping):
+                compute_nodes = objects.ComputeNodeList.get_all(ctxt)
+            for compute in compute_nodes:
+                try:
+                    objects.HostMapping.get_by_host(ctxt, compute.host)
+                except exception.HostMappingNotFound:
+                    host_mapping = objects.HostMapping(
+                        ctxt, host=compute.host,
+                        cell_mapping=cell_mapping)
+                    host_mapping.create()
+
 
 CATEGORIES = {
     'account': AccountCommands,
