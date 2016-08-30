@@ -146,10 +146,9 @@ omit this parameter, the scheduler chooses a host. If a scheduled host
 is not suitable to do migration, the scheduler tries up to
 ``migrate_max_retries`` rescheduling attempts.
 
-If both source and destination hosts provide local disks, you can set
-the ``block_migration`` parameter to ``true``. If either host uses
-shared storage, the migration fails if you set this ``block_migration``
-to ``true``.
+Starting from API version 2.25, the ``block_migration`` parameter could be
+to ``auto`` so that nova can decide value of block_migration during live
+migration.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
@@ -175,12 +174,13 @@ Request
   - server_id: server_id
   - host: host_migration
   - block_migration: block_migration
+  - block_migration: block_migration_2_25
   - disk_over_commit: disk_over_commit
   - force: force_live_migrate
 
 **Example Live-Migrate Server (os-migrateLive Action): JSON request**
 
-.. literalinclude:: ../../doc/api_samples/os-migrate-server/live-migrate-server.json
+.. literalinclude:: ../../doc/api_samples/os-migrate-server/v2.30/live-migrate-server.json
    :language: javascript
 
 Response
