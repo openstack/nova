@@ -510,7 +510,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'version': self._version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
         if (CONF.libvirt.virt_type in ("qemu", "kvm") and
-            not self._host.has_min_version(NEXT_MIN_QEMU_VERSION)):
+            not self._host.has_min_version(hv_ver=NEXT_MIN_QEMU_VERSION)):
             LOG.warning(_LW('Running Nova with a QEMU version less than '
                             '%(version)s is deprecated. The required minimum '
                             'version of QEMU will be raised to %(version)s '
