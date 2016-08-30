@@ -85,6 +85,15 @@ class SchedulerReportClient(object):
             url, json=data,
             endpoint_filter=self.ks_filter, raise_exc=False)
 
+    def put(self, url, data):
+        # NOTE(sdague): using json= instead of data= sets the
+        # media type to application/json for us. Placement API is
+        # more sensitive to this than other APIs in the OpenStack
+        # ecosystem.
+        return self._client.put(
+            url, json=data,
+            endpoint_filter=self.ks_filter, raise_exc=False)
+
     @safe_connect
     def _get_resource_provider(self, uuid):
         """Queries the placement API for a resource provider record with the
@@ -191,6 +200,89 @@ class SchedulerReportClient(object):
         self._resource_providers[uuid] = rp
         return rp
 
+    def _compute_node_inventory(self, compute_node):
+        inventories = [
+            {'resource_class': 'VCPU',
+             'total': compute_node.vcpus,
+             'reserved': 0,
+             'min_unit': 1,
+             'max_unit': 1,
+             'step_size': 1,
+             'allocation_ratio': compute_node.cpu_allocation_ratio},
+            {'resource_class': 'MEMORY_MB',
+             'total': compute_node.memory_mb,
+             'reserved': CONF.reserved_host_memory_mb,
+             'min_unit': 1,
+             'max_unit': 1,
+             'step_size': 1,
+             'allocation_ratio': compute_node.ram_allocation_ratio},
+            {'resource_class': 'DISK_GB',
+             'total': compute_node.local_gb,
+             'reserved': CONF.reserved_host_disk_mb * 1024,
+             'min_unit': 1,
+             'max_unit': 1,
+             'step_size': 1,
+             'allocation_ratio': compute_node.disk_allocation_ratio},
+        ]
+        generation = self._resource_providers[compute_node.uuid].generation
+        data = {
+            'resource_provider_generation': generation,
+            'inventories': inventories,
+        }
+        return data
+
+    @safe_connect
+    def _update_inventory(self, compute_node):
+        """Update the inventory for this compute node if needed.
+
+        :param compute_node: The objects.ComputeNode for the operation
+        :returns: True if the inventory was updated (or did not need to be),
+                  False otherwise.
+        """
+        url = '/resource_providers/%s/inventories' % compute_node.uuid
+        data = self._compute_node_inventory(compute_node)
+        result = self.put(url, data)
+        if result.status_code == 409:
+            # Generation fail, re-poll and then re-try
+            del self._resource_providers[compute_node.uuid]
+            self._ensure_resource_provider(
+                compute_node.uuid, compute_node.hypervisor_hostname)
+            LOG.info(_LI('Retrying update inventory for %s'),
+                     compute_node.uuid)
+            # Regenerate the body with the new generation
+            data = self._compute_node_inventory(compute_node)
+            result = self.put(url, data)
+        elif not result:
+            LOG.warning(_LW('Failed to update inventory for '
+                            '%(uuid)s: %(status)i %(text)s'),
+                        {'uuid': compute_node.uuid,
+                         'status': result.status_code,
+                         'text': result.text})
+            return False
+
+        generation = data['resource_provider_generation']
+        if result.status_code == 200:
+            self._resource_providers[compute_node.uuid].generation = (
+                generation + 1)
+            LOG.debug('Updated inventory for %s at generation %i' % (
+                compute_node.uuid, generation))
+            return True
+        elif result.status_code == 409:
+            LOG.info(_LI('Double generation clash updating inventory '
+                         'for %(uuid)s at generation %(gen)i'),
+                     {'uuid': compute_node.uuid,
+                      'gen': generation})
+            return False
+
+        LOG.info(_LI('Received unexpected response code %(code)i while '
+                     'trying to update inventory for compute node %(uuid)s '
+                     'at generation %(gen)i: %(text)s'),
+                 {'uuid': compute_node.uuid,
+                  'code': result.status_code,
+                  'gen': generation,
+                  'text': result.text})
+        return False
+
     def update_resource_stats(self, compute_node):
         """Creates or updates stats for the supplied compute node.
 
@@ -199,3 +291,5 @@ class SchedulerReportClient(object):
         compute_node.save()
         self._ensure_resource_provider(compute_node.uuid,
                                        compute_node.hypervisor_hostname)
+        if compute_node.uuid in self._resource_providers:
+            self._update_inventory(compute_node)
