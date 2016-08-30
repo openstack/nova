@@ -10967,8 +10967,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             drvr.init_host("wibble")
             drvr.get_num_instances()
-            self.assertTrue(not service_mock.disabled and
-                            service_mock.disabled_reason is None)
+            self.assertFalse(service_mock.disabled)
+            self.assertIsNone(service_mock.disabled_reason)
 
     @mock.patch.object(objects.Instance, 'save')
     def test_immediate_delete(self, mock_save):

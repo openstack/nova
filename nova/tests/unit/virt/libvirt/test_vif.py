@@ -692,7 +692,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             doc = etree.fromstring(xml)
 
             bandwidth = doc.find('./devices/interface/bandwidth')
-            self.assertNotEqual(bandwidth, None)
+            self.assertIsNotNone(bandwidth)
 
             inbound = bandwidth.find('inbound')
             self.assertEqual(inbound.get("average"),

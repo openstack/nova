@@ -70,7 +70,7 @@ class HideServerAddressesTestV21(test.TestCase):
         return server.get('addresses', SENTINEL)
 
     def _check_addresses(self, addresses, exists):
-        self.assertTrue(addresses is not SENTINEL)
+        self.assertIsNot(addresses, SENTINEL)
         if exists:
             self.assertTrue(addresses)
         else:

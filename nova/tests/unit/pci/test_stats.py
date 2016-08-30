@@ -131,15 +131,14 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                          set(['v1', 'v2', 'v3']))
 
     def test_support_requests(self):
-        self.assertEqual(self.pci_stats.support_requests(pci_requests),
-                         True)
+        self.assertTrue(self.pci_stats.support_requests(pci_requests))
         self.assertEqual(len(self.pci_stats.pools), 3)
         self.assertEqual(set([d['count'] for d in self.pci_stats]),
                          set((1, 2)))
 
     def test_support_requests_failed(self):
-        self.assertEqual(
-            self.pci_stats.support_requests(pci_requests_multiple), False)
+        self.assertFalse(
+            self.pci_stats.support_requests(pci_requests_multiple))
         self.assertEqual(len(self.pci_stats.pools), 3)
         self.assertEqual(set([d['count'] for d in self.pci_stats]),
                          set([1, 2]))
