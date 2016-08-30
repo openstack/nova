@@ -1,10 +1,3 @@
-# needs:fix_opt_description
-# needs:check_deprecation_status
-# needs:check_opt_group_and_type
-# needs:fix_opt_description_indentation
-# needs:fix_opt_registration_consistency
-
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -29,22 +22,53 @@ from oslo_utils import netutils
 
 
 netconf_opts = [
-    cfg.StrOpt('my_ip',
+    cfg.StrOpt("my_ip",
                default=netutils.get_my_ipv4(),
-               help='IP address of this host'),
-    cfg.StrOpt('my_block_storage_ip',
-               default='$my_ip',
-               help='Block storage IP address of this host'),
-    cfg.StrOpt('host',
+               help="""
+The IP address which the host is using to connect to the management network.
+
+Possible values:
+
+* String with valid IP address. Default is IPv4 address of this host.
+
+Related options:
+
+* metadata_host
+* my_block_storage_ip
+* routing_source_ip
+* vpn_ip
+"""),
+    cfg.StrOpt("my_block_storage_ip",
+               default="$my_ip",
+               help="""
+The IP address which is used to connect to the block storage network.
+
+Possible values:
+
+* String with valid IP address. Default is IP address of this host.
+
+Related options:
+
+* my_ip - if my_block_storage_ip is not set, then my_ip value is used.
+"""),
+    cfg.StrOpt("host",
                default=socket.gethostname(),
-               help='Name of this node.  This can be an opaque identifier.  '
-                    'It is not necessarily a hostname, FQDN, or IP address. '
-                    'However, the node name must be valid within '
-                    'an AMQP key, and if using ZeroMQ, a valid '
-                    'hostname, FQDN, or IP address'),
-    cfg.BoolOpt('use_ipv6',
+               help="""
+Hostname, FQDN or IP address of this host. Must be valid within AMQP key.
+
+Possible values:
+
+* String with hostname, FQDN or IP address. Default is hostname of this host.
+"""),
+    cfg.BoolOpt("use_ipv6",
                 default=False,
-                help='Use IPv6'),
+                help="""
+Assign IPv6 and IPv4 addresses when creating instances.
+
+Related options:
+
+* use_neutron: this only works with nova-network.
+"""),
 ]
 
 
