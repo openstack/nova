@@ -40,6 +40,7 @@ from oslo_log.fixture import logging_error as log_fixture
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
+from oslo_versionedobjects import fixture as ovo_fixture
 from oslotest import moxstubout
 import six
 import testtools
@@ -229,7 +230,7 @@ class TestCase(testtools.TestCase):
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
 
-        self.useFixture(nova_fixtures.StableObjectJsonFixture())
+        self.useFixture(ovo_fixture.StableObjectJsonFixture())
 
         # NOTE(mnaser): All calls to utils.is_neutron() are cached in
         # nova.utils._IS_NEUTRON.  We set it to None to avoid any
