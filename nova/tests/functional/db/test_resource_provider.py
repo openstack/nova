@@ -572,6 +572,109 @@ class TestAllocation(ResourceProviderBaseCase):
                        for allocation in allocations])
 
 
+class TestAllocationListCreateDelete(ResourceProviderBaseCase):
+
+    def test_allocation_list_create(self):
+        consumer_uuid = uuidsentinel.consumer
+
+        # Create two resource providers
+        rp1_name = uuidsentinel.rp1_name
+        rp1_uuid = uuidsentinel.rp1_uuid
+        rp1_class = fields.ResourceClass.DISK_GB
+        rp1_used = 6
+
+        rp2_name = uuidsentinel.rp2_name
+        rp2_uuid = uuidsentinel.rp2_uuid
+        rp2_class = fields.ResourceClass.IPV4_ADDRESS
+        rp2_used = 2
+
+        rp1 = objects.ResourceProvider(
+            self.context, name=rp1_name, uuid=rp1_uuid)
+        rp1.create()
+        rp2 = objects.ResourceProvider(
+            self.context, name=rp2_name, uuid=rp2_uuid)
+        rp2.create()
+
+        # Two allocations, one for each resource provider.
+        allocation_1 = objects.Allocation(resource_provider=rp1,
+                                          consumer_id=consumer_uuid,
+                                          resource_class=rp1_class,
+                                          used=rp1_used)
+        allocation_2 = objects.Allocation(resource_provider=rp2,
+                                          consumer_id=consumer_uuid,
+                                          resource_class=rp2_class,
+                                          used=rp2_used)
+        allocation_list = objects.AllocationList(
+            self.context, objects=[allocation_1, allocation_2])
+
+        # There's no inventory, we have a failure.
+        self.assertRaises(exception.InvalidInventory,
+                          allocation_list.create_all)
+
+        # Add inventory for one of the two resource providers. This should also
+        # fail, since rp2 has no inventory.
+        inv = objects.Inventory(resource_provider=rp1,
+                                resource_class=rp1_class,
+                                total=1024)
+        inv.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[inv])
+        rp1.set_inventory(inv_list)
+        self.assertRaises(exception.InvalidInventory,
+                          allocation_list.create_all)
+
+        # Add inventory for the second resource provider
+        inv = objects.Inventory(resource_provider=rp2,
+                                resource_class=rp2_class,
+                                total=255, reserved=2)
+        inv.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[inv])
+        rp2.set_inventory(inv_list)
+
+        # Now the allocations will work.
+        allocation_list.create_all()
+
+        # Check that those allocations changed usage on each
+        # resource provider.
+        rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp1_uuid)
+        rp2_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp2_uuid)
+        self.assertEqual(rp1_used, rp1_usage[0].usage)
+        self.assertEqual(rp2_used, rp2_usage[0].usage)
+
+        # redo one allocation
+        # TODO(cdent): This does not currently behave as expected
+        # because a new allocataion is created, adding to the total
+        # used, not replacing.
+        rp1_used += 1
+        allocation_1 = objects.Allocation(resource_provider=rp1,
+                                          consumer_id=consumer_uuid,
+                                          resource_class=rp1_class,
+                                          used=rp1_used)
+        allocation_list = objects.AllocationList(
+            self.context, objects=[allocation_1])
+        allocation_list.create_all()
+
+        rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp1_uuid)
+        self.assertEqual(rp1_used, rp1_usage[0].usage)
+
+        # delete the allocations for the consumer
+        # NOTE(cdent): The database uses 'consumer_id' for the
+        # column, presumably because some ids might not be uuids, at
+        # some point in the future.
+        consumer_allocations = objects.AllocationList.get_all_by_consumer_id(
+            self.context, consumer_uuid)
+        consumer_allocations.delete_all()
+
+        rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp1_uuid)
+        rp2_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp2_uuid)
+        self.assertEqual(0, rp1_usage[0].usage)
+        self.assertEqual(0, rp2_usage[0].usage)
+
+
 class UsageListTestCase(ResourceProviderBaseCase):
 
     def test_get_all_null(self):
