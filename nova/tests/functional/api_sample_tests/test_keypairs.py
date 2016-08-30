@@ -41,7 +41,10 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def _check_keypairs_post(self, **kwargs):
         """Get api sample of key pairs post request."""
-        key_name = 'keypair-' + str(uuid.uuid4())
+        key_name = kwargs.pop('kp_name', None)
+        if not key_name:
+            key_name = 'keypair-' + str(uuid.uuid4())
+
         subs = dict(keypair_name=key_name, **kwargs)
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
         subs = {'keypair_name': key_name}
@@ -193,6 +196,29 @@ class KeyPairsV210SampleJsonTest(KeyPairsSampleJsonTest):
         self.assertEqual(self.expected_delete_status_code,
                          response.status_code)
 
+    def test_keypairs_list_for_different_users(self):
+        # Get api sample of key pairs list request.
+
+        # create common kp_name for two users
+        kp_name = 'keypair-' + str(uuid.uuid4())
+
+        keypair_user1 = self._check_keypairs_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+            user_id="user1", kp_name=kp_name)
+        keypair_user2 = self._check_keypairs_post(
+            keypair_type=keypair_obj.KEYPAIR_TYPE_SSH,
+            user_id="user2", kp_name=kp_name)
+
+        # get all keypairs for user1 (only one)
+        response = self._do_get('os-keypairs?user_id=user1')
+        subs = {'keypair_name': keypair_user1}
+        self._verify_response('keypairs-list-resp', subs, response, 200)
+
+        # get all keypairs for user2 (only one)
+        response = self._do_get('os-keypairs?user_id=user2')
+        subs = {'keypair_name': keypair_user2}
+        self._verify_response('keypairs-list-resp', subs, response, 200)
+
 
 class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
     ADMIN_API = False
@@ -209,6 +235,11 @@ class KeyPairsV210SampleJsonTestNotAdmin(KeyPairsV210SampleJsonTest):
                     user_id='fake1')
         response = self._do_post('os-keypairs', 'keypairs-post-req', subs)
 
+        self.assertEqual(403, response.status_code)
+
+    def test_keypairs_list_for_different_users(self):
+        # get and post for other users is forbidden for non admin
+        response = self._do_get('os-keypairs?user_id=fake1')
         self.assertEqual(403, response.status_code)
 
 
@@ -236,7 +267,7 @@ class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
 
     def _check_keypairs_post(self, **kwargs):
         """Get api sample of key pairs post request."""
-        key_name = kwargs.pop('kp_name')
+        key_name = kwargs.pop('kp_name', None)
         if not key_name:
             key_name = 'keypair-' + str(uuid.uuid4())
 
@@ -274,12 +305,10 @@ class KeyPairsV235SampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_get('os-keypairs?user_id=user1&marker=%s'
                                 % keypairs_user1[1])
         subs = {'keypair_name': keypairs_user1[2]}
-        self._verify_response(
-            'keypairs-list-user1-resp', subs, response, 200)
+        self._verify_response('keypairs-list-user1-resp', subs, response, 200)
 
         # get only one keypair after the second for user2
         response = self._do_get('os-keypairs?user_id=user2&marker=%s&limit=1'
                                 % keypairs_user2[1])
         subs = {'keypair_name': keypairs_user2[2]}
-        self._verify_response(
-            'keypairs-list-user2-resp', subs, response, 200)
+        self._verify_response('keypairs-list-user2-resp', subs, response, 200)
