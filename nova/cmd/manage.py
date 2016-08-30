@@ -834,7 +834,11 @@ class ApiDbCommands(object):
     @args('--version', metavar='<version>', help=argparse.SUPPRESS)
     @args('version2', metavar='VERSION', nargs='?', help='Database version')
     def sync(self, version=None, version2=None):
-        """Sync the database up to the most recent version."""
+        """Sync the database up to the most recent version.
+
+        If placement_database.connection is not None, sync that
+        database using the API database migrations.
+        """
         if version and not version2:
             print(_("DEPRECATED: The '--version' parameter was deprecated in "
                     "the Pike cycle and will not be supported in future "
@@ -842,7 +846,15 @@ class ApiDbCommands(object):
                     "instead"))
             version2 = version
 
-        return migration.db_sync(version2, database='api')
+        # NOTE(cdent): At the moment, the migration code deep in the belly
+        # of the migration package doesn't actually return anything, so
+        # returning the result of db_sync is not particularly meaningful
+        # here. But, in case that changes, we store the result from the
+        # the placement sync to and with the api sync.
+        result = True
+        if CONF.placement_database.connection is not None:
+            result = migration.db_sync(version, database='placement')
+        return migration.db_sync(version2, database='api') and result
 
     def version(self):
         """Print the current database version."""

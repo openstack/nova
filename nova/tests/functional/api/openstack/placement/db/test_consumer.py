@@ -55,7 +55,7 @@ class ConsumerTestCase(tb.PlacementDbBaseTestCase):
         self.assertRaises(exception.ConsumerExists, c.create)
 
 
-@db_api.api_context_manager.reader
+@db_api.placement_context_manager.reader
 def _get_allocs_with_no_consumer_relationship(ctx):
     alloc_to_consumer = sa.outerjoin(
         ALLOC_TBL, CONSUMER_TBL,
@@ -75,10 +75,10 @@ class CreateIncompleteConsumersTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CreateIncompleteConsumersTestCase, self).setUp()
         self.useFixture(fixtures.Database())
-        self.api_db = self.useFixture(fixtures.Database(database='api'))
+        self.api_db = self.useFixture(fixtures.Database(database='placement'))
         self.ctx = context.RequestContext('fake-user', 'fake-project')
 
-    @db_api.api_context_manager.writer
+    @db_api.placement_context_manager.writer
     def _create_incomplete_allocations(self, ctx):
         # Create some allocations with consumers that don't exist in the
         # consumers table to represent old allocations that we expect to be
@@ -105,7 +105,7 @@ class CreateIncompleteConsumersTestCase(test.NoDBTestCase):
         res = ctx.session.execute(sel).fetchall()
         self.assertEqual(0, len(res))
 
-    @db_api.api_context_manager.reader
+    @db_api.placement_context_manager.reader
     def _check_incomplete_consumers(self, ctx):
         incomplete_external_id = CONF.placement.incomplete_consumer_project_id
 

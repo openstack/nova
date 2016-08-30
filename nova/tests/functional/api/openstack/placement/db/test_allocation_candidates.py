@@ -1954,7 +1954,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         names = map(six.text_type, names)
         sel = sa.select([rp_obj._RP_TBL.c.id])
         sel = sel.where(rp_obj._RP_TBL.c.name.in_(names))
-        with self.api_db.get_engine().connect() as conn:
+        with self.placement_db.get_engine().connect() as conn:
             rp_ids = set([r[0] for r in conn.execute(sel)])
         return rp_ids
 

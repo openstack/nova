@@ -24,7 +24,7 @@ CONF = cfg.CONF
 USER_TBL = models.User.__table__
 
 
-@db_api.api_context_manager.writer
+@db_api.placement_context_manager.writer
 def ensure_incomplete_user(ctx):
     """Ensures that a user record is created for the "incomplete consumer
     user". Returns the internal ID of that record.
@@ -40,7 +40,7 @@ def ensure_incomplete_user(ctx):
     return res.inserted_primary_key[0]
 
 
-@db_api.api_context_manager.reader
+@db_api.placement_context_manager.reader
 def _get_user_by_external_id(ctx, external_id):
     users = sa.alias(USER_TBL, name="u")
     cols = [
@@ -81,7 +81,7 @@ class User(base.VersionedObject):
         return cls._from_db_object(ctx, cls(ctx), res)
 
     def create(self):
-        @db_api.api_context_manager.writer
+        @db_api.placement_context_manager.writer
         def _create_in_db(ctx):
             db_obj = models.User(external_id=self.external_id)
             try:

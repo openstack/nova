@@ -61,6 +61,8 @@ class APIFixture(fixture.GabbiFixture):
         self.conf.set_override('connection', "sqlite://", group='database')
         self.conf.set_override('connection', "sqlite://",
                                group='api_database')
+        self.conf.set_override('connection', "sqlite://",
+                               group='placement_database')
 
         # Register CORS opts, but do not set config. This has the
         # effect of exercising the "don't use cors" path in
@@ -73,12 +75,14 @@ class APIFixture(fixture.GabbiFixture):
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
 
-        # NOTE(cdent): The main database is not used but we still need to
-        # manage it to make the fixtures work correctly and not cause
+        # NOTE(cdent): All three database fixtures need to be
+        # managed for database handling to work and not cause
         # conflicts with other tests in the same process.
         self._reset_db_flags()
+        self.placement_db_fixture = fixtures.Database('placement')
         self.api_db_fixture = fixtures.Database('api')
         self.main_db_fixture = fixtures.Database('main')
+        self.placement_db_fixture.reset()
         self.api_db_fixture.reset()
         self.main_db_fixture.reset()
 
@@ -96,6 +100,7 @@ class APIFixture(fixture.GabbiFixture):
         os.environ['ALT_PARENT_PROVIDER_UUID'] = uuidutils.generate_uuid()
 
     def stop_fixture(self):
+        self.placement_db_fixture.cleanup()
         self.api_db_fixture.cleanup()
         self.main_db_fixture.cleanup()
 
