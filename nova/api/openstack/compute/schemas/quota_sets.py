@@ -40,6 +40,7 @@ quota_resources = {
     'injected_file_path_bytes': common_quota,
     'server_groups': common_quota,
     'server_group_members': common_quota,
+    'networks': common_quota
 }
 
 update_quota_set = copy.deepcopy(quota_resources)
@@ -50,6 +51,7 @@ del update_quota_set_v236['fixed_ips']
 del update_quota_set_v236['floating_ips']
 del update_quota_set_v236['security_groups']
 del update_quota_set_v236['security_group_rules']
+del update_quota_set_v236['networks']
 
 update = {
     'type': 'object',
