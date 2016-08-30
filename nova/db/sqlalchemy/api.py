@@ -2144,10 +2144,8 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
                 query_prefix = query_prefix.filter(not_soft_deleted)
 
     if 'cleaned' in filters:
-        if filters.pop('cleaned'):
-            query_prefix = query_prefix.filter(models.Instance.cleaned == 1)
-        else:
-            query_prefix = query_prefix.filter(models.Instance.cleaned == 0)
+        cleaned = 1 if filters.pop('cleaned') else 0
+        query_prefix = query_prefix.filter(models.Instance.cleaned == cleaned)
 
     if 'tags' in filters:
         tags = filters.pop('tags')
