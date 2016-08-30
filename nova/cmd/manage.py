@@ -1491,6 +1491,10 @@ class CellV2Commands(object):
         """
         ctxt = context.RequestContext()
 
+        # TODO(alaski): If this is not run on a host configured to use the API
+        # database most of the lookups below will fail and may not provide a
+        # great error message. Add a check which will raise a useful error
+        # message about running this from an API host.
         if cell_uuid:
             cell_mappings = [objects.CellMapping.get_by_uuid(ctxt, cell_uuid)]
         else:
