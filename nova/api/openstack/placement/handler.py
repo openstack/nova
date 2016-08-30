@@ -126,8 +126,6 @@ class PlacementHandler(object):
 
     def __call__(self, environ, start_response):
         # All requests but '/' require admin.
-        # TODO(cdent): We'll eventually want our own auth context,
-        # but using nova's is convenient for now.
         if environ['PATH_INFO'] != '/':
             context = environ['placement.context']
             # TODO(cdent): Using is_admin everywhere (except /) is
