@@ -26,13 +26,17 @@ method.
 import routes
 import webob
 
+from oslo_log import log as logging
+
 from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement.handlers import usage
 from nova.api.openstack.placement import util
 from nova import exception
+from nova.i18n import _LE
 
+LOG = logging.getLogger(__name__)
 
 # URLs and Handlers
 # NOTE(cdent): When adding URLs here, do not use regex patterns in
@@ -114,6 +118,27 @@ def make_map(declarations):
     return mapper
 
 
+def format_request_line(environ):
+    """Format a request line for logging from the environment."""
+    base = "%(REMOTE_ADDR)s \"%(REQUEST_METHOD)s %(PATH_INFO)s" % environ
+    if environ.get('QUERY_STRING'):
+        base += "?" + environ.get('QUERY_STRING')
+    base += '"'
+
+    # if there is a response, include status code
+    resp = extract_response(environ)
+    if resp:
+        base += " status: %s len: %s" % (resp.status_int, resp.content_length)
+    return base
+
+
+def extract_response(environ):
+    """Extract the response which is carried around oddly"""
+    attrs = environ.get('webob.adhoc_attrs')
+    if attrs:
+        return attrs['response']
+
+
 class PlacementHandler(object):
     """Serve Placement API.
 
@@ -125,6 +150,9 @@ class PlacementHandler(object):
         self._map = make_map(ROUTE_DECLARATIONS)
 
     def __call__(self, environ, start_response):
+        # TODO(sdague): it would be great to also record the body
+        # here, for completeness.
+        LOG.debug("Starting request: %s" % format_request_line(environ))
         # All requests but '/' require admin.
         # TODO(cdent): We'll eventually want our own auth context,
         # but using nova's is convenient for now.
@@ -150,3 +178,8 @@ class PlacementHandler(object):
         except exception.NotFound as exc:
             raise webob.exc.HTTPNotFound(
                 exc, json_formatter=util.json_error_formatter)
+        except Exception as exc:
+            LOG.exception(_LE("Uncaught exception"))
+            raise
+        finally:
+            LOG.info(format_request_line(environ))

@@ -14,6 +14,7 @@
 from keystonemiddleware import auth_token
 from oslo_middleware import request_id
 
+from nova.api import openstack as common_api
 from nova.api.openstack.placement import auth
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
@@ -42,12 +43,14 @@ def deploy(conf, project_name):
     context_middleware = auth.PlacementKeystoneContext
     req_id_middleware = request_id.RequestId
     microversion_middleware = microversion.MicroversionMiddleware
+    fault_wrap = common_api.FaultWrapper
 
     application = handler.PlacementHandler()
 
     for middleware in (context_middleware,
                        auth_middleware,
                        microversion_middleware,
+                       fault_wrap,
                        req_id_middleware):
         application = middleware(application)
 
