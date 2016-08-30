@@ -371,6 +371,17 @@ class ResourceProviderAggregate(API_BASE):
     aggregate_id = Column(Integer, primary_key=True, nullable=False)
 
 
+class PlacementAggregate(API_BASE):
+    """A grouping of resource providers."""
+    __tablename__ = 'placement_aggregates'
+    __table_args__ = (
+        schema.UniqueConstraint("uuid", name="uniq_placement_aggregates0uuid"),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    uuid = Column(String(36), index=True)
+
+
 class InstanceGroupMember(API_BASE):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'
