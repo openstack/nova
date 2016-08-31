@@ -1185,6 +1185,9 @@ class _ComputeAPIUnitTestMixIn(object):
         objects.BlockDeviceMappingList.get_by_instance_uuid(
             self.context, inst.uuid).AndReturn(
                 objects.BlockDeviceMappingList())
+        objects.BuildRequest.get_by_instance_uuid(
+            self.context, inst.uuid).AndRaise(
+                exception.BuildRequestNotFound(uuid=inst.uuid))
         inst.save()
         self.compute_api._create_reservations(self.context,
                                               inst, inst.task_state,
@@ -1431,7 +1434,7 @@ class _ComputeAPIUnitTestMixIn(object):
                    '_attempt_delete_of_buildrequest') as mock_attempt_delete:
             self.assertFalse(
                 self.compute_api._delete_while_booting(self.context, inst))
-            self.assertFalse(mock_attempt_delete.called)
+            self.assertTrue(mock_attempt_delete.called)
         mock_get_service_version.assert_called_once_with(self.context,
                                                          'nova-osapi_compute')
 
