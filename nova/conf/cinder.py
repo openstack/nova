@@ -90,20 +90,12 @@ By default there is no availability zone restriction on volume attach.
 """),
 ]
 
-deprecated = {'timeout': [cfg.DeprecatedOpt('http_timeout',
-                                            group=cinder_group.name)],
-              'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
-                                           group=cinder_group.name)],
-              'insecure': [cfg.DeprecatedOpt('api_insecure',
-                                             group=cinder_group.name)]}
-
 
 def register_opts(conf):
     conf.register_group(cinder_group)
     conf.register_opts(cinder_opts, group=cinder_group)
     ks_loading.register_session_conf_options(conf,
-                                             cinder_group.name,
-                                             deprecated_opts=deprecated)
+                                             cinder_group.name)
 
 
 def list_opts():
