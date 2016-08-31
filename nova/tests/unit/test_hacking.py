@@ -843,3 +843,37 @@ class HackingTestCase(test.NoDBTestCase):
                               for name, value in test.items()])})
                """
         self._assert_has_no_errors(code, checker)
+
+    def test_no_assert_equal_true_false(self):
+        code = """
+                  self.assertEqual(context_is_admin, True)
+                  self.assertEqual(context_is_admin, False)
+                  self.assertEqual(True, context_is_admin)
+                  self.assertEqual(False, context_is_admin)
+                  self.assertNotEqual(context_is_admin, True)
+                  self.assertNotEqual(context_is_admin, False)
+                  self.assertNotEqual(True, context_is_admin)
+                  self.assertNotEqual(False, context_is_admin)
+               """
+        errors = [(1, 0, 'N355'), (2, 0, 'N355'), (3, 0, 'N355'),
+                  (4, 0, 'N355'), (5, 0, 'N355'), (6, 0, 'N355'),
+                  (7, 0, 'N355'), (8, 0, 'N355')]
+        self._assert_has_errors(code, checks.no_assert_equal_true_false,
+                                expected_errors=errors)
+        code = """
+                  self.assertEqual(context_is_admin, stuff)
+                  self.assertNotEqual(context_is_admin, stuff)
+               """
+        self._assert_has_no_errors(code, checks.no_assert_equal_true_false)
+
+    def test_no_assert_true_false_is_not(self):
+        code = """
+                  self.assertTrue(test is None)
+                  self.assertTrue(False is my_variable)
+                  self.assertFalse(None is test)
+                  self.assertFalse(my_variable is False)
+               """
+        errors = [(1, 0, 'N356'), (2, 0, 'N356'), (3, 0, 'N356'),
+                  (4, 0, 'N356')]
+        self._assert_has_errors(code, checks.no_assert_true_false_is_not,
+                                expected_errors=errors)

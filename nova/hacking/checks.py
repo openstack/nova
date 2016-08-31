@@ -823,6 +823,39 @@ def check_delayed_string_interpolation(logical_line, physical_line, filename):
               "Use ',' instead of '%'.")
 
 
+def no_assert_equal_true_false(logical_line):
+    """Enforce use of assertTrue/assertFalse.
+
+    Prevent use of assertEqual(A, True|False), assertEqual(True|False, A),
+    assertNotEqual(A, True|False), and assertNotEqual(True|False, A).
+
+    N355
+    """
+    _start_re = re.compile(r'assert(Not)?Equal\((True|False),')
+    _end_re = re.compile(r'assert(Not)?Equal\(.*,\s+(True|False)\)$')
+
+    if _start_re.search(logical_line) or _end_re.search(logical_line):
+        yield (0, "N355: assertEqual(A, True|False), "
+               "assertEqual(True|False, A), assertNotEqual(A, True|False), "
+               "or assertEqual(True|False, A) sentences must not be used. "
+               "Use assertTrue(A) or assertFalse(A) instead")
+
+
+def no_assert_true_false_is_not(logical_line):
+    """Enforce use of assertIs/assertIsNot.
+
+    Prevent use of assertTrue(A is|is not B) and assertFalse(A is|is not B).
+
+    N356
+    """
+    _re = re.compile(r'assert(True|False)\(.+\s+is\s+(not\s+)?.+\)$')
+
+    if _re.search(logical_line):
+        yield (0, "N356: assertTrue(A is|is not B) or "
+               "assertFalse(A is|is not B) sentences must not be used. "
+               "Use assertIs(A, B) or assertIsNot(A, B) instead")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -864,3 +897,5 @@ def factory(register):
     register(CheckForUncalledTestClosure)
     register(check_context_log)
     register(check_delayed_string_interpolation)
+    register(no_assert_equal_true_false)
+    register(no_assert_true_false_is_not)
