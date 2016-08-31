@@ -684,7 +684,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         ports = self.ironicclient.call("node.list_ports", node.uuid)
         return set([p.address for p in ports])
 
-    def _generate_configdrive(self, instance, node, network_info,
+    def _generate_configdrive(self, context, instance, node, network_info,
                               extra_md=None, files=None):
         """Generate a config drive.
 
@@ -701,7 +701,8 @@ class IronicDriver(virt_driver.ComputeDriver):
             extra_md = {}
 
         i_meta = instance_metadata.InstanceMetadata(instance,
-            content=files, extra_md=extra_md, network_info=network_info)
+            content=files, extra_md=extra_md, network_info=network_info,
+            request_context=context)
 
         with tempfile.NamedTemporaryFile() as uncompressed:
             with configdrive.ConfigDriveBuilder(instance_md=i_meta) as cdb:
@@ -788,7 +789,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
             try:
                 configdrive_value = self._generate_configdrive(
-                    instance, node, network_info, extra_md=extra_md,
+                    context, instance, node, network_info, extra_md=extra_md,
                     files=injected_files)
             except Exception as e:
                 with excutils.save_and_reraise_exception():

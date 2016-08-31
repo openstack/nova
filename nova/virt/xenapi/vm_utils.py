@@ -1107,7 +1107,7 @@ def generate_iso_blank_root_disk(session, instance, vm_ref, userdevice,
                    'user', size_gb * 1024, CONF.default_ephemeral_format)
 
 
-def generate_configdrive(session, instance, vm_ref, userdevice,
+def generate_configdrive(session, context, instance, vm_ref, userdevice,
                          network_info, admin_password=None, files=None):
     sr_ref = safe_find_sr(session)
     vdi_ref = create_vdi(session, sr_ref, instance, 'config-2',
@@ -1118,7 +1118,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
             extra_md['admin_pass'] = admin_password
         inst_md = instance_metadata.InstanceMetadata(
             instance, content=files, extra_md=extra_md,
-            network_info=network_info)
+            network_info=network_info, request_context=context)
         with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
             with utils.tempdir() as tmp_path:
                 tmp_file = os.path.join(tmp_path, 'configdrive')

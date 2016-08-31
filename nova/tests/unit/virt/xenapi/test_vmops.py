@@ -208,7 +208,7 @@ class VMOpsTestCase(VMOpsTestBase):
             {'properties': {'auto_disk_config': 'false'}})
         vdis = {'root': {'ref': 'fake-ref'}}
         self.assertRaises(test.TestingException, self._vmops._attach_disks,
-                instance, image_meta=image_meta, vm_ref=None,
+                ctxt, instance, image_meta=image_meta, vm_ref=None,
                 name_label=None, vdis=vdis, disk_image_type='fake',
                 network_info=[], rescue=True)
         self.assertFalse(try_auto_config.called)
@@ -224,7 +224,7 @@ class VMOpsTestCase(VMOpsTestBase):
             {'properties': {'auto_disk_config': 'true'}})
         vdis = {'root': {'ref': 'fake-ref'}}
         self.assertRaises(test.TestingException, self._vmops._attach_disks,
-                instance, image_meta=image_meta, vm_ref=None,
+                ctxt, instance, image_meta=image_meta, vm_ref=None,
                 name_label=None, vdis=vdis, disk_image_type='fake',
                 network_info=[], rescue=True)
         try_auto_config.assert_called_once_with(self._vmops._session,
@@ -397,8 +397,8 @@ class SpawnTestCase(VMOpsTestBase):
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
-        self.vmops._attach_disks(instance, image_meta, vm_ref, name_label,
-                            vdis, di_type, network_info, rescue,
+        self.vmops._attach_disks(context, instance, image_meta, vm_ref,
+                            name_label, vdis, di_type, network_info, rescue,
                             admin_password, injected_files)
         if attach_pci_dev:
             fake_dev = {
@@ -579,8 +579,9 @@ class SpawnTestCase(VMOpsTestBase):
 
         if resize_instance:
             self.vmops._resize_up_vdis(instance, vdis)
-        self.vmops._attach_disks(instance, image_meta, vm_ref, name_label,
-                            vdis, di_type, network_info, False, None, None)
+        self.vmops._attach_disks(context, instance, image_meta, vm_ref,
+                            name_label, vdis, di_type, network_info, False,
+                            None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
         pci_manager.get_instance_pci_devs(instance).AndReturn([])
 

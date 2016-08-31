@@ -2356,8 +2356,9 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
              'properties': {'vm_mode': 'xen'}})
 
         self.mox.ReplayAll()
-        self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
-                instance['name'], vdis, disk_image_type, "fake_nw_inf")
+        self.conn._vmops._attach_disks(self.context, instance, image_meta,
+                vm_ref, instance['name'], vdis, disk_image_type,
+                "fake_nw_inf")
 
         self.assertEqual(marker["partition_called"], called)
 
@@ -2477,8 +2478,9 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
             {'id': uuids.image_id,
              'disk_format': 'vhd',
              'properties': {'vm_mode': 'xen'}})
-        self.conn._vmops._attach_disks(instance, image_meta, vm_ref,
-                    instance['name'], vdis, disk_image_type, "fake_nw_inf")
+        self.conn._vmops._attach_disks(self.context, instance, image_meta,
+                    vm_ref, instance['name'], vdis, disk_image_type,
+                    "fake_nw_inf")
         self.assertTrue(self.called)
 
     def test_generate_swap(self):

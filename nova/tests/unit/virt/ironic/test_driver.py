@@ -893,7 +893,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self._test_spawn()
         # assert configdrive was generated
         mock_configdrive.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY,
-                                                 extra_md={}, files=[])
+                                                 mock.ANY, extra_md={},
+                                                 files=[])
 
     @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(loopingcall, 'FixedIntervalLoopingCall')
@@ -1722,11 +1723,12 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_instance_meta.return_value = 'fake-instance'
         mock_make_drive = mock.MagicMock(make_drive=lambda *_: None)
         mock_cd_builder.return_value.__enter__.return_value = mock_make_drive
-        self.driver._generate_configdrive(self.instance, self.node,
-                                          self.network_info)
+        self.driver._generate_configdrive(None, self.instance,
+                                          self.node, self.network_info)
         mock_cd_builder.assert_called_once_with(instance_md='fake-instance')
         mock_instance_meta.assert_called_once_with(self.instance,
-            network_info=self.network_info, extra_md={}, content=None)
+            network_info=self.network_info, extra_md={}, content=None,
+            request_context=None)
 
     def test_generate_configdrive_fail(self, mock_cd_builder,
                                        mock_instance_meta):
@@ -1737,12 +1739,13 @@ class IronicDriverGenerateConfigDriveTestCase(test.NoDBTestCase):
         mock_cd_builder.return_value.__enter__.return_value = mock_make_drive
 
         self.assertRaises(exception.ConfigDriveMountFailed,
-                          self.driver._generate_configdrive,
+                          self.driver._generate_configdrive, None,
                           self.instance, self.node, self.network_info)
 
         mock_cd_builder.assert_called_once_with(instance_md='fake-instance')
         mock_instance_meta.assert_called_once_with(self.instance,
-            network_info=self.network_info, extra_md={}, content=None)
+            network_info=self.network_info, extra_md={}, content=None,
+            request_context=None)
 
 
 class HashRingTestCase(test.NoDBTestCase):

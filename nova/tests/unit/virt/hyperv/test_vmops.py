@@ -444,7 +444,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock_configdrive_required.assert_called_once_with(mock_instance)
             if configdrive_required:
                 mock_create_config_drive.assert_called_once_with(
-                    mock_instance, [mock.sentinel.FILE],
+                    self.context, mock_instance, [mock.sentinel.FILE],
                     mock.sentinel.PASSWORD,
                     mock.sentinel.INFO)
                 mock_attach_config_drive.assert_called_once_with(
@@ -687,19 +687,24 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         if config_drive_format != self.ISO9660:
             self.assertRaises(exception.ConfigDriveUnsupportedFormat,
                               self._vmops._create_config_drive,
-                              mock_instance, [mock.sentinel.FILE],
+                              self.context,
+                              mock_instance,
+                              [mock.sentinel.FILE],
                               mock.sentinel.PASSWORD,
                               mock.sentinel.NET_INFO,
                               rescue)
         elif side_effect is processutils.ProcessExecutionError:
             self.assertRaises(processutils.ProcessExecutionError,
                               self._vmops._create_config_drive,
-                              mock_instance, [mock.sentinel.FILE],
+                              self.context,
+                              mock_instance,
+                              [mock.sentinel.FILE],
                               mock.sentinel.PASSWORD,
                               mock.sentinel.NET_INFO,
                               rescue)
         else:
-            path = self._vmops._create_config_drive(mock_instance,
+            path = self._vmops._create_config_drive(self.context,
+                                                    mock_instance,
                                                     [mock.sentinel.FILE],
                                                     mock.sentinel.PASSWORD,
                                                     mock.sentinel.NET_INFO,
@@ -707,7 +712,8 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             mock_InstanceMetadata.assert_called_once_with(
                 mock_instance, content=[mock.sentinel.FILE],
                 extra_md={'admin_pass': mock.sentinel.PASSWORD},
-                network_info=mock.sentinel.NET_INFO)
+                network_info=mock.sentinel.NET_INFO,
+                request_context=self.context)
             mock_get_configdrive_path.assert_has_calls(
                 expected_get_configdrive_path_calls)
             mock_ConfigDriveBuilder.assert_called_with(
@@ -1330,7 +1336,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             drive_type=constants.DISK)
         mock_detach_config_drive.assert_called_once_with(mock_instance.name)
         mock_create_config_drive.assert_called_once_with(
-            mock_instance,
+            self.context, mock_instance,
             injected_files=None,
             admin_password=mock.sentinel.rescue_password,
             network_info=mock.sentinel.network_info,

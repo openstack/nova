@@ -455,8 +455,9 @@ class VMOps(object):
             if resize:
                 self._resize_up_vdis(instance, vdis)
 
-            self._attach_disks(instance, image_meta, vm_ref, name_label, vdis,
-                               disk_image_type, network_info, rescue,
+            self._attach_disks(context, instance, image_meta, vm_ref,
+                               name_label, vdis, disk_image_type,
+                               network_info, rescue,
                                admin_password, injected_files)
             if not first_boot:
                 self._attach_mapped_block_devices(instance,
@@ -717,8 +718,8 @@ class VMOps(object):
                                     use_pv_kernel, device_id)
         return vm_ref
 
-    def _attach_disks(self, instance, image_meta, vm_ref, name_label, vdis,
-                      disk_image_type, network_info, rescue=False,
+    def _attach_disks(self, context, instance, image_meta, vm_ref, name_label,
+                      vdis, disk_image_type, network_info, rescue=False,
                       admin_password=None, files=None):
         flavor = instance.get_flavor()
 
@@ -800,7 +801,8 @@ class VMOps(object):
 
         # Attach (optional) configdrive v2 disk
         if configdrive.required_by(instance):
-            vm_utils.generate_configdrive(self._session, instance, vm_ref,
+            vm_utils.generate_configdrive(self._session, context,
+                                          instance, vm_ref,
                                           DEVICE_CONFIGDRIVE,
                                           network_info,
                                           admin_password=admin_password,
