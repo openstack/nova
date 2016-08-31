@@ -3,9 +3,9 @@ features:
   - The nova-compute worker now communicates with the new placement API
     service. Nova determines the placement API service by querying the
     OpenStack service catalog for the service with a service type of
-    'placement'.
+    'placement'. If there is no placement entry in the service catalog,
+    nova-compute will log a warning and no longer try to reconnect to the
+    placement API until the nova-worker process is restarted.
   - A new [placement] section is added to the nova.conf configuration file for
     configuration options affecting how Nova interacts with the new placement
-    API service. The only configuration option currently available is
-    `os_region_name` which provides support for Nova to query the appropriate
-    OpenStack region's service catalog for the placement service.
+    API service. This contains the usual keystone auth and session options.
