@@ -409,7 +409,7 @@ class ComputeTaskManager(base.Base):
         except exception.BuildRequestNotFound:
             with excutils.save_and_reraise_exception() as exc_ctxt:
                 service_version = objects.Service.get_minimum_version(
-                    context, 'nova-api')
+                    context, 'nova-osapi_compute')
                 if service_version >= 12:
                     # A BuildRequest was created during the boot process, the
                     # NotFound exception indicates a delete happened which

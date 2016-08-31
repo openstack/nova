@@ -829,6 +829,7 @@ class _BaseTaskTestCase(object):
 
         do_test()
 
+    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=12)
     @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid',
             side_effect=exc.BuildRequestNotFound(uuid='fake'))
@@ -837,7 +838,7 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_set_vm_state_and_notify', new=mock.MagicMock())
     def test_build_instances_build_request_not_found_because_delete(self,
-            mock_select_dests, mock_build_req_get):
+            mock_select_dests, mock_build_req_get, mock_service_version):
 
         mock_select_dests.return_value = [
                 {'host': 'host1', 'nodename': 'node1', 'limits': []},
@@ -850,8 +851,6 @@ class _BaseTaskTestCase(object):
 
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
-        # Ensure service is high enough to run the new code path
-        self.useFixture(fixtures.AllServicesCurrent())
 
         inst_map_mock = mock.MagicMock()
 
@@ -875,6 +874,8 @@ class _BaseTaskTestCase(object):
             self.assertTrue(inst_map_mock.destroy.called)
 
         do_test()
+        mock_service_version.assert_called_once_with(self.context,
+                                                     'nova-osapi_compute')
 
     def test_unshelve_instance_on_host(self):
         instance = self._create_fake_instance_obj()
