@@ -168,9 +168,19 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertEqual(
             len(list(checks.assert_equal_none("self.assertIsNone()"))), 0)
 
-    def test_assert_true_or_false_with_in_or_not_in(self):
         self.assertEqual(len(list(checks.assert_equal_none(
-            "self.assertEqual(A, None)"))), 1)
+            "self.assertIs(A, None)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertIsNot(A, None)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertIs(None, A)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertIsNot(None, A)"))), 1)
+
+    def test_assert_true_or_false_with_in_or_not_in(self):
         self.assertEqual(len(list(checks.assert_true_or_false_with_in(
             "self.assertTrue(A in B)"))), 1)
 
