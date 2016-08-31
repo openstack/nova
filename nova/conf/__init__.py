@@ -67,6 +67,7 @@ from nova.conf import novnc
 from nova.conf import osapi_v21
 from nova.conf import paths
 from nova.conf import pci
+from nova.conf import placement
 from nova.conf import quota
 from nova.conf import rdp
 from nova.conf import remote_debug
@@ -141,6 +142,7 @@ novnc.register_opts(CONF)
 osapi_v21.register_opts(CONF)
 paths.register_opts(CONF)
 pci.register_opts(CONF)
+placement.register_opts(CONF)
 quota.register_opts(CONF)
 rdp.register_opts(CONF)
 rpc.register_opts(CONF)
