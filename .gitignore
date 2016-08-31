@@ -34,6 +34,7 @@ api-guide/build/*
 api-ref/build/*
 etc/nova/nova.conf.sample
 etc/nova/policy.yaml.sample
+etc/nova/policy.yaml.merged
 instances
 keeper
 keys
