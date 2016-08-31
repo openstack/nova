@@ -1124,7 +1124,7 @@ class CellV2CommandsTestCase(test.TestCase):
         self.assertEqual('fake://netloc/nova_api_cell0',
                          cell_mapping.database_connection)
 
-    def _test_migrate_simple_command(self):
+    def _test_migrate_simple_command(self, first_call=True):
         ctxt = context.RequestContext()
         CONF.set_default('connection',
                          'fake://netloc/nova_api',
@@ -1147,10 +1147,20 @@ class CellV2CommandsTestCase(test.TestCase):
 
         transport_url = "fake://guest:devstack@127.0.0.1:9999/"
         cell_uuid = uuidsentinel.cell
-        with mock.patch.object(uuidutils, 'generate_uuid',
-                return_value=cell_uuid):
-            r = self.commands.simple_cell_setup(transport_url)
 
+        @mock.patch('nova.db.migration.db_sync')
+        @mock.patch.object(uuidutils, 'generate_uuid',
+                return_value=cell_uuid)
+        def _test(mock_gen_uuid, mock_db_sync):
+            result = self.commands.simple_cell_setup(transport_url)
+            if first_call:
+                mock_db_sync.assert_called_once_with(
+                    None, context=test.MatchType(context.RequestContext))
+            else:
+                mock_db_sync.assert_not_called()
+            return result
+
+        r = _test()
         self.assertEqual(0, r)
 
         # Check cell0 from default
@@ -1176,7 +1186,7 @@ class CellV2CommandsTestCase(test.TestCase):
     def test_simple_command_multiple(self):
         self._test_migrate_simple_command()
         with mock.patch.object(self.commands, '_map_cell_and_hosts') as m:
-            self._test_migrate_simple_command()
+            self._test_migrate_simple_command(first_call=False)
             self.assertFalse(m.called)
 
     def test_simple_command_cellsv1(self):
