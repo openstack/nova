@@ -1606,7 +1606,7 @@ class API(base.Base):
         # Before service version 15 deletion of the BuildRequest has no effect
         # and will be cleaned up as part of the boot process.
         service_version = objects.Service.get_minimum_version(
-            context, 'nova-api')
+            context, 'nova-osapi_compute')
         if service_version < 15:
             return False
         deleted = self._attempt_delete_of_buildrequest(context, instance)
@@ -2143,7 +2143,7 @@ class API(base.Base):
         # there is an instance mapping we don't need to honor it for older
         # service versions.
         service_version = objects.Service.get_minimum_version(
-            context, 'nova-api')
+            context, 'nova-osapi_compute')
         if service_version < 15:
             return objects.Instance.get_by_uuid(context, instance_uuid,
                                                 expected_attrs=expected_attrs)

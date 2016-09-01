@@ -1423,13 +1423,17 @@ class _ComputeAPIUnitTestMixIn(object):
                                                                  inst))
             self.assertTrue(build_req_mock.destroy.called)
 
-    def test_delete_while_booting_low_service_version(self):
+    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=0)
+    def test_delete_while_booting_low_service_version(self,
+            mock_get_service_version):
         inst = self._create_instance_obj()
         with mock.patch.object(self.compute_api,
                    '_attempt_delete_of_buildrequest') as mock_attempt_delete:
             self.assertFalse(
                 self.compute_api._delete_while_booting(self.context, inst))
             self.assertFalse(mock_attempt_delete.called)
+        mock_get_service_version.assert_called_once_with(self.context,
+                                                         'nova-osapi_compute')
 
     def test_delete_while_booting_buildreq_not_deleted(self):
         self.useFixture(fixtures.AllServicesCurrent())
@@ -4101,11 +4105,11 @@ class _ComputeAPIUnitTestMixIn(object):
                                                   'security_groups',
                                                   'info_cache'])
 
+    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=15)
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     def test_get_instance_not_in_cell(self, mock_get_build_req,
-            mock_get_inst_map):
-        self.useFixture(fixtures.AllServicesCurrent())
+            mock_get_inst_map, mock_get_min_service):
         build_req_obj = fake_build_request.fake_req_obj(self.context)
         mock_get_inst_map.return_value = objects.InstanceMapping(
                 cell_mapping=None)
@@ -4116,6 +4120,8 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_get_inst_map.assert_called_once_with(self.context, instance.uuid)
         mock_get_build_req.assert_called_once_with(self.context, instance.uuid)
         self.assertEqual(instance, inst_from_build_req)
+        mock_get_min_service.assert_called_once_with(self.context,
+                                                     'nova-osapi_compute')
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
