@@ -465,8 +465,10 @@ class _BaseTaskTestCase(object):
                        'select_destinations')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_cleanup_allocated_networks')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_destroy_build_request')
     def test_build_instances_scheduler_failure(
-            self, cleanup_mock, sd_mock, state_mock,
+            self, dest_build_req_mock, cleanup_mock, sd_mock, state_mock,
             sig_mock, bs_mock):
         instances = [fake_instance.fake_instance_obj(self.context)
                      for i in range(2)]
@@ -475,6 +477,9 @@ class _BaseTaskTestCase(object):
                 'instance_properties': instances[0]}
         exception = exc.NoValidHost(reason='fake-reason')
 
+        dest_build_req_mock.side_effect = (
+            exc.BuildRequestNotFound(uuid='fake'),
+            None)
         bs_mock.return_value = spec
         sd_mock.side_effect = exception
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
@@ -496,14 +501,18 @@ class _BaseTaskTestCase(object):
 
         set_state_calls = []
         cleanup_network_calls = []
+        dest_build_req_calls = []
         for instance in instances:
             set_state_calls.append(mock.call(
                 self.context, instance.uuid, 'compute_task', 'build_instances',
                 updates, exception, spec))
             cleanup_network_calls.append(mock.call(
                 self.context, mock.ANY, None))
+            dest_build_req_calls.append(
+                mock.call(self.context, test.MatchType(type(instance))))
         state_mock.assert_has_calls(set_state_calls)
         cleanup_mock.assert_has_calls(cleanup_network_calls)
+        dest_build_req_mock.assert_has_calls(dest_build_req_calls)
 
     def test_build_instances_retry_exceeded(self):
         instances = [fake_instance.fake_instance_obj(self.context)]

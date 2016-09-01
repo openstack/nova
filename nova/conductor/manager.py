@@ -488,6 +488,12 @@ class ComputeTaskManager(base.Base):
                 self._set_vm_state_and_notify(
                     context, instance.uuid, 'build_instances', updates,
                     exc, request_spec)
+                try:
+                    # If the BuildRequest stays around then instance show/lists
+                    # will pull from it rather than the errored instance.
+                    self._destroy_build_request(context, instance)
+                except exception.BuildRequestNotFound:
+                    pass
                 self._cleanup_allocated_networks(
                     context, instance, requested_networks)
             return
