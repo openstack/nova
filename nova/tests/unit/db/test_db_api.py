@@ -1860,14 +1860,16 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.ctxt, security_group1['id'])
         self._assertEqualObjects(db.security_group_get(
                 self.ctxt, security_group2['id'],
-                columns_to_join=['instances']), security_group2)
+                columns_to_join=['instances',
+                                 'rules']), security_group2)
 
     def test_security_group_get(self):
         security_group1 = self._create_security_group({})
         self._create_security_group({'name': 'fake_sec_group2'})
         real_security_group = db.security_group_get(self.ctxt,
                                               security_group1['id'],
-                                              columns_to_join=['instances'])
+                                              columns_to_join=['instances',
+                                                               'rules'])
         self._assertEqualObjects(security_group1,
                                  real_security_group)
 

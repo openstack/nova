@@ -117,7 +117,8 @@ def return_non_running_server(context, server_id, columns_to_join=None):
            'uuid': server_id, 'host': "localhost", 'name': 'asdf'})
 
 
-def return_security_group_by_name(context, project_id, group_name):
+def return_security_group_by_name(context, project_id, group_name,
+                                  columns_to_join=None):
     return {'id': 1, 'name': group_name,
             "instances": [{'id': 1, 'uuid': UUID_SERVER}]}
 
@@ -476,7 +477,7 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_get_security_group_by_id(self):
         sg = security_group_template(id=2, rules=[])
 
-        def return_security_group(context, group_id):
+        def return_security_group(context, group_id, columns_to_join=None):
             self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
@@ -501,7 +502,7 @@ class TestSecurityGroupsV21(test.TestCase):
         sg_update = security_group_template(id=2, rules=[],
                         name='update_name', description='update_desc')
 
-        def return_security_group(context, group_id):
+        def return_security_group(context, group_id, columns_to_join=None):
             self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
@@ -526,7 +527,7 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_update_security_group_name_to_default(self):
         sg = security_group_template(id=2, rules=[], name='default')
 
-        def return_security_group(context, group_id):
+        def return_security_group(context, group_id, columns_to_join=None):
             self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
@@ -551,7 +552,7 @@ class TestSecurityGroupsV21(test.TestCase):
         def security_group_destroy(context, id):
             self.called = True
 
-        def return_security_group(context, group_id):
+        def return_security_group(context, group_id, columns_to_join=None):
             self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
@@ -595,7 +596,7 @@ class TestSecurityGroupsV21(test.TestCase):
         def security_group_in_use(context, id):
             return True
 
-        def return_security_group(context, group_id):
+        def return_security_group(context, group_id, columns_to_join=None):
             self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 

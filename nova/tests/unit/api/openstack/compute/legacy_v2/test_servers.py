@@ -2147,7 +2147,8 @@ class ServersControllerCreateTest(test.TestCase):
         group = 'foo'
         old_create = compute_api.API.create
 
-        def sec_group_get(ctx, proj, name):
+        def sec_group_get(ctx, proj, name, columns_to_join=None):
+            self.assertEqual(['rules'], columns_to_join)
             if name == group:
                 return True
             else:
