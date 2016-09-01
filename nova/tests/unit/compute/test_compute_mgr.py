@@ -4528,6 +4528,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         # revert_resize() and the return value is passed to driver.destroy().
         # Otherwise we could regress this.
 
+        @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
         @mock.patch.object(self.instance, 'revert_migration_context')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_is_instance_storage_shared')
@@ -4552,7 +4553,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     finish_revert_resize,
                     _is_instance_storage_shared,
                     get_instance_nw_info,
-                    revert_migration_context):
+                    revert_migration_context,
+                    mock_finish_revert):
 
             self.migration.source_compute = self.instance['host']
 
@@ -4572,6 +4574,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             # should not destroy disks otherwise it should destroy disks.
             destroy.assert_called_once_with(self.context, self.instance,
                                             mock.ANY, mock.ANY, not is_shared)
+            mock_finish_revert.assert_called_once_with(
+                    self.context, self.instance, self.migration,
+                    self.migration.source_compute, mock.ANY)
 
         do_test()
 
