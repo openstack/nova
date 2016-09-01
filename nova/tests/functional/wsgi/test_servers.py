@@ -134,3 +134,42 @@ class ServersPreSchedulingTestCase(test.TestCase):
                                     create_resp.body['server']['id'],
                                     check_response_status=False)
         self.assertEqual(404, get_resp.status)
+
+    def _test_instance_list_from_buildrequests(self):
+        image_ref = fake_image.get_valid_image_id()
+        body = {
+            'server': {
+                'name': 'foo',
+                'imageRef': image_ref,
+                'flavorRef': '1',
+                'networks': 'none',
+            }
+        }
+        inst1 = self.api.api_post('servers', body)
+        body['server']['name'] = 'bar'
+        inst2 = self.api.api_post('servers', body)
+
+        list_resp = self.api.get_servers()
+        # Default sort is created_at desc, so last created is first
+        self.assertEqual(2, len(list_resp))
+        self.assertEqual(inst2.body['server']['id'], list_resp[0]['id'])
+        self.assertEqual('bar', list_resp[0]['name'])
+        self.assertEqual(inst1.body['server']['id'], list_resp[1]['id'])
+        self.assertEqual('foo', list_resp[1]['name'])
+
+        # Change the sort order
+        list_resp = self.api.api_get(
+            'servers/detail?sort_key=created_at&sort_dir=asc')
+        list_resp = list_resp.body['servers']
+        self.assertEqual(2, len(list_resp))
+        self.assertEqual(inst1.body['server']['id'], list_resp[0]['id'])
+        self.assertEqual('foo', list_resp[0]['name'])
+        self.assertEqual(inst2.body['server']['id'], list_resp[1]['id'])
+        self.assertEqual('bar', list_resp[1]['name'])
+
+    def test_instance_list_from_buildrequests(self):
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+        self._test_instance_list_from_buildrequests()
+
+    def test_instance_list_from_buildrequests_old_service(self):
+        self._test_instance_list_from_buildrequests()

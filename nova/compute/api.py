@@ -2300,9 +2300,61 @@ class API(base.Base):
             LOG.debug('Removing limit for DB query due to IP filter')
             limit = None
 
-        instances = self._get_instances_by_filters(context, filters,
-                limit=limit, marker=marker, expected_attrs=expected_attrs,
-                sort_keys=sort_keys, sort_dirs=sort_dirs)
+        # The ordering of instances will be
+        # [sorted instances with no host] + [sorted instances with host].
+        # This means BuildRequest and cell0 instances first, then cell
+        # instances
+        build_requests = objects.BuildRequestList.get_by_filters(
+            context, filters, limit=limit, marker=marker, sort_keys=sort_keys,
+            sort_dirs=sort_dirs)
+        build_req_instances = objects.InstanceList(
+            objects=[build_req.instance for build_req in build_requests])
+        # Only subtract from limit if it is not None
+        limit = (limit - len(build_req_instances)) if limit else limit
+
+        try:
+            cell0_mapping = objects.CellMapping.get_by_uuid(context,
+                objects.CellMapping.CELL0_UUID)
+        except exception.CellMappingNotFound:
+            cell0_instances = objects.InstanceList(objects=[])
+        else:
+            with nova_context.target_cell(context, cell0_mapping):
+                cell0_instances = self._get_instances_by_filters(
+                    context, filters, limit=limit, marker=marker,
+                    expected_attrs=expected_attrs, sort_keys=sort_keys,
+                    sort_dirs=sort_dirs)
+        # Only subtract from limit if it is not None
+        limit = (limit - len(cell0_instances)) if limit else limit
+
+        # There is only planned support for a single cell here. Multiple cell
+        # instance lists should be proxied to project Searchlight, or a similar
+        # alternative.
+        if limit is None or limit > 0:
+            cell_instances = self._get_instances_by_filters(context, filters,
+                    limit=limit, marker=marker, expected_attrs=expected_attrs,
+                    sort_keys=sort_keys, sort_dirs=sort_dirs)
+        else:
+            cell_instances = objects.InstanceList(objects=[])
+
+        def _get_unique_filter_method():
+            seen_uuids = set()
+
+            def _filter(instance):
+                if instance.uuid in seen_uuids:
+                    return False
+                seen_uuids.add(instance.uuid)
+                return True
+
+            return _filter
+
+        filter_method = _get_unique_filter_method()
+        # TODO(alaski): Clean up the objects concatenation when List objects
+        # support it natively.
+        instances = objects.InstanceList(
+            objects=list(filter(filter_method,
+                           build_req_instances.objects +
+                           cell0_instances.objects +
+                           cell_instances.objects)))
 
         if filter_ip:
             instances = self._ip_filter(instances, filters, orig_limit)

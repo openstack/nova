@@ -10256,19 +10256,25 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
                 expected_ids = expected_ids[:expected_len]
             self.assertEqual(expected_ids, [inst.id for inst in insts])
 
-    def test_ip_filtering_no_limit_to_db(self):
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_ip_filtering_no_limit_to_db(self, _mock_cell_map_get):
         c = context.get_admin_context()
         # Limit is not supplied to the DB when using an IP filter
         with mock.patch('nova.objects.InstanceList.get_by_filters') as m_get:
+            m_get.return_value = objects.InstanceList(objects=[])
             self.compute_api.get_all(c, search_opts={'ip': '.10'}, limit=1)
             self.assertEqual(1, m_get.call_count)
             kwargs = m_get.call_args[1]
             self.assertIsNone(kwargs['limit'])
 
-    def test_ip_filtering_pass_limit_to_db(self):
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+    def test_ip_filtering_pass_limit_to_db(self, _mock_cell_map_get):
         c = context.get_admin_context()
         # No IP filter, verify that the limit is passed
         with mock.patch('nova.objects.InstanceList.get_by_filters') as m_get:
+            m_get.return_value = objects.InstanceList(objects=[])
             self.compute_api.get_all(c, search_opts={}, limit=1)
             self.assertEqual(1, m_get.call_count)
             kwargs = m_get.call_args[1]
