@@ -587,6 +587,21 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
                 expected)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch.object(report.LOG, 'warning')
+    def test_update_instance_allocation_new_failed(self, mock_warn, mock_put):
+        cn = objects.ComputeNode(uuid=uuids.cn)
+        inst = objects.Instance(uuid=uuids.inst)
+        with mock.patch.object(self.client, '_allocations'):
+            try:
+                mock_put.return_value.__nonzero__.return_value = False
+            except AttributeError:
+                # NOTE(danms): LOL @ py3
+                mock_put.return_value.__bool__.return_value = False
+            self.client.update_instance_allocation(cn, inst, 1)
+            self.assertTrue(mock_warn.called)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
     def test_update_instance_allocation_delete(self, mock_delete):
         cn = objects.ComputeNode(uuid=uuids.cn)
@@ -594,3 +609,18 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         self.client.update_instance_allocation(cn, inst, -1)
         mock_delete.assert_called_once_with(
             '/allocations/%s' % inst.uuid)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete')
+    @mock.patch.object(report.LOG, 'warning')
+    def test_update_instance_allocation_delete_failed(self, mock_warn,
+                                                      mock_delete):
+        cn = objects.ComputeNode(uuid=uuids.cn)
+        inst = objects.Instance(uuid=uuids.inst)
+        try:
+            mock_delete.return_value.__nonzero__.return_value = False
+        except AttributeError:
+            # NOTE(danms): LOL @ py3
+            mock_delete.return_value.__bool__.return_value = False
+        self.client.update_instance_allocation(cn, inst, -1)
+        self.assertTrue(mock_warn.called)
