@@ -980,10 +980,8 @@ class ServersControllerTest(ControllerTest):
         # Assert that 'deleted' filter value is converted to boolean
         # while calling get_all() method.
         expected_search_opts = {'deleted': True, 'project_id': 'fake'}
-        mock_get_all.assert_called_once_with(
-            mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
-            expected_attrs=['flavor', 'info_cache', 'metadata', 'pci_devices'],
-            marker=mock.ANY, sort_keys=mock.ANY, sort_dirs=mock.ANY)
+        self.assertEqual(expected_search_opts,
+                         mock_get_all.call_args[1]['search_opts'])
 
     @mock.patch.object(compute_api.API, 'get_all')
     def test_get_servers_deleted_filter_invalid_str(self, mock_get_all):
@@ -1003,10 +1001,8 @@ class ServersControllerTest(ControllerTest):
         # Assert that invalid 'deleted' filter value is converted to boolean
         # False while calling get_all() method.
         expected_search_opts = {'deleted': False, 'project_id': 'fake'}
-        mock_get_all.assert_called_once_with(
-            mock.ANY, search_opts=expected_search_opts, limit=mock.ANY,
-            expected_attrs=['flavor', 'info_cache', 'metadata', 'pci_devices'],
-            marker=mock.ANY, sort_keys=mock.ANY, sort_dirs=mock.ANY)
+        self.assertEqual(expected_search_opts,
+                         mock_get_all.call_args[1]['search_opts'])
 
     def test_get_servers_allows_name(self):
         server_uuid = str(uuid.uuid4())
@@ -1273,6 +1269,18 @@ class ServersControllerTest(ControllerTest):
 
         req = self.req('/fake/servers', use_admin_context=True)
         self.assertIn('servers', self.controller.index(req))
+
+    def test_get_servers_joins_services(self):
+        def fake_get_all(compute_self, context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIn('services', expected_attrs)
+            return objects.InstanceList()
+
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = self.req('/fake/servers/detail', use_admin_context=True)
+        self.assertIn('servers', self.controller.detail(req))
 
 
 class ServersControllerTestV29(ServersControllerTest):
