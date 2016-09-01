@@ -59,7 +59,10 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
              'op': 'add'},
             {'path': '/instance_info/local_gb',
              'value': str(self.node.properties.get('local_gb', 0)),
-             'op': 'add'}
+             'op': 'add'},
+            {'path': '/instance_info/nova_host_id',
+             'value': u'fake-host',
+             'op': 'add'},
         ]
 
     def assertPatchEqual(self, expected, observed):

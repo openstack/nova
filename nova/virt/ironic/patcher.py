@@ -65,6 +65,8 @@ class GenericDriverFields(object):
                       'op': 'add', 'value': instance.display_name})
         patch.append({'path': '/instance_info/vcpus', 'op': 'add',
                       'value': str(instance.flavor.vcpus)})
+        patch.append({'path': '/instance_info/nova_host_id', 'op': 'add',
+                      'value': instance.get('host')})
         patch.append({'path': '/instance_info/memory_mb', 'op': 'add',
                       'value': str(instance.flavor.memory_mb)})
         patch.append({'path': '/instance_info/local_gb', 'op': 'add',

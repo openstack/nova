@@ -1242,6 +1242,8 @@ class ComputeDriver(object):
         """Does the driver want networks deallocated on reschedule?"""
         return False
 
+    # NOTE(vsaienko) This method is deprecated, don't use it!
+    # TODO(vsaienko) Remove this function in Ocata.
     def macs_for_instance(self, instance):
         """What MAC addresses must this instance have?
 

@@ -1,0 +1,6 @@
+---
+upgrade:
+  - The Ironic driver now requires python-ironicclient>=1.9.0, and requires
+    Ironic service to support API version 1.28 or
+    higher. As usual, Ironic should be upgraded before Nova for a
+    smooth upgrade process.
