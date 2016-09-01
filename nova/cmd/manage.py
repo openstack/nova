@@ -1218,11 +1218,15 @@ class CellV2Commands(object):
         if CONF.cells.enable:
             print('CellsV1 users cannot use this simplified setup command')
             return 2
+        ctxt = context.RequestContext()
         try:
-            self.map_cell0()
+            cell0_mapping = self.map_cell0()
         except db_exc.DBDuplicateEntry:
             print('Already setup, nothing to do.')
             return 0
+        # Run migrations so cell0 is usable
+        with context.target_cell(ctxt, cell0_mapping):
+            migration.db_sync(None, context=ctxt)
         cell_uuid = self._map_cell_and_hosts(transport_url)
         if cell_uuid is None:
             # There are no compute hosts which means no cell_mapping was
@@ -1270,6 +1274,7 @@ class CellV2Commands(object):
                 transport_url="none:///",
                 database_connection=dbc)
         cell_mapping.create()
+        return cell_mapping
 
     def _get_and_map_instances(self, ctxt, cell_mapping, limit, marker):
         filters = {}
