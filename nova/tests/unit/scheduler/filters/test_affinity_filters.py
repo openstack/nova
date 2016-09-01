@@ -14,14 +14,11 @@ import uuid
 
 import mock
 
-import nova.conf
 from nova import objects
 from nova.scheduler.filters import affinity_filter
 from nova import test
 from nova.tests.unit.scheduler import fakes
 from nova.tests import uuidsentinel as uuids
-
-CONF = nova.conf.CONF
 
 
 class TestDifferentHostFilter(test.NoDBTestCase):

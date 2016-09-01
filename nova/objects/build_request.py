@@ -13,7 +13,6 @@
 import functools
 import re
 
-from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
@@ -28,7 +27,6 @@ from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 

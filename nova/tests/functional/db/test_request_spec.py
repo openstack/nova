@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
-
 from nova import context
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import api_models
@@ -24,8 +22,6 @@ from nova.tests import fixtures
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_request_spec
-
-CONF = cfg.CONF
 
 
 class RequestSpecTestCase(test.NoDBTestCase):

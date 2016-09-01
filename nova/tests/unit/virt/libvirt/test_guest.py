@@ -17,7 +17,6 @@
 import sys
 
 import mock
-from oslo_config import cfg
 from oslo_utils import encodeutils
 
 from nova import context
@@ -32,8 +31,6 @@ from nova.virt.libvirt import host
 
 host.libvirt = fakelibvirt
 libvirt_guest.libvirt = fakelibvirt
-
-CONF = cfg.CONF
 
 if sys.version_info > (3,):
     long = int
