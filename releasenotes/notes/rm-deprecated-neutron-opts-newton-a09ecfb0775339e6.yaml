@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The following deprecated configuration options have been removed from the
+    ``neutron`` section of nova.conf:
+
+      - ca_certificates_file
+      - api_insecure
+      - url_timeout

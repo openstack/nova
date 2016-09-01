@@ -105,13 +105,6 @@ Related options:
 
 ALL_OPTS = (neutron_opts + metadata_proxy_opts)
 
-deprecations = {'cafile': [cfg.DeprecatedOpt('ca_certificates_file',
-                                             group=NEUTRON_GROUP)],
-                'insecure': [cfg.DeprecatedOpt('api_insecure',
-                                               group=NEUTRON_GROUP)],
-                'timeout': [cfg.DeprecatedOpt('url_timeout',
-                                              group=NEUTRON_GROUP)]}
-
 
 def _gen_opts_from_plugins():
     opts = copy.deepcopy(neutron_options)
@@ -136,7 +129,7 @@ def register_opts(conf):
     conf.register_group(neutron_group)
     conf.register_opts(ALL_OPTS, group=neutron_group)
     neutron_options = ks_loading.register_session_conf_options(
-        conf, NEUTRON_GROUP, deprecated_opts=deprecations)
+        conf, NEUTRON_GROUP)
     ks_loading.register_auth_conf_options(conf, NEUTRON_GROUP)
 
 
