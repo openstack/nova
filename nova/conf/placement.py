@@ -34,11 +34,17 @@ Possible values:
 def register_opts(conf):
     conf.register_group(placement_group)
     conf.register_opts(placement_opts, group=placement_group)
-    ks_loading.register_auth_conf_options(conf,
-                                             placement_group.name)
+    ks_loading.register_session_conf_options(conf, placement_group.name)
+    ks_loading.register_auth_conf_options(conf, placement_group.name)
 
 
 def list_opts():
     return {
-        placement_group.name: placement_opts
+        placement_group.name: (
+            placement_opts +
+            ks_loading.get_session_conf_options() +
+            ks_loading.get_auth_common_conf_options() +
+            ks_loading.get_auth_plugin_conf_options('password') +
+            ks_loading.get_auth_plugin_conf_options('v2password') +
+            ks_loading.get_auth_plugin_conf_options('v3password'))
     }

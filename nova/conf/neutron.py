@@ -16,8 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
@@ -29,7 +27,6 @@ neutron_group = cfg.OptGroup(
     help="""
 Configuration options for neutron (network connectivity as a service).
 """)
-neutron_options = None
 
 neutron_opts = [
     cfg.URIOpt('url',
@@ -106,34 +103,20 @@ Related options:
 ALL_OPTS = (neutron_opts + metadata_proxy_opts)
 
 
-def _gen_opts_from_plugins():
-    opts = copy.deepcopy(neutron_options)
-    opts.insert(0, ks_loading.get_auth_common_conf_options()[0])
-    # NOTE(dims): There are a lot of auth plugins, we just generate
-    # the config options for a few common ones
-    plugins = ['password', 'v2password', 'v3password']
-    for name in plugins:
-        plugin = ks_loading.get_plugin_loader(name)
-        for plugin_option in ks_loading.get_auth_plugin_conf_options(plugin):
-            for option in opts:
-                if option.name == plugin_option.name:
-                    break
-            else:
-                opts.append(plugin_option)
-    opts.sort(key=lambda x: x.name)
-    return opts
-
-
 def register_opts(conf):
-    global neutron_options
     conf.register_group(neutron_group)
     conf.register_opts(ALL_OPTS, group=neutron_group)
-    neutron_options = ks_loading.register_session_conf_options(
-        conf, NEUTRON_GROUP)
+    ks_loading.register_session_conf_options(conf, NEUTRON_GROUP)
     ks_loading.register_auth_conf_options(conf, NEUTRON_GROUP)
 
 
 def list_opts():
     return {
-        neutron_group: ALL_OPTS + _gen_opts_from_plugins()
+        neutron_group: (
+            ALL_OPTS +
+            ks_loading.get_session_conf_options() +
+            ks_loading.get_auth_common_conf_options() +
+            ks_loading.get_auth_plugin_conf_options('password') +
+            ks_loading.get_auth_plugin_conf_options('v2password') +
+            ks_loading.get_auth_plugin_conf_options('v3password'))
     }
