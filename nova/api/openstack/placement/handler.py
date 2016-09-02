@@ -28,6 +28,7 @@ import webob
 
 from oslo_log import log as logging
 
+from nova.api.openstack.placement.handlers import allocation
 from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
@@ -68,6 +69,10 @@ ROUTE_DECLARATIONS = {
     },
     '/resource_providers/{uuid}/usages': {
         'GET': usage.list_usages
+    },
+    '/allocations/{consumer_uuid}': {
+        'PUT': allocation.set_allocations,
+        'DELETE': allocation.delete_allocations,
     },
 }
 
