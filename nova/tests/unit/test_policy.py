@@ -15,6 +15,7 @@
 
 """Test of Policy Engine For Nova."""
 
+import mock
 import os.path
 
 from oslo_policy import policy as oslo_policy
@@ -155,6 +156,30 @@ class PolicyTestCase(test.NoDBTestCase):
                                                roles=['AdMiN'])
         policy.authorize(admin_context, lowercase_action, self.target)
         policy.authorize(admin_context, uppercase_action, self.target)
+
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_warning_when_deprecated_user_based_rule_used(self, mock_warning):
+        policy._warning_for_deprecated_user_based_rules(
+            [("os_compute_api:servers:index",
+                "project_id:%(project_id)s or user_id:%(user_id)s")])
+        mock_warning.assert_called_once_with(
+            u"The user_id attribute isn't supported in the rule "
+             "'%s'. All the user_id based policy enforcement will be removed "
+             "in the future.", "os_compute_api:servers:index")
+
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_no_warning_for_user_based_resource(self, mock_warning):
+        policy._warning_for_deprecated_user_based_rules(
+            [("os_compute_api:os-keypairs:index",
+                "user_id:%(user_id)s")])
+        mock_warning.assert_not_called()
+
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_no_warning_for_no_user_based_rule(self, mock_warning):
+        policy._warning_for_deprecated_user_based_rules(
+            [("os_compute_api:servers:index",
+                "project_id:%(project_id)s")])
+        mock_warning.assert_not_called()
 
 
 class IsAdminCheckTestCase(test.NoDBTestCase):
