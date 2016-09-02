@@ -493,7 +493,7 @@ class _TestAllocationListNoDB(object):
 
         self.assertEqual(1, len(allocations))
         mock_get_allocations_from_db.assert_called_once_with(
-            self.context, uuids.resource_provider)
+            self.context, resource_provider_uuid=uuids.resource_provider)
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
 
 
