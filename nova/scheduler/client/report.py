@@ -20,6 +20,7 @@ from keystoneauth1 import loading as keystone
 from keystoneauth1 import session
 from oslo_log import log as logging
 
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova.i18n import _LE, _LI, _LW
 from nova import objects
@@ -92,6 +93,11 @@ class SchedulerReportClient(object):
         # ecosystem.
         return self._client.put(
             url, json=data,
+            endpoint_filter=self.ks_filter, raise_exc=False)
+
+    def delete(self, url):
+        return self._client.delete(
+            url,
             endpoint_filter=self.ks_filter, raise_exc=False)
 
     @safe_connect
@@ -293,3 +299,64 @@ class SchedulerReportClient(object):
                                        compute_node.hypervisor_hostname)
         if compute_node.uuid in self._resource_providers:
             self._update_inventory(compute_node)
+
+    def _allocations(self, instance):
+        # NOTE(danms): Boot-from-volume instances consume no local disk
+        is_bfv = compute_utils.is_volume_backed_instance(instance._context,
+                                                         instance)
+        disk = ((0 if is_bfv else instance.flavor.root_gb) +
+                instance.flavor.swap +
+                instance.flavor.ephemeral_gb)
+        return {
+            'MEMORY_MB': instance.flavor.memory_mb,
+            'VCPU': instance.flavor.vcpus,
+            'DISK_GB': disk,
+        }
+
+    @safe_connect
+    def _allocate_for_instance(self, compute_node, instance):
+        url = '/allocations/%s' % instance.uuid
+        allocations = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': compute_node.uuid,
+                    },
+                    'resources': self._allocations(instance),
+                },
+            ],
+        }
+        LOG.debug('Sending allocation for instance %s: %s' % (
+            instance.uuid, allocations))
+        r = self.put(url, allocations)
+        if not r:
+            LOG.warning(
+                _LW('Unable to submit allocation for instance '
+                    '%(uuid)s (%(code)i %(text)s)'),
+                {'uuid': instance.uuid,
+                 'code': r.status_code,
+                 'text': r.text})
+        else:
+            LOG.info(_LI('Submitted allocation for instance %s'),
+                     instance.uuid)
+
+    @safe_connect
+    def _delete_allocation_for_instance(self, instance):
+        url = '/allocations/%s' % instance.uuid
+        r = self.delete(url)
+        if r:
+            LOG.info(_LI('Deleted allocation for instance %s'),
+                     instance.uuid)
+        else:
+            LOG.warning(
+                _LW('Unable to delete allocation for instance '
+                    '%(uuid)s: (%(code)i %(text)s)'),
+                {'uuid': instance.uuid,
+                 'code': r.status_code,
+                 'text': r.text})
+
+    def update_instance_allocation(self, compute_node, instance, sign):
+        if sign > 0:
+            self._allocate_for_instance(compute_node, instance)
+        else:
+            self._delete_allocation_for_instance(instance)

@@ -535,3 +535,62 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         self.client.update_resource_stats(cn)
         mock_save.assert_called_once_with()
         mock_ensure.assert_called_once_with(uuids.compute_node, 'host1')
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
+    def test_allocations(self, mock_vbi):
+        mock_vbi.return_value = False
+        inst = objects.Instance(
+            uuid=uuids.inst,
+            flavor=objects.Flavor(root_gb=10,
+                                  swap=1,
+                                  ephemeral_gb=100,
+                                  memory_mb=1024,
+                                  vcpus=2))
+        expected = {
+            'MEMORY_MB': 1024,
+            'VCPU': 2,
+            'DISK_GB': 111,
+        }
+        self.assertEqual(expected, self.client._allocations(inst))
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
+    def test_allocations_boot_from_volume(self, mock_vbi):
+        mock_vbi.return_value = True
+        inst = objects.Instance(
+            uuid=uuids.inst,
+            flavor=objects.Flavor(root_gb=10,
+                                  swap=1,
+                                  ephemeral_gb=100,
+                                  memory_mb=1024,
+                                  vcpus=2))
+        expected = {
+            'MEMORY_MB': 1024,
+            'VCPU': 2,
+            'DISK_GB': 101,
+        }
+        self.assertEqual(expected, self.client._allocations(inst))
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    def test_update_instance_allocation_new(self, mock_put):
+        cn = objects.ComputeNode(uuid=uuids.cn)
+        inst = objects.Instance(uuid=uuids.inst)
+        with mock.patch.object(self.client, '_allocations') as mock_a:
+            expected = {
+                'allocations': [
+                    {'resource_provider': {'uuid': cn.uuid},
+                     'resources': mock_a.return_value}]
+            }
+            self.client.update_instance_allocation(cn, inst, 1)
+            mock_put.assert_called_once_with(
+                '/allocations/%s' % inst.uuid,
+                expected)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete')
+    def test_update_instance_allocation_delete(self, mock_delete):
+        cn = objects.ComputeNode(uuid=uuids.cn)
+        inst = objects.Instance(uuid=uuids.inst)
+        self.client.update_instance_allocation(cn, inst, -1)
+        mock_delete.assert_called_once_with(
+            '/allocations/%s' % inst.uuid)

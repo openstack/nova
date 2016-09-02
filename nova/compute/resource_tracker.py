@@ -861,6 +861,8 @@ class ResourceTracker(object):
                 self.pci_tracker.update_pci_for_instance(context,
                                                          instance,
                                                          sign=sign)
+            self.scheduler_client.reportclient.update_instance_allocation(
+                self.compute_node, instance, sign)
             # new instance, update compute node resource usage:
             self._update_usage(self._get_usage_dict(instance), sign=sign)
 
