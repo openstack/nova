@@ -5367,7 +5367,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._compare_cpu(instance.vcpu_model, None, instance)
 
         # Create file on storage, to be checked on source host
-        filename = self._create_shared_storage_test_file()
+        filename = self._create_shared_storage_test_file(instance)
 
         data = objects.LibvirtLiveMigrateData()
         data.filename = filename
@@ -5425,7 +5425,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         dest_check_data.is_shared_instance_path = (
             self._check_shared_storage_test_file(
-                dest_check_data.filename))
+                dest_check_data.filename, instance))
 
         dest_check_data.is_shared_block_storage = (
             self._is_shared_block_storage(instance, dest_check_data,
@@ -5643,26 +5643,30 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.error(m, {'ret': ret, 'u': u})
             raise exception.InvalidCPUInfo(reason=m % {'ret': ret, 'u': u})
 
-    def _create_shared_storage_test_file(self):
+    def _create_shared_storage_test_file(self, instance):
         """Makes tmpfile under CONF.instances_path."""
         dirpath = CONF.instances_path
         fd, tmp_file = tempfile.mkstemp(dir=dirpath)
         LOG.debug("Creating tmpfile %s to notify to other "
                   "compute nodes that they should mount "
-                  "the same storage.", tmp_file)
+                  "the same storage.", tmp_file, instance=instance)
         os.close(fd)
         return os.path.basename(tmp_file)
 
-    def _check_shared_storage_test_file(self, filename):
+    def _check_shared_storage_test_file(self, filename, instance):
         """Confirms existence of the tmpfile under CONF.instances_path.
 
         Cannot confirm tmpfile return False.
         """
         tmp_file = os.path.join(CONF.instances_path, filename)
         if not os.path.exists(tmp_file):
-            return False
+            exists = False
         else:
-            return True
+            exists = True
+        LOG.debug('Check if temp file %s exists to indicate shared storage '
+                  'is being used for migration. Exists? %s', tmp_file, exists,
+                  instance=instance)
+        return exists
 
     def _cleanup_shared_storage_test_file(self, filename):
         """Removes existence of the tmpfile under CONF.instances_path."""

@@ -6953,7 +6953,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr._is_shared_block_storage(instance, dest_check_data,
                 block_device_info).AndReturn(is_shared_block_storage)
         self.mox.StubOutWithMock(drvr, '_check_shared_storage_test_file')
-        drvr._check_shared_storage_test_file('file').AndReturn(
+        drvr._check_shared_storage_test_file('file', instance).AndReturn(
                 is_shared_instance_path)
         self.mox.StubOutWithMock(drvr, "get_instance_disk_info")
         drvr.get_instance_disk_info(instance,
