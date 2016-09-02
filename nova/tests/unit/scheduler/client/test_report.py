@@ -398,194 +398,210 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
             },
         }
         expected = {
-            'resource_provider_generation': rp.generation,
             'inventories': expected_inventories,
         }
         self.assertEqual(expected, result)
 
-    def test_update_inventory(self):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_compute_node_inventory')
+    def test_update_inventory(self, mock_inv, mock_put, mock_get):
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
-        name = 'computehost'
         compute_node = objects.ComputeNode(uuid=uuid,
-                                           hypervisor_hostname=name,
-                                           vcpus=2,
-                                           cpu_allocation_ratio=16.0,
-                                           memory_mb=1024,
-                                           ram_allocation_ratio=1.5,
-                                           local_gb=10,
-                                           disk_allocation_ratio=1.0)
-        rp = objects.ResourceProvider(uuid=uuid, name=name, generation=42)
+                                           hypervisor_hostname='foo')
+        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
         # Make sure the ResourceProvider exists for preventing to call the API
         self.client._resource_providers[uuid] = rp
 
-        expected_output = mock.sentinel.inventories
-        resp_mock = mock.Mock(status_code=200, json=lambda: expected_output)
-        self.ks_sess_mock.put.return_value = resp_mock
+        mock_inv.return_value = {'inventories': []}
+        mock_get.return_value.json.return_value = {
+            'inventories': {
+                'VCPU': {'resource_provider_generation': 43},
+            }}
+        mock_put.return_value.status_code = 200
+        mock_put.return_value.json.return_value = {
+            'inventories': {
+                'VCPU': {
+                    'resource_provider_generation': 44,
+                }}}
 
-        # Make sure we store the original generation bit before it's updated
-        original_generation = rp.generation
-        expected_payload = self.client._compute_node_inventory(compute_node)
-
-        result = self.client._update_inventory(compute_node)
-
-        expected_url = '/resource_providers/' + uuid + '/inventories'
-        self.ks_sess_mock.put.assert_called_once_with(
-                expected_url,
-                endpoint_filter=mock.ANY,
-                json=expected_payload,
-                raise_exc=False)
+        result = self.client._update_inventory_attempt(compute_node)
         self.assertTrue(result)
-        # Make sure the generation bit has been incremented
-        rp = self.client._resource_providers[compute_node.uuid]
-        self.assertEqual(original_generation + 1, rp.generation)
+
+        exp_url = '/resource_providers/%s/inventories' % uuid
+        mock_get.assert_called_once_with(exp_url)
+        # Called with the newly-found generation from the existing inventory
+        self.assertEqual(43,
+                         mock_inv.return_value['resource_provider_generation'])
+        # Updated with the new inventory from the PUT call
+        self.assertEqual(44, rp.generation)
+        mock_put.assert_called_once_with(exp_url, mock_inv.return_value)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_compute_node_inventory')
+    def test_update_inventory_no_update(self, mock_inv, mock_put, mock_get):
+        uuid = uuids.compute_node
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname='foo')
+        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
+        self.client._resource_providers[uuid] = rp
+        mock_inv.return_value = {'inventories': {
+            'VCPU': {'total': 8},
+        }}
+        mock_get.return_value.json.return_value = {'inventories': {
+            'VCPU': {'total': 8,
+                     'resource_provider_generation': 43}
+        }}
+        result = self.client._update_inventory_attempt(compute_node)
+        self.assertTrue(result)
+        exp_url = '/resource_providers/%s/inventories' % uuid
+        mock_get.assert_called_once_with(exp_url)
+        # No update so put should not be called
+        self.assertFalse(mock_put.called)
+        # Make sure we updated the generation from the inventory records
+        self.assertEqual(43, rp.generation)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_compute_node_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_provider')
+    def test_update_inventory_conflicts(self, mock_ensure, mock_inv,
+                                        mock_put, mock_get):
+        # Ensure _update_inventory() returns a list of Inventories objects
+        # after creating or updating the existing values
+        uuid = uuids.compute_node
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname='foo')
+        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[uuid] = rp
+
+        mock_inv.return_value = {'inventories': [{'resource_class': 'VCPU'}]}
+        mock_get.return_value = {}
+        mock_put.return_value.status_code = 409
+
+        result = self.client._update_inventory_attempt(compute_node)
+        self.assertFalse(result)
+
+        # Invalidated the cache
+        self.assertNotIn(uuid, self.client._resource_providers)
+        # Refreshed our resource provider
+        mock_ensure.assert_called_once_with(uuid, 'foo')
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_compute_node_inventory')
+    def test_update_inventory_unknown_response(self, mock_inv,
+                                               mock_put, mock_get):
+        # Ensure _update_inventory() returns a list of Inventories objects
+        # after creating or updating the existing values
+        uuid = uuids.compute_node
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname='foo')
+        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[uuid] = rp
+
+        mock_inv.return_value = {'inventories': [{'resource_class': 'VCPU'}]}
+        mock_get.return_value = {}
+        mock_put.return_value.status_code = 234
+
+        result = self.client._update_inventory_attempt(compute_node)
+        self.assertFalse(result)
+
+        # No cache invalidation
+        self.assertIn(uuid, self.client._resource_providers)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_inventory')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_compute_node_inventory')
+    def test_update_inventory_failed(self, mock_inv,
+                                     mock_put, mock_get):
+        # Ensure _update_inventory() returns a list of Inventories objects
+        # after creating or updating the existing values
+        uuid = uuids.compute_node
+        compute_node = objects.ComputeNode(uuid=uuid,
+                                           hypervisor_hostname='foo')
+        rp = objects.ResourceProvider(uuid=uuid, name='foo', generation=42)
+        # Make sure the ResourceProvider exists for preventing to call the API
+        self.client._resource_providers[uuid] = rp
+
+        mock_inv.return_value = {'inventories': [{'resource_class': 'VCPU'}]}
+        mock_get.return_value = {}
+        try:
+            mock_put.return_value.__nonzero__.return_value = False
+        except AttributeError:
+            # Thanks py3
+            mock_put.return_value.__bool__.return_value = False
+
+        result = self.client._update_inventory_attempt(compute_node)
+        self.assertFalse(result)
+
+        # No cache invalidation
+        self.assertIn(uuid, self.client._resource_providers)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_update_inventory_conflicts_and_then_succeeds(self, ensure_mock):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_update_inventory_attempt')
+    @mock.patch('time.sleep')
+    def test_update_inventory_fails_and_then_succeeds(self, mock_sleep,
+                                                      mock_update,
+                                                      mock_ensure):
         # Ensure _update_inventory() fails if we have a conflict when updating
         # but retries correctly.
-        uuid = uuids.compute_node
-        name = 'computehost'
-        compute_node = objects.ComputeNode(uuid=uuid,
-                                           hypervisor_hostname=name,
-                                           vcpus=2,
-                                           cpu_allocation_ratio=16.0,
-                                           memory_mb=1024,
-                                           ram_allocation_ratio=1.5,
-                                           local_gb=10,
-                                           disk_allocation_ratio=1.0)
-        rp = objects.ResourceProvider(uuid=uuid, name=name, generation=42)
+        cn = mock.MagicMock()
+        mock_update.side_effect = (False, True)
 
-        # Make sure the ResourceProvider exists for preventing to call the API
-        def fake_ensure_rp(uuid, name=None):
-            self.client._resource_providers[uuid] = rp
-        ensure_mock.side_effect = fake_ensure_rp
-
-        self.client._resource_providers[uuid] = rp
-
-        # Make sure we store the original generation bit before it's updated
-        original_generation = rp.generation
-        expected_payload = self.client._compute_node_inventory(compute_node)
-        expected_output = mock.sentinel.inventories
-
-        conflict_mock = mock.Mock(status_code=409)
-        success_mock = mock.Mock(status_code=200, json=lambda: expected_output)
-        self.ks_sess_mock.put.side_effect = (conflict_mock, success_mock)
-
-        result = self.client._update_inventory(compute_node)
-
-        expected_url = '/resource_providers/' + uuid + '/inventories'
-        self.ks_sess_mock.put.assert_has_calls(
-            [
-                mock.call(expected_url,
-                          endpoint_filter=mock.ANY,
-                          json=expected_payload,
-                          raise_exc=False),
-                mock.call(expected_url,
-                          endpoint_filter=mock.ANY,
-                          json=expected_payload,
-                          raise_exc=False),
-            ])
-
+        result = self.client._update_inventory(cn)
         self.assertTrue(result)
-        # Make sure the generation bit has been incremented
-        rp = self.client._resource_providers[compute_node.uuid]
-        self.assertEqual(original_generation + 1, rp.generation)
+
+        # Only slept once
+        mock_sleep.assert_called_once_with(1)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_update_inventory_conflicts_and_then_fails(self, ensure_mock):
-        # Ensure _update_inventory() fails if we have a conflict when updating
-        # but fails again.
-        uuid = uuids.compute_node
-        name = 'computehost'
-        compute_node = objects.ComputeNode(uuid=uuid,
-                                           hypervisor_hostname=name,
-                                           vcpus=2,
-                                           cpu_allocation_ratio=16.0,
-                                           memory_mb=1024,
-                                           ram_allocation_ratio=1.5,
-                                           local_gb=10,
-                                           disk_allocation_ratio=1.0)
-        rp = objects.ResourceProvider(uuid=uuid, name=name, generation=42)
-
-        # Make sure the ResourceProvider exists for preventing to call the API
-        def fake_ensure_rp(uuid, name=None):
-            self.client._resource_providers[uuid] = rp
-        ensure_mock.side_effect = fake_ensure_rp
-
-        self.client._resource_providers[uuid] = rp
-
-        expected_payload = self.client._compute_node_inventory(compute_node)
-
-        conflict_mock = mock.Mock(status_code=409)
-        fail_mock = mock.Mock(status_code=400)
-        self.ks_sess_mock.put.side_effect = (conflict_mock, fail_mock)
-
-        result = self.client._update_inventory(compute_node)
-
-        expected_url = '/resource_providers/' + uuid + '/inventories'
-        self.ks_sess_mock.put.assert_has_calls(
-            [
-                mock.call(expected_url,
-                          endpoint_filter=mock.ANY,
-                          json=expected_payload,
-                          raise_exc=False),
-                mock.call(expected_url,
-                          endpoint_filter=mock.ANY,
-                          json=expected_payload,
-                          raise_exc=False),
-            ])
-
-        self.assertFalse(result)
-
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_provider')
-    def test_update_inventory_conflicts_and_then_conflicts(self, ensure_mock):
-        # Ensure _update_inventory() fails if we have a conflict when updating
-        # but fails again.
-        uuid = uuids.compute_node
-        name = 'computehost'
-        compute_node = objects.ComputeNode(uuid=uuid,
-                                           hypervisor_hostname=name,
-                                           vcpus=2,
-                                           cpu_allocation_ratio=16.0,
-                                           memory_mb=1024,
-                                           ram_allocation_ratio=1.5,
-                                           local_gb=10,
-                                           disk_allocation_ratio=1.0)
-        rp = objects.ResourceProvider(uuid=uuid, name=name, generation=42)
+                '_update_inventory_attempt')
+    @mock.patch('time.sleep')
+    def test_update_inventory_never_succeeds(self, mock_sleep,
+                                             mock_update,
+                                             mock_ensure):
+        # but retries correctly.
+        cn = mock.MagicMock()
+        mock_update.side_effect = (False, False, False)
 
-        # Make sure the ResourceProvider exists for preventing to call the API
-        def fake_ensure_rp(uuid, name=None):
-            self.client._resource_providers[uuid] = rp
-        ensure_mock.side_effect = fake_ensure_rp
-
-        self.client._resource_providers[uuid] = rp
-
-        expected_payload = self.client._compute_node_inventory(compute_node)
-
-        conflict_mock = mock.Mock(status_code=409)
-        self.ks_sess_mock.put.return_value = conflict_mock
-
-        result = self.client._update_inventory(compute_node)
-
-        expected_url = '/resource_providers/' + uuid + '/inventories'
-        self.ks_sess_mock.put.assert_has_calls(
-            [
-                mock.call(expected_url,
-                          endpoint_filter=mock.ANY,
-                          json=expected_payload,
-                          raise_exc=False),
-                mock.call(expected_url,
-                          endpoint_filter=mock.ANY,
-                          json=expected_payload,
-                          raise_exc=False),
-            ])
-
+        result = self.client._update_inventory(cn)
         self.assertFalse(result)
+
+        # Slept three times
+        mock_sleep.assert_has_calls([mock.call(1), mock.call(1), mock.call(1)])
+
+        # Three attempts to update
+        mock_update.assert_has_calls([mock.call(cn), mock.call(cn),
+                                      mock.call(cn)])
+
+        # Slept three times
+        mock_sleep.assert_has_calls([mock.call(1), mock.call(1), mock.call(1)])
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
