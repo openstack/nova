@@ -111,7 +111,10 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
     :param inv_list: InventoryList object
     :param to_update: set() containing resource class IDs to search inv_list
                       for updating in resource provider.
+    :returns: A list of (uuid, class) tuples that have exceeded their
+              capacity after this inventory update.
     """
+    exceeded = []
     for res_class in to_update:
         inv_record = inv_list.find(res_class)
         if inv_record.capacity <= 0:
@@ -125,9 +128,8 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
                 _ALLOC_TBL.c.resource_class_id == res_class))
         allocations = conn.execute(allocation_query).first()
         if allocations and allocations['usage'] > inv_record.capacity:
-            raise exception.InvalidInventoryNewCapacityExceeded(
-                resource_class=fields.ResourceClass.from_index(res_class),
-                resource_provider=rp.uuid)
+            exceeded.append((rp.uuid,
+                             fields.ResourceClass.from_index(res_class)))
         upd_stmt = _INV_TBL.update().where(sa.and_(
                 _INV_TBL.c.resource_provider_id == rp.id,
                 _INV_TBL.c.resource_class_id == res_class)).values(
@@ -142,6 +144,7 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
             raise exception.NotFound(
                 'No inventory of class %s found for update'
                 % fields.ResourceClass.from_index(res_class))
+    return exceeded
 
 
 def _increment_provider_generation(conn, rp):
@@ -188,9 +191,10 @@ def _update_inventory(context, rp, inventory):
     inv_list = InventoryList(objects=[inventory])
     conn = context.session.connection()
     with conn.begin():
-        _update_inventory_for_provider(
+        exceeded = _update_inventory_for_provider(
             conn, rp, inv_list, set([resource_class_id]))
         rp.generation = _increment_provider_generation(conn, rp)
+    return exceeded
 
 
 @db_api.api_context_manager.writer
@@ -215,6 +219,8 @@ def _set_inventory(context, rp, inv_list):
     :param context: Nova RequestContext.
     :param rp: `ResourceProvider` object upon which to set inventory.
     :param inv_list: `InventoryList` object to save to backend storage.
+    :returns: A list of (uuid, class) tuples that have exceeded their
+              capacity after this inventory update.
     :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
             the same resource provider's view of its inventory or allocations
             in between the time when this object was originally read
@@ -233,6 +239,7 @@ def _set_inventory(context, rp, inv_list):
     to_add = these_resources - existing_resources
     to_delete = existing_resources - these_resources
     to_update = these_resources & existing_resources
+    exceeded = []
 
     with conn.begin():
         if to_delete:
@@ -240,7 +247,8 @@ def _set_inventory(context, rp, inv_list):
         if to_add:
             _add_inventory_to_provider(conn, rp, inv_list, to_add)
         if to_update:
-            _update_inventory_for_provider(conn, rp, inv_list, to_update)
+            exceeded = _update_inventory_for_provider(conn, rp, inv_list,
+                                                      to_update)
 
         # Here is where we update the resource provider's generation value.
         # If this update updates zero rows, that means that another
@@ -252,6 +260,8 @@ def _set_inventory(context, rp, inv_list):
         # to retry the inventory save after reverifying any capacity
         # conditions and re-reading the existing inventory information.
         rp.generation = _increment_provider_generation(conn, rp)
+
+    return exceeded
 
 
 @base.NovaObjectRegistry.register
@@ -320,7 +330,11 @@ class ResourceProvider(base.NovaObject):
     @base.remotable
     def set_inventory(self, inv_list):
         """Set all resource provider Inventory to be the provided list."""
-        _set_inventory(self._context, self, inv_list)
+        exceeded = _set_inventory(self._context, self, inv_list)
+        for uuid, rclass in exceeded:
+            LOG.warning(_LW('Resource provider %(uuid)s is now over-'
+                            'capacity for %(resource)s'),
+                        {'uuid': uuid, 'resource': rclass})
         self.obj_reset_changes()
 
     @base.remotable
@@ -329,7 +343,11 @@ class ResourceProvider(base.NovaObject):
 
         Fails if no Inventory of the same class is present.
         """
-        _update_inventory(self._context, self, inventory)
+        exceeded = _update_inventory(self._context, self, inventory)
+        for uuid, rclass in exceeded:
+            LOG.warning(_LW('Resource provider %(uuid)s is now over-'
+                            'capacity for %(resource)s'),
+                        {'uuid': uuid, 'resource': rclass})
         self.obj_reset_changes()
 
     @staticmethod
