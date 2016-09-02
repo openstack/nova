@@ -61,6 +61,11 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         check_shared_storage.return_value = shared_storage
         self._migrationops._pathutils.exists.return_value = True
 
+        fake_disk_files = [os.path.join(instance_path, disk_name)
+                           for disk_name in
+                           ['root.vhd', 'configdrive.vhd', 'configdrive.iso',
+                            'eph0.vhd', 'eph1.vhdx']]
+
         expected_get_dir = [mock.call(mock.sentinel.instance_name),
                             mock.call(mock.sentinel.instance_name,
                                       mock.sentinel.dest_path)]
@@ -69,7 +74,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
 
         self._migrationops._migrate_disk_files(
             instance_name=mock.sentinel.instance_name,
-            disk_files=[self._FAKE_DISK],
+            disk_files=fake_disk_files,
             dest=mock.sentinel.dest_path)
 
         self._migrationops._pathutils.exists.assert_called_once_with(
@@ -94,8 +99,11 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
 
         self._migrationops._pathutils.get_instance_dir.assert_has_calls(
             expected_get_dir)
-        self._migrationops._pathutils.copy.assert_called_once_with(
-            self._FAKE_DISK, fake_dest_path)
+        self._migrationops._pathutils.copy.assert_has_calls(
+            mock.call(fake_disk_file, fake_dest_path)
+            for fake_disk_file in fake_disk_files)
+        self.assertEqual(len(fake_disk_files),
+                         self._migrationops._pathutils.copy.call_count)
         self._migrationops._pathutils.move_folder_files.assert_has_calls(
             expected_move_calls)
 
