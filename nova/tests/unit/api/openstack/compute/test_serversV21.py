@@ -2965,6 +2965,23 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, body=self.body)
 
+    @mock.patch.object(nova.compute.flavors, 'get_flavor_by_flavor_id',
+                       return_value=objects.Flavor())
+    @mock.patch.object(compute_api.API, 'create')
+    def test_create_instance_with_non_existing_snapshot_id(
+            self, mock_create,
+            mock_get_flavor_by_flavor_id):
+        mock_create.side_effect = exception.SnapshotNotFound(snapshot_id='123')
+
+        self.body['server'] = {'name': 'server_test',
+                               'flavorRef': self.flavor_ref,
+                               'block_device_mapping_v2':
+                                   [{'source_type': 'snapshot',
+                                     'uuid': '123'}]}
+        self.req.body = jsonutils.dump_as_bytes(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, body=self.body)
+
     def test_create_instance_invalid_flavor_id_empty(self):
         flavor_ref = ""
         self.body['server']['flavorRef'] = flavor_ref
