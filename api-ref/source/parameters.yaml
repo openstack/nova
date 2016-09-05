@@ -3795,7 +3795,7 @@ server_groups_list:
     The list of existing server groups.
   in: body
   required: true
-  type: list
+  type: array
 server_groups_quota_details:
   description: |
     The object of detailed server groups, including in_use,
