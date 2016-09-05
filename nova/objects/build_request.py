@@ -36,7 +36,8 @@ LOG = logging.getLogger(__name__)
 class BuildRequest(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added block_device_mappings
-    VERSION = '1.1'
+    # Version 1.2: Added save() method
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -194,6 +195,23 @@ class BuildRequest(base.NovaObject):
     @base.remotable
     def destroy(self):
         self._destroy_in_db(self._context, self.instance_uuid)
+
+    @db.api_context_manager.writer
+    def _save_in_db(self, context, req_id, updates):
+        db_req = context.session.query(
+            api_models.BuildRequest).filter_by(id=req_id).first()
+        if not db_req:
+            raise exception.BuildRequestNotFound(uuid=self.instance_uuid)
+
+        db_req.update(updates)
+        context.session.add(db_req)
+        return db_req
+
+    @base.remotable
+    def save(self):
+        updates = self._get_update_primitives()
+        db_req = self._save_in_db(self._context, self.id, updates)
+        self._from_db_object(self._context, self, db_req)
 
 
 @base.NovaObjectRegistry.register

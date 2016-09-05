@@ -85,6 +85,24 @@ class BuildRequestTestCase(test.NoDBTestCase):
         db_req.destroy()
         self.assertRaises(exception.BuildRequestNotFound, db_req.destroy)
 
+    def test_save(self):
+        self._create_req()
+        db_req = self.build_req_obj.get_by_instance_uuid(self.context,
+                                                         self.instance_uuid)
+        db_req.project_id = 'foobar'
+        db_req.save()
+        updated_req = self.build_req_obj.get_by_instance_uuid(
+            self.context, self.instance_uuid)
+        self.assertEqual('foobar', updated_req.project_id)
+
+    def test_save_not_found(self):
+        self._create_req()
+        db_req = self.build_req_obj.get_by_instance_uuid(self.context,
+                                                         self.instance_uuid)
+        db_req.project_id = 'foobar'
+        db_req.destroy()
+        self.assertRaises(exception.BuildRequestNotFound, db_req.save)
+
 
 class BuildRequestListTestCase(test.NoDBTestCase):
     USES_DB_SELF = True

@@ -2082,11 +2082,12 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body=body)
 
-    def test_update_server_not_found_on_update(self):
+    @mock.patch.object(compute_api.API, 'update_instance')
+    def test_update_server_not_found_on_update(self, mock_update_instance):
         def fake_update(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id='fake')
 
-        self.stub_out('nova.db.instance_update_and_get_original', fake_update)
+        mock_update_instance.side_effect = fake_update
         body = {'server': {'name': 'server_test'}}
         req = self._get_request(body)
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
@@ -4539,10 +4540,10 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             FAKE_UUID, body=body)
 
     @mock.patch('nova.api.openstack.compute.views.servers.ViewBuilder.show')
-    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch.object(compute_api.API, 'update_instance')
     @mock.patch.object(common, 'get_instance')
     def test_update_overridden_policy_pass_with_same_project(
-        self, get_instance_mock, save_mock, view_show_mock):
+        self, get_instance_mock, update_instance_mock, view_show_mock):
         instance = fake_instance.fake_instance_obj(
             self.req.environ['nova.context'],
             project_id=self.req.environ['nova.context'].project_id)
@@ -4567,11 +4568,11 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
             FAKE_UUID, body=body)
 
     @mock.patch('nova.api.openstack.compute.views.servers.ViewBuilder.show')
-    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch.object(compute_api.API, 'update_instance')
     @mock.patch.object(common, 'get_instance')
     def test_update_overridden_policy_pass_with_same_user(self,
                                                           get_instance_mock,
-                                                          save_mock,
+                                                          update_instance_mock,
                                                           view_show_mock):
         instance = fake_instance.fake_instance_obj(
             self.req.environ['nova.context'],

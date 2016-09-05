@@ -793,10 +793,8 @@ class ServersController(wsgi.Controller):
         helpers.translate_attributes(helpers.UPDATE, server, update_dict)
 
         try:
-            # NOTE(mikal): this try block needs to stay because save() still
-            # might throw an exception.
-            instance.update(update_dict)
-            instance.save()
+            instance = self.compute_api.update_instance(ctxt, instance,
+                                                        update_dict)
             return self._view_builder.show(req, instance,
                                            extend_address=False)
         except exception.InstanceNotFound:
