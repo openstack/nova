@@ -24,9 +24,10 @@ tests:
 - name: get empty inventories
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
   response_json_paths:
+      $.resource_provider_generation: 0
       $.inventories: {}
 
-- name: post an conflicting capacity inventory
+- name: post a conflicting capacity inventory
   POST: /resource_providers/$ENVIRON['RP_UUID']/inventories
   request_headers:
       content-type: application/json
@@ -54,6 +55,7 @@ tests:
   response_headers:
       location: $SCHEME://$NETLOC/resource_providers/$ENVIRON['RP_UUID']/inventories/DISK_GB
   response_json_paths:
+      $.resource_provider_generation: 1
       $.total: 2048
       $.reserved: 512
 
@@ -178,6 +180,7 @@ tests:
 - name: get list of inventories
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
   response_json_paths:
+      $.resource_provider_generation: 2
       $.inventories.DISK_GB.total: 2048
       $.inventories.DISK_GB.reserved: 1024
 
@@ -188,6 +191,7 @@ tests:
 - name: get now empty inventories
   GET: /resource_providers/$ENVIRON['RP_UUID']/inventories
   response_json_paths:
+      $.resource_provider_generation: 3
       $.inventories: {}
 
 - name: post new disk inventory
@@ -214,6 +218,7 @@ tests:
   request_headers:
       content-type: application/json
   response_json_paths:
+      $.resource_provider_generation: 5
       $.inventories.DISK_GB.total: 1024
       $.inventories.IPV4_ADDRESS.total: 255
 
@@ -266,6 +271,7 @@ tests:
           total: 1024
   status: 200
   response_json_paths:
+      $.resource_provider_generation: 1
       $.inventories.IPV4_ADDRESS.total: 253
       $.inventories.IPV4_ADDRESS.reserved: 0
       $.inventories.DISK_GB.total: 1024
@@ -274,6 +280,7 @@ tests:
 - name: check both inventory classes
   GET: $LAST_URL
   response_json_paths:
+      $.resource_provider_generation: 1
       $.inventories.DISK_GB.total: 1024
       $.inventories.IPV4_ADDRESS.total: 253
 

@@ -420,15 +420,14 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
 
         mock_inv.return_value = {'inventories': []}
         mock_get.return_value.json.return_value = {
-            'inventories': {
-                'VCPU': {'resource_provider_generation': 43},
-            }}
+            'resource_provider_generation': 43,
+            'inventories': {'VCPU': {'total': 16}},
+        }
         mock_put.return_value.status_code = 200
         mock_put.return_value.json.return_value = {
-            'inventories': {
-                'VCPU': {
-                    'resource_provider_generation': 44,
-                }}}
+            'resource_provider_generation': 44,
+            'inventories': {'VCPU': {'total': 16}},
+        }
 
         result = self.client._update_inventory_attempt(compute_node)
         self.assertTrue(result)
@@ -457,10 +456,12 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         mock_inv.return_value = {'inventories': {
             'VCPU': {'total': 8},
         }}
-        mock_get.return_value.json.return_value = {'inventories': {
-            'VCPU': {'total': 8,
-                     'resource_provider_generation': 43}
-        }}
+        mock_get.return_value.json.return_value = {
+            'resource_provider_generation': 43,
+            'inventories': {
+                'VCPU': {'total': 8}
+            }
+        }
         result = self.client._update_inventory_attempt(compute_node)
         self.assertTrue(result)
         exp_url = '/resource_providers/%s/inventories' % uuid
