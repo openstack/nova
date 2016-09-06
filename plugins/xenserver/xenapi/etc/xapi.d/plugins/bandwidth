@@ -24,6 +24,8 @@ import utils
 
 import pluginlib_nova
 
+import re
+
 
 pluginlib_nova.configure_logging('bandwidth')
 
@@ -40,7 +42,8 @@ def _get_bandwitdth_from_proc():
     devs = [l.strip() for l in _read_proc_net()]
     # ignore headers
     devs = devs[2:]
-    dlist = [d.split(':', 1) for d in devs if d.startswith('vif')]
+    vif_pattern = re.compile("^vif(\d+)\.(\d+)")
+    dlist = [d.split(':', 1) for d in devs if vif_pattern.match(d)]
     devmap = dict()
     for name, stats in dlist:
         slist = stats.split()
