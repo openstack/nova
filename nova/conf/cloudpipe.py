@@ -17,8 +17,7 @@ from oslo_config import cfg
 from nova.conf import paths
 
 cloudpipe_opts = [
-    cfg.StrOpt(
-        'vpn_image_id',
+    cfg.StrOpt('vpn_image_id',
         default='0',
         help="""
 Image ID used when starting up a cloudpipe VPN client.
@@ -32,8 +31,7 @@ Possible values:
 
 * Any valid ID of a VPN image
 """),
-    cfg.StrOpt(
-        'vpn_flavor',
+    cfg.StrOpt('vpn_flavor',
         default='m1.tiny',
         help="""
 Flavor for VPN instances.
@@ -42,8 +40,7 @@ Possible values:
 
 * Any valid flavor name
 """),
-    cfg.StrOpt(
-        'boot_script_template',
+    cfg.StrOpt('boot_script_template',
         default=paths.basedir_def('nova/cloudpipe/bootscript.template'),
         help="""
 Template for cloudpipe instance boot script.
@@ -54,14 +51,14 @@ Possible values:
 
 Related options:
 
-Following options are required to configure cloudpipe-managed
+The following options are required to configure cloudpipe-managed
 OpenVPN server.
+
 * dmz_net
 * dmz_mask
 * cnt_vpn_clients
 """),
-    cfg.IPOpt(
-        'dmz_net',
+    cfg.IPOpt('dmz_net',
         default='10.0.0.0',
         help="""
 Network to push into OpenVPN config.
@@ -76,10 +73,9 @@ Possible values:
 Related options:
 
 * boot_script_template - dmz_net is pushed into bootscript.template
-to configure cloudpipe-managed OpenVPN server
+  to configure cloudpipe-managed OpenVPN server
 """),
-    cfg.IPOpt(
-        'dmz_mask',
+    cfg.IPOpt('dmz_mask',
         default='255.255.255.0',
         help="""
 Netmask to push into OpenVPN config.
@@ -91,12 +87,10 @@ Possible values:
 Related options:
 
 * dmz_net - dmz_net and dmz_mask is pushed into bootscript.template
-to configure cloudpipe-managed OpenVPN server
+  to configure cloudpipe-managed OpenVPN server
 * boot_script_template
 """),
-
-    cfg.StrOpt(
-        'vpn_key_suffix',
+    cfg.StrOpt('vpn_key_suffix',
         default='-vpn',
         help="""
 Suffix to add to project name for VPN key and secgroups
