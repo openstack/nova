@@ -18,6 +18,7 @@ from nova.api import openstack as common_api
 from nova.api.openstack.placement import auth
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement import requestlog
 from nova import objects
 
 
@@ -44,6 +45,7 @@ def deploy(conf, project_name):
     req_id_middleware = request_id.RequestId
     microversion_middleware = microversion.MicroversionMiddleware
     fault_wrap = common_api.FaultWrapper
+    request_log = requestlog.RequestLog
 
     application = handler.PlacementHandler()
 
@@ -51,7 +53,9 @@ def deploy(conf, project_name):
                        auth_middleware,
                        microversion_middleware,
                        fault_wrap,
-                       req_id_middleware):
+                       req_id_middleware,
+                       request_log,
+                       ):
         application = middleware(application)
 
     return application
