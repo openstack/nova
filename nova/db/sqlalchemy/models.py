@@ -385,6 +385,8 @@ class InstanceExtra(BASE, NovaBase, models.SoftDeleteMixin):
                             primaryjoin=instance_uuid == Instance.uuid)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class InstanceTypes(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents possible flavors for instances.
 
@@ -711,6 +713,8 @@ class ProviderFirewallRule(BASE, NovaBase, models.SoftDeleteMixin):
     cidr = Column(types.CIDR())
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class KeyPair(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a public key pair for ssh / WinRM."""
     __tablename__ = 'key_pairs'
@@ -1012,6 +1016,8 @@ class InstanceSystemMetadata(BASE, NovaBase, models.SoftDeleteMixin):
                             foreign_keys=instance_uuid)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class InstanceTypeProjects(BASE, NovaBase, models.SoftDeleteMixin):
     """Represent projects associated instance_types."""
     __tablename__ = "instance_type_projects"
@@ -1032,6 +1038,8 @@ class InstanceTypeProjects(BASE, NovaBase, models.SoftDeleteMixin):
                  'InstanceTypeProjects.deleted == 0)')
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class InstanceTypeExtraSpecs(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents additional specs as key/value pairs for an instance_type."""
     __tablename__ = 'instance_type_extra_specs'
@@ -1079,6 +1087,8 @@ class Cell(BASE, NovaBase, models.SoftDeleteMixin):
     is_parent = Column(Boolean())
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class AggregateHost(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a host that is member of an aggregate."""
     __tablename__ = 'aggregate_hosts'
@@ -1092,6 +1102,8 @@ class AggregateHost(BASE, NovaBase, models.SoftDeleteMixin):
     aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a metadata key/value pair for an aggregate."""
     __tablename__ = 'aggregate_metadata'
@@ -1107,6 +1119,8 @@ class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
     aggregate_id = Column(Integer, ForeignKey('aggregates.id'), nullable=False)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class Aggregate(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents a cluster of hosts that exists in this zone."""
     __tablename__ = 'aggregates'
@@ -1319,6 +1333,8 @@ class TaskLog(BASE, NovaBase, models.SoftDeleteMixin):
     errors = Column(Integer(), default=0)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class InstanceGroupMember(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents the members for an instance group."""
     __tablename__ = 'instance_group_member'
@@ -1331,6 +1347,8 @@ class InstanceGroupMember(BASE, NovaBase, models.SoftDeleteMixin):
                       nullable=False)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class InstanceGroupPolicy(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents the policy type for an instance group."""
     __tablename__ = 'instance_group_policy'
@@ -1343,6 +1361,8 @@ class InstanceGroupPolicy(BASE, NovaBase, models.SoftDeleteMixin):
                       nullable=False)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class InstanceGroup(BASE, NovaBase, models.SoftDeleteMixin):
     """Represents an instance group.
 
@@ -1449,6 +1469,8 @@ class Tag(BASE, models.ModelBase):
     )
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class ResourceProvider(BASE, models.ModelBase):
     """Represents a mapping to a providers of resources."""
 
@@ -1469,6 +1491,8 @@ class ResourceProvider(BASE, models.ModelBase):
     can_host = Column(Integer, default=0)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class Inventory(BASE, models.ModelBase):
     """Represents a quantity of available resource."""
 
@@ -1500,6 +1524,8 @@ class Inventory(BASE, models.ModelBase):
         foreign_keys=resource_provider_id)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class Allocation(BASE, models.ModelBase):
     """A use of inventory."""
 
@@ -1520,6 +1546,8 @@ class Allocation(BASE, models.ModelBase):
     used = Column(Integer, nullable=False)
 
 
+# NOTE(alaski): This table exists in the nova_api database and its usage here
+# is deprecated.
 class ResourceProviderAggregate(BASE, models.ModelBase):
     """Associate a resource provider with an aggregate."""
 
