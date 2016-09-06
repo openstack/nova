@@ -14,13 +14,17 @@
 import collections
 
 import jsonschema
+from oslo_log import log as logging
 from oslo_serialization import jsonutils
 import webob
 
 from nova.api.openstack.placement import util
 from nova import exception
+from nova.i18n import _LE
 from nova import objects
 
+
+LOG = logging.getLogger(__name__)
 
 ALLOCATION_SCHEMA = {
     "type": "object",
@@ -248,16 +252,20 @@ def set_allocations(req):
             allocation_objects.append(allocation)
 
     allocations = objects.AllocationList(context, objects=allocation_objects)
+
     try:
         allocations.create_all()
+        LOG.debug("Successfully wrote allocations %s", allocations)
     # InvalidInventory is a parent for several exceptions that
     # indicate either that Inventory is not present, or that
     # capacity limits have been exceeded.
     except exception.InvalidInventory as exc:
+        LOG.exception(_LE("Bad inventory"))
         raise webob.exc.HTTPConflict(
             'Unable to allocate inventory: %s' % exc,
             json_formatter=util.json_error_formatter)
     except exception.ConcurrentUpdateDetected as exc:
+        LOG.exception(_LE("Concurrent Update"))
         raise webob.exc.HTTPConflict(
             'Inventory changed while attempting to allocate: %s' % exc,
             json_formatter=util.json_error_formatter)
@@ -279,6 +287,7 @@ def delete_allocations(req):
             "No allocations for consumer '%s'" % consumer_uuid,
             json_formatter=util.json_error_formatter)
     allocations.delete_all()
+    LOG.debug("Successfully deleted allocations %s", allocations)
 
     req.response.status = 204
     req.response.content_type = None
