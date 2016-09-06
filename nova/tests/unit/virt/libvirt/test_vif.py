@@ -641,18 +641,31 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         xml = self._get_instance_xml(d, self.vif_bridge)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
-    def test_model_kvm_qemu_custom(self):
-        for virt in ('kvm', 'qemu'):
+    def test_model_parallels(self):
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='parallels',
+                   group='libvirt')
+
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_bridge)
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_model_kvm_qemu_parallels_custom(self):
+        for virt in ('kvm', 'qemu', 'parallels'):
             self.flags(use_virtio_for_bridges=True,
                        virt_type=virt,
                        group='libvirt')
 
             d = vif.LibvirtGenericVIFDriver()
-            supported = (network_model.VIF_MODEL_NE2K_PCI,
-                         network_model.VIF_MODEL_PCNET,
-                         network_model.VIF_MODEL_RTL8139,
-                         network_model.VIF_MODEL_E1000,
-                         network_model.VIF_MODEL_SPAPR_VLAN)
+            if virt == 'parallels':
+                supported = (network_model.VIF_MODEL_RTL8139,
+                             network_model.VIF_MODEL_E1000)
+            else:
+                supported = (network_model.VIF_MODEL_NE2K_PCI,
+                             network_model.VIF_MODEL_PCNET,
+                             network_model.VIF_MODEL_RTL8139,
+                             network_model.VIF_MODEL_E1000,
+                             network_model.VIF_MODEL_SPAPR_VLAN)
             for model in supported:
                 image_meta = objects.ImageMeta.from_dict(
                     {'properties': {'hw_vif_model': model}})

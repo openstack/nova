@@ -68,6 +68,9 @@ def is_vif_model_valid_for_virt(virt_type, vif_model):
                 network_model.VIF_MODEL_E1000],
         'lxc': [],
         'uml': [],
+        'parallels': [network_model.VIF_MODEL_VIRTIO,
+                      network_model.VIF_MODEL_RTL8139,
+                      network_model.VIF_MODEL_E1000],
         }
 
     if vif_model is None:
@@ -107,10 +110,10 @@ class LibvirtGenericVIFDriver(object):
         if image_meta:
             model = osinfo.HardwareProperties(image_meta).network_model
 
-        # Else if the virt type is KVM/QEMU, use virtio according
-        # to the global config parameter
+        # Else if the virt type is KVM/QEMU/VZ(Parallels), then use virtio
+        # according to the global config parameter
         if (model is None and
-            virt_type in ('kvm', 'qemu') and
+            virt_type in ('kvm', 'qemu', 'parallels') and
                     CONF.libvirt.use_virtio_for_bridges):
             model = network_model.VIF_MODEL_VIRTIO
 
@@ -124,7 +127,7 @@ class LibvirtGenericVIFDriver(object):
                                            model):
             raise exception.UnsupportedHardware(model=model,
                                                 virt=virt_type)
-        if (virt_type == 'kvm' and
+        if (virt_type in ('kvm', 'parallels') and
             model == network_model.VIF_MODEL_VIRTIO):
             vhost_drv, vhost_queues = self._get_virtio_mq_settings(image_meta,
                                                                    inst_type)
