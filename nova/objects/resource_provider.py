@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_log import log as logging
 import six
 import sqlalchemy as sa
 from sqlalchemy import func
@@ -19,6 +20,7 @@ from sqlalchemy import sql
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova import exception
+from nova.i18n import _LW
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -26,6 +28,8 @@ from nova.objects import fields
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
+
+LOG = logging.getLogger(__name__)
 
 
 def _get_current_inventory_resources(conn, rp):
@@ -685,8 +689,10 @@ def _check_capacity_exceeded(conn, allocs):
             sql.and_(_RP_TBL.c.id == _INV_TBL.c.resource_provider_id,
                      _INV_TBL.c.resource_class_id.in_(res_classes)))
     primary_join = sql.outerjoin(inv_join, usage,
-            _INV_TBL.c.resource_provider_id == usage.c.resource_provider_id)
-
+        sql.and_(
+            _INV_TBL.c.resource_provider_id == usage.c.resource_provider_id,
+            _INV_TBL.c.resource_class_id == usage.c.resource_class_id)
+    )
     cols_in_output = [
         _RP_TBL.c.id.label('resource_provider_id'),
         _RP_TBL.c.uuid,
@@ -707,7 +713,10 @@ def _check_capacity_exceeded(conn, allocs):
     usage_map = {}
     provs_with_inv = set()
     for record in records:
-        usage_map[(record['uuid'], record['resource_class_id'])] = record
+        map_key = (record['uuid'], record['resource_class_id'])
+        if map_key in usage_map:
+            raise KeyError("%s already in usage_map, bad query" % str(map_key))
+        usage_map[map_key] = record
         provs_with_inv.add(record["uuid"])
     # Ensure that all providers have existing inventory
     missing_provs = provider_uuids - provs_with_inv
@@ -727,6 +736,14 @@ def _check_capacity_exceeded(conn, allocs):
         used = usage['used'] or 0
         capacity = (usage['total'] - usage['reserved']) * allocation_ratio
         if capacity < (used + amount_needed):
+            LOG.warning(
+                _LW("Over capacity for %(rc)s on resource provider %(rp)s. "
+                    "Needed: %(needed)s, Used: %(used)s, Capacity: %(cap)s"),
+                {'rc': fields.ResourceClass.from_index(res_class),
+                 'rp': rp_uuid,
+                 'needed': amount_needed,
+                 'used': used,
+                 'cap': capacity})
             raise exception.InvalidAllocationCapacityExceeded(
                 resource_class=fields.ResourceClass.from_index(res_class),
                 resource_provider=rp_uuid)
