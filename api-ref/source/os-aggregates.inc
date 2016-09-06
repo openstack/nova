@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 ================================
  Host aggregates (os-aggregates)
@@ -196,7 +195,7 @@ Request
 Response
 --------
 
-There is no body content for the response of a successful POST action.
+There is no body content for the response of a successful DELETE action.
 
 Add Host
 ========
