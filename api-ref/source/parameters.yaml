@@ -8,7 +8,7 @@ tag_location:
   type: string
   min_version: 2.26
 x-openstack-request-id:
-  description: >
+  description: |
     A unique ID for tracking the request. The request ID associated with the request
     appears in the log lines for that request. By default, the middleware configuration
     ensures that the request ID appears in the log files.
@@ -17,12 +17,6 @@ x-openstack-request-id:
   type: string
 
 # variables in path
-admin_tenant_id:
-  description: |
-    The UUID of the administrative tenant.
-  in: path
-  required: true
-  type: string
 agent_build_id:
   description: |
     The id of the agent build.
@@ -64,18 +58,6 @@ before_timestamp:
 cell_id:
   description: |
     The UUID of the cell.
-  in: path
-  required: true
-  type: string
-certificate_id:
-  description: |
-    The certificate ID, as a string. The only valid value is ``root``.
-  in: path
-  required: true
-  type: string
-class_id:
-  description: |
-    The UUID of the quota class.
   in: path
   required: true
   type: string
@@ -266,12 +248,6 @@ volume_id_path:
   in: path
   required: true
   type: string
-volume_type_id:
-  description: |
-    The unique ID for a volume type.
-  in: path
-  required: true
-  type: string
 
 # variables in query
 all_projects:
@@ -412,14 +388,6 @@ flavor_query:
   description: |
     Filters the response by a flavor, as a UUID. A flavor is a combination of memory,
     disk size, and CPUs.
-  in: query
-  required: false
-  type: string
-host_query:
-  description: |
-    Filters the response by a host name, as a string. This query parameter is typically
-    available to only administrative users. If you are a non-administrative user,
-    the API ignores this parameter.
   in: query
   required: false
   type: string
@@ -1436,12 +1404,6 @@ description:
   in: body
   required: true
   type: string
-description_2:
-  description: |
-    The security group description.
-  in: body
-  required: true
-  type: string
 destination_type:
   description: |
     Defines where the volume comes from. A valid value is ``local`` or ``volume``.
@@ -2400,12 +2362,6 @@ images:
   in: body
   required: true
   type: array
-in_use:
-  description: |
-    The in-use quota value.
-  in: body
-  required: true
-  type: integer
 injected_file_content_bytes:
   description: |
     The number of allowed bytes of content for each injected file.
@@ -2745,12 +2701,6 @@ limits_absolutes:
   in: body
   required: true
   type: object
-limits_rate_regex:
-  description: |
-    A regular expression defining the URI path to apply the limit to.
-  in: body
-  required: true
-  type: string
 limits_rate_uri:
   description: |
     A human readable URI that is used as a friendly description of where the api rate limit is applied.
@@ -2951,31 +2901,6 @@ name:
   in: body
   required: true
   type: string
-name_3:
-  description: |
-    The name to associate with the keypair.
-  in: body
-  required: true
-  type: string
-name_4:
-  description: |
-    The source security group name.
-  in: body
-  required: true
-  type: string
-name_5:
-  description: |
-    The server group name. A non-empty string with no leading or trailing spaces.
-    Maximum length is 255 characters.
-  in: body
-  required: true
-  type: string
-name_9:
-  description: |
-    The name of floating IP pools.
-  in: body
-  required: false
-  type: string
 name_server_group:
   description: |
     The name of the server group.
@@ -3062,13 +2987,6 @@ new_file:
     image for the VM.
   in: body
   required: true
-  type: string
-next:
-  description: |
-    Moves to the next metadata item.
-  format: uri
-  in: body
-  required: false
   type: string
 on_shared_storage:
   description: |
@@ -3683,7 +3601,7 @@ security_group_default_rules:
     A list of the ``security_group_default_rule`` object.
   in: body
   required: true
-  type: object
+  type: array
 security_group_rule:
   description: |
     A ``security_group_rule`` object.
@@ -3743,12 +3661,6 @@ security_groups_quota_optional:
   required: false
   type: integer
 server:
-  description: |
-    A ``server`` object.
-  in: body
-  required: true
-  type: object
-server_2:
   description: |
     A ``server`` object.
   in: body
