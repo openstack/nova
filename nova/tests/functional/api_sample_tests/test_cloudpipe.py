@@ -49,11 +49,11 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
 
     def test_cloud_pipe_create(self):
         # Get api samples of cloud pipe extension creation.
-        self.flags(vpn_image_id=fake.get_valid_image_id())
+        self.flags(vpn_image_id=fake.get_valid_image_id(), group='cloudpipe')
         subs = {'project_id': str(uuid_lib.uuid4().hex)}
         response = self._do_post('os-cloudpipe', 'cloud-pipe-create-req',
                                  subs)
-        subs['image_id'] = CONF.vpn_image_id
+        subs['image_id'] = CONF.cloudpipe.vpn_image_id
         self._verify_response('cloud-pipe-create-resp', subs, response, 200)
         return subs
 
@@ -61,7 +61,7 @@ class CloudPipeSampleTest(api_sample_base.ApiSampleTestBaseV21):
         # Get api samples of cloud pipe extension get request.
         subs = self.test_cloud_pipe_create()
         response = self._do_get('os-cloudpipe')
-        subs['image_id'] = CONF.vpn_image_id
+        subs['image_id'] = CONF.cloudpipe.vpn_image_id
         self._verify_response('cloud-pipe-get-resp', subs, response, 200)
 
     def test_cloud_pipe_update(self):

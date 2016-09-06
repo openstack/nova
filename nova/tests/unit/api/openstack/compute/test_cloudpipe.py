@@ -38,7 +38,7 @@ uuid = str(uuid_lib.uuid4())
 
 def fake_vpn_instance():
     return objects.Instance(
-        id=7, image_ref=CONF.vpn_image_id, vm_state='active',
+        id=7, image_ref=CONF.cloudpipe.vpn_image_id, vm_state='active',
         created_at=timeutils.parse_strtime('1981-10-20T00:00:00.000000'),
         uuid=uuid, project_id=project_id)
 

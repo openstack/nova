@@ -16,9 +16,14 @@ from oslo_config import cfg
 
 from nova.conf import paths
 
+cloudpipe_group = cfg.OptGroup(
+    name='cloudpipe',
+    title='Cloudpipe options')
+
 cloudpipe_opts = [
     cfg.StrOpt('vpn_image_id',
         default='0',
+        deprecated_group='DEFAULT',
         help="""
 Image ID used when starting up a cloudpipe VPN client.
 
@@ -33,6 +38,7 @@ Possible values:
 """),
     cfg.StrOpt('vpn_flavor',
         default='m1.tiny',
+        deprecated_group='DEFAULT',
         help="""
 Flavor for VPN instances.
 
@@ -42,6 +48,7 @@ Possible values:
 """),
     cfg.StrOpt('boot_script_template',
         default=paths.basedir_def('nova/cloudpipe/bootscript.template'),
+        deprecated_group='DEFAULT',
         help="""
 Template for cloudpipe instance boot script.
 
@@ -60,6 +67,7 @@ OpenVPN server.
 """),
     cfg.IPOpt('dmz_net',
         default='10.0.0.0',
+        deprecated_group='DEFAULT',
         help="""
 Network to push into OpenVPN config.
 
@@ -77,6 +85,7 @@ Related options:
 """),
     cfg.IPOpt('dmz_mask',
         default='255.255.255.0',
+        deprecated_group='DEFAULT',
         help="""
 Netmask to push into OpenVPN config.
 
@@ -92,6 +101,7 @@ Related options:
 """),
     cfg.StrOpt('vpn_key_suffix',
         default='-vpn',
+        deprecated_group='DEFAULT',
         help="""
 Suffix to add to project name for VPN key and secgroups
 
@@ -103,9 +113,9 @@ Possible values:
 
 
 def register_opts(conf):
-    conf.register_opts(cloudpipe_opts)
+    conf.register_group(cloudpipe_group)
+    conf.register_opts(cloudpipe_opts, group=cloudpipe_group)
 
 
 def list_opts():
-    # TODO(siva_krishnan) add opt group
-    return {'DEFAULT': cloudpipe_opts}
+    return {cloudpipe_group: cloudpipe_opts}
