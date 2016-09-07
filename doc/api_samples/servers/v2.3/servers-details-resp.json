@@ -1,0 +1,92 @@
+{
+    "servers": [
+        {
+            "accessIPv4": "1.2.3.4",
+            "accessIPv6": "80fe::",
+            "addresses": {
+                "private": [
+                    {
+                        "addr": "192.168.0.3",
+                        "OS-EXT-IPS-MAC:mac_addr": "aa:bb:cc:dd:ee:ff",
+                        "OS-EXT-IPS:type": "fixed",
+                        "version": 4
+                    }
+                ]
+            },
+            "created": "2013-09-03T04:01:32Z",
+            "flavor": {
+                "id": "1",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/1",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "hostId": "bcf92836fc9ed4203a75cb0337afc7f917d2be504164b995c2334b25",
+            "id": "f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+            "image": {
+                "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+                "links": [
+                    {
+                        "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                        "rel": "bookmark"
+                    }
+                ]
+            },
+            "key_name": null,
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+                    "rel": "bookmark"
+                }
+            ],
+            "metadata": {
+                "My Server Name": "Apache1"
+            },
+            "name": "new-server-test",
+            "config_drive": "",
+            "OS-DCF:diskConfig": "AUTO",
+            "OS-EXT-AZ:availability_zone": "nova",
+            "OS-EXT-SRV-ATTR:host": "c3f14e9812ad496baf92ccfb3c61e15f",
+            "OS-EXT-SRV-ATTR:hypervisor_hostname": "fake-mini",
+            "OS-EXT-SRV-ATTR:instance_name": "instance-00000001",
+            "OS-EXT-SRV-ATTR:reservation_id": "r-00000001",
+            "OS-EXT-SRV-ATTR:launch_index": 0,
+            "OS-EXT-SRV-ATTR:kernel_id": "",
+            "OS-EXT-SRV-ATTR:ramdisk_id": "",
+            "OS-EXT-SRV-ATTR:hostname": "fake-hostname",
+            "OS-EXT-SRV-ATTR:root_device_name": "/dev/sda",
+            "OS-EXT-SRV-ATTR:user_data": "IyEvYmluL2Jhc2gKL2Jpbi9zdQplY2hvICJJIGFtIGluIHlvdSEiCg==",
+            "OS-EXT-STS:power_state": 1,
+            "OS-EXT-STS:task_state": null,
+            "OS-EXT-STS:vm_state": "active",
+            "os-extended-volumes:volumes_attached": [
+                {
+                    "id": "volume_id1",
+                    "delete_on_termination": false
+                },
+                {
+                    "id": "volume_id2",
+                    "delete_on_termination": false
+                }
+            ],
+            "OS-SRV-USG:launched_at": "2013-09-23T13:53:12.774549",
+            "OS-SRV-USG:terminated_at": null,
+            "progress": 0,
+            "security_groups": [
+                {
+                    "name": "default"
+                }
+            ],
+            "status": "ACTIVE",
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "updated": "2013-09-03T04:01:32Z",
+            "user_id": "fake"
+        }
+    ]
+}
