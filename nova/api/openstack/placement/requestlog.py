@@ -14,6 +14,7 @@
 
 from oslo_log import log as logging
 
+from nova.api.openstack.placement import microversion
 
 LOG = logging.getLogger(__name__)
 
@@ -25,15 +26,16 @@ class RequestLog(object):
     """
 
     format = ('%(REMOTE_ADDR)s "%(REQUEST_METHOD)s %(REQUEST_URI)s" '
-              'status: %(status)s len: %(bytes)s')
+              'status: %(status)s len: %(bytes)s '
+              'microversion: %(microversion)s')
 
     def __init__(self, application):
         self.application = application
 
     def __call__(self, environ, start_response):
-        LOG.debug('Starting request: %s "%s %s"' %
-                  (environ['REMOTE_ADDR'], environ['REQUEST_METHOD'],
-                   self._get_uri(environ)))
+        LOG.debug('Starting request: %s "%s %s"',
+                  environ['REMOTE_ADDR'], environ['REQUEST_METHOD'],
+                   self._get_uri(environ))
         if LOG.isEnabledFor(logging.INFO):
             return self._log_app(environ, start_response)
         else:
@@ -69,14 +71,12 @@ class RequestLog(object):
         if size is None:
             size = '-'
         log_format = {
-                'REMOTE_ADDR': environ.get('REMOTE_ADDR') or '-',
+                'REMOTE_ADDR': environ.get('REMOTE_ADDR', '-'),
                 'REQUEST_METHOD': environ['REQUEST_METHOD'],
                 'REQUEST_URI': req_uri,
                 'status': status.split(None, 1)[0],
                 'bytes': size,
+                'microversion': environ.get(
+                    microversion.MICROVERSION_ENVIRON, '-'),
         }
-        # We don't need to worry about trying to avoid the cost of
-        # interpolation here because we only reach this code if INFO
-        # is enabled.
-        message = self.format % log_format
-        LOG.info(message)
+        LOG.info(self.format, log_format)
