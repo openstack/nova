@@ -2129,12 +2129,6 @@ class InvalidInventoryCapacity(InvalidInventory):
                 "The reserved value is greater than or equal to total.")
 
 
-class InvalidInventoryNewCapacityExceeded(InvalidInventory):
-    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. The new total "
-                "minus reserved amount is less than the existing used amount.")
-
-
 class InvalidAllocationCapacityExceeded(InvalidInventory):
     msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
                 "resource provider '%(resource_provider)s'. The requested "

@@ -317,8 +317,6 @@ def set_inventories(req):
 
     If the resource generation is out of sync, return a 409.
     If an inventory to be deleted is in use, return a 409.
-    If an inventory to be updated would set capacity to exceed existing
-    use, return a 409.
     If any inventory to be created or updated has settings which are
     invalid (for example reserved exceeds capacity), return a 400.
 
@@ -347,7 +345,6 @@ def set_inventories(req):
         resource_provider.set_inventory(inventories)
     except (exception.ConcurrentUpdateDetected,
             exception.InventoryInUse,
-            exception.InvalidInventoryNewCapacityExceeded,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
             'update conflict: %s' % exc,
@@ -367,8 +364,6 @@ def update_inventory(req):
     """PUT to update one inventory.
 
     If the resource generation is out of sync, return a 409.
-    If the inventory would set capacity to exceed existing use, return
-    a 409.
     If the inventory has settings which are invalid (for example
     reserved exceeds capacity), return a 400.
 
@@ -394,7 +389,6 @@ def update_inventory(req):
     try:
         resource_provider.update_inventory(inventory)
     except (exception.ConcurrentUpdateDetected,
-            exception.InvalidInventoryNewCapacityExceeded,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
             'update conflict: %s' % exc,

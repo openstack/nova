@@ -11,6 +11,7 @@
 #    under the License.
 
 
+import mock
 from oslo_db import exception as db_exc
 
 from nova import context
@@ -205,6 +206,53 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             self.context, resource_provider.uuid))
         self.assertEqual(33, reloaded_inventories[0].total)
 
+    @mock.patch('nova.objects.resource_provider.LOG')
+    def test_set_inventory_over_capacity(self, mock_log):
+        rp = objects.ResourceProvider(context=self.context,
+                                      uuid=uuidsentinel.rp_uuid,
+                                      name=uuidsentinel.rp_name)
+        rp.create()
+
+        disk_inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.DISK_GB,
+                total=1024,
+                reserved=15,
+                min_unit=10,
+                max_unit=100,
+                step_size=10,
+                allocation_ratio=1.0)
+        vcpu_inv = objects.Inventory(
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.VCPU,
+                total=12,
+                reserved=0,
+                min_unit=1,
+                max_unit=12,
+                step_size=1,
+                allocation_ratio=16.0)
+
+        inv_list = objects.InventoryList(objects=[disk_inv, vcpu_inv])
+        rp.set_inventory(inv_list)
+        self.assertFalse(mock_log.warning.called)
+
+        # Allocate something reasonable for the above inventory
+        alloc = objects.Allocation(
+            context=self.context,
+            resource_provider=rp,
+            consumer_id=uuidsentinel.consumer,
+            resource_class='DISK_GB',
+            used=512)
+        alloc.create()
+
+        # Update our inventory to over-subscribe us after the above allocation
+        disk_inv.total = 400
+        rp.set_inventory(inv_list)
+
+        # We should succeed, but have logged a warning for going over on disk
+        mock_log.warning.assert_called_once_with(
+            mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
+
     def test_provider_modify_inventory(self):
         rp = objects.ResourceProvider(context=self.context,
                                       uuid=uuidsentinel.rp_uuid,
@@ -380,7 +428,11 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertIn('No inventory of class DISK_GB found for update',
                       str(error))
 
-    def test_update_inventory_violates_allocation(self):
+    @mock.patch('nova.objects.resource_provider.LOG')
+    def test_update_inventory_violates_allocation(self, mock_log):
+        # Compute nodes that are reconfigured have to be able to set
+        # their inventory to something that violates allocations so
+        # we need to make that possible.
         rp, allocation = self._make_allocation()
         disk_inv = objects.Inventory(resource_provider=rp,
                                      resource_class='DISK_GB',
@@ -390,16 +442,22 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         rp.set_inventory(inv_list)
         # attempt to set inventory to less than currently allocated
         # amounts
+        new_total = 1
         disk_inv = objects.Inventory(
             resource_provider=rp,
-            resource_class=fields.ResourceClass.DISK_GB, total=1)
+            resource_class=fields.ResourceClass.DISK_GB, total=new_total)
         disk_inv.obj_set_defaults()
-        error = self.assertRaises(
-            exception.InvalidInventoryNewCapacityExceeded,
-            rp.update_inventory, disk_inv)
-        self.assertIn("Invalid inventory for '%s'"
-                      % fields.ResourceClass.DISK_GB, str(error))
-        self.assertIn("on resource provider '%s'." % rp.uuid, str(error))
+        rp.update_inventory(disk_inv)
+
+        usages = objects.UsageList.get_all_by_resource_provider_uuid(
+            self.context, rp.uuid)
+        self.assertEqual(allocation.used, usages[0].usage)
+
+        inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+            self.context, rp.uuid)
+        self.assertEqual(new_total, inv_list[0].total)
+        mock_log.warning.assert_called_once_with(
+            mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_add_invalid_inventory(self):
         rp = objects.ResourceProvider(context=self.context,
