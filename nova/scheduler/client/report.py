@@ -326,27 +326,28 @@ class SchedulerReportClient(object):
                 },
             ],
         }
-        LOG.debug('Sending allocation for instance %s: %s' % (
-            instance.uuid, allocations))
+        LOG.debug('Sending allocation for instance %s',
+                  allocations,
+                  instance=instance)
         r = self.put(url, allocations)
-        if not r:
+        if r:
+            LOG.info(_LI('Submitted allocation for instance'),
+                     instance=instance)
+        else:
             LOG.warning(
                 _LW('Unable to submit allocation for instance '
                     '%(uuid)s (%(code)i %(text)s)'),
                 {'uuid': instance.uuid,
                  'code': r.status_code,
                  'text': r.text})
-        else:
-            LOG.info(_LI('Submitted allocation for instance %s'),
-                     instance.uuid)
 
     @safe_connect
     def _delete_allocation_for_instance(self, instance):
         url = '/allocations/%s' % instance.uuid
         r = self.delete(url)
         if r:
-            LOG.info(_LI('Deleted allocation for instance %s'),
-                     instance.uuid)
+            LOG.info(_LI('Deleted allocation for instance'),
+                     instance=instance)
         else:
             LOG.warning(
                 _LW('Unable to delete allocation for instance '
