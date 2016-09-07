@@ -574,6 +574,71 @@ class TestAllocation(ResourceProviderBaseCase):
 
 class TestAllocationListCreateDelete(ResourceProviderBaseCase):
 
+    def test_allocation_checking(self):
+        """Test that allocation check logic works with 2 resource classes on
+        one provider.
+
+        If this fails, we get a KeyError at create_all()
+        """
+
+        consumer_uuid = uuidsentinel.consumer
+        consumer_uuid2 = uuidsentinel.consumer2
+
+        # Create one resource provider with 2 classes
+        rp1_name = uuidsentinel.rp1_name
+        rp1_uuid = uuidsentinel.rp1_uuid
+        rp1_class = fields.ResourceClass.DISK_GB
+        rp1_used = 6
+
+        rp2_class = fields.ResourceClass.IPV4_ADDRESS
+        rp2_used = 2
+
+        rp1 = objects.ResourceProvider(
+            self.context, name=rp1_name, uuid=rp1_uuid)
+        rp1.create()
+
+        inv = objects.Inventory(resource_provider=rp1,
+                                resource_class=rp1_class,
+                                total=1024)
+        inv.obj_set_defaults()
+
+        inv2 = objects.Inventory(resource_provider=rp1,
+                                resource_class=rp2_class,
+                                total=255, reserved=2)
+        inv2.obj_set_defaults()
+        inv_list = objects.InventoryList(objects=[inv, inv2])
+        rp1.set_inventory(inv_list)
+
+        # create the allocations for a first consumer
+        allocation_1 = objects.Allocation(resource_provider=rp1,
+                                          consumer_id=consumer_uuid,
+                                          resource_class=rp1_class,
+                                          used=rp1_used)
+        allocation_2 = objects.Allocation(resource_provider=rp1,
+                                          consumer_id=consumer_uuid,
+                                          resource_class=rp2_class,
+                                          used=rp2_used)
+        allocation_list = objects.AllocationList(
+            self.context, objects=[allocation_1, allocation_2])
+        allocation_list.create_all()
+
+        # create the allocations for a second consumer, until we have
+        # allocations for more than one consumer in the db, then we
+        # won't actually be doing real allocation math, which triggers
+        # the sql monster.
+        allocation_1 = objects.Allocation(resource_provider=rp1,
+                                          consumer_id=consumer_uuid2,
+                                          resource_class=rp1_class,
+                                          used=rp1_used)
+        allocation_2 = objects.Allocation(resource_provider=rp1,
+                                          consumer_id=consumer_uuid2,
+                                          resource_class=rp2_class,
+                                          used=rp2_used)
+        allocation_list = objects.AllocationList(
+            self.context, objects=[allocation_1, allocation_2])
+        # If we are joining wrong, this will be a KeyError
+        allocation_list.create_all()
+
     def test_allocation_list_create(self):
         consumer_uuid = uuidsentinel.consumer
 
