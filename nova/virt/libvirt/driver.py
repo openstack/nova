@@ -5672,6 +5672,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         Cannot confirm tmpfile return False.
         """
+        # NOTE(tpatzig): if instances_path is a shared volume that is
+        # under heavy IO (many instances on many compute nodes),
+        # then checking the existence of the testfile fails,
+        # just because it takes longer until the client refreshes and new
+        # content gets visible.
+        # os.utime (like touch) on the directory forces the client to refresh.
+        os.utime(CONF.instances_path, None)
+
         tmp_file = os.path.join(CONF.instances_path, filename)
         if not os.path.exists(tmp_file):
             exists = False
