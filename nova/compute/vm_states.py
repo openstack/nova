@@ -27,32 +27,52 @@ health and progress.
 See http://wiki.openstack.org/VMState
 """
 
-ACTIVE = 'active'  # VM is running
-BUILDING = 'building'  # VM only exists in DB
-PAUSED = 'paused'
-SUSPENDED = 'suspended'  # VM is suspended to disk.
-STOPPED = 'stopped'  # VM is powered off, the disk image is still there.
-RESCUED = 'rescued'  # A rescue image is running with the original VM image
-# attached.
-RESIZED = 'resized'  # a VM with the new size is active. The user is expected
-# to manually confirm or revert.
+from nova.objects import fields
 
-SOFT_DELETED = 'soft-delete'  # VM is marked as deleted but the disk images are
-# still available to restore.
-DELETED = 'deleted'  # VM is permanently deleted.
 
-ERROR = 'error'
+# VM is running
+ACTIVE = fields.InstanceState.ACTIVE
 
-SHELVED = 'shelved'  # VM is powered off, resources still on hypervisor
-SHELVED_OFFLOADED = 'shelved_offloaded'  # VM and associated resources are
-# not on hypervisor
+# VM only exists in DB
+BUILDING = fields.InstanceState.BUILDING
 
-ALLOW_SOFT_REBOOT = [ACTIVE]  # states we can soft reboot from
-ALLOW_HARD_REBOOT = ALLOW_SOFT_REBOOT + [STOPPED, PAUSED, SUSPENDED, ERROR]
+PAUSED = fields.InstanceState.PAUSED
+
+# VM is suspended to disk.
+SUSPENDED = fields.InstanceState.SUSPENDED
+
+# VM is powered off, the disk image is still there.
+STOPPED = fields.InstanceState.STOPPED
+
+# A rescue image is running with the original VM image attached
+RESCUED = fields.InstanceState.RESCUED
+
+# a VM with the new size is active. The user is expected to manually confirm
+# or revert.
+RESIZED = fields.InstanceState.RESIZED
+
+# VM is marked as deleted but the disk images are still available to restore.
+SOFT_DELETED = fields.InstanceState.SOFT_DELETED
+
+# VM is permanently deleted.
+DELETED = fields.InstanceState.DELETED
+
+ERROR = fields.InstanceState.ERROR
+
+# VM is powered off, resources still on hypervisor
+SHELVED = fields.InstanceState.SHELVED
+
+# VM and associated resources are not on hypervisor
+SHELVED_OFFLOADED = fields.InstanceState.SHELVED_OFFLOADED
+
+# states we can soft reboot from
+ALLOW_SOFT_REBOOT = [ACTIVE]
+
 # states we allow hard reboot from
+ALLOW_HARD_REBOOT = ALLOW_SOFT_REBOOT + [STOPPED, PAUSED, SUSPENDED, ERROR]
 
-ALLOW_TRIGGER_CRASH_DUMP = [ACTIVE, PAUSED, RESCUED, RESIZED, ERROR]
 # states we allow to trigger crash dump
+ALLOW_TRIGGER_CRASH_DUMP = [ACTIVE, PAUSED, RESCUED, RESIZED, ERROR]
 
-ALLOW_RESOURCE_REMOVAL = [DELETED, SHELVED_OFFLOADED]
 # states we allow resources to be freed in
+ALLOW_RESOURCE_REMOVAL = [DELETED, SHELVED_OFFLOADED]

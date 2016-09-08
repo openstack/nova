@@ -522,9 +522,10 @@ class NotificationAction(BaseNovaEnum):
            POWER_OFF, SHELVE, RESUME, RESTORE)
 
 
+# TODO(rlrossit): These should be changed over to be a StateMachine enum from
+# oslo.versionedobjects using the valid state transitions described in
+# nova.compute.vm_states
 class InstanceState(BaseNovaEnum):
-    # TODO(gibi): this is currently a copy of nova.compute.vm_states, remove
-    # the duplication
     ACTIVE = 'active'
     BUILDING = 'building'
     PAUSED = 'paused'
@@ -542,9 +543,10 @@ class InstanceState(BaseNovaEnum):
            SOFT_DELETED, DELETED, ERROR, SHELVED, SHELVED_OFFLOADED)
 
 
+# TODO(rlrossit): These should be changed over to be a StateMachine enum from
+# oslo.versionedobjects using the valid state transitions described in
+# nova.compute.task_states
 class InstanceTaskState(BaseNovaEnum):
-    # TODO(gibi): this is currently a copy of nova.compute.task_states, remove
-    # the duplication
     SCHEDULING = 'scheduling'
     BLOCK_DEVICE_MAPPING = 'block_device_mapping'
     NETWORKING = 'networking'
@@ -601,34 +603,48 @@ class InstanceTaskState(BaseNovaEnum):
            SHELVING_OFFLOADING, UNSHELVING)
 
 
-class InstancePowerState(BaseNovaEnum):
-    # TODO(gibi): this is currently a copy of nova.compute.power_state, remove
-    # the duplication
+class InstancePowerState(Enum):
+    _UNUSED = '_unused'
     NOSTATE = 'pending'
     RUNNING = 'running'
     PAUSED = 'paused'
     SHUTDOWN = 'shutdown'
     CRASHED = 'crashed'
     SUSPENDED = 'suspended'
+    # The order is important here. If you make changes, only *append*
+    # values to the end of the list.
+    ALL = (
+        NOSTATE,
+        RUNNING,
+        _UNUSED,
+        PAUSED,
+        SHUTDOWN,
+        _UNUSED,
+        CRASHED,
+        SUSPENDED,
+    )
 
-    VALUE_MAP = {
-        0x00: NOSTATE,
-        0x01: RUNNING,
-        0x03: PAUSED,
-        0x04: SHUTDOWN,
-        0x06: CRASHED,
-        0x07: SUSPENDED
-    }
-
-    ALL = (NOSTATE, RUNNING, PAUSED, SHUTDOWN, CRASHED, SUSPENDED)
+    def __init__(self):
+        super(InstancePowerState, self).__init__(
+            valid_values=InstancePowerState.ALL)
 
     def coerce(self, obj, attr, value):
         try:
             value = int(value)
-            value = InstancePowerState.VALUE_MAP[value]
+            value = self.from_index(value)
         except (ValueError, KeyError):
             pass
         return super(InstancePowerState, self).coerce(obj, attr, value)
+
+    @classmethod
+    def index(cls, value):
+        """Return an index into the Enum given a value."""
+        return cls.ALL.index(value)
+
+    @classmethod
+    def from_index(cls, index):
+        """Return the Enum value at a given index."""
+        return cls.ALL[index]
 
 
 class IPV4AndV6Address(IPAddress):
