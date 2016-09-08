@@ -805,6 +805,18 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
         self.connection.emit_event(event1)
 
+    def test_emit_unicode_event(self):
+        """Tests that we do not fail on translated unicode events."""
+        started_event = virtevent.LifecycleEvent(
+            "cef19ce0-0ca2-11df-855d-b19fbce37686",
+            virtevent.EVENT_LIFECYCLE_STARTED)
+        callback = mock.Mock()
+        self.connection.register_event_listener(callback)
+        with mock.patch.object(started_event, 'get_name',
+                               return_value=u'\xF0\x9F\x92\xA9'):
+            self.connection.emit_event(started_event)
+        callback.assert_called_once_with(started_event)
+
     def test_set_bootable(self):
         self.assertRaises(NotImplementedError, self.connection.set_bootable,
                           'instance', True)
