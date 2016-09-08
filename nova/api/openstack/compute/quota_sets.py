@@ -22,12 +22,14 @@ from nova.api.openstack.compute.schemas import quota_sets
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova import quota
 
 
+CONF = nova.conf.CONF
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 authorize = extensions.os_compute_authorizer(ALIAS)
@@ -110,6 +112,15 @@ class QuotaSetsController(wsgi.Controller):
         user_id = params.get('user_id', [None])[0]
 
         quota_set = body['quota_set']
+
+        # NOTE(alex_xu): The CONF.enable_network_quota was deprecated due to
+        # it is only used by nova-network, and nova-network will be deprecated
+        # also. So when CONF.enable_newtork_quota is removed, the networks
+        # quota will disappeare also.
+        if not CONF.enable_network_quota and 'networks' in quota_set:
+            raise webob.exc.HTTPBadRequest(
+                explanation=_('The networks quota is disabled'))
+
         force_update = strutils.bool_from_string(quota_set.get('force',
                                                                'False'))
         settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
