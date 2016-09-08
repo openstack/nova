@@ -3044,7 +3044,8 @@ class LibvirtDriver(driver.ComputeDriver):
                             network_info, admin_pass, files, inject_files,
                             fallback_from_host):
         # File injection only if needed
-        need_inject = inject_files and CONF.libvirt.inject_partition != -2
+        need_inject = (not configdrive.required_by(instance) and
+                       inject_files and CONF.libvirt.inject_partition != -2)
 
         # NOTE(ndipanov): Even if disk_mapping was passed in, which
         # currently happens only on rescue - we still don't want to

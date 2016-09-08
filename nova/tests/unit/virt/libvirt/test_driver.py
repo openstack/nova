@@ -15959,6 +15959,24 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance['image_ref'] = 'uuid'
         self.assertFalse(func(instance, disk_mapping))
 
+    @mock.patch(
+        'nova.virt.libvirt.driver.LibvirtDriver._try_fetch_image_cache')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._inject_data')
+    @mock.patch('nova.virt.libvirt.driver.imagecache')
+    def test_data_not_injects_with_configdrive(self, mock_image, mock_inject,
+                                               mock_fetch):
+        self.flags(inject_partition=-1, group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # config_drive is True by default, configdrive.required_by()
+        # returns True
+        instance_ref = self._create_instance()
+        disk_images = {'image_id': None}
+
+        drvr._create_and_inject_local_root(self.context, instance_ref, False,
+                                    '', disk_images, [], None, [], True, None)
+        self.assertFalse(mock_inject.called)
+
     @mock.patch('nova.virt.netutils.get_injected_network_template')
     @mock.patch('nova.virt.disk.api.inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_conn")
