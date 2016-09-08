@@ -221,6 +221,8 @@ Related options:
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 deprecated_for_removal=True,
+                deprecated_reason="This option is being replaced by the "
+                                  "'pointer_model' option.",
                 help="""
 Enable a mouse cursor within a graphical VNC or SPICE sessions.
 
