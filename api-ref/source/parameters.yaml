@@ -3836,7 +3836,7 @@ server_kernel_id:
 server_launch_index:
   in: body
   required: true
-  type: int
+  type: integer
   description: |
     When servers are launched via multiple create, this is the
     sequence in which the servers were launched.
