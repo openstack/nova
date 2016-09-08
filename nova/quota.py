@@ -530,7 +530,7 @@ class DbQuotaDriver(object):
         LOG.debug('Quotas for project %(project_id)s and user %(user_id)s '
                   'after resource sync: %(quotas)s',
                   {'project_id': project_id, 'user_id': user_id,
-                   'quotas': quotas})
+                   'quotas': user_quotas})
 
         # NOTE(Vek): Most of the work here has to be done in the DB
         #            API, because we have to do it in a transaction,
