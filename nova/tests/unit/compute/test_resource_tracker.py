@@ -1035,6 +1035,7 @@ class TestInitComputeNode(BaseTestCase):
         self.assertFalse(create_mock.called)
         self.assertTrue(pci_mock.called)
         self.assertFalse(self.rt.disabled)
+        self.assertTrue(self.sched_client_mock.update_resource_stats.called)
 
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList())
@@ -1057,6 +1058,7 @@ class TestInitComputeNode(BaseTestCase):
                                          _NODENAME)
         self.assertFalse(create_mock.called)
         self.assertFalse(self.rt.disabled)
+        self.assertTrue(self.sched_client_mock.update_resource_stats.called)
 
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList(objects=[]))
@@ -1134,6 +1136,7 @@ class TestInitComputeNode(BaseTestCase):
                                                  self.rt.compute_node))
         pci_tracker_mock.assert_called_once_with(mock.sentinel.ctx,
                                                  42)
+        self.assertTrue(self.sched_client_mock.update_resource_stats.called)
 
 
 class TestUpdateComputeNode(BaseTestCase):

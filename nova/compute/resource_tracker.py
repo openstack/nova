@@ -419,6 +419,7 @@ class ResourceTracker(object):
         if self.compute_node:
             self._copy_resources(resources)
             self._setup_pci_tracker(context, resources)
+            self.scheduler_client.update_resource_stats(self.compute_node)
             return
 
         # now try to get the compute node record from the
@@ -427,6 +428,7 @@ class ResourceTracker(object):
         if self.compute_node:
             self._copy_resources(resources)
             self._setup_pci_tracker(context, resources)
+            self.scheduler_client.update_resource_stats(self.compute_node)
             return
 
         # there was no local copy and none in the database
@@ -441,6 +443,7 @@ class ResourceTracker(object):
                  {'host': self.host, 'node': self.nodename})
 
         self._setup_pci_tracker(context, resources)
+        self.scheduler_client.update_resource_stats(self.compute_node)
 
     def _setup_pci_tracker(self, context, resources):
         if not self.pci_tracker:
