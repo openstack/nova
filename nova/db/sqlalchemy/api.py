@@ -1734,6 +1734,7 @@ def _check_instance_exists_in_project(context, instance_uuid):
 
 
 @require_context
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def instance_create(context, values):
     """Create a new Instance record in the database.
