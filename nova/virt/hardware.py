@@ -40,9 +40,9 @@ MEMPAGES_ANY = -3
 
 
 def get_vcpu_pin_set():
-    """Parsing vcpu_pin_set config.
+    """Parse vcpu_pin_set config.
 
-    Returns a set of pcpu ids can be used by instances.
+    :returns: a set of pcpu ids can be used by instances
     """
     if not CONF.vcpu_pin_set:
         return None
@@ -57,16 +57,14 @@ def get_vcpu_pin_set():
 def parse_cpu_spec(spec):
     """Parse a CPU set specification.
 
-    :param spec: cpu set string eg "1-4,^3,6"
-
-    Each element in the list is either a single
-    CPU number, a range of CPU numbers, or a
-    caret followed by a CPU number to be excluded
+    Each element in the list is either a single CPU number, a range of
+    CPU numbers, or a caret followed by a CPU number to be excluded
     from a previous range.
+
+    :param spec: cpu set string eg "1-4,^3,6"
 
     :returns: a set of CPU indexes
     """
-
     cpuset_ids = set()
     cpuset_reject_ids = set()
     for rule in spec.split(','):
@@ -121,16 +119,15 @@ def parse_cpu_spec(spec):
 def format_cpu_spec(cpuset, allow_ranges=True):
     """Format a libvirt CPU range specification.
 
-    :param cpuset: set (or list) of CPU indexes
+    Format a set/list of CPU indexes as a libvirt CPU range
+    specification. It allow_ranges is true, it will try to detect
+    continuous ranges of CPUs, otherwise it will just list each CPU
+    index explicitly.
 
-    Format a set/list of CPU indexes as a libvirt CPU
-    range specification. It allow_ranges is true, it
-    will try to detect continuous ranges of CPUs,
-    otherwise it will just list each CPU index explicitly.
+    :param cpuset: set (or list) of CPU indexes
 
     :returns: a formatted CPU range string
     """
-
     # We attempt to detect ranges, but don't bother with
     # trying to do range negations to minimize the overall
     # spec string length
@@ -155,15 +152,12 @@ def format_cpu_spec(cpuset, allow_ranges=True):
 
 
 def get_number_of_serial_ports(flavor, image_meta):
-    """Get the number of serial consoles from the flavor or image
+    """Get the number of serial consoles from the flavor or image.
 
-    :param flavor: Flavor object to read extra specs from
-    :param image_meta: nova.objects.ImageMeta object instance
-
-    If flavor extra specs is not set, then any image meta value is permitted.
-    If flavor extra specs *is* set, then this provides the default serial
-    port count. The image meta is permitted to override the extra specs, but
-    *only* with a lower value. ie
+    If flavor extra specs is not set, then any image meta value is
+    permitted.  If flavor extra specs *is* set, then this provides the
+    default serial port count. The image meta is permitted to override
+    the extra specs, but *only* with a lower value, i.e.:
 
     - flavor hw:serial_port_count=4
       VM gets 4 serial ports
@@ -173,6 +167,9 @@ def get_number_of_serial_ports(flavor, image_meta):
       VM gets 6 serial ports
     - flavor hw:serial_port_count=4 and image hw_serial_port_count=6
       Abort guest boot - forbidden to exceed flavor value
+
+    :param flavor: Flavor object to read extra specs from
+    :param image_meta: nova.objects.ImageMeta object instance
 
     :returns: number of serial ports
     """
@@ -207,7 +204,8 @@ class InstanceInfo(object):
         :param state: the running state, one of the power_state codes
         :param max_mem_kb: (int) the maximum memory in KBytes allowed
         :param mem_kb: (int) the memory in KBytes used by the instance
-        :param num_cpu: (int) the number of virtual CPUs for the instance
+        :param num_cpu: (int) the number of virtual CPUs for the
+                        instance
         :param cpu_time_ns: (int) the CPU time used in nanoseconds
         :param id: a unique ID for the instance
         """
@@ -224,22 +222,23 @@ class InstanceInfo(object):
 
 
 def _score_cpu_topology(topology, wanttopology):
-    """Calculate score for the topology against a desired configuration
+    """Compare a topology against a desired configuration.
+
+    Calculate a score indicating how well a provided topology matches
+    against a preferred topology, where:
+
+     a score of 3 indicates an exact match for sockets, cores and
+       threads
+     a score of 2 indicates a match of sockets and cores, or sockets
+       and threads, or cores and threads
+     a score of 1 indicates a match of sockets or cores or threads
+     a score of 0 indicates no match
 
     :param wanttopology: nova.objects.VirtCPUTopology instance for
                          preferred topology
 
-    Calculate a score indicating how well this topology
-    matches against a preferred topology. A score of 3
-    indicates an exact match for sockets, cores and threads.
-    A score of 2 indicates a match of sockets & cores or
-    sockets & threads or cores and threads. A score of 1
-    indicates a match of sockets or cores or threads. A
-    score of 0 indicates no match
-
     :returns: score in range 0 (worst) to 3 (best)
     """
-
     score = 0
     if (wanttopology.sockets != -1 and
         topology.sockets == wanttopology.sockets):
@@ -256,12 +255,9 @@ def _score_cpu_topology(topology, wanttopology):
 def _get_cpu_topology_constraints(flavor, image_meta):
     """Get the topology constraints declared in flavor or image
 
-    :param flavor: Flavor object to read extra specs from
-    :param image_meta: nova.objects.ImageMeta object instance
-
-    Gets the topology constraints from the configuration defined
-    in the flavor extra specs or the image metadata. In the flavor
-    this will look for
+    Extracts the topology constraints from the configuration defined in
+    the flavor extra specs or the image metadata. In the flavor this
+    will look for:
 
      hw:cpu_sockets - preferred socket count
      hw:cpu_cores - preferred core count
@@ -270,7 +266,7 @@ def _get_cpu_topology_constraints(flavor, image_meta):
      hw:cpu_max_cores - maximum core count
      hw:cpu_max_threads - maximum thread count
 
-    In the image metadata this will look at
+    In the image metadata this will look at:
 
      hw_cpu_sockets - preferred socket count
      hw_cpu_cores - preferred core count
@@ -279,25 +275,23 @@ def _get_cpu_topology_constraints(flavor, image_meta):
      hw_cpu_max_cores - maximum core count
      hw_cpu_max_threads - maximum thread count
 
-    The image metadata must be strictly lower than any values
-    set in the flavor. All values are, however, optional.
+    The image metadata must be strictly lower than any values set in
+    the flavor. All values are, however, optional.
 
-    This will return a pair of nova.objects.VirtCPUTopology instances,
-    the first giving the preferred socket/core/thread counts,
-    and the second giving the upper limits on socket/core/
-    thread counts.
+    :param flavor: Flavor object to read extra specs from
+    :param image_meta: nova.objects.ImageMeta object instance
 
-    exception.ImageVCPULimitsRangeExceeded will be raised
-    if the maximum counts set against the image exceed
-    the maximum counts set against the flavor
-
-    exception.ImageVCPUTopologyRangeExceeded will be raised
-    if the preferred counts set against the image exceed
-    the maximum counts set against the image or flavor
-
-    :returns: (preferred topology, maximum topology)
+    :raises: exception.ImageVCPULimitsRangeExceeded if the maximum
+             counts set against the image exceed the maximum counts
+             set against the flavor
+    :raises: exception.ImageVCPUTopologyRangeExceeded if the preferred
+             counts set against the image exceed the maximum counts set
+             against the image or flavor
+    :returns: A two-tuple of objects.VirtCPUTopology instances. The
+              first element corresponds to the preferred topology,
+              while the latter corresponds to the maximum topology,
+              based on upper limits.
     """
-
     # Obtain the absolute limits from the flavor
     flvmaxsockets = int(flavor.extra_specs.get(
         "hw:cpu_max_sockets", 65536))
@@ -401,23 +395,23 @@ def _get_cpu_topology_constraints(flavor, image_meta):
 
 def _get_possible_cpu_topologies(vcpus, maxtopology,
                                  allow_threads):
-    """Get a list of possible topologies for a vCPU count
+    """Get a list of possible topologies for a vCPU count.
+
+    Given a total desired vCPU count and constraints on the maximum
+    number of sockets, cores and threads, return a list of
+    objects.VirtCPUTopology instances that represent every possible
+    topology that satisfies the constraints.
+
     :param vcpus: total number of CPUs for guest instance
-    :param maxtopology: nova.objects.VirtCPUTopology for upper limits
-    :param allow_threads: if the hypervisor supports CPU threads
+    :param maxtopology: objects.VirtCPUTopology instance for upper
+                        limits
+    :param allow_threads: True if the hypervisor supports CPU threads
 
-    Given a total desired vCPU count and constraints on the
-    maximum number of sockets, cores and threads, return a
-    list of nova.objects.VirtCPUTopology instances that represent every
-    possible topology that satisfies the constraints.
-
-    exception.ImageVCPULimitsRangeImpossible is raised if
-    it is impossible to achieve the total vcpu count given
-    the maximum limits on sockets, cores & threads.
-
-    :returns: list of nova.objects.VirtCPUTopology instances
+    :raises: exception.ImageVCPULimitsRangeImpossible if it is
+             impossible to achieve the total vcpu count given
+             the maximum limits on sockets, cores and threads
+    :returns: list of objects.VirtCPUTopology instances
     """
-
     # Clamp limits to number of vcpus to prevent
     # iterating over insanely large list
     maxsockets = min(vcpus, maxtopology.sockets)
@@ -468,27 +462,23 @@ def _get_possible_cpu_topologies(vcpus, maxtopology,
 
 
 def _filter_for_numa_threads(possible, wantthreads):
-    """Filter to topologies which closest match to NUMA threads
-    :param possible: list of nova.objects.VirtCPUTopology
-    :param wantthreads: ideal number of threads
+    """Filter topologies which closest match to NUMA threads.
 
-    Determine which topologies provide the closest match to
-    the number of threads desired by the NUMA topology of
-    the instance.
+    Determine which topologies provide the closest match to the number
+    of threads desired by the NUMA topology of the instance.
 
-    The possible topologies may not have any entries
-    which match the desired thread count. So this method
-    will find the topologies which have the closest
-    matching count.
+    The possible topologies may not have any entries which match the
+    desired thread count. This method will find the topologies which
+    have the closest matching count. For example, if 'wantthreads' is 4
+    and the possible topologies has entries with 6, 3, 2 or 1 threads,
+    the topologies which have 3 threads will be identified as the
+    closest match not greater than 4 and will be returned.
 
-    ie if wantthreads is 4 and the possible topologies
-    has entries with 6, 3, 2 or 1 threads, it will
-    return the topologies which have 3 threads, as
-    this is the closest match not greater than 4.
+    :param possible: list of objects.VirtCPUTopology instances
+    :param wantthreads: desired number of threads
 
-    :returns: list of nova.objects.VirtCPUTopology
+    :returns: list of objects.VirtCPUTopology instances
     """
-
     # First figure out the largest available thread
     # count which is not greater than wantthreads
     mostthreads = 0
@@ -510,14 +500,15 @@ def _filter_for_numa_threads(possible, wantthreads):
 
 
 def _sort_possible_cpu_topologies(possible, wanttopology):
-    """Sort the topologies in order of preference
-    :param possible: list of nova.objects.VirtCPUTopology instances
-    :param wanttopology: nova.objects.VirtCPUTopology for preferred
-                         topology
+    """Sort the topologies in order of preference.
 
-    This takes the list of possible topologies and resorts
-    it such that those configurations which most closely
-    match the preferred topology are first.
+    Sort the provided list of possible topologies such that the
+    configurations which most closely match the preferred topology are
+    first.
+
+    :param possible: list of objects.VirtCPUTopology instances
+    :param wanttopology: objects.VirtCPUTopology instance for preferred
+                         topology
 
     :returns: sorted list of nova.objects.VirtCPUTopology instances
     """
@@ -545,21 +536,22 @@ def _sort_possible_cpu_topologies(possible, wanttopology):
 
 def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
                                   numa_topology=None):
-    """Get desired CPU topologies according to settings
+    """Identify desirable CPU topologies based for given constraints.
 
-    :param flavor: Flavor object to query extra specs from
+    Look at the properties set in the flavor extra specs and the image
+    metadata and build up a list of all possible valid CPU topologies
+    that can be used in the guest. Then return this list sorted in
+    order of preference.
+
+    :param flavor: objects.Flavor instance to query extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
-    :param numa_topology: InstanceNUMATopology object that may contain
-                          additional topology constraints (such as threading
-                          information) that we should consider
+    :param numa_topology: objects.InstanceNUMATopology instance that
+                          may contain additional topology constraints
+                          (such as threading information) that should
+                          be considered
 
-    Look at the properties set in the flavor extra specs and
-    the image metadata and build up a list of all possible
-    valid CPU topologies that can be used in the guest. Then
-    return this list sorted in order of preference.
-
-    :returns: sorted list of nova.objects.VirtCPUTopology instances
+    :returns: sorted list of objects.VirtCPUTopology instances
     """
 
     LOG.debug("Getting desirable topologies for flavor %(flavor)s "
@@ -605,37 +597,35 @@ def _get_desirable_cpu_topologies(flavor, image_meta, allow_threads=True,
 
 def get_best_cpu_topology(flavor, image_meta, allow_threads=True,
                           numa_topology=None):
-    """Get best CPU topology according to settings
+    """Identify best CPU topology for given constraints.
 
-    :param flavor: Flavor object to query extra specs from
+    Look at the properties set in the flavor extra specs and the image
+    metadata and build up a list of all possible valid CPU topologies
+    that can be used in the guest. Then return the best topology to use
+
+    :param flavor: objects.Flavor instance to query extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
     :param allow_threads: if the hypervisor supports CPU threads
-    :param numa_topology: InstanceNUMATopology object that may contain
-                          additional topology constraints (such as threading
-                          information) that we should consider
+    :param numa_topology: objects.InstanceNUMATopology instance that
+                          may contain additional topology constraints
+                          (such as threading information) that should
+                          be considered
 
-    Look at the properties set in the flavor extra specs and
-    the image metadata and build up a list of all possible
-    valid CPU topologies that can be used in the guest. Then
-    return the best topology to use
-
-    :returns: a nova.objects.VirtCPUTopology instance for best topology
+    :returns: an objects.VirtCPUTopology instance for best topology
     """
-
     return _get_desirable_cpu_topologies(flavor, image_meta,
                                          allow_threads, numa_topology)[0]
 
 
 def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
-    """Determines whether the cell can accept the request.
+    """Determine whether the cell can accept the request.
 
     :param host_cell: host cell to fit the instance cell onto
     :param inst_cell: instance cell we want to fit
 
     :raises: exception.MemoryPageSizeNotSupported if custom page
-             size not supported in host cell.
-
-    :returns: The page size able to be handled by host_cell
+             size not supported in host cell
+    :returns: the page size able to be handled by host_cell
     """
     avail_pagesize = [page.size_kb for page in host_cell.mempages]
     avail_pagesize.sort(reverse=True)
@@ -660,34 +650,34 @@ def _pack_instance_onto_cores(available_siblings,
                               instance_cell,
                               host_cell_id,
                               threads_per_core=1):
-    """Pack an instance onto a set of siblings
+    """Pack an instance onto a set of siblings.
 
-    :param available_siblings: list of sets of CPU id's - available
-                               siblings per core
-    :param instance_cell: An instance of objects.InstanceNUMACell describing
-                          the pinning requirements of the instance
+    Calculate the pinning for the given instance and its topology,
+    making sure that hyperthreads of the instance match up with those of
+    the host when the pinning takes effect.
+
+    Currently the strategy for packing is to prefer siblings and try use
+    cores evenly by using emptier cores first. This is achieved by the
+    way we order cores in the sibling_sets structure, and the order in
+    which we iterate through it.
+
+    The main packing loop that iterates over the sibling_sets dictionary
+    will not currently try to look for a fit that maximizes number of
+    siblings, but will simply rely on the iteration ordering and picking
+    the first viable placement.
+
+    :param available_siblings: list of sets of CPU IDs corresponding to
+                               available siblings per core
+    :param instance_cell: An instance of objects.InstanceNUMACell
+                          describing the pinning requirements of the
+                          instance
     :param threads_per_core: number of threads per core in host's cell
 
-    :returns: An instance of objects.InstanceNUMACell containing the pinning
-              information, and potentially a new topology to be exposed to the
-              instance. None if there is no valid way to satisfy the sibling
-              requirements for the instance.
-
-    This method will calculate the pinning for the given instance and it's
-    topology, making sure that hyperthreads of the instance match up with
-    those of the host when the pinning takes effect.
-
-    Currently the strategy for packing is to prefer siblings and try use cores
-    evenly, by using emptier cores first. This is achieved by the way we order
-    cores in the sibling_sets structure, and the order in which we iterate
-    through it.
-
-    The main packing loop that iterates over the sibling_sets dictionary will
-    not currently try to look for a fit that maximizes number of siblings, but
-    will simply rely on the iteration ordering and picking the first viable
-    placement.
+    :returns: An instance of objects.InstanceNUMACell containing the
+              pinning information, and potentially a new topology to be
+              exposed to the instance. None if there is no valid way to
+              satisfy the sibling requirements for the instance.
     """
-
     # We build up a data structure that answers the question: 'Given the
     # number of threads I want to pack, give me a list of all the available
     # sibling sets (or groups thereof) that can accommodate it'
@@ -819,10 +809,10 @@ def _pack_instance_onto_cores(available_siblings,
 
 
 def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
-    """Figure out if cells can be pinned to a host cell and return details
+    """Determine if cells can be pinned to a host cell.
 
     :param host_cell: objects.NUMACell instance - the host cell that
-                      the isntance should be pinned to
+                      the instance should be pinned to
     :param instance_cell: objects.InstanceNUMACell instance without any
                           pinning information
 
@@ -871,17 +861,18 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell):
 
 
 def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None):
-    """Check if an instance cell can fit and set it's cell id
+    """Ensure an instance cell can fit onto a host cell
+
+    Ensure an instance cell can fit onto a host cell and, if so, return
+    a new objects.InstanceNUMACell with the id set to that of the host.
+    Returns None if the instance cell exceeds the limits of the host.
 
     :param host_cell: host cell to fit the instance cell onto
     :param instance_cell: instance cell we want to fit
     :param limit_cell: an objects.NUMATopologyLimit or None
 
-    Make sure we can fit the instance cell onto a host cell and if so,
-    return a new objects.InstanceNUMACell with the id set to that of
-    the host, or None if the cell exceeds the limits of the host
-
-    :returns: a new instance cell or None
+    :returns: objects.InstanceNUMACell with the id set to that of the
+              host, or None
     """
     # NOTE (ndipanov): do not allow an instance to overcommit against
     # itself on any NUMA cell
@@ -945,7 +936,10 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
     :param flavor: a Flavor object to read extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
 
-    :raises: MemoryPagesSizeInvalid or MemoryPageSizeForbidden
+    :raises: MemoryPagesSizeInvalid if flavor extra spec or image
+             metadata provides an invalid hugepage value
+    :raises: MemoryPageSizeForbidden if flavor extra spec request
+             conflicts with image metadata request
     :returns: a page size requested or MEMPAGES_*
     """
 
@@ -1190,32 +1184,50 @@ def _add_cpu_pinning_constraint(flavor, image_meta, numa_topology):
 def _validate_numa_nodes(nodes):
     """Validate NUMA nodes number
 
-    :param nodes: The number of NUMA nodes
-    :raises: exception.InvalidNUMANodesNumber if the given
-             parameter is not a number or less than 1
+    :param nodes: number of NUMA nodes
+
+    :raises: exception.InvalidNUMANodesNumber if the number of NUMA
+             nodes is less than 1 or not an integer
     """
     if nodes is not None and (not strutils.is_int_like(nodes) or
        int(nodes) < 1):
         raise exception.InvalidNUMANodesNumber(nodes=nodes)
 
 
-# TODO(sahid): Move numa related to hardward/numa.py
+# TODO(sahid): Move numa related to hardware/numa.py
 def numa_get_constraints(flavor, image_meta):
-    """Return topology related to input request
+    """Return topology related to input request.
 
-    :param flavor: Flavor object to read extra specs from
+    :param flavor: a flavor object to read extra specs from
     :param image_meta: nova.objects.ImageMeta object instance
 
-    May raise exception.ImageNUMATopologyIncomplete() if the
-    image properties are not correctly specified, or
-    exception.ImageNUMATopologyForbidden if an attempt is
-    made to override flavor settings with image properties.
-    exception.InvalidNUMANodesNumber if the number of NUMA
-    nodes is less than 1 (or not an integer).
-
     :returns: InstanceNUMATopology or None
+    :raises: exception.InvalidNUMANodesNumber if the number of NUMA
+             nodes is less than 1 or not an integer
+    :raises: exception.ImageNUMATopologyForbidden if an attempt is made
+             to override flavor settings with image properties
+    :raises: exception.MemoryPagesSizeInvalid if flavor extra spec or
+             image metadata provides an invalid hugepage value
+    :raises: exception.MemoryPageSizeForbidden if flavor extra spec
+             request conflicts with image metadata request
+    :raises: exception.ImageNUMATopologyIncomplete if the image
+             properties are not correctly specified
+    :raises: exception.ImageNUMATopologyAsymmetric if the number of
+             NUMA nodes is not a factor of the requested total CPUs or
+             memory
+    :raises: exception.ImageNUMATopologyCPUOutOfRange if an instance
+             CPU given in a NUMA mapping is not valid
+    :raises: exception.ImageNUMATopologyCPUDuplicates if an instance
+             CPU is specified in CPU mappings for two NUMA nodes
+    :raises: exception.ImageCPUPinningForbidden if a CPU policy
+             specified in a flavor conflicts with one defined in image
+             metadata
+    :raises: exception.RealtimeConfigurationInvalid if realtime is
+             requested but dedicated CPU policy is not also requested
+    :raises: exception.RealtimeMaskNotFoundOrInvalid if realtime is
+             requested but no mask provided
+    :returns: objects.InstanceNUMATopology, or None
     """
-
     nodes = flavor.get('extra_specs', {}).get("hw:numa_nodes")
     props = image_meta.properties
     if nodes is not None:
@@ -1264,19 +1276,23 @@ def numa_get_constraints(flavor, image_meta):
 def numa_fit_instance_to_host(
         host_topology, instance_topology, limits=None,
         pci_requests=None, pci_stats=None):
-    """Fit the instance topology onto the host topology given the limits
+    """Fit the instance topology onto the host topology.
 
-    :param host_topology: objects.NUMATopology object to fit an instance on
+    Given a host, instance topology, and (optional) limits, attempt to
+    fit instance cells onto all permutations of host cells by calling
+    the _fit_instance_cell method, and return a new InstanceNUMATopology
+    with its cell ids set to host cell ids of the first successful
+    permutation, or None.
+
+    :param host_topology: objects.NUMATopology object to fit an
+                          instance on
     :param instance_topology: objects.InstanceNUMATopology to be fitted
     :param limits: objects.NUMATopologyLimits that defines limits
     :param pci_requests: instance pci_requests
     :param pci_stats: pci_stats for the host
 
-    Given a host and instance topology and optionally limits - this method
-    will attempt to fit instance cells onto all permutations of host cells
-    by calling the _numa_fit_instance_cell method, and return a new
-    InstanceNUMATopology with it's cell ids set to host cell id's of
-    the first successful permutation, or None.
+    :returns: objects.InstanceNUMATopology with its cell IDs set to host
+              cell ids of the first successful permutation, or None
     """
     if not (host_topology and instance_topology):
         LOG.debug("Require both a host and instance NUMA topology to "
@@ -1318,15 +1334,14 @@ def numa_fit_instance_to_host(
 
 
 def numa_get_reserved_huge_pages():
-    """Returns reserved memory pages from host option
+    """Returns reserved memory pages from host option.
 
-    Based from the compute node option reserved_huge_pages, this
-    method will return a well formatted list of dict which can be used
-    to build NUMATopology.
+    Based from the compute node option reserved_huge_pages, generate
+    a well formatted list of dict which can be used to build a valid
+    NUMATopology.
 
     :raises: exception.InvalidReservedMemoryPagesOption when
              reserved_huge_pages option is not correctly set.
-
     :returns: a list of dict ordered by NUMA node ids; keys of dict
               are pages size and values of the number reserved.
     """
@@ -1364,18 +1379,17 @@ def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
 
 
 def numa_usage_from_instances(host, instances, free=False):
-    """Get host topology usage
+    """Get host topology usage.
+
+    Sum the usage from all provided instances to report the overall
+    host topology usage.
 
     :param host: objects.NUMATopology with usage information
     :param instances: list of objects.InstanceNUMATopology
-    :param free: If True usage of the host will be decreased
-
-    Sum the usage from all @instances to report the overall
-    host topology usage
+    :param free: decrease, rather than increase, host usage
 
     :returns: objects.NUMATopology including usage information
     """
-
     if host is None:
         return
 
@@ -1430,11 +1444,18 @@ def numa_usage_from_instances(host, instances, free=False):
 
 # TODO(ndipanov): Remove when all code paths are using objects
 def instance_topology_from_instance(instance):
-    """Convenience method for getting the numa_topology out of instances
+    """Extract numa topology from myriad instance representations.
 
-    Since we may get an Instance as either a dict, a db object, or an actual
-    Instance object, this makes sure we get beck either None, or an instance
-    of objects.InstanceNUMATopology class.
+    Until the RPC version is bumped to 5.x, an instance may be
+    represented as a dict, a db object, or an actual Instance object.
+    Identify the type received and return either an instance of
+    objects.InstanceNUMATopology if the instance's NUMA topology is
+    available, else None.
+
+    :param host: nova.objects.ComputeNode instance, or a db object or
+                 dict
+
+    :returns: An instance of objects.NUMATopology or None
     """
     if isinstance(instance, obj_instance.Instance):
         # NOTE (ndipanov): This may cause a lazy-load of the attribute
@@ -1490,14 +1511,17 @@ def instance_topology_from_instance(instance):
 
 # TODO(ndipanov): Remove when all code paths are using objects
 def host_topology_and_format_from_host(host):
-    """Convenience method for getting the numa_topology out of hosts
+    """Extract numa topology from myriad host representations.
 
-    Since we may get a host as either a dict, a db object, or an actual
-    ComputeNode object, or an instance of HostState class, this makes sure we
-    get back either None, or an instance of objects.NUMATopology class.
+    Until the RPC version is bumped to 5.x, a host may be represented
+    as a dict, a db object, an actual ComputeNode object, or an
+    instance of HostState class. Identify the type received and return
+    either an instance of objects.NUMATopology if host's NUMA topology
+    is available, else None.
 
-    :returns: A two-tuple, first element is the topology itself or None, second
-              is a boolean set to True if topology was in JSON format.
+    :returns: A two-tuple. The first element is either an instance of
+              objects.NUMATopology or None. The second element is a
+              boolean set to True if topology was in JSON format.
     """
     was_json = False
     try:
@@ -1518,24 +1542,26 @@ def host_topology_and_format_from_host(host):
 # TODO(ndipanov): Remove when all code paths are using objects
 def get_host_numa_usage_from_instance(host, instance, free=False,
                                      never_serialize_result=False):
-    """Calculate new 'numa_usage' of 'host' from 'instance' NUMA usage
+    """Calculate new host NUMA usage from an instance's NUMA usage.
 
-    This is a convenience method to help us handle the fact that we use several
-    different types throughout the code (ComputeNode and Instance objects,
-    dicts, scheduler HostState) which may have both json and deserialized
-    versions of objects.numa classes.
+    Until the RPC version is bumped to 5.x, both host and instance
+    representations may be provided in a variety of formats. Extract
+    both host and instance numa topologies from provided
+    representations, and use the latter to update the NUMA usage
+    information of the former.
 
-    Handles all the complexity without polluting the class method with it.
+    :param host: nova.objects.ComputeNode instance, or a db object or
+                 dict
+    :param instance: nova.objects.Instance instance, or a db object or
+                     dict
+    :param free: if True the returned topology will have its usage
+                 decreased instead
+    :param never_serialize_result: if True result will always be an
+                                   instance of objects.NUMATopology
 
-    :param host: nova.objects.ComputeNode instance, or a db object or dict
-    :param instance: nova.objects.Instance instance, or a db object or dict
-    :param free: if True the returned topology will have it's usage
-                 decreased instead.
-    :param never_serialize_result: if True result will always be an instance of
-                                   objects.NUMATopology class.
-
-    :returns: numa_usage in the format it was on the host or
-              objects.NUMATopology instance if never_serialize_result was True
+    :returns: a objects.NUMATopology instance if never_serialize_result
+              was True, else numa_usage in the format it was on the
+              host
     """
     instance_numa_topology = instance_topology_from_instance(instance)
     if instance_numa_topology:
