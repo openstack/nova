@@ -2969,42 +2969,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.libvirt.virt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')
 
-        # File injection only if needed
-        need_inject = inject_files and CONF.libvirt.inject_partition != -2
-
-        # NOTE(ndipanov): Even if disk_mapping was passed in, which
-        # currently happens only on rescue - we still don't want to
-        # create a base image.
-        if not booted_from_volume:
-            root_fname = imagecache.get_cache_fname(disk_images['image_id'])
-            size = instance.flavor.root_gb * units.Gi
-
-            if size == 0 or suffix == '.rescue':
-                size = None
-
-            backend = image('disk')
-            if instance.task_state == task_states.RESIZE_FINISH:
-                backend.create_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
-            if backend.SUPPORTS_CLONE:
-                def clone_fallback_to_fetch(*args, **kwargs):
-                    try:
-                        backend.clone(context, disk_images['image_id'])
-                    except exception.ImageUnacceptable:
-                        libvirt_utils.fetch_image(*args, **kwargs)
-                fetch_func = clone_fallback_to_fetch
-            else:
-                fetch_func = libvirt_utils.fetch_image
-            self._try_fetch_image_cache(backend, fetch_func, context,
-                                        root_fname, disk_images['image_id'],
-                                        instance, size, fallback_from_host)
-
-            if need_inject:
-                self._inject_data(backend, instance, network_info, admin_pass,
-                                  files)
-
-        elif need_inject:
-            LOG.warning(_LW('File injection into a boot from volume '
-                            'instance is not supported'), instance=instance)
+        self._create_and_inject_local_root(context, instance,
+                                 booted_from_volume, suffix, disk_images,
+                                 network_info, admin_pass, files, inject_files,
+                                 fallback_from_host)
 
         # Lookup the filesystem type if required
         os_type_with_default = disk_api.get_fs_type_for_os_type(
@@ -3070,6 +3038,48 @@ class LibvirtDriver(driver.ComputeDriver):
                                          filename="swap_%s" % swap_mb,
                                          size=size,
                                          swap_mb=swap_mb)
+
+    def _create_and_inject_local_root(self, context, instance,
+                            booted_from_volume, suffix, disk_images,
+                            network_info, admin_pass, files, inject_files,
+                            fallback_from_host):
+        # File injection only if needed
+        need_inject = inject_files and CONF.libvirt.inject_partition != -2
+
+        # NOTE(ndipanov): Even if disk_mapping was passed in, which
+        # currently happens only on rescue - we still don't want to
+        # create a base image.
+        if not booted_from_volume:
+            root_fname = imagecache.get_cache_fname(disk_images['image_id'])
+            size = instance.flavor.root_gb * units.Gi
+
+            if size == 0 or suffix == '.rescue':
+                size = None
+
+            backend = self.image_backend.image(instance, 'disk' + suffix,
+                                               CONF.libvirt.images_type)
+            if instance.task_state == task_states.RESIZE_FINISH:
+                backend.create_snap(libvirt_utils.RESIZE_SNAPSHOT_NAME)
+            if backend.SUPPORTS_CLONE:
+                def clone_fallback_to_fetch(*args, **kwargs):
+                    try:
+                        backend.clone(context, disk_images['image_id'])
+                    except exception.ImageUnacceptable:
+                        libvirt_utils.fetch_image(*args, **kwargs)
+                fetch_func = clone_fallback_to_fetch
+            else:
+                fetch_func = libvirt_utils.fetch_image
+            self._try_fetch_image_cache(backend, fetch_func, context,
+                                        root_fname, disk_images['image_id'],
+                                        instance, size, fallback_from_host)
+
+            if need_inject:
+                self._inject_data(backend, instance, network_info, admin_pass,
+                                  files)
+
+        elif need_inject:
+            LOG.warning(_LW('File injection into a boot from volume '
+                            'instance is not supported'), instance=instance)
 
     def _create_configdrive(self, context, instance, admin_pass=None,
                             files=None, network_info=None, suffix=''):
