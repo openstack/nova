@@ -221,7 +221,23 @@ class ComputeCellsAPI(compute_api.API):
                     context, instance.uuid)
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
-            if self._delete_while_booting(context, instance):
+            try:
+                if self._delete_while_booting(context, instance):
+                    return
+            except exception.ObjectActionError:
+                # NOTE(alaski): We very likely got here because the host
+                # constraint in instance.destroy() failed.  This likely means
+                # that an update came up from a child cell and cell_name is
+                # set now.  We handle this similarly to how the
+                # ObjectActionError is handled below.
+                with excutils.save_and_reraise_exception() as exc:
+                    instance = self._lookup_instance(context, instance.uuid)
+                    if instance is None:
+                        exc.reraise = False
+                    elif instance.cell_name:
+                        exc.reraise = False
+                        self._handle_cell_delete(context, instance,
+                                                 method_name)
                 return
             # If instance.cell_name was not set it's possible that the Instance
             # object here was pulled from a BuildRequest object and is not

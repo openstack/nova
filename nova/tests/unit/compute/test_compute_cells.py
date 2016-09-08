@@ -15,6 +15,7 @@
 """
 Tests For Compute w/ Cells
 """
+import copy
 import functools
 import inspect
 
@@ -294,6 +295,60 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
 
     def test_force_delete_instance_no_cell(self):
         self._test_delete_instance_no_cell('force_delete')
+
+    @mock.patch.object(compute_api.API, '_delete_while_booting',
+                       side_effect=exception.ObjectActionError(
+                           action='delete', reason='host now set'))
+    @mock.patch.object(compute_api.API, '_local_delete')
+    @mock.patch.object(compute_api.API, '_lookup_instance')
+    @mock.patch.object(compute_api.API, 'delete')
+    def test_delete_instance_no_cell_then_cell(self, mock_delete,
+                                               mock_lookup_instance,
+                                               mock_local_delete,
+                                               mock_delete_while_booting):
+        # This checks the case where initially an instance has no cell_name,
+        # and therefore no host, set but instance.destroy fails because
+        # there is now a host.
+        instance = self._create_fake_instance_obj()
+        instance_with_cell = copy.deepcopy(instance)
+        instance_with_cell.cell_name = 'foo'
+        mock_lookup_instance.return_value = instance_with_cell
+
+        cells_rpcapi = self.compute_api.cells_rpcapi
+
+        @mock.patch.object(cells_rpcapi, 'instance_delete_everywhere')
+        def test(mock_inst_delete_everywhere):
+            self.compute_api.delete(self.context, instance)
+            mock_local_delete.assert_not_called()
+            mock_delete.assert_called_once_with(self.context,
+                                                instance_with_cell)
+
+        test()
+
+    @mock.patch.object(compute_api.API, '_delete_while_booting',
+                       side_effect=exception.ObjectActionError(
+                           action='delete', reason='host now set'))
+    @mock.patch.object(compute_api.API, '_local_delete')
+    @mock.patch.object(compute_api.API, '_lookup_instance')
+    @mock.patch.object(compute_api.API, 'delete')
+    def test_delete_instance_no_cell_then_no_instance(self,
+            mock_delete, mock_lookup_instance, mock_local_delete,
+            mock_delete_while_booting):
+        # This checks the case where initially an instance has no cell_name,
+        # and therefore no host, set but instance.destroy fails because
+        # there is now a host. And then the instance can't be looked up.
+        instance = self._create_fake_instance_obj()
+        mock_lookup_instance.return_value = None
+
+        cells_rpcapi = self.compute_api.cells_rpcapi
+
+        @mock.patch.object(cells_rpcapi, 'instance_delete_everywhere')
+        def test(mock_inst_delete_everywhere):
+            self.compute_api.delete(self.context, instance)
+            mock_local_delete.assert_not_called()
+            mock_delete.assert_not_called()
+
+        test()
 
     def test_get_migrations(self):
         filters = {'cell_name': 'ChildCell', 'status': 'confirmed'}
