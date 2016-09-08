@@ -5623,7 +5623,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(host.Host, "get_capabilities")
     def _test_get_guest_with_perf(self, caps, events, mock_get_caps):
-        self.flags(enabled_perf_events=['cmt'], group='libvirt')
         mock_get_caps.return_value = caps
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -5641,21 +5640,31 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_CMT', True,
                        create=True)
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_MBMT', True,
+                       create=True)
+    @mock.patch.object(fakelibvirt, 'VIR_PERF_PARAM_MBML', True,
+                       create=True)
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_guest_with_perf_supported(self,
                                  mock_min_version):
-        self.flags(enabled_perf_events=['cmt'], group='libvirt')
+        self.flags(enabled_perf_events=['cmt', 'mbml', 'mbmt'],
+                   group='libvirt')
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
         caps.host.cpu.arch = "x86_64"
         caps.host.topology = self._fake_caps_numa_topology()
-        feature = vconfig.LibvirtConfigGuestCPUFeature()
-        feature.name = 'cqm'
-        feature.policy = cpumodel.POLICY_REQUIRE
-        caps.host.cpu.features = set([feature])
 
-        self._test_get_guest_with_perf(caps, ['cmt'])
+        features = []
+        for f in ('cmt', 'mbm_local', 'mbm_total'):
+            feature = vconfig.LibvirtConfigGuestCPUFeature()
+            feature.name = f
+            feature.policy = cpumodel.POLICY_REQUIRE
+            features.append(feature)
+
+        caps.host.cpu.features = set(features)
+
+        self._test_get_guest_with_perf(caps, ['cmt', 'mbml', 'mbmt'])
 
     @mock.patch.object(host.Host, 'has_min_version')
     def test_get_guest_with_perf_libvirt_unsupported(self, mock_min_version):

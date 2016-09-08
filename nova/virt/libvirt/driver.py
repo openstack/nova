@@ -310,12 +310,12 @@ MIN_QEMU_OTHER_ARCH = {arch.S390: MIN_QEMU_S390_VERSION,
                       }
 
 # perf events support
-MIN_LIBVIRT_PERF_VERSION = (1, 3, 3)
+MIN_LIBVIRT_PERF_VERSION = (2, 0, 0)
 LIBVIRT_PERF_EVENT_PREFIX = 'VIR_PERF_PARAM_'
 
-PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cqm',
-                                'mbml': 'cqm_mbm_local',
-                                'mbmt': 'cqm_mbm_total',
+PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
+                                'mbml': 'mbm_local',
+                                'mbmt': 'mbm_total',
                                }
 
 

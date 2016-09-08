@@ -448,7 +448,8 @@ Related options:
 This is a performance event list which could be used as monitor. These events
 will be passed to libvirt domain xml while creating a new instances.
 Then event statistics data can be collected from libvirt.  The minimum
-libvirt version is 1.3.3.
+libvirt version is 2.0.0. For more information about `Performance monitoring
+events`, refer https://libvirt.org/formatdomain.html#elementsPerf .
 
 * Possible values:
     A string list.
