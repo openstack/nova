@@ -389,20 +389,27 @@ class HostManager(object):
             if aggregate.id in self.host_aggregates_map[host]:
                 self.host_aggregates_map[host].remove(aggregate.id)
 
-    def _init_instance_info(self):
+    def _init_instance_info(self, compute_nodes=None):
         """Creates the initial view of instances for all hosts.
 
         As this initial population of instance information may take some time,
         we don't wish to block the scheduler's startup while this completes.
         The async method allows us to simply mock out the _init_instance_info()
         method in tests.
+
+        :param compute_nodes: a list of nodes to populate instances info for
+        if is None, compute_nodes will be looked up in database
         """
 
-        def _async_init_instance_info():
-            context = context_module.get_admin_context()
+        def _async_init_instance_info(compute_nodes):
+            context = context_module.RequestContext()
             LOG.debug("START:_async_init_instance_info")
             self._instance_info = {}
-            compute_nodes = objects.ComputeNodeList.get_all(context).objects
+
+            if not compute_nodes:
+                compute_nodes = objects.ComputeNodeList.get_all(
+                    context).objects
+
             LOG.debug("Total number of compute nodes: %s", len(compute_nodes))
             # Break the queries into batches of 10 to reduce the total number
             # of calls to the DB.
@@ -416,8 +423,8 @@ class HostManager(object):
                 filters = {"host": [curr_node.host
                                     for curr_node in curr_nodes],
                            "deleted": False}
-                result = objects.InstanceList.get_by_filters(context,
-                                                             filters)
+                result = objects.InstanceList.get_by_filters(
+                    context.elevated(), filters)
                 instances = result.objects
                 LOG.debug("Adding %s instances for hosts %s-%s",
                           len(instances), start_node, end_node)
@@ -433,7 +440,7 @@ class HostManager(object):
             LOG.debug("END:_async_init_instance_info")
 
         # Run this async so that we don't block the scheduler start-up
-        utils.spawn_n(_async_init_instance_info)
+        utils.spawn_n(_async_init_instance_info, compute_nodes)
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need

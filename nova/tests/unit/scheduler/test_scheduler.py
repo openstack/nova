@@ -190,7 +190,8 @@ class SchedulerInitTestCase(test.NoDBTestCase):
         manager = self.driver_cls().host_manager
         self.assertIsInstance(manager, host_manager.HostManager)
 
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(ironic_host_manager.IronicHostManager,
+                       '_init_instance_info')
     @mock.patch.object(host_manager.HostManager, '_init_aggregates')
     def test_init_using_ironic_hostmanager(self,
                                            mock_init_agg,
