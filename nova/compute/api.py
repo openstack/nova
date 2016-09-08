@@ -2185,12 +2185,13 @@ class API(base.Base):
                     instance = objects.Instance.get_by_uuid(
                         context, instance_uuid, expected_attrs=expected_attrs)
         else:
-            # This should not happen if we made it past the service_version
-            # check above. But it does not need to be an exception yet.
-            LOG.warning(_LW('No instance_mapping found for instance %s. This '
-                            'should not be happening and will lead to errors '
-                            'in the future. Please open a bug at '
-                            'https://bugs.launchpad.net/nova'), instance_uuid)
+            # This should not happen once a deployment has migrated to cellsv2.
+            # If it happens after that point we handle it gracefully for now
+            # but this will become an exception in the future.
+            # TODO(alaski): Once devstack is setting up cellsv2 by default add
+            # a warning log message that this will become an exception in the
+            # future. The warning message will be conditional upon the
+            # migration having happened, which means a db lookup to check that.
             instance = objects.Instance.get_by_uuid(
                 context, instance_uuid, expected_attrs=expected_attrs)
 
