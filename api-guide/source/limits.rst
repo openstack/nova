@@ -25,7 +25,7 @@ applications.
 The regular expression boundary matcher "^" for the rate limit takes
 effect after the root URI path. For example, the regular expression
 ^/servers would match the bolded portion of the following URI:
-https://servers.api.openstack.org/v2/3542812\ **/servers**.
+https://servers.api.openstack.org/v2.1\ **/servers**.
 
 **Table: Sample rate limits**
 

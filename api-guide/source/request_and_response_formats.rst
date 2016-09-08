@@ -16,7 +16,7 @@ The example below shows a request body in JSON format:
 
 .. code::
 
-   POST /v2/010101/servers HTTP/1.1
+   POST /v2.1/servers HTTP/1.1
    Host: servers.api.openstack.org
    X-Auth-Token: eaaafd18-0fed-4b3a-81b4-663c99ec1cbb
 

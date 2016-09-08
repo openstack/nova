@@ -86,11 +86,11 @@ following types of link relations are associated with resources:
           "links":[
              {
                 "rel":"self",
-                "href":"http://servers.api.openstack.org/v2/1234/servers/52415800-8b69-11e0-9b19-734fcece0043"
+                "href":"http://servers.api.openstack.org/v2.1/servers/52415800-8b69-11e0-9b19-734fcece0043"
              },
              {
                 "rel":"bookmark",
-                "href":"http://servers.api.openstack.org/1234/servers/52415800-8b69-11e0-9b19-734fcece0043"
+                "href":"http://servers.api.openstack.org/servers/52415800-8b69-11e0-9b19-734fcece0043"
              }
           ]
        }
@@ -108,11 +108,11 @@ following types of link relations are associated with resources:
             "links": [
                 {
                     "rel" : "self",
-                    "href" : "http://servers.api.openstack.org/v2/1234/images/52415800-8b69-11e0-9b19-734f5736d2a2"
+                    "href" : "http://servers.api.openstack.org/v2.1/images/52415800-8b69-11e0-9b19-734f5736d2a2"
                 },
                 {
                     "rel" : "bookmark",
-                    "href" : "http://servers.api.openstack.org/1234/images/52415800-8b69-11e0-9b19-734f5736d2a2"
+                    "href" : "http://servers.api.openstack.org/images/52415800-8b69-11e0-9b19-734f5736d2a2"
                 },
                 {
                     "rel"  : "alternate",
