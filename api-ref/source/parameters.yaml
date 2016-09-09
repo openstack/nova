@@ -834,8 +834,9 @@ addresses:
     The addresses for the server.  Addresses information is hidden for any server
     in a state set in the ``osapi_hide_server_address_states`` configuration option.
     By default, servers in ``building`` state hide their addresses information.
-    See ``nova.conf`` configuration options
-    <http://docs.openstack.org/liberty/config-reference/content/list-of-compute-config-options.html>`_.
+    See ``nova.conf`` `configuration options
+    <http://docs.openstack.org/liberty/config-reference/content/list-of-compute-config-options.html>`_
+    for more information.
   in: body
   required: true
   type: object
