@@ -1,0 +1,10 @@
+---
+other:
+  - New configuration option sync_power_state_pool_size
+    has been added to set the number of greenthreads available
+    for use to sync power states. Default value (1000) matches
+    the previous implicit default value provided by Greenpool.
+    This option can be used to reduce the number of concurrent requests
+    made to the hypervisor or system with real instance power states
+    for performance reasons.
+

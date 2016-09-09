@@ -512,7 +512,8 @@ class ComputeManager(manager.Manager):
         self.scheduler_client = scheduler_client.SchedulerClient()
         self._resource_tracker_dict = {}
         self.instance_events = InstanceEvents()
-        self._sync_power_pool = eventlet.GreenPool()
+        self._sync_power_pool = eventlet.GreenPool(
+            size=CONF.sync_power_state_pool_size)
         self._syncs_in_progress = {}
         self.send_instance_updates = CONF.scheduler_tracks_instance_changes
         if CONF.max_concurrent_builds != 0:
