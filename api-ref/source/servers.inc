@@ -523,6 +523,7 @@ Response
   - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
   - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
   - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - locked: locked
 
 **Example List Servers Detailed**
 
@@ -609,6 +610,7 @@ Response
   - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
   - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
   - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - locked: locked
 
 **Example Show Server Details**
 
@@ -702,6 +704,7 @@ Response
   - OS-EXT-SERV-ATTR:ramdisk_id: server_ramdisk_id
   - OS-EXT-SERV-ATTR:root_device_name: server_root_device_name
   - OS-EXT-SERV-ATTR:user_data: server_user_data
+  - locked: locked
 
 **Example Update server name**
 
