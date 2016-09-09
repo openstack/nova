@@ -41,6 +41,7 @@ Response
   - cidr: cidr
   - host: fixed_ip_host
   - hostname: fixed_ip_hostname
+  - reserved: reserved_fixedip
 
 
 **Example Show Fixed Ip Details: JSON response**
