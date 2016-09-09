@@ -14,6 +14,7 @@
 from oslo_db.sqlalchemy import models
 from sqlalchemy import Boolean
 from sqlalchemy import Column
+from sqlalchemy.dialects.mysql import MEDIUMTEXT
 from sqlalchemy import Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Float
@@ -26,6 +27,10 @@ from sqlalchemy import schema
 from sqlalchemy import String
 from sqlalchemy import Text
 from sqlalchemy import Unicode
+
+
+def MediumText():
+    return Text().with_variant(MEDIUMTEXT(), 'mysql')
 
 
 class _NovaAPIBase(models.ModelBase, models.TimestampMixin):
@@ -236,7 +241,7 @@ class BuildRequest(API_BASE):
     instance_uuid = Column(String(36))
     project_id = Column(String(255), nullable=False)
     instance = Column(Text)
-    block_device_mappings = Column(Text)
+    block_device_mappings = Column(MediumText())
     # TODO(alaski): Drop these from the db in Ocata
     # columns_to_drop = ['request_spec_id', 'user_id', 'display_name',
     #         'instance_metadata', 'progress', 'vm_state', 'task_state',
