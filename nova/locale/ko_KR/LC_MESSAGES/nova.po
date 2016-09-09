@@ -11,9 +11,9 @@
 # Sungjin Kang <gang.sungjin@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 13.0.1.dev83\n"
+"Project-Id-Version: nova 13.1.2.dev11\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-06-11 00:10+0000\n"
+"POT-Creation-Date: 2016-09-07 20:56+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -4603,10 +4603,6 @@ msgstr "알 수 없는 인수: 포트"
 
 msgid "Unknown argument: port"
 msgstr "알 수 없는 인수: 포트"
-
-#, python-format
-msgid "Unknown auth plugin: %s"
-msgstr "알 수 없는 인증 플러그인: %s"
 
 #, python-format
 msgid "Unknown chain: %r"
