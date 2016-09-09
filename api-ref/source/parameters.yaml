@@ -15,13 +15,6 @@ x-openstack-request-id:
   in: header
   required: true
   type: string
-x-openstack-request-id_1:
-  description: |
-    A unique request ID that provides tracking for the request. Provider must configure
-    middleware to return a request ID header in a response.
-  in: header
-  required: false
-  type: string
 
 # variables in path
 admin_tenant_id:
@@ -179,12 +172,6 @@ key:
 keypair_name_path:
   description: |
     The keypair name.
-  in: path
-  required: true
-  type: string
-name_1:
-  description: |
-    The name of the DNS entry.
   in: path
   required: true
   type: string
@@ -734,12 +721,6 @@ tags_query:
     all tags in this list will be returned. Boolean expression in this
     case is 't1 AND t2'. Tags in query must be separated by comma.
   min_version: 2.26
-user_id_1:
-  description: |
-    Filters the response by a user, by ID.
-  in: query
-  required: false
-  type: string
 user_id_query_quota:
   description: |
     ID of user to list the quotas for.
@@ -2338,42 +2319,6 @@ id:
   in: body
   required: true
   type: string
-id_1:
-  description: |
-    The security group ID.
-  in: body
-  required: true
-  type: string
-id_2:
-  description: |
-    The ID of the security group.
-  in: body
-  required: true
-  type: integer
-id_4:
-  description: |
-    The snapshot ID.
-  in: body
-  required: true
-  type: string
-id_5:
-  description: |
-    The ID of the quota set.
-  in: body
-  required: true
-  type: string
-id_6:
-  description: |
-    The UUID of the security group.
-  in: body
-  required: true
-  type: string
-id_9:
-  description: |
-    The ID of the quota set.
-  in: body
-  required: false
-  type: string
 image:
   description: |
     The UUID and links for the image for your server instance. The ``image`` object
@@ -2434,13 +2379,6 @@ imageRef:
     otherwise API will return 400.
   in: body
   required: true
-  type: string
-imageRef_1:
-  description: |
-    The image reference, as an ID or full URL, for the image for your server instance.
-    Required if you define a block device mapping.
-  in: body
-  required: false
   type: string
 images:
   description: |
@@ -2771,12 +2709,6 @@ length:
   in: body
   required: false
   type: string
-limit_1:
-  description: |
-    The maximum limit for the quota.
-  in: body
-  required: true
-  type: integer
 limits:
   description: |
     Data structure that contains both absolute limits within a deployment.
@@ -2914,12 +2846,6 @@ metadata:
   description: |
     Metadata key and value pairs. The maximum size of the metadata key and value is
     255 bytes each.
-  in: body
-  required: false
-  type: object
-metadata_1:
-  description: |
-    One or more metadata key and value pairs to associate with the volume.
   in: body
   required: false
   type: object
@@ -3418,12 +3344,6 @@ policies:
   in: body
   required: true
   type: array
-policies_1:
-  description: |
-    A list of policies for the server group.
-  in: body
-  required: true
-  type: array
 pool:
   description: |
     Pool from which to allocate the IP address. If you omit this parameter, the call
@@ -3666,12 +3586,6 @@ rules:
   in: body
   required: true
   type: array
-rules_1:
-  description: |
-    A rules object.
-  in: body
-  required: true
-  type: string
 running_vms:
   description: |
     The number of running vms on this hypervisor.
@@ -3717,12 +3631,6 @@ secgroup_tenant_id_body:
 security_group:
   description: |
     Specify the ``security_group`` action in the request body.
-  in: body
-  required: true
-  type: string
-security_group_1:
-  description: |
-    Security group object.
   in: body
   required: true
   type: string
@@ -3842,12 +3750,6 @@ server_groups:
   in: body
   required: true
   type: integer
-server_groups_1:
-  description: |
-    A ``server_groups`` object.
-  in: body
-  required: true
-  type: array
 server_groups_list:
   description: |
     The list of existing server groups.
