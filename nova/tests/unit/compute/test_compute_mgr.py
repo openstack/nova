@@ -3805,7 +3805,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_notify.assert_has_calls([
             mock.call(self.context, self.instance, 'create.start',
                 extra_usage_info={'image_name': self.image.get('name')}),
-            mock.call(self.context, self.instance, 'create.end',
+            mock.call(self.context, self.instance, 'create.error',
                 fault=exc)])
         mock_build.assert_called_once_with(self.context, self.instance,
             self.requested_networks, self.security_groups)
@@ -4386,10 +4386,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         _check_access_ip()
 
     @mock.patch.object(manager.ComputeManager, '_instance_update')
-    def test_create_end_on_instance_delete(self, mock_instance_update):
+    def test_create_error_on_instance_delete(self, mock_instance_update):
 
         def fake_notify(*args, **kwargs):
-            if args[2] == 'create.end':
+            if args[2] == 'create.error':
                 # Check that launched_at is set on the instance
                 self.assertIsNotNone(args[1].launched_at)
 
@@ -4411,10 +4411,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.security_groups, self.block_device_mapping, self.node,
                     self.limits, self.filter_properties)
             expected_call = mock.call(self.context, self.instance,
-                    'create.end', fault=exc)
-            create_end_call = mock_notify.call_args_list[
+                    'create.error', fault=exc)
+            create_error_call = mock_notify.call_args_list[
                     mock_notify.call_count - 1]
-            self.assertEqual(expected_call, create_end_call)
+            self.assertEqual(expected_call, create_error_call)
 
 
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
