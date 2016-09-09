@@ -871,6 +871,10 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
     def delete_all(self):
         self._delete_allocations(self._context, self.objects)
 
+    def __repr__(self):
+        strings = [repr(x) for x in self.objects]
+        return "AllocationList[" + ", ".join(strings) + "]"
+
 
 @base.NovaObjectRegistry.register
 class Usage(base.NovaObject):
@@ -930,3 +934,7 @@ class UsageList(base.ObjectListBase, base.NovaObject):
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         usage_list = cls._get_all_by_resource_provider_uuid(context, rp_uuid)
         return base.obj_make_list(context, cls(context), Usage, usage_list)
+
+    def __repr__(self):
+        strings = [repr(x) for x in self.objects]
+        return "UsageList[" + ", ".join(strings) + "]"
