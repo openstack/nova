@@ -104,8 +104,8 @@ user documentation.
 2.9
 ---
 
-  Add a new ``locked`` attribute to the detailed view of
-  servers. ``locked`` will be ``true`` if anyone is currently holding
+  Add a new ``locked`` attribute to the detailed view, update,
+  and rebuild action. ``locked`` will be ``true`` if anyone is currently holding
   a lock on the server, ``false`` otherwise.
 
 2.10
