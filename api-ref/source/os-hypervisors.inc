@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:example_verification
 .. needs:body_verification
 
 ==============================
@@ -43,6 +42,7 @@ Response
   - id: hypervisor_id_body
   - state: hypervisor_state
   - status: hypervisor_status
+  - hypervisor_links: hypervisor_links
 
 **Example List Hypervisors: JSON response**
 
@@ -101,6 +101,7 @@ Response
   - service.disable_reason: service_disable_reason
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
+  - hypervisor_links: hypervisor_links
 
 **Example List Hypervisors Details: JSON response**
 
