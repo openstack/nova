@@ -18,11 +18,10 @@ tests:
   GET: /allocations
   status: 404
 
-- name: get allocations is 405
+- name: get allocations is empty dict
   GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
-  status: 405
-  response_headers:
-      allow: /(PUT, DELETE|DELETE, PUT)/
+  response_json_paths:
+      $.allocations: {}
 
 - name: put an allocation no resource provider
   PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
@@ -200,3 +199,144 @@ tests:
   response_json_paths:
       $.resource_provider_generation: 7
       $.usages.DISK_GB: 40
+
+- name: check allocations for the resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/allocations
+  response_json_paths:
+      $.resource_provider_generation: 7
+      # allocations are keyed by consumer id, jsonpath-rw needs us
+      # to quote the uuids or its parser gets confused that maybe
+      # they are numbers on which math needs to be done.
+      $.allocations['833f0885-f78c-4788-bb2b-3607b0656be7'].resources.DISK_GB: 20
+      $.allocations['833f0885-f78c-4788-bb2b-3607b0656be7'].resources.VCPU: 4
+      $.allocations['599ffd2d-526a-4b2e-8683-f13ad25f9958'].resources.DISK_GB: 10
+      $.allocations['39715579-2167-4c63-8247-301311cc6703'].resources.DISK_GB: 10
+
+- name: confirm 404 for allocations of bad resource provider
+  GET: /resource_providers/cb8a3007-b93a-471f-9e1f-4d58355678bd/allocations
+  status: 404
+
+- name: check allocations by consumer id
+  GET: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
+  response_json_paths:
+      # TODO(cdent): Can't currently do substituion on left hand
+      # side of json path in gabbi, a bug has been made. In the
+      # meantime we have to jump over it. This works because we only
+      # have one resource provider in this output.
+      $.allocations..generation: 7
+      $.allocations..resources.DISK_GB: 20
+      $.allocations..resources.VCPU: 4
+
+- name: check allocations by diferent consumer id
+  GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  response_json_paths:
+      # TODO(cdent): Can't currently do substituion on left hand
+      # side of json path in gabbi, a bug has been made. In the
+      # meantime we have to jump over the resource provider (which
+      # we don't know as a static value). This works because we only
+      # have one resource provider in this output.
+      $.allocations..generation: 7
+      $.allocations..DISK_GB: 10
+
+# - name: create another two resource providers
+- name: create resource provider 1
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: rp1
+      uuid: 9229b2fc-d556-4e38-9c18-443e4bc6ceae
+  status: 201
+
+- name: create resource provider 2
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: rp2
+      uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+  status: 201
+
+- name: set inventory on rp1
+  PUT: /resource_providers/9229b2fc-d556-4e38-9c18-443e4bc6ceae/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      # TODO(cdent): This format is going to go out of date because
+      # of other changes
+      resource_provider_generation: 0
+      inventories:
+        - resource_class: VCPU
+          total: 32
+        - resource_class: DISK_GB
+          total: 10
+
+- name: set inventory on rp2
+  PUT: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      # TODO(cdent): This format is going to go out of date because
+      # of other changes
+      resource_provider_generation: 0
+      inventories:
+        - resource_class: VCPU
+          total: 16
+        - resource_class: DISK_GB
+          total: 20
+  status: 200
+
+- name: put allocations on both those providers one
+  PUT: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+            resources:
+                DISK_GB: 10
+                VCPU: 8
+          - resource_provider:
+                uuid: 9229b2fc-d556-4e38-9c18-443e4bc6ceae
+            resources:
+                DISK_GB: 5
+                VCPU: 16
+  status: 204
+
+- name: put allocations on both those providers two
+  PUT: /allocations/75d0f5f7-75d9-458c-b204-f90ac91604ec
+  request_headers:
+      content-type: application/json
+  data:
+      allocations:
+          - resource_provider:
+                uuid: fcfa516a-abbe-45d1-8152-d5225d82e596
+            resources:
+                DISK_GB: 5
+                VCPU: 4
+          - resource_provider:
+                uuid: 9229b2fc-d556-4e38-9c18-443e4bc6ceae
+            resources:
+                DISK_GB: 2
+                VCPU: 8
+  status: 204
+
+- name: get those allocations for consumer
+  GET: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
+  response_json_paths:
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].generation: 3
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.DISK_GB: 10
+      $.allocations.['fcfa516a-abbe-45d1-8152-d5225d82e596'].resources.VCPU: 8
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].generation: 3
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.DISK_GB: 5
+      $.allocations.['9229b2fc-d556-4e38-9c18-443e4bc6ceae'].resources.VCPU: 16
+
+- name: get those allocations for resource provider
+  GET: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/allocations
+  response_json_paths:
+      $.resource_provider_generation: 3
+      $.allocations.['75d0f5f7-75d9-458c-b204-f90ac91604ec'].resources.DISK_GB: 5
+      $.allocations.['75d0f5f7-75d9-458c-b204-f90ac91604ec'].resources.VCPU: 4
+      $.allocations.['1835b1c9-1c61-45af-9eb3-3e0e9f29487b'].resources.DISK_GB: 10
+      $.allocations.['1835b1c9-1c61-45af-9eb3-3e0e9f29487b'].resources.VCPU: 8
