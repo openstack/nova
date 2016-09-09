@@ -401,7 +401,7 @@ Request
   - server_id: server_id_path
   - rebuild: rebuild
   - imageRef: imageRef
-  - name: name
+  - name: server_name_optional
   - adminPass: adminPass_evacuate_rebuild
   - metadata: metadata
   - personality: personality
