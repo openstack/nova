@@ -14,7 +14,7 @@ Provisioning a virtual machine for testing
 ------------------------------------------
 
 The entire test process will take place inside a large virtual machine running
-Fedora 21. The instructions should work for any other Linux distribution which
+Fedora 24. The instructions should work for any other Linux distribution which
 includes libvirt >= 1.2.9 and QEMU >= 2.1.2
 
 The tests will require support for nested KVM, which is not enabled by default
@@ -49,32 +49,32 @@ While on AMD hosts verify it with
  # cat /sys/module/kvm_amd/parameters/nested
  1
 
-The virt-install command below shows how to provision a basic Fedora 21 x86_64
+The virt-install command below shows how to provision a basic Fedora 24 x86_64
 guest with 8 virtual CPUs, 8 GB of RAM and 20 GB of disk space:
 
 .. code-block:: bash
 
  # cd /var/lib/libvirt/images
- # wget http://download.fedoraproject.org/pub/fedora/linux/releases/test/21-Alpha/Server/x86_64/iso/Fedora-Server-netinst-x86_64-21_Alpha.iso
+ # wget https://download.fedoraproject.org/pub/fedora/linux/releases/24/Server/x86_64/iso/Fedora-Server-netinst-x86_64-24-1.2.iso
 
  # virt-install \
-    --name f21x86_64 \
+    --name f24x86_64 \
     --ram 8000 \
     --vcpus 8 \
-    --file /var/lib/libvirt/images/f21x86_64.img \
+    --file /var/lib/libvirt/images/f24x86_64.img \
     --file-size 20
-    --cdrom /var/lib/libvirt/images/Fedora-Server-netinst-x86_64-21_Alpha.iso \
-    --os-variant fedora20
+    --cdrom /var/lib/libvirt/images/Fedora-Server-netinst-x86_64-24-1.2.iso \
+    --os-variant fedora23
 
 When the virt-viewer application displays the installer, follow the defaults
-for the installation with a couple of exceptions
+for the installation with a couple of exceptions:
 
 * The automatic disk partition setup can be optionally tweaked to reduce the
   swap space allocated. No more than 500MB is required, free'ing up an extra
-  1.5 GB for the root disk.
+  1.5 GB for the root disk
 
 * Select "Minimal install" when asked for the installation type since a desktop
-  environment is not required.
+  environment is not required
 
 * When creating a user account be sure to select the option "Make this user
   administrator" so it gets 'sudo' rights
@@ -87,45 +87,35 @@ development environment.
 Setting up a devstack environment
 ---------------------------------
 
-For later ease of use, copy your SSH public key into the virtual machine
+For later ease of use, copy your SSH public key into the virtual machine:
 
 .. code-block:: bash
 
   # ssh-copy-id  <IP of VM>
 
-Now login to the virtual machine
+Now login to the virtual machine:
 
 .. code-block:: bash
 
   # ssh <IP of VM>
 
-We'll install devstack under `$HOME/src/cloud/`.
+The Fedora minimal install does not contain git. Install git and clone the
+devstack repo:
 
 .. code-block:: bash
 
-  # mkdir -p $HOME/src/cloud
-  # cd $HOME/src/cloud
-  # chmod go+rx $HOME
+  $ sudo dnf -y install git
+  $ git clone git://github.com/openstack-dev/devstack.git
+  $ cd devstack
 
-The Fedora minimal install does not contain git and only has the crude &
-old-fashioned "vi" editor.
-
-.. code-block:: bash
-
-  # sudo yum -y install git emacs
-
-At this point a fairly standard devstack setup can be done. The config below is
-just an example that is convenient to use to place everything in `$HOME`
-instead of `/opt/stack`. Change the IP addresses to something appropriate for
-your environment of course
+At this point a fairly standard devstack setup can be done with one exception:
+we should enable the ``NUMATopologyFilter`` filter, which we will use later.
+For example:
 
 .. code-block:: bash
 
-  # git clone git://github.com/openstack-dev/devstack.git
-  # cd devstack
-  # cat >>local.conf <<EOF
+  $ cat >>local.conf <<EOF
   [[local|localrc]]
-  DEST=$HOME/src/cloud
   DATA_DIR=$DEST/data
   SERVICE_DIR=$DEST/status
 
@@ -133,36 +123,36 @@ your environment of course
   SCREEN_LOGDIR=$DATA_DIR/logs
   VERBOSE=True
 
-  disable_service neutron
-
-  HOST_IP=192.168.122.50
-  FLAT_INTERFACE=eth0
-  FIXED_RANGE=192.168.128.0/24
-  FIXED_NETWORK_SIZE=256
-  FLOATING_RANGE=192.168.129.0/24
+  disable_service n-net
+  enable_service neutron q-svc q-dhcp q-l3 q-meta q-agt
 
   MYSQL_PASSWORD=123456
+  DATABASE_PASSWORD=123456
   SERVICE_TOKEN=123456
   SERVICE_PASSWORD=123456
   ADMIN_PASSWORD=123456
   RABBIT_PASSWORD=123456
 
-  IMAGE_URLS="http://download.cirros-cloud.net/0.3.2/cirros-0.3.2-x86_64-uec.tar.gz"
-  EOF
+  [[post-config|$NOVA_CONF]]
+  [DEFAULT]
+  firewall_driver=nova.virt.firewall.NoopFirewallDriver
 
-  # FORCE=yes ./stack.sh
+  [filter_scheduler]
+  enabled_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,PciPassthroughFilter,NUMATopologyFilter
+  EOF
+  $ FORCE=yes ./stack.sh
 
 Unfortunately while devstack starts various system services and changes various
 system settings it doesn't make the changes persistent. Fix that now to avoid
-later surprises after reboots
+later surprises after reboots:
 
 .. code-block:: bash
 
-  # sudo systemctl enable mysqld.service
-  # sudo systemctl enable rabbitmq-server.service
-  # sudo systemctl enable httpd.service
+  $ sudo systemctl enable mariadb.service
+  $ sudo systemctl enable rabbitmq-server.service
+  $ sudo systemctl enable httpd.service
 
-  # sudo emacs /etc/sysconfig/selinux
+  $ sudo vi /etc/sysconfig/selinux
   SELINUX=permissive
 
 ----------------------------
@@ -170,19 +160,21 @@ Testing basis non-NUMA usage
 ----------------------------
 
 First to confirm we've not done anything unusual to the traditional operation
-of Nova libvirt guests boot a tiny instance
+of nova libvirt guests boot a tiny instance:
 
 .. code-block:: bash
 
-  # . openrc admin
-  # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.tiny cirros1
+  $ . openrc admin
+  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.tiny \
+      cirros1
 
 The host will be reporting NUMA topology, but there should only be a single
-NUMA cell this point.
+NUMA cell this point. We can validate this by querying the nova database. For
+example (with object versioning fields removed):
 
 .. code-block:: bash
 
-  # mysql -u root -p nova
+  $ mysql -u root -p123456 nova
   MariaDB [nova]> select numa_topology from compute_nodes;
   +----------------------------------------------------------------------------+
   | numa_topology                                                              |
@@ -203,17 +195,28 @@ NUMA cell this point.
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 987430,
   |                                 "used": 0,
+  |                                 "total": 987430,
+  |                                 "reserved":0,
   |                                 "size_kb": 4
   |                             },
   |                         },
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 0,
   |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved":0,
   |                                 "size_kb": 2048
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
+  |                                 "size_kb": 1048576
   |                             },
   |                         }
   |                     ],
@@ -225,7 +228,7 @@ NUMA cell this point.
   | }
   +----------------------------------------------------------------------------+
 
-Meanwhile, the guest instance should not have any NUMA configuration recorded
+Meanwhile, the guest instance should not have any NUMA configuration recorded:
 
 .. code-block:: bash
 
@@ -243,17 +246,17 @@ Reconfiguring the test instance to have NUMA topology
 Now that devstack is proved operational, it is time to configure some NUMA
 topology for the test VM, so that it can be used to verify the OpenStack NUMA
 support. To do the changes, the VM instance that is running devstack must be
-shut down.
+shut down:
 
 .. code-block:: bash
 
-  # sudo shutdown -h now
+  $ sudo shutdown -h now
 
-And now back on the physical host edit the guest config as root
+And now back on the physical host edit the guest config as root:
 
 .. code-block:: bash
 
-  # sudo virsh edit f21x86_64
+  $ sudo virsh edit f21x86_64
 
 The first thing is to change the `<cpu>` block to do passthrough of the host
 CPU. In particular this exposes the "SVM" or "VMX" feature bits to the guest so
@@ -261,9 +264,9 @@ that "Nested KVM" can work. At the same time we want to define the NUMA
 topology of the guest. To make things interesting we're going to give the guest
 an asymmetric topology with 4 CPUS and 4 GBs of RAM in the first NUMA node and
 2 CPUs and 2 GB of RAM in the second and third NUMA nodes. So modify the guest
-XML to include the following CPU XML
+XML to include the following CPU XML:
 
-.. code-block:: bash
+.. code-block:: xml
 
   <cpu mode='host-passthrough'>
     <numa>
@@ -273,47 +276,39 @@ XML to include the following CPU XML
     </numa>
   </cpu>
 
-The guest can now be started again, and ssh back into it
+Now start the guest again:
 
 .. code-block:: bash
 
-  # virsh start f21x86_64
+  # virsh start f24x86_64
 
- ...wait for it to finish booting
+...and login back in:
+
+.. code-block:: bash
 
   # ssh <IP of VM>
 
-Before starting OpenStack services again, it is necessary to reconfigure Nova
-to enable the NUMA scheduler filter. The libvirt virtualization type must also
-be explicitly set to KVM, so that guests can take advantage of nested KVM.
+Before starting OpenStack services again, it is necessary to explicitly set the
+libvirt virtualization type to KVM, so that guests can take advantage of nested
+KVM:
 
 .. code-block:: bash
 
-  # sudo emacs /etc/nova/nova.conf
+  $ sudo sed -i 's/virt_type = qemu/virt_type = kvm/g' /etc/nova/nova.conf
 
-Set the following parameters:
-
-.. code-block:: bash
-
-  [filter_scheduler]
-  enabled_filters=RetryFilter, AvailabilityZoneFilter, RamFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter, NUMATopologyFilter
-
-  [libvirt]
-  virt_type = kvm
-
-With that done, OpenStack can be started again
+With that done, OpenStack can be started again:
 
 .. code-block:: bash
 
-  # cd $HOME/src/cloud/devstack
-  # ./rejoin-stack.sh
+  $ cd devstack
+  $ ./stack.sh
 
 The first thing is to check that the compute node picked up the new NUMA
-topology setup for the guest
+topology setup for the guest:
 
 .. code-block:: bash
 
-  # mysql -u root -p nova
+  $ mysql -u root -p123456 nova
   MariaDB [nova]> select numa_topology from compute_nodes;
   +----------------------------------------------------------------------------+
   | numa_topology                                                              |
@@ -321,7 +316,8 @@ topology setup for the guest
   | {
   |     "nova_object.name": "NUMATopology",
   |     "nova_object.data": {
-  |         "cells": [{
+  |         "cells": [
+  |             {
   |                 "nova_object.name": "NUMACell",
   |                 "nova_object.data": {
   |                     "cpu_usage": 0,
@@ -329,22 +325,33 @@ topology setup for the guest
   |                     "cpuset": [0, 1, 2, 3],
   |                     "pinned_cpus": [],
   |                     "siblings": [],
-  |                     "memory": 3857,
+  |                     "memory": 3856,
   |                     "mempages": [
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 987430,
   |                                 "used": 0,
+  |                                 "total": 987231,
+  |                                 "reserved": 0,
   |                                 "size_kb": 4
   |                             },
   |                         },
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 0,
   |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
   |                                 "size_kb": 2048
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
+  |                                 "size_kb": 1048576
   |                             },
   |                         }
   |                     ],
@@ -364,17 +371,28 @@ topology setup for the guest
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 504216,
   |                                 "used": 0,
+  |                                 "total": 504202,
+  |                                 "reserved": 0,
   |                                 "size_kb": 4
   |                             },
   |                         },
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 0,
   |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
   |                                 "size_kb": 2048
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
+  |                                 "size_kb": 1048576
   |                             },
   |                         }
   |                     ],
@@ -394,17 +412,28 @@ topology setup for the guest
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 503575,
   |                                 "used": 0,
+  |                                 "total": 503565,
+  |                                 "reserved": 0,
   |                                 "size_kb": 4
   |                             },
   |                         },
   |                         {
   |                             "nova_object.name": "NUMAPagesTopology",
   |                             "nova_object.data": {
-  |                                 "total": 0,
   |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
   |                                 "size_kb": 2048
+  |                             },
+  |                         },
+  |                         {
+  |                             "nova_object.name": "NUMAPagesTopology",
+  |                             "nova_object.data": {
+  |                                 "used": 0,
+  |                                 "total": 0,
+  |                                 "reserved": 0,
+  |                                 "size_kb": 1048576
   |                             },
   |                         }
   |                     ],
@@ -427,55 +456,62 @@ For the sake of backwards compatibility, if the NUMA filter is enabled, but the
 flavor/image does not have any NUMA settings requested, it should be assumed
 that the guest will have a single NUMA node. The guest should be locked to a
 single host NUMA node too. Boot a guest with the `m1.tiny` flavor to test this
-condition
+condition:
 
 .. code-block:: bash
 
-  # . openrc admin admin
-  # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.tiny cirros1
+  $ . openrc admin admin
+  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.tiny \
+      cirros1
 
-Now look at the libvirt guest XML. It should show that the vCPUs are locked to
-pCPUs within a particular node.
+Now look at the libvirt guest XML:
 
 .. code-block:: bash
 
-  # virsh -c qemu:///system list
-  ....
-  # virsh -c qemu:///system dumpxml instanceXXXXXX
+  $ sudo virsh list
+   Id    Name                           State
+  ----------------------------------------------------
+   1     instance-00000001              running
+  $ sudo virsh dumpxml instance-00000001
   ...
-  <vcpu placement='static' cpuset='6-7'>1</vcpu>
+  <vcpu placement='static'>1</vcpu>
   ...
 
-This example shows that the guest has been locked to the 3rd NUMA node (which
-contains pCPUs 6 and 7). Note that there is no explicit NUMA topology listed in
-the guest XML.
+This example shows that there is no explicit NUMA topology listed in the guest
+XML.
 
 ------------------------------------------------
 Testing instance boot with 1 NUMA cell requested
 ------------------------------------------------
 
-Moving forward a little, explicitly tell Nova that the NUMA topology for the
+Moving forward a little, explicitly tell nova that the NUMA topology for the
 guest should have a single NUMA node. This should operate in an identical
 manner to the default behavior where no NUMA policy is set. To define the
-topology we will create a new flavor
+topology we will create a new flavor:
 
 .. code-block:: bash
 
-  # nova flavor-create m1.numa 999 1024 1 4
-  # nova flavor-key m1.numa set hw:numa_nodes=1
-  # nova flavor-show m1.numa
+  $ openstack flavor create --ram 1024 --disk 1 --vcpus 4 m1.numa
+  $ openstack flavor set --property hw:numa_nodes=1 m1.numa
+  $ openstack flavor show m1.numa
 
-Now boot the guest using this new flavor
-
-.. code-block:: bash
-
-  # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.numa cirros2
-
-Looking at the resulting guest XML from libvirt
+Now boot the guest using this new flavor:
 
 .. code-block:: bash
 
-  # virsh -c qemu:///system dumpxml instanceXXXXXX
+  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.numa \
+      cirros2
+
+Looking at the resulting guest XML from libvirt:
+
+.. code-block:: bash
+
+  $ sudo virsh list
+   Id    Name                           State
+  ----------------------------------------------------
+   1     instance-00000001              running
+   2     instance-00000002              running
+  $ sudo virsh dumpxml instance-00000002
   ...
   <vcpu placement='static'>4</vcpu>
   <cputune>
@@ -511,11 +547,12 @@ The XML shows:
 
 * The guest NUMA node has been strictly pinned to a host NUMA node.
 
-As a further sanity test, check what Nova recorded for the instance in the
-database. This should match the <numatune> information
+As a further sanity test, check what nova recorded for the instance in the
+database. This should match the ``<numatune>`` information:
 
 .. code-block:: bash
 
+  $ mysql -u root -p123456 nova
   MariaDB [nova]> select numa_topology from instance_extra;
   +----------------------------------------------------------------------------+
   | numa_topology                                                              |
@@ -523,22 +560,18 @@ database. This should match the <numatune> information
   | {
   |     "nova_object.name": "InstanceNUMATopology",
   |     "nova_object.data": {
-  |         "instance_uuid": "4c2302fe-3f0f-46f1-9f3e-244011f6e03a",
   |         "cells": [
   |             {
   |                 "nova_object.name": "InstanceNUMACell",
   |                 "nova_object.data": {
-  |                     "cpu_topology": null,
   |                     "pagesize": null,
-  |                     "cpuset": [
-  |                         0,
-  |                         1,
-  |                         2,
-  |                         3
-  |                     ],
+  |                     "cpu_topology": null,
+  |                     "cpuset": [0, 1, 2, 3],
+  |                     "cpu_policy": null,
   |                     "memory": 1024,
   |                     "cpu_pinning_raw": null,
-  |                     "id": 0
+  |                     "id": 0,
+  |                     "cpu_thread_policy": null
   |                 },
   |             }
   |         ]
@@ -546,29 +579,41 @@ database. This should match the <numatune> information
   | }
   +----------------------------------------------------------------------------+
 
+Delete this instance:
+
+.. code-block:: bash
+
+  $ openstack server delete cirros2
+
 -------------------------------------------------
 Testing instance boot with 2 NUMA cells requested
 -------------------------------------------------
 
-Now getting more advanced we tell Nova that the guest will have two NUMA nodes.
-To define the topology we will change the previously defined flavor
+Now getting more advanced we tell nova that the guest will have two NUMA nodes.
+To define the topology we will change the previously defined flavor:
 
 .. code-block:: bash
 
-  # nova flavor-key m1.numa set hw:numa_nodes=2
-  # nova flavor-show m1.numa
+  $ openstack flavor set --property hw:numa_nodes=2 m1.numa
+  $ openstack flavor show m1.numa
 
-Now boot the guest using this changed flavor
-
-.. code-block:: bash
-
-  # nova boot --image cirros-0.3.2-x86_64-uec --flavor m1.numa cirros2
-
-Looking at the resulting guest XML from libvirt
+Now boot the guest using this changed flavor:
 
 .. code-block:: bash
 
-  # virsh -c qemu:///system dumpxml instanceXXXXXX
+  $ openstack server create --image cirros-0.3.4-x86_64-uec --flavor m1.numa \
+      cirros2
+
+Looking at the resulting guest XML from libvirt:
+
+.. code-block:: bash
+
+  $ sudo virsh list
+   Id    Name                           State
+  ----------------------------------------------------
+   1     instance-00000001              running
+   3     instance-00000003              running
+  $ sudo virsh dumpxml instance-00000003
   ...
   <vcpu placement='static'>4</vcpu>
   <cputune>
@@ -606,8 +651,8 @@ The XML shows:
 
 * The guest NUMA nodes have been strictly pinned to different host NUMA node
 
-As a further sanity test, check what Nova recorded for the instance in the
-database. This should match the <numatune> information
+As a further sanity test, check what nova recorded for the instance in the
+database. This should match the ``<numatune>`` information:
 
 .. code-block:: bash
 
@@ -618,38 +663,34 @@ database. This should match the <numatune> information
   | {
   |     "nova_object.name": "InstanceNUMATopology",
   |     "nova_object.data": {
-  |         "instance_uuid": "a14fcd68-567e-4d71-aaa4-a12f23f16d14",
   |         "cells": [
   |             {
   |                 "nova_object.name": "InstanceNUMACell",
   |                 "nova_object.data": {
-  |                     "cpu_topology": null,
   |                     "pagesize": null,
-  |                     "cpuset": [
-  |                         0,
-  |                         1
-  |                     ],
+  |                     "cpu_topology": null,
+  |                     "cpuset": [0, 1],
+  |                     "cpu_policy": null,
   |                     "memory": 512,
   |                     "cpu_pinning_raw": null,
-  |                     "id": 0
+  |                     "id": 0,
+  |                     "cpu_thread_policy": null
   |                 },
   |             },
   |             {
   |                 "nova_object.name": "InstanceNUMACell",
   |                 "nova_object.data": {
-  |                     "cpu_topology": null,
   |                     "pagesize": null,
-  |                     "cpuset": [
-  |                         2,
-  |                         3
-  |                     ],
+  |                     "cpu_topology": null,
+  |                     "cpuset": [2, 3],
+  |                     "cpu_policy": null,
   |                     "memory": 512,
   |                     "cpu_pinning_raw": null,
-  |                     "id": 1
+  |                     "id": 1,
+  |                     "cpu_thread_policy": null
   |                 },
   |             }
   |         ]
   |     },
   | }
-  |
   +----------------------------------------------------------------------------+
