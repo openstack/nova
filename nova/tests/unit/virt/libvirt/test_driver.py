@@ -3419,9 +3419,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_config_with_vnc(self):
         self.flags(enabled=True, group='vnc')
-        self.flags(virt_type='kvm',
-                   use_usb_tablet=False,
-                   group='libvirt')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(pointer_model='ps2mouse')
         self.flags(enabled=False, group='spice')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -4144,6 +4143,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         image_meta = objects.ImageMeta.from_dict(image_meta)
         return drvr._get_guest_pointer_model(os_type, image_meta)
 
+    def test_use_ps2_mouse(self):
+        self.flags(pointer_model='ps2mouse')
+
+        tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
+        self.assertIsNone(tablet)
+
     def test_get_guest_usb_tablet_wipe(self):
         self.flags(use_usb_tablet=True, group='libvirt')
 
@@ -4206,12 +4211,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_get_guest_no_pointer_model_usb_tablet_set(self):
         self.flags(use_usb_tablet=True, group='libvirt')
+        self.flags(pointer_model=None)
 
         tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
         self.assertIsNotNone(tablet)
 
     def test_get_guest_no_pointer_model_usb_tablet_not_set(self):
         self.flags(use_usb_tablet=False, group='libvirt')
+        self.flags(pointer_model=None)
 
         tablet = self._test_get_guest_usb_tablet(True, True, vm_mode.HVM)
         self.assertIsNone(tablet)
@@ -4567,9 +4574,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(cfg.devices[5].type, "vnc")
 
     def test_get_guest_config_with_rng_device(self):
-        self.flags(virt_type='kvm',
-                   use_usb_tablet=False,
-                   group='libvirt')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(pointer_model='ps2mouse')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -4608,9 +4614,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIsNone(cfg.devices[6].rate_period)
 
     def test_get_guest_config_with_rng_not_allowed(self):
-        self.flags(virt_type='kvm',
-                   use_usb_tablet=False,
-                   group='libvirt')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(pointer_model='ps2mouse')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -4641,9 +4646,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                               vconfig.LibvirtConfigMemoryBalloon)
 
     def test_get_guest_config_with_rng_limits(self):
-        self.flags(virt_type='kvm',
-                   use_usb_tablet=False,
-                   group='libvirt')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(pointer_model='ps2mouse')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
@@ -4686,9 +4690,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.os.path.exists')
     def test_get_guest_config_with_rng_backend(self, mock_path):
         self.flags(virt_type='kvm',
-                   use_usb_tablet=False,
                    rng_dev_path='/dev/hw_rng',
                    group='libvirt')
+        self.flags(pointer_model='ps2mouse')
         mock_path.return_value = True
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
