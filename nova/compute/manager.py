@@ -1962,6 +1962,7 @@ class ComputeManager(manager.Manager):
                 exception.ImageNotActive,
                 exception.ImageUnacceptable,
                 exception.InvalidDiskInfo,
+                exception.InvalidDiskFormat,
                 exception.SignatureVerificationError) as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)

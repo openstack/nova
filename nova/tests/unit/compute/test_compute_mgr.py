@@ -3902,6 +3902,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._test_build_and_run_spawn_exceptions(
             exception.InvalidDiskInfo(reason=""))
 
+    def test_build_and_run_invalid_disk_format_exception(self):
+        self._test_build_and_run_spawn_exceptions(
+            exception.InvalidDiskFormat(disk_format=""))
+
     def test_build_and_run_signature_verification_error(self):
         self._test_build_and_run_spawn_exceptions(
             exception.SignatureVerificationError(reason=""))
