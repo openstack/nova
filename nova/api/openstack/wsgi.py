@@ -15,8 +15,6 @@
 #    under the License.
 
 import functools
-import math
-import time
 
 import microversion_parse
 from oslo_log import log as logging
@@ -1070,46 +1068,3 @@ class Fault(webob.exc.HTTPException):
 
     def __str__(self):
         return self.wrapped_exc.__str__()
-
-
-class RateLimitFault(webob.exc.HTTPException):
-    """Rate-limited request response."""
-
-    def __init__(self, message, details, retry_time):
-        """Initialize new `RateLimitFault` with relevant information."""
-        hdrs = RateLimitFault._retry_after(retry_time)
-        self.wrapped_exc = webob.exc.HTTPTooManyRequests(headers=hdrs)
-        self.content = {
-            "overLimit": {
-                "code": self.wrapped_exc.status_int,
-                "message": message,
-                "details": details,
-                "retryAfter": hdrs['Retry-After'],
-            },
-        }
-
-    @staticmethod
-    def _retry_after(retry_time):
-        delay = int(math.ceil(retry_time - time.time()))
-        retry_after = delay if delay > 0 else 0
-        headers = {'Retry-After': '%d' % retry_after}
-        return headers
-
-    @webob.dec.wsgify(RequestClass=Request)
-    def __call__(self, request):
-        """Return the wrapped exception with a serialized body conforming
-        to our error format.
-        """
-        user_locale = request.best_match_language()
-
-        self.content['overLimit']['message'] = \
-            i18n.translate(self.content['overLimit']['message'], user_locale)
-        self.content['overLimit']['details'] = \
-            i18n.translate(self.content['overLimit']['details'], user_locale)
-
-        content = JSONDictSerializer().serialize(self.content)
-        self.wrapped_exc.charset = 'UTF-8'
-        self.wrapped_exc.content_type = "application/json"
-        self.wrapped_exc.text = content
-
-        return self.wrapped_exc
