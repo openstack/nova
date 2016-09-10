@@ -17,7 +17,7 @@ Every request made has a unique Request ID.
 This is returned in a response header.
 Here is an example response header:
 
-X-Compute-Request-ID: req-4b9e5c04-c40f-4b4f-960e-6ac0858dca6c
+X-Compute-Request-Id: req-4b9e5c04-c40f-4b4f-960e-6ac0858dca6c
 
 Server Actions
 --------------
