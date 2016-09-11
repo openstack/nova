@@ -21,6 +21,7 @@ It is used via a single directive in the .rst file
 """
 
 import re
+import sys
 
 from six.moves import configparser
 
@@ -158,7 +159,11 @@ class FeatureMatrixDirective(rst.Directive):
         :returns: Matrix instance
         """
 
-        cfg = configparser.SafeConfigParser()
+        # SafeConfigParser was deprecated in Python 3.2
+        if sys.version_info >= (3, 2):
+            cfg = configparser.ConfigParser()
+        else:
+            cfg = configparser.SafeConfigParser()
         env = self.state.document.settings.env
         filename = self.arguments[0]
         rel_fpath, fpath = env.relfn2path(filename)
