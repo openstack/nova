@@ -16,6 +16,7 @@
 Shared constants across the VMware driver
 """
 
+from nova.compute import power_state
 from nova.network import model as network_model
 
 MIN_VC_VERSION = '5.1.0'
@@ -225,3 +226,7 @@ VALID_OS_TYPES = set([
     'winXPPro64Guest',
     'winXPProGuest',
 ])
+
+POWER_STATES = {'poweredOff': power_state.SHUTDOWN,
+                'poweredOn': power_state.RUNNING,
+                'suspended': power_state.SUSPENDED}

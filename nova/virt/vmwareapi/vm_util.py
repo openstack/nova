@@ -1153,7 +1153,7 @@ def get_vm_state(session, instance):
     vm_ref = get_vm_ref(session, instance)
     vm_state = session._call_method(vutil, "get_object_property",
                                     vm_ref, "runtime.powerState")
-    return vm_state
+    return constants.POWER_STATES[vm_state]
 
 
 def get_stats_from_cluster(session, cluster):

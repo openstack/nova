@@ -1438,7 +1438,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     @mock.patch.object(driver.VMwareVCDriver, 'reboot')
     @mock.patch.object(vm_util, 'get_vm_state',
-                       return_value='poweredOff')
+                       return_value=power_state.SHUTDOWN)
     def test_resume_state_on_host_boot(self, mock_get_vm_state,
                                        mock_reboot):
         self._create_instance()
@@ -1451,7 +1451,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_resume_state_on_host_boot_no_reboot(self):
         self._create_instance()
-        for state in ['poweredOn', 'suspended']:
+        for state in [power_state.RUNNING, power_state.SUSPENDED]:
             with test.nested(
                 mock.patch.object(driver.VMwareVCDriver, 'reboot'),
                 mock.patch.object(vm_util, 'get_vm_state',
