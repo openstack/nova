@@ -3256,6 +3256,14 @@ class ServersControllerCreateTest(test.TestCase):
                           self.req, body=self.body)
 
     @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.InvalidNUMANodesNumber(
+                           details=''))
+    def test_create_instance_raise_invalid_numa_nodes(self, mock_create):
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.req, body=self.body)
+
+    @mock.patch.object(compute_api.API, 'create',
                        side_effect=exception.InvalidBDMFormat(details=''))
     def test_create_instance_raise_invalid_bdm_format(self, mock_create):
         self.assertRaises(webob.exc.HTTPBadRequest,
