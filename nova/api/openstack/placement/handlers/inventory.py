@@ -20,6 +20,7 @@ import webob
 
 from nova.api.openstack.placement import util
 from nova import exception
+from nova.i18n import _
 from nova import objects
 
 RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
@@ -109,13 +110,13 @@ def _extract_json(body, schema):
         data = jsonutils.loads(body)
     except ValueError as exc:
         raise webob.exc.HTTPBadRequest(
-            'Malformed JSON: %s' % exc,
+            _('Malformed JSON: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     try:
         jsonschema.validate(data, schema)
     except jsonschema.ValidationError as exc:
         raise webob.exc.HTTPBadRequest(
-            'JSON does not validate: %s' % exc,
+            _('JSON does not validate: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     return data
 
@@ -156,8 +157,10 @@ def _make_inventory_object(resource_provider, resource_class, **data):
             resource_class=resource_class, **data)
     except (ValueError, TypeError) as exc:
         raise webob.exc.HTTPBadRequest(
-            'Bad inventory %s for resource provider %s: %s'
-            % (resource_class, resource_provider.uuid, exc),
+            _('Bad inventory %(class)s for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'class': resource_class,
+                                           'rp_uuid': resource_provider.uuid,
+                                           'error': exc},
             json_formatter=util.json_error_formatter)
     return inventory
 
@@ -226,12 +229,13 @@ def create_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            'Update conflict: %s' % exc,
+            _('Update conflict: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(
-            'Unable to create inventory for resource provider %s: %s'
-            % (resource_provider.uuid, exc),
+            _('Unable to create inventory for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
+                                           'error': exc},
             json_formatter=util.json_error_formatter)
 
     response = req.response
@@ -261,8 +265,8 @@ def delete_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             exception.InventoryInUse) as exc:
         raise webob.exc.HTTPConflict(
-            'Unable to delete inventory of class %s: %s' % (
-                resource_class, exc),
+            _('Unable to delete inventory of class %(class)s: %(error)s') %
+            {'class': resource_class, 'error': exc},
             json_formatter=util.json_error_formatter)
 
     response = req.response
@@ -308,8 +312,8 @@ def get_inventory(req):
 
     if not inventory:
         raise webob.exc.HTTPNotFound(
-            'No inventory of class %s for %s'
-            % (resource_class, resource_provider.uuid),
+            _('No inventory of class %(class)s for %(rp_uuid)s') %
+            {'class': resource_class, 'rp_uuid': resource_provider.uuid},
             json_formatter=util.json_error_formatter)
 
     return _send_inventory(req.response, resource_provider, inventory)
@@ -339,7 +343,7 @@ def set_inventories(req):
     data = _extract_inventories(req.body, PUT_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
-            'resource provider generation conflict',
+            _('resource provider generation conflict'),
             json_formatter=util.json_error_formatter)
 
     inv_list = []
@@ -355,12 +359,13 @@ def set_inventories(req):
             exception.InventoryInUse,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            'update conflict: %s' % exc,
+            _('update conflict: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(
-            'Unable to update inventory for resource provider %s: %s'
-            % (resource_provider.uuid, exc),
+            _('Unable to update inventory for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
+                                          'error': exc},
             json_formatter=util.json_error_formatter)
 
     return _send_inventories(req.response, resource_provider, inventories)
@@ -388,7 +393,7 @@ def update_inventory(req):
     data = _extract_inventory(req.body, BASE_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
-            'resource provider generation conflict',
+            _('resource provider generation conflict'),
             json_formatter=util.json_error_formatter)
 
     inventory = _make_inventory_object(resource_provider,
@@ -400,12 +405,13 @@ def update_inventory(req):
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
-            'update conflict: %s' % exc,
+            _('update conflict: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(
-            'Unable to update inventory for resource provider %s: %s'
-            % (resource_provider.uuid, exc),
+            _('Unable to update inventory for resource provider '
+              '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
+                                          'error': exc},
             json_formatter=util.json_error_formatter)
 
     return _send_inventory(req.response, resource_provider, inventory)

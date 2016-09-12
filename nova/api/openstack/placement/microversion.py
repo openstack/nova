@@ -24,6 +24,7 @@ import webob
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.util
+from nova.i18n import _
 
 
 SERVICE_TYPE = 'placement'
@@ -78,11 +79,11 @@ class MicroversionMiddleware(object):
             microversion = extract_version(req.headers)
         except ValueError as exc:
             raise webob.exc.HTTPNotAcceptable(
-                'Invalid microversion: %s' % exc,
+                _('Invalid microversion: %(error)s') % {'error': exc},
                 json_formatter=util.json_error_formatter)
         except TypeError as exc:
             raise webob.exc.HTTPBadRequest(
-                'Invalid microversion: %s' % exc,
+                _('Invalid microversion: %(error)s') % {'error': exc},
                 json_formatter=util.json_error_formatter)
 
         req.environ[MICROVERSION_ENVIRON] = microversion
