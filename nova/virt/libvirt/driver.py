@@ -5409,16 +5409,6 @@ class LibvirtDriver(driver.ComputeDriver):
             md_obj.from_legacy_dict(dest_check_data)
             dest_check_data = md_obj
 
-        listen_addrs = libvirt_migrate.graphics_listen_addrs(
-            dest_check_data)
-        migratable_flag = self._host.is_migratable_xml_flag()
-        if not migratable_flag or not listen_addrs:
-            # In this context want to ensure we do not have to migrate
-            # graphic or serial consoles since we can't update guest's
-            # domain XML to make it handle destination host.
-            self._check_graphics_addresses_can_live_migrate(listen_addrs)
-            self._verify_serial_console_is_disabled()
-
         # Checking shared storage connectivity
         # if block migration, instances_paths should not be on shared storage.
         source = CONF.host
@@ -5834,6 +5824,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
             listen_addrs = libvirt_migrate.graphics_listen_addrs(
                 migrate_data)
+
+            migratable_flag = self._host.is_migratable_xml_flag()
+            if not migratable_flag or not listen_addrs:
+                # In this context want to ensure we do not have to migrate
+                # graphic or serial consoles since we can't update guest's
+                # domain XML to make it handle destination host.
+                # TODO(alexs-h): These checks could be moved to the
+                # check_can_live_migrate_destination/source phase
+                self._check_graphics_addresses_can_live_migrate(listen_addrs)
+                self._verify_serial_console_is_disabled()
+
             if ('target_connect_addr' in migrate_data and
                     migrate_data.target_connect_addr is not None):
                 dest = migrate_data.target_connect_addr

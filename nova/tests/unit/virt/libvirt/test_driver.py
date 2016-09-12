@@ -6990,26 +6990,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertIn('is_shared_block_storage', ret)
         self.assertIn('is_shared_instance_path', ret)
 
-    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
-                       create=True)
-    def test_check_can_live_migrate_source_serial_fails(self):
-        self.flags(enabled=True, group="serial_console")
-        instance = objects.Instance(**self.test_instance)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.MigrationError,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, {})
-
-    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
-                       create=True)
-    def test_check_can_live_migrate_source_graphics_fails(self):
-        self.flags(enabled=True, vncserver_listen='1.2.3.4', group='vnc')
-        instance = objects.Instance(**self.test_instance)
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.assertRaises(exception.MigrationError,
-                          drvr.check_can_live_migrate_source,
-                          self.context, instance, {})
-
     def test_check_can_live_migrate_source_shared_block_storage(self):
         instance, dest_check_data, drvr = self._mock_can_live_migrate_source(
                 is_shared_block_storage=True)
@@ -7810,6 +7790,24 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
                        create=True)
+    def test_live_migration_fails_with_serial_console_without_migratable(self):
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_ref = self.test_instance
+
+        CONF.set_override("enabled", True, "serial_console")
+        dom = fakelibvirt.virDomain
+        migrate_data = objects.LibvirtLiveMigrateData(
+            serial_listen_addr='', target_connect_addr=None,
+            block_migration=False)
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.MigrationError,
+                          drvr._live_migration_operation,
+                          self.context, instance_ref, 'dest',
+                          False, migrate_data, dom, [])
+
+    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
+                       create=True)
     def test_live_migration_uses_migrateToURI_without_migratable_flag(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = dict(self.test_instance)
@@ -7949,6 +7947,35 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_migrateToURI3.assert_called_once_with(
             drvr._live_migration_uri('dest'),
             params=params, flags=151)
+
+    @mock.patch.object(fakelibvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None,
+                       create=True)
+    def test_live_migration_fails_without_migratable_flag_or_0_addr(self):
+        self.flags(enabled=True, vncserver_listen='1.2.3.4', group='vnc')
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_dict = dict(self.test_instance)
+        instance_dict.update({'host': 'fake',
+                              'power_state': power_state.RUNNING,
+                              'vm_state': vm_states.ACTIVE})
+        instance_ref = objects.Instance(**instance_dict)
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "migrateToURI")
+
+        # start test
+        migrate_data = objects.LibvirtLiveMigrateData(
+            graphics_listen_addr_vnc='1.2.3.4',
+            graphics_listen_addr_spice='1.2.3.4',
+            serial_listen_addr='127.0.0.1',
+            target_connect_addr=None,
+            block_migration=False)
+        self.mox.ReplayAll()
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.MigrationError,
+                          drvr._live_migration_operation,
+                          self.context, instance_ref, 'dest',
+                          False, migrate_data, vdmock, [])
 
     def test_live_migration_raises_exception(self):
         # Confirms recover method is called when exceptions are raised.
