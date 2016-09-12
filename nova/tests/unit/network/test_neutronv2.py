@@ -4478,6 +4478,32 @@ class TestNeutronv2WithMock(test.TestCase):
                                                       '172.24.4.227')
         self.assertIsNone(fip)
 
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension',
+                return_value=False)
+    @mock.patch.object(neutronapi.LOG, 'exception')
+    def test_unbind_ports_portnotfound(self, mock_log, mock_ext):
+        api = neutronapi.API()
+        neutron_client = mock.Mock()
+        neutron_client.update_port = mock.Mock(
+            side_effect=exceptions.PortNotFoundClient)
+        api._unbind_ports(self.context, [uuids.port_id], neutron_client)
+        neutron_client.update_port.assert_called_once_with(
+            uuids.port_id, {'port': {'device_id': '', 'device_owner': ''}})
+        mock_log.assert_not_called()
+
+    @mock.patch('nova.network.neutronv2.api.API._has_port_binding_extension',
+                return_value=False)
+    @mock.patch.object(neutronapi.LOG, 'exception')
+    def test_unbind_ports_unexpected_error(self, mock_log, mock_ext):
+        api = neutronapi.API()
+        neutron_client = mock.Mock()
+        neutron_client.update_port = mock.Mock(
+            side_effect=test.TestingException)
+        api._unbind_ports(self.context, [uuids.port_id], neutron_client)
+        neutron_client.update_port.assert_called_once_with(
+            uuids.port_id, {'port': {'device_id': '', 'device_owner': ''}})
+        self.assertTrue(mock_log.called)
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
