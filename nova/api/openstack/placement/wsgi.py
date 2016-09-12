@@ -61,5 +61,5 @@ def init_application():
             logging.getLogger(__name__),
             logging.DEBUG)
 
-    # build our paste app and return it for wsgi goodness
+    # build and return our WSGI app
     return deploy.loadapp(conf.CONF)
