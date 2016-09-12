@@ -381,6 +381,10 @@ Possible values:
                help="""
 Number of greenthreads available for use to sync power states.
 
+This option can be used to reduce the number of concurrent requests
+made to the hypervisor or system with real instance power states
+for performance reasons, for example, with Ironic.
+
 Possible values:
 
 * Any positive integer representing greenthreads count.
