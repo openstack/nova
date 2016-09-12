@@ -61,7 +61,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - name: name
+  - name: name_server_group
   - policies: policies
 
 **Example Create Server Group: JSON request**
