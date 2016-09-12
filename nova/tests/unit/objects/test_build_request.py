@@ -95,6 +95,7 @@ class _TestBuildRequestObject(object):
         with mock.patch.object(build_request.BuildRequest, '_create_in_db',
                 _test_create_args):
             req_obj.create()
+        self.assertEqual({}, req_obj.obj_get_changes())
 
     def test_create_id_set(self):
         req_obj = build_request.BuildRequest(self.context)
