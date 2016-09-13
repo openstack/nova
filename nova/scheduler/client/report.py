@@ -13,7 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import functools
+import time
 
 from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
@@ -24,9 +26,13 @@ from nova.compute import utils as compute_utils
 import nova.conf
 from nova.i18n import _LE, _LI, _LW
 from nova import objects
+from nova.objects import fields
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
+VCPU = fields.ResourceClass.VCPU
+MEMORY_MB = fields.ResourceClass.MEMORY_MB
+DISK_GB = fields.ResourceClass.DISK_GB
 
 
 def safe_connect(f):
@@ -233,34 +239,73 @@ class SchedulerReportClient(object):
                 'allocation_ratio': compute_node.disk_allocation_ratio,
             },
         }
-        generation = self._resource_providers[compute_node.uuid].generation
         data = {
-            'resource_provider_generation': generation,
             'inventories': inventories,
         }
         return data
 
-    @safe_connect
-    def _update_inventory(self, compute_node):
+    def _get_inventory(self, compute_node):
+        url = '/resource_providers/%s/inventories' % compute_node.uuid
+        result = self.get(url)
+        if not result:
+            return {'inventories': {}}
+        return result.json()
+
+    @staticmethod
+    def _compare_inventory(local, remote):
+        """This is needed because the placement service is not restful
+        and does not take and return a consistent object.
+        """
+
+        # Snip out the generation from each of the resource class dicts
+        trimmed = {}
+        for rclass, rdict in remote.items():
+            trimmed[rclass] = copy.copy(rdict)
+            trimmed[rclass].pop('resource_provider_generation')
+
+        return local == trimmed
+
+    def _update_inventory_attempt(self, compute_node):
         """Update the inventory for this compute node if needed.
 
         :param compute_node: The objects.ComputeNode for the operation
         :returns: True if the inventory was updated (or did not need to be),
                   False otherwise.
         """
-        url = '/resource_providers/%s/inventories' % compute_node.uuid
         data = self._compute_node_inventory(compute_node)
+        curr = self._get_inventory(compute_node)
+
+        # Update our generation immediately, if possible. We always report
+        # VCPU inventory, so use that.
+        if curr.get('inventories'):
+            server_gen = (curr['inventories'][VCPU]
+                          ['resource_provider_generation'])
+            my_rp = self._resource_providers[compute_node.uuid]
+            if server_gen != my_rp.generation:
+                LOG.debug('Updating our resource provider generation '
+                          'from %(old)i to %(new)i',
+                          {'old': my_rp.generation,
+                           'new': server_gen})
+            my_rp.generation = server_gen
+
+        # Check to see if we need to update placement's view
+        if self._compare_inventory(data['inventories'],
+                                   curr.get('inventories', {})):
+            return True
+
+        data['resource_provider_generation'] = (
+            self._resource_providers[compute_node.uuid].generation)
+        url = '/resource_providers/%s/inventories' % compute_node.uuid
         result = self.put(url, data)
         if result.status_code == 409:
-            # Generation fail, re-poll and then re-try
-            del self._resource_providers[compute_node.uuid]
-            self._ensure_resource_provider(
-                compute_node.uuid, compute_node.hypervisor_hostname)
-            LOG.info(_LI('Retrying update inventory for %s'),
+            LOG.info(_LI('Inventory update conflict for %s'),
                      compute_node.uuid)
-            # Regenerate the body with the new generation
-            data = self._compute_node_inventory(compute_node)
-            result = self.put(url, data)
+            # Invalidate our cache and re-fetch the resource provider
+            # to be sure to get the latest generation.
+            del self._resource_providers[compute_node.uuid]
+            self._ensure_resource_provider(compute_node.uuid,
+                                           compute_node.hypervisor_hostname)
+            return False
         elif not result:
             LOG.warning(_LW('Failed to update inventory for '
                             '%(uuid)s: %(status)i %(text)s'),
@@ -269,27 +314,31 @@ class SchedulerReportClient(object):
                          'text': result.text})
             return False
 
-        generation = data['resource_provider_generation']
-        if result.status_code == 200:
-            self._resource_providers[compute_node.uuid].generation = (
-                generation + 1)
-            LOG.debug('Updated inventory for %s at generation %i' % (
-                compute_node.uuid, generation))
-            return True
-        elif result.status_code == 409:
-            LOG.info(_LI('Double generation clash updating inventory '
-                         'for %(uuid)s at generation %(gen)i'),
-                     {'uuid': compute_node.uuid,
-                      'gen': generation})
+        if result.status_code != 200:
+            LOG.info(
+                _LI('Received unexpected response code %(code)i while '
+                    'trying to update inventory for compute node %(uuid)s'
+                    ': %(text)s'),
+                {'uuid': compute_node.uuid,
+                 'code': result.status_code,
+                 'text': result.text})
             return False
 
-        LOG.info(_LI('Received unexpected response code %(code)i while '
-                     'trying to update inventory for compute node %(uuid)s '
-                     'at generation %(gen)i: %(text)s'),
-                 {'uuid': compute_node.uuid,
-                  'code': result.status_code,
-                  'gen': generation,
-                  'text': result.text})
+        # Update our view of the generation for next time
+        updated_inventories = result.json()['inventories']
+        new_gen = updated_inventories[VCPU]['resource_provider_generation']
+
+        self._resource_providers[compute_node.uuid].generation = new_gen
+        LOG.debug('Updated inventory for %s at generation %i' % (
+            compute_node.uuid, new_gen))
+        return True
+
+    @safe_connect
+    def _update_inventory(self, compute_node):
+        for attempt in (1, 2, 3):
+            if self._update_inventory_attempt(compute_node):
+                return True
+            time.sleep(1)
         return False
 
     def update_resource_stats(self, compute_node):
@@ -311,9 +360,9 @@ class SchedulerReportClient(object):
                 instance.flavor.swap +
                 instance.flavor.ephemeral_gb)
         return {
-            'MEMORY_MB': instance.flavor.memory_mb,
-            'VCPU': instance.flavor.vcpus,
-            'DISK_GB': disk,
+            MEMORY_MB: instance.flavor.memory_mb,
+            VCPU: instance.flavor.vcpus,
+            DISK_GB: disk,
         }
 
     @safe_connect
