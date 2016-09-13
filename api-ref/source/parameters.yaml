@@ -1131,14 +1131,14 @@ block_device_mapping_v2:
 
       .. code-block:: javascript
 
-        "block_device_mapping_v2": {
+        "block_device_mapping_v2": [{
             "boot_index": "0",
             "uuid": "ac408821-c95a-448f-9292-73986c790911",
             "source_type": "image",
             "volume_size": "25",
             "destination_type": "volume",
             "delete_on_termination": true,
-            "tag": "disk1" }
+            "tag": "disk1" }]
 
     Starting in microversion 2.32, the tag is an optional, arbitrary attribute
     that can be used to assign a tag to the block device. This tag is then
