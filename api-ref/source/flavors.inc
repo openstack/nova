@@ -26,8 +26,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - sort_key: sort_key
-  - sort_dir: sort_dir
+  - sort_key: sort_key_flavor
+  - sort_dir: sort_dir_flavor
   - limit: limit
   - marker: marker
   - minDisk: minDisk
@@ -128,8 +128,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - sort_key: sort_key
-  - sort_dir: sort_dir
+  - sort_key: sort_key_flavor
+  - sort_dir: sort_dir_flavor
   - limit: limit
   - marker: marker
   - minDisk: minDisk

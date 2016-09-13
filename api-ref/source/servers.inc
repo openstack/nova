@@ -159,8 +159,8 @@ Request
 
   - limit: limit
   - marker: marker
-  - sort_key: sort_key
-  - sort_dir: sort_dir
+  - sort_key: sort_key_server
+  - sort_dir: sort_dir_server
   - changes-since: changes_since_server
   - image: image_query
   - flavor: flavor_query
@@ -462,8 +462,8 @@ Request
 
   - limit: limit
   - marker: marker
-  - sort_key: sort_key
-  - sort_dir: sort_dir
+  - sort_key: sort_key_server
+  - sort_dir: sort_dir_server
   - changes-since: changes_since_server
   - image: image_query
   - flavor: flavor_query
