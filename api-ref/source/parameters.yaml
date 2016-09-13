@@ -821,6 +821,12 @@ addresses:
   in: body
   required: true
   type: object
+addresses_obj:
+  description: |
+    The addresses information for the server.
+  in: body
+  required: true
+  type: object
 addSecurityGroup:
   description: |
     The action.
@@ -4348,6 +4354,12 @@ version_id:
   description: >
     A common name for the version in question. Informative only, it
     has no real semantic meaning.
+version_ip:
+  description: |
+    The IP version of the address associated with server.
+  in: body
+  required: true
+  type: integer
 version_max:
   type: string
   in: body
