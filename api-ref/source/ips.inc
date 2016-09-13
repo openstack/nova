@@ -34,10 +34,10 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - addresses: addresses
+  - addresses: addresses_obj
   - network_label: network_label_body
   - addr: ip_address
-  - version: version
+  - version: version_ip
 
 **Example List Ips: JSON response**
 
@@ -74,7 +74,7 @@ Response
 
   - network_label: network_label_body
   - addr: ip_address
-  - version: version
+  - version: version_ip
 
 **Example Show Ip Details: JSON response**
 
