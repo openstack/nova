@@ -3252,7 +3252,8 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _has_sriov_port(network_info):
         for vif in network_info:
-            if vif['vnic_type'] == network_model.VNIC_TYPE_DIRECT:
+            if vif['vnic_type'] in [network_model.VNIC_TYPE_DIRECT,
+                                    network_model.VNIC_TYPE_DIRECT_PHYSICAL]:
                 return True
         return False
 

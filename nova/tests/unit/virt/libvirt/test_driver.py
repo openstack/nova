@@ -11660,6 +11660,26 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
     @mock.patch.object(utils, 'get_image_from_system_metadata',
                        return_value=None)
+    def test_attach_sriov_direct_physical_ports(self,
+                                mock_get_image_metadata,
+                                mock_ID,
+                                mock_attachDevice):
+        instance = objects.Instance(**self.test_instance)
+
+        network_info = _fake_network_info(self, 1)
+        network_info[0]['vnic_type'] = network_model.VNIC_TYPE_DIRECT_PHYSICAL
+        guest = libvirt_guest.Guest(FakeVirtDomain())
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        drvr._attach_sriov_ports(self.context, instance, guest, network_info)
+        mock_get_image_metadata.assert_called_once_with(
+            instance.system_metadata)
+        self.assertTrue(mock_attachDevice.called)
+
+    @mock.patch.object(FakeVirtDomain, 'attachDeviceFlags')
+    @mock.patch.object(FakeVirtDomain, 'ID', return_value=1)
+    @mock.patch.object(utils, 'get_image_from_system_metadata',
+                       return_value=None)
     def test_attach_sriov_ports_with_info_cache(self,
                                                 mock_get_image_metadata,
                                                 mock_ID,
