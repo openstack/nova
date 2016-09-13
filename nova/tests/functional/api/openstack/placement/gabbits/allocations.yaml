@@ -266,9 +266,9 @@ tests:
       # of other changes
       resource_provider_generation: 0
       inventories:
-        - resource_class: VCPU
+        VCPU:
           total: 32
-        - resource_class: DISK_GB
+        DISK_GB:
           total: 10
 
 - name: set inventory on rp2
@@ -280,9 +280,9 @@ tests:
       # of other changes
       resource_provider_generation: 0
       inventories:
-        - resource_class: VCPU
+        VCPU:
           total: 16
-        - resource_class: DISK_GB
+        DISK_GB:
           total: 20
   status: 200
 

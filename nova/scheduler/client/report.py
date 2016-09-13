@@ -207,29 +207,32 @@ class SchedulerReportClient(object):
         return rp
 
     def _compute_node_inventory(self, compute_node):
-        inventories = [
-            {'resource_class': 'VCPU',
-             'total': compute_node.vcpus,
-             'reserved': 0,
-             'min_unit': 1,
-             'max_unit': 1,
-             'step_size': 1,
-             'allocation_ratio': compute_node.cpu_allocation_ratio},
-            {'resource_class': 'MEMORY_MB',
-             'total': compute_node.memory_mb,
-             'reserved': CONF.reserved_host_memory_mb,
-             'min_unit': 1,
-             'max_unit': 1,
-             'step_size': 1,
-             'allocation_ratio': compute_node.ram_allocation_ratio},
-            {'resource_class': 'DISK_GB',
-             'total': compute_node.local_gb,
-             'reserved': CONF.reserved_host_disk_mb * 1024,
-             'min_unit': 1,
-             'max_unit': 1,
-             'step_size': 1,
-             'allocation_ratio': compute_node.disk_allocation_ratio},
-        ]
+        inventories = {
+            'VCPU': {
+                'total': compute_node.vcpus,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': compute_node.cpu_allocation_ratio,
+            },
+            'MEMORY_MB': {
+                'total': compute_node.memory_mb,
+                'reserved': CONF.reserved_host_memory_mb,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': compute_node.ram_allocation_ratio,
+            },
+            'DISK_GB': {
+                'total': compute_node.local_gb,
+                'reserved': CONF.reserved_host_disk_mb * 1024,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': compute_node.disk_allocation_ratio,
+            },
+        }
         generation = self._resource_providers[compute_node.uuid].generation
         data = {
             'resource_provider_generation': generation,

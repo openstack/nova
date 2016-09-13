@@ -22,7 +22,7 @@ from nova.api.openstack.placement import util
 from nova import exception
 from nova import objects
 
-
+RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
 BASE_INVENTORY_SCHEMA = {
     "type": "object",
     "properties": {
@@ -57,10 +57,12 @@ BASE_INVENTORY_SCHEMA = {
 POST_INVENTORY_SCHEMA = copy.deepcopy(BASE_INVENTORY_SCHEMA)
 POST_INVENTORY_SCHEMA['properties']['resource_class'] = {
     "type": "string",
-    "pattern": "^[A-Z0-9_]+$"
+    "pattern": RESOURCE_CLASS_IDENTIFIER,
 }
 POST_INVENTORY_SCHEMA['required'].append('resource_class')
 POST_INVENTORY_SCHEMA['required'].remove('resource_provider_generation')
+PUT_INVENTORY_RECORD_SCHEMA = copy.deepcopy(BASE_INVENTORY_SCHEMA)
+PUT_INVENTORY_RECORD_SCHEMA['required'].remove('resource_provider_generation')
 PUT_INVENTORY_SCHEMA = {
     "type": "object",
     "properties": {
@@ -68,8 +70,10 @@ PUT_INVENTORY_SCHEMA = {
             "type": "integer"
         },
         "inventories": {
-            "type": "array",
-            "items": POST_INVENTORY_SCHEMA
+            "type": "object",
+            "patternProperties": {
+                RESOURCE_CLASS_IDENTIFIER: PUT_INVENTORY_RECORD_SCHEMA,
+            }
         }
     },
     "required": [
@@ -130,17 +134,17 @@ def _extract_inventories(body, schema):
     """Extract and validate multiple inventories from JSON body."""
     data = _extract_json(body, schema)
 
-    inventories = []
-    for raw_inventory in data['inventories']:
+    inventories = {}
+    for res_class, raw_inventory in data['inventories'].items():
         inventory_data = copy.copy(INVENTORY_DEFAULTS)
         inventory_data.update(raw_inventory)
-        inventories.append(inventory_data)
+        inventories[res_class] = inventory_data
 
     data['inventories'] = inventories
     return data
 
 
-def _make_inventory_object(resource_provider, **data):
+def _make_inventory_object(resource_provider, resource_class, **data):
     """Single place to catch malformed Inventories."""
     # TODO(cdent): Some of the validation checks that are done here
     # could be done via JSONschema (using, for example, "minimum":
@@ -148,11 +152,12 @@ def _make_inventory_object(resource_provider, **data):
     # duplication or decoupling so leaving it as this for now.
     try:
         inventory = objects.Inventory(
-            resource_provider=resource_provider, **data)
+            resource_provider=resource_provider,
+            resource_class=resource_class, **data)
     except (ValueError, TypeError) as exc:
         raise webob.exc.HTTPBadRequest(
             'Bad inventory %s for resource provider %s: %s'
-            % (data['resource_class'], resource_provider.uuid, exc),
+            % (resource_class, resource_provider.uuid, exc),
             json_formatter=util.json_error_formatter)
     return inventory
 
@@ -210,8 +215,11 @@ def create_inventory(req):
     resource_provider = objects.ResourceProvider.get_by_uuid(
         context, uuid)
     data = _extract_inventory(req.body, POST_INVENTORY_SCHEMA)
+    resource_class = data.pop('resource_class')
 
-    inventory = _make_inventory_object(resource_provider, **data)
+    inventory = _make_inventory_object(resource_provider,
+                                       resource_class,
+                                       **data)
 
     try:
         resource_provider.add_inventory(inventory)
@@ -228,7 +236,7 @@ def create_inventory(req):
 
     response = req.response
     response.location = util.inventory_url(
-        req.environ, resource_provider, data['resource_class'])
+        req.environ, resource_provider, resource_class)
     return _send_inventory(response, resource_provider, inventory,
                            status=201)
 
@@ -335,9 +343,9 @@ def set_inventories(req):
             json_formatter=util.json_error_formatter)
 
     inv_list = []
-    for inventory_data in data['inventories']:
+    for res_class, inventory_data in data['inventories'].items():
         inventory = _make_inventory_object(
-            resource_provider, **inventory_data)
+            resource_provider, res_class, **inventory_data)
         inv_list.append(inventory)
     inventories = objects.InventoryList(objects=inv_list)
 
@@ -383,8 +391,9 @@ def update_inventory(req):
             'resource provider generation conflict',
             json_formatter=util.json_error_formatter)
 
-    data['resource_class'] = resource_class
-    inventory = _make_inventory_object(resource_provider, **data)
+    inventory = _make_inventory_object(resource_provider,
+                                       resource_class,
+                                       **data)
 
     try:
         resource_provider.update_inventory(inventory)

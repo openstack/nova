@@ -160,6 +160,8 @@ tests:
       resource_class: NO_CLASS_14
       total: 2048
   status: 400
+  response_strings:
+      - Bad inventory NO_CLASS_14 for resource provider $ENVIRON['RP_UUID']
 
 - name: post inventory duplicated resource class
   desc: DISK_GB was already created above
@@ -258,9 +260,9 @@ tests:
   data:
       resource_provider_generation: 0
       inventories:
-        - resource_class: IPV4_ADDRESS
+        IPV4_ADDRESS:
           total: 253
-        - resource_class: DISK_GB
+        DISK_GB:
           total: 1024
   status: 200
   response_json_paths:
@@ -287,7 +289,7 @@ tests:
   data:
       resource_provider_generation: 99
       inventories:
-        - resource_class: IPV4_ADDRESS
+        IPV4_ADDRESS:
           total: 253
   status: 409
   response_strings:
@@ -302,7 +304,7 @@ tests:
   data:
       resource_provider_generation: 6
       inventories:
-        - resource_class: IPV4_ADDRESS
+        IPV4_ADDRESS:
           total: 253
           reserved: 512
   status: 400
