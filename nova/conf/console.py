@@ -47,7 +47,7 @@ Possible values
   * 'console' (default) or any string representing topic exchange name.
 """),
 
-# TODO(pumaranikar): Move this config to stevedoor plugin system.
+# TODO(pumaranikar): Move this config to stevedore plugin system.
     cfg.StrOpt('console_driver',
                 default='nova.console.xvp.XVPConsoleProxy',
                 help="""

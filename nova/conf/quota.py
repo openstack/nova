@@ -226,7 +226,7 @@ Possible values:
 """),
 
 # TODO(pumaranikar): Add a new config to select between the db_driver and
-# the no_op driver using stevedoor.
+# the no_op driver using stevedore.
     cfg.StrOpt('quota_driver',
                default='nova.quota.DbQuotaDriver',
                deprecated_for_removal=True,
