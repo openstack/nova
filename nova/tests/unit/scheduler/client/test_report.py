@@ -749,3 +749,32 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
             mock_delete.return_value.__bool__.return_value = False
         self.client.update_instance_allocation(cn, inst, -1)
         self.assertTrue(mock_warn.called)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_remove_deleted_instances(
+            self, mock_get, mock_delete):
+        cn = objects.ComputeNode(uuid=uuids.cn)
+        inst1 = objects.Instance(uuid=uuids.inst1)
+        inst2 = objects.Instance(uuid=uuids.inst2)
+        fake_allocations = {
+            'MEMORY_MB': 1024,
+            'VCPU': 2,
+            'DISK_GB': 101,
+        }
+        mock_get.return_value.json.return_value = {'allocations': {
+                inst1.uuid: fake_allocations,
+                inst2.uuid: fake_allocations,
+            }
+        }
+        mock_delete.return_value = True
+        with mock.patch.object(self.client, '_allocations'):
+            self.client.remove_deleted_instances(cn, [])
+            mock_get.assert_called_once_with(
+                '/resource_providers/%s/allocations' % cn.uuid)
+            expected_calls = [
+                mock.call('/allocations/%s' % inst1.uuid),
+                mock.call('/allocations/%s' % inst2.uuid)]
+            mock_delete.assert_has_calls(expected_calls, any_order=True)

@@ -408,17 +408,17 @@ class SchedulerReportClient(object):
                  'text': r.text})
 
     @safe_connect
-    def _delete_allocation_for_instance(self, instance):
-        url = '/allocations/%s' % instance.uuid
+    def _delete_allocation_for_instance(self, uuid):
+        url = '/allocations/%s' % uuid
         r = self.delete(url)
         if r:
-            LOG.info(_LI('Deleted allocation for instance'),
-                     instance=instance)
+            LOG.info(_LI('Deleted allocation for instance %s'),
+                     uuid)
         else:
             LOG.warning(
                 _LW('Unable to delete allocation for instance '
                     '%(uuid)s: (%(code)i %(text)s)'),
-                {'uuid': instance.uuid,
+                {'uuid': uuid,
                  'code': r.status_code,
                  'text': r.text})
 
@@ -426,4 +426,27 @@ class SchedulerReportClient(object):
         if sign > 0:
             self._allocate_for_instance(compute_node, instance)
         else:
-            self._delete_allocation_for_instance(instance)
+            self._delete_allocation_for_instance(instance.uuid)
+
+    @safe_connect
+    def _get_allocations(self, compute_node):
+        url = '/resource_providers/%s/allocations' % compute_node.uuid
+        resp = self.get(url)
+        if not resp:
+            return {}
+        else:
+            return resp.json()['allocations']
+
+    def remove_deleted_instances(self, compute_node, instance_uuids):
+        allocations = self._get_allocations(compute_node)
+        if allocations is None:
+            allocations = {}
+
+        instance_dict = {instance.uuid: instance
+                         for instance in instance_uuids}
+        removed_instances = set(allocations.keys()) - set(instance_dict.keys())
+
+        for uuid in removed_instances:
+            LOG.warning(_LW('Deleting stale allocation for instance %s'),
+                        uuid)
+            self._delete_allocation_for_instance(uuid)
