@@ -136,7 +136,7 @@ class BuildRequest(base.NovaObject):
                 setattr(req, key, db_req[key])
         # Load instance last because other fields on req may be referenced
         req._load_instance(db_req['instance'])
-        req.obj_reset_changes()
+        req.obj_reset_changes(recursive=True)
         req._context = context
         return req
 
