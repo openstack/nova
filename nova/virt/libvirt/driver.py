@@ -2883,8 +2883,16 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _create_ephemeral(target, ephemeral_size,
                           fs_label, os_type, is_block_dev=False,
-                          context=None, specified_fs=None):
+                          context=None, specified_fs=None,
+                          vm_mode=None):
         if not is_block_dev:
+            if (CONF.libvirt.virt_type == "parallels" and
+                    vm_mode == fields.VMMode.EXE):
+
+                libvirt_utils.create_ploop_image('expanded', target,
+                                                 '%dG' % ephemeral_size,
+                                                 specified_fs)
+                return
             libvirt_utils.create_image('raw', target, '%dG' % ephemeral_size)
 
         # Run as root only for block devices.
@@ -3059,13 +3067,15 @@ class LibvirtDriver(driver.ComputeDriver):
         file_extension = disk_api.get_file_extension_for_os_type(
                                                           os_type_with_default)
 
+        vm_mode = fields.VMMode.get_from_instance(instance)
         ephemeral_gb = instance.flavor.ephemeral_gb
         if 'disk.local' in disk_mapping:
             disk_image = image('disk.local')
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral0',
                                    os_type=instance.os_type,
-                                   is_block_dev=disk_image.is_block_dev)
+                                   is_block_dev=disk_image.is_block_dev,
+                                   vm_mode=vm_mode)
             fname = "ephemeral_%s_%s" % (ephemeral_gb, file_extension)
             size = ephemeral_gb * units.Gi
             disk_image.cache(fetch_func=fn,
@@ -3086,7 +3096,8 @@ class LibvirtDriver(driver.ComputeDriver):
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral%d' % idx,
                                    os_type=instance.os_type,
-                                   is_block_dev=disk_image.is_block_dev)
+                                   is_block_dev=disk_image.is_block_dev,
+                                   vm_mode=vm_mode)
             size = eph['size'] * units.Gi
             fname = "ephemeral_%s_%s" % (eph['size'], file_extension)
             disk_image.cache(fetch_func=fn,
@@ -3512,6 +3523,19 @@ class LibvirtDriver(driver.ComputeDriver):
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
         mount_rootfs = CONF.libvirt.virt_type == "lxc"
+
+        def _get_ephemeral_devices():
+            eph_devices = []
+            for idx, eph in enumerate(
+                driver.block_device_info_get_ephemerals(
+                    block_device_info)):
+                diskeph = self._get_guest_disk_config(
+                    instance,
+                    blockinfo.get_eph_disk(idx),
+                    disk_mapping, inst_type)
+                eph_devices.append(diskeph)
+            return eph_devices
+
         if mount_rootfs:
             fs = vconfig.LibvirtConfigGuestFilesys()
             fs.source_type = "mount"
@@ -3531,6 +3555,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if 'disk' in disk_mapping:
                     fs = self._get_guest_fs_config(instance, "disk")
                     devices.append(fs)
+                devices = devices + _get_ephemeral_devices()
         else:
 
             if rescue:
@@ -3562,14 +3587,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     instance.default_ephemeral_device = (
                         block_device.prepend_dev(disklocal.target_dev))
 
-                for idx, eph in enumerate(
-                    driver.block_device_info_get_ephemerals(
-                        block_device_info)):
-                    diskeph = self._get_guest_disk_config(
-                        instance,
-                        blockinfo.get_eph_disk(idx),
-                        disk_mapping, inst_type)
-                    devices.append(diskeph)
+                devices = devices + _get_ephemeral_devices()
 
                 if 'disk.swap' in disk_mapping:
                     diskswap = self._get_guest_disk_config(instance,

@@ -10761,7 +10761,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         backend.mock_create_ephemeral.assert_called_once_with(
             target=filename, ephemeral_size=100, fs_label='ephemeral0',
             is_block_dev=mock.sentinel.is_block_dev, os_type='linux',
-            specified_fs=None, context=self.context)
+            specified_fs=None, context=self.context, vm_mode=None)
         backend.disks['disk.eph0'].cache.assert_called_once_with(
             fetch_func=mock.ANY, context=self.context,
             filename=filename, size=100 * units.Gi, ephemeral_size=mock.ANY,
@@ -10867,6 +10867,18 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
+
+    @mock.patch.object(fake_libvirt_utils, 'create_ploop_image')
+    def test_create_ephemeral_parallels(self, mock_create_ploop):
+        self.flags(virt_type='parallels', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               is_block_dev=False,
+                               specified_fs='fs_format',
+                               vm_mode=fields.VMMode.EXE)
+        mock_create_ploop.assert_called_once_with('expanded',
+                                                  '/dev/something',
+                                                  '20G', 'fs_format')
 
     def test_create_swap_default(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

@@ -1026,11 +1026,18 @@ class Ploop(Image):
 
         self.resolve_driver_format()
 
+    # Create new ploop disk (in case of epehemeral) or
+    # copy ploop disk from glance image
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        filename = os.path.split(base)[-1]
+        filename = os.path.basename(base)
 
+        # Copy main file of ploop disk, restore DiskDescriptor.xml for it
+        # and resize if necessary
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
-        def create_ploop_image(base, target, size):
+        def _copy_ploop_image(base, target, size):
+            # Ploop disk is a directory with data file(root.hds) and
+            # DiskDescriptor.xml, so create this dir
+            fileutils.ensure_tree(target)
             image_path = os.path.join(target, "root.hds")
             libvirt_utils.copy_image(base, image_path)
             utils.execute('ploop', 'restore-descriptor', '-f', self.pcs_format,
@@ -1038,7 +1045,28 @@ class Ploop(Image):
             if size:
                 self.resize_image(size)
 
-        if not os.path.exists(self.path):
+        # Generating means that we create empty ploop disk
+        generating = 'image_id' not in kwargs
+        remove_func = functools.partial(fileutils.delete_if_exists,
+                                        remove=shutil.rmtree)
+        if generating:
+            if os.path.exists(self.path):
+                return
+            with fileutils.remove_path_on_error(self.path, remove=remove_func):
+                prepare_template(target=self.path, *args, **kwargs)
+        else:
+            # Create ploop disk from glance image
+            if not os.path.exists(base):
+                prepare_template(target=base, *args, **kwargs)
+            else:
+                # Disk already exists in cache, just update time
+                libvirt_utils.update_mtime(base)
+            self.verify_base_size(base, size)
+
+            if os.path.exists(self.path):
+                return
+
+            # Get format for ploop disk
             if CONF.force_raw_images:
                 self.pcs_format = "raw"
             else:
@@ -1058,19 +1086,8 @@ class Ploop(Image):
                                         image_id=kwargs["image_id"],
                                         reason=reason)
 
-        if not os.path.exists(base):
-            prepare_template(target=base, *args, **kwargs)
-        self.verify_base_size(base, size)
-
-        if os.path.exists(self.path):
-            return
-
-        fileutils.ensure_tree(self.path)
-
-        remove_func = functools.partial(fileutils.delete_if_exists,
-                                        remove=shutil.rmtree)
-        with fileutils.remove_path_on_error(self.path, remove=remove_func):
-            create_ploop_image(base, self.path, size)
+            with fileutils.remove_path_on_error(self.path, remove=remove_func):
+                _copy_ploop_image(base, self.path, size)
 
     def resize_image(self, size):
         image = imgmodel.LocalFileImage(self.path, imgmodel.FORMAT_PLOOP)
