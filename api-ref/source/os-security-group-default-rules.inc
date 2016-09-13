@@ -1,6 +1,5 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
+
 .. needs:body_verification
 
 ================================================================================
@@ -31,11 +30,12 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - security_group_default_rules: security_group_default_rules
   - from_port: from_port
-  - id: id
+  - id: secgroup_default_rule_id
   - ip_protocol: ip_protocol
-  - ip_range: ip_range
-  - cidr: cidr
+  - ip_range: secgroup_rule_ip_range
+  - ip_range.cidr: secgroup_rule_cidr
   - to_port: to_port
 
 **Example List default security group rules: JSON response**
@@ -66,11 +66,12 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - security_group_default_rule: security_group_default_rule
   - from_port: from_port
-  - id: id
+  - id: secgroup_default_rule_id
   - ip_protocol: ip_protocol
-  - ip_range: ip_range
-  - cidr: cidr
+  - ip_range: secgroup_rule_ip_range
+  - ip_range.cidr: secgroup_rule_cidr
   - to_port: to_port
 
 **Example Show default security group rule: JSON response**
@@ -97,11 +98,11 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - id: id
+  - security_group_default_rule: security_group_default_rule
   - ip_protocol: ip_protocol
   - from_port: from_port
   - to_port: to_port
-  - cidr: cidr
+  - cidr: secgroup_rule_cidr
 
 **Example Create default security group rule: JSON request**
 
@@ -113,11 +114,12 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - security_group_default_rule: security_group_default_rule
   - from_port: from_port
-  - id: id
+  - id: secgroup_default_rule_id
   - ip_protocol: ip_protocol
-  - ip_range: ip_range
-  - cidr: cidr
+  - ip_range: secgroup_rule_ip_range
+  - ip_range.cidr: secgroup_rule_cidr
   - to_port: to_port
 
 **Example Create default security group rule: JSON response**

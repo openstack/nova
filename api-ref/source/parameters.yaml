@@ -3644,6 +3644,12 @@ running_vms_total:
   in: body
   required: true
   type: integer
+secgroup_default_rule_id:
+  description: |
+    The security group default rule ID.
+  in: body
+  required: true
+  type: string
 secgroup_rule_cidr:
   description: |
     The CIDR for address range.
@@ -3680,6 +3686,18 @@ security_group_1:
   in: body
   required: true
   type: string
+security_group_default_rule:
+  description: |
+    A ``security_group_default_rule`` object.
+  in: body
+  required: true
+  type: object
+security_group_default_rules:
+  description: |
+    A list of the ``security_group_default_rule`` object.
+  in: body
+  required: true
+  type: object
 security_group_rule:
   description: |
     A ``security_group_rule`` object.
