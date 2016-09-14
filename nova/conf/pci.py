@@ -39,10 +39,11 @@ Possible Values:
   defines an alias for the Intel QuickAssist card. (multi valued). Valid key
   values are :
 
-  * "name"
-  * "product_id"
-  * "vendor_id"
-  * "device_type"
+  * "name": Name of the PCI alias.
+  * "product_id": Product ID of the device in hexadecimal.
+  * "vendor_id": Vendor ID of the device in hexadecimal.
+  * "device_type": Type of PCI device. Valid values are: "type-PCI",
+    "type-PF" and "type-VF".
 """),
     cfg.MultiStrOpt('pci_passthrough_whitelist',
         default=[],
@@ -54,14 +55,26 @@ Possible values:
 * A JSON dictionary which describe a whitelisted PCI device. It should take
   the following format:
 
-    ["device_id": "<id>",] ["product_id": "<id>",]
+    ["vendor_id": "<id>",] ["product_id": "<id>",]
     ["address": "[[[[<domain>]:]<bus>]:][<slot>][.[<function>]]" |
-     "devname": "PCI Device Name",]
-    {"tag": "<tag_value>",}
+     "devname": "<name>",]
+    {"<tag>": "<tag_value>",}
 
-  where '[' indicates zero or one occurrences, '{' indicates zero or multiple
+  Where '[' indicates zero or one occurrences, '{' indicates zero or multiple
   occurrences, and '|' mutually exclusive options. Note that any missing
-  fields are automatically wildcarded. Valid examples are:
+  fields are automatically wildcarded.
+
+  Valid key values are :
+
+  * "vendor_id": Vendor ID of the device in hexadecimal.
+  * "product_id": Product ID of the device in hexadecimal.
+  * "address": PCI address of the device.
+  * "devname": Device name of the device (for e.g. interface name). Not all
+    PCI devices have a name.
+  * "<tag>": Additional <tag> and <tag_value> used for matching PCI devices.
+    Supported <tag>: "physical_network".
+
+  Valid examples are:
 
     pci_passthrough_whitelist = {"devname":"eth0",
                                  "physical_network":"physnet"}
