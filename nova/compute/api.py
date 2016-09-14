@@ -1356,6 +1356,8 @@ class API(base.Base):
         else:
             hostname = None
 
+        # NOTE(mriedem): This is only here for test simplicity since a server
+        # name is required in the REST API.
         if display_name is None:
             display_name = self._default_display_name(instance.uuid)
             instance.display_name = display_name
