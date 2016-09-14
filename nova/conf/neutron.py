@@ -1,6 +1,3 @@
-# needs:check_deprecation_status
-
-
 # Copyright 2016 OpenStack Foundation
 # All Rights Reserved.
 #
