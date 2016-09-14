@@ -1,11 +1,14 @@
 .. -*- rst -*-
-.. needs:parameter_verification
-.. needs:example_verification
-.. needs:body_verification
 
-==========================
- Cloudpipe (os-cloudpipe)
-==========================
+======================================
+ Cloudpipe (os-cloudpipe) (DEPRECATED)
+======================================
+
+.. warning::
+
+   This API only works with ``nova-network`` which is
+   deprecated in favor of Neutron. It should be avoided
+   in any new applications.
 
 Manages virtual VPNs for projects.
 
@@ -22,6 +25,17 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 
 Response
 --------
+
+.. rest_parameters:: parameters.yaml
+
+  - cloudpipes: cloudpipes
+  - created_at: created
+  - instance_id: instance_id_cloudpipe
+  - internal_ip: fixed_ip
+  - project_id: project_id_instance_action
+  - public_ip: vpn_public_ip_resp
+  - public_port: vpn_public_port_resp
+  - state: vpn_state
 
 **Example List Cloudpipes: JSON response**
 
@@ -44,6 +58,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
+  - cloudpipe: cloudpipe
   - project_id: project_id
 
 **Example Create Cloudpipe: JSON request**
@@ -54,6 +69,10 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - instance_id: instance_id_cloudpipe
+
 **Example Create Cloudpipe: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-cloudpipe/cloud-pipe-create-resp.json
@@ -62,7 +81,7 @@ Response
 Update Cloudpipe
 ================
 
-.. rest_method:: POST /os-cloudpipe/configure-project
+.. rest_method:: PUT /os-cloudpipe/configure-project
 
 Updates the virtual private network (VPN) IP address and port for a cloudpipe instance.
 
@@ -75,8 +94,9 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - vpn_ip: vpn_ip
-  - vpn_port: vpn_port
+  - configure_project: configure_project_cloudpipe
+  - vpn_ip: vpn_public_ip
+  - vpn_port: vpn_public_port
 
 **Example Update Cloudpipe: JSON request**
 
@@ -85,3 +105,5 @@ Request
 
 Response
 --------
+
+There is no body content for the response of a successful PUT request

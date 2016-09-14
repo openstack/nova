@@ -1225,6 +1225,18 @@ cidr:
   in: body
   required: true
   type: string
+cloudpipe:
+  description: |
+    The cloudpipe object.
+  in: body
+  required: true
+  type: object
+cloudpipes:
+  description: |
+    The list of cloudpipe objects.
+  in: body
+  required: true
+  type: array
 code:
   description: |
     The HTTP response code for the event. The following codes are currently used:
@@ -1253,6 +1265,12 @@ config_drive_resp:
   in: body
   required: true
   type: boolean
+configure_project_cloudpipe:
+  description: |
+    VPN IP and Port information to configure the cloudpipe instance..
+  in: body
+  required: true
+  type: object
 confirmResize:
   description: |
     The action.
@@ -2510,6 +2528,12 @@ instance_action_events:
 instance_id_body:
   description: |
     The UUID of the server.
+  in: body
+  required: true
+  type: string
+instance_id_cloudpipe:
+  description: |
+    The UUID of the cloudpipe instance.
   in: body
   required: true
   type: string
@@ -4513,15 +4537,33 @@ volumes:
   in: body
   required: true
   type: array
-vpn_ip:
+vpn_public_ip:
   description: |
     The VPN IP address.
   in: body
   required: true
   type: string
-vpn_port:
+vpn_public_ip_resp:
+  description: |
+    The VPN public IP address.
+  in: body
+  required: false
+  type: string
+vpn_public_port:
   description: |
     The VPN port.
   in: body
   required: true
+  type: string
+vpn_public_port_resp:
+  description: |
+    The VPN public port.
+  in: body
+  required: false
+  type: string
+vpn_state:
+  description: |
+    The VPN state.
+  in: body
+  required: false
   type: string
