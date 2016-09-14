@@ -5481,8 +5481,11 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(self.compute.network_api,
                               'migrate_instance_start'),
             mock.patch.object(self.rt.pci_tracker,
-                              'free_device')
-            ) as (mock_setup, mock_migrate, mock_pci_free_device):
+                              'free_device'),
+            mock.patch.object(self.rt.pci_tracker.stats, 'to_device_pools_obj',
+                              return_value=objects.PciDevicePoolList())
+            ) as (mock_setup, mock_migrate, mock_pci_free_device,
+                  mock_to_device_pools_obj):
             method(self.context, instance=instance,
                                  migration=migration, reservations=[])
             mock_pci_free_device.assert_called_once_with(
