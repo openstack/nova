@@ -73,6 +73,11 @@ tests:
   data: I want a resource provider please
   status: 415
 
+- name: post resource provider missing content-type
+  POST: /resource_providers
+  data: I want a resource provider please
+  status: 400
+
 - name: post resource provider schema mismatch
   POST: /resource_providers
   request_headers:
