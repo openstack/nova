@@ -524,15 +524,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 not self._host.has_min_version(
                                         MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch),
                                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))):
-                raise exception.NovaException(
-                    _('Running Nova with qemu/kvm virt_type on %(arch)s '
-                      'requires libvirt version %(libvirt_ver)s and '
-                      'qemu version %(qemu_ver)s, or greater') %
-                    {'arch': kvm_arch,
-                     'libvirt_ver': self._version_to_string(
-                        MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
-                     'qemu_ver': self._version_to_string(
-                        MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
+            raise exception.NovaException(
+                _('Running Nova with qemu/kvm virt_type on %(arch)s '
+                  'requires libvirt version %(libvirt_ver)s and '
+                  'qemu version %(qemu_ver)s, or greater') %
+                {'arch': kvm_arch,
+                 'libvirt_ver': self._version_to_string(
+                     MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
+                 'qemu_ver': self._version_to_string(
+                     MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
 
     def _prepare_migration_flags(self):
         migration_flags = 0

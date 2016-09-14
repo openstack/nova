@@ -314,7 +314,7 @@ class APIRouterV21(base_wsgi.Router):
                             **kargs)
 
             if resource.custom_routes_fn:
-                    resource.custom_routes_fn(mapper, wsgi_resource)
+                resource.custom_routes_fn(mapper, wsgi_resource)
 
     def _register_controllers(self, ext):
         """Register controllers defined by the extensions

@@ -118,7 +118,7 @@ class LibvirtScalityVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
                 parts = mount.split()
                 if (parts[0].endswith('fuse') and
                         parts[1].rstrip('/') == mount_path):
-                            return True
+                    return True
         return False
 
     def _mount_sofs(self):

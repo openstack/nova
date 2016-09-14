@@ -84,23 +84,23 @@ def generate_identity_headers(context, status='Confirmed'):
 
 
 def _glanceclient_from_endpoint(context, endpoint, version=1):
-        """Instantiate a new glanceclient.Client object."""
-        params = {}
-        # NOTE(sdague): even if we aren't using keystone, it doesn't
-        # hurt to send these headers.
-        params['identity_headers'] = generate_identity_headers(context)
-        if endpoint.startswith('https://'):
-            # https specific params
-            params['insecure'] = CONF.glance.api_insecure
-            params['ssl_compression'] = False
-            sslutils.is_enabled(CONF)
-            if CONF.ssl.cert_file:
-                params['cert_file'] = CONF.ssl.cert_file
-            if CONF.ssl.key_file:
-                params['key_file'] = CONF.ssl.key_file
-            if CONF.ssl.ca_file:
-                params['cacert'] = CONF.ssl.ca_file
-        return glanceclient.Client(str(version), endpoint, **params)
+    """Instantiate a new glanceclient.Client object."""
+    params = {}
+    # NOTE(sdague): even if we aren't using keystone, it doesn't
+    # hurt to send these headers.
+    params['identity_headers'] = generate_identity_headers(context)
+    if endpoint.startswith('https://'):
+        # https specific params
+        params['insecure'] = CONF.glance.api_insecure
+        params['ssl_compression'] = False
+        sslutils.is_enabled(CONF)
+        if CONF.ssl.cert_file:
+            params['cert_file'] = CONF.ssl.cert_file
+        if CONF.ssl.key_file:
+            params['key_file'] = CONF.ssl.key_file
+        if CONF.ssl.ca_file:
+            params['cacert'] = CONF.ssl.ca_file
+    return glanceclient.Client(str(version), endpoint, **params)
 
 
 def get_api_servers():

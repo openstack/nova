@@ -31,7 +31,7 @@ def all_things_equal(obj_a, obj_b):
             continue
 
         if getattr(obj_a, name) != getattr(obj_b, name):
-                return False
+            return False
     return True
 
 

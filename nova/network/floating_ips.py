@@ -607,10 +607,9 @@ class FloatingIP(object):
         for dns_domain in domain_list:
             if (dns_domain.domain in floating_driver_domain_list or
                     dns_domain.domain in instance_driver_domain_list):
-                    domain_entry = self._prepare_domain_entry(context,
-                                                              dns_domain)
-                    if domain_entry:
-                        domains.append(domain_entry)
+                domain_entry = self._prepare_domain_entry(context, dns_domain)
+                if domain_entry:
+                    domains.append(domain_entry)
             else:
                 LOG.warning(_LW('Database inconsistency: DNS domain |%s| is '
                                 'registered in the Nova db but not visible to '

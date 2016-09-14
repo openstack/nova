@@ -2078,10 +2078,11 @@ class ComputeManager(manager.Manager):
             yield resources
         except Exception as exc:
             with excutils.save_and_reraise_exception() as ctxt:
-                if not isinstance(exc, (exception.InstanceNotFound,
-                    exception.UnexpectedDeletingTaskStateError)):
-                        LOG.exception(_LE('Instance failed to spawn'),
-                                instance=instance)
+                if not isinstance(exc, (
+                        exception.InstanceNotFound,
+                        exception.UnexpectedDeletingTaskStateError)):
+                    LOG.exception(_LE('Instance failed to spawn'),
+                                  instance=instance)
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)
