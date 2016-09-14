@@ -290,7 +290,7 @@ Request
   - accessIPv6: accessIPv6_in
   - adminPass: adminPass
   - user_data: user_data
-  - os-availability-zone:availability_zone: os-availability-zone:availability_zone
+  - availability_zone: os-availability-zone:availability_zone
   - networks: networks
   - networks.uuid: network_uuid
   - networks.port: port
