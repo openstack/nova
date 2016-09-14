@@ -12,7 +12,7 @@
    See: `Relevant Image APIs
    <http://developer.openstack.org/api-ref-image-v2.html#images-images-v2>`__.
 
-Lists, shows details, creates, updates, and deletes images.
+Lists, shows details and deletes images.
 Also sets, lists, shows details, create, update and deletes image metadata.
 
 An image is a collection of files that you use to create and rebuild a
