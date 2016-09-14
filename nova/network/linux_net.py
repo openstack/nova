@@ -1231,9 +1231,6 @@ def _ip_bridge_cmd(action, params, device):
 
 def _set_device_mtu(dev, mtu=None):
     """Set the device MTU."""
-
-    if not mtu:
-        mtu = CONF.network_device_mtu
     if mtu:
         utils.execute('ip', 'link', 'set', dev, 'mtu',
                       mtu, run_as_root=True,
