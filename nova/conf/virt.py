@@ -272,7 +272,8 @@ Unused unresized base images younger than this will not be removed
 
     cfg.StrOpt(
         'pointer_model',
-        choices=[None, 'usbtablet'],
+        default='usbtablet',
+        choices=[None, 'ps2mouse', 'usbtablet'],
         help="""
 Generic property to specify the pointer type.
 
@@ -284,7 +285,9 @@ this configuration option.
 
 Possible values:
 
-* None: Uses relative movement. Mouse connected by PS2
+* None: Uses default behavior provided by drivers (mouse on PS2 for
+        libvirt x86)
+* ps2mouse: Uses relative movement. Mouse connected by PS2
 * usbtablet: Uses absolute movement. Tablet connect by USB
 
 Interdependencies to other options:
