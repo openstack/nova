@@ -166,7 +166,7 @@ def _send_inventories(response, resource_provider, inventories):
     """Send a JSON representation of a list of inventories."""
     response.status = 200
     response.body = jsonutils.dumps(_serialize_inventories(
-        resource_provider.generation, inventories))
+        inventories, resource_provider.generation))
     response.content_type = 'application/json'
     return response
 
@@ -175,30 +175,32 @@ def _send_inventory(response, resource_provider, inventory, status=200):
     """Send a JSON representation of one single inventory."""
     response.status = status
     response.body = jsonutils.dumps(_serialize_inventory(
-        resource_provider.generation, inventory))
+        inventory, generation=resource_provider.generation))
     response.content_type = 'application/json'
     return response
 
 
-def _serialize_inventory(generation, inventory):
+def _serialize_inventory(inventory, generation=None):
     """Turn a single inventory into a dictionary."""
     data = {
         field: getattr(inventory, field)
         for field in OUTPUT_INVENTORY_FIELDS
     }
-    data['resource_provider_generation'] = generation
+    if generation:
+        data['resource_provider_generation'] = generation
     return data
 
 
-def _serialize_inventories(generation, inventories):
+def _serialize_inventories(inventories, generation):
     """Turn a list of inventories in a dict by resource class."""
     inventories_by_class = {inventory.resource_class: inventory
                             for inventory in inventories}
     inventories_dict = {}
     for resource_class, inventory in inventories_by_class.items():
         inventories_dict[resource_class] = _serialize_inventory(
-            generation, inventory)
-    return {'inventories': inventories_dict}
+            inventory, generation=None)
+    return {'resource_provider_generation': generation,
+            'inventories': inventories_dict}
 
 
 @webob.dec.wsgify

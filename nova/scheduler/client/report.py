@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import functools
 import time
 
@@ -251,20 +250,6 @@ class SchedulerReportClient(object):
             return {'inventories': {}}
         return result.json()
 
-    @staticmethod
-    def _compare_inventory(local, remote):
-        """This is needed because the placement service is not restful
-        and does not take and return a consistent object.
-        """
-
-        # Snip out the generation from each of the resource class dicts
-        trimmed = {}
-        for rclass, rdict in remote.items():
-            trimmed[rclass] = copy.copy(rdict)
-            trimmed[rclass].pop('resource_provider_generation')
-
-        return local == trimmed
-
     def _update_inventory_attempt(self, compute_node):
         """Update the inventory for this compute node if needed.
 
@@ -275,11 +260,11 @@ class SchedulerReportClient(object):
         data = self._compute_node_inventory(compute_node)
         curr = self._get_inventory(compute_node)
 
-        # Update our generation immediately, if possible. We always report
-        # VCPU inventory, so use that.
-        if curr.get('inventories'):
-            server_gen = (curr['inventories'][VCPU]
-                          ['resource_provider_generation'])
+        # Update our generation immediately, if possible. Even if there
+        # are no inventories we should always have a generation but let's
+        # be careful.
+        server_gen = curr.get('resource_provider_generation')
+        if server_gen:
             my_rp = self._resource_providers[compute_node.uuid]
             if server_gen != my_rp.generation:
                 LOG.debug('Updating our resource provider generation '
@@ -289,8 +274,7 @@ class SchedulerReportClient(object):
             my_rp.generation = server_gen
 
         # Check to see if we need to update placement's view
-        if self._compare_inventory(data['inventories'],
-                                   curr.get('inventories', {})):
+        if data['inventories'] == curr.get('inventories', {}):
             return True
 
         data['resource_provider_generation'] = (
@@ -325,8 +309,8 @@ class SchedulerReportClient(object):
             return False
 
         # Update our view of the generation for next time
-        updated_inventories = result.json()['inventories']
-        new_gen = updated_inventories[VCPU]['resource_provider_generation']
+        updated_inventories_result = result.json()
+        new_gen = updated_inventories_result['resource_provider_generation']
 
         self._resource_providers[compute_node.uuid].generation = new_gen
         LOG.debug('Updated inventory for %s at generation %i' % (
