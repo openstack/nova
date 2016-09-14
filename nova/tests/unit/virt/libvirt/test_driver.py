@@ -14330,7 +14330,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
             mock_dom.XMLDesc.return_value = xmldoc
             mock_dom.isPersistent.return_value = True
-            mock_dom.blockJobInfo.return_value = {}
+            mock_dom.blockJobInfo.return_value = {'cur': 100, 'end': 100}
 
             drvr._swap_volume(guest, srcfile, dstfile, 1)
 
@@ -17626,7 +17626,8 @@ class LibvirtVolumeSnapshotTestCase(test.NoDBTestCase):
                            flags=fakelibvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE)
 
         domain.blockJobInfo('vda', flags=0).AndReturn({'cur': 1, 'end': 1000})
-        domain.blockJobInfo('vda', flags=0).AndReturn({})
+        domain.blockJobInfo('vda', flags=0).AndReturn({'cur': 1000,
+                                                       'end': 1000})
 
         self.mox.ReplayAll()
 

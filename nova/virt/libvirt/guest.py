@@ -695,11 +695,13 @@ class BlockDevice(object):
         Libvirt may return either cur==end or an empty dict when
         the job is complete, depending on whether the job has been
         cleaned up by libvirt yet, or not.
+        It can also return end=0 if qemu has not yet started the block
+        operation.
 
         :param abort_on_error: Whether to stop process and raise NovaException
                                on error (default: False)
         :param wait_for_job_clean: Whether to force wait to ensure job is
-                                   finished (see bug: LP#1119173)
+                                   finished (see bug: RH Bugzilla#1119173)
 
         :returns: True if still in progress
                   False if completed
@@ -714,7 +716,10 @@ class BlockDevice(object):
         if wait_for_job_clean:
             job_ended = status.job == 0
         else:
-            job_ended = status.cur == status.end
+            # NOTE(slaweq): because of bug in libvirt, which is described in
+            # http://www.redhat.com/archives/libvir-list/2016-September/msg00017.html
+            # if status.end == 0 job is not started yet so it is not finished
+            job_ended = status.end != 0 and status.cur == status.end
 
         return not job_ended
 
