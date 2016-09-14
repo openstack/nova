@@ -2910,6 +2910,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
     def test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa):
+        for each_arch in [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64]:
+            self._test_does_want_hugepages(
+                mock_caps, mock_hp, mock_numa, each_arch)
+
+    def _test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa,
+                                  architecture):
         self.flags(reserved_huge_pages=[
             {'node': 0, 'size': 2048, 'count': 128},
             {'node': 1, 'size': 2048, 'count': 1},
@@ -2927,7 +2933,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         caps = vconfig.LibvirtConfigCaps()
         caps.host = vconfig.LibvirtConfigCapsHost()
         caps.host.cpu = vconfig.LibvirtConfigCPU()
-        caps.host.cpu.arch = "x86_64"
+        caps.host.cpu.arch = architecture
         caps.host.topology = self._fake_caps_numa_topology()
 
         mock_caps.return_value = caps
