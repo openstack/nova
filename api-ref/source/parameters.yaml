@@ -3408,14 +3408,6 @@ personality:
   in: body
   required: false
   type: string
-personality_1:
-  description: |
-    The file path and contents, text only, to inject into the server at launch. The
-    maximum size of the file path data is 255 bytes. The maximum limit is the number
-    of allowed bytes in the decoded, rather than the encoded, data.
-  in: body
-  required: false
-  type: string
 policies:
   description: |
     A list of one or more policy names to associate with the server group. The list
