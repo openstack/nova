@@ -320,6 +320,14 @@ class SchedulerReportClient(object):
     @safe_connect
     def _update_inventory(self, compute_node):
         for attempt in (1, 2, 3):
+            if compute_node.uuid not in self._resource_providers:
+                # NOTE(danms): Either we failed to fetch/create the RP
+                # on our first attempt, or a previous attempt had to
+                # invalidate the cache, and we were unable to refresh
+                # it. Bail and try again next time.
+                LOG.warning(_LW(
+                    'Unable to refresh my resource provider record'))
+                return False
             if self._update_inventory_attempt(compute_node):
                 return True
             time.sleep(1)
@@ -333,8 +341,7 @@ class SchedulerReportClient(object):
         compute_node.save()
         self._ensure_resource_provider(compute_node.uuid,
                                        compute_node.hypervisor_hostname)
-        if compute_node.uuid in self._resource_providers:
-            self._update_inventory(compute_node)
+        self._update_inventory(compute_node)
 
     def _allocations(self, instance):
         # NOTE(danms): Boot-from-volume instances consume no local disk

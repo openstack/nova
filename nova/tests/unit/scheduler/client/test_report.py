@@ -573,6 +573,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         cn = mock.MagicMock()
         mock_update.side_effect = (False, True)
 
+        self.client._resource_providers[cn.uuid] = True
         result = self.client._update_inventory(cn)
         self.assertTrue(result)
 
@@ -591,6 +592,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         cn = mock.MagicMock()
         mock_update.side_effect = (False, False, False)
 
+        self.client._resource_providers[cn.uuid] = True
         result = self.client._update_inventory(cn)
         self.assertFalse(result)
 
@@ -607,7 +609,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_update_inventory')
+                '_update_inventory_attempt')
     def test_update_resource_stats_rp_fail(self, mock_ui, mock_erp):
         cn = mock.MagicMock()
         self.client.update_resource_stats(cn)
