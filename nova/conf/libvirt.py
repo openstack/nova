@@ -782,8 +782,17 @@ libvirt_remotefs_opts = [
     cfg.StrOpt('remote_filesystem_transport',
                default='ssh',
                choices=('ssh', 'rsync'),
-               help='Use ssh or rsync transport for creating, copying, '
-                    'removing files on the remote host.'),
+               help="""
+libvirt's transport method for remote file operations.
+
+Because libvirt cannot use RPC to copy files over network to/from other
+compute nodes, other method must be used for:
+
+* creating directory on remote host
+* creating file on remote host
+* removing file from remote host
+* copying file to remote host
+""")
 ]
 
 libvirt_volume_vzstorage_opts = [
@@ -893,7 +902,7 @@ Related options:
 
 * All other vzstorage_* options
 """
-              ),
+),
 ]
 
 ALL_OPTS = list(itertools.chain(
