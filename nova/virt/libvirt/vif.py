@@ -772,7 +772,7 @@ class LibvirtGenericVIFDriver(object):
         except processutils.ProcessExecutionError:
             LOG.exception(_LE("Failed while plugging vif"), instance=instance)
 
-    def _plug_os_vif(self, instance, vif):
+    def _plug_os_vif(self, instance, vif, raw_vif):
         instance_info = os_vif_util.nova_to_osvif_instance(instance)
 
         try:
@@ -781,6 +781,22 @@ class LibvirtGenericVIFDriver(object):
             msg = (_("Failure running os_vif plugin plug method: %(ex)s")
                    % {'ex': ex})
             raise exception.NovaException(msg)
+
+        # TODO(johngarbutt) remove this hack once 1623876 is fixed in os-vif
+        network = raw_vif.get('network')
+        mtu = network.get_meta('mtu') if network else None
+        if mtu is not None:
+            linux_net._set_device_mtu(network["bridge"], mtu)
+
+        if (isinstance(vif, os_vif.objects.vif.VIFBridge) and
+            hasattr(vif, "port_profile") and
+            isinstance(vif.port_profile,
+                       os_vif.objects.vif.VIFPortProfileOpenVSwitch)):
+            veths = [
+                ("qvb%s" % vif.id)[:network_model.NIC_NAME_LEN],
+                ("qvo%s" % vif.id)[:network_model.NIC_NAME_LEN]]
+            for veth in veths:
+                linux_net._set_device_mtu(veth, mtu)
 
     def plug(self, instance, vif):
         vif_type = vif['type']
@@ -798,7 +814,7 @@ class LibvirtGenericVIFDriver(object):
         # Try os-vif codepath first
         vif_obj = os_vif_util.nova_to_osvif_vif(vif)
         if vif_obj is not None:
-            self._plug_os_vif(instance, vif_obj)
+            self._plug_os_vif(instance, vif_obj, vif)
             return
 
         # Legacy non-os-vif codepath
