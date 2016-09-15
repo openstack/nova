@@ -19,7 +19,7 @@ PasteDeploy>=1.5.0 # MIT
 Paste # MIT
 PrettyTable<0.8,>=0.7 # BSD
 sqlalchemy-migrate>=0.9.6 # Apache-2.0
-netaddr!=0.7.16,>=0.7.12 # BSD
+netaddr!=0.7.16,>=0.7.13 # BSD
 netifaces>=0.10.4 # MIT
 paramiko>=2.0 # LGPLv2.1+
 Babel>=2.3.4 # BSD
