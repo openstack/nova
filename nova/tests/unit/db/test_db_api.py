@@ -2881,6 +2881,27 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                          db.instance_group_members_get(ctxt,
                                                        group['uuid']))
 
+    def test_delete_migrations_on_instance_destroy(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidsentinel.uuid1
+        db.instance_create(ctxt, {'uuid': uuid})
+
+        migrations_values = {'instance_uuid': uuid}
+        migration = db.migration_create(ctxt, migrations_values)
+
+        migrations = db.migration_get_all_by_filters(
+            ctxt, {'instance_uuid': uuid})
+
+        self.assertEqual(1, len(migrations))
+        self._assertEqualObjects(migration, migrations[0])
+
+        instance = db.instance_destroy(ctxt, uuid)
+        migrations = db.migration_get_all_by_filters(
+            ctxt, {'instance_uuid': uuid})
+
+        self.assertTrue(instance.deleted)
+        self.assertEqual(0, len(migrations))
+
     def test_instance_update_and_get_original(self):
         instance = self.create_instance_with_args(vm_state='building')
         (old_ref, new_ref) = db.instance_update_and_get_original(self.ctxt,
@@ -8842,6 +8863,9 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.instances = models.Instance.__table__
         self.shadow_instances = sqlalchemyutils.get_table(
             self.engine, "shadow_instances")
+        self.migrations = models.Migration.__table__
+        self.shadow_migrations = sqlalchemyutils.get_table(
+            self.engine, "shadow_migrations")
 
         self.uuidstrs = []
         for _ in range(6):
@@ -9044,8 +9068,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'shadow_dns_domains',
         )
 
-    def test_archive_deleted_rows_fk_constraint(self):
-        # consoles.pool_id depends on console_pools.id
+    def _check_sqlite_version_less_than_3_7(self):
         # SQLite doesn't enforce foreign key constraints without a pragma.
         dialect = self.engine.url.get_dialect()
         if dialect == sqlite.dialect:
@@ -9059,6 +9082,10 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 self.skipTest(
                     'sqlite version too old for reliable SQLA foreign_keys')
             self.conn.execute("PRAGMA foreign_keys = ON")
+
+    def test_archive_deleted_rows_fk_constraint(self):
+        # consoles.pool_id depends on console_pools.id
+        self._check_sqlite_version_less_than_3_7()
         ins_stmt = self.console_pools.insert().values(deleted=1)
         result = self.conn.execute(ins_stmt)
         id1 = result.inserted_primary_key[0]
@@ -9081,6 +9108,33 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assert_shadow_tables_empty_except(
             'shadow_console_pools',
             'shadow_consoles'
+        )
+
+    def test_archive_deleted_rows_for_migrations(self):
+        # migrations.instance_uuid depends on instances.uuid
+        self._check_sqlite_version_less_than_3_7()
+        instance_uuid = uuidsentinel.instance
+        ins_stmt = self.instances.insert().values(uuid=instance_uuid,
+                                                  deleted=1)
+        self.conn.execute(ins_stmt)
+        ins_stmt = self.migrations.insert().values(instance_uuid=instance_uuid,
+                                                   deleted=0)
+        self.conn.execute(ins_stmt)
+        # The first try to archive instances should fail, due to FK.
+        num = sqlalchemy_api._archive_deleted_rows_for_table("instances",
+                                                             max_rows=None)
+        self.assertEqual(0, num)
+        # Then archiving migrations should work.
+        num = sqlalchemy_api._archive_deleted_rows_for_table("migrations",
+                                                             max_rows=None)
+        self.assertEqual(1, num)
+        # Then archiving instances should work.
+        num = sqlalchemy_api._archive_deleted_rows_for_table("instances",
+                                                             max_rows=None)
+        self.assertEqual(1, num)
+        self._assert_shadow_tables_empty_except(
+            'shadow_instances',
+            'shadow_migrations'
         )
 
     def test_archive_deleted_rows_2_tables(self):

@@ -1847,6 +1847,9 @@ def instance_destroy(context, instance_uuid, constraint=None):
     model_query(context, models.BlockDeviceMapping).\
             filter_by(instance_uuid=instance_uuid).\
             soft_delete()
+    model_query(context, models.Migration).\
+            filter_by(instance_uuid=instance_uuid).\
+            soft_delete()
     # NOTE(snikitin): We can't use model_query here, because there is no
     # column 'deleted' in 'tags' table.
     context.session.query(models.Tag).filter_by(
@@ -6314,7 +6317,10 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
     # NOTE(clecomte): Tables instance_actions and instances_actions_events
     # have to be manage differently so we soft-delete them here to let
     # the archive work the same for all tables
-    if tablename == "instance_actions":
+    # NOTE(takashin): The record in table migrations should be
+    # soft deleted when the instance is deleted.
+    # This is just for upgrading.
+    if tablename in ("instance_actions", "migrations"):
         instances = models.BASE.metadata.tables["instances"]
         deleted_instances = sql.select([instances.c.uuid]).\
             where(instances.c.deleted != instances.c.deleted.default.arg)
