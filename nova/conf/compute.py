@@ -107,17 +107,6 @@ Possible values:
 * Positive number: Allows only these many number of local discs.
                        (Default value is 3).
 """),
-    cfg.MultiStrOpt('compute_available_monitors',
-        deprecated_for_removal=True,
-        deprecated_since='12.0.0',
-        deprecated_reason="""
-stevedore and setuptools entry points now allow a set of plugins to be
-specified without this config option.""",
-        help="""
-Monitor classes available to the compute which may be specified more than once.
-This option is DEPRECATED and no longer used. Use setuptools entry points to
-list available monitor plugins.
-"""),
     cfg.ListOpt('compute_monitors',
         default=[],
         help="""
