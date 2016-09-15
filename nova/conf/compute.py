@@ -848,18 +848,6 @@ Related options:
 
 * not to be confused with: ``multi_instance_display_name_template``
 """),
-    # TODO(markus_z): 2016-04-04: This is not used anymore. The class
-    # "models.Snapshot" uses it but this class is not used anymore.
-    # This class got introduced with commit 0ba0859 but all calls
-    # to it got removed with commit 5d197cb. This cleanup must
-    # have missed the class "models.Snapshot" and a new change
-    # should remove it completely.
-    cfg.StrOpt('snapshot_name_template',
-         default='snapshot-%s',
-         deprecated_for_removal=True,
-         deprecated_since='14.0.0',
-         deprecated_reason='This is not used anymore.',
-         help='Template string to be used to generate snapshot names')
 ]
 
 

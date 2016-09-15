@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The deprecated compute config option ``snapshot_name_template``
+    has been removed. It is not used anywhere and has no effect
+    on any code, so there is no impact.

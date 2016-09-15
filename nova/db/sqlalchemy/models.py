@@ -547,10 +547,6 @@ class Snapshot(BASE, NovaBase, models.SoftDeleteMixin):
     deleted = Column(String(36), default="")
 
     @property
-    def name(self):
-        return CONF.snapshot_name_template % self.id
-
-    @property
     def volume_name(self):
         return CONF.volume_name_template % self.volume_id
 
