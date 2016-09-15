@@ -73,7 +73,10 @@ tests:
       - "invalid version string: 1.2.3"
 
 - name: error in application produces microversion headers
+  desc: we do not want xml
   POST: /
+  request_headers:
+      content-type: application/xml
   status: 405
   response_headers:
       openstack-api-version: placement 1.0

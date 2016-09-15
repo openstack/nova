@@ -35,7 +35,7 @@ from nova.api.openstack.placement.handlers import root
 from nova.api.openstack.placement.handlers import usage
 from nova.api.openstack.placement import util
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _, _LE
 
 LOG = logging.getLogger(__name__)
 
@@ -153,6 +153,21 @@ class PlacementHandler(object):
             if 'admin' not in context.to_policy_values()['roles']:
                 raise webob.exc.HTTPForbidden(
                     'admin required',
+                    json_formatter=util.json_error_formatter)
+        # Check that an incoming write-oriented request method has
+        # the required content-type header. If not raise a 400. If
+        # this doesn't happen here then webob.dec.wsgify (elsewhere
+        # in the stack) will raise an uncaught KeyError. Since that
+        # is such a generic exception we cannot merely catch it
+        # here, we need to avoid it ever happening.
+        # TODO(cdent): Move this and the auth checking above into
+        # middleware. It shouldn't be here. This is for dispatch not
+        # validation or authorization.
+        request_method = environ['REQUEST_METHOD'].upper()
+        if request_method in ('POST', 'PUT', 'PATCH'):
+            if 'CONTENT_TYPE' not in environ:
+                raise webob.exc.HTTPBadRequest(
+                    _('content-type header required'),
                     json_formatter=util.json_error_formatter)
         try:
             return dispatch(environ, start_response, self._map)
