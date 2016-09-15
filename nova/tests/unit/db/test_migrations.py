@@ -64,7 +64,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                              test_migrations.WalkVersionsMixin):
     """Test sqlalchemy-migrate migrations."""
 
-    TIMEOUT_SCALING_FACTOR = 2
+    TIMEOUT_SCALING_FACTOR = 4
 
     @property
     def INIT_VERSION(self):
