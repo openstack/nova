@@ -431,6 +431,17 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
                           os_vif_util._nova_to_osvif_network,
                           network)
 
+    def test_nova_to_osvif_network_mtu(self):
+        network = model.Network(
+            id="b82c1929-051e-481d-8110-4669916c7915",
+            bridge="br0",
+            mtu=550,
+            subnets=[])
+
+        osv_obj = os_vif_util._nova_to_osvif_network(network)
+
+        self.assertEqual(550, osv_obj.mtu)
+
     def test_nova_to_osvif_vif_linux_bridge(self):
         vif = model.VIF(
             id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
