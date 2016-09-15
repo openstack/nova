@@ -662,9 +662,12 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
-    def test_update_instance_allocation_new(self, mock_put):
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_update_instance_allocation_new(self, mock_get, mock_put):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
+        mock_get.return_value.json.return_value = {'allocations': {}}
         with mock.patch.object(self.client, '_allocations') as mock_a:
             expected = {
                 'allocations': [
@@ -675,11 +678,41 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
             mock_put.assert_called_once_with(
                 '/allocations/%s' % inst.uuid,
                 expected)
+            self.assertTrue(mock_get.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    def test_update_instance_allocation_existing(self, mock_get, mock_put):
+        cn = objects.ComputeNode(uuid=uuids.cn)
+        inst = objects.Instance(uuid=uuids.inst)
+        mock_get.return_value.json.return_value = {'allocations': {
+            cn.uuid: {
+                'generation': 2,
+                'resources': {
+                    'DISK_GB': 123,
+                    'MEMORY_MB': 456,
+                }
+            }}
+        }
+        with mock.patch.object(self.client, '_allocations') as mock_a:
+            mock_a.return_value = {
+                'DISK_GB': 123,
+                'MEMORY_MB': 456,
+            }
+            self.client.update_instance_allocation(cn, inst, 1)
+            self.assertFalse(mock_put.called)
+            mock_get.assert_called_once_with(
+                '/allocations/%s' % inst.uuid)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put')
     @mock.patch.object(report.LOG, 'warning')
-    def test_update_instance_allocation_new_failed(self, mock_warn, mock_put):
+    def test_update_instance_allocation_new_failed(self, mock_warn, mock_put,
+                                                   mock_get):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
         with mock.patch.object(self.client, '_allocations'):

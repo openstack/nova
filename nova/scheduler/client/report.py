@@ -349,16 +349,39 @@ class SchedulerReportClient(object):
             DISK_GB: disk,
         }
 
+    def _get_allocations_for_instance(self, compute_node, instance):
+        url = '/allocations/%s' % instance.uuid
+        resp = self.get(url)
+        if not resp:
+            return {}
+        else:
+            # NOTE(cdent): This trims to just the allocations being
+            # used on this compute node. In the future when there
+            # are shared resources there might be other providers.
+            return resp.json()['allocations'].get(
+                compute_node.uuid, {}).get('resources', {})
+
     @safe_connect
     def _allocate_for_instance(self, compute_node, instance):
         url = '/allocations/%s' % instance.uuid
+
+        my_allocations = self._allocations(instance)
+        current_allocations = self._get_allocations_for_instance(compute_node,
+                                                                 instance)
+        if current_allocations == my_allocations:
+            allocstr = ','.join(['%s=%s' % (k, v)
+                                 for k, v in my_allocations.items()])
+            LOG.debug('Instance %(uuid)s allocations are unchanged: %(alloc)s',
+                      {'uuid': instance.uuid, 'alloc': allocstr})
+            return
+
         allocations = {
             'allocations': [
                 {
                     'resource_provider': {
                         'uuid': compute_node.uuid,
                     },
-                    'resources': self._allocations(instance),
+                    'resources': my_allocations,
                 },
             ],
         }
