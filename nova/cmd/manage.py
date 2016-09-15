@@ -1506,8 +1506,7 @@ class CellV2Commands(object):
             cell_mappings = objects.CellMappingList.get_all(context)
 
         for cell_mapping in cell_mappings:
-            # TODO(alaski): Factor this into helper method on CellMapping
-            if cell_mapping.uuid == cell_mapping.CELL0_UUID:
+            if cell_mapping.is_cell0():
                 continue
             with context.target_cell(ctxt, cell_mapping):
                 compute_nodes = objects.ComputeNodeList.get_all(ctxt)

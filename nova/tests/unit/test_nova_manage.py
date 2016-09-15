@@ -1321,10 +1321,12 @@ class CellV2CommandsTestCase(test.TestCase):
             objects.ComputeNodeList(objects=compute_nodes[1:]),
             objects.ComputeNodeList(objects=compute_nodes[:1]))
 
+        cell_mapping0 = objects.CellMapping(
+            uuid=objects.CellMapping.CELL0_UUID)
         cell_mapping1 = objects.CellMapping(uuid=uuidutils.generate_uuid())
         cell_mapping2 = objects.CellMapping(uuid=uuidutils.generate_uuid())
         mock_cell_mapping_get_all.return_value = objects.CellMappingList(
-            objects=[cell_mapping1, cell_mapping2])
+            objects=[cell_mapping0, cell_mapping1, cell_mapping2])
 
         self.commands.discover_hosts()
 

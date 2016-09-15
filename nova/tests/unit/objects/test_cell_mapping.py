@@ -96,6 +96,13 @@ class _TestCellMappingObject(object):
         mapping_obj.destroy()
         destroy_in_db.assert_called_once_with(self.context, uuid)
 
+    def test_is_cell0(self):
+        self.assertFalse(objects.CellMapping().is_cell0())
+        self.assertFalse(objects.CellMapping(
+            uuid=uuidutils.generate_uuid()).is_cell0())
+        self.assertTrue(objects.CellMapping(
+            uuid=objects.CellMapping.CELL0_UUID).is_cell0())
+
 
 class TestCellMappingObject(test_objects._LocalTest,
                             _TestCellMappingObject):
