@@ -893,3 +893,15 @@ class HackingTestCase(test.NoDBTestCase):
                   version_uuid = uuid.uuid4().version
                """
         self._assert_has_no_errors(code, checks.check_uuid4)
+
+    def test_return_followed_by_space(self):
+        self.assertEqual(1, len(list(checks.return_followed_by_space(
+            "return(42)"))))
+        self.assertEqual(1, len(list(checks.return_followed_by_space(
+            "return(' some string ')"))))
+        self.assertEqual(0, len(list(checks.return_followed_by_space(
+            "return 42"))))
+        self.assertEqual(0, len(list(checks.return_followed_by_space(
+            "return ' some string '"))))
+        self.assertEqual(0, len(list(checks.return_followed_by_space(
+            "return (int('40') + 2)"))))

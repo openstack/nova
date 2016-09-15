@@ -452,7 +452,7 @@ def main():
     try:
         fn, fn_args, fn_kwargs = cmd_common.get_action_fn()
         ret = fn(*fn_args, **fn_kwargs)
-        return(ret)
+        return ret
     except Exception:
         print(_('Error:\n%s') % traceback.format_exc())
         # This is 255 so it's not confused with the upgrade check exit codes.

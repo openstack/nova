@@ -167,10 +167,10 @@ class SubDictMismatch(object):
         if self.keys:
             return "Keys between dictionaries did not match"
         else:
-            return("Dictionaries do not match at %s. d1: %s d2: %s"
-                   % (self.key,
-                      self.super_value,
-                      self.sub_value))
+            return ("Dictionaries do not match at %s. d1: %s d2: %s"
+                    % (self.key,
+                       self.super_value,
+                       self.sub_value))
 
     def get_details(self):
         return {}

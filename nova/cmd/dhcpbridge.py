@@ -131,7 +131,7 @@ def main():
             network_id = int(os.environ.get('NETWORK_ID'))
         except TypeError:
             LOG.error(_LE("Environment variable 'NETWORK_ID' must be set."))
-            return(1)
+            return 1
 
         print(init_leases(network_id))
 

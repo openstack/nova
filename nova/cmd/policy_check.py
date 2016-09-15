@@ -168,7 +168,7 @@ def main():
     try:
         fn, fn_args, fn_kwargs = cmd_common.get_action_fn()
         ret = fn(*fn_args, **fn_kwargs)
-        return(ret)
+        return ret
     except Exception as ex:
         print(_("error: %s") % ex)
         return 1

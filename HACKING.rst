@@ -69,6 +69,7 @@ Nova Specific Commandments
 - [N356] Enforce use of assertIs/assertIsNot
 - [N357] Use oslo_utils.uuidutils or uuidsentinel(in case of test cases) to
   generate UUID instead of uuid4().
+- [N358] Return must always be followed by a space when returning a value.
 
 Creating Unit Tests
 -------------------
