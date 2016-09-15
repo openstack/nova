@@ -442,7 +442,7 @@ class SchedulerReportClient(object):
         if allocations is None:
             allocations = {}
 
-        instance_dict = {instance.uuid: instance
+        instance_dict = {instance['uuid']: instance
                          for instance in instance_uuids}
         removed_instances = set(allocations.keys()) - set(instance_dict.keys())
 
