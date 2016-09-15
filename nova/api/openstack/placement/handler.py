@@ -109,7 +109,7 @@ def handle_405(environ, start_response):
     if _methods:
         headers['allow'] = _methods
     raise webob.exc.HTTPMethodNotAllowed(
-        'The method specified is not allowed for this resource.',
+        _('The method specified is not allowed for this resource.'),
         headers=headers, json_formatter=util.json_error_formatter)
 
 
@@ -152,7 +152,7 @@ class PlacementHandler(object):
             # integrated yet.
             if 'admin' not in context.to_policy_values()['roles']:
                 raise webob.exc.HTTPForbidden(
-                    'admin required',
+                    _('admin required'),
                     json_formatter=util.json_error_formatter)
         # Check that an incoming write-oriented request method has
         # the required content-type header. If not raise a 400. If

@@ -20,6 +20,7 @@ import webob
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.microversion
+from nova.i18n import _
 
 
 # NOTE(cdent): This registers a FormatChecker on the jsonschema
@@ -51,7 +52,7 @@ def check_accept(*types):
                 if not best_match:
                     type_string = ', '.join(types)
                     raise webob.exc.HTTPNotAcceptable(
-                        'Only %s is provided' % type_string,
+                        _('Only %(type)s is provided') % {'type': type_string},
                         json_formatter=json_error_formatter)
             return f(req)
         return decorated_function
@@ -107,8 +108,10 @@ def require_content(content_type):
                 # set it the error message content to 'None' to make
                 # a useful message in that case.
                 raise webob.exc.HTTPUnsupportedMediaType(
-                    'The media type %s is not supported, use %s'
-                    % (req.content_type or 'None', content_type),
+                    _('The media type %(bad_type)s is not supported, '
+                      'use %(good_type)s') %
+                    {'bad_type': req.content_type or 'None',
+                     'good_type': content_type},
                     json_formatter=json_error_formatter)
             else:
                 return f(req)

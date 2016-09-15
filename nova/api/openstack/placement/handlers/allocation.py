@@ -20,7 +20,7 @@ import webob
 
 from nova.api.openstack.placement import util
 from nova import exception
-from nova.i18n import _LE
+from nova.i18n import _, _LE
 from nova import objects
 
 
@@ -96,14 +96,14 @@ def _extract_allocations(body, schema):
         data = jsonutils.loads(body)
     except ValueError as exc:
         raise webob.exc.HTTPBadRequest(
-            'Malformed JSON: %s' % exc,
+            _('Malformed JSON: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     try:
         jsonschema.validate(data, schema,
                             format_checker=jsonschema.FormatChecker())
     except jsonschema.ValidationError as exc:
         raise webob.exc.HTTPBadRequest(
-            'JSON does not validate: %s' % exc,
+            _('JSON does not validate: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     return data
 
@@ -197,7 +197,8 @@ def list_for_resource_provider(req):
             context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
-            "Resource provider '%s' not found: %s" % (uuid, exc),
+            _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
+            {'rp_uuid': uuid, 'error': exc},
             json_formatter=util.json_error_formatter)
 
     allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
@@ -232,8 +233,9 @@ def set_allocations(req):
                 context, resource_provider_uuid)
         except exception.NotFound:
             raise webob.exc.HTTPBadRequest(
-                "Allocation for resource provider '%s' "
-                "that does not exist." % resource_provider_uuid,
+                _("Allocation for resource provider '%(rp_uuid)s' "
+                  "that does not exist.") %
+                {'rp_uuid': resource_provider_uuid},
                 json_formatter=util.json_error_formatter)
 
         resources = allocation['resources']
@@ -246,9 +248,10 @@ def set_allocations(req):
                     used=resources[resource_class])
             except ValueError as exc:
                 raise webob.exc.HTTPBadRequest(
-                    "Allocation of class '%s' for "
-                    "resource provider '%s' invalid: "
-                    "%s" % (resource_class, resource_provider_uuid, exc))
+                    _("Allocation of class '%(class)s' for "
+                      "resource provider '%(rp_uuid)s' invalid: %(error)s") %
+                    {'class': resource_class, 'rp_uuid':
+                     resource_provider_uuid, 'error': exc})
             allocation_objects.append(allocation)
 
     allocations = objects.AllocationList(context, objects=allocation_objects)
@@ -262,12 +265,13 @@ def set_allocations(req):
     except exception.InvalidInventory as exc:
         LOG.exception(_LE("Bad inventory"))
         raise webob.exc.HTTPConflict(
-            'Unable to allocate inventory: %s' % exc,
+            _('Unable to allocate inventory: %(error)s') % {'error': exc},
             json_formatter=util.json_error_formatter)
     except exception.ConcurrentUpdateDetected as exc:
         LOG.exception(_LE("Concurrent Update"))
         raise webob.exc.HTTPConflict(
-            'Inventory changed while attempting to allocate: %s' % exc,
+            _('Inventory changed while attempting to allocate: %(error)s') %
+            {'error': exc},
             json_formatter=util.json_error_formatter)
 
     req.response.status = 204
@@ -284,7 +288,8 @@ def delete_allocations(req):
         context, consumer_uuid)
     if not allocations:
         raise webob.exc.HTTPNotFound(
-            "No allocations for consumer '%s'" % consumer_uuid,
+            _("No allocations for consumer '%(consumer_uuid)s'") %
+            {'consumer_uuid': consumer_uuid},
             json_formatter=util.json_error_formatter)
     allocations.delete_all()
     LOG.debug("Successfully deleted allocations %s", allocations)
