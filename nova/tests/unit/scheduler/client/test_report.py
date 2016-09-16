@@ -769,9 +769,14 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
                 inst2.uuid: fake_allocations,
             }
         }
+
+        # One instance still on the node, dict form as the
+        # RT tracks it
+        inst3 = {'uuid': 'foo'}
+
         mock_delete.return_value = True
         with mock.patch.object(self.client, '_allocations'):
-            self.client.remove_deleted_instances(cn, [])
+            self.client.remove_deleted_instances(cn, [inst3])
             mock_get.assert_called_once_with(
                 '/resource_providers/%s/allocations' % cn.uuid)
             expected_calls = [
