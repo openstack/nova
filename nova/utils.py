@@ -697,6 +697,20 @@ def safe_ip_format(ip):
     return ip
 
 
+def format_remote_path(host, path):
+    """Returns remote path in format acceptable for scp/rsync.
+
+    If host is IPv6 address literal, return '[host]:path', otherwise
+    'host:path' is returned.
+
+    If host is None, only path is returned.
+    """
+    if host is None:
+        return path
+
+    return "%s:%s" % (safe_ip_format(host), path)
+
+
 def monkey_patch():
     """If the CONF.monkey_patch set as True,
     this function patches a decorator

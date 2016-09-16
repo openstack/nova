@@ -193,3 +193,45 @@ class RemoteFSTestCase(test.NoDBTestCase):
                                              '/home/favourite',
                                              on_completion=None,
                                              on_execute=None)
+
+    @mock.patch('tempfile.mkdtemp', return_value='/tmp/Saturn')
+    def test_rsync_driver_ipv6(self, mock_mkdtemp):
+        with mock.patch('nova.utils.execute') as mock_execute:
+            remotefs.RsyncDriver().create_file('2600::', 'dest_dir', None,
+                                               None)
+            rsync_call_args = mock.call('rsync', '--archive', '--relative',
+                                        '--no-implied-dirs',
+                                        '/tmp/Saturn/./dest_dir', '[2600::]:/',
+                                        on_completion=None, on_execute=None)
+            self.assertEqual(mock_execute.mock_calls[2], rsync_call_args)
+
+        with mock.patch('nova.utils.execute') as mock_execute:
+            remotefs.RsyncDriver().create_dir('2600::', 'dest_dir', None, None)
+            rsync_call_args = mock.call('rsync', '--archive', '--relative',
+                                        '--no-implied-dirs',
+                                        '/tmp/Saturn/./dest_dir', '[2600::]:/',
+                                        on_completion=None, on_execute=None)
+            self.assertEqual(mock_execute.mock_calls[1], rsync_call_args)
+
+        with mock.patch('nova.utils.execute') as mock_execute:
+            remotefs.RsyncDriver().remove_file('2600::', 'dest', None, None)
+            rsync_call_args = mock.call('rsync', '--archive',
+                                        '--delete', '--include',
+                                        'dest', '--exclude', '*',
+                                        '/tmp/Saturn/', '[2600::]:',
+                                        on_completion=None, on_execute=None)
+            self.assertEqual(mock_execute.mock_calls[0], rsync_call_args)
+
+        with mock.patch('nova.utils.execute') as mock_execute:
+            remotefs.RsyncDriver().remove_dir('2600::', 'dest', None, None)
+            rsync_call_args = mock.call('rsync', '--archive',
+                                        '--delete-excluded', '/tmp/Saturn/',
+                                        '[2600::]:dest',
+                                        on_completion=None, on_execute=None)
+            self.assertEqual(mock_execute.mock_calls[0], rsync_call_args)
+            rsync_call_args = mock.call('rsync', '--archive',
+                                        '--delete', '--include',
+                                        'dest', '--exclude', '*',
+                                        '/tmp/Saturn/', '[2600::]:',
+                                        on_completion=None, on_execute=None)
+            self.assertEqual(mock_execute.mock_calls[1], rsync_call_args)

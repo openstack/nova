@@ -277,7 +277,7 @@ class RsyncDriver(RemoteFilesystemDriver):
         # Remove remote directory's content
         utils.execute('rsync', '--archive', '--delete-excluded',
                       kwargs['tmp_dir_path'] + os.path.sep,
-                      '%s:%s' % (host, dst),
+                      utils.format_remote_path(host, dst),
                       on_execute=on_execute, on_completion=on_completion)
 
         # Delete empty directory
@@ -300,7 +300,8 @@ class RsyncDriver(RemoteFilesystemDriver):
                       '--include', os.path.basename(os.path.normpath(dst)),
                       '--exclude', '*',
                       os.path.normpath(src) + os.path.sep,
-                      '%s:%s' % (host, os.path.dirname(os.path.normpath(dst))),
+                      utils.format_remote_path(host,
+                                 os.path.dirname(os.path.normpath(dst))),
                       on_execute=on_execute, on_completion=on_completion)
 
     @staticmethod
@@ -329,7 +330,8 @@ class RsyncDriver(RemoteFilesystemDriver):
 
         # Do relative rsync local directory with remote root directory
         utils.execute('rsync', '--archive', '--relative', '--no-implied-dirs',
-                      relative_tmp_file_path, '%s:%s' % (host, os.path.sep),
+                      relative_tmp_file_path,
+                      utils.format_remote_path(host, os.path.sep),
                       on_execute=on_execute, on_completion=on_completion)
 
     def copy_file(self, src, dst, on_execute, on_completion, compression):
