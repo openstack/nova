@@ -610,7 +610,7 @@ libvirt_volume_net_opts = [
                help='The RADOS client name for accessing rbd volumes'),
     cfg.StrOpt('rbd_secret_uuid',
                help='The libvirt UUID of the secret for the rbd_user'
-                    'volumes'),
+                    ' volumes'),
 ]
 
 libvirt_volume_nfs_opts = [
