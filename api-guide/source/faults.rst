@@ -91,7 +91,7 @@ An error may occur in the background while a server is being built or while a
 server is executing an action.
 
 In these cases, the server is usually placed in an ``ERROR`` state. For some
-operations, like resize, its possible that the operations fails but
+operations, like resize, it is possible that the operation fails but
 the instance gracefully returned to its original state before attempting the
 operation. In both of these cases, you should be able to find out more from
 the Server Actions API described above.
