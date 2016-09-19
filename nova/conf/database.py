@@ -177,8 +177,7 @@ placement_db_opts = [
 
 
 def register_opts(conf):
-    oslo_db_options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION,
-                                 sqlite_db='nova.sqlite')
+    oslo_db_options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION)
     conf.register_opt(db_driver_opt)
     conf.register_opts(api_db_opts, group=api_db_group)
     conf.register_opts(placement_db_opts, group=placement_db_group)
