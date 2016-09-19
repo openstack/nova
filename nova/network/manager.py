@@ -29,7 +29,6 @@ import datetime
 import functools
 import math
 import re
-import uuid
 
 import netaddr
 from oslo_log import log as logging
@@ -702,7 +701,7 @@ class NetworkManager(manager.Manager):
                 vif.address = mac or utils.generate_mac_address()
                 vif.instance_uuid = instance_uuid
                 vif.network_id = network_id
-                vif.uuid = str(uuid.uuid4())
+                vif.uuid = uuidutils.generate_uuid()
                 vif.tag = tag
                 vif.create()
                 return vif

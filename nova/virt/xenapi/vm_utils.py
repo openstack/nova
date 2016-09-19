@@ -23,7 +23,6 @@ import contextlib
 import os
 import time
 import urllib
-import uuid
 from xml.dom import minidom
 from xml.parsers import expat
 
@@ -35,6 +34,7 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 from oslo_utils import versionutils
 import six
 from six.moves import range
@@ -1157,7 +1157,7 @@ def _create_kernel_image(context, session, instance, name_label, image_id,
     if CONF.xenserver.cache_images != 'none':
         args = {}
         args['cached-image'] = image_id
-        args['new-image-uuid'] = str(uuid.uuid4())
+        args['new-image-uuid'] = uuidutils.generate_uuid()
         filename = session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                        args)
 
@@ -1345,7 +1345,7 @@ def _make_uuid_stack():
     # which does not have the `uuid` module. To work around this,
     # we generate the uuids here (under Python 2.6+) and
     # pass them as arguments
-    return [str(uuid.uuid4()) for i in range(MAX_VDI_CHAIN_SIZE)]
+    return [uuidutils.generate_uuid() for i in range(MAX_VDI_CHAIN_SIZE)]
 
 
 def _image_uses_bittorrent(context, instance):

@@ -16,7 +16,6 @@
 #
 
 import time
-import uuid
 
 from keystoneauth1 import loading as ks_loading
 from neutronclient.common import exceptions as neutron_client_exc
@@ -1444,7 +1443,7 @@ class API(base_api.NetworkAPI):
                 request = objects.InstancePCIRequest(
                     count=1,
                     spec=[spec],
-                    request_id=str(uuid.uuid4()))
+                    request_id=uuidutils.generate_uuid())
                 pci_requests.requests.append(request)
                 pci_request_id = request.request_id
 

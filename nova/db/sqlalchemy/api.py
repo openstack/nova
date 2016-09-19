@@ -23,7 +23,6 @@ import datetime
 import functools
 import inspect
 import sys
-import uuid
 
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
@@ -1755,7 +1754,7 @@ def instance_create(context, values):
 
     instance_ref = models.Instance()
     if not values.get('uuid'):
-        values['uuid'] = str(uuid.uuid4())
+        values['uuid'] = uuidutils.generate_uuid()
     instance_ref['info_cache'] = models.InstanceInfoCache()
     info_cache = values.pop('info_cache', None)
     if info_cache is not None:
@@ -3039,7 +3038,7 @@ def network_count_reserved_ips(context, network_id):
 @main_context_manager.writer
 def network_create_safe(context, values):
     network_ref = models.Network()
-    network_ref['uuid'] = str(uuid.uuid4())
+    network_ref['uuid'] = uuidutils.generate_uuid()
     network_ref.update(values)
 
     try:
@@ -3837,7 +3836,7 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
         reservations = []
         for res, delta in deltas.items():
             reservation = _reservation_create(
-                                             str(uuid.uuid4()),
+                                             uuidutils.generate_uuid(),
                                              user_usages[res],
                                              project_id,
                                              user_id,

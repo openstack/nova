@@ -19,9 +19,9 @@
 """Built-in instance properties."""
 
 import re
-import uuid
 
 from oslo_utils import strutils
+from oslo_utils import uuidutils
 import six
 
 from nova.api.validation import parameter_types
@@ -72,7 +72,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
            swap=0, rxtx_factor=1.0, is_public=True):
     """Creates flavors."""
     if not flavorid:
-        flavorid = uuid.uuid4()
+        flavorid = uuidutils.generate_uuid()
 
     kwargs = {
         'memory_mb': memory,

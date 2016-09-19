@@ -19,11 +19,11 @@ from distutils import version
 import os
 import sys
 import time
-import uuid
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import strutils
+from oslo_utils import uuidutils
 
 from nova.api.metadata import password
 from nova.compute import utils as compute_utils
@@ -62,7 +62,7 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
     dom_id = session.VM.get_domid(vm_ref)
 
     args = {
-        'id': str(uuid.uuid4()),
+        'id': uuidutils.generate_uuid(),
         'dom_id': str(dom_id),
         'timeout': str(timeout),
     }
