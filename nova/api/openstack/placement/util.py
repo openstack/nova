@@ -14,6 +14,7 @@
 import functools
 import jsonschema
 from oslo_middleware import request_id
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 import webob
 
@@ -26,10 +27,7 @@ from nova.i18n import _
 # NOTE(cdent): This registers a FormatChecker on the jsonschema
 # module. Do not delete this code! Although it appears that nothing
 # is using the decorated method it is being used in JSON schema
-# validations to check uuid formatted strings. The addition of a uuid
-# format checker is an implicit result of loading the util module.
-# Since util.json_error_formatter # needs to be imported when jsonschema
-# is doing validation this works.
+# validations to check uuid formatted strings.
 @jsonschema.FormatChecker.cls_checks('uuid')
 def _validate_uuid_format(instance):
     return uuidutils.is_uuid_like(instance)
@@ -57,6 +55,24 @@ def check_accept(*types):
             return f(req)
         return decorated_function
     return decorator
+
+
+def extract_json(body, schema):
+    """Extract JSON from a body and validate with the provided schema."""
+    try:
+        data = jsonutils.loads(body)
+    except ValueError as exc:
+        raise webob.exc.HTTPBadRequest(
+            _('Malformed JSON: %(error)s') % {'error': exc},
+            json_formatter=json_error_formatter)
+    try:
+        jsonschema.validate(data, schema,
+                            format_checker=jsonschema.FormatChecker())
+    except jsonschema.ValidationError as exc:
+        raise webob.exc.HTTPBadRequest(
+            _('JSON does not validate: %(error)s') % {'error': exc},
+            json_formatter=json_error_formatter)
+    return data
 
 
 def inventory_url(environ, resource_provider, resource_class=None):
