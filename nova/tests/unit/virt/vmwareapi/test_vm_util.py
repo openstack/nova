@@ -1188,22 +1188,15 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected.deviceChange.append(device_change)
         self.assertEqual(expected, result)
 
-    def test_get_create_vif_spec(self):
-        vif_info = {'network_name': 'br100',
-            'mac_address': '00:00:00:ca:fe:01',
-            'network_ref': {'type': 'DistributedVirtualPortgroup',
-                            'dvsw': 'fake-network-id',
-                            'dvpg': 'fake-group'},
-            'iface_id': 7,
-            'vif_model': 'VirtualE1000'}
-        fake_factory = fake.FakeFactory()
+    def _get_create_vif_spec(self, fake_factory, vif_info):
         limits = vm_util.Limits()
         limits.limit = 10
         limits.reservation = 20
         limits.shares_level = 'custom'
         limits.shares_share = 40
-        result = vm_util._create_vif_spec(
-                fake_factory, vif_info, limits)
+        return vm_util._create_vif_spec(fake_factory, vif_info, limits)
+
+    def _construct_vif_spec(self, fake_factory, vif_info):
         port = 'ns0:DistributedVirtualSwitchPortConnection'
         backing = 'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
 
@@ -1220,6 +1213,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         device.backing.port = fake_factory.create(port)
         device.backing.port.portgroupKey = vif_info['network_ref']['dvpg']
         device.backing.port.switchUuid = vif_info['network_ref']['dvsw']
+        if vif_info['network_ref'].get('dvs_port_key'):
+            device.backing.port.portKey = (
+                vif_info['network_ref']['dvs_port_key'])
 
         device.resourceAllocation = fake_factory.create(
             'ns0:VirtualEthernetCardResourceAllocation')
@@ -1236,6 +1232,33 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         connectable.startConnected = True
         device.connectable = connectable
         device_change.device = device
+        return device_change
+
+    def test_get_create_vif_spec(self):
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'DistributedVirtualPortgroup',
+                            'dvsw': 'fake-network-id',
+                            'dvpg': 'fake-group'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        fake_factory = fake.FakeFactory()
+        result = self._get_create_vif_spec(fake_factory, vif_info)
+        device_change = self._construct_vif_spec(fake_factory, vif_info)
+        self.assertEqual(device_change, result)
+
+    def test_get_create_vif_spec_dvs_port_key(self):
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'DistributedVirtualPortgroup',
+                            'dvsw': 'fake-network-id',
+                            'dvpg': 'fake-group',
+                            'dvs_port_key': 'fake-key'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        fake_factory = fake.FakeFactory()
+        result = self._get_create_vif_spec(fake_factory, vif_info)
+        device_change = self._construct_vif_spec(fake_factory, vif_info)
         self.assertEqual(device_change, result)
 
     def test_get_network_detach_config_spec(self):
