@@ -26,6 +26,7 @@ from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova.scheduler import ironic_host_manager
 from nova import test
+from nova.tests.unit.scheduler import fakes
 from nova.tests.unit.scheduler import ironic_fakes
 
 
@@ -92,6 +93,40 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
             self.assertEqual(compute_node.free_disk_gb * 1024,
                              host_states_map[state_key].free_disk_mb)
 
+    def test_is_ironic_compute(self):
+        ironic = ironic_fakes.COMPUTE_NODES[0]
+        self.assertTrue(self.host_manager._is_ironic_compute(ironic))
+
+        non_ironic = fakes.COMPUTE_NODES[0]
+        self.assertFalse(self.host_manager._is_ironic_compute(non_ironic))
+
+    @mock.patch.object(host_manager.HostManager, '_get_instance_info')
+    def test_get_instance_info_ironic_compute_return_empty_instance_dict(self,
+            mock_get_instance_info):
+        compute_node = ironic_fakes.COMPUTE_NODES[0]
+
+        rv = self.host_manager._get_instance_info('fake_context', compute_node)
+
+        # for ironic compute nodes we always return an empty dict
+        self.assertEqual({}, rv)
+        # base class implementation is overriden and not called
+        self.assertFalse(mock_get_instance_info.called)
+
+    @mock.patch.object(host_manager.HostManager, '_get_instance_info')
+    def test_get_instance_info_non_ironic_compute_call_super_class(self,
+            mock_get_instance_info):
+        expected_rv = {'fake-uuid': objects.Instance()}
+        mock_get_instance_info.return_value = expected_rv
+        compute_node = fakes.COMPUTE_NODES[0]
+
+        rv = self.host_manager._get_instance_info('fake_context', compute_node)
+
+        # for a non-ironic compute we call the base class implementation
+        mock_get_instance_info.assert_called_once_with('fake_context',
+                                                       compute_node)
+        # we return exactly what the base class implementation returned
+        self.assertIs(expected_rv, rv)
+
 
 class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for IronicHostManager class."""
@@ -122,7 +157,7 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
     @mock.patch.object(ironic_host_manager.IronicNodeState, '__init__')
     def test_create_ironic_node_state(self, init_mock):
         init_mock.return_value = None
-        compute = {'hypervisor_type': 'ironic'}
+        compute = objects.ComputeNode(hypervisor_type='ironic')
         host_state = self.host_manager.host_state_cls('fake-host', 'fake-node',
                                                       compute=compute)
         self.assertIs(ironic_host_manager.IronicNodeState, type(host_state))

@@ -73,6 +73,11 @@ class IronicNodeState(host_manager.HostState):
 class IronicHostManager(host_manager.HostManager):
     """Ironic HostManager class."""
 
+    @staticmethod
+    def _is_ironic_compute(compute):
+        ht = compute.hypervisor_type if 'hypervisor_type' in compute else None
+        return ht == hv_type.IRONIC
+
     def _load_filters(self):
         if CONF.scheduler_use_baremetal_filters:
             return CONF.baremetal_scheduler_default_filters
@@ -81,7 +86,7 @@ class IronicHostManager(host_manager.HostManager):
     def host_state_cls(self, host, node, **kwargs):
         """Factory function/property to create a new HostState."""
         compute = kwargs.get('compute')
-        if compute and compute.get('hypervisor_type') == hv_type.IRONIC:
+        if compute and self._is_ironic_compute(compute):
             return IronicNodeState(host, node)
         else:
             return host_manager.HostState(host, node)
@@ -92,4 +97,9 @@ class IronicHostManager(host_manager.HostManager):
 
     def _get_instance_info(self, context, compute):
         """Ironic hosts should not pass instance info."""
-        return {}
+
+        if compute and self._is_ironic_compute(compute):
+            return {}
+        else:
+            return super(IronicHostManager, self)._get_instance_info(context,
+                                                                     compute)
