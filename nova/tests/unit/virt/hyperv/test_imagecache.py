@@ -14,7 +14,6 @@
 #    under the License.
 
 import os
-import uuid
 
 import mock
 from oslo_config import cfg
@@ -25,6 +24,7 @@ from nova import objects
 from nova.tests.unit import fake_instance
 from nova.tests.unit.objects import test_flavor
 from nova.tests.unit.virt.hyperv import test_base
+from nova.tests import uuidsentinel as uuids
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 
@@ -271,7 +271,7 @@ class ImageCacheTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch.object(imagecache.os, 'listdir')
     def test_list_base_images(self, mock_listdir):
-        original_image = str(uuid.uuid4())
+        original_image = uuids.fake
         unexplained_image = 'just-an-image'
         ignored_file = 'foo.bar'
         mock_listdir.return_value = ['%s.VHD' % original_image,

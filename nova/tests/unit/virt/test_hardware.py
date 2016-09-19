@@ -13,7 +13,6 @@
 # under the License.
 
 import collections
-import uuid
 
 import mock
 from oslo_serialization import jsonutils
@@ -1851,7 +1850,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
 
     def test_instance_with_fetch(self):
         host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        fake_uuid = str(uuid.uuid4())
+        fake_uuid = uuids.fake
         instance = {'uuid': fake_uuid}
 
         with mock.patch.object(objects.InstanceNUMATopology,
@@ -1862,7 +1861,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
 
     def test_object_instance_with_load(self):
         host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        fake_uuid = str(uuid.uuid4())
+        fake_uuid = uuids.fake
         instance = objects.Instance(context=self.context, uuid=fake_uuid)
 
         with mock.patch.object(objects.InstanceNUMATopology,
@@ -1873,7 +1872,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
 
     def test_instance_serialized_by_build_request_spec(self):
         host = objects.ComputeNode(numa_topology=self.hosttopo._to_json())
-        fake_uuid = str(uuid.uuid4())
+        fake_uuid = uuids.fake
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
                 numa_topology=self.instancetopo)
         # NOTE (ndipanov): This emulates scheduler.utils.build_request_spec
@@ -1906,7 +1905,7 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         self._check_usage(res)
 
     def test_dict_numa_topology_to_obj(self):
-        fake_uuid = str(uuid.uuid4())
+        fake_uuid = uuids.fake
         instance = objects.Instance(context=self.context, id=1, uuid=fake_uuid,
                                     numa_topology=self.instancetopo)
         instance_dict = base_obj.obj_to_primitive(instance)

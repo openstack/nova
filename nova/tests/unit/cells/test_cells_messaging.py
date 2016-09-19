@@ -17,14 +17,11 @@
 Tests For Cells Messaging module
 """
 
-import uuid
-
 import mock
 from mox3 import mox
 import oslo_messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
-from oslo_utils import uuidutils
 
 from nova.cells import messaging
 from nova.cells import rpcapi as cells_rpcapi
@@ -86,7 +83,7 @@ class CellsMessageClassesTestCase(test.NoDBTestCase):
                             neighbor_only=True))
 
     def test_response_to_json_and_from_json(self):
-        fake_uuid = str(uuid.uuid4())
+        fake_uuid = uuids.fake
         response = messaging.Response(self.ctxt, 'child-cell!api-cell',
                                       objects.Instance(id=1, uuid=fake_uuid),
                                       False)
@@ -1068,7 +1065,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
     def test_call_compute_api_with_obj(self):
         instance = objects.Instance()
-        instance.uuid = uuidutils.generate_uuid()
+        instance.uuid = uuids.fake
         self.mox.StubOutWithMock(instance, 'refresh')
         # Using 'snapshot' for this test, because it
         # takes args and kwargs.
@@ -1086,7 +1083,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
     def test_call_compute_api_with_obj_no_cache(self):
         instance = objects.Instance()
-        instance.uuid = uuidutils.generate_uuid()
+        instance.uuid = uuids.fake
         error = exception.InstanceInfoCacheNotFound(
                                             instance_uuid=instance.uuid)
         with mock.patch.object(instance, 'refresh', side_effect=error):
@@ -1096,7 +1093,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
     def test_call_delete_compute_api_with_obj_no_cache(self):
         instance = objects.Instance()
-        instance.uuid = uuidutils.generate_uuid()
+        instance.uuid = uuids.fake
         error = exception.InstanceInfoCacheNotFound(
                                             instance_uuid=instance.uuid)
         with test.nested(
@@ -1111,7 +1108,7 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
     def test_call_compute_with_obj_unknown_instance(self):
         instance = objects.Instance()
-        instance.uuid = uuidutils.generate_uuid()
+        instance.uuid = uuids.fake
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         self.mox.StubOutWithMock(instance, 'refresh')

@@ -18,9 +18,9 @@
 
 import copy
 import datetime
-import uuid
 
 from oslo_log import log as logging
+from oslo_utils import uuidutils
 
 from nova.compute import arch
 import nova.conf
@@ -188,7 +188,7 @@ class _FakeImageService(object):
         :raises: Duplicate if the image already exist.
 
         """
-        image_id = str(metadata.get('id', uuid.uuid4()))
+        image_id = str(metadata.get('id', uuidutils.generate_uuid()))
         metadata['id'] = image_id
         if image_id in self.images:
             raise exception.CouldNotUploadImage(image_id=image_id)
