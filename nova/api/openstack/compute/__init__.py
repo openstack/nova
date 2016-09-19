@@ -20,10 +20,6 @@ WSGI middleware for OpenStack Compute API.
 
 import nova.api.openstack
 from nova.api.openstack.compute import extension_info
-import nova.conf
-
-
-CONF = nova.conf.CONF
 
 
 class APIRouterV21(nova.api.openstack.APIRouterV21):
