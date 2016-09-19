@@ -1,0 +1,9 @@
+---
+fixes:
+  - To make live-migration consistent with resize, confirm-resize and
+    revert-resize operations, the migration status is changed to 'error'
+    instead of 'failed' in case of live-migration failure. With this change
+    the periodic task '_cleanup_incomplete_migrations' is now able to remove
+    orphaned instance files from compute nodes in case of live-migration
+    failures. There is no impact since migration status 'error' and
+    'failed' refer to the same failed state.
