@@ -2979,6 +2979,13 @@ net_id_resp:
   in: body
   required: true
   type: string
+net_id_resp_2_12:
+  description: |
+    The network ID.
+  in: body
+  required: true
+  type: string
+  min_version: 2.12
 network_label_body:
   description: |
     The network label, such as ``public`` or ``private``.
@@ -4355,7 +4362,7 @@ virtual_interface_id_optional:
   type: string
 virtual_interfaces:
   description: |
-    A ``virtual_interfaces`` object.
+    An array of virtual interfaces.
   in: body
   required: true
   type: array
