@@ -11,7 +11,6 @@
 #    under the License.
 
 import copy
-import uuid
 
 import mock
 from oslo_serialization import jsonutils
@@ -20,8 +19,9 @@ from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.tests.unit.objects import test_objects
+from nova.tests import uuidsentinel as uuids
 
-fake_instance_uuid = str(uuid.uuid4())
+fake_instance_uuid = uuids.fake
 
 fake_obj_numa_topology = objects.InstanceNUMATopology(
     instance_uuid = fake_instance_uuid,

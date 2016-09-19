@@ -244,7 +244,7 @@ class TestNeutronv2Base(test.TestCase):
                 'bff4a5a6b9eb4ea2a6efec6eefb77936')
         self.tenant_id = '9d049e4b60b64716978ab415e6fbd5c0'
         self.instance = {'project_id': self.tenant_id,
-                         'uuid': str(uuid.uuid4()),
+                         'uuid': uuids.fake,
                          'display_name': 'test_instance',
                          'hostname': 'test-instance',
                          'availability_zone': 'nova',
@@ -252,7 +252,7 @@ class TestNeutronv2Base(test.TestCase):
                          'info_cache': {'network_info': []},
                          'security_groups': []}
         self.instance2 = {'project_id': self.tenant_id,
-                         'uuid': str(uuid.uuid4()),
+                         'uuid': uuids.fake,
                          'display_name': 'test_instance2',
                          'availability_zone': 'nova',
                          'info_cache': {'network_info': []},
@@ -417,7 +417,7 @@ class TestNeutronv2Base(test.TestCase):
     def _fake_instance_info_cache(self, nw_info, instance_uuid=None):
         info_cache = {}
         if instance_uuid is None:
-            info_cache['instance_uuid'] = str(uuid.uuid4())
+            info_cache['instance_uuid'] = uuids.fake
         else:
             info_cache['instance_uuid'] = instance_uuid
         info_cache['deleted'] = False
@@ -3152,7 +3152,7 @@ class TestNeutronv2WithMock(test.TestCase):
 
     @mock.patch('oslo_concurrency.lockutils.lock')
     def test_get_instance_nw_info_locks_per_instance(self, mock_lock):
-        instance = objects.Instance(uuid=uuid.uuid4())
+        instance = objects.Instance(uuid=uuids.fake)
         api = neutronapi.API()
         mock_lock.side_effect = test.TestingException
         self.assertRaises(test.TestingException,
@@ -3197,7 +3197,7 @@ class TestNeutronv2WithMock(test.TestCase):
                   meta={"tenant_id": instance_networks[0]["tenant_id"]})}]
         )
 
-        instance_uuid = uuid.uuid4()
+        instance_uuid = uuids.fake
         instance = objects.Instance(uuid=instance_uuid,
                                     info_cache=objects.InstanceInfoCache(
                                         context=self.context,
@@ -3382,7 +3382,7 @@ class TestNeutronv2WithMock(test.TestCase):
 
     def test_allocate_floating_ip_no_ipv4_subnet(self):
         api = neutronapi.API()
-        net_id = uuid.uuid4()
+        net_id = uuids.fake
         error_msg = ('Bad floatingip request: Network %s does not contain '
                      'any IPv4 subnet' % net_id)
         with test.nested(
@@ -3512,7 +3512,7 @@ class TestNeutronv2WithMock(test.TestCase):
         # setup fake data
         instance = fake_instance.fake_instance_obj(self.context)
         mock_preexisting.return_value = []
-        port_data = {'ports': [{'id': str(uuid.uuid4())}]}
+        port_data = {'ports': [{'id': uuids.fake}]}
         ports = set([port['id'] for port in port_data.get('ports')])
         api = neutronapi.API()
         # setup mocks
@@ -3635,7 +3635,7 @@ class TestNeutronv2WithMock(test.TestCase):
         mock_client.update_port.return_value = 'port'
 
         instance = {'project_id': '9d049e4b60b64716978ab415e6fbd5c0',
-                    'uuid': str(uuid.uuid4()),
+                    'uuid': uuids.fake,
                     'display_name': 'test_instance',
                     'availability_zone': 'nova',
                     'host': 'some_host'}

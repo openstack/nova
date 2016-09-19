@@ -327,7 +327,7 @@ class UnsupportedDbRegexpTestCase(DbTestCase):
         self.assertRaises(exception.MarkerNotFound,
                           db.instance_get_all_by_filters,
                           self.context, {'display_name': '%test%'},
-                          marker=str(stdlib_uuid.uuid4()))
+                          marker=uuidsentinel.uuid1)
 
     def _assert_equals_inst_order(self, correct_order, filters,
                                   sort_keys=None, sort_dirs=None,
@@ -2833,7 +2833,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ctxt = context.get_admin_context()
         instance = db.instance_create(ctxt, dict(display_name='bdm-test'))
         bdm = {
-            'volume_id': uuidutils.generate_uuid(),
+            'volume_id': uuidsentinel.uuid1,
             'device_name': '/dev/vdb',
             'instance_uuid': instance['uuid'],
         }
@@ -2860,7 +2860,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_delete_instance_faults_on_instance_destroy(self):
         ctxt = context.get_admin_context()
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
         # Create faults
         db.instance_create(ctxt, {'uuid': uuid})
 
@@ -2884,7 +2884,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_delete_instance_group_member_on_instance_destroy(self):
         ctxt = context.get_admin_context()
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
         db.instance_create(ctxt, {'uuid': uuid})
         values = {'name': 'fake_name', 'user_id': 'fake',
                   'project_id': 'fake'}
@@ -3768,7 +3768,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_start(self):
         """Create an instance action."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action_values = self._create_action_values(uuid)
         action = db.action_start(self.ctxt, action_values)
@@ -3780,7 +3780,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_finish(self):
         """Create an instance action."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action_values = self._create_action_values(uuid)
         db.action_start(self.ctxt, action_values)
@@ -3793,7 +3793,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_finish_without_started_event(self):
         """Create an instance finish action."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action_values = self._create_action_values(uuid)
         action_values['finish_time'] = timeutils.utcnow()
@@ -3802,7 +3802,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_actions_get_by_instance(self):
         """Ensure we can get actions by UUID."""
-        uuid1 = str(stdlib_uuid.uuid4())
+        uuid1 = uuidsentinel.uuid1
 
         expected = []
 
@@ -3815,7 +3815,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         expected.append(action)
 
         # Create some extra actions
-        uuid2 = str(stdlib_uuid.uuid4())
+        uuid2 = uuidsentinel.uuid2
         ctxt2 = context.get_admin_context()
         action_values = self._create_action_values(uuid2, 'reboot', ctxt2)
         db.action_start(ctxt2, action_values)
@@ -3827,7 +3827,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_actions_get_are_in_order(self):
         """Ensure retrived actions are in order."""
-        uuid1 = str(stdlib_uuid.uuid4())
+        uuid1 = uuidsentinel.uuid1
 
         extra = {
             'created_at': timeutils.utcnow()
@@ -3847,8 +3847,8 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_action_get_by_instance_and_action(self):
         """Ensure we can get an action by instance UUID and action id."""
         ctxt2 = context.get_admin_context()
-        uuid1 = str(stdlib_uuid.uuid4())
-        uuid2 = str(stdlib_uuid.uuid4())
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
 
         action_values = self._create_action_values(uuid1)
         db.action_start(self.ctxt, action_values)
@@ -3869,7 +3869,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_event_start(self):
         """Create an instance action event."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action_values = self._create_action_values(uuid)
         action = db.action_start(self.ctxt, action_values)
@@ -3885,7 +3885,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_event_start_without_action(self):
         """Create an instance action event."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         event_values = self._create_event_values(uuid)
         self.assertRaises(exception.InstanceActionNotFound,
@@ -3893,7 +3893,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_event_finish_without_started_event(self):
         """Finish an instance action event."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         db.action_start(self.ctxt, self._create_action_values(uuid))
 
@@ -3907,7 +3907,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_event_finish_without_action(self):
         """Finish an instance action event."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         event_values = {
             'finish_time': timeutils.utcnow() + datetime.timedelta(seconds=5),
@@ -3919,7 +3919,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_event_finish_success(self):
         """Finish an instance action event."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action = db.action_start(self.ctxt, self._create_action_values(uuid))
 
@@ -3939,7 +3939,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_event_finish_error(self):
         """Finish an instance action event with an error."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action = db.action_start(self.ctxt, self._create_action_values(uuid))
 
@@ -3959,7 +3959,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_and_event_start_string_time(self):
         """Create an instance action and event with a string start_time."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action = db.action_start(self.ctxt, self._create_action_values(uuid))
 
@@ -3971,7 +3971,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_action_events_get_are_in_order(self):
         """Ensure retrived action events are in order."""
-        uuid1 = str(stdlib_uuid.uuid4())
+        uuid1 = uuidsentinel.uuid1
 
         action = db.action_start(self.ctxt,
                                  self._create_action_values(uuid1))
@@ -4000,8 +4000,8 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_action_event_get_by_id(self):
         """Get a specific instance action event."""
         ctxt2 = context.get_admin_context()
-        uuid1 = str(stdlib_uuid.uuid4())
-        uuid2 = str(stdlib_uuid.uuid4())
+        uuid1 = uuidsentinel.uuid1
+        uuid2 = uuidsentinel.uuid2
 
         action = db.action_start(self.ctxt,
                                  self._create_action_values(uuid1))
@@ -4023,7 +4023,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  ['instance_uuid', 'request_id'])
 
     def test_instance_action_event_start_with_different_request_id(self):
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action_values = self._create_action_values(uuid)
         action = db.action_start(self.ctxt, action_values)
@@ -4039,7 +4039,7 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertActionEventSaved(event, action['id'])
 
     def test_instance_action_event_finish_with_different_request_id(self):
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         action = db.action_start(self.ctxt, self._create_action_values(uuid))
 
@@ -4078,7 +4078,7 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_fault_create(self):
         """Ensure we can create an instance fault."""
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
 
         # Ensure no faults registered for this instance
         faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [uuid])
@@ -4100,7 +4100,7 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_fault_get_by_instance(self):
         """Ensure we can retrieve faults for instance."""
-        uuids = [str(stdlib_uuid.uuid4()), str(stdlib_uuid.uuid4())]
+        uuids = [uuidsentinel.uuid1, uuidsentinel.uuid2]
         fault_codes = [404, 500]
         expected = {}
 
@@ -4121,7 +4121,7 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self._assertEqualListsOfObjects(expected[uuid], faults[uuid])
 
     def test_instance_faults_get_by_instance_uuids_no_faults(self):
-        uuid = str(stdlib_uuid.uuid4())
+        uuid = uuidsentinel.uuid1
         # None should be returned when no faults exist.
         faults = db.instance_fault_get_by_instance_uuids(self.ctxt, [uuid])
         expected = {uuid: []}
@@ -6553,7 +6553,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'instance_uuid': self.instance_uuid,
             'address': 'fake_address',
             'network_id': self.network['id'],
-            'uuid': str(stdlib_uuid.uuid4()),
+            'uuid': uuidutils.generate_uuid(),
             'tag': 'fake-tag',
         }
 
@@ -7652,7 +7652,7 @@ class S3ImageTestCase(test.TestCase):
 
     def test_s3_image_get_by_uuid_not_found(self):
         self.assertRaises(exception.ImageNotFound, db.s3_image_get_by_uuid,
-                          self.ctxt, uuidutils.generate_uuid())
+                          self.ctxt, uuidsentinel.uuid1)
 
 
 class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -8264,7 +8264,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ]
         self.console_pools = [db.console_pool_create(self.ctxt, val)
                          for val in pools_data]
-        instance_uuid = uuidutils.generate_uuid()
+        instance_uuid = uuidsentinel.uuid1
         db.instance_create(self.ctxt, {'uuid': instance_uuid})
         self.console_data = [{'instance_name': 'name' + str(x),
                               'instance_uuid': instance_uuid,
@@ -8319,7 +8319,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_console_get_all_by_instance_empty(self):
         consoles_get = db.console_get_all_by_instance(self.ctxt,
-                                                uuidutils.generate_uuid())
+                                                uuidsentinel.uuid2)
         self.assertEqual(consoles_get, [])
 
     def test_console_delete(self):
@@ -8332,7 +8332,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.ConsoleNotFoundInPoolForInstance,
                           db.console_get_by_pool_instance, self.ctxt,
                           self.consoles[0]['pool_id'],
-                          uuidutils.generate_uuid())
+                          uuidsentinel.uuid2)
 
     def test_console_get_not_found(self):
         self.assertRaises(exception.ConsoleNotFound, db.console_get,
@@ -8341,7 +8341,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_console_get_not_found_instance(self):
         self.assertRaises(exception.ConsoleNotFoundForInstance, db.console_get,
                           self.ctxt, self.consoles[0]['id'],
-                          uuidutils.generate_uuid())
+                          uuidsentinel.uuid2)
 
 
 class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -10082,7 +10082,7 @@ class TestInstanceInfoCache(test.TestCase):
 
     def test_instance_info_cache_create_using_update(self):
         network_info = 'net'
-        instance_uuid = uuidutils.generate_uuid()
+        instance_uuid = uuidsentinel.uuid1
         db.instance_info_cache_update(self.context, instance_uuid,
                                       {'network_info': network_info})
         info_cache = db.instance_info_cache_get(self.context, instance_uuid)
