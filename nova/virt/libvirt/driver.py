@@ -5108,7 +5108,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     self._bad_libvirt_numa_version_warn = True
                 return False
 
-        support_matrix = {(arch.I686, arch.X86_64): MIN_LIBVIRT_NUMA_VERSION,
+        support_matrix = {(arch.I686, arch.X86_64,
+                           arch.AARCH64): MIN_LIBVIRT_NUMA_VERSION,
                           (arch.PPC64,
                            arch.PPC64LE): MIN_LIBVIRT_NUMA_VERSION_PPC}
         caps = self._host.get_capabilities()
@@ -5124,7 +5125,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_hugepage_support(self):
         # This means that the host can support multiple values for the size
         # field in LibvirtConfigGuestMemoryBackingPage
-        supported_archs = [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64]
+        supported_archs = [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64,
+                           arch.AARCH64]
         caps = self._host.get_capabilities()
         return ((caps.host.cpu.arch in supported_archs) and
                 self._host.has_min_version(MIN_LIBVIRT_HUGEPAGE_VERSION,

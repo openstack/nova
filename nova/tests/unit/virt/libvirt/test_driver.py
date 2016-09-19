@@ -2910,7 +2910,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                        return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
     def test_does_want_hugepages(self, mock_caps, mock_hp, mock_numa):
-        for each_arch in [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64]:
+        for each_arch in [arch.I686, arch.X86_64, arch.PPC64LE, arch.PPC64,
+                          arch.AARCH64]:
             self._test_does_want_hugepages(
                 mock_caps, mock_hp, mock_numa, each_arch)
 
