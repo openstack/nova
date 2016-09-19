@@ -464,9 +464,18 @@ class GuestTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(devs))
         self.assertIsInstance(devs[0], vconfig.LibvirtConfigGuestInterface)
 
+        cfg = vconfig.LibvirtConfigGuestInterface()
+        cfg.parse_str("""
+            <interface type="bridge">
+              <mac address="fa:16:3e:f9:af:ae"/>
+              <model type="virtio"/>
+              <driver name="qemu"/>
+              <source bridge="qbr84008d03-11"/>
+              <target dev="tap84008d03-11"/>
+              </interface>""")
         self.assertIsNotNone(
-            self.guest.get_interface_by_mac('fa:16:3e:f9:af:ae'))
-        self.assertIsNone(self.guest.get_interface_by_mac(None))
+            self.guest.get_interface_by_cfg(cfg))
+        self.assertIsNone(self.guest.get_interface_by_cfg(None))
 
     def test_get_info(self):
         self.domain.info.return_value = (1, 2, 3, 4, 5)

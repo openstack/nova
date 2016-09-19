@@ -1342,11 +1342,25 @@ class LibvirtDriver(driver.ComputeDriver):
                                          instance.image_meta,
                                          instance.flavor,
                                          CONF.libvirt.virt_type, self._host)
+        interface = guest.get_interface_by_cfg(cfg)
         try:
             self.vif_driver.unplug(instance, vif)
+            # NOTE(mriedem): When deleting an instance and using Neutron,
+            # we can be racing against Neutron deleting the port and
+            # sending the vif-deleted event which then triggers a call to
+            # detach the interface, so if the interface is not found then
+            # we can just log it as a warning.
+            if not interface:
+                mac = vif.get('address')
+                # The interface is gone so just log it as a warning.
+                LOG.warning(_LW('Detaching interface %(mac)s failed because '
+                                'the device is no longer found on the guest.'),
+                            {'mac': mac}, instance=instance)
+                return
+
             state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
-            guest.detach_device(cfg, persistent=True, live=live)
+            guest.detach_device(interface, persistent=True, live=live)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
@@ -1361,11 +1375,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 # network device no longer exists. Libvirt will fail with
                 # "operation failed: no matching network device was found"
                 # which unfortunately does not have a unique error code so we
-                # need to look up the interface by MAC and if it's not found
+                # need to look up the interface by config and if it's not found
                 # then we can just log it as a warning rather than tracing an
                 # error.
                 mac = vif.get('address')
-                interface = guest.get_interface_by_mac(mac)
+                interface = guest.get_interface_by_cfg(cfg)
                 if interface:
                     LOG.error(_LE('detaching network adapter failed.'),
                              instance=instance, exc_info=True)
