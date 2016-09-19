@@ -2104,6 +2104,12 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instance = self.create_instance_with_args()
         self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
 
+    @mock.patch.object(db.sqlalchemy.api, 'security_group_ensure_default')
+    def test_instance_create_with_deadlock_retry(self, mock_sg):
+        mock_sg.side_effect = [db_exc.DBDeadlock(), None]
+        instance = self.create_instance_with_args()
+        self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
+
     def test_instance_create_with_object_values(self):
         values = {
             'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
