@@ -365,7 +365,6 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
 
         self.stub_out("nova.objects.keypair.KeyPair._get_from_db",
                       _db_key_pair_get)
-        self.stub_out("nova.db.key_pair_destroy", db_key_pair_destroy)
 
         self.req = fakes.HTTPRequest.blank('')
 
@@ -376,7 +375,8 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
                           self.KeyPairController.index,
                           self.req)
 
-    def test_keypair_list_pass_policy(self):
+    @mock.patch('nova.objects.KeyPairList.get_by_user')
+    def test_keypair_list_pass_policy(self, mock_get):
         rules = {self.policy_path + ':index': ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
         res = self.KeyPairController.index(self.req)
@@ -427,7 +427,8 @@ class KeypairPolicyTestV21(test.NoDBTestCase):
                           self.KeyPairController.delete,
                           self.req, 'FAKE')
 
-    def test_keypair_delete_pass_policy(self):
+    @mock.patch('nova.objects.KeyPair.destroy_by_name')
+    def test_keypair_delete_pass_policy(self, mock_destroy):
         rules = {self.policy_path + ':delete': ''}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
         self.KeyPairController.delete(self.req, 'FAKE')
