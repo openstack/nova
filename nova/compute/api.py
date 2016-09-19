@@ -988,9 +988,12 @@ class API(base.Base):
                                     "group")
                             raise exception.QuotaError(msg)
 
-                    objects.InstanceGroup.add_members(context,
-                                                      instance_group.uuid,
-                                                      [instance.uuid])
+                    members = objects.InstanceGroup.add_members(
+                        context, instance_group.uuid, [instance.uuid])
+                    # list of members added to servers group in this iteration
+                    # is needed to check quota of server group during add next
+                    # instance
+                    instance_group.members.extend(members)
 
                 # send a state update notification for the initial create to
                 # show it going from non-existent to BUILDING
