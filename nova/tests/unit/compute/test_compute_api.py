@@ -168,10 +168,11 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch('nova.conductor.conductor_api.ComputeTaskAPI.build_instances')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('nova.compute.api.API._check_requested_networks')
+    @mock.patch('nova.quota.QUOTAS.limit_check')
     @mock.patch('nova.compute.api.API._get_image')
     @mock.patch('nova.compute.api.API._provision_instances')
     def test_create_with_networks_max_count_none(self, provision_instances,
-                                                 get_image,
+                                                 get_image, check_limit,
                                                  check_requested_networks,
                                                  record_action_start,
                                                  build_instances):
