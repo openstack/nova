@@ -13,11 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 import mock
 from mox3 import mox
-from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.compute import extension_info
@@ -34,6 +31,7 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 FAKE_UUID = fakes.FAKE_UUID
@@ -115,7 +113,7 @@ class ServerActionsControllerTestV21(test.TestCase):
     def _stub_instance_get(self, context, uuid=None):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         if uuid is None:
-            uuid = uuidutils.generate_uuid()
+            uuid = uuids.fake
         instance = fake_instance.fake_db_instance(
             id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None,
             project_id=context.project_id,
@@ -218,7 +216,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         body = dict(reboot=dict(type="HARD"))
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._action_reboot,
-                          self.req, str(uuid.uuid4()), body=body)
+                          self.req, uuids.fake, body=body)
 
     def test_reboot_raises_conflict_on_invalid_state(self):
         body = dict(reboot=dict(type="HARD"))
@@ -965,7 +963,7 @@ class ServerActionsControllerTestV21(test.TestCase):
                                image_root_device_name='/dev/vda',
                                image_block_device_mapping=str(bdm),
                                image_container_format='ami')
-        instance = fakes.fake_instance_get(image_ref=str(uuid.uuid4()),
+        instance = fakes.fake_instance_get(image_ref=uuids.fake,
                                            vm_state=vm_states.ACTIVE,
                                            root_device_name='/dev/vda',
                                            system_metadata=system_metadata)

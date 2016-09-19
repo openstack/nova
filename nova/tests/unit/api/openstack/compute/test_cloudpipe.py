@@ -27,13 +27,14 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_network
 from nova.tests.unit import matchers
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 CONF = nova.conf.CONF
 
 
 project_id = str(uuid_lib.uuid4().hex)
-uuid = str(uuid_lib.uuid4())
+uuid = uuids.fake
 
 
 def fake_vpn_instance():
