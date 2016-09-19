@@ -29,8 +29,7 @@ import subprocess
 import sys
 import warnings
 
-import openstackdocstheme  # noqa
-import os_api_ref  # noqa
+import openstackdocstheme
 
 extensions = [
     'os_api_ref',
@@ -43,8 +42,6 @@ html_theme_options = {
     "sidebar_mode": "toc",
 }
 html_context = {'bug_project': 'nova', 'bug_tag': 'api-ref'}
-
-# End temporary block
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
