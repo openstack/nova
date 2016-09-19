@@ -291,7 +291,7 @@ class ProjectCommands(object):
         else:
             quota = QUOTAS.get_project_quotas(ctxt, project_id)
         for key, value in six.iteritems(quota):
-            if value['limit'] < 0 or value['limit'] is None:
+            if value['limit'] is None or value['limit'] < 0:
                 value['limit'] = 'unlimited'
             print(print_format % (key, value['limit'], value['in_use'],
                                   value['reserved']))
