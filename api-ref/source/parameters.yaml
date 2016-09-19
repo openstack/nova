@@ -2253,6 +2253,16 @@ hypervisor_id_body:
   in: body
   required: true
   type: integer
+hypervisor_links:
+  description: |
+    Links to the hypervisors resource. See `API Guide / Links and
+    References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  type: array
+  min_version: 2.33
+  required: false
 hypervisor_service:
   description: |
     The hypervisor service object.
