@@ -4,10 +4,10 @@ Faults
 
 This doc explains how to understand what has happened to your API request.
 
-Every HTTP request has a status code. 2xx codes signify the API was a success.
-However, that is often not the end of the story. That generally only means the
-request to start the operation has been accepted. It does not mean the action
-you requested has successfully completed.
+Every HTTP request has a status code. 2xx codes signify the API call was a
+success. However, that is often not the end of the story. That generally only
+means the request to start the operation has been accepted. It does not mean
+the action you requested has successfully completed.
 
 
 Tracking Errors by Request ID
