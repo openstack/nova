@@ -6827,7 +6827,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # on instance utilization.
         local_instance_list = objects.InstanceList.get_by_filters(
             ctx, filters, use_slave=True)
-        # Convert instance list to dictionary with instace uuid as key.
+        # Convert instance list to dictionary with instance uuid as key.
         local_instances = {inst.uuid: inst for inst in local_instance_list}
 
         # Get bdms by instance uuids
