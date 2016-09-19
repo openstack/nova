@@ -14,7 +14,6 @@
 #    under the License.
 
 import contextlib
-import uuid
 
 from eventlet import greenthread
 import mock
@@ -562,7 +561,7 @@ class CheckVDISizeTestCase(VMUtilsTestBase):
         super(CheckVDISizeTestCase, self).setUp()
         self.context = 'fakecontext'
         self.session = 'fakesession'
-        self.instance = objects.Instance(uuid=str(uuid.uuid4()))
+        self.instance = objects.Instance(uuid=uuids.fake)
         self.flavor = objects.Flavor()
         self.vdi_uuid = 'fakeuuid'
 
@@ -1358,7 +1357,7 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         self.instance = {"kernel_id": None, "ramdisk_id": None}
         self.name_label = "name"
         self.mox.StubOutWithMock(self.session, "call_plugin")
-        self.mox.StubOutWithMock(uuid, "uuid4")
+        self.mox.StubOutWithMock(uuidutils, "generate_uuid")
         self.mox.StubOutWithMock(vm_utils, "_fetch_disk_image")
 
     def test_create_kernel_and_ramdisk_no_create(self):
@@ -1376,14 +1375,14 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         args_kernel = {}
         args_kernel['cached-image'] = kernel_id
         args_kernel['new-image-uuid'] = "fake_uuid1"
-        uuid.uuid4().AndReturn("fake_uuid1")
+        uuidutils.generate_uuid().AndReturn("fake_uuid1")
         self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                   args_kernel).AndReturn("k")
 
         args_ramdisk = {}
         args_ramdisk['cached-image'] = ramdisk_id
         args_ramdisk['new-image-uuid'] = "fake_uuid2"
-        uuid.uuid4().AndReturn("fake_uuid2")
+        uuidutils.generate_uuid().AndReturn("fake_uuid2")
         self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                   args_ramdisk).AndReturn("r")
 
@@ -1399,7 +1398,7 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         args_kernel = {}
         args_kernel['cached-image'] = kernel_id
         args_kernel['new-image-uuid'] = "fake_uuid1"
-        uuid.uuid4().AndReturn("fake_uuid1")
+        uuidutils.generate_uuid().AndReturn("fake_uuid1")
         self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                   args_kernel).AndReturn("")
 
@@ -1422,7 +1421,7 @@ class CreateKernelRamdiskTestCase(VMUtilsTestBase):
         self.flags(cache_images=cache_images, group='xenserver')
 
         if cache_images == 'all':
-            uuid.uuid4().AndReturn("fake_uuid1")
+            uuidutils.generate_uuid().AndReturn("fake_uuid1")
             self.session.call_plugin('kernel.py', 'create_kernel_ramdisk',
                                      args_kernel).AndReturn("cached_image")
         else:
@@ -1577,8 +1576,7 @@ class CreateVmTestCase(VMUtilsTestBase):
     def test_invalid_cpu_mask_raises(self, mock_extract):
         self.flags(vcpu_pin_set="asdf")
         session = mock.Mock()
-        instance = objects.Instance(uuid=str(uuid.uuid4()),
-                                    system_metadata={})
+        instance = objects.Instance(uuid=uuids.fake, system_metadata={})
         with mock.patch.object(instance, 'get_flavor') as get:
             get.return_value = objects.Flavor._from_db_object(
                 None, objects.Flavor(), test_flavor.fake_flavor)
@@ -1589,7 +1587,7 @@ class CreateVmTestCase(VMUtilsTestBase):
 
     def test_destroy_vm(self, mock_extract):
         session = mock.Mock()
-        instance = objects.Instance(uuid=str(uuid.uuid4()))
+        instance = objects.Instance(uuid=uuids.fake)
 
         vm_utils.destroy_vm(session, instance, "vm_ref")
 
@@ -1600,7 +1598,7 @@ class CreateVmTestCase(VMUtilsTestBase):
         exc = test.TestingException()
         session.XenAPI.Failure = test.TestingException
         session.VM.destroy.side_effect = exc
-        instance = objects.Instance(uuid=str(uuid.uuid4()))
+        instance = objects.Instance(uuid=uuids.fake)
 
         vm_utils.destroy_vm(session, instance, "vm_ref")
 
@@ -1992,7 +1990,7 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
     @mock.patch.object(vm_utils, '_import_migrated_vhds')
     def test_import_migrate_ephemeral_disks(self, mock_migrate):
         mock_migrate.return_value = "foo"
-        instance = objects.Instance(id=1, uuid=uuidutils.generate_uuid())
+        instance = objects.Instance(id=1, uuid=uuids.fake)
         instance.old_flavor = objects.Flavor(ephemeral_gb=4000)
 
         result = vm_utils._import_migrate_ephemeral_disks("s", instance)
@@ -2014,8 +2012,7 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
     def test_import_migrate_ephemeral_disks_use_old_flavor(self,
             mock_get_sizes):
         mock_get_sizes.return_value = []
-        instance = objects.Instance(id=1, uuid=uuidutils.generate_uuid(),
-                ephemeral_gb=2000)
+        instance = objects.Instance(id=1, uuid=uuids.fake, ephemeral_gb=2000)
         instance.old_flavor = objects.Flavor(ephemeral_gb=4000)
 
         vm_utils._import_migrate_ephemeral_disks("s", instance)

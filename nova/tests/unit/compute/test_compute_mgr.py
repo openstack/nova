@@ -14,7 +14,6 @@
 
 import datetime
 import time
-import uuid
 
 from cinderclient import exceptions as cinder_exception
 from eventlet import event as eventlet_event
@@ -471,7 +470,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self.compute,
                                '_build_semaphore') as mock_sem:
-            instance = objects.Instance(uuid=str(uuid.uuid4()))
+            instance = objects.Instance(uuid=uuidutils.generate_uuid())
             for i in (1, 2, 3):
                 self.compute.build_and_run_instance(self.context, instance,
                                                     mock.sentinel.image,
@@ -1773,12 +1772,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # This test ensures that volume_id arguments are passed to volume_api
         # and that volume states are OK
         volumes = {}
-        old_volume_id = uuidutils.generate_uuid()
+        old_volume_id = uuids.fake
         volumes[old_volume_id] = {'id': old_volume_id,
                                   'display_name': 'old_volume',
                                   'status': 'detaching',
                                   'size': 1}
-        new_volume_id = uuidutils.generate_uuid()
+        new_volume_id = uuids.fake_2
         volumes[new_volume_id] = {'id': new_volume_id,
                                   'display_name': 'new_volume',
                                   'status': 'available',
@@ -1940,12 +1939,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # This test ensures that delete_on_termination flag arguments
         # are reserved
         volumes = {}
-        old_volume_id = uuidutils.generate_uuid()
+        old_volume_id = uuids.fake
         volumes[old_volume_id] = {'id': old_volume_id,
                                   'display_name': 'old_volume',
                                   'status': 'detaching',
                                   'size': 2}
-        new_volume_id = uuidutils.generate_uuid()
+        new_volume_id = uuids.fake_2
         volumes[new_volume_id] = {'id': new_volume_id,
                                   'display_name': 'new_volume',
                                   'status': 'available',
@@ -4881,7 +4880,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         @mock.patch('nova.objects.Migration.save')
         def _do_it(mock_mig_save):
-            instance = objects.Instance(uuid=str(uuid.uuid4()))
+            instance = objects.Instance(uuid=uuids.fake)
             migration = objects.Migration()
             self.compute.live_migration(self.context,
                                         mock.sentinel.dest,
@@ -5003,7 +5002,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     def test_live_migration_force_complete_succeeded(self):
 
-        instance = objects.Instance(uuid=str(uuid.uuid4()))
+        instance = objects.Instance(uuid=uuids.fake)
         migration = objects.Migration()
         migration.status = 'running'
         migration.id = 0
