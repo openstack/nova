@@ -53,6 +53,9 @@ Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
 
+.. note:: From v2.20 attach a volume to an instance in SHELVED or SHELVED_OFFLOADED
+          state is allowed.
+
 Request
 -------
 
@@ -160,6 +163,9 @@ Detach a volume from an instance.
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), conflict(409)
+
+.. note:: From v2.20 detach a volume from an instance in SHELVED or SHELVED_OFFLOADED
+          state is allowed.
 
 Request
 -------
