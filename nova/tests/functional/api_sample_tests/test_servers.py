@@ -63,7 +63,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
         }
 
         orig_value = self.__class__._use_common_server_api_samples
-        orig_sample_dir = self.__class__.sample_dir
         try:
             self.__class__._use_common_server_api_samples = (
                                         use_common_server_api_samples)
@@ -74,7 +73,6 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
             return status
         finally:
             self.__class__._use_common_server_api_samples = orig_value
-            self.__class__.sample_dir = orig_sample_dir
 
     def setUp(self):
         super(ServersSampleBase, self).setUp()
