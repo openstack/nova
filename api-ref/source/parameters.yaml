@@ -3543,6 +3543,13 @@ reserved:
   in: body
   required: true
   type: integer
+reserved_fixedip:
+  description: |
+    True if the fixed ip is reserved, otherwise False.
+  in: body
+  required: true
+  type: boolean
+  min_version: 2.4
 resetNetwork:
   description: |
     The action.
