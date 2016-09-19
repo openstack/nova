@@ -4,6 +4,10 @@
  Compute API
 =============
 
+This is a reference for the Openstack Compute API which is provided by Nova
+project. For getting more document about the basic concept of API, please
+refer to `API guide <http://developer.openstack.org/api-guide/compute/index.html>`_
+
 .. rest_expand_all::
 
 .. include:: versions.inc
