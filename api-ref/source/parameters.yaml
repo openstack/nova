@@ -1806,7 +1806,10 @@ flavor_disk:
   description: |
     The size of the root disk that will be created in GiB. If 0 the
     root disk will be set to exactly the size of the image used to
-    deploy the instance.
+    deploy the instance. However in this case filter scheduler cannot
+    select the compute host based on the virtual image size. Therefore
+    0 should only be used for volume booted instances or for testing
+    purposes.
 flavor_ephem_disk:
   in: body
   required: true
