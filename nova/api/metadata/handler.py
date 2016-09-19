@@ -46,6 +46,11 @@ class MetadataRequestHandler(wsgi.Application):
     def __init__(self):
         self._cache = cache_utils.get_client(
                 expiration_time=CONF.metadata_cache_expiration)
+        if (CONF.neutron.service_metadata_proxy and
+            not CONF.neutron.metadata_proxy_shared_secret):
+            LOG.warning(_LW("metadata_proxy_shared_secret is not configured, "
+                            "the metadata information returned by the proxy "
+                            "cannot be trusted"))
 
     def get_metadata_by_remote_address(self, address):
         if not address:
