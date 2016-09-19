@@ -2646,6 +2646,16 @@ keypair_fingerprint:
   type: string
   description: |
     The fingerprint for the keypair.
+keypair_links:
+  description: |
+    Links pertaining to keypair. See `API Guide / Links and
+    References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  type: array
+  required: false
+  min_version: 2.35
 keypair_name:
   in: body
   required: true
