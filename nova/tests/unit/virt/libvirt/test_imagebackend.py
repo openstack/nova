@@ -1684,6 +1684,7 @@ class BackendTestCase(test.NoDBTestCase):
     def setUp(self):
         super(BackendTestCase, self).setUp()
         self.flags(enabled=False, group='ephemeral_storage_encryption')
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         self.INSTANCE['ephemeral_key_uuid'] = None
 
     def get_image(self, use_cow, image_type):
