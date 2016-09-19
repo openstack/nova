@@ -16275,6 +16275,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                      mock_build_device_metadata, mock_set_host_enabled,
                      mock_write_to_file,
                      exists=None):
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         mock_build_device_metadata.return_value = None
         mock_supports_direct_io.return_value = True
 
