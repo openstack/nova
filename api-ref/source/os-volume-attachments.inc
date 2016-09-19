@@ -1,5 +1,4 @@
 .. -*- rst -*-
-.. needs:body_verification
 
 ===================================================================
  Servers with volume attachments (servers, os-volume\_attachments)
@@ -24,7 +23,6 @@ Request
 -------
 
 .. rest_parameters:: parameters.yaml
-
 
   - server_id: server_id_path
 
@@ -59,7 +57,6 @@ Request
 -------
 
 .. rest_parameters:: parameters.yaml
-
 
   - server_id: server_id_path
   - volumeAttachment: volumeAttachment
@@ -103,7 +100,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - attachment_id: attachment_id
 
@@ -139,7 +135,6 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-
   - server_id: server_id_path
   - attachment_id: attachment_id
   - volumeAttachment: volumeAttachment
@@ -170,7 +165,6 @@ Request
 -------
 
 .. rest_parameters:: parameters.yaml
-
 
   - server_id: server_id_path
   - attachment_id: attachment_id
