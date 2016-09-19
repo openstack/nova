@@ -167,7 +167,7 @@ def get_vlanid_and_vswitch_for_portgroup(session, pg_name, cluster=None):
     port_grps_on_host = port_grps_on_host_ret.HostPortGroup
     for p_gp in port_grps_on_host:
         if p_gp.spec.name == pg_name:
-            p_grp_vswitch_name = p_gp.vswitch.split("-")[-1]
+            p_grp_vswitch_name = p_gp.spec.vswitchName
             return p_gp.spec.vlanId, p_grp_vswitch_name
     return None, None
 
