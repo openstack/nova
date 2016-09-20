@@ -9,9 +9,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev2\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:15+0000\n"
+"POT-Creation-Date: 2016-09-20 00:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -803,9 +803,6 @@ msgstr "Pool-set_name_label a échoué : %s"
 msgid "Pre live migration failed at %s"
 msgstr "Pré migration en directe a échoué a %s"
 
-msgid "Read/Write data failed"
-msgstr "Echec de Lecture/Ecriture des données"
-
 #, python-format
 msgid "Requested VM Generation %s is not supported on this OS."
 msgstr ""
@@ -867,9 +864,6 @@ msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s."
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "L'appel à %(method)s a renvoyé une erreur : %(e)s. args=%(args)r"
-
-msgid "Transfer data failed"
-msgstr "Le transfert de donnée a échoué"
 
 #, python-format
 msgid "Unable to access floating IP %s"

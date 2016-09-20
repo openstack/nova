@@ -7,9 +7,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev2\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:15+0000\n"
+"POT-Creation-Date: 2016-09-20 00:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -790,9 +790,6 @@ msgstr "Pool-set_name_label Fehler: %s"
 msgid "Pre live migration failed at %s"
 msgstr "Vor-Live-Migration fehlgeschlagen an %s"
 
-msgid "Read/Write data failed"
-msgstr "Lesen/Schreiben von Daten fehlgeschlagen"
-
 #, python-format
 msgid "Requested VM Generation %s, but provided VHD instead of VHDX."
 msgstr "Angefragte VM Generation %s, aber zur Verfügung steht VHD statt VHDX."
@@ -849,9 +846,6 @@ msgstr "Der Aufruf zu %(method)s gab einen Fehler zurück: %(e)s."
 #, python-format
 msgid "The call to %(method)s returned an error: %(e)s. args=%(args)r"
 msgstr "Der Aufruf zu %(method)s gab einen Fehler zurück: %(e)s. args=%(args)r"
-
-msgid "Transfer data failed"
-msgstr "Datenübertragung fehlgeschlagen"
 
 #, python-format
 msgid "Unable to access floating IP %s"
