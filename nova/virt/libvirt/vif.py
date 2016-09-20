@@ -453,7 +453,7 @@ class LibvirtGenericVIFDriver(object):
         func = getattr(self, profilefunc, None)
         if not func:
             raise exception.NovaException(
-                "Unsupported VIF port profile type %(obj)s func %(func)s" %
+                _("Unsupported VIF port profile type %(obj)s func %(func)s") %
                 {'obj': vif.port_profile.obj_name(), 'func': profilefunc})
 
         func(vif.port_profile, conf)
@@ -481,7 +481,7 @@ class LibvirtGenericVIFDriver(object):
         func = getattr(self, viffunc, None)
         if not func:
             raise exception.NovaException(
-                "Unsupported VIF type %(obj)s func %(func)s" %
+                _("Unsupported VIF type %(obj)s func %(func)s") %
                 {'obj': vif.obj_name(), 'func': viffunc})
         func(instance, vif, conf)
 
