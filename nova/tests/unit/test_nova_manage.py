@@ -592,12 +592,24 @@ class DBCommandsTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.context.get_admin_context')
     def test_online_migrations(self, mock_get_context):
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         ctxt = mock_get_context.return_value
         command_cls = self._fake_db_command()
         command = command_cls()
         command.online_data_migrations(10)
         command_cls.online_migrations[0].assert_called_once_with(ctxt, 10)
         command_cls.online_migrations[1].assert_called_once_with(ctxt, 6)
+        expected = """\
+5 rows matched query mock_mig_1, 4 migrated
+6 rows matched query mock_mig_2, 6 migrated
++------------+--------------+-----------+
+| Migration  | Total Needed | Completed |
++------------+--------------+-----------+
+| mock_mig_1 |      5       |     4     |
+| mock_mig_2 |      6       |     6     |
++------------+--------------+-----------+
+"""
+        self.assertEqual(expected, sys.stdout.getvalue())
 
     @mock.patch('nova.context.get_admin_context')
     def test_online_migrations_no_max_count(self, mock_get_context):
@@ -622,6 +634,7 @@ class DBCommandsTestCase(test.NoDBTestCase):
     def test_online_migrations_error(self):
         fake_migration = mock.MagicMock()
         fake_migration.side_effect = Exception
+        fake_migration.__name__ = 'fake'
         command_cls = self._fake_db_command((fake_migration,))
         command = command_cls()
         command.online_data_migrations(None)
@@ -636,19 +649,19 @@ class DBCommandsTestCase(test.NoDBTestCase):
 
     def test_online_migrations_no_max(self):
         with mock.patch.object(self.commands, '_run_migration') as rm:
-            rm.return_value = 0
+            rm.return_value = {}
             self.assertEqual(0,
                              self.commands.online_data_migrations())
 
     def test_online_migrations_finished(self):
         with mock.patch.object(self.commands, '_run_migration') as rm:
-            rm.return_value = 0
+            rm.return_value = {}
             self.assertEqual(0,
                              self.commands.online_data_migrations(max_count=5))
 
     def test_online_migrations_not_finished(self):
         with mock.patch.object(self.commands, '_run_migration') as rm:
-            rm.return_value = 5
+            rm.return_value = {'mig': (10, 5)}
             self.assertEqual(1,
                              self.commands.online_data_migrations(max_count=5))
 
