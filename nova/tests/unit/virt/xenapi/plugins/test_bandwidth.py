@@ -32,7 +32,8 @@ class BandwidthTestCase(plugin_test.PluginTestBase):
         'if|bw_in i1 i2 i3 i4 i5 i6 i7|bw_out o1 o2 o3 o4 o5 o6 o7',
         'xenbr1: 1 0 0 0 0 0 0 0 11 0 0 0 0 0 0 0',
         'vif2.0: 2 0 0 0 0 0 0 0 12 0 0 0 0 0 0 0',
-        'vif2.1: 3 0 0 0 0 0 0 0 13 0 0 0 0 0 0 0\n']
+        'vif2.1: 3 0 0 0 0 0 0 0 13 0 0 0 0 0 0 0',
+        'vifabcd1234-c: 4 0 0 0 0 0 0 0 14 0 0 0 0 0 0 0\n']
         expect_devmap = {'2': {'1': {'bw_in': 13, 'bw_out': 3},
                                '0': {'bw_in': 12, 'bw_out': 2}
                               }
