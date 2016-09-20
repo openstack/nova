@@ -20,9 +20,6 @@ from nova.tests.unit.scheduler import fakes
 
 class TestDiskFilter(test.NoDBTestCase):
 
-    def setUp(self):
-        super(TestDiskFilter, self).setUp()
-
     def test_disk_filter_passes(self):
         filt_cls = disk_filter.DiskFilter()
         spec_obj = objects.RequestSpec(

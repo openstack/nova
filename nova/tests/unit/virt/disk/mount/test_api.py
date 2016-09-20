@@ -29,9 +29,6 @@ MAP_PARTITION = "/dev/mapper/nullp77"
 
 
 class MountTestCase(test.NoDBTestCase):
-    def setUp(self):
-        super(MountTestCase, self).setUp()
-
     def _test_map_dev(self, partition):
         mount = api.Mount(mock.sentinel.image, mock.sentinel.mount_dir)
         mount.device = ORIG_DEVICE

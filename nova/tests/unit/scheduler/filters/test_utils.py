@@ -42,9 +42,6 @@ _AGGREGATE_FIXTURES = [
 
 
 class TestUtils(test.NoDBTestCase):
-    def setUp(self):
-        super(TestUtils, self).setUp()
-
     def test_aggregate_values_from_key(self):
         host_state = fakes.FakeHostState(
             'fake', 'node', {'aggregates': _AGGREGATE_FIXTURES})
