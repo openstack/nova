@@ -939,9 +939,7 @@ class API(base.Base):
                 security_groups)
         self.security_group_api.ensure_default(context)
         LOG.debug("Going to run %s instances...", num_instances)
-        instances = []
-        instance_mappings = []
-        build_requests = []
+        instances_to_build = []
         try:
             for i in range(num_instances):
                 # Create a uuid for the instance so we can store the
@@ -971,12 +969,16 @@ class API(base.Base):
                     self._bdm_validate_set_size_and_instance(context,
                         instance, instance_type, block_device_mapping))
 
+                # NOTE(danms): BDMs are still not created, so we need to pass
+                # a clone and then reset them on our object after create so
+                # that they're still dirty for later in this process
                 build_request = objects.BuildRequest(context,
                         instance=instance, instance_uuid=instance.uuid,
                         project_id=instance.project_id,
-                        block_device_mappings=block_device_mapping)
+                        block_device_mappings=block_device_mapping.obj_clone())
                 build_request.create()
-                build_requests.append(build_request)
+                build_request.block_device_mappings = block_device_mapping
+
                 # Create an instance_mapping.  The null cell_mapping indicates
                 # that the instance doesn't yet exist in a cell, and lookups
                 # for it need to instead look for the RequestSpec.
@@ -988,17 +990,9 @@ class API(base.Base):
                 inst_mapping.project_id = context.project_id
                 inst_mapping.cell_mapping = None
                 inst_mapping.create()
-                instance_mappings.append(inst_mapping)
-                # TODO(alaski): Cast to conductor here which will call the
-                # scheduler and defer instance creation until the scheduler
-                # has picked a cell/host. Set the instance_mapping to the cell
-                # that the instance is scheduled to.
-                # NOTE(alaski): Instance and block device creation are going
-                # to move to the conductor.
-                instance.create()
-                instances.append(instance)
 
-                self._create_block_device_mapping(block_device_mapping)
+                instances_to_build.append(
+                    (req_spec, build_request, inst_mapping))
 
                 if instance_group:
                     if check_server_group_quota:
@@ -1021,29 +1015,22 @@ class API(base.Base):
                     # instance
                     instance_group.members.extend(members)
 
-                # send a state update notification for the initial create to
-                # show it going from non-existent to BUILDING
-                notifications.send_update_with_states(context, instance, None,
-                        vm_states.BUILDING, None, None, service="api")
-
         # In the case of any exceptions, attempt DB cleanup and rollback the
         # quota reservations.
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
-                    for instance in instances:
+                    for rs, br, im in instances_to_build:
                         try:
-                            instance.destroy()
-                        except exception.ObjectActionError:
+                            rs.destroy()
+                        except exception.RequestSpecNotFound:
                             pass
-                    for instance_mapping in instance_mappings:
                         try:
-                            instance_mapping.destroy()
+                            im.destroy()
                         except exception.InstanceMappingNotFound:
                             pass
-                    for build_request in build_requests:
                         try:
-                            build_request.destroy()
+                            br.destroy()
                         except exception.BuildRequestNotFound:
                             pass
                 finally:
@@ -1051,7 +1038,8 @@ class API(base.Base):
 
         # Commit the reservations
         quotas.commit()
-        return instances
+
+        return instances_to_build
 
     def _get_bdm_image_metadata(self, context, block_device_mapping,
                                 legacy_bdm=True):
@@ -1111,6 +1099,30 @@ class API(base.Base):
             return
 
         return objects.InstanceGroup.get_by_uuid(context, group_hint)
+
+    def _safe_destroy_instance_residue(self, instances, instances_to_build):
+        """Delete residue left over from a failed instance build with
+           reckless abandon.
+
+        :param instances: List of Instance objects to destroy
+        :param instances_to_build: List of tuples, output from
+            _provision_instances, which is:
+             request_spec, build_request, instance_mapping
+        """
+        for instance in instances:
+            try:
+                instance.destroy()
+            except Exception as e:
+                LOG.debug('Failed to destroy instance residue: %s', e,
+                          instance=instance)
+        for to_destroy in instances_to_build:
+            for thing in to_destroy:
+                try:
+                    thing.destroy()
+                except Exception as e:
+                    LOG.debug(
+                        'Failed to destroy %s during residue cleanup: %s',
+                        thing, e)
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
@@ -1180,11 +1192,36 @@ class API(base.Base):
         instance_group = self._get_requested_instance_group(context,
                                    filter_properties)
 
-        instances = self._provision_instances(context, instance_type,
+        instances_to_build = self._provision_instances(context, instance_type,
                 min_count, max_count, base_options, boot_meta, security_groups,
                 block_device_mapping, shutdown_terminate,
                 instance_group, check_server_group_quota, filter_properties,
                 key_pair)
+
+        instances = []
+        build_requests = []
+        # TODO(alaski): Cast to conductor here which will call the
+        # scheduler and defer instance creation until the scheduler
+        # has picked a cell/host. Set the instance_mapping to the cell
+        # that the instance is scheduled to.
+        # NOTE(alaski): Instance and block device creation are going
+        # to move to the conductor.
+        try:
+            for rs, build_request, im in instances_to_build:
+                build_requests.append(build_request)
+                instance = build_request.get_new_instance(context)
+                instance.create()
+                instances.append(instance)
+                self._create_block_device_mapping(
+                    build_request.block_device_mappings)
+                # send a state update notification for the initial create to
+                # show it going from non-existent to BUILDING
+                notifications.send_update_with_states(context, instance, None,
+                        vm_states.BUILDING, None, None, service="api")
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._safe_destroy_instance_residue(instances,
+                                                    instances_to_build)
 
         for instance in instances:
             self._record_action_start(context, instance,
