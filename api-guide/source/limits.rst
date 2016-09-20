@@ -4,54 +4,12 @@ Limits
 
 Accounts may be pre-configured with a set of thresholds (or limits) to
 manage capacity and prevent abuse of the system. The system recognizes
-two kinds of limits: *rate limits* and *absolute limits*. Rate limits
-are thresholds that are reset after a certain amount of time passes.
-Absolute limits are fixed. Limits are configured by operators and may
-differ from one deployment of the OpenStack Compute service to
-another. Please contact your provider to determine the limits that
+*absolute limits*. Absolute limits are fixed. Limits are configured by 
+operators and may differ from one deployment of the OpenStack Compute service 
+to another. Please contact your provider to determine the limits that
 apply to your account. Your provider may be able to adjust your
 account's limits if they are too low. Also see the API Reference for
 `*Limits* <http://developer.openstack.org/api-ref/compute/#limits-limits>`__.
-
-Rate limits
-~~~~~~~~~~~
-
-Rate limits are specified in terms of both a human-readable wild-card
-URI and a machine-processable regular expression. The human-readable
-limit is intended for displaying in graphical user interfaces. The
-machine-processable form is intended to be used directly by client
-applications.
-
-The regular expression boundary matcher "^" for the rate limit takes
-effect after the root URI path. For example, the regular expression
-^/servers would match the bolded portion of the following URI:
-https://servers.api.openstack.org/v2.1\ **/servers**.
-
-**Table: Sample rate limits**
-
-+------------+-------------------+----------------------+----------+
-| Verb       | URI               | RegEx                | Default  |
-+------------+-------------------+----------------------+----------+
-| **POST**   | \*                | .\*                  | 120/min  |
-+------------+-------------------+----------------------+----------+
-| **POST**   | \*/servers        | ^/servers            | 120/min  |
-+------------+-------------------+----------------------+----------+
-| **PUT**    | \*                | .\*                  | 120/min  |
-+------------+-------------------+----------------------+----------+
-| **GET**    | \*changes-since\* | .\*changes-since.\*  | 120/min  |
-+------------+-------------------+----------------------+----------+
-| **DELETE** | \*                | .\*                  | 120/min  |
-+------------+-------------------+----------------------+----------+
-| **GET**    | \*/os-fping\*     | ^/os-fping           | 12/min   |
-+------------+-------------------+----------------------+----------+
-
-
-Rate limits are applied in order relative to the verb, going from least
-to most specific.
-
-In the event a request exceeds the thresholds established for your
-account, a 413 HTTP response is returned with a ``Retry-After`` header
-to notify the client when they can attempt to try again.
 
 Absolute limits
 ~~~~~~~~~~~~~~~
