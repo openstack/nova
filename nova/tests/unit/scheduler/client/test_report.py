@@ -676,7 +676,7 @@ class TestInventory(SchedulerReportClientTestCase):
 class TestAllocations(SchedulerReportClientTestCase):
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    def test_allocations(self, mock_vbi):
+    def test_instance_to_allocations_dict(self, mock_vbi):
         mock_vbi.return_value = False
         inst = objects.Instance(
             uuid=uuids.inst,
@@ -685,15 +685,16 @@ class TestAllocations(SchedulerReportClientTestCase):
                                   ephemeral_gb=100,
                                   memory_mb=1024,
                                   vcpus=2))
+        result = report._instance_to_allocations_dict(inst)
         expected = {
             'MEMORY_MB': 1024,
             'VCPU': 2,
             'DISK_GB': 111,
         }
-        self.assertEqual(expected, self.client._allocations(inst))
+        self.assertEqual(expected, result)
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance')
-    def test_allocations_boot_from_volume(self, mock_vbi):
+    def test_instance_to_allocations_dict_boot_from_volume(self, mock_vbi):
         mock_vbi.return_value = True
         inst = objects.Instance(
             uuid=uuids.inst,
@@ -702,38 +703,44 @@ class TestAllocations(SchedulerReportClientTestCase):
                                   ephemeral_gb=100,
                                   memory_mb=1024,
                                   vcpus=2))
+        result = report._instance_to_allocations_dict(inst)
         expected = {
             'MEMORY_MB': 1024,
             'VCPU': 2,
             'DISK_GB': 101,
         }
-        self.assertEqual(expected, self.client._allocations(inst))
+        self.assertEqual(expected, result)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
-    def test_update_instance_allocation_new(self, mock_get, mock_put):
+    @mock.patch('nova.scheduler.client.report.'
+                '_instance_to_allocations_dict')
+    def test_update_instance_allocation_new(self, mock_a, mock_get,
+                                            mock_put):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
         mock_get.return_value.json.return_value = {'allocations': {}}
-        with mock.patch.object(self.client, '_allocations') as mock_a:
-            expected = {
-                'allocations': [
-                    {'resource_provider': {'uuid': cn.uuid},
-                     'resources': mock_a.return_value}]
-            }
-            self.client.update_instance_allocation(cn, inst, 1)
-            mock_put.assert_called_once_with(
-                '/allocations/%s' % inst.uuid,
-                expected)
-            self.assertTrue(mock_get.called)
+        expected = {
+            'allocations': [
+                {'resource_provider': {'uuid': cn.uuid},
+                 'resources': mock_a.return_value}]
+        }
+        self.client.update_instance_allocation(cn, inst, 1)
+        mock_put.assert_called_once_with(
+            '/allocations/%s' % inst.uuid,
+            expected)
+        self.assertTrue(mock_get.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
-    def test_update_instance_allocation_existing(self, mock_get, mock_put):
+    @mock.patch('nova.scheduler.client.report.'
+                '_instance_to_allocations_dict')
+    def test_update_instance_allocation_existing(self, mock_a, mock_get,
+                                                 mock_put):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
         mock_get.return_value.json.return_value = {'allocations': {
@@ -745,33 +752,33 @@ class TestAllocations(SchedulerReportClientTestCase):
                 }
             }}
         }
-        with mock.patch.object(self.client, '_allocations') as mock_a:
-            mock_a.return_value = {
-                'DISK_GB': 123,
-                'MEMORY_MB': 456,
-            }
-            self.client.update_instance_allocation(cn, inst, 1)
-            self.assertFalse(mock_put.called)
-            mock_get.assert_called_once_with(
-                '/allocations/%s' % inst.uuid)
+        mock_a.return_value = {
+            'DISK_GB': 123,
+            'MEMORY_MB': 456,
+        }
+        self.client.update_instance_allocation(cn, inst, 1)
+        self.assertFalse(mock_put.called)
+        mock_get.assert_called_once_with(
+            '/allocations/%s' % inst.uuid)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
+    @mock.patch('nova.scheduler.client.report.'
+                '_instance_to_allocations_dict')
     @mock.patch.object(report.LOG, 'warning')
-    def test_update_instance_allocation_new_failed(self, mock_warn, mock_put,
-                                                   mock_get):
+    def test_update_instance_allocation_new_failed(self, mock_warn, mock_a,
+                                                   mock_put, mock_get):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
-        with mock.patch.object(self.client, '_allocations'):
-            try:
-                mock_put.return_value.__nonzero__.return_value = False
-            except AttributeError:
-                # NOTE(danms): LOL @ py3
-                mock_put.return_value.__bool__.return_value = False
-            self.client.update_instance_allocation(cn, inst, 1)
-            self.assertTrue(mock_warn.called)
+        try:
+            mock_put.return_value.__nonzero__.return_value = False
+        except AttributeError:
+            # NOTE(danms): LOL @ py3
+            mock_put.return_value.__bool__.return_value = False
+        self.client.update_instance_allocation(cn, inst, 1)
+        self.assertTrue(mock_warn.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
@@ -801,8 +808,10 @@ class TestAllocations(SchedulerReportClientTestCase):
                 'delete')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
-    def test_remove_deleted_instances(
-            self, mock_get, mock_delete):
+    @mock.patch('nova.scheduler.client.report.'
+                '_instance_to_allocations_dict')
+    def test_remove_deleted_instances(self, mock_a, mock_get,
+                                      mock_delete):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst1 = objects.Instance(uuid=uuids.inst1)
         inst2 = objects.Instance(uuid=uuids.inst2)
@@ -822,11 +831,10 @@ class TestAllocations(SchedulerReportClientTestCase):
         inst3 = {'uuid': 'foo'}
 
         mock_delete.return_value = True
-        with mock.patch.object(self.client, '_allocations'):
-            self.client.remove_deleted_instances(cn, [inst3])
-            mock_get.assert_called_once_with(
-                '/resource_providers/%s/allocations' % cn.uuid)
-            expected_calls = [
-                mock.call('/allocations/%s' % inst1.uuid),
-                mock.call('/allocations/%s' % inst2.uuid)]
-            mock_delete.assert_has_calls(expected_calls, any_order=True)
+        self.client.remove_deleted_instances(cn, [inst3])
+        mock_get.assert_called_once_with(
+            '/resource_providers/%s/allocations' % cn.uuid)
+        expected_calls = [
+            mock.call('/allocations/%s' % inst1.uuid),
+            mock.call('/allocations/%s' % inst2.uuid)]
+        mock_delete.assert_has_calls(expected_calls, any_order=True)

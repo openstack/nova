@@ -93,6 +93,25 @@ def _compute_node_to_inventory_dict(compute_node):
     }
 
 
+def _instance_to_allocations_dict(instance):
+    """Given an `objects.Instance` object, return a dict, keyed by resource
+    class of the amount used by the instance.
+
+    :param instance: `objects.Instance` object to translate
+    """
+    # NOTE(danms): Boot-from-volume instances consume no local disk
+    is_bfv = compute_utils.is_volume_backed_instance(instance._context,
+                                                     instance)
+    disk = ((0 if is_bfv else instance.flavor.root_gb) +
+            instance.flavor.swap +
+            instance.flavor.ephemeral_gb)
+    return {
+        MEMORY_MB: instance.flavor.memory_mb,
+        VCPU: instance.flavor.vcpus,
+        DISK_GB: disk,
+    }
+
+
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
@@ -348,19 +367,6 @@ class SchedulerReportClient(object):
                                        compute_node.hypervisor_hostname)
         self._update_inventory(compute_node)
 
-    def _allocations(self, instance):
-        # NOTE(danms): Boot-from-volume instances consume no local disk
-        is_bfv = compute_utils.is_volume_backed_instance(instance._context,
-                                                         instance)
-        disk = ((0 if is_bfv else instance.flavor.root_gb) +
-                instance.flavor.swap +
-                instance.flavor.ephemeral_gb)
-        return {
-            MEMORY_MB: instance.flavor.memory_mb,
-            VCPU: instance.flavor.vcpus,
-            DISK_GB: disk,
-        }
-
     def _get_allocations_for_instance(self, compute_node, instance):
         url = '/allocations/%s' % instance.uuid
         resp = self.get(url)
@@ -377,7 +383,7 @@ class SchedulerReportClient(object):
     def _allocate_for_instance(self, compute_node, instance):
         url = '/allocations/%s' % instance.uuid
 
-        my_allocations = self._allocations(instance)
+        my_allocations = _instance_to_allocations_dict(instance)
         current_allocations = self._get_allocations_for_instance(compute_node,
                                                                  instance)
         if current_allocations == my_allocations:
