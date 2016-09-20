@@ -19,7 +19,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import versionutils
 
-from nova import context
 from nova import db
 from nova import exception
 from nova import objects
@@ -114,18 +113,6 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         'parent_addr': fields.StringField(nullable=True),
     }
 
-    @staticmethod
-    def should_migrate_data():
-        # NOTE(ndipanov): Only migrate parent_addr if all services are up to at
-        # least version 4 - this should only ever be called from save()
-        services = ('conductor', 'api')
-        min_parent_addr_version = 4
-
-        min_deployed = min(objects.Service.get_minimum_version(
-            context.get_admin_context(), 'nova-' + service)
-            for service in services)
-        return min_deployed >= min_parent_addr_version
-
     def obj_make_compatible(self, primitive, target_version):
         target_version = versionutils.convert_version_to_tuple(target_version)
         if target_version < (1, 2) and 'request_id' in primitive:
@@ -199,10 +186,6 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                 pci_device.extra_info = jsonutils.loads(extra_info)
         pci_device._context = context
         pci_device.obj_reset_changes()
-        # NOTE(ndipanov): As long as there is PF data in the old location, we
-        # want to load it as it may have be the only place we have it
-        if 'phys_function' in pci_device.extra_info:
-            pci_device.parent_addr = pci_device.extra_info['phys_function']
 
         return pci_device
 
@@ -238,23 +221,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                                   self.address)
         elif self.status != fields.PciDeviceStatus.DELETED:
             updates = self.obj_get_changes()
-            if not self.should_migrate_data():
-                # NOTE(ndipanov): If we are not migrating data yet, make sure
-                # that any changes to parent_addr are also in the old location
-                # in extra_info
-                if 'parent_addr' in updates and updates['parent_addr']:
-                    extra_update = updates.get('extra_info', {})
-                    if not extra_update and self.obj_attr_is_set('extra_info'):
-                        extra_update = self.extra_info
-                    extra_update['phys_function'] = updates['parent_addr']
-                    updates['extra_info'] = extra_update
-            else:
-                # NOTE(ndipanov): Once we start migrating, meaning all control
-                # plane has been upgraded - aggressively migrate on every save
-                pf_extra = self.extra_info.pop('phys_function', None)
-                if pf_extra and 'parent_addr' not in updates:
-                    updates['parent_addr'] = pf_extra
-                updates['extra_info'] = self.extra_info
+            updates['extra_info'] = self.extra_info
 
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])

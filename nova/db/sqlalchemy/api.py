@@ -6414,31 +6414,6 @@ def archive_deleted_rows(max_rows=None):
 
 
 @main_context_manager.writer
-def pcidevice_online_data_migration(context, max_count):
-    from nova.objects import pci_device as pci_dev_obj
-
-    count_all = 0
-    count_hit = 0
-
-    if not pci_dev_obj.PciDevice.should_migrate_data():
-        LOG.error(_LE("Data migrations for PciDevice are not safe, likely "
-                      "because not all services that access the DB directly "
-                      "are updated to the latest version"))
-    else:
-        results = model_query(context, models.PciDevice).filter_by(
-            parent_addr=None).limit(max_count)
-
-        for db_dict in results:
-            count_all += 1
-            pci_dev = pci_dev_obj.PciDevice._from_db_object(
-                context, pci_dev_obj.PciDevice(), db_dict)
-            if pci_dev.obj_what_changed():
-                pci_dev.save()
-                count_hit += 1
-    return count_all, count_hit
-
-
-@main_context_manager.writer
 def aggregate_uuids_online_data_migration(context, max_count):
     from nova.objects import aggregate
 
