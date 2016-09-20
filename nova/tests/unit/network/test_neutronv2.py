@@ -5131,7 +5131,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
             uuids.net1: {"id": uuids.net1, "port_security_enabled": False},
             uuids.net2: {"id": uuids.net2, "port_security_enabled": False},
             uuids.net3: {"id": uuids.net3, "port_security_enabled": False},
-            uuids.net3: {"id": uuids.net4, "port_security_enabled": False}
+            uuids.net4: {"id": uuids.net4, "port_security_enabled": False}
         }
         error = exception.PortLimitExceeded()
         mock_client = mock.Mock()
