@@ -1315,40 +1315,52 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NovaException,
                           drvr.set_admin_password, instance, "123")
 
+    @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_set_host_enabled_with_disable(self, mock_svc):
+    def test_set_host_enabled_with_disable(self, mock_svc, mock_save):
         # Tests disabling an enabled host.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(host='fake-mini')
         mock_svc.return_value = svc
         drvr._set_host_enabled(False)
         self.assertTrue(svc.disabled)
+        mock_save.assert_called_once_with()
 
+    @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_set_host_enabled_with_enable(self, mock_svc):
+    def test_set_host_enabled_with_enable(self, mock_svc, mock_save):
         # Tests enabling a disabled host.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(disabled=True, host='fake-mini')
         mock_svc.return_value = svc
         drvr._set_host_enabled(True)
+        # since disabled_reason is not set and not prefixed with "AUTO:",
+        # service should not be enabled.
+        mock_save.assert_not_called()
         self.assertTrue(svc.disabled)
 
+    @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_set_host_enabled_with_enable_state_enabled(self, mock_svc):
+    def test_set_host_enabled_with_enable_state_enabled(self, mock_svc,
+                                                        mock_save):
         # Tests enabling an enabled host.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(disabled=False, host='fake-mini')
         mock_svc.return_value = svc
         drvr._set_host_enabled(True)
         self.assertFalse(svc.disabled)
+        mock_save.assert_not_called()
 
+    @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
-    def test_set_host_enabled_with_disable_state_disabled(self, mock_svc):
+    def test_set_host_enabled_with_disable_state_disabled(self, mock_svc,
+                                                          mock_save):
         # Tests disabling a disabled host.
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         svc = self._create_service(disabled=True, host='fake-mini')
         mock_svc.return_value = svc
         drvr._set_host_enabled(False)
+        mock_save.assert_not_called()
         self.assertTrue(svc.disabled)
 
     def test_set_host_enabled_swallows_exceptions(self):
