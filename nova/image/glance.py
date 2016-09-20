@@ -653,7 +653,9 @@ def _extract_attributes(image, include_locations=False):
                 output[attr] = getattr(image, attr, None)
         # NOTE(mdorman): 'size' attribute must not be 'None', so use 0 instead
         elif attr == 'size':
-            output[attr] = getattr(image, attr) or 0
+            # NOTE(mriedem): A snapshot image may not have the size attribute
+            # set so default to 0.
+            output[attr] = getattr(image, attr, 0) or 0
         else:
             # NOTE(xarses): Anything that is caught with the default value
             # will result in an additional lookup to glance for said attr.

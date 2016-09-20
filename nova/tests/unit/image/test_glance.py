@@ -57,7 +57,8 @@ class TestConversions(test.NoDBTestCase):
         self.assertEqual(result['updated_at'], NOW_DATETIME)
         self.assertEqual(result['deleted_at'], NOW_DATETIME)
 
-    def _test_extracting_missing_attributes(self, include_locations):
+    def _test_extracting_missing_attributes(self, include_locations,
+                                            size_attr=True):
         # Verify behavior from glance objects that are missing attributes
         # TODO(jaypipes): Find a better way of testing this crappy
         #                 glanceclient magic object stuff.
@@ -66,6 +67,8 @@ class TestConversions(test.NoDBTestCase):
                 IMAGE_ATTRIBUTES = ['size', 'owner', 'id', 'created_at',
                                     'updated_at', 'status', 'min_disk',
                                     'min_ram', 'is_public']
+                if not size_attr:
+                    IMAGE_ATTRIBUTES.pop(0)
                 raw = dict.fromkeys(IMAGE_ATTRIBUTES)
                 raw.update(metadata)
                 self.__dict__['raw'] = raw
@@ -118,6 +121,12 @@ class TestConversions(test.NoDBTestCase):
 
     def test_extracting_missing_attributes_exclude_locations(self):
         self._test_extracting_missing_attributes(include_locations=False)
+
+    def test_extracting_missing_attributes_exclude_size(self):
+        # If image status is 'queued', 'size' attribute will be excluded
+        # by glance v1 API.
+        self._test_extracting_missing_attributes(include_locations=False,
+                                                 size_attr=False)
 
 
 class TestExceptionTranslations(test.NoDBTestCase):
