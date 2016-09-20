@@ -342,9 +342,6 @@ class ServerMigrationsPolicyEnforcementV223(
 
     wsgi_api_version = '2.23'
 
-    def setUp(self):
-        super(ServerMigrationsPolicyEnforcementV223, self).setUp()
-
     def test_migration_index_failed(self):
         rule_name = "os_compute_api:servers:migrations:index"
         self.policy.set_rules({rule_name: "project:non_fake"})
@@ -368,9 +365,6 @@ class ServerMigrationsPolicyEnforcementV224(
                 ServerMigrationsPolicyEnforcementV223):
 
     wsgi_api_version = '2.24'
-
-    def setUp(self):
-        super(ServerMigrationsPolicyEnforcementV224, self).setUp()
 
     def test_migrate_delete_failed(self):
         rule_name = "os_compute_api:servers:migrations:delete"

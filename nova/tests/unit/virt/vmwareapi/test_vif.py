@@ -52,9 +52,6 @@ class VMwareVifTestCase(test.NoDBTestCase):
         self.session = fake.FakeSession()
         self.cluster = None
 
-    def tearDown(self):
-        super(VMwareVifTestCase, self).tearDown()
-
     def test_ensure_vlan_bridge(self):
         self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
         self.mox.StubOutWithMock(network_util,
