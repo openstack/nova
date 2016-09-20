@@ -788,7 +788,7 @@ class LibvirtGenericVIFDriver(object):
         if mtu is not None:
             linux_net._set_device_mtu(network["bridge"], mtu)
 
-        if (isinstance(vif, os_vif.objects.vif.VIFBridge) and
+        if (type(vif) == os_vif.objects.vif.VIFBridge and
             hasattr(vif, "port_profile") and
             isinstance(vif.port_profile,
                        os_vif.objects.vif.VIFPortProfileOpenVSwitch)):
