@@ -1,0 +1,15 @@
+DEVICE="{{ name }}"
+NM_CONTROLLED="no"
+ONBOOT=yes
+TYPE=Ethernet
+BOOTPROTO=static
+IPADDR={{ address }}
+NETMASK={{ netmask }}
+BROADCAST={{ broadcast }}
+GATEWAY={{ gateway }}
+DNS1={{ dns }}
+
+#if $use_ipv6
+IPV6INIT=yes
+IPV6ADDR={{ address_v6 }}
+#end if
