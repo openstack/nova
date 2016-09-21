@@ -784,14 +784,23 @@ class DbCommands(object):
     """Class for managing the main database."""
 
     online_migrations = (
+        # Added in Mitaka
         db.aggregate_uuids_online_data_migration,
+        # Added in Newton
         flavor_obj.migrate_flavors,
+        # Added in Newton
         flavor_obj.migrate_flavor_reset_autoincrement,
+        # Added in Newton
         instance_obj.migrate_instance_keypairs,
+        # Added in Newton
         request_spec.migrate_instances_add_request_spec,
+        # Added in Newton
         keypair_obj.migrate_keypairs_to_api_db,
+        # Added in Newton
         aggregate_obj.migrate_aggregates,
+        # Added in Newton
         aggregate_obj.migrate_aggregate_reset_autoincrement,
+        # Added in Newton
         instance_group_obj.migrate_instance_groups_to_api_db,
     )
 
