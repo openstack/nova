@@ -29,6 +29,7 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests import uuidsentinel
 
 
 class TestNullInstanceUuidScanDB(test.TestCase):
@@ -280,3 +281,87 @@ class TestNewtonCheck(test.TestCase):
                                   'status': 'whatisthis?'})
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
+
+
+class TestOcataCheck(test.TestCase):
+    def setUp(self):
+        super(TestOcataCheck, self).setUp()
+        self.context = context.get_admin_context()
+        self.migration = importlib.import_module(
+            'nova.db.sqlalchemy.migrate_repo.versions.'
+            '345_require_online_migration_completion')
+        self.engine = db_api.get_engine()
+        self.flavor_values = {
+            'name': 'foo',
+            'memory_mb': 256,
+            'vcpus': 1,
+            'root_gb': 10,
+            'ephemeral_gb': 100,
+            'flavorid': 'bar',
+            'swap': 1,
+            'rxtx_factor': 1.0,
+            'vcpu_weight': 1,
+            'disabled': False,
+            'is_public': True,
+        }
+        self.keypair_values = {
+            'name': 'foo',
+            'user_ud': 'bar',
+            'fingerprint': 'baz',
+            'public_key': 'bat',
+            'type': 'ssh',
+        }
+        self.aggregate_values = {
+            'uuid': uuidsentinel.agg,
+            'name': 'foo',
+        }
+        self.ig_values = {
+            'user_id': 'foo',
+            'project_id': 'bar',
+            'uuid': uuidsentinel.ig,
+            'name': 'baz',
+        }
+
+    def test_upgrade_clean(self):
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_flavors(self):
+        db_api.flavor_create(self.context, self.flavor_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_flavors(self):
+        flavor = db_api.flavor_create(self.context, self.flavor_values)
+        db_api.flavor_destroy(self.context, flavor['flavorid'])
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_keypairs(self):
+        db_api.key_pair_create(self.context, self.keypair_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_keypairs(self):
+        keypair = db_api.key_pair_create(self.context, self.keypair_values)
+        db_api.key_pair_destroy(self.context,
+                                keypair['user_id'], keypair['name'])
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_aggregates(self):
+        db_api.aggregate_create(self.context, self.aggregate_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_aggregates(self):
+        agg = db_api.aggregate_create(self.context, self.aggregate_values)
+        db_api.aggregate_delete(self.context, agg['id'])
+        self.migration.upgrade(self.engine)
+
+    def test_upgrade_dirty_instance_groups(self):
+        db_api.instance_group_create(self.context, self.ig_values)
+        self.assertRaises(exception.ValidationError,
+                          self.migration.upgrade, self.engine)
+
+    def test_upgrade_with_deleted_instance_groups(self):
+        group = db_api.instance_group_create(self.context, self.ig_values)
+        db_api.instance_group_delete(self.context, group['uuid'])
+        self.migration.upgrade(self.engine)

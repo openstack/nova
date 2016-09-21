@@ -920,6 +920,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertColumnExists(engine, 'shadow_instance_extra',
                                         'device_metadata')
 
+    def _check_345(self, engine, data):
+        # NOTE(danms): Just a sanity-check migration
+        pass
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
