@@ -2815,6 +2815,32 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertNotIn('should_create_bridge', net)
         self.assertEqual('port-id', iid)
 
+    def test_nw_info_build_network_vhostuser_fp(self):
+        fake_port = {
+            'fixed_ips': [{'ip_address': '1.1.1.1'}],
+            'id': 'port-id',
+            'network_id': 'net-id',
+            'binding:vif_type': model.VIF_TYPE_VHOSTUSER,
+            'binding:vif_details': {
+                    model.VIF_DETAILS_VHOSTUSER_FP_PLUG: True,
+                    model.VIF_DETAILS_VHOSTUSER_OVS_PLUG: False,
+                                    }
+            }
+        fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
+        fake_nets = [{'id': 'net-id', 'name': 'foo', 'tenant_id': 'tenant'}]
+        api = neutronapi.API()
+        neutronapi.get_client(mox.IgnoreArg()).AndReturn(self.moxed_client)
+        self.mox.ReplayAll()
+        neutronapi.get_client(uuids.fake)
+        net, ovs_interfaceid = api._nw_info_build_network(
+            fake_port, fake_nets, fake_subnets)
+        self.assertEqual(fake_subnets, net['subnets'])
+        self.assertEqual('net-id', net['id'])
+        self.assertEqual('foo', net['label'])
+        self.assertEqual('tenant', net.get_meta('tenant_id'))
+        self.assertEqual('brqnet-id', net['bridge'])
+        self.assertIsNone(ovs_interfaceid)
+
     def _test_nw_info_build_custom_bridge(self, vif_type, extra_details=None):
         fake_port = {
             'fixed_ips': [{'ip_address': '1.1.1.1'}],
