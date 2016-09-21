@@ -140,7 +140,6 @@ the start.
 # also apply here
 placement_db_opts = [
     cfg.StrOpt('connection',
-               default=None,
                help='',
                secret=True),
     cfg.BoolOpt('sqlite_synchronous',

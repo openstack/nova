@@ -19,7 +19,6 @@ from oslo_config import cfg
 ALL_OPTS = [
     cfg.StrOpt(
         'notify_on_state_change',
-        default=None,
         choices=(None, 'vm_state', 'vm_and_task_state'),
         help="""
 If set, send compute.instance.update notifications on instance state
