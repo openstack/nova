@@ -14377,7 +14377,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 srcfile, 1 * units.Gi / units.Ki)
             mock_define.assert_called_once_with(xmldoc)
 
-    @mock.patch('nova.context.get_admin_context', return_value='fake-context')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
     @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
@@ -14386,13 +14385,12 @@ class LibvirtConnTestCase(test.NoDBTestCase):
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     def _test_swap_volume_driver_bdm_save(self, get_guest,
-                                          connect_volume, get_volume_config,
-                                          get_by_volume_and_instance,
-                                          swap_volume,
-                                          disconnect_volume,
-                                          get_admin_context,
-                                          volume_save,
-                                          source_type):
+                                         connect_volume, get_volume_config,
+                                         get_by_volume_and_instance,
+                                         swap_volume,
+                                         disconnect_volume,
+                                         volume_save,
+                                         source_type):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
         old_connection_info = {'driver_volume_type': 'fake',
@@ -14436,9 +14434,6 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         get_guest.assert_called_once_with(instance)
         connect_volume.assert_called_once_with(new_connection_info, disk_info)
-        get_by_volume_and_instance.assert_called_once_with('fake-context',
-                                                           'old-volume-id',
-                                                           instance.uuid)
 
         swap_volume.assert_called_once_with(guest, 'vdb',
                                             '/fake-new-volume', 1)
