@@ -172,6 +172,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         kilo_placeholders = range(281, 291)
         liberty_placeholders = range(303, 313)
         mitaka_placeholders = range(320, 330)
+        newton_placeholders = range(335, 345)
 
         return (special +
                 havana_placeholders +
@@ -179,7 +180,8 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
                 juno_placeholders +
                 kilo_placeholders +
                 liberty_placeholders +
-                mitaka_placeholders)
+                mitaka_placeholders +
+                newton_placeholders)
 
     def migrate_up(self, version, with_data=False):
         if with_data:
