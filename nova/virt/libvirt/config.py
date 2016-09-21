@@ -48,16 +48,16 @@ class LibvirtConfigObject(object):
         self.ns_prefix = kwargs.get('ns_prefix')
         self.ns_uri = kwargs.get('ns_uri')
 
-    def _new_node(self, name, **kwargs):
+    def _new_node(self, node_name, **kwargs):
         if self.ns_uri is None:
-            return etree.Element(name, **kwargs)
+            return etree.Element(node_name, **kwargs)
         else:
-            return etree.Element("{" + self.ns_uri + "}" + name,
+            return etree.Element("{" + self.ns_uri + "}" + node_name,
                                  nsmap={self.ns_prefix: self.ns_uri},
                                  **kwargs)
 
-    def _text_node(self, name, value, **kwargs):
-        child = self._new_node(name, **kwargs)
+    def _text_node(self, node_name, value, **kwargs):
+        child = self._new_node(node_name, **kwargs)
         child.text = six.text_type(value)
         return child
 
