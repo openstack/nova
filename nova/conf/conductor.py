@@ -33,6 +33,7 @@ ALL_OPTS = [
         'use_local',
         default=False,
         deprecated_for_removal=True,
+        deprecated_since='13.0.0',
         help="""
 Perform nova-conductor operations locally. This legacy mode was
 introduced to bridge a gap during the transition to the conductor service.
@@ -51,6 +52,7 @@ Topic exchange name on which conductor nodes listen.
         'manager',
         default='nova.conductor.manager.ConductorManager',
         deprecated_for_removal=True,
+        deprecated_since='13.0.0',
         help="""
 Full class name for the Manager for conductor.
 

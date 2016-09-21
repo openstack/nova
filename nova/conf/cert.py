@@ -19,6 +19,7 @@ from oslo_config import cfg
 cert_opts = [
     cfg.StrOpt("cert_topic",
         deprecated_for_removal=True,
+        deprecated_since="14.0.0",
         deprecated_reason="""
 Since the nova-cert service is marked for deprecation, the feature to change
 RPC topic that cert nodes listen may be removed as early as the 15.0.0

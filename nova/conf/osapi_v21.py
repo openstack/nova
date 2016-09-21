@@ -23,7 +23,7 @@ api_opts = [
     cfg.ListOpt("extensions_blacklist",
         default=[],
         deprecated_for_removal=True,
-        deprecated_group="osapi_v21",
+        deprecated_since="12.0.0",
         help="""
 This option is a list of all of the v2.1 API extensions to never load. However,
 it will be removed in the near future, after which all the functionality
@@ -43,7 +43,7 @@ Related options:
     cfg.ListOpt("extensions_whitelist",
         default=[],
         deprecated_for_removal=True,
-        deprecated_group="osapi_v21",
+        deprecated_since="12.0.0",
         help="""
 This is a list of extensions. If it is empty, then *all* extensions except
 those specified in the extensions_blacklist option will be loaded. If it is not
@@ -64,7 +64,7 @@ Related options:
 """),
     cfg.StrOpt("project_id_regex",
         deprecated_for_removal=True,
-        deprecated_group="osapi_v21",
+        deprecated_since="13.0.0",
         help="""
 This option is a string representing a regular expression (regex) that matches
 the project_id as contained in URLs. If not set, it will match normal UUIDs

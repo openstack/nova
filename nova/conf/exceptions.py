@@ -19,6 +19,7 @@ exc_log_opts = [
     cfg.BoolOpt('fatal_exception_format_errors',
                 default=False,
                 deprecated_for_removal=True,
+                deprecated_since="14.0.0",
                 deprecated_reason="This is only used for internal testing.",
                 help="""
 When set to true, this option enables validation of exception

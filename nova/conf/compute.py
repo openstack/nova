@@ -114,6 +114,7 @@ Possible values:
 """),
     cfg.MultiStrOpt('compute_available_monitors',
                     deprecated_for_removal=True,
+                    deprecated_since='12.0.0',
                     deprecated_reason='stevedore and setuptools entry points '
                                       'now allow a set of plugins to be '
                                       'specified without this config option.',
@@ -174,6 +175,7 @@ Possible values:
     cfg.StrOpt('compute_stats_class',
                default='nova.compute.stats.Stats',
                deprecated_for_removal=True,
+               deprecated_since='13.0.0',
                help="""
 Abstracts out managing compute host stats to pluggable class. This class
 manages and updates stats for the local compute host after an instance
@@ -700,8 +702,8 @@ Related options:
     cfg.StrOpt('snapshot_name_template',
                default='snapshot-%s',
                deprecated_for_removal=True,
-               deprecated_reason='This is not used anymore and will be '
-                                 'removed in the O release.',
+               deprecated_since='14.0.0',
+               deprecated_reason='This is not used anymore.',
                help='Template string to be used to generate snapshot names')
 ]
 

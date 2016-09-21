@@ -24,6 +24,7 @@ filesystems = cfg.ListOpt(
     name='filesystems',
     default=[],
     deprecated_for_removal=True,
+    deprecated_since="14.0.0",
     deprecated_reason="""
 The feature to download images from glance via filesystem is not used and will
 be removed in the future.
@@ -39,6 +40,7 @@ image_file_url:<list entry name> sections
 filesystem_opts = [
      cfg.StrOpt('id',
                 deprecated_for_removal=True,
+                deprecated_since="14.0.0",
                 deprecated_reason="""
 The feature to download images from glance via filesystem is not used and will
 be removed in the future.
@@ -50,6 +52,7 @@ file system.
 """),
      cfg.StrOpt('mountpoint',
                 deprecated_for_removal=True,
+                deprecated_since="14.0.0",
                 deprecated_reason="""
 The feature to download images from glance via filesystem is not used and will
 be removed in the future.

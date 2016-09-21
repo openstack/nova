@@ -64,6 +64,7 @@ Possible values:
     cfg.StrOpt("vendordata_driver",
             default="nova.api.metadata.vendordata_json.JsonFileVendorData",
             deprecated_for_removal=True,
+            deprecated_since="13.0.0",
             help="""
 When returning instance metadata, this is the class that is used
 for getting vendor metadata when that class isn't specified in the individual
@@ -278,6 +279,7 @@ fping_path_opts = [
 os_network_opts = [
     cfg.BoolOpt("enable_network_quota",
             deprecated_for_removal=True,
+            deprecated_since="14.0.0",
             deprecated_reason="""
 CRUD operations on tenant networks are only available when using nova-network
 and nova-network is itself deprecated.""",
@@ -311,6 +313,7 @@ Related options:
 """),
     cfg.IntOpt("quota_networks",
             deprecated_for_removal=True,
+            deprecated_since="14.0.0",
             deprecated_reason="""
 CRUD operations on tenant networks are only available when using nova-network
 and nova-network is itself deprecated.""",

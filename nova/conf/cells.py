@@ -237,6 +237,7 @@ cell_manager_opts = [
         cfg.StrOpt('driver',
                 default='nova.cells.rpc_driver.CellsRPCDriver',
                 deprecated_for_removal=True,
+                deprecated_since="14.0.0",
                 deprecated_reason='The only available driver '
                                   'is the RPC driver.',
                 help="""Cells communication driver
