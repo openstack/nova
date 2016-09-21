@@ -13,13 +13,13 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0b3.dev750\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev2\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-08-25 06:14+0000\n"
+"POT-Creation-Date: 2016-09-20 00:38+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-06-03 01:34+0000\n"
+"PO-Revision-Date: 2016-09-16 03:49+0000\n"
 "Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -1521,6 +1521,9 @@ msgstr "Floating IP für Host %(host)s nicht gefunden."
 msgid "Floating IP pool not found."
 msgstr "Pool mit Floating IPs nicht gefunden."
 
+msgid "Forbidden"
+msgstr "Verboten"
+
 msgid ""
 "Forbidden to exceed flavor value of number of serial ports passed in image "
 "meta."
@@ -1551,14 +1554,6 @@ msgstr "Nicht eindeutiges Netz für name_label %s gefunden"
 msgid "Free %(type)s %(free).02f %(unit)s < requested %(requested)d %(unit)s"
 msgstr ""
 "Frei %(type)s %(free).02f %(unit)s < angefordert %(requested)d %(unit)s"
-
-#, python-format
-msgid "Glance image %(image_id)s is in unknown state - %(state)s"
-msgstr "Glance-Image '%(image_id)s' ist in unbekanntem Status - %(state)s"
-
-#, python-format
-msgid "Glance image %s is in killed state"
-msgstr "Glance-Image '%s' ist im Status 'killed'"
 
 #, python-format
 msgid "Group not valid. Reason: %(reason)s"
@@ -2179,6 +2174,9 @@ msgstr "Ungültige Startzeit. Die Startzeit darf nicht nach der Endzeit liegen."
 msgid "Invalid state of instance files on shared storage"
 msgstr "Ungültiger Status der Instanzdateien im gemeinsam genutzten Speicher"
 
+msgid "Invalid status value"
+msgstr "Ungültiger Status Wert"
+
 msgid "Invalid target_lun"
 msgstr "Ungültige target_lun"
 
@@ -2343,6 +2341,10 @@ msgid ""
 msgstr ""
 "Die Livemigration mit API v2.25 ist erst verfügbar, wenn das Mitaka-Upgrade "
 "vollständig abgeschlossen ist."
+
+#, python-format
+msgid "Malformed JSON: %(error)s"
+msgstr "Fehlerhaftes JSON: %(error)s"
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
