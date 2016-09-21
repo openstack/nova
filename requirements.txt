@@ -4,7 +4,6 @@
 
 pbr>=1.6 # Apache-2.0
 SQLAlchemy<1.1.0,>=1.0.10 # MIT
-boto>=2.32.1 # MIT
 decorator>=3.4.0 # BSD
 eventlet!=0.18.3,>=0.18.2 # MIT
 Jinja2>=2.8 # BSD License (3 clause)
