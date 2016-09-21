@@ -277,6 +277,11 @@ class RequestContext(context.RequestContext):
                 raise
             return False
 
+    def to_policy_values(self):
+        policy = super(RequestContext, self).to_policy_values()
+        policy['is_admin'] = self.is_admin
+        return policy
+
     def __str__(self):
         return "<Context %s>" % self.to_dict()
 
