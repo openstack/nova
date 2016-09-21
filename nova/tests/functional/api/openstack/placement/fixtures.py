@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
 import os
 
 from gabbi import fixture
@@ -37,6 +38,25 @@ class APIFixture(fixture.GabbiFixture):
         self.conf = None
 
     def start_fixture(self):
+        # Set up a logger for errors that will display to screen,
+        # otherwise gabbi failures can be hard to debug while doing
+        # TDD. Establish here but don't add until after the logging
+        # fixture is started, because that cares about handler
+        # ordering.
+        error_log = logging.StreamHandler()
+        error_log.setLevel(logging.ERROR)
+
+        # Set up stderr and stdout captures by directly driving the
+        # existing nova fixtures that do that.
+        self.standard_logging_fixture = fixtures.StandardLogging()
+        self.standard_logging_fixture.setUp()
+        self.output_stream_fixture = fixtures.OutputStreamCapture()
+        self.output_stream_fixture.setUp()
+
+        # add the error handler
+        # catastrophic error messages in a useful way
+        logging.getLogger().addHandler(error_log)
+
         self.conf = CONF
         self.conf.set_override('auth_strategy', 'noauth2')
         # Be explicit about all three database connections to avoid
@@ -63,6 +83,8 @@ class APIFixture(fixture.GabbiFixture):
     def stop_fixture(self):
         self.api_db_fixture.cleanup()
         self.main_db_fixture.cleanup()
+        self.output_stream_fixture.cleanUp()
+        self.standard_logging_fixture.cleanUp()
         if self.conf:
             self.conf.reset()
 
