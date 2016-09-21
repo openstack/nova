@@ -59,6 +59,40 @@ def safe_connect(f):
     return wrapper
 
 
+def _compute_node_to_inventory_dict(compute_node):
+    """Given a supplied `objects.ComputeNode` object, return a dict, keyed
+    by resource class, of various inventory information.
+
+    :param compute_node: `objects.ComputeNode` object to translate
+    """
+    return {
+        VCPU: {
+            'total': compute_node.vcpus,
+            'reserved': 0,
+            'min_unit': 1,
+            'max_unit': 1,
+            'step_size': 1,
+            'allocation_ratio': compute_node.cpu_allocation_ratio,
+        },
+        MEMORY_MB: {
+            'total': compute_node.memory_mb,
+            'reserved': CONF.reserved_host_memory_mb,
+            'min_unit': 1,
+            'max_unit': 1,
+            'step_size': 1,
+            'allocation_ratio': compute_node.ram_allocation_ratio,
+        },
+        DISK_GB: {
+            'total': compute_node.local_gb,
+            'reserved': CONF.reserved_host_disk_mb * 1024,
+            'min_unit': 1,
+            'max_unit': 1,
+            'step_size': 1,
+            'allocation_ratio': compute_node.disk_allocation_ratio,
+        },
+    }
+
+
 class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
@@ -211,38 +245,6 @@ class SchedulerReportClient(object):
         self._resource_providers[uuid] = rp
         return rp
 
-    def _compute_node_inventory(self, compute_node):
-        inventories = {
-            'VCPU': {
-                'total': compute_node.vcpus,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 1,
-                'step_size': 1,
-                'allocation_ratio': compute_node.cpu_allocation_ratio,
-            },
-            'MEMORY_MB': {
-                'total': compute_node.memory_mb,
-                'reserved': CONF.reserved_host_memory_mb,
-                'min_unit': 1,
-                'max_unit': 1,
-                'step_size': 1,
-                'allocation_ratio': compute_node.ram_allocation_ratio,
-            },
-            'DISK_GB': {
-                'total': compute_node.local_gb,
-                'reserved': CONF.reserved_host_disk_mb * 1024,
-                'min_unit': 1,
-                'max_unit': 1,
-                'step_size': 1,
-                'allocation_ratio': compute_node.disk_allocation_ratio,
-            },
-        }
-        data = {
-            'inventories': inventories,
-        }
-        return data
-
     def _get_inventory(self, compute_node):
         url = '/resource_providers/%s/inventories' % compute_node.uuid
         result = self.get(url)
@@ -257,7 +259,7 @@ class SchedulerReportClient(object):
         :returns: True if the inventory was updated (or did not need to be),
                   False otherwise.
         """
-        data = self._compute_node_inventory(compute_node)
+        inv_data = _compute_node_to_inventory_dict(compute_node)
         curr = self._get_inventory(compute_node)
 
         # Update our generation immediately, if possible. Even if there
@@ -274,13 +276,16 @@ class SchedulerReportClient(object):
             my_rp.generation = server_gen
 
         # Check to see if we need to update placement's view
-        if data['inventories'] == curr.get('inventories', {}):
+        if inv_data == curr.get('inventories', {}):
             return True
 
-        data['resource_provider_generation'] = (
-            self._resource_providers[compute_node.uuid].generation)
+        cur_rp_gen = self._resource_providers[compute_node.uuid].generation
+        payload = {
+            'resource_provider_generation': cur_rp_gen,
+            'inventories': inv_data,
+        }
         url = '/resource_providers/%s/inventories' % compute_node.uuid
-        result = self.put(url, data)
+        result = self.put(url, payload)
         if result.status_code == 409:
             LOG.info(_LI('Inventory update conflict for %s'),
                      compute_node.uuid)
