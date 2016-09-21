@@ -25,175 +25,7 @@ METRICS_GROUP_NAME = "metrics"
 TRUSTED_GROUP_NAME = "trusted_computing"
 
 
-host_subset_size_opt = cfg.IntOpt("scheduler_host_subset_size",
-        default=1,
-        help="""
-New instances will be scheduled on a host chosen randomly from a subset of the
-N best hosts, where N is the value set by this option. Valid values are 1 or
-greater. Any value less than one will be treated as 1.
-
-Setting this to a value greater than 1 will reduce the chance that multiple
-scheduler processes handling similar requests will select the same host,
-creating a potential race condition. By selecting a host randomly from the N
-hosts that best fit the request, the chance of a conflict is reduced. However,
-the higher you set this value, the less optimal the chosen host may be for a
-given request.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Possible values:
-
-* Any integer, although any value less than 1 will be treated as 1
-""")
-
-bm_default_filter_opt = cfg.ListOpt("baremetal_scheduler_default_filters",
-        default=[
-            "RetryFilter",
-            "AvailabilityZoneFilter",
-            "ComputeFilter",
-            "ComputeCapabilitiesFilter",
-            "ImagePropertiesFilter",
-            "ExactRamFilter",
-            "ExactDiskFilter",
-            "ExactCoreFilter",
-        ],
-        help="""
-This option specifies the filters used for filtering baremetal hosts. The value
-should be a list of strings, with each string being the name of a filter class
-to be used. When used, they will be applied in order, so place your most
-restrictive filters first to make the filtering process more efficient.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Possible values:
-
-* Any list of zero or more strings, with each string being the name of a filter
-  to be used for selecting a baremetal host.
-
-Related options:
-
-* If the 'scheduler_use_baremetal_filters' option is False, this option has
-  no effect.
-""")
-
-use_bm_filters_opt = cfg.BoolOpt("scheduler_use_baremetal_filters",
-        default=False,
-        help="""
-Set this to True to tell the nova scheduler that it should use the filters
-specified in the 'baremetal_scheduler_default_filters' option. If you are not
-scheduling baremetal nodes, leave this at the default setting of False.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Related options:
-
-* If this option is set to True, then the filters specified in the
-  'baremetal_scheduler_default_filters' are used instead of the filters
-  specified in 'scheduler_default_filters'.
-""")
-
-host_mgr_avail_filt_opt = cfg.MultiStrOpt("scheduler_available_filters",
-        default=["nova.scheduler.filters.all_filters"],
-        help="""
-This is an unordered list of the filter classes the Nova scheduler may apply.
-Only the filters specified in the 'scheduler_default_filters' option will be
-used, but any filter appearing in that option must also be included in this
-list.
-
-By default, this is set to all filters that are included with Nova. If you wish
-to change this, replace this with a list of strings, where each element is the
-path to a filter.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Possible values:
-
-* Any list of zero or more strings, with each string being the name of a filter
-  that may be used for selecting a host.
-
-Related options:
-
-* scheduler_default_filters
-""")
-
-host_mgr_default_filt_opt = cfg.ListOpt("scheduler_default_filters",
-        default=[
-          "RetryFilter",
-          "AvailabilityZoneFilter",
-          "RamFilter",
-          "DiskFilter",
-          "ComputeFilter",
-          "ComputeCapabilitiesFilter",
-          "ImagePropertiesFilter",
-          "ServerGroupAntiAffinityFilter",
-          "ServerGroupAffinityFilter",
-          ],
-        help="""
-This option is the list of filter class names that will be used for filtering
-hosts. The use of 'default' in the name of this option implies that other
-filters may sometimes be used, but that is not the case. These filters will be
-applied in the order they are listed, so place your most restrictive filters
-first to make the filtering process more efficient.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Possible values:
-
-* Any list of zero or more strings, with each string being the name of a filter
-  to be used for selecting a host.
-
-Related options:
-
-* All of the filters in this option *must* be present in the
-  'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
-  exception will be raised.
-""")
-
-host_mgr_sched_wgt_cls_opt = cfg.ListOpt("scheduler_weight_classes",
-        default=["nova.scheduler.weights.all_weighers"],
-        help="""
-This is a list of weigher class names. Only hosts which pass the filters are
-weighed. The weight for any host starts at 0, and the weighers order these
-hosts by adding to or subtracting from the weight assigned by the previous
-weigher. Weights may become negative.
-
-An instance will be scheduled to one of the N most-weighted hosts, where N is
-'scheduler_host_subset_size'.
-
-By default, this is set to all weighers that are included with Nova. If you
-wish to change this, replace this with a list of strings, where each element is
-the path to a weigher.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-
-Possible values:
-
-* Any list of zero or more strings, with each string being the name of a
-  weigher that will be used for selecting a host.
-""")
-
-host_mgr_tracks_inst_chg_opt = cfg.BoolOpt("scheduler_tracks_instance_changes",
-        default=True,
-        help="""
-The scheduler may need information about the instances on a host in order to
-evaluate its filters and weighers. The most common need for this information is
-for the (anti-)affinity filters, which need to choose a host based on the
-instances already running on a host.
-
-If the configured filters and weighers do not need this information, disabling
-this option will improve performance. It may also be disabled when the tracking
-overhead proves too heavy, although this will cause classes requiring host
-usage data to query the database on each request instead.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect.
-""")
+# scheduler opts
 
 rpc_sched_topic_opt = cfg.StrOpt("scheduler_topic",
         default="scheduler",
@@ -291,6 +123,306 @@ Related options:
 * ``nova-service service_down_time``
 """)
 
+scheduler_max_att_opt = cfg.IntOpt("scheduler_max_attempts",
+        default=3,
+        help="""
+This is the maximum number of attempts that will be made to schedule an
+instance before it is assumed that the failures aren't due to normal occasional
+race conflicts, but rather some other problem. When this is reached a
+MaxRetriesExceeded exception is raised, and the instance is set to an error
+state.
+
+Possible values:
+
+* Any positive integer
+""")
+
+# filter scheduler opts
+
+host_subset_size_opt = cfg.IntOpt("scheduler_host_subset_size",
+        default=1,
+        help="""
+New instances will be scheduled on a host chosen randomly from a subset of the
+N best hosts, where N is the value set by this option. Valid values are 1 or
+greater. Any value less than one will be treated as 1.
+
+Setting this to a value greater than 1 will reduce the chance that multiple
+scheduler processes handling similar requests will select the same host,
+creating a potential race condition. By selecting a host randomly from the N
+hosts that best fit the request, the chance of a conflict is reduced. However,
+the higher you set this value, the less optimal the chosen host may be for a
+given request.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Possible values:
+
+* Any integer, although any value less than 1 will be treated as 1
+""")
+
+max_io_ops_per_host_opt = cfg.IntOpt("max_io_ops_per_host",
+        default=8,
+        help="""
+This setting caps the number of instances on a host that can be actively
+performing IO (in a build, resize, snapshot, migrate, rescue, or unshelve task
+state) before that host becomes ineligible to build new instances.
+
+Valid values are positive integers: 1 or greater.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'io_ops_filter' filter is enabled.
+
+Possible values:
+
+* Any integer is valid, although a value of zero or less will cause all hosts
+  to fail the IoOpsFilter.
+""")
+
+max_instances_per_host_opt = cfg.IntOpt("max_instances_per_host",
+        default=50,
+        help="""
+If you need to limit the number of instances on any given host, set this option
+to the maximum number of instances you want to allow. The num_instances_filter
+will reject any host that has at least as many instances as this option's
+value.
+
+Valid values are positive integers; setting it to zero or less will cause all
+hosts to be rejected if the num_instances_filter is active.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'num_instances_filter' filter is enabled.
+
+Possible values:
+
+* Any integer, although setting it to zero or less will cause all hosts to be
+  rejected if the num_instances_filter is active.
+""")
+
+host_mgr_tracks_inst_chg_opt = cfg.BoolOpt("scheduler_tracks_instance_changes",
+        default=True,
+        help="""
+The scheduler may need information about the instances on a host in order to
+evaluate its filters and weighers. The most common need for this information is
+for the (anti-)affinity filters, which need to choose a host based on the
+instances already running on a host.
+
+If the configured filters and weighers do not need this information, disabling
+this option will improve performance. It may also be disabled when the tracking
+overhead proves too heavy, although this will cause classes requiring host
+usage data to query the database on each request instead.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+""")
+
+host_mgr_avail_filt_opt = cfg.MultiStrOpt("scheduler_available_filters",
+        default=["nova.scheduler.filters.all_filters"],
+        help="""
+This is an unordered list of the filter classes the Nova scheduler may apply.
+Only the filters specified in the 'scheduler_default_filters' option will be
+used, but any filter appearing in that option must also be included in this
+list.
+
+By default, this is set to all filters that are included with Nova. If you wish
+to change this, replace this with a list of strings, where each element is the
+path to a filter.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Possible values:
+
+* Any list of zero or more strings, with each string being the name of a filter
+  that may be used for selecting a host.
+
+Related options:
+
+* scheduler_default_filters
+""")
+
+host_mgr_default_filt_opt = cfg.ListOpt("scheduler_default_filters",
+        default=[
+          "RetryFilter",
+          "AvailabilityZoneFilter",
+          "RamFilter",
+          "DiskFilter",
+          "ComputeFilter",
+          "ComputeCapabilitiesFilter",
+          "ImagePropertiesFilter",
+          "ServerGroupAntiAffinityFilter",
+          "ServerGroupAffinityFilter",
+          ],
+        help="""
+This option is the list of filter class names that will be used for filtering
+hosts. The use of 'default' in the name of this option implies that other
+filters may sometimes be used, but that is not the case. These filters will be
+applied in the order they are listed, so place your most restrictive filters
+first to make the filtering process more efficient.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Possible values:
+
+* Any list of zero or more strings, with each string being the name of a filter
+  to be used for selecting a host.
+
+Related options:
+
+* All of the filters in this option *must* be present in the
+  'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
+  exception will be raised.
+""")
+
+bm_default_filter_opt = cfg.ListOpt("baremetal_scheduler_default_filters",
+        default=[
+            "RetryFilter",
+            "AvailabilityZoneFilter",
+            "ComputeFilter",
+            "ComputeCapabilitiesFilter",
+            "ImagePropertiesFilter",
+            "ExactRamFilter",
+            "ExactDiskFilter",
+            "ExactCoreFilter",
+        ],
+        help="""
+This option specifies the filters used for filtering baremetal hosts. The value
+should be a list of strings, with each string being the name of a filter class
+to be used. When used, they will be applied in order, so place your most
+restrictive filters first to make the filtering process more efficient.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Possible values:
+
+* Any list of zero or more strings, with each string being the name of a filter
+  to be used for selecting a baremetal host.
+
+Related options:
+
+* If the 'scheduler_use_baremetal_filters' option is False, this option has
+  no effect.
+""")
+
+use_bm_filters_opt = cfg.BoolOpt("scheduler_use_baremetal_filters",
+        default=False,
+        help="""
+Set this to True to tell the nova scheduler that it should use the filters
+specified in the 'baremetal_scheduler_default_filters' option. If you are not
+scheduling baremetal nodes, leave this at the default setting of False.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Related options:
+
+* If this option is set to True, then the filters specified in the
+  'baremetal_scheduler_default_filters' are used instead of the filters
+  specified in 'scheduler_default_filters'.
+""")
+
+host_mgr_sched_wgt_cls_opt = cfg.ListOpt("scheduler_weight_classes",
+        default=["nova.scheduler.weights.all_weighers"],
+        help="""
+This is a list of weigher class names. Only hosts which pass the filters are
+weighed. The weight for any host starts at 0, and the weighers order these
+hosts by adding to or subtracting from the weight assigned by the previous
+weigher. Weights may become negative.
+
+An instance will be scheduled to one of the N most-weighted hosts, where N is
+'scheduler_host_subset_size'.
+
+By default, this is set to all weighers that are included with Nova. If you
+wish to change this, replace this with a list of strings, where each element is
+the path to a weigher.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect.
+
+Possible values:
+
+* Any list of zero or more strings, with each string being the name of a
+  weigher that will be used for selecting a host.
+""")
+
+ram_weight_mult_opt = cfg.FloatOpt("ram_weight_multiplier",
+        default=1.0,
+        help="""
+This option determines how hosts with more or less available RAM are weighed. A
+positive value will result in the scheduler preferring hosts with more
+available RAM, and a negative number will result in the scheduler preferring
+hosts with less available RAM. Another way to look at it is that positive
+values for this option will tend to spread instances across many hosts, while
+negative values will tend to fill up (stack) hosts as much as possible before
+scheduling to a less-used host. The absolute value, whether positive or
+negative, controls how strong the RAM weigher is relative to other weighers.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'ram' weigher is enabled.
+
+Valid values are numeric, either integer or float.
+
+Possible values:
+
+* Any numeric value
+""")
+
+disk_weight_mult_opt = cfg.FloatOpt("disk_weight_multiplier",
+        default=1.0,
+        help="Multiplier used for weighing free disk space. Negative "
+             "numbers mean to stack vs spread.")
+
+io_ops_weight_mult_opt = cfg.FloatOpt("io_ops_weight_multiplier",
+        default=-1.0,
+        help="""
+This option determines how hosts with differing workloads are weighed. Negative
+values, such as the default, will result in the scheduler preferring hosts with
+lighter workloads whereas positive values will prefer hosts with heavier
+workloads. Another way to look at it is that positive values for this option
+will tend to schedule instances onto hosts that are already busy, while
+negative values will tend to distribute the workload across more hosts. The
+absolute value, whether positive or negative, controls how strong the io_ops
+weigher is relative to other weighers.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'io_ops' weigher is enabled.
+
+Valid values are numeric, either integer or float.
+
+Possible values:
+
+* Any numeric value
+""")
+
+soft_affinity_weight_opt = cfg.FloatOpt("soft_affinity_weight_multiplier",
+        default=1.0,
+        help="""
+This is the multiplier used for weighing hosts for group soft-affinity.
+
+Possible values:
+
+* Any numeric, although only a positive value is meaningful, as negative values
+  would make this behave as a soft-anti-affinity weigher.
+""")
+
+soft_anti_affinity_weight_opt = cfg.FloatOpt(
+        "soft_anti_affinity_weight_multiplier",
+        default=1.0,
+        help="""
+This is the multiplier used for weighing hosts for group soft-anti-affinity.
+
+Possible values:
+
+* Any numeric, although only a positive value is meaningful, as negative values
+  would make this behave as a soft-affinity weigher.
+""")
+
 isolated_img_opt = cfg.ListOpt("isolated_images",
         default=[],
         help="""
@@ -351,6 +483,58 @@ Related options:
 
 * scheduler/isolated_images
 * scheduler/isolated_hosts
+""")
+
+agg_img_prop_iso_namespace_opt = cfg.StrOpt(
+        "aggregate_image_properties_isolation_namespace",
+        help="""
+Images and hosts can be configured so that certain images can only be scheduled
+to hosts in a particular aggregate. This is done with metadata values set on
+the host aggregate that are identified by beginning with the value of this
+option. If the host is part of an aggregate with such a metadata key, the image
+in the request spec must have the value of that metadata in its properties in
+order for the scheduler to consider the host as acceptable.
+
+Valid values are strings.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'aggregate_image_properties_isolation' filter is
+enabled.
+
+Possible values:
+
+* Any string
+
+Related options:
+
+* aggregate_image_properties_isolation_separator
+""")
+
+agg_img_prop_iso_separator_opt = cfg.StrOpt(
+        "aggregate_image_properties_isolation_separator",
+        default=".",
+        help="""
+When using the aggregate_image_properties_isolation filter, the relevant
+metadata keys are prefixed with the namespace defined in the
+aggregate_image_properties_isolation_namespace configuration option plus a
+separator. This option defines the separator to be used. It defaults to a
+period ('.').
+
+Valid values are strings.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'aggregate_image_properties_isolation' filter is
+enabled.
+
+Possible values:
+
+* Any string
+
+Related options:
+
+* aggregate_image_properties_isolation_namespace
 """)
 
 # These opts are registered as a separate OptGroup
@@ -543,149 +727,6 @@ Related options:
 """),
 ]
 
-max_io_ops_per_host_opt = cfg.IntOpt("max_io_ops_per_host",
-        default=8,
-        help="""
-This setting caps the number of instances on a host that can be actively
-performing IO (in a build, resize, snapshot, migrate, rescue, or unshelve task
-state) before that host becomes ineligible to build new instances.
-
-Valid values are positive integers: 1 or greater.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'io_ops_filter' filter is enabled.
-
-Possible values:
-
-* Any integer is valid, although a value of zero or less will cause all hosts
-  to fail the IoOpsFilter.
-""")
-
-agg_img_prop_iso_namespace_opt = cfg.StrOpt(
-        "aggregate_image_properties_isolation_namespace",
-        help="""
-Images and hosts can be configured so that certain images can only be scheduled
-to hosts in a particular aggregate. This is done with metadata values set on
-the host aggregate that are identified by beginning with the value of this
-option. If the host is part of an aggregate with such a metadata key, the image
-in the request spec must have the value of that metadata in its properties in
-order for the scheduler to consider the host as acceptable.
-
-Valid values are strings.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'aggregate_image_properties_isolation' filter is
-enabled.
-
-Possible values:
-
-* Any string
-
-Related options:
-
-* aggregate_image_properties_isolation_separator
-""")
-
-agg_img_prop_iso_separator_opt = cfg.StrOpt(
-        "aggregate_image_properties_isolation_separator",
-        default=".",
-        help="""
-When using the aggregate_image_properties_isolation filter, the relevant
-metadata keys are prefixed with the namespace defined in the
-aggregate_image_properties_isolation_namespace configuration option plus a
-separator. This option defines the separator to be used. It defaults to a
-period ('.').
-
-Valid values are strings.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'aggregate_image_properties_isolation' filter is
-enabled.
-
-Possible values:
-
-* Any string
-
-Related options:
-
-* aggregate_image_properties_isolation_namespace
-""")
-
-max_instances_per_host_opt = cfg.IntOpt("max_instances_per_host",
-        default=50,
-        help="""
-If you need to limit the number of instances on any given host, set this option
-to the maximum number of instances you want to allow. The num_instances_filter
-will reject any host that has at least as many instances as this option's
-value.
-
-Valid values are positive integers; setting it to zero or less will cause all
-hosts to be rejected if the num_instances_filter is active.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'num_instances_filter' filter is enabled.
-
-Possible values:
-
-* Any integer, although setting it to zero or less will cause all hosts to be
-  rejected if the num_instances_filter is active.
-""")
-
-ram_weight_mult_opt = cfg.FloatOpt("ram_weight_multiplier",
-        default=1.0,
-        help="""
-This option determines how hosts with more or less available RAM are weighed. A
-positive value will result in the scheduler preferring hosts with more
-available RAM, and a negative number will result in the scheduler preferring
-hosts with less available RAM. Another way to look at it is that positive
-values for this option will tend to spread instances across many hosts, while
-negative values will tend to fill up (stack) hosts as much as possible before
-scheduling to a less-used host. The absolute value, whether positive or
-negative, controls how strong the RAM weigher is relative to other weighers.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'ram' weigher is enabled.
-
-Valid values are numeric, either integer or float.
-
-Possible values:
-
-* Any numeric value
-""")
-
-disk_weight_mult_opt = cfg.FloatOpt("disk_weight_multiplier",
-        default=1.0,
-        help="Multiplier used for weighing free disk space. Negative "
-             "numbers mean to stack vs spread.")
-
-io_ops_weight_mult_opt = cfg.FloatOpt("io_ops_weight_multiplier",
-        default=-1.0,
-        help="""
-This option determines how hosts with differing workloads are weighed. Negative
-values, such as the default, will result in the scheduler preferring hosts with
-lighter workloads whereas positive values will prefer hosts with heavier
-workloads. Another way to look at it is that positive values for this option
-will tend to schedule instances onto hosts that are already busy, while
-negative values will tend to distribute the workload across more hosts. The
-absolute value, whether positive or negative, controls how strong the io_ops
-weigher is relative to other weighers.
-
-This option is only used by the FilterScheduler and its subclasses; if you use
-a different scheduler, this option has no effect. Also note that this setting
-only affects scheduling if the 'io_ops' weigher is enabled.
-
-Valid values are numeric, either integer or float.
-
-Possible values:
-
-* Any numeric value
-""")
-
 # These opts are registered as a separate OptGroup
 metrics_weight_opts = [
      cfg.FloatOpt("weight_multiplier",
@@ -795,43 +836,6 @@ Related options:
 * weight_multiplier
 """),
 ]
-
-scheduler_max_att_opt = cfg.IntOpt("scheduler_max_attempts",
-        default=3,
-        help="""
-This is the maximum number of attempts that will be made to schedule an
-instance before it is assumed that the failures aren't due to normal occasional
-race conflicts, but rather some other problem. When this is reached a
-MaxRetriesExceeded exception is raised, and the instance is set to an error
-state.
-
-Possible values:
-
-* Any positive integer
-""")
-
-soft_affinity_weight_opt = cfg.FloatOpt("soft_affinity_weight_multiplier",
-        default=1.0,
-        help="""
-This is the multiplier used for weighing hosts for group soft-affinity.
-
-Possible values:
-
-* Any numeric, although only a positive value is meaningful, as negative values
-  would make this behave as a soft-anti-affinity weigher.
-""")
-
-soft_anti_affinity_weight_opt = cfg.FloatOpt(
-        "soft_anti_affinity_weight_multiplier",
-        default=1.0,
-        help="""
-This is the multiplier used for weighing hosts for group soft-anti-affinity.
-
-Possible values:
-
-* Any numeric, although only a positive value is meaningful, as negative values
-  would make this behave as a soft-affinity weigher.
-""")
 
 
 default_opts = [host_subset_size_opt,
