@@ -389,52 +389,56 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         'quota:vif_outbound_burst': '30'
     }
 
-    os_vif_network = osv_objects.network.Network(
-        id="b82c1929-051e-481d-8110-4669916c7915",
-        label="Demo Net",
-        subnets=osv_objects.subnet.SubnetList(
-            objects=[]))
+    def setup_os_vif_objects(self):
+        self.os_vif_network = osv_objects.network.Network(
+            id="b82c1929-051e-481d-8110-4669916c7915",
+            label="Demo Net",
+            subnets=osv_objects.subnet.SubnetList(
+                objects=[]))
 
-    os_vif_bridge = osv_objects.vif.VIFBridge(
-        id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-        address="22:52:25:62:e2:aa",
-        plugin="linux_bridge",
-        vif_name="nicdc065497-3c",
-        bridge_name="br100",
-        has_traffic_filtering=False,
-        network=os_vif_network)
+        self.os_vif_bridge = osv_objects.vif.VIFBridge(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            plugin="linux_bridge",
+            vif_name="nicdc065497-3c",
+            bridge_name="br100",
+            has_traffic_filtering=False,
+            network=self.os_vif_network)
 
-    os_vif_ovs_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
-        interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
-        profile_id="fishfood")
+        self.os_vif_ovs_prof = osv_objects.vif.VIFPortProfileOpenVSwitch(
+            interface_id="07bd6cea-fb37-4594-b769-90fc51854ee9",
+            profile_id="fishfood")
 
-    os_vif_ovs = osv_objects.vif.VIFOpenVSwitch(
-        id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-        address="22:52:25:62:e2:aa",
-        unplugin="linux_bridge",
-        vif_name="nicdc065497-3c",
-        bridge_name="br0",
-        port_profile=os_vif_ovs_prof,
-        network=os_vif_network)
+        self.os_vif_ovs = osv_objects.vif.VIFOpenVSwitch(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            unplugin="linux_bridge",
+            vif_name="nicdc065497-3c",
+            bridge_name="br0",
+            port_profile=self.os_vif_ovs_prof,
+            network=self.os_vif_network)
 
-    os_vif_ovs_hybrid = osv_objects.vif.VIFBridge(
-        id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
-        address="22:52:25:62:e2:aa",
-        unplugin="linux_bridge",
-        vif_name="nicdc065497-3c",
-        bridge_name="br0",
-        port_profile=os_vif_ovs_prof,
-        has_traffic_filtering=False,
-        network=os_vif_network)
+        self.os_vif_ovs_hybrid = osv_objects.vif.VIFBridge(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            unplugin="linux_bridge",
+            vif_name="nicdc065497-3c",
+            bridge_name="br0",
+            port_profile=self.os_vif_ovs_prof,
+            has_traffic_filtering=False,
+            network=self.os_vif_network)
 
-    os_vif_inst_info = osv_objects.instance_info.InstanceInfo(
-        uuid="d5b1090c-9e00-4fa4-9504-4b1494857970",
-        name="instance-000004da",
-        project_id="2f37d7f6-e51a-4a1f-8b6e-b0917ffc8390")
+        self.os_vif_inst_info = osv_objects.instance_info.InstanceInfo(
+            uuid="d5b1090c-9e00-4fa4-9504-4b1494857970",
+            name="instance-000004da",
+            project_id="2f37d7f6-e51a-4a1f-8b6e-b0917ffc8390")
 
     def setUp(self):
         super(LibvirtVifTestCase, self).setUp()
         self.flags(allow_same_net_traffic=True)
+        # os_vif.initialize is typically done in nova-compute startup
+        os_vif.initialize()
+        self.setup_os_vif_objects()
         self.executes = []
 
         def fake_execute(*cmd, **kwargs):

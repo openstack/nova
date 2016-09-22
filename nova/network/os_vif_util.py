@@ -20,7 +20,6 @@ versioned object model os_vif.objects.*
 
 import sys
 
-import os_vif
 from os_vif import objects
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -32,9 +31,6 @@ from nova.network import model
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
-
-# Ensure os-vif objects are registered and plugins loaded
-os_vif.initialize()
 
 
 def _get_vif_name(vif):

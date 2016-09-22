@@ -19,6 +19,7 @@
 import shlex
 import sys
 
+import os_vif
 from oslo_log import log as logging
 from oslo_privsep import priv_context
 from oslo_reports import guru_meditation_report as gmr
@@ -44,6 +45,8 @@ def main():
     priv_context.init(root_helper=shlex.split(utils.get_root_helper()))
     utils.monkey_patch()
     objects.register_all()
+    # Ensure os-vif objects are registered and plugins loaded
+    os_vif.initialize()
 
     gmr.TextGuruMeditation.setup_autorun(version)
 

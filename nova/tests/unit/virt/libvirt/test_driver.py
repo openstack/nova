@@ -36,6 +36,7 @@ from lxml import etree
 import mock
 from mox3 import mox
 from os_brick.initiator import connector
+import os_vif
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_config import cfg
@@ -693,6 +694,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             fake_libvirt_utils))
 
         self.flags(sysinfo_serial="hardware", group="libvirt")
+
+        # normally loaded during nova-compute startup
+        os_vif.initialize()
 
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
@@ -15002,6 +15006,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     """Test for nova.virt.libvirt.libvirt_driver.LibvirtDriver."""
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
+        os_vif.initialize()
+
         self.drvr = libvirt_driver.LibvirtDriver(
             fake.FakeVirtAPI(), read_only=True)
         self.context = context.get_admin_context()
