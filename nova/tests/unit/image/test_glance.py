@@ -414,21 +414,6 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
         client = self._get_static_client(create_client_mock)
         self.assert_retry_not_attempted(sleep_mock, client)
 
-    @mock.patch('nova.image.glance.LOG')
-    @mock.patch('time.sleep')
-    @mock.patch('nova.image.glance._glanceclient_from_endpoint')
-    def test_static_client_with_retries_negative(self, create_client_mock,
-                                                 sleep_mock, mock_log):
-        side_effect = glanceclient.exc.ServiceUnavailable
-        self._mock_client_images_response(create_client_mock, side_effect)
-        self.flags(num_retries=-1, group='glance')
-        client = self._get_static_client(create_client_mock)
-        self.assert_retry_not_attempted(sleep_mock, client)
-
-        self.assertTrue(mock_log.warning.called)
-        msg = mock_log.warning.call_args_list[0]
-        self.assertIn('Treating negative config value', msg[0][0])
-
     @mock.patch('time.sleep')
     @mock.patch('nova.image.glance._glanceclient_from_endpoint')
     def test_static_client_with_retries(self, create_client_mock,
