@@ -79,6 +79,7 @@ class ServersController(wsgi.Controller):
     schema_server_create_v219 = schema_servers.base_create_v219
     schema_server_update_v219 = schema_servers.base_update_v219
     schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
+    schema_server_rebuild_v254 = schema_servers.base_rebuild_v254
 
     schema_server_create_v232 = schema_servers.base_create_v232
     schema_server_create_v237 = schema_servers.base_create_v237
@@ -876,7 +877,8 @@ class ServersController(wsgi.Controller):
     @wsgi.action('rebuild')
     @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
     @validation.schema(schema_server_rebuild, '2.1', '2.18')
-    @validation.schema(schema_server_rebuild_v219, '2.19')
+    @validation.schema(schema_server_rebuild_v219, '2.19', '2.53')
+    @validation.schema(schema_server_rebuild_v254, '2.54')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -899,6 +901,10 @@ class ServersController(wsgi.Controller):
         kwargs = {}
 
         helpers.translate_attributes(helpers.REBUILD, rebuild_dict, kwargs)
+
+        if (api_version_request.is_supported(req, min_version='2.54')
+                and 'key_name' in rebuild_dict):
+            kwargs['key_name'] = rebuild_dict.get('key_name')
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
@@ -930,6 +936,9 @@ class ServersController(wsgi.Controller):
         except exception.ImageNotFound:
             msg = _("Cannot find image for rebuild")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.KeypairNotFound:
+            msg = _("Invalid key_name provided.")
+            raise exc.HTTPBadRequest(explanation=msg)
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.ImageNotActive,
@@ -947,6 +956,10 @@ class ServersController(wsgi.Controller):
         # unless instance passwords are disabled
         if CONF.api.enable_instance_password:
             view['server']['adminPass'] = password
+
+        if api_version_request.is_supported(req, min_version='2.54'):
+            # NOTE(liuyulong): set the new key_name for the API response.
+            view['server']['key_name'] = instance.key_name
 
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)

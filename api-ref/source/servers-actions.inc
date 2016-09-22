@@ -487,10 +487,11 @@ Request
   - personality.contents: contents
   - preserve_ephemeral: preserve_ephemeral
   - description: server_description
+  - key_name: key_name_rebuild_req
 
-**Example Rebuild Server (rebuild Action) (v2.47)**
+**Example Rebuild Server (rebuild Action) (v2.54)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-action-rebuild.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.54/server-action-rebuild.json
    :language: javascript
 
 Response
@@ -534,10 +535,11 @@ Response
   - locked: locked
   - description: server_description_resp
   - tags: tags
+  - key_name: key_name_rebuild_resp
 
-**Example Rebuild Server (rebuild Action) (v2.47)**
+**Example Rebuild Server (rebuild Action) (v2.54)**
 
-.. literalinclude:: ../../doc/api_samples/servers/v2.47/server-action-rebuild-resp.json
+.. literalinclude:: ../../doc/api_samples/servers/v2.54/server-action-rebuild-resp.json
    :language: javascript
 
 Remove (Disassociate) Floating Ip (removeFloatingIp Action) (DEPRECATED)

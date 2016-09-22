@@ -1,0 +1,14 @@
+{
+    "rebuild" : {
+        "accessIPv4" : "1.2.3.4",
+        "accessIPv6" : "80fe::",
+        "imageRef" : "70a599e0-31e7-49b7-b260-868f441e862b",
+        "name" : "foobar",
+        "key_name": "new-key",
+        "description" : "description of foobar",
+        "adminPass" : "seekr3t",
+        "metadata" : {
+            "meta_var" : "meta_val"
+        }
+    }
+}

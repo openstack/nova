@@ -3493,7 +3493,27 @@ key_name:
   in: body
   required: false
   type: string
+key_name_rebuild_req:
+  description: |
+    Key pair name for rebuild API.
 
+    .. note:: Users within the same project are able to rebuild other
+              user's instances in that project with a new keypair. Keys
+              are owned by users (which is the only resource that’s true
+              of). Servers are owned by projects. Because of this a rebuild
+              with a key_name is looking up the keypair by the user calling
+              rebuild.
+  in: body
+  required: false
+  type: string
+  min_version: 2.54
+key_name_rebuild_resp:
+  description: |
+    The name of associated key pair, if any.
+  in: body
+  required: true
+  type: string
+  min_version: 2.54
 key_name_resp:
   description: |
     The name of associated key pair, if any.

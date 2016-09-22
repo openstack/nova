@@ -160,6 +160,17 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.obj_reset_changes()
         return instance
 
+    def _create_keypair_obj(self, instance):
+        """Create a test keypair."""
+        keypair = objects.KeyPair()
+        keypair.id = 1
+        keypair.name = 'fake_key'
+        keypair.user_id = instance.user_id
+        keypair.fingerprint = 'fake'
+        keypair.public_key = 'fake key'
+        keypair.type = 'ssh'
+        return keypair
+
     def _obj_to_list_obj(self, list_obj, obj):
         list_obj.objects = []
         list_obj.objects.append(obj)
@@ -3237,6 +3248,68 @@ class _ComputeAPIUnitTestMixIn(object):
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, new_image, flavor, {}, [], None)
         self.assertEqual(fields_obj.VMMode.XEN, instance.vm_mode)
+
+    @mock.patch.object(objects.KeyPair, 'get_by_name')
+    @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.Instance, 'get_flavor')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild_change_keypair(self, _record_action_start,
+            _checks_for_create_and_rebuild, _check_auto_disk_config,
+            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
+            req_spec_get_by_inst_uuid, mock_get_keypair):
+        orig_system_metadata = {}
+        orig_key_name = 'orig_key_name'
+        orig_key_data = 'orig_key_data_XXX'
+        instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+                launched_at=timeutils.utcnow(),
+                system_metadata=orig_system_metadata,
+                image_ref='foo',
+                expected_attrs=['system_metadata'],
+                key_name=orig_key_name,
+                key_data=orig_key_data)
+        get_flavor.return_value = test_flavor.fake_flavor
+        flavor = instance.get_flavor()
+        image_href = 'foo'
+        image = {
+            "min_ram": 10, "min_disk": 1,
+            "properties": {'architecture': fields_obj.Architecture.X86_64,
+                           'vm_mode': 'hvm'}}
+        admin_pass = ''
+        files_to_inject = []
+        bdms = objects.BlockDeviceMappingList()
+
+        _get_image.return_value = (None, image)
+        bdm_get_by_instance_uuid.return_value = bdms
+
+        fake_spec = objects.RequestSpec()
+        req_spec_get_by_inst_uuid.return_value = fake_spec
+
+        keypair = self._create_keypair_obj(instance)
+        mock_get_keypair.return_value = keypair
+        with mock.patch.object(self.compute_api.compute_task_api,
+                'rebuild_instance') as rebuild_instance:
+            self.compute_api.rebuild(self.context, instance, image_href,
+                    admin_pass, files_to_inject, key_name=keypair.name)
+
+            rebuild_instance.assert_called_once_with(self.context,
+                    instance=instance, new_pass=admin_pass,
+                    injected_files=files_to_inject, image_ref=image_href,
+                    orig_image_ref=image_href,
+                    orig_sys_metadata=orig_system_metadata, bdms=bdms,
+                    preserve_ephemeral=False, host=instance.host,
+                    request_spec=fake_spec, kwargs={})
+
+        _check_auto_disk_config.assert_called_once_with(image=image)
+        _checks_for_create_and_rebuild.assert_called_once_with(self.context,
+                None, image, flavor, {}, [], None)
+        self.assertNotEqual(orig_key_name, instance.key_name)
+        self.assertNotEqual(orig_key_data, instance.key_data)
 
     def _test_check_injected_file_quota_onset_file_limit_exceeded(self,
                                                                   side_effect):
