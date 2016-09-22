@@ -739,8 +739,11 @@ def _check_capacity_exceeded(conn, allocs):
     # Ensure that all providers have existing inventory
     missing_provs = provider_uuids - provs_with_inv
     if missing_provs:
-        raise exception.InvalidInventory(resource_class=str(res_classes),
-                resource_provider=missing_provs)
+        class_str = ', '.join([fields.ResourceClass.from_index(res_class)
+                               for res_class in res_classes])
+        provider_str = ', '.join(missing_provs)
+        raise exception.InvalidInventory(resource_class=class_str,
+                resource_provider=provider_str)
 
     res_providers = {}
     for alloc in allocs:

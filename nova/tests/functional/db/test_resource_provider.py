@@ -731,8 +731,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             self.context, objects=[allocation_1, allocation_2])
 
         # There's no inventory, we have a failure.
-        self.assertRaises(exception.InvalidInventory,
-                          allocation_list.create_all)
+        error = self.assertRaises(exception.InvalidInventory,
+                                  allocation_list.create_all)
+        # Confirm that the resource class string, not index, is in
+        # the exception and resource providers are listed by uuid.
+        self.assertIn(rp1_class, str(error))
+        self.assertIn(rp2_class, str(error))
+        self.assertIn(rp1.uuid, str(error))
+        self.assertIn(rp2.uuid, str(error))
 
         # Add inventory for one of the two resource providers. This should also
         # fail, since rp2 has no inventory.
