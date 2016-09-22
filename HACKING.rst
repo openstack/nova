@@ -37,6 +37,7 @@ Nova Specific Commandments
 - [N324] Ensure that jsonutils.%(fun)s must be used instead of json.%(fun)s
 - [N325] str() and unicode() cannot be used on an exception.  Remove use or use six.text_type()
 - [N326] Translated messages cannot be concatenated.  String should be included in translated message.
+- [N327] Do not use xrange(). xrange() is not compatible with Python 3. Use range() or six.moves.range() instead.
 - [N328] Validate that LOG.info messages use _LI.
 - [N329] Validate that LOG.exception messages use _LE.
 - [N330] Validate that LOG.warning and LOG.warn messages use _LW.
