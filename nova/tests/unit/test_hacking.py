@@ -343,7 +343,11 @@ class HackingTestCase(test.NoDBTestCase):
         lines = textwrap.dedent(code).strip().splitlines(True)
 
         checker = pep8.Checker(filename=filename, lines=lines)
-        checker.check_all()
+        # NOTE(sdague): the standard reporter has printing to stdout
+        # as a normal part of check_all, which bleeds through to the
+        # test output stream in an unhelpful way. This blocks that printing.
+        with mock.patch('pep8.StandardReport.get_file_results'):
+            checker.check_all()
         checker.report._deferred_print.sort()
         return checker.report._deferred_print
 
