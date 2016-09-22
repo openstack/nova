@@ -34,11 +34,6 @@ class ServerGroupsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         return self._verify_response('server-groups-post-resp',
                                      subs, response, 200)
 
-    def _create_server_group(self):
-        subs = self._get_create_subs()
-        return self._do_post('os-server-groups',
-                             'server-groups-post-req', subs)
-
     def test_server_groups_post(self):
         return self._post_server_group()
 

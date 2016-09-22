@@ -4061,29 +4061,6 @@ class ComputeTestCase(BaseTestCase):
                 bind_host_id=self.compute.host)
         mock_mac.assert_called_once_with(test.MatchType(instance_obj.Instance))
 
-    def _create_server_group(self, policies, instance_host):
-        group_instance = self._create_fake_instance_obj(
-                params=dict(host=instance_host))
-
-        instance_group = objects.InstanceGroup(self.context)
-        instance_group.user_id = self.user_id
-        instance_group.project_id = self.project_id
-        instance_group.name = 'messi'
-        instance_group.uuid = str(uuid.uuid4())
-        instance_group.members = [group_instance.uuid]
-        instance_group.policies = policies
-        fake_notifier.NOTIFICATIONS = []
-        instance_group.create()
-        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
-        msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEqual(instance_group.name, msg.payload['name'])
-        self.assertEqual(instance_group.members, msg.payload['members'])
-        self.assertEqual(instance_group.policies, msg.payload['policies'])
-        self.assertEqual(instance_group.project_id, msg.payload['project_id'])
-        self.assertEqual(instance_group.uuid, msg.payload['uuid'])
-        self.assertEqual('servergroup.create', msg.event_type)
-        return instance_group
-
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.
         instance = self._create_fake_instance_obj()
