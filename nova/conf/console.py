@@ -19,62 +19,59 @@ from oslo_config import cfg
 
 
 console_opts = [
+    cfg.StrOpt('console_topic',
+        default='console',
+        deprecated_for_removal=True,
+        deprecated_since='15.0.0',
+        deprecated_reason="""
+There is no need to let users choose the RPC topic for all services - there
+is little gain from this. Furthermore, it makes it really easy to break Nova
+by using this option.
+""",
+        help="""
+Represents the message queue topic name used by nova-console
+service when communicating via the AMQP server. The Nova API uses a message
+queue to communicate with nova-console to retrieve a console URL for that
+host.
+
+Possible values:
+
+* A string representing topic exchange name
+"""),
+    # TODO(pumaranikar): Move this config to stevedore plugin system.
+    cfg.StrOpt('console_driver',
+        default='nova.console.xvp.XVPConsoleProxy',
+        help="""
+Nova-console proxy is used to set up multi-tenant VM console access.
+This option allows pluggable driver program for the console session
+and represents driver to use for the console proxy.
+
+Possible values:
+
+* A string representing fully classified class name of console driver.
+"""),
     cfg.ListOpt('console_allowed_origins',
-                default=[],
-                help="""
+        default=[],
+        help="""
 Adds list of allowed origins to the console websocket proxy to allow
 connections from other origin hostnames.
 Websocket proxy matches the host header with the origin header to
 prevent cross-site requests. This list specifies if any there are
 values other than host are allowed in the origin header.
 
-Possible values
+Possible values:
 
-  * An empty list (default) or list of allowed origin hostnames.
+* A list where each element is an allowed origin hostnames, else an empty list
 """),
-
-    cfg.StrOpt('console_topic',
-                default='console',
-                deprecated_for_removal=True,
-                deprecated_since='15.0.0',
-                deprecated_reason="""
-There is no need to let users choose the RPC topic for all services - there
-is little gain from this. Furthermore, it makes it really easy to break Nova
-by using this option.
-""",
-                help="""
-Represents the message queue topic name used by nova-console
-service when communicating via the AMQP server. The Nova API uses a message
-queue to communicate with nova-console to retrieve a console URL for that
-host.
-
-Possible values
-
-  * 'console' (default) or any string representing topic exchange name.
-"""),
-
-# TODO(pumaranikar): Move this config to stevedore plugin system.
-    cfg.StrOpt('console_driver',
-                default='nova.console.xvp.XVPConsoleProxy',
-                help="""
-Nova-console proxy is used to set up multi-tenant VM console access.
-This option allows pluggable driver program for the console session
-and represents driver to use for the console proxy.
-
-Possible values
-
-  * 'nova.console.xvp.XVPConsoleProxy' (default) or
-    a string representing fully classified class name of console driver.
-"""),
-
+    # TODO(sfinucan): Convert this to URIOpt
     cfg.StrOpt('console_public_hostname',
-                default=socket.gethostname(),
-                help="""
+        default=socket.gethostname(),
+        help="""
 Publicly visible name for this console host.
 
-Possible values
+Possible values:
 
-  * Current hostname (default) or any string representing hostname.
+* A string representing a valid hostname
 """),
 ]
 
