@@ -41,6 +41,8 @@ CONF = conf.CONF
 class FixedIpCommandsTestCase(test.TestCase):
     def setUp(self):
         super(FixedIpCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         db_fakes.stub_out_db_network_api(self)
         self.commands = manage.FixedIpCommands()
 
@@ -75,15 +77,15 @@ class FixedIpCommandsTestCase(test.TestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.db.fixed_ip_get_by_host',
             fake_fixed_ip_get_by_host))
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO()))
         self.commands.list('banana')
-        self.assertNotEqual(1, sys.stdout.getvalue().find('192.168.0.100'))
+        self.assertNotEqual(1, self.output.getvalue().find('192.168.0.100'))
 
 
 class FloatingIpCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIpCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         db_fakes.stub_out_db_network_api(self)
         self.commands = manage.FloatingIpCommands()
 
@@ -125,6 +127,8 @@ class FloatingIpCommandsTestCase(test.NoDBTestCase):
 class NetworkCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NetworkCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.NetworkCommands()
         self.net = {'id': 0,
                     'label': 'fake',
@@ -273,11 +277,8 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
         def fake_network_get_all(context):
             return [db_fakes.FakeModel(self.net)]
         self.stub_out('nova.db.network_get_all', fake_network_get_all)
-        output = StringIO()
-        sys.stdout = output
         self.commands.list()
-        sys.stdout = sys.__stdout__
-        result = output.getvalue()
+        result = self.output.getvalue()
         _fmt = "\t".join(["%(id)-5s", "%(cidr)-18s", "%(cidr_v6)-15s",
                           "%(dhcp_start)-15s", "%(dns1)-15s", "%(dns2)-15s",
                           "%(vlan)-15s", "%(project_id)-15s", "%(uuid)-15s"])
@@ -355,6 +356,8 @@ class NetworkCommandsTestCase(test.NoDBTestCase):
 class NeutronV2NetworkCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NeutronV2NetworkCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.flags(use_neutron=True)
         self.commands = manage.NetworkCommands()
 
@@ -374,18 +377,17 @@ class NeutronV2NetworkCommandsTestCase(test.NoDBTestCase):
 class ProjectCommandsTestCase(test.TestCase):
     def setUp(self):
         super(ProjectCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.ProjectCommands()
 
     def test_quota(self):
-        output = StringIO()
-        sys.stdout = output
         self.commands.quota(project_id='admin',
                             key='instances',
                             value='unlimited',
                            )
 
-        sys.stdout = sys.__stdout__
-        result = output.getvalue()
+        result = self.output.getvalue()
         print_format = "%-36s %-10s" % ('instances', 'unlimited')
         self.assertIn(print_format, result)
 
@@ -423,12 +425,12 @@ class ProjectCommandsTestCase(test.TestCase):
 class VmCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VmCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.VmCommands()
         self.fake_flavor = objects.Flavor(**test_flavors.DEFAULT_FLAVORS[0])
 
     def test_list_without_host(self):
-        output = StringIO()
-        sys.stdout = output
         with mock.patch.object(objects.InstanceList, 'get_by_filters') as get:
             get.return_value = objects.InstanceList(
                 objects=[fake_instance.fake_instance_obj(
@@ -437,16 +439,13 @@ class VmCommandsTestCase(test.NoDBTestCase):
                     system_metadata={})])
             self.commands.list()
 
-        sys.stdout = sys.__stdout__
-        result = output.getvalue()
+        result = self.output.getvalue()
 
         self.assertIn('node', result)   # check the header line
         self.assertIn('m1.tiny', result)    # flavor.name
         self.assertIn('foo-host', result)
 
     def test_list_with_host(self):
-        output = StringIO()
-        sys.stdout = output
         with mock.patch.object(objects.InstanceList, 'get_by_host') as get:
             get.return_value = objects.InstanceList(
                 objects=[fake_instance.fake_instance_obj(
@@ -455,8 +454,7 @@ class VmCommandsTestCase(test.NoDBTestCase):
                     system_metadata={})])
             self.commands.list(host='fake-host')
 
-        sys.stdout = sys.__stdout__
-        result = output.getvalue()
+        result = self.output.getvalue()
 
         self.assertIn('node', result)   # check the header line
         self.assertIn('m1.tiny', result)    # flavor.name
@@ -466,6 +464,8 @@ class VmCommandsTestCase(test.NoDBTestCase):
 class DBCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(DBCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.DbCommands()
 
     def test_archive_deleted_rows_negative(self):
@@ -478,10 +478,9 @@ class DBCommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(db, 'archive_deleted_rows',
                        return_value=dict(instances=10, consoles=5))
     def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         self.commands.archive_deleted_rows(20, verbose=verbose)
         mock_db_archive.assert_called_once_with(20)
-        output = sys.stdout.getvalue()
+        output = self.output.getvalue()
         if verbose:
             expected = '''\
 +-----------+-------------------------+
@@ -505,27 +504,22 @@ class DBCommandsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(db, 'archive_deleted_rows', return_value={})
     def test_archive_deleted_rows_verbose_no_results(self, mock_db_archive):
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         self.commands.archive_deleted_rows(20, verbose=True)
         mock_db_archive.assert_called_once_with(20)
-        output = sys.stdout.getvalue()
+        output = self.output.getvalue()
         self.assertIn('Nothing was archived.', output)
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 0})
     def test_null_instance_uuid_scan_no_records_found(self, mock_scan):
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO()))
         self.commands.null_instance_uuid_scan()
-        self.assertIn("There were no records found", sys.stdout.getvalue())
+        self.assertIn("There were no records found", self.output.getvalue())
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 1, 'bar': 0})
     def _test_null_instance_uuid_scan(self, mock_scan, delete):
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout',
-                                             StringIO()))
         self.commands.null_instance_uuid_scan(delete)
-        output = sys.stdout.getvalue()
+        output = self.output.getvalue()
 
         if delete:
             self.assertIn("Deleted 1 records from table 'foo'.", output)
@@ -656,6 +650,8 @@ class DBCommandsTestCase(test.NoDBTestCase):
 class ApiDbCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ApiDbCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.ApiDbCommands()
 
     @mock.patch.object(sqla_migration, 'db_version', return_value=2)
@@ -674,6 +670,8 @@ class ApiDbCommandsTestCase(test.NoDBTestCase):
 class CellCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CellCommandsTestCase, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.CellCommands()
 
     def test_create_transport_hosts_multiple(self):
@@ -815,7 +813,8 @@ class CellCommandsTestCase(test.NoDBTestCase):
 class CellV2CommandsTestCase(test.TestCase):
     def setUp(self):
         super(CellV2CommandsTestCase, self).setUp()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.CellV2Commands()
 
     def test_map_cell_and_hosts(self):
@@ -839,7 +838,7 @@ class CellV2CommandsTestCase(test.TestCase):
         cell_transport_url = "fake://guest:devstack@127.0.0.1:9999/"
         self.commands.map_cell_and_hosts(cell_transport_url, name='ssd',
                                          verbose=True)
-        cell_mapping_uuid = sys.stdout.getvalue().strip()
+        cell_mapping_uuid = self.output.getvalue().strip()
         # Verify the cell mapping
         cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_mapping_uuid)
         self.assertEqual('ssd', cell_mapping.name)
@@ -882,7 +881,7 @@ class CellV2CommandsTestCase(test.TestCase):
                                                   name='ssd',
                                                   verbose=True)
         self.assertEqual(0, retval)
-        output = sys.stdout.getvalue().strip()
+        output = self.output.getvalue().strip()
         expected = ''
         for i in range(3):
             expected += ('Host host%s is already mapped to cell %s\n' %
@@ -935,7 +934,7 @@ class CellV2CommandsTestCase(test.TestCase):
         host_mapping = objects.HostMapping.get_by_host(ctxt, 'host2')
         self.assertEqual(cell_mapping.uuid, host_mapping.cell_mapping.uuid)
         # Verify the output
-        output = sys.stdout.getvalue().strip()
+        output = self.output.getvalue().strip()
         expected = ''
         for i in [0, 1, 0]:
             expected += ('Host host%s is already mapped to cell %s\n' %
@@ -950,14 +949,14 @@ class CellV2CommandsTestCase(test.TestCase):
                                                   name='ssd',
                                                   verbose=True)
         self.assertEqual(0, retval)
-        output = sys.stdout.getvalue().strip()
+        output = self.output.getvalue().strip()
         expected = 'No hosts found to map to cell, exiting.'
         self.assertEqual(expected, output)
 
     def test_map_cell_and_hosts_no_transport_url(self):
         retval = self.commands.map_cell_and_hosts()
         self.assertEqual(1, retval)
-        output = sys.stdout.getvalue().strip()
+        output = self.output.getvalue().strip()
         expected = ('Must specify --transport-url if [DEFAULT]/transport_url '
                     'is not set in the configuration file.')
         self.assertEqual(expected, output)
