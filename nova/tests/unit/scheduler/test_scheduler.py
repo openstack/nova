@@ -71,23 +71,6 @@ class SchedulerManagerInitTestCase(test.NoDBTestCase):
         self.flags(scheduler_driver='nonexist_scheduler')
         self.assertRaises(RuntimeError, self.manager_cls)
 
-    # NOTE(Yingxin): Loading full class path is deprecated and should be
-    # removed in the N release.
-    @mock.patch.object(manager.LOG, 'warning')
-    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
-    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
-    def test_init_using_classpath_to_schedulerdriver(self,
-                                                     mock_init_agg,
-                                                     mock_init_inst,
-                                                     mock_warning):
-        self.flags(
-            scheduler_driver=
-            'nova.scheduler.chance.ChanceScheduler')
-        driver = self.manager_cls().driver
-        self.assertIsInstance(driver, chance.ChanceScheduler)
-        warn_args, kwargs = mock_warning.call_args
-        self.assertIn("DEPRECATED", warn_args[0])
-
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
