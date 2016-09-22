@@ -33,6 +33,8 @@ class TestRequestLog(test.NoDBTestCase):
         self.environ = self.req.environ
         # The blank does not include remote address, so add it.
         self.environ['REMOTE_ADDR'] = '127.0.0.1'
+        # nor a microversion
+        self.environ['placement.microversion'] = '2.1'
 
     def test_get_uri(self):
         req_uri = requestlog.RequestLog._get_uri(self.environ)
@@ -57,7 +59,14 @@ class TestRequestLog(test.NoDBTestCase):
         app = requestlog.RequestLog(self.application)
         app(self.environ, start_response_mock)
         mocked_log.debug.assert_called_once_with(
-            'Starting request: 127.0.0.1 "GET /resource_providers?name=myrp"')
+            'Starting request: %s "%s %s"', '127.0.0.1', 'GET',
+            '/resource_providers?name=myrp')
         mocked_log.info.assert_called_once_with(
-            '127.0.0.1 "GET /resource_providers?name=myrp" '
-            'status: 200 len: 0')
+            '%(REMOTE_ADDR)s "%(REQUEST_METHOD)s %(REQUEST_URI)s" '
+            'status: %(status)s len: %(bytes)s microversion: %(microversion)s',
+            {'microversion': '2.1',
+             'status': '200',
+             'REQUEST_URI': '/resource_providers?name=myrp',
+             'REQUEST_METHOD': 'GET',
+             'REMOTE_ADDR': '127.0.0.1',
+             'bytes': '0'})
