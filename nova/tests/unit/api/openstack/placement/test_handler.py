@@ -18,6 +18,7 @@ import routes
 import webob
 
 from nova.api.openstack.placement import handler
+from nova.api.openstack.placement.handlers import root
 from nova import test
 from nova.tests import uuidsentinel
 
@@ -112,3 +113,20 @@ class PlacementLoggingTest(test.NoDBTestCase):
                           app, environ, start_response)
         mocked_log.error.assert_not_called()
         mocked_log.exception.assert_not_called()
+
+
+class DeclarationsTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(DeclarationsTest, self).setUp()
+        self.mapper = handler.make_map(handler.ROUTE_DECLARATIONS)
+
+    def test_root_slash_match(self):
+        environ = _environ(path='/')
+        result = self.mapper.match(environ=environ)
+        self.assertEqual(root.home, result['action'])
+
+    def test_root_empty_match(self):
+        environ = _environ(path='')
+        result = self.mapper.match(environ=environ)
+        self.assertEqual(root.home, result['action'])
