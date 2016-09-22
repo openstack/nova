@@ -1807,7 +1807,7 @@ class VMOps(object):
         dom_id = self._get_last_dom_id(instance, check_rescue=True)
 
         try:
-            raw_console_data = self._session.call_plugin('console',
+            raw_console_data = self._session.call_plugin('console.py',
                     'get_console_log', {'dom_id': dom_id})
         except self._session.XenAPI.Failure:
             LOG.exception(_LE("Guest does not have a console available"))
@@ -2222,7 +2222,7 @@ class VMOps(object):
         except AttributeError:
             config_value = None
             try:
-                config_value = self._make_plugin_call('config_file',
+                config_value = self._make_plugin_call('config_file.py',
                                                       'get_val',
                                                       key='relax-xsm-sr-check')
             except Exception:

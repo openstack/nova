@@ -1,0 +1,143 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2012 OpenStack Foundation
+# Copyright (c) 2010 Citrix Systems, Inc.
+# Copyright 2010 United States Government as represented by the
+# Administrator of the National Aeronautics and Space Administration.
+# All Rights Reserved.
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+# NOTE: XenServer still only supports Python 2.4 in it's dom0 userspace
+# which means the Nova xenapi plugins must use only Python 2.4 features
+
+# TODO(sfinucan): Resolve all 'noqa' items once the above is no longer true
+
+"""Handle the manipulation of kernel images."""
+
+import errno
+import os
+import shutil
+
+import XenAPIPlugin
+
+import pluginlib_nova
+
+
+pluginlib_nova.configure_logging('kernel')
+logging = pluginlib_nova.logging
+exists = pluginlib_nova.exists
+optional = pluginlib_nova.optional
+with_vdi_in_dom0 = pluginlib_nova.with_vdi_in_dom0
+
+
+KERNEL_DIR = '/boot/guest'
+
+
+def _copy_vdi(dest, copy_args):
+    vdi_uuid = copy_args['vdi_uuid']
+    vdi_size = copy_args['vdi_size']
+    cached_image = copy_args['cached-image']
+
+    logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",
+                  dest, vdi_uuid)
+    filename = KERNEL_DIR + '/' + vdi_uuid
+
+    # Make sure KERNEL_DIR exists, otherwise create it
+    if not os.path.isdir(KERNEL_DIR):
+        logging.debug("Creating directory %s", KERNEL_DIR)
+        os.makedirs(KERNEL_DIR)
+
+    # Read data from /dev/ and write into a file on /boot/guest
+    of = open(filename, 'wb')
+    f = open(dest, 'rb')
+
+    # Copy only vdi_size bytes
+    data = f.read(vdi_size)
+    of.write(data)
+
+    if cached_image:
+        # Create a cache file. If caching is enabled, kernel images do not have
+        # to be fetched from glance.
+        cached_image = KERNEL_DIR + '/' + cached_image
+        logging.debug("copying kernel/ramdisk file from %s to /boot/guest/%s",
+                      dest, cached_image)
+        cache_file = open(cached_image, 'wb')
+        cache_file.write(data)
+        cache_file.close()
+        logging.debug("Done. Filename: %s", cached_image)
+
+    f.close()
+    of.close()
+    logging.debug("Done. Filename: %s", filename)
+    return filename
+
+
+def copy_vdi(session, args):
+    vdi = exists(args, 'vdi-ref')
+    size = exists(args, 'image-size')
+    cached_image = optional(args, 'cached-image')
+
+    # Use the uuid as a filename
+    vdi_uuid = session.xenapi.VDI.get_uuid(vdi)
+    copy_args = {'vdi_uuid': vdi_uuid,
+                 'vdi_size': int(size),
+                 'cached-image': cached_image}
+
+    filename = with_vdi_in_dom0(session, vdi, False,
+                                lambda dev:
+                               _copy_vdi('/dev/%s' % dev, copy_args))
+    return filename
+
+
+def create_kernel_ramdisk(session, args):
+    """Creates a copy of the kernel/ramdisk image if it is present in the
+    cache. If the image is not present in the cache, it does nothing.
+    """
+    cached_image = exists(args, 'cached-image')
+    image_uuid = exists(args, 'new-image-uuid')
+    cached_image_filename = KERNEL_DIR + '/' + cached_image
+    filename = KERNEL_DIR + '/' + image_uuid
+
+    if os.path.isfile(cached_image_filename):
+        shutil.copyfile(cached_image_filename, filename)
+        logging.debug("Done. Filename: %s", filename)
+    else:
+        filename = ""
+        logging.debug("Cached kernel/ramdisk image not found")
+    return filename
+
+
+def _remove_file(filepath):
+    try:
+        os.remove(filepath)
+    except OSError, exc:  # noqa
+        if exc.errno != errno.ENOENT:
+            raise
+
+
+def remove_kernel_ramdisk(session, args):
+    """Removes kernel and/or ramdisk from dom0's file system."""
+    kernel_file = optional(args, 'kernel-file')
+    ramdisk_file = optional(args, 'ramdisk-file')
+    if kernel_file:
+        _remove_file(kernel_file)
+    if ramdisk_file:
+        _remove_file(ramdisk_file)
+    return "ok"
+
+
+if __name__ == '__main__':
+    XenAPIPlugin.dispatch({'copy_vdi': copy_vdi,
+                           'create_kernel_ramdisk': create_kernel_ramdisk,
+                           'remove_kernel_ramdisk': remove_kernel_ramdisk})

@@ -69,7 +69,7 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
     args.update(addl_args)
 
     try:
-        ret = session.call_plugin('agent', method, args)
+        ret = session.call_plugin('agent.py', method, args)
     except session.XenAPI.Failure as e:
         err_msg = e.details[-1].splitlines()[-1]
         if 'TIMEOUT:' in err_msg:

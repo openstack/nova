@@ -188,7 +188,7 @@ class HostState(object):
                       " a pci device for passthrough"))
 
             type_pci = self._session.call_plugin_serialized(
-                'xenhost', 'get_pci_type', slot_id[0])
+                'xenhost.py', 'get_pci_type', slot_id[0])
 
             return {'label': '_'.join(['label',
                                        vendor_id[0],
@@ -203,7 +203,7 @@ class HostState(object):
         # Devices are separated by a blank line. That is why we
         # use "\n\n" as separator.
         lspci_out = self._session.call_plugin_serialized(
-            'xenhost', 'get_pci_device_details')
+            'xenhost.py', 'get_pci_device_details')
         pci_list = lspci_out.split("\n\n")
 
         # For each device of the list, check if it uses the pciback
@@ -356,7 +356,7 @@ def call_xenhost(session, method, arg_dict):
     """
     # Create a task ID as something that won't match any instance ID
     try:
-        result = session.call_plugin('xenhost', method, args=arg_dict)
+        result = session.call_plugin('xenhost.py', method, args=arg_dict)
         if not result:
             return ''
         return jsonutils.loads(result)

@@ -362,9 +362,9 @@ class CallAgentTestCase(AgentTestCaseBase):
             'timeout': '300',
         }
         expected_args.update(addl_args)
-        session.VM.get_domid.assert_called_once_with("vm_ref")
-        session.call_plugin.assert_called_once_with("agent", "method",
+        session.call_plugin.assert_called_once_with("agent.py", "method",
                                                     expected_args)
+        session.VM.get_domid.assert_called_once_with("vm_ref")
 
     def _call_agent_setup(self, session, mock_uuid,
                           returncode='0', success_codes=None,
@@ -389,7 +389,7 @@ class CallAgentTestCase(AgentTestCaseBase):
             'dom_id': '42',
             'timeout': '30',
         }
-        session.call_plugin.assert_called_once_with("agent", "method",
+        session.call_plugin.assert_called_once_with("agent.py", "method",
                                                     expected_args)
         session.VM.get_domid.assert_called_once_with("vm_ref")
 
