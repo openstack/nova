@@ -27,6 +27,7 @@ from sqlalchemy.types import UserDefinedType
 from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
+from nova.tests import fixtures as nova_fixtures
 
 SA_VERSION = compat_utils.SQLA_VERSION
 
@@ -36,11 +37,23 @@ class CustomType(UserDefinedType):
     def get_col_spec(self):
         return "CustomType"
 
+# TODO(sdague): no tests in the nova/tests tree should inherit from
+# base test classes in another library. This causes all kinds of havoc
+# in these doing things incorrectly for what we need in subunit
+# reporting. This is a long unwind, but should be done in the future
+# and any code needed out of oslo_db should be exported / accessed as
+# a fixture.
+
 
 class TestMigrationUtilsSQLite(test_base.DbTestCase):
     """Class for testing utils that are used in db migrations."""
 
     def setUp(self):
+        # NOTE(sdague): the oslo_db base test case completely
+        # invalidates our logging setup, we actually have to do that
+        # before it is called to keep this from vomitting all over our
+        # test output.
+        self.useFixture(nova_fixtures.StandardLogging())
         super(TestMigrationUtilsSQLite, self).setUp()
         self.meta = MetaData(bind=self.engine)
 

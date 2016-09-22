@@ -33,10 +33,6 @@ For postgres on Ubuntu this can be done with the following commands::
 """
 
 import glob
-# NOTE(dhellmann): Use stdlib logging instead of oslo.log because we
-# need to call methods on the logger that are not exposed through the
-# adapter provided by oslo.log.
-import logging
 import os
 
 from migrate import UniqueConstraint
@@ -58,6 +54,13 @@ from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+
+# TODO(sdague): no tests in the nova/tests tree should inherit from
+# base test classes in another library. This causes all kinds of havoc
+# in these doing things incorrectly for what we need in subunit
+# reporting. This is a long unwind, but should be done in the future
+# and any code needed out of oslo_db should be exported / accessed as
+# a fixture.
 
 
 class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
@@ -84,14 +87,13 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         return self.engine
 
     def setUp(self):
-        super(NovaMigrationsCheckers, self).setUp()
-        # NOTE(viktors): We should reduce log output because it causes issues,
-        #                when we run tests with testr
-        migrate_log = logging.getLogger('migrate')
-        old_level = migrate_log.level
-        migrate_log.setLevel(logging.WARN)
-        self.addCleanup(migrate_log.setLevel, old_level)
+        # NOTE(sdague): the oslo_db base test case completely
+        # invalidates our logging setup, we actually have to do that
+        # before it is called to keep this from vomitting all over our
+        # test output.
+        self.useFixture(nova_fixtures.StandardLogging())
 
+        super(NovaMigrationsCheckers, self).setUp()
         # NOTE(rpodolyaka): we need to repeat the functionality of the base
         # test case a bit here as this gets overriden by oslotest base test
         # case and nova base test case cleanup must be the last one (as it
