@@ -33,4 +33,4 @@ oslo.vmware>=2.11.0 # Apache-2.0
 reno>=1.8.0 # Apache2
 
 # placement functional tests
-wsgi-intercept>=0.6.1 # MIT License
+wsgi-intercept>=1.4.1 # MIT License

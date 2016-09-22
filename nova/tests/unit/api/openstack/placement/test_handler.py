@@ -92,11 +92,23 @@ class MapperTest(test.NoDBTestCase):
         action = self.mapper.match(environ=environ)['action']
         self.assertEqual('hello', action)
 
-    def test_405(self):
+    def test_405_methods(self):
         environ = _environ(path='/hello', method='POST')
         result = self.mapper.match(environ=environ)
         self.assertEqual(handler.handle_405, result['action'])
         self.assertEqual('GET', result['_methods'])
+
+    def test_405_headers(self):
+        environ = _environ(path='/hello', method='POST')
+        error = self.assertRaises(webob.exc.HTTPMethodNotAllowed,
+                                  handler.dispatch,
+                                  environ, start_response,
+                                  self.mapper)
+        allow_header = error.headers['allow']
+        self.assertEqual('GET', allow_header)
+        # PEP 3333 requires that headers be whatever the native str
+        # is in that version of Python. Never unicode.
+        self.assertEqual(str, type(allow_header))
 
 
 class PlacementLoggingTest(test.NoDBTestCase):
