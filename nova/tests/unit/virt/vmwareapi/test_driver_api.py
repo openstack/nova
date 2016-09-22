@@ -1876,7 +1876,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           instance=None)
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
+                       'get_by_instance_uuids')
     def test_image_aging_image_used(self, mock_get_by_inst):
         self._create_vm()
         all_instances = [self.instance]
@@ -1914,7 +1914,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._cached_files_exist()
         self._timestamp_file_exists()
 
-    def test_image_aging_image_marked_for_deletion(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_image_aging_image_marked_for_deletion(self, mock_get_by_inst):
         self._override_time()
         self._image_aging_image_marked_for_deletion()
 
@@ -1925,11 +1927,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         uuid=uuidutils.generate_uuid())
         self._timestamp_file_exists(exists=False)
 
-    def test_timestamp_file_removed_spawn(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_timestamp_file_removed_spawn(self, mock_get_by_inst):
         self._timestamp_file_removed()
 
     @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
+                       'get_by_instance_uuids')
     def test_timestamp_file_removed_aging(self, mock_get_by_inst):
         self._timestamp_file_removed()
         ts = self._get_timestamp_filename()
@@ -1941,9 +1945,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.manage_image_cache(self.context, all_instances)
         self._timestamp_file_exists(exists=False)
 
-    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
-                       'get_by_instance_uuid')
-    def test_image_aging_disabled(self, mock_get_by_inst):
+    def test_image_aging_disabled(self):
         self._override_time()
         self.flags(remove_unused_base_images=False)
         self._create_vm()
@@ -1962,11 +1964,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.useFixture(utils_fixture.TimeFixture(cur_time))
         self.conn.manage_image_cache(self.context, all_instances)
 
-    def test_image_aging_aged(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_image_aging_aged(self, mock_get_by_inst):
         self._image_aging_aged(aging_time=8)
         self._cached_files_exist(exists=False)
 
-    def test_image_aging_not_aged(self):
+    @mock.patch.object(objects.block_device.BlockDeviceMappingList,
+                       'get_by_instance_uuids')
+    def test_image_aging_not_aged(self, mock_get_by_inst):
         self._image_aging_aged()
         self._cached_files_exist()
 
