@@ -698,11 +698,10 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertFalse(is_valid_info_file(base_filename + '.sha1'))
         self.assertTrue(is_valid_info_file(base_filename + '.info'))
 
-    def test_run_image_cache_manager_pass(self):
-        was = {'called': False}
+    @mock.patch('nova.objects.InstanceList.get_by_filters')
+    def test_run_image_cache_manager_pass(self, mock_instance_list):
 
-        def fake_get_all_by_filters(context, *args, **kwargs):
-            was['called'] = True
+        def fake_instances(ctxt):
             instances = []
             for x in range(2):
                 instances.append(
@@ -712,19 +711,24 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                         name='instance-%s' % x,
                         vm_state='',
                         task_state=''))
-            return instances
+            return objects.instance._make_instance_list(
+                ctxt, objects.InstanceList(), instances, None)
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
-
-            self.stub_out('nova.db.instance_get_all_by_filters',
-                          fake_get_all_by_filters)
+            ctxt = context.get_admin_context()
+            mock_instance_list.return_value = fake_instances(ctxt)
             compute = importutils.import_object(CONF.compute_manager)
             self.flags(use_local=True, group='conductor')
             compute.conductor_api = conductor.API()
-            ctxt = context.get_admin_context()
             compute._run_image_cache_manager_pass(ctxt)
-            self.assertTrue(was['called'])
+            filters = {
+                'host': ['fake-mini'],
+                'deleted': False,
+                'soft_deleted': True,
+            }
+            mock_instance_list.assert_called_once_with(
+                ctxt, filters, expected_attrs=[], use_slave=True)
 
     def test_store_swap_image(self):
         image_cache_manager = imagecache.ImageCacheManager()
