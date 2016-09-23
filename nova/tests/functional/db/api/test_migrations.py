@@ -28,7 +28,6 @@ For postgres on Ubuntu this can be done with the following commands::
 
 """
 
-import logging
 import os
 
 from migrate.versioning import repository
@@ -44,6 +43,7 @@ from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 
 
 class NovaAPIModelsSync(test_migrations.ModelsMigrationsSync):
@@ -137,13 +137,12 @@ class TestNovaAPIMigrationsPostgreSQL(NovaAPIModelsSync,
 
 class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def setUp(self):
+        # NOTE(sdague): the oslo_db base test case completely
+        # invalidates our logging setup, we actually have to do that
+        # before it is called to keep this from vomitting all over our
+        # test output.
+        self.useFixture(nova_fixtures.StandardLogging())
         super(NovaAPIMigrationsWalk, self).setUp()
-        # NOTE(viktors): We should reduce log output because it causes issues,
-        #                when we run tests with testr
-        migrate_log = logging.getLogger('migrate')
-        old_level = migrate_log.level
-        migrate_log.setLevel(logging.WARN)
-        self.addCleanup(migrate_log.setLevel, old_level)
 
     @property
     def INIT_VERSION(self):
