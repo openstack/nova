@@ -164,7 +164,8 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
 
     def _skippable_migrations(self):
         mitaka_placeholders = range(8, 13)
-        return mitaka_placeholders
+        newton_placeholders = range(21, 26)
+        return mitaka_placeholders + newton_placeholders
 
     def migrate_up(self, version, with_data=False):
         if with_data:
