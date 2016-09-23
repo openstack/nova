@@ -177,13 +177,6 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(), set())
 
-    def test_from_db_obj_pre_1_4_format(self):
-        ctxt = context.get_admin_context()
-        dev = pci_device.PciDevice._from_db_object(
-            ctxt, pci_device.PciDevice(), fake_db_dev_old)
-        self.assertEqual('blah', dev.parent_addr)
-        self.assertEqual({'phys_function': 'blah'}, dev.extra_info)
-
     def test_from_db_obj_pre_1_5_format(self):
         ctxt = context.get_admin_context()
         fake_dev_pre_1_5 = copy.deepcopy(fake_db_dev_old)
@@ -212,6 +205,7 @@ class _TestPciDeviceObject(object):
         self.pci_device.status = fields.PciDeviceStatus.ALLOCATED
         self.pci_device.instance_uuid = uuids.instance2
         expected_updates = dict(status=fields.PciDeviceStatus.ALLOCATED,
+                                extra_info='{}',
                                 instance_uuid=uuids.instance2)
         self.mox.StubOutWithMock(db, 'pci_device_update')
         db.pci_device_update(ctxt, 1, 'a',
@@ -262,49 +256,6 @@ class _TestPciDeviceObject(object):
         self.called = False
         self.pci_device.save()
         self.assertFalse(self.called)
-
-    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=4)
-    def test_save_migrate_parent_addr(self, get_min_ver_mock):
-        ctxt = context.get_admin_context()
-        dev = pci_device.PciDevice._from_db_object(
-            ctxt, pci_device.PciDevice(), fake_db_dev_old)
-        with mock.patch.object(db, 'pci_device_update',
-                               return_value=fake_db_dev_old) as update_mock:
-            dev.save()
-            update_mock.assert_called_once_with(
-                ctxt, dev.compute_node_id, dev.address,
-                {'extra_info': '{}', 'parent_addr': 'blah'})
-
-    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=4)
-    def test_save_migrate_parent_addr_updated(self, get_min_ver_mock):
-        ctxt = context.get_admin_context()
-        dev = pci_device.PciDevice._from_db_object(
-            ctxt, pci_device.PciDevice(), fake_db_dev_old)
-        # Note that the pci manager code will never update parent_addr alone,
-        # but we want to make it future proof so we guard against it
-        dev.parent_addr = 'doh!'
-        with mock.patch.object(db, 'pci_device_update',
-                               return_value=fake_db_dev_old) as update_mock:
-            dev.save()
-            update_mock.assert_called_once_with(
-                ctxt, dev.compute_node_id, dev.address,
-                {'extra_info': '{}', 'parent_addr': 'doh!'})
-
-    @mock.patch.object(objects.Service, 'get_minimum_version', return_value=2)
-    def test_save_dont_migrate_parent_addr(self, get_min_ver_mock):
-        ctxt = context.get_admin_context()
-        dev = pci_device.PciDevice._from_db_object(
-            ctxt, pci_device.PciDevice(), fake_db_dev_old)
-        dev.extra_info['other'] = "blahtoo"
-        with mock.patch.object(db, 'pci_device_update',
-                               return_value=fake_db_dev_old) as update_mock:
-            dev.save()
-            self.assertEqual("blah",
-                             update_mock.call_args[0][3]['parent_addr'])
-            self.assertIn("phys_function",
-                          update_mock.call_args[0][3]['extra_info'])
-            self.assertIn("other",
-                          update_mock.call_args[0][3]['extra_info'])
 
     def test_update_numa_node(self):
         self.pci_device = pci_device.PciDevice.create(None, dev_dict)

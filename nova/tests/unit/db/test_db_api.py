@@ -9677,45 +9677,6 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
             db.pci_device_update(self.admin_context, v['compute_node_id'],
                                  v['address'], v)
 
-    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
-                       return_value=False)
-    def test_pcidevice_online_mig_not_ready(self, mock_should_migrate):
-        self._create_fake_pci_devs_old_format()
-
-        found, done = db.pcidevice_online_data_migration(self.admin_context,
-                                                         None)
-        self.assertEqual(0, found)
-        self.assertEqual(0, done)
-
-    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
-                       return_value=True)
-    def test_pcidevice_online_mig_data_migrated_limit(self,
-                                                      mock_should_migrate):
-        self._create_fake_pci_devs_old_format()
-
-        found, done = db.pcidevice_online_data_migration(self.admin_context, 1)
-        self.assertEqual(1, found)
-        self.assertEqual(1, done)
-
-    @mock.patch.object(objects.PciDevice, 'should_migrate_data',
-                       return_value=True)
-    def test_pcidevice_online_mig(self, mock_should_migrate):
-        self._create_fake_pci_devs_old_format()
-
-        found, done = db.pcidevice_online_data_migration(self.admin_context,
-                                                         50)
-        self.assertEqual(2, found)
-        self.assertEqual(2, done)
-        results = db.pci_device_get_all_by_node(self.admin_context,
-                                                self.compute_node['id'])
-        for result in results:
-            self.assertEqual('fake-phys-func', result['parent_addr'])
-
-        found, done = db.pcidevice_online_data_migration(self.admin_context,
-                                                         50)
-        self.assertEqual(0, found)
-        self.assertEqual(0, done)
-
     def test_migrate_aggregates(self):
         db.aggregate_create(self.context, {'name': 'foo'})
         db.aggregate_create(self.context, {'name': 'bar',
