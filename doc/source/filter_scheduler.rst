@@ -313,6 +313,9 @@ filtering is done in the following manner:
 * If instance has a topology defined, it will be considered only for NUMA
   capable hosts.
 
+Configuring Filters
+-------------------
+
 To use filters you specify two settings:
 
 * ``scheduler_available_filters`` - Defines filter classes made available to the
@@ -333,6 +336,9 @@ would be available, and by default the |RamFilter|, |ComputeFilter|,
 |ImagePropertiesFilter|, |ServerGroupAntiAffinityFilter|,
 and |ServerGroupAffinityFilter| would be used.
 
+Writing Your Own Filter
+-----------------------
+
 To create **your own filter** you must inherit from
 |BaseHostFilter| and implement one method:
 ``host_passes``. This method should return ``True`` if a host passes the filter. It
@@ -348,6 +354,10 @@ settings:
     --scheduler_available_filters=nova.scheduler.filters.all_filters
     --scheduler_available_filters=myfilter.MyFilter
     --scheduler_default_filters=RamFilter,ComputeFilter,MyFilter
+
+.. note:: When writing your own filter, be sure to add it to the list of available filters
+   and enable it in the default filters. The "all_filters" setting  only includes the
+   filters shipped with nova.
 
 With these settings, nova will use the ``FilterScheduler`` for the scheduler
 driver.  The standard nova filters and MyFilter are available to the
