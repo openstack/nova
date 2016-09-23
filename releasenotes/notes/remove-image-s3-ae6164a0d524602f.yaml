@@ -1,0 +1,3 @@
+---
+upgrade:
+  - The deprecated S3 image backend has been removed.
