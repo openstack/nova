@@ -540,7 +540,7 @@ class CleanupFromVDIsTestCase(VolumeOpsTestBase):
         vdi_refs = ['vdi_ref1', 'vdi_ref2']
         sr_refs = ['sr_ref1', 'sr_ref2']
         find_sr_from_vdi.side_effect = sr_refs
-        purge_sr.side_effects = [test.TestingException, None]
+        purge_sr.side_effect = [test.TestingException, None]
         self.ops.safe_cleanup_from_vdis(vdi_refs)
 
         self._check_find_purge_calls(find_sr_from_vdi, purge_sr, vdi_refs,
