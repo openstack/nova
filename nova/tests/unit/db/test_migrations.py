@@ -769,7 +769,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         def removed_column(element):
             # Define a whitelist of columns that would be removed from the
             # DB at a later release.
-            column_whitelist = {'instances': ['scheduled_at']}
+            column_whitelist = {'instances': ['scheduled_at', 'internal_id']}
 
             if element[0] != 'remove_column':
                 return False
