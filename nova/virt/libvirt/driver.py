@@ -4408,7 +4408,6 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.memory = flavor.memory_mb * units.Ki
         guest.vcpus = flavor.vcpus
         allowed_cpus = hardware.get_vcpu_pin_set()
-        pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
 
         guest_numa_config = self._get_guest_numa_config(
             instance.numa_topology, flavor, allowed_cpus, image_meta)
@@ -4524,9 +4523,13 @@ class LibvirtDriver(driver.ComputeDriver):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
 
         if virt_type in ('xen', 'qemu', 'kvm'):
+            # Get all generic PCI devices (non-SR-IOV).
             for pci_dev in pci_manager.get_instance_pci_devs(instance):
                 guest.add_device(self._get_guest_pci_device(pci_dev))
         else:
+            # PCI devices is only supported for hypervisor 'xen', 'qemu' and
+            # 'kvm'.
+            pci_devs = pci_manager.get_instance_pci_devs(instance, 'all')
             if len(pci_devs) > 0:
                 raise exception.PciDeviceUnsupportedHypervisor(
                     type=virt_type)
