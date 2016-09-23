@@ -14,7 +14,9 @@
 
 import argparse
 
+import fixtures
 import mock
+from six.moves import StringIO
 
 from nova.cmd import idmapshift
 from nova import test
@@ -35,8 +37,10 @@ class FakeStat(object):
 
 
 class BaseTestCase(test.NoDBTestCase):
-    def __init__(self, *args, **kwargs):
-        super(BaseTestCase, self).__init__(*args, **kwargs)
+    def setUp(self):
+        super(BaseTestCase, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
+
         self.uid_maps = [(0, 10000, 10), (10, 20000, 1000)]
         self.gid_maps = [(0, 10000, 10), (10, 20000, 1000)]
 
