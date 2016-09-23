@@ -1,0 +1,6 @@
+---
+features:
+  - The nova-manage online_data_migrations command now prints a
+    tabular summary of completed and remaining records. The goal
+    here is to get all your numbers to zero. The previous execution
+    return code behavior is retained for scripting.
