@@ -64,6 +64,7 @@ from nova import objects
 from nova.objects import fields
 from nova import quota
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_console_auth_token
 from nova.tests.unit import matchers
 from nova.tests import uuidsentinel
@@ -9714,6 +9715,12 @@ class RetryOnDeadlockTestCase(test.TestCase):
 
 class TestSqlalchemyTypesRepr(test_base.DbTestCase):
     def setUp(self):
+        # NOTE(sdague): the oslo_db base test case completely
+        # invalidates our logging setup, we actually have to do that
+        # before it is called to keep this from vomitting all over our
+        # test output.
+        self.useFixture(nova_fixtures.StandardLogging())
+
         super(TestSqlalchemyTypesRepr, self).setUp()
         meta = MetaData(bind=self.engine)
         self.table = Table(
