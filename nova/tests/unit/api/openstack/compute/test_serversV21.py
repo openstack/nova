@@ -58,6 +58,7 @@ from nova import objects
 from nova.objects import instance as instance_obj
 from nova import policy
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
@@ -3553,11 +3554,11 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
 
     @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
                        side_effect=exception.FlavorNotFound(flavor_id='2'))
-    def test_create_server_auto_flavornotfound(self,
-                                                                 get_flavor):
+    def test_create_server_auto_flavornotfound(self, get_flavor):
         """Tests that requesting auto networking is OK. This test
         short-circuits on a FlavorNotFound error.
         """
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         ex = self.assertRaises(
             webob.exc.HTTPBadRequest, self._create_server, 'auto')
         # make sure it was a flavor not found error and not something else
@@ -3565,11 +3566,11 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
 
     @mock.patch.object(objects.Flavor, 'get_by_flavor_id',
                        side_effect=exception.FlavorNotFound(flavor_id='2'))
-    def test_create_server_none_flavornotfound(self,
-                                                                 get_flavor):
+    def test_create_server_none_flavornotfound(self, get_flavor):
         """Tests that requesting none for networking is OK. This test
         short-circuits on a FlavorNotFound error.
         """
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         ex = self.assertRaises(
             webob.exc.HTTPBadRequest, self._create_server, 'none')
         # make sure it was a flavor not found error and not something else
@@ -3582,6 +3583,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         """Tests that requesting multiple specific network IDs is OK. This test
         short-circuits on a FlavorNotFound error.
         """
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         ex = self.assertRaises(
             webob.exc.HTTPBadRequest, self._create_server,
                 [{'uuid': 'e3b686a8-b91d-4a61-a3fc-1b74bb619ddb'},
@@ -4352,6 +4354,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
 
     def setUp(self):
         super(ServersPolicyEnforcementV21, self).setUp()
+        self.useFixture(nova_fixtures.AllServicesCurrent())
         ext_info = extension_info.LoadedExtensionInfo()
         ext_info.extensions.update({'os-networks': 'fake'})
         self.controller = servers.ServersController(extension_info=ext_info)
