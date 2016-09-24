@@ -21,12 +21,10 @@ import webob
 from nova.api.openstack.compute import shelve as shelve_v21
 from nova.compute import api as compute_api
 from nova import exception
-from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
-from nova.tests import uuidsentinel
 
 
 class ShelvePolicyTestV21(test.NoDBTestCase):
@@ -37,31 +35,28 @@ class ShelvePolicyTestV21(test.NoDBTestCase):
         self.controller = self.plugin.ShelveController()
         self.req = fakes.HTTPRequest.blank('')
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_shelve_locked_server(self, mock_instance_get):
-        instance = objects.Instance(
-            uuid=uuidsentinel.instance1,
-            project_id=self.req.environ['nova.context'].project_id,
-            user_id=self.req.environ['nova.context'].user_id)
-        mock_instance_get.return_value = instance
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_shelve_locked_server(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         self.stubs.Set(compute_api.API, 'shelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
                           self.req, str(uuid.uuid4()), {})
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_unshelve_locked_server(self, mock_instance_get):
-        instance = objects.Instance(uuid=uuidsentinel.instance1)
-        mock_instance_get.return_value = instance
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_unshelve_locked_server(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         self.stubs.Set(compute_api.API, 'unshelve',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
                           self.req, str(uuid.uuid4()), {})
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
-    def test_shelve_offload_locked_server(self, mock_instance_get):
-        instance = objects.Instance(uuid=uuidsentinel.instance1)
-        mock_instance_get.return_value = instance
+    @mock.patch('nova.api.openstack.common.get_instance')
+    def test_shelve_offload_locked_server(self, get_instance_mock):
+        get_instance_mock.return_value = (
+            fake_instance.fake_instance_obj(self.req.environ['nova.context']))
         self.stubs.Set(compute_api.API, 'shelve_offload',
                        fakes.fake_actions_to_locked_server)
         self.assertRaises(webob.exc.HTTPConflict,
