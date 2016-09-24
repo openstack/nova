@@ -43,6 +43,7 @@ from nova import exception
 from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
 from nova import objects
+from nova.objects import fields
 from nova import signature_utils
 
 LOG = logging.getLogger(__name__)
@@ -171,7 +172,9 @@ class GlanceClientWrapper(object):
             client = self.client or self._create_onetime_client(context,
                                                                 version)
             try:
-                result = getattr(client.images, method)(*args, **kwargs)
+                controller = getattr(client,
+                                     kwargs.pop('controller', 'images'))
+                result = getattr(controller, method)(*args, **kwargs)
                 if inspect.isgenerator(result):
                     # Convert generator results to a list, so that we can
                     # catch any potential exceptions now and retry the call.
@@ -641,6 +644,49 @@ class GlanceImageServiceV2(object):
         self._client.call(context, 2, 'upload', image_id, data)
         return self._client.call(context, 2, 'get', image_id)
 
+    def _get_image_create_disk_format_default(self, context):
+        """Gets an acceptable default image disk_format based on the schema.
+        """
+        # These preferred disk formats are in order:
+        # 1. we want qcow2 if possible (at least for backward compat)
+        # 2. vhd for xenapi and hyperv
+        # 3. vmdk for vmware
+        # 4. raw should be universally accepted
+        preferred_disk_formats = (
+            fields.DiskFormat.QCOW2,
+            fields.DiskFormat.VHD,
+            fields.DiskFormat.VMDK,
+            fields.DiskFormat.RAW,
+        )
+
+        # Get the image schema - note we don't cache this value since it could
+        # change under us. This looks a bit funky, but what it's basically
+        # doing is calling glanceclient.v2.Client.schemas.get('image').
+        image_schema = self._client.call(context, 2, 'get', 'image',
+                                         controller='schemas')
+        # get the disk_format schema property from the raw schema
+        disk_format_schema = (
+            image_schema.raw()['properties'].get('disk_format') if image_schema
+                                                                else {}
+        )
+        if disk_format_schema and 'enum' in disk_format_schema:
+            supported_disk_formats = disk_format_schema['enum']
+            # try a priority ordered list
+            for preferred_format in preferred_disk_formats:
+                if preferred_format in supported_disk_formats:
+                    return preferred_format
+            # alright, let's just return whatever is available
+            LOG.debug('Unable to find a preferred disk_format for image '
+                      'creation with the Image Service v2 API. Using: %s',
+                      supported_disk_formats[0])
+            return supported_disk_formats[0]
+
+        LOG.warning(_LW('Unable to determine disk_format schema from the '
+                        'Image Service v2 API. Defaulting to '
+                        '%(preferred_disk_format)s.'),
+                    {'preferred_disk_format': preferred_disk_formats[0]})
+        return preferred_disk_formats[0]
+
     def _create_v2(self, context, sent_service_image_meta, data=None,
                    force_activate=False):
         # Glance v1 allows image activation without setting disk and
@@ -649,7 +695,9 @@ class GlanceImageServiceV2(object):
         if force_activate:
             data = ''
             if 'disk_format' not in sent_service_image_meta:
-                sent_service_image_meta['disk_format'] = 'qcow2'
+                sent_service_image_meta['disk_format'] = (
+                    self._get_image_create_disk_format_default(context)
+                )
             if 'container_format' not in sent_service_image_meta:
                 sent_service_image_meta['container_format'] = 'bare'
 
