@@ -1533,3 +1533,117 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
                           objects.ResourceClass.get_by_name,
                           self.context,
                           'CUSTOM_IRON_NFV')
+
+
+class ResourceProviderTraitsTestCase(ResourceProviderBaseCase):
+
+    def _assert_traits(self, expected_traits, traits_objs):
+        expected_traits.sort()
+        traits = []
+        for obj in traits_objs:
+            traits.append(obj.name)
+        traits.sort()
+        self.assertEqual(expected_traits, traits)
+
+    def test_trait_create(self):
+        t = objects.Trait(self.context)
+        t.name = 'CUSTOM_TRAIT_A'
+        t.create()
+        self.assertIn('id', t)
+        self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
+
+    def test_trait_create_with_id_set(self):
+        t = objects.Trait(self.context)
+        t.name = 'CUSTOM_TRAIT_A'
+        t.id = 1
+        self.assertRaises(exception.ObjectActionError, t.create)
+
+    def test_trait_create_without_name_set(self):
+        t = objects.Trait(self.context)
+        self.assertRaises(exception.ObjectActionError, t.create)
+
+    def test_trait_create_without_custom_prefix(self):
+        t = objects.Trait(self.context)
+        t.name = 'TRAIT_A'
+        self.assertRaises(exception.ObjectActionError, t.create)
+
+    def test_trait_create_duplicated_trait(self):
+        trait = objects.Trait(self.context)
+        trait.name = 'CUSTOM_TRAIT_A'
+        trait.create()
+        tmp_trait = objects.Trait.get_by_name(self.context, 'CUSTOM_TRAIT_A')
+        self.assertEqual('CUSTOM_TRAIT_A', tmp_trait.name)
+        duplicated_trait = objects.Trait(self.context)
+        duplicated_trait.name = 'CUSTOM_TRAIT_A'
+        self.assertRaises(exception.TraitExists, duplicated_trait.create)
+
+    def test_trait_get(self):
+        t = objects.Trait(self.context)
+        t.name = 'CUSTOM_TRAIT_A'
+        t.create()
+        t = objects.Trait.get_by_name(self.context, 'CUSTOM_TRAIT_A')
+        self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
+
+    def test_trait_get_non_existed_trait(self):
+        self.assertRaises(exception.TraitNotFound,
+            objects.Trait.get_by_name, self.context, 'CUSTOM_TRAIT_A')
+
+    def test_trait_destroy(self):
+        t = objects.Trait(self.context)
+        t.name = 'CUSTOM_TRAIT_A'
+        t.create()
+        t = objects.Trait.get_by_name(self.context, 'CUSTOM_TRAIT_A')
+        self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
+        t.destroy()
+        self.assertRaises(exception.TraitNotFound, objects.Trait.get_by_name,
+                          self.context, 'CUSTOM_TRAIT_A')
+
+    def test_trait_destroy_with_standard_trait(self):
+        t = objects.Trait(self.context)
+        t.id = 1
+        t.name = 'HW_CPU_X86_AVX'
+        self.assertRaises(exception.TraitCannotDeleteStandard, t.destroy)
+
+    def test_traits_get_all(self):
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        for name in trait_names:
+            t = objects.Trait(self.context)
+            t.name = name
+            t.create()
+
+        self._assert_traits(trait_names,
+                            objects.TraitList.get_all(self.context))
+
+    def test_traits_get_all_with_name_in_filter(self):
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        for name in trait_names:
+            t = objects.Trait(self.context)
+            t.name = name
+            t.create()
+
+        traits = objects.TraitList.get_all(self.context,
+            filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
+        self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'], traits)
+
+    def test_traits_get_all_with_non_existed_name(self):
+        traits = objects.TraitList.get_all(self.context,
+            filters={'name_in': ['CUSTOM_TRAIT_X', 'CUSTOM_TRAIT_Y']})
+        self.assertEqual(0, len(traits))
+
+    def test_traits_get_all_with_prefix_filter(self):
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
+        for name in trait_names:
+            t = objects.Trait(self.context)
+            t.name = name
+            t.create()
+
+        traits = objects.TraitList.get_all(self.context,
+                                           filters={'prefix': 'CUSTOM'})
+        self._assert_traits(
+            ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'],
+            traits)
+
+    def test_traits_get_all_with_non_existed_prefix(self):
+        traits = objects.TraitList.get_all(self.context,
+            filters={"prefix": "NOT_EXISTED"})
+        self.assertEqual(0, len(traits))

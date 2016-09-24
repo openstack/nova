@@ -2137,3 +2137,15 @@ class InvalidEmulatorThreadsPolicy(Invalid):
 class BadRequirementEmulatorThreadsPolicy(Invalid):
     msg_fmt = _("An isolated CPU emulator threads option requires a dedicated "
                 "CPU policy option.")
+
+
+class TraitNotFound(NotFound):
+    msg_fmt = _("No such trait %(name)s.")
+
+
+class TraitExists(NovaException):
+    msg_fmt = _("The Trait %(name)s already exists")
+
+
+class TraitCannotDeleteStandard(Invalid):
+    msg_fmt = _("Cannot delete standard trait %(name)s.")
