@@ -89,7 +89,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
                      'project_id:%(project_id)s'}
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.api.openstack.common.get_instance')
     def test_list_actions_restricted_by_project(self, mock_instance_get):
         self._set_policy_rules()
         req = self._get_http_req('os-instance-actions')
@@ -97,7 +97,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
         self.assertRaises(exception.Forbidden, self.controller.index, req,
                           str(uuid.uuid4()))
 
-    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.api.openstack.common.get_instance')
     def test_get_action_restricted_by_project(self, mock_instance_get):
         self._set_policy_rules()
         req = self._get_http_req('os-instance-actions/1')
