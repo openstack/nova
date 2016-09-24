@@ -23,6 +23,7 @@ import sqlalchemy as sa
 from sqlalchemy import func
 from sqlalchemy.orm import contains_eager
 from sqlalchemy import sql
+from sqlalchemy.sql import null
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
@@ -318,7 +319,8 @@ class ResourceProvider(base.NovaObject):
     # Version 1.1: Add destroy()
     # Version 1.2: Add get_aggregates(), set_aggregates()
     # Version 1.3: Turn off remotable
-    VERSION = '1.3'
+    # Version 1.4: Add set/get_traits methods
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -531,6 +533,55 @@ class ResourceProvider(base.NovaObject):
                                      select_agg_id)
             conn = context.session.connection()
             conn.execute(insert_aggregates)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_traits_from_db(context, _id):
+        db_traits = context.session.query(models.Trait).join(
+            models.ResourceProviderTrait,
+            sa.and_(
+                models.Trait.id == models.ResourceProviderTrait.trait_id,
+                models.ResourceProviderTrait.resource_provider_id == _id
+            )).all()
+        return db_traits
+
+    @base.remotable
+    def get_traits(self):
+        db_traits = self._get_traits_from_db(self._context, self.id)
+        return base.obj_make_list(self._context, TraitList(self._context),
+            Trait, db_traits)
+
+    @staticmethod
+    @db_api.api_context_manager.writer
+    def _set_traits_to_db(context, rp, _id, traits):
+        existing_traits = ResourceProvider._get_traits_from_db(context, _id)
+        traits_dict = {trait.name: trait for trait in traits}
+        existing_traits_dict = {trait.name: trait for trait in existing_traits}
+
+        to_add_names = (set(traits_dict.keys()) -
+            set(existing_traits_dict.keys()))
+        to_delete_names = (set(existing_traits_dict.keys()) -
+            set(traits_dict.keys()))
+        to_delete_ids = [existing_traits_dict[name].id
+                            for name in to_delete_names]
+
+        conn = context.session.connection()
+        with conn.begin():
+            if to_delete_names:
+                context.session.query(models.ResourceProviderTrait).filter(
+                    models.ResourceProviderTrait.trait_id.in_(to_delete_ids)
+                ).delete(synchronize_session='fetch')
+            if to_add_names:
+                for name in to_add_names:
+                    rp_trait = models.ResourceProviderTrait()
+                    rp_trait.trait_id = traits_dict[name].id
+                    rp_trait.resource_provider_id = _id
+                    context.session.add(rp_trait)
+            rp.generation = _increment_provider_generation(conn, rp)
+
+    @base.remotable
+    def set_traits(self, traits):
+        self._set_traits_to_db(self._context, self, self.id, traits)
 
 
 @base.NovaObjectRegistry.register
@@ -1518,7 +1569,12 @@ class Trait(base.NovaObject):
 
     @staticmethod
     @db_api.api_context_manager.writer
-    def _destroy_in_db(context, name):
+    def _destroy_in_db(context, _id, name):
+        num = context.session.query(models.ResourceProviderTrait).filter(
+            models.ResourceProviderTrait.trait_id == _id).count()
+        if num:
+            raise exception.TraitInUse(name=name)
+
         res = context.session.query(models.Trait).filter_by(
             name=name).delete()
         if not res:
@@ -1536,7 +1592,7 @@ class Trait(base.NovaObject):
             raise exception.ObjectActionError(action='destroy',
                                               reason='ID attribute not found')
 
-        self._destroy_in_db(self._context, self.name)
+        self._destroy_in_db(self._context, self.id, self.name)
 
 
 @base.NovaObjectRegistry.register
@@ -1560,6 +1616,15 @@ class TraitList(base.ObjectListBase, base.NovaObject):
         if 'prefix' in filters:
             query = query.filter(
                 models.Trait.name.like(filters['prefix'] + '%'))
+        if 'associated' in filters:
+            if filters['associated']:
+                query = query.join(models.ResourceProviderTrait,
+                    models.Trait.id == models.ResourceProviderTrait.trait_id
+                ).distinct()
+            else:
+                query = query.outerjoin(models.ResourceProviderTrait,
+                    models.Trait.id == models.ResourceProviderTrait.trait_id
+                ).filter(models.ResourceProviderTrait.trait_id == null())
 
         return query.all()
 
