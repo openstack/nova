@@ -2518,8 +2518,12 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_resume_notifications(self):
+    @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_resume_notifications(self, mock_context, mock_notify):
         # ensure instance can be suspended and resumed.
+        context = self.context
+        mock_context.return_value = context
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -2536,6 +2540,11 @@ class ComputeTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[5]
         self.assertEqual(msg.event_type,
                          'compute.instance.resume.end')
+        mock_notify.assert_has_calls([
+            mock.call(context, instance, 'fake-mini',
+                      action='resume', phase='start'),
+            mock.call(context, instance, 'fake-mini',
+                      action='resume', phase='end')])
         self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_resume_no_old_state(self):
