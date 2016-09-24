@@ -2913,15 +2913,49 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                 'rebuild.error', fault=ex)
 
     def test_rebuild_deleting(self):
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = fake_instance.fake_instance_obj(self.context)
         ex = exception.UnexpectedDeletingTaskStateError(
             instance_uuid=instance.uuid, expected='expected', actual='actual')
         self._test_rebuild_ex(instance, ex)
 
     def test_rebuild_notfound(self):
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = fake_instance.fake_instance_obj(self.context)
         ex = exception.InstanceNotFound(instance_id=instance.uuid)
         self._test_rebuild_ex(instance, ex)
+
+    def test_rebuild_node_not_updated_if_not_recreate(self):
+        node = uuidutils.generate_uuid()  # ironic node uuid
+        instance = fake_instance.fake_instance_obj(self.context, node=node)
+        instance.migration_context = None
+        with test.nested(
+            mock.patch.object(self.compute, '_get_compute_info'),
+            mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute, '_set_migration_status'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_set):
+            self.compute.rebuild_instance(self.context, instance, None, None,
+                                          None, None, None, None, False)
+            self.assertFalse(mock_get.called)
+            self.assertEqual(node, instance.node)
+            mock_set.assert_called_once_with(None, 'done')
+
+    def test_rebuild_node_updated_if_recreate(self):
+        dead_node = uuidutils.generate_uuid()
+        instance = fake_instance.fake_instance_obj(self.context,
+                                                   node=dead_node)
+        instance.migration_context = None
+        with test.nested(
+            mock.patch.object(self.compute, '_get_compute_info'),
+            mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
+            mock.patch.object(objects.Instance, 'save'),
+            mock.patch.object(self.compute, '_set_migration_status'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_set):
+            mock_get.return_value.hypervisor_hostname = 'new-node'
+            self.compute.rebuild_instance(self.context, instance, None, None,
+                                          None, None, None, None, True)
+            mock_get.assert_called_once_with(mock.ANY, self.compute.host)
+            self.assertEqual('new-node', instance.node)
+            mock_set.assert_called_once_with(None, 'done')
 
     def test_rebuild_default_impl(self):
         def _detach(context, bdms):
