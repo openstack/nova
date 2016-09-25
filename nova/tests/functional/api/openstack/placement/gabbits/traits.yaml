@@ -1,0 +1,259 @@
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        OpenStack-API-Version: placement latest
+
+tests:
+
+- name: create a trait without custom namespace
+  PUT: /traits/TRAIT_X
+  status: 400
+  response_strings:
+    - 'The trait is invalid. A valid trait must include prefix "CUSTOM_" and use following characters: "A"-"Z", "0"-"9" and "_"'
+
+- name: create a trait with invalid characters
+  PUT: /traits/CUSTOM_ABC:1
+  status: 400
+  response_strings:
+    - 'The trait is invalid. A valid trait must include prefix "CUSTOM_" and use following characters: "A"-"Z", "0"-"9" and "_"'
+
+- name: create a trait
+  PUT: /traits/CUSTOM_TRAIT_1
+  status: 201
+  response_headers:
+    location: //traits/CUSTOM_TRAIT_1/
+  response_forbidden_headers:
+    - content-type
+
+- name: create a trait which existed
+  PUT: /traits/CUSTOM_TRAIT_1
+  status: 204
+  response_headers:
+    location: //traits/CUSTOM_TRAIT_1/
+  response_forbidden_headers:
+    - content-type
+
+- name: get a trait
+  GET: /traits/CUSTOM_TRAIT_1
+  status: 204
+  response_forbidden_headers:
+      - content-type
+
+- name: get a non-existed trait
+  GET: /traits/NON_EXISTED
+  status: 404
+
+- name: delete a trait
+  DELETE: /traits/CUSTOM_TRAIT_1
+  status: 204
+
+- name: delete a non-existed trait
+  DELETE: /traits/CUSTOM_NON_EXSITED
+  status: 404
+
+- name: create CUSTOM_TRAIT_1
+  PUT: /traits/CUSTOM_TRAIT_1
+  status: 201
+  response_headers:
+    location: //traits/CUSTOM_TRAIT_1/
+  response_forbidden_headers:
+    - content-type
+
+- name: create CUSTOM_TRAIT_2
+  PUT: /traits/CUSTOM_TRAIT_2
+  status: 201
+  response_headers:
+    location: //traits/CUSTOM_TRAIT_2/
+  response_forbidden_headers:
+    - content-type
+
+- name: list traits
+  GET: /traits
+  status: 200
+  response_json_paths:
+    $.traits.`len`: 2
+  response_strings:
+    - CUSTOM_TRAIT_1
+    - CUSTOM_TRAIT_2
+
+- name: list traits with invalid format of name parameter
+  GET: /traits?name=in_abc
+  status: 400
+  response_strings:
+    - 'Badly formatted name parameter. Expected name query string parameter in form: ?name=[in|startswith]:[name1,name2|prefix]. Got: "in_abc"'
+
+- name: list traits with name=in filter
+  GET: /traits?name=in:CUSTOM_TRAIT_1,CUSTOM_TRAIT_2
+  status: 200
+  response_json_paths:
+    $.traits.`len`: 2
+  response_strings:
+    - CUSTOM_TRAIT_1
+    - CUSTOM_TRAIT_2
+
+- name: create CUSTOM_ANOTHER_TRAIT
+  PUT: /traits/CUSTOM_ANOTHER_TRAIT
+  status: 201
+  response_headers:
+    location: //traits/CUSTOM_ANOTHER_TRAIT/
+  response_forbidden_headers:
+    - content-type
+
+- name: list traits with prefix
+  GET: /traits?name=startswith:CUSTOM_TRAIT
+  status: 200
+  response_json_paths:
+    $.traits.`len`: 2
+  response_strings:
+    - CUSTOM_TRAIT_1
+    - CUSTOM_TRAIT_2
+
+- name: list traits with invalid parameters
+  GET: /traits?invalid=abc
+  status: 400
+  response_strings:
+    - "Invalid query string parameters: Additional properties are not allowed"
+
+- name: post new resource provider
+  POST: /resource_providers
+  request_headers:
+    content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+  response_forbidden_headers:
+      - content-type
+
+- name: list traits for resource provider without traits
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  status: 200
+  response_json_paths:
+    $.resource_provider_generation: 0
+    $.traits.`len`: 0
+
+- name: set traits for resource provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 200
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+        - CUSTOM_TRAIT_2
+    resource_provider_generation: 0
+  response_json_paths:
+    $.resource_provider_generation: 1
+    $.traits.`len`: 2
+  response_strings:
+    - CUSTOM_TRAIT_1
+    - CUSTOM_TRAIT_2
+
+- name: get associated traits
+  GET: /traits?associated=true
+  status: 200
+  response_json_paths:
+    $.traits.`len`: 2
+  response_strings:
+    - CUSTOM_TRAIT_1
+    - CUSTOM_TRAIT_2
+
+- name: get associated traits with invalid value
+  GET: /traits?associated=xyz
+  status: 400
+  response_strings:
+    - 'The query parameter "associated" only accepts "true" or "false"'
+
+- name: set traits for resource provider without resource provider generation
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 400
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+        - CUSTOM_TRAIT_2
+  response_strings:
+    - CUSTOM_TRAIT_1
+
+- name: set traits for resource provider with conflict generation
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 409
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+    resource_provider_generation: 5
+  response_strings:
+    - Resource provider's generation already changed. Please update the generation and try again.
+
+- name: set non existed traits for resource provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 400
+  data:
+    traits:
+      - NON_EXISTED_TRAIT1
+      - NON_EXISTED_TRAIT2
+      - CUSTOM_TRAIT_1
+    resource_provider_generation: 1
+  response_strings:
+    - No such trait
+    - NON_EXISTED_TRAIT1
+    - NON_EXISTED_TRAIT2
+
+- name: set traits for non_existed resource provider
+  PUT: /resource_providers/non_existed/traits
+  request_headers:
+    content-type: application/json
+  data:
+    traits:
+      - CUSTOM_TRAIT_1
+    resource_provider_generation: 1
+  status: 404
+  response_strings:
+    - No resource provider with uuid non_existed found
+
+- name: list traits for resource provider
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  status: 200
+  response_json_paths:
+    $.resource_provider_generation: 1
+    $.traits.`len`: 2
+  response_strings:
+    - CUSTOM_TRAIT_1
+    - CUSTOM_TRAIT_2
+
+- name: delete an in-use trait
+  DELETE: /traits/CUSTOM_TRAIT_1
+  status: 409
+  response_strings:
+    - The trait CUSTOM_TRAIT_1 is in use by a resource provider.
+
+- name: list traits for non_existed resource provider
+  GET: /resource_providers/non_existed/traits
+  request_headers:
+    content-type: application/json
+  status: 404
+  response_strings:
+    - No resource provider with uuid non_existed found
+
+- name: delete traits for resource provider
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+  status: 204
+  response_forbidden_headers:
+     - content-type
+
+- name: delete traits for non_existed resource provider
+  DELETE: /resource_providers/non_existed/traits
+  status: 404
+  response_strings:
+    - No resource provider with uuid non_existed found

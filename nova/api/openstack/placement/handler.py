@@ -34,6 +34,7 @@ from nova.api.openstack.placement.handlers import inventory
 from nova.api.openstack.placement.handlers import resource_class
 from nova.api.openstack.placement.handlers import resource_provider
 from nova.api.openstack.placement.handlers import root
+from nova.api.openstack.placement.handlers import trait
 from nova.api.openstack.placement.handlers import usage
 from nova.api.openstack.placement import policy
 from nova.api.openstack.placement import util
@@ -102,6 +103,19 @@ ROUTE_DECLARATIONS = {
         'GET': allocation.list_for_consumer,
         'PUT': allocation.set_allocations,
         'DELETE': allocation.delete_allocations,
+    },
+    '/traits': {
+        'GET': trait.list_traits,
+    },
+    '/traits/{name}': {
+        'GET': trait.get_trait,
+        'PUT': trait.put_trait,
+        'DELETE': trait.delete_trait,
+    },
+    '/resource_providers/{uuid}/traits': {
+        'GET': trait.list_traits_for_resource_provider,
+        'PUT': trait.update_traits_for_resource_provider,
+        'DELETE': trait.delete_traits_for_resource_provider
     },
 }
 

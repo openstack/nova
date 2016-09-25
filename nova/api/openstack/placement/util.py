@@ -160,6 +160,16 @@ def resource_provider_url(environ, resource_provider):
     return '%s/resource_providers/%s' % (prefix, resource_provider.uuid)
 
 
+def trait_url(environ, trait):
+    """Produce the URL for a trait.
+
+    If SCRIPT_NAME is present, it is the mount point of the placement
+    WSGI app.
+    """
+    prefix = environ.get('SCRIPT_NAME', '')
+    return '%s/traits/%s' % (prefix, trait.name)
+
+
 def wsgi_path_item(environ, name):
     """Extract the value of a named field in a URL.
 
