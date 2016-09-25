@@ -121,8 +121,11 @@ class FakeDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
         "supports_recreate": True,
-        "supports_migrate_to_same_host": True
-        }
+        "supports_migrate_to_same_host": True,
+        "supports_attach_interface": True,
+        "supports_tagged_attach_interface": True,
+        "supports_tagged_attach_volume": True
+    }
 
     # Since we don't have a real hypervisor, pretend we have lots of
     # disk and ram so this driver can be used to test large instances.

@@ -564,3 +564,18 @@ user documentation.
   standardized. It has a set of fields which each hypervisor will try to fill.
   If a hypervisor driver is unable to provide a specific field then this field
   will be reported as 'None'.
+
+2.49
+----
+
+  Continuing from device role tagging at server create time introduced in
+  version 2.32 and later fixed in 2.42, microversion 2.49 allows the attachment
+  of network interfaces and volumes with an optional ``tag`` parameter. This tag
+  is used to identify the virtual devices in the guest and is exposed in the
+  metadata API. Because the config drive cannot be updated while the guest is
+  running, it will only contain metadata of devices that were tagged at boot
+  time. Any changes made to devices while the instance is running - be it
+  detaching a tagged device or performing a tagged device attachment - will not
+  be reflected in the config drive.
+
+  Tagged volume attachment is not supported for shelved-offloaded instances.

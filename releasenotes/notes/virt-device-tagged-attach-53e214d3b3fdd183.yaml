@@ -1,0 +1,19 @@
+---
+features:
+  - |
+    Microversion 2.49 brings device role tagging to the attach operation of
+    volumes and network interfaces. Both network interfaces and volumes can now
+    be attached with an optional ``tag`` parameter. The tag is then exposed to
+    the guest operating system through the metadata API. Unlike the original
+    device role tagging feature, tagged attach does not support the config
+    drive. Because the config drive was never designed to be dynamic, it only
+    contains device tags that were set at boot time with API 2.32. Any changes
+    made to tagged devices with API 2.49 while the server is running will only
+    be reflected in the metadata obtained from the metadata API. Because of
+    metadata caching, changes may take up to ``metadata_cache_expiration`` to
+    appear in the metadata API. The default value for
+    ``metadata_cache_expiration`` is 15 seconds.
+
+    Tagged volume attachment is not supported for shelved-offloaded instances.
+    Tagged device attachment (both volumes and network interfaces) is not
+    supported for Cells V1 deployments.

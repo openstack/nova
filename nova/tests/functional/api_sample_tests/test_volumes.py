@@ -17,6 +17,7 @@ import datetime
 
 from nova import context
 from nova import objects
+from nova.tests import fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
@@ -306,3 +307,32 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
                                 subs)
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.text)
+
+
+class VolumeAttachmentsSampleV249(test_servers.ServersSampleBase):
+    sample_dir = "os-volumes"
+    microversion = '2.49'
+    scenarios = [('v2_49', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(VolumeAttachmentsSampleV249, self).setUp()
+        self.useFixture(fixtures.CinderFixture(self))
+
+    def test_attach_volume_to_server(self):
+        device_name = '/dev/sdb'
+        bdm = objects.BlockDeviceMapping()
+        bdm['device_name'] = device_name
+        volume = fakes.stub_volume_get(None, context.get_admin_context(),
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
+        subs = {
+            'volume_id': volume['id'],
+            'device': device_name,
+            'tag': 'foo',
+        }
+        server_id = self._post_server()
+        response = self._do_post('servers/%s/os-volume_attachments'
+                                 % server_id,
+                                 'attach-volume-to-server-req', subs)
+
+        self._verify_response('attach-volume-to-server-resp', subs,
+                              response, 200)

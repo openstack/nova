@@ -1794,6 +1794,19 @@ device_tag_bdm:
   required: false
   type: string
   min_version: 2.32
+device_tag_bdm_attachment:
+  description: |
+    A device role tag that can be applied to a volume when attaching it to the
+    VM. The guest OS of a server that has devices tagged in this manner can
+    access hardware metadata about the tagged devices from the metadata API and
+    on the config drive, if enabled.
+
+    .. note:: Tagged volume attachment is not supported for shelved-offloaded
+              instances.
+  in: body
+  required: false
+  type: string
+  min_version: 2.49
 device_tag_nic:
   description: |
     A device role tag that can be applied to a network interface. The guest OS
@@ -1807,6 +1820,17 @@ device_tag_nic:
   required: false
   type: string
   min_version: 2.32
+device_tag_nic_attachment:
+  description: |
+    A device role tag that can be applied to a network interface when attaching
+    it to the VM. The guest OS of a server that has devices tagged in this
+    manner can access hardware metadata about the tagged devices from the
+    metadata API and on the config
+    drive, if enabled.
+  in: body
+  required: false
+  type: string
+  min_version: 2.49
 disabled_reason_body:
   description: |
     The reason for disabling a service.

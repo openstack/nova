@@ -71,6 +71,7 @@ Request
   - net_id: net_id
   - fixed_ips: fixed_ips
   - ip_address: ip_address_req
+  - tag: device_tag_nic_attachment
 
 **Example Create Interface: JSON request**
 
@@ -82,6 +83,11 @@ Create interface with ``net_id`` and ``fixed_ips``.
 Create interface with ``port_id``.
 
 .. literalinclude:: ../../doc/api_samples/os-attach-interfaces/attach-interfaces-create-req.json
+   :language: javascript
+
+**Example Create Tagged Interface (v2.49): JSON request**
+
+.. literalinclude:: ../../doc/api_samples/os-attach-interfaces/v2.49/attach-interfaces-create-req.json
    :language: javascript
 
 Response
