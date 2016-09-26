@@ -120,14 +120,12 @@ class Guest(object):
         :returns guest.Guest: Guest ready to be launched
         """
         try:
-            # TODO(sahid): Host.write_instance_config should return
-            # an instance of Guest
-            domain = host.write_instance_config(xml)
+            guest = host.write_instance_config(xml)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE('Error defining a domain with XML: %s'),
+                LOG.error(_LE('Error defining a guest with XML: %s'),
                           encodeutils.safe_decode(xml))
-        return cls(domain)
+        return guest
 
     def launch(self, pause=False):
         """Starts a created guest.
