@@ -380,7 +380,8 @@ class ClientRouter(periodic_task.PeriodicTasks):
         # NOTE(melwitt): Cells v1 does its own serialization and won't
         # have a serializer available on the client object.
         self.serializer = getattr(default_client, 'serializer', None)
-        self.run_periodic_tasks(nova.context.RequestContext())
+        # Prevent this empty context from overwriting the thread local copy
+        self.run_periodic_tasks(nova.context.RequestContext(overwrite=False))
 
     def _client(self, context, cell_mapping=None):
         if cell_mapping:
