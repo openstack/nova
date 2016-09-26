@@ -58,10 +58,6 @@ asse_equal_in_end_with_true_or_false_re = re.compile(r"assertEqual\("
                     r"(\w|[][.'\"])+ in (\w|[][.'\", ])+, (True|False)\)")
 asse_equal_in_start_with_true_or_false_re = re.compile(r"assertEqual\("
                     r"(True|False), (\w|[][.'\"])+ in (\w|[][.'\", ])+\)")
-asse_equal_end_with_none_re = re.compile(
-                           r"assertEqual\(.*?,\s+None\)$")
-asse_equal_start_with_none_re = re.compile(
-                           r"assertEqual\(None,")
 # NOTE(snikitin): Next two regexes weren't united to one for more readability.
 #                 asse_true_false_with_in_or_not_in regex checks
 #                 assertTrue/False(A in B) cases where B argument has no spaces
@@ -283,11 +279,20 @@ def assert_equal_none(logical_line):
 
     N318
     """
-    res = (asse_equal_start_with_none_re.search(logical_line) or
-           asse_equal_end_with_none_re.search(logical_line))
-    if res:
+    _start_re = re.compile(r"assertEqual\(.*?,\s+None\)$")
+    _end_re = re.compile(r"assertEqual\(None,")
+
+    if _start_re.search(logical_line) or _end_re.search(logical_line):
         yield (0, "N318: assertEqual(A, None) or assertEqual(None, A) "
-               "sentences not allowed")
+               "sentences not allowed. Use assertIsNone(A) instead.")
+
+    _start_re = re.compile(r"assertIs(Not)?\(None,")
+    _end_re = re.compile(r"assertIs(Not)?\(.*,\s+None\)$")
+
+    if _start_re.search(logical_line) or _end_re.search(logical_line):
+        yield (0, "N318: assertIsNot(A, None) or assertIsNot(None, A) must "
+               "not be used. Use assertIsNone(A) or assertIsNotNone(A) "
+               "instead.")
 
 
 def check_python3_xrange(logical_line):
