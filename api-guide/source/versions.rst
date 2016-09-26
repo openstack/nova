@@ -108,7 +108,4 @@ responses, see `*API versions*
 <http://developer.openstack.org/api-ref/compute/#api-versions>`__.
 
 The detailed version response contains pointers to both a human-readable
-and a machine-processable description of the API service. The
-machine-processable description is written in the Web Application
-Description Language (WADL).
-
+and a machine-processable description of the API service.
