@@ -1158,6 +1158,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_delete('force_delete', vm_state=vm_state)
 
     def test_delete_fast_if_host_not_set(self):
+        self.useFixture(fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
         inst.host = ''
         quotas = quotas_obj.Quotas(self.context)
@@ -3868,9 +3869,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(swap_size, bdms[1].volume_size)
         self.assertEqual(ephemeral_size, bdms[2].volume_size)
 
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(compute_api.API, '_get_instances_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
-    def test_tenant_to_project_conversion(self, mock_cell_map_get, mock_get):
+    def test_tenant_to_project_conversion(self, mock_cell_map_get, mock_get,
+                                          mock_buildreq_get):
         mock_cell_map_get.side_effect = exception.CellMappingNotFound(
                                                                 uuid='fake')
         mock_get.return_value = objects.InstanceList(objects=[])
