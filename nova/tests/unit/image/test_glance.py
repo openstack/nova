@@ -15,6 +15,7 @@
 
 
 import collections
+import copy
 import datetime
 
 import cryptography
@@ -57,6 +58,9 @@ class FakeSchema(object):
 
     def is_base_property(self, prop_name):
         return prop_name in self.base_props
+
+    def raw(self):
+        return copy.deepcopy(self.raw_schema)
 
 image_fixtures = {
     'active_image_v1': {
@@ -2019,6 +2023,37 @@ class TestCreate(test.NoDBTestCase):
 
     @mock.patch('nova.image.glance._translate_from_glance')
     @mock.patch('nova.image.glance._translate_to_glance')
+    def test_create_success_v2_force_activate(
+            self, trans_to_mock, trans_from_mock):
+        """Tests that creating an image with the v2 API with a size of 0 will
+        trigger a call to set the disk and container formats.
+        """
+        self.flags(use_glance_v1=False, group='glance')
+        translated = {
+            'name': mock.sentinel.name,
+        }
+        trans_to_mock.return_value = translated
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        # size=0 will trigger force_activate=True
+        image_mock = {'size': 0}
+        client = mock.MagicMock()
+        client.call.return_value = {'id': '123'}
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        with mock.patch.object(service,
+                               '_get_image_create_disk_format_default',
+                               return_value='vdi'):
+            image_meta = service.create(ctx, image_mock)
+        trans_to_mock.assert_called_once_with(image_mock)
+        # Verify that the disk_format and container_format kwargs are passed.
+        create_call_kwargs = client.call.call_args_list[0][1]
+        self.assertEqual('vdi', create_call_kwargs['disk_format'])
+        self.assertEqual('bare', create_call_kwargs['container_format'])
+        trans_from_mock.assert_called_once_with({'id': '123'})
+        self.assertEqual(mock.sentinel.trans_from, image_meta)
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._translate_to_glance')
     def test_create_success_v2_with_location(
             self, trans_to_mock, trans_from_mock):
         self.flags(use_glance_v1=False, group='glance')
@@ -2079,6 +2114,66 @@ class TestCreate(test.NoDBTestCase):
         self.assertRaises(exception.Invalid, service.create, ctx, image_mock)
         trans_to_mock.assert_called_once_with(image_mock)
         self.assertFalse(trans_from_mock.called)
+
+    def _test_get_image_create_disk_format_default(self,
+                                                   test_schema,
+                                                   expected_disk_format):
+        mock_client = mock.MagicMock()
+        mock_client.call.return_value = test_schema
+        service = glance.GlanceImageServiceV2(mock_client)
+        disk_format = service._get_image_create_disk_format_default(
+            mock.sentinel.ctx)
+        self.assertEqual(expected_disk_format, disk_format)
+        mock_client.call.assert_called_once_with(
+            mock.sentinel.ctx, 2, 'get', 'image', controller='schemas')
+
+    def test_get_image_create_disk_format_default_no_schema(self):
+        """Tests that if there is no disk_format schema we default to qcow2.
+        """
+        test_schema = FakeSchema({'properties': {}})
+        self._test_get_image_create_disk_format_default(test_schema, 'qcow2')
+
+    def test_get_image_create_disk_format_default_single_entry(self):
+        """Tests that if there is only a single supported disk_format then
+        we use that.
+        """
+        test_schema = FakeSchema({
+            'properties': {
+                'disk_format': {
+                    'enum': ['iso'],
+                }
+            }
+        })
+        self._test_get_image_create_disk_format_default(test_schema, 'iso')
+
+    def test_get_image_create_disk_format_default_multiple_entries(self):
+        """Tests that if there are multiple supported disk_formats we look for
+        one in a preferred order.
+        """
+        test_schema = FakeSchema({
+            'properties': {
+                'disk_format': {
+                    # For this test we want to skip qcow2 since that's primary.
+                    'enum': ['vhd', 'raw'],
+                }
+            }
+        })
+        self._test_get_image_create_disk_format_default(test_schema, 'vhd')
+
+    def test_get_image_create_disk_format_default_multiple_entries_no_match(
+            self):
+        """Tests that if we can't match a supported disk_format to what we
+        prefer then we take the first supported disk_format in the list.
+        """
+        test_schema = FakeSchema({
+            'properties': {
+                'disk_format': {
+                    # For this test we want to skip qcow2 since that's primary.
+                    'enum': ['aki', 'ari', 'ami'],
+                }
+            }
+        })
+        self._test_get_image_create_disk_format_default(test_schema, 'aki')
 
 
 class TestUpdate(test.NoDBTestCase):
