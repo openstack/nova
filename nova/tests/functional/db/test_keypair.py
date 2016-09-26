@@ -16,16 +16,12 @@ from nova import exception
 from nova import objects
 from nova.objects import keypair
 from nova import test
-from nova.tests import fixtures
 
 
-class KeyPairObjectTestCase(test.NoDBTestCase):
-    USES_DB_SELF = True
+class KeyPairObjectTestCase(test.TestCase):
 
     def setUp(self):
         super(KeyPairObjectTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
     def _api_kp(self, **values):

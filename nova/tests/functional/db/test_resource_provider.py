@@ -42,14 +42,10 @@ DISK_ALLOCATION = dict(
 )
 
 
-class ResourceProviderBaseCase(test.NoDBTestCase):
-
-    USES_DB_SELF = True
+class ResourceProviderBaseCase(test.TestCase):
 
     def setUp(self):
         super(ResourceProviderBaseCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
     def _make_allocation(self, rp_uuid=None):
