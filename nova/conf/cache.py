@@ -23,4 +23,5 @@ def register_opts(conf):
 
 
 def list_opts():
-    return core._opts.list_opts()
+    # The oslo_cache library returns a list of tuples
+    return dict(core._opts.list_opts())
