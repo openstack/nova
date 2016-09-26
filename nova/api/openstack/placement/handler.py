@@ -169,13 +169,17 @@ class PlacementHandler(object):
                     json_formatter=util.json_error_formatter)
         try:
             return dispatch(environ, start_response, self._map)
-        # Trap the small number of nova exceptions that aren't
-        # caught elsewhere and transform them into webob.exc.
-        # These are common exceptions raised when making calls against
-        # nova.objects in the handlers.
+        # Trap the NotFound exceptions raised by the objects used
+        # with the API and transform them into webob.exc.HTTPNotFound.
         except exception.NotFound as exc:
             raise webob.exc.HTTPNotFound(
                 exc, json_formatter=util.json_error_formatter)
+        # Trap the HTTPNotFound that can be raised by dispatch()
+        # when no route is found. The exception is passed through to
+        # the FaultWrap middleware without causing an alarming log
+        # message.
+        except webob.exc.HTTPNotFound:
+            raise
         except Exception as exc:
             LOG.exception(_LE("Uncaught exception"))
             raise

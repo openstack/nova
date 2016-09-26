@@ -97,3 +97,18 @@ class MapperTest(test.NoDBTestCase):
         result = self.mapper.match(environ=environ)
         self.assertEqual(handler.handle_405, result['action'])
         self.assertEqual('GET', result['_methods'])
+
+
+class PlacementLoggingTest(test.NoDBTestCase):
+
+    @mock.patch("nova.api.openstack.placement.handler.LOG")
+    def test_404_no_error_log(self, mocked_log):
+        environ = _environ(path='/hello', method='GET')
+        context_mock = mock.Mock()
+        context_mock.to_policy_values.return_value = {'roles': ['admin']}
+        environ['placement.context'] = context_mock
+        app = handler.PlacementHandler()
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          app, environ, start_response)
+        mocked_log.error.assert_not_called()
+        mocked_log.exception.assert_not_called()
