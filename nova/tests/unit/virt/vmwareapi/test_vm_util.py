@@ -1712,118 +1712,41 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 "get_object_property", vm_ref, "config.hardware.device")
             self.assertEqual(swap_disk, device)
 
-    def test_create_folder_with_empty_vmfolder(self):
-        """Test create_folder when the datacenter vmFolder is empty"""
+    def test_create_folder(self):
+        """Test create_folder when the folder doesn't exist"""
         child_folder = mock.sentinel.child_folder
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method',
-                               side_effect=[None, child_folder]):
+                               side_effect=[child_folder]):
             parent_folder = mock.sentinel.parent_folder
             parent_folder.value = 'parent-ref'
             child_name = 'child_folder'
             ret = vm_util.create_folder(session, parent_folder, child_name)
 
             self.assertEqual(child_folder, ret)
-            expected_calls = [mock.call(vutil, 'get_object_property',
-                                        parent_folder,
-                                       'childEntity'),
-                              mock.call(session.vim, 'CreateFolder',
-                                        parent_folder, name=child_name)]
-            self.assertEqual(expected_calls,
-                             session._call_method.call_args_list)
+            session._call_method.assert_called_once_with(session.vim,
+                                                         'CreateFolder',
+                                                         parent_folder,
+                                                         name=child_name)
 
-    def test_create_folder_not_present(self):
-        """Test create_folder when child not present."""
-        prop_val = mock.Mock()
-        prop_val.ManagedObjectReference = []
-        child_folder = mock.sentinel.child_folder
+    def test_create_folder_duplicate_name(self):
+        """Test create_folder when the folder already exists"""
         session = fake.FakeSession()
-        with mock.patch.object(session, '_call_method',
-                               side_effect=[prop_val, child_folder]):
-            child_name = 'child_folder'
-            parent_folder = mock.sentinel.parent_folder
-            parent_folder.value = 'parent-ref'
-            ret = vm_util.create_folder(session, parent_folder, child_name)
-            self.assertEqual(child_folder, ret)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             parent_folder,
-                                             'childEntity'),
-                                   mock.call(session.vim, 'CreateFolder',
-                                             parent_folder, name=child_name)]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
-
-    def test_create_folder_already_present(self):
-        """Test create_folder when child already present."""
-        parent_folder = mock.sentinel.parent_folder
-        child_name = 'child_folder'
-        prop_val = mock.Mock()
-        child_entity_1 = mock.Mock()
-        child_entity_1._type = 'Folder'
-        child_entity_1_name = 'SomeOtherName'
-        child_entity_2 = mock.Mock()
-        child_entity_2._type = 'Folder'
-        child_entity_2_name = 'AnotherName'
-        child_entity_3 = mock.Mock()
-        child_entity_3._type = 'Folder'
-        child_entity_3_name = child_name
-        prop_val.ManagedObjectReference = [child_entity_1, child_entity_2,
-                                           child_entity_3]
-        session = fake.FakeSession()
-        with mock.patch.object(session, '_call_method',
-                               side_effect=[prop_val,
-                                            child_entity_1_name,
-                                            child_entity_2_name,
-                                            child_entity_3_name]):
-            ret = vm_util.create_folder(session, parent_folder, child_name)
-            self.assertEqual(child_entity_3, ret)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             parent_folder,
-                                             'childEntity'),
-                                   mock.call(vutil, 'get_object_property',
-                                             child_entity_1,
-                                             'name'),
-                                   mock.call(vutil, 'get_object_property',
-                                             child_entity_2,
-                                             'name'),
-                                   mock.call(vutil, 'get_object_property',
-                                             child_entity_3,
-                                             'name')]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
-
-    def test_create_folder_with_duplicate_name(self):
-        parent_folder = mock.sentinel.parent_folder
-        parent_folder.value = 'parent-ref'
-        child_name = 'child_folder'
-
-        prop_val_1 = mock.Mock()
-        prop_val_1.ManagedObjectReference = []
-
-        child_entity_2 = mock.Mock()
-        child_entity_2._type = 'Folder'
-        prop_val_2 = mock.Mock()
-        prop_val_2.ManagedObjectReference = [child_entity_2]
-        child_entity_2_name = child_name
-
         details = {'object': 'folder-1'}
         duplicate_exception = vexc.DuplicateName(details=details)
-
-        session = fake.FakeSession()
         with mock.patch.object(session, '_call_method',
-                               side_effect=[prop_val_1,
-                                            duplicate_exception,
-                                            prop_val_2,
-                                            child_entity_2_name]):
+                               side_effect=[duplicate_exception]):
+            parent_folder = mock.sentinel.parent_folder
+            parent_folder.value = 'parent-ref'
+            child_name = 'child_folder'
             ret = vm_util.create_folder(session, parent_folder, child_name)
-            self.assertEqual(child_entity_2._type, ret._type)
-            expected_invoke_api = [mock.call(vutil, 'get_object_property',
-                                             parent_folder,
-                                             'childEntity'),
-                                   mock.call(session.vim, 'CreateFolder',
-                                             parent_folder, name=child_name)]
-            self.assertEqual(expected_invoke_api,
-                             session._call_method.mock_calls)
+
+            self.assertEqual('Folder', ret._type)
+            self.assertEqual('folder-1', ret.value)
+            session._call_method.assert_called_once_with(session.vim,
+                                                         'CreateFolder',
+                                                         parent_folder,
+                                                         name=child_name)
 
     def test_get_folder_does_not_exist(self):
         session = fake.FakeSession()
