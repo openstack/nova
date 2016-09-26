@@ -17,7 +17,9 @@
     Unit tests for the nova-policy-check CLI interfaces.
 """
 
+import fixtures
 import mock
+from six.moves import StringIO
 
 from nova.cmd import policy_check
 import nova.conf
@@ -27,7 +29,6 @@ from nova import exception
 from nova.policies import base as base_policies
 from nova.policies import instance_actions as ia_policies
 from nova import test
-from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit import policy_fixture
 
@@ -38,7 +39,8 @@ class TestPolicyCheck(test.NoDBTestCase):
 
     def setUp(self):
         super(TestPolicyCheck, self).setUp()
-        self.output = self.useFixture(fixtures.OutputStreamCapture())
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
         self.cmd = policy_check.PolicyCommands()
 
@@ -57,7 +59,7 @@ class TestPolicyCheck(test.NoDBTestCase):
                                                 mock.sentinel.target)
         mock_filter_rules.assert_called_once_with(
             mock_get_context.return_value, '', mock_get_target.return_value)
-        self.assertEqual('\n'.join(fake_rules), self.output.stdout)
+        self.assertEqual('\n'.join(fake_rules) + '\n', self.output.getvalue())
 
     @mock.patch.object(nova_context, 'RequestContext')
     @mock.patch.object(policy_check, 'CONF')
@@ -170,7 +172,7 @@ class TestPolicyCheck(test.NoDBTestCase):
                        return_value="x.x.x")
     def test_main_version(self, mock_version_string):
         self._check_main(category_name='version')
-        self.assertEqual("x.x.x", self.output.stdout)
+        self.assertEqual("x.x.x\n", self.output.getvalue())
 
     @mock.patch.object(policy_check.cmd_common, 'print_bash_completion')
     def test_main_bash_completion(self, mock_print_bash):
@@ -195,4 +197,4 @@ class TestPolicyCheck(test.NoDBTestCase):
         mock_get_action_fn.return_value = (mock_fn, [], {})
 
         self._check_main(expected_return_value=1)
-        self.assertIn("error: ", self.output.stdout)
+        self.assertIn("error: ", self.output.getvalue())

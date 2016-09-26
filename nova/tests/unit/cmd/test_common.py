@@ -17,7 +17,9 @@
     Unit tests for the common functions used by different CLI interfaces.
 """
 
+import fixtures
 import mock
+from six.moves import StringIO
 
 from nova.cmd import common as cmd_common
 from nova.db import api
@@ -128,6 +130,8 @@ class TestCmdCommon(test.NoDBTestCase):
     @mock.patch.object(cmd_common.utils, 'validate_args')
     @mock.patch.object(cmd_common, 'CONF')
     def test_get_action_fn_missing_args(self, mock_CONF, mock_validate_args):
+        # Don't leak the actual print call
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', StringIO()))
         mock_validate_args.return_value = ['foo']
         mock_CONF.category.action_fn = mock.sentinel.action_fn
         mock_CONF.category.action_args = []
