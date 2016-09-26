@@ -24,7 +24,6 @@ import copy
 import functools
 import re
 import string
-import uuid
 
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
@@ -921,7 +920,7 @@ class API(base.Base):
             for i in range(num_instances):
                 # Create a uuid for the instance so we can store the
                 # RequestSpec before the instance is created.
-                instance_uuid = str(uuid.uuid4())
+                instance_uuid = uuidutils.generate_uuid()
                 # Store the RequestSpec that will be used for scheduling.
                 req_spec = objects.RequestSpec.from_components(context,
                         instance_uuid, boot_meta, instance_type,

@@ -33,7 +33,6 @@ import inspect
 import sys
 import time
 import traceback
-import uuid
 
 from cinderclient import exceptions as cinder_exception
 import eventlet.event
@@ -49,6 +48,7 @@ from oslo_service import periodic_task
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
+from oslo_utils import uuidutils
 import six
 from six.moves import range
 
@@ -4441,7 +4441,7 @@ class ComputeManager(manager.Manager):
         """Return connection information for a vnc console."""
         context = context.elevated()
         LOG.debug("Getting vnc console", instance=instance)
-        token = str(uuid.uuid4())
+        token = uuidutils.generate_uuid()
 
         if not CONF.vnc.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
@@ -4478,7 +4478,7 @@ class ComputeManager(manager.Manager):
         """Return connection information for a spice console."""
         context = context.elevated()
         LOG.debug("Getting spice console", instance=instance)
-        token = str(uuid.uuid4())
+        token = uuidutils.generate_uuid()
 
         if not CONF.spice.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
@@ -4514,7 +4514,7 @@ class ComputeManager(manager.Manager):
         """Return connection information for a RDP console."""
         context = context.elevated()
         LOG.debug("Getting RDP console", instance=instance)
-        token = str(uuid.uuid4())
+        token = uuidutils.generate_uuid()
 
         if not CONF.rdp.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
@@ -4548,7 +4548,7 @@ class ComputeManager(manager.Manager):
         """Return connection information for a MKS console."""
         context = context.elevated()
         LOG.debug("Getting MKS console", instance=instance)
-        token = str(uuid.uuid4())
+        token = uuidutils.generate_uuid()
 
         if not CONF.mks.enabled:
             raise exception.ConsoleTypeUnavailable(console_type=console_type)
@@ -4592,7 +4592,7 @@ class ComputeManager(manager.Manager):
 
         context = context.elevated()
 
-        token = str(uuid.uuid4())
+        token = uuidutils.generate_uuid()
         access_url = '%s?token=%s' % (CONF.serial_console.base_url, token)
 
         try:

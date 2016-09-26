@@ -51,7 +51,6 @@ A fake XenAPI SDK.
 import base64
 import pickle
 import random
-import uuid
 from xml.sax import saxutils
 import zlib
 
@@ -59,6 +58,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 
 from nova import exception
@@ -350,8 +350,8 @@ def _create_local_pif(host_ref):
 
 
 def _create_object(table, obj):
-    ref = str(uuid.uuid4())
-    obj['uuid'] = str(uuid.uuid4())
+    ref = uuidutils.generate_uuid()
+    obj['uuid'] = uuidutils.generate_uuid()
     _db_content[table][ref] = obj
     return ref
 
@@ -875,8 +875,8 @@ class SessionBase(object):
             return meth(*full_params)
 
     def _login(self, method, params):
-        self._session = str(uuid.uuid4())
-        _session_info = {'uuid': str(uuid.uuid4()),
+        self._session = uuidutils.generate_uuid()
+        _session_info = {'uuid': uuidutils.generate_uuid(),
                          'this_host': list(_db_content['host'])[0]}
         _db_content['session'][self._session] = _session_info
 
