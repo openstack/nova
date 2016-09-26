@@ -8273,7 +8273,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         dom = fakelibvirt.Domain(drvr._get_connection(), xml, False)
         guest = libvirt_guest.Guest(dom)
-        return_value = drvr._live_migration_copy_disk_paths(context, instance,
+        return_value = drvr._live_migration_copy_disk_paths(self.context,
+                                                            instance,
                                                             guest)
         expected = (['/var/lib/nova/instance/123/disk.root',
                      '/var/lib/nova/instance/123/disk.shared',
@@ -10367,7 +10368,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.useFixture(
             fake_imagebackend.ImageBackendFixture(got_files=gotFiles))
 
-        drvr._create_image(context, instance, disk_info['mapping'])
+        drvr._create_image(self.context, instance, disk_info['mapping'])
         drvr._get_guest_xml(self.context, instance, None,
                             disk_info, image_meta)
 
@@ -10435,7 +10436,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                                 instance,
                                                 image_meta)
-            driver._create_image(context, instance, disk_info['mapping'])
+            driver._create_image(self.context, instance, disk_info['mapping'])
 
         # Assert that kernel and ramdisk were fetched with fetch_raw_image
         # and no size
@@ -10443,7 +10444,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             cache = disk.cache
             if name in ('kernel', 'ramdisk'):
                 cache.assert_called_once_with(
-                    context=context, filename=mock.ANY, image_id=mock.ANY,
+                    context=self.context, filename=mock.ANY, image_id=mock.ANY,
                     fetch_func=fake_libvirt_utils.fetch_raw_image)
 
         wantFiles = [
@@ -10495,9 +10496,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             got_files=gotFiles, imported_files=imported_files, exists=exists))
 
         if test_create_configdrive:
-            drvr._create_configdrive(context, instance)
+            drvr._create_configdrive(self.context, instance)
         else:
-            drvr._create_image(context, instance, disk_info['mapping'],
+            drvr._create_image(self.context, instance, disk_info['mapping'],
                                suffix=suffix)
         drvr._get_guest_xml(self.context, instance, None,
                             disk_info, image_meta)
