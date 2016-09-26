@@ -535,6 +535,14 @@ class _TestRequestSpecObject(object):
                 _test_save_args):
             req_obj.save()
 
+    @mock.patch.object(request_spec.RequestSpec, '_destroy_in_db')
+    def test_destroy(self, destroy_in_db):
+        req_obj = fake_request_spec.fake_spec_obj()
+        req_obj.destroy()
+
+        destroy_in_db.assert_called_once_with(req_obj._context,
+                                              req_obj.instance_uuid)
+
     def test_reset_forced_destinations(self):
         req_obj = fake_request_spec.fake_spec_obj()
         # Making sure the fake object has forced hosts and nodes

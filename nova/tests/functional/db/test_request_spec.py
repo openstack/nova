@@ -72,6 +72,19 @@ class RequestSpecTestCase(test.NoDBTestCase):
         spec = self._create_spec()
         self.assertRaises(exception.ObjectActionError, spec.create)
 
+    def test_destroy(self):
+        spec = self._create_spec()
+        spec.destroy()
+        self.assertRaises(
+            exception.RequestSpecNotFound,
+            self.spec_obj._get_by_instance_uuid_from_db, self.context,
+            self.instance_uuid)
+
+    def test_destroy_not_found(self):
+        spec = self._create_spec()
+        spec.destroy()
+        self.assertRaises(exception.RequestSpecNotFound, spec.destroy)
+
 
 @db.api_context_manager.writer
 def _delete_request_spec(context, instance_uuid):

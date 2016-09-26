@@ -1179,7 +1179,7 @@ object_data = {
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'Quotas': '1.2-1fe4cd50593aaf5d36a6dc5ab3f98fb3',
     'QuotasNoOp': '1.2-e041ddeb7dc8188ca71706f78aad41c1',
-    'RequestSpec': '1.6-c1cb516acdf120d367a42d343ed695b5',
+    'RequestSpec': '1.7-5ff3e9df208bf25f8215f1b87624970d',
     'ResourceProvider': '1.1-7bbcd5ea1c51782692f55489ab08dea6',
     'ResourceProviderList': '1.0-82bd48d8d0f7913bbe7266f3835c81bf',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
