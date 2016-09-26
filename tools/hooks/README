@@ -1,0 +1,4 @@
+These are hooks to be used by the OpenStack infra test system. These scripts
+may be called by certain jobs at important times to do extra testing, setup,
+etc. They are really only relevant within the scope of the OpenStack infra
+system and are not expected to be useful to anyone else.
