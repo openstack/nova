@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    The Hyper-V driver now supports the following quota flavor extra
+    specs, allowing to specify IO limits applied for each of the
+    instance local disks, individually.
+
+    - quota:disk_total_bytes_sec
+    - quota:disk_total_iops_sec - those are normalized IOPS, thus each
+      IO request is accounted for as 1 normalized IO if the size of the
+      request is less than or equal to a predefined base size (8KB).
+
+    Also, the following Cinder front-end QoS specs are now supported
+    for SMB Cinder backends:
+
+    - total_bytes_sec
+    - total_iops_sec - normalized IOPS

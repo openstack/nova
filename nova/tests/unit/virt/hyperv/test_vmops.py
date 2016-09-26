@@ -34,6 +34,7 @@ from nova.tests.unit.virt.hyperv import test_base
 from nova.virt import hardware
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmops
+from nova.virt.hyperv import volumeops
 
 CONF = cfg.CONF
 
@@ -475,6 +476,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
 
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps'
                 '.attach_volumes')
+    @mock.patch.object(vmops.VMOps, '_set_instance_disk_qos_specs')
     @mock.patch.object(vmops.VMOps, '_create_vm_com_port_pipes')
     @mock.patch.object(vmops.VMOps, '_attach_ephemerals')
     @mock.patch.object(vmops.VMOps, '_attach_root_device')
@@ -483,6 +485,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                               mock_attach_root_device,
                               mock_attach_ephemerals,
                               mock_create_pipes,
+                              mock_set_qos_specs,
                               mock_attach_volumes,
                               enable_instance_metrics,
                               vm_gen=constants.VM_GEN_1):
@@ -529,6 +532,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         mock_enable = self._vmops._metricsutils.enable_vm_metrics_collection
         if enable_instance_metrics:
             mock_enable.assert_called_once_with(mock_instance.name)
+        mock_set_qos_specs.assert_called_once_with(mock_instance)
 
     def test_create_instance(self):
         self._test_create_instance(enable_instance_metrics=True)
@@ -1444,3 +1448,64 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self.assertRaises(exception.InstanceNotRescuable,
                           self._vmops.unrescue_instance,
                           mock_instance)
+
+    @mock.patch.object(volumeops.VolumeOps, 'bytes_per_sec_to_iops')
+    @mock.patch.object(vmops.VMOps, '_get_scoped_flavor_extra_specs')
+    @mock.patch.object(vmops.VMOps, '_get_instance_local_disks')
+    def test_set_instance_disk_qos_specs(self, mock_get_local_disks,
+                                         mock_get_scoped_specs,
+                                         mock_bytes_per_sec_to_iops):
+        fake_total_bytes_sec = 8
+        fake_total_iops_sec = 1
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_local_disks = [mock.sentinel.root_vhd_path,
+                            mock.sentinel.eph_vhd_path]
+
+        mock_get_local_disks.return_value = mock_local_disks
+        mock_set_qos_specs = self._vmops._vmutils.set_disk_qos_specs
+        mock_get_scoped_specs.return_value = dict(
+            disk_total_bytes_sec=fake_total_bytes_sec)
+        mock_bytes_per_sec_to_iops.return_value = fake_total_iops_sec
+
+        self._vmops._set_instance_disk_qos_specs(mock_instance)
+
+        mock_bytes_per_sec_to_iops.assert_called_once_with(
+            fake_total_bytes_sec)
+
+        mock_get_local_disks.assert_called_once_with(mock_instance.name)
+        expected_calls = [mock.call(disk_path, fake_total_iops_sec)
+                          for disk_path in mock_local_disks]
+        mock_set_qos_specs.assert_has_calls(expected_calls)
+
+    def test_get_instance_local_disks(self):
+        fake_instance_dir = 'fake_instance_dir'
+        fake_local_disks = [os.path.join(fake_instance_dir, disk_name)
+                            for disk_name in ['root.vhd', 'configdrive.iso']]
+        fake_instance_disks = ['fake_remote_disk'] + fake_local_disks
+
+        mock_get_storage_paths = self._vmops._vmutils.get_vm_storage_paths
+        mock_get_storage_paths.return_value = [fake_instance_disks, []]
+        mock_get_instance_dir = self._vmops._pathutils.get_instance_dir
+        mock_get_instance_dir.return_value = fake_instance_dir
+
+        ret_val = self._vmops._get_instance_local_disks(
+            mock.sentinel.instance_name)
+
+        self.assertEqual(fake_local_disks, ret_val)
+
+    def test_get_scoped_flavor_extra_specs(self):
+        # The flavor extra spect dict contains only string values.
+        fake_total_bytes_sec = '8'
+
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_instance.flavor.extra_specs = {
+            'spec_key': 'spec_value',
+            'quota:total_bytes_sec': fake_total_bytes_sec}
+
+        ret_val = self._vmops._get_scoped_flavor_extra_specs(
+            mock_instance, scope='quota')
+
+        expected_specs = {
+            'total_bytes_sec': fake_total_bytes_sec
+        }
+        self.assertEqual(expected_specs, ret_val)
