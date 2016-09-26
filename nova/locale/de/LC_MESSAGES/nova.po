@@ -13,13 +13,13 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev2\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev11\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-09-20 00:38+0000\n"
+"POT-Creation-Date: 2016-09-23 17:04+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-09-16 03:49+0000\n"
+"PO-Revision-Date: 2016-09-25 11:17+0000\n"
 "Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -349,6 +349,9 @@ msgstr "Versuchte Überschreibung eines vorhandenen Wertes."
 msgid "Attribute not supported: %(attr)s"
 msgstr "Attribut nicht unterstützt: %(attr)s"
 
+msgid "Bad Request - Invalid Parameters"
+msgstr "Fehlerhafte Anfrage - Ungültige Parameter"
+
 #, python-format
 msgid "Bad mac for to_global_ipv6: %s"
 msgstr "Falsche MAC-Adresse für 'to_global_ipv6': %s"
@@ -500,6 +503,33 @@ msgstr "CPU-Nummer %(cpuset)s ist keinem Knoten zugeordnet"
 #, python-format
 msgid "CPU pinning is not supported by the host: %(reason)s"
 msgstr "CPU pinning wird nicht unterstützt vom Host: %(reason)s"
+
+#, python-format
+msgid "CPU set to pin %(requested)s must be a subset of free CPU set %(free)s"
+msgstr ""
+"CPU Set zu pin %(requested)s muss eine Teilmenge freier CPU Sets %(free)s "
+"sein"
+
+#, python-format
+msgid ""
+"CPU set to pin %(requested)s must be a subset of known CPU set %(cpuset)s"
+msgstr ""
+"CPU Set zu pin %(requested)s muss eine Teilmenge bekannter CPU Sets "
+"%(cpuset)s sein"
+
+#, python-format
+msgid ""
+"CPU set to unpin %(requested)s must be a subset of known CPU set %(cpuset)s"
+msgstr ""
+"CPU Set zu unpin %(requested)s muss eine Teilmenge bekannter CPU Sets "
+"%(cpuset)s sein"
+
+#, python-format
+msgid ""
+"CPU set to unpin %(requested)s must be a subset of pinned CPU set %(pinned)s"
+msgstr ""
+"CPU Set zu unpin %(requested)s muss eine Teilmenge der bereits gepinnten CPU "
+"Sets %(pinned)s sein"
 
 msgid "Can not add access to a public flavor."
 msgstr "Kann keinen Zugriff auf eine öffentliche Version herstellen. "
@@ -957,6 +987,10 @@ msgid "Device '%(device)s' not found."
 msgstr "Das Gerät '%(device)s' wurde nicht gefunden."
 
 #, python-format
+msgid "Device detach failed for %(device)s: %(reason)s"
+msgstr "Abhängen des Geräts fehlgeschlagen für %(device)s: %(reason)s"
+
+#, python-format
 msgid ""
 "Device id %(id)s specified is not supported by hypervisor version %(version)s"
 msgstr ""
@@ -1327,6 +1361,10 @@ msgstr "Instanz konnte nicht beendet werden: %(reason)s"
 #, python-format
 msgid "Failed to unplug vif %s"
 msgstr "Vif %s konnte nicht entfernt werden."
+
+#, python-format
+msgid "Failed to unplug virtual interface: %(reason)s"
+msgstr "Virtuelle Schnittstelle konnte nicht entfernt werden: %(reason)s"
 
 msgid "Failure prepping block device."
 msgstr "Fehler beim Vorbereiten des Block-Gerätes."
@@ -4203,6 +4241,10 @@ msgid "Unknown argument: port"
 msgstr "Unbekanntes Argument: Port"
 
 #, python-format
+msgid "Unknown auth type: %s"
+msgstr "Unbekannter Authentifizierungstyp: %s"
+
+#, python-format
 msgid "Unknown chain: %r"
 msgstr "Unbekannte Kette: %r"
 
@@ -4341,6 +4383,10 @@ msgstr ""
 #, python-format
 msgid "Value must be >= 0 for field %s"
 msgstr "Wert muß >= 0 sein für Feld %s"
+
+#, python-format
+msgid "Value must match %s"
+msgstr "Wert muss %s entsprechen"
 
 msgid "Value required for 'scality_sofs_config'"
 msgstr "Wert für 'scality_sofs_config' erforderlich"
