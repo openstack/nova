@@ -216,11 +216,11 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
                           self.wh.new_websocket_client)
         check_token.assert_called_with(mock.ANY, token="123-456-789")
 
-    @mock.patch('sys.version_info')
+    @mock.patch.object(websocketproxy, 'sys')
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
     def test_new_websocket_client_py273_good_scheme(
-            self, check_token, version_info):
-        version_info.return_value = (2, 7, 3)
+            self, check_token, mock_sys):
+        mock_sys.version_info.return_value = (2, 7, 3)
         check_token.return_value = {
             'host': 'node1',
             'port': '10000',
@@ -237,11 +237,11 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
 
-    @mock.patch('sys.version_info')
+    @mock.patch.object(websocketproxy, 'sys')
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')
     def test_new_websocket_client_py273_special_scheme(
-            self, check_token, version_info):
-        version_info.return_value = (2, 7, 3)
+            self, check_token, mock_sys):
+        mock_sys.version_info = (2, 7, 3)
         check_token.return_value = {
             'host': 'node1',
             'port': '10000',
@@ -258,8 +258,8 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
     def test_address_string_doesnt_do_reverse_dns_lookup(self, getfqdn):
         request_mock = mock.MagicMock()
         request_mock.makefile().readline.side_effect = [
-            'GET /vnc.html?token=123-456-789 HTTP/1.1\r\n',
-            ''
+            b'GET /vnc.html?token=123-456-789 HTTP/1.1\r\n',
+            b''
         ]
         server_mock = mock.MagicMock()
         client_address = ('8.8.8.8', 54321)

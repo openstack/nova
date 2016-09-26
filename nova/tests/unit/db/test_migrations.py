@@ -168,13 +168,13 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             272,  # NOOP migration due to revert
         ]
 
-        havana_placeholders = range(217, 227)
-        icehouse_placeholders = range(235, 244)
-        juno_placeholders = range(255, 265)
-        kilo_placeholders = range(281, 291)
-        liberty_placeholders = range(303, 313)
-        mitaka_placeholders = range(320, 330)
-        newton_placeholders = range(335, 345)
+        havana_placeholders = list(range(217, 227))
+        icehouse_placeholders = list(range(235, 244))
+        juno_placeholders = list(range(255, 265))
+        kilo_placeholders = list(range(281, 291))
+        liberty_placeholders = list(range(303, 313))
+        mitaka_placeholders = list(range(320, 330))
+        newton_placeholders = list(range(335, 345))
 
         return (special +
                 havana_placeholders +

@@ -35,11 +35,11 @@ class Test(test.NoDBTestCase):
 
             def __call__(self, environ, start_response):
                 start_response("200", [("X-Test", "checking")])
-                return ['Test result']
+                return [b'Test result']
 
         application = wsgi.Debug(Application())
         result = webob.Request.blank('/').get_response(application)
-        self.assertEqual(result.body, "Test result")
+        self.assertEqual(result.body, b"Test result")
 
     def test_router(self):
 

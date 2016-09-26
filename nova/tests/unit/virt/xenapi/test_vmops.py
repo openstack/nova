@@ -256,7 +256,8 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
         self.vmops._get_last_dom_id(instance, check_rescue=True).AndReturn(42)
         self.mox.ReplayAll()
 
-        self.assertEqual("dom_id: 42", self.vmops.get_console_output(instance))
+        self.assertEqual(b"dom_id: 42",
+                         self.vmops.get_console_output(instance))
 
     def test_get_console_output_not_available(self):
         self.mox.StubOutWithMock(self.vmops, '_get_last_dom_id')

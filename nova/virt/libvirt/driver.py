@@ -2756,7 +2756,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # Check is the write allowed with 512 byte alignment
             align_size = 512
             m = mmap.mmap(-1, align_size)
-            m.write(r"x" * align_size)
+            m.write(b"x" * align_size)
             os.write(fd, m)
             LOG.debug("Path '%(path)s' supports direct I/O",
                       {'path': dirpath})

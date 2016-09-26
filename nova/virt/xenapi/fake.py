@@ -776,7 +776,8 @@ class SessionBase(object):
         dom_id = args["dom_id"]
         if dom_id == 0:
             raise Failure('Guest does not have a console')
-        return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
+        return base64.b64encode(
+            zlib.compress(("dom_id: %s" % dom_id).encode('utf-8')))
 
     def _plugin_nova_plugin_version_get_version(self, method, args):
         return pickle.dumps("1.8")
