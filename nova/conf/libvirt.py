@@ -647,13 +647,18 @@ libvirt_volume_scality_opts = [
 libvirt_volume_smbfs_opts = [
     cfg.StrOpt('smbfs_mount_point_base',
                default=paths.state_path_def('mnt'),
-               help='Directory where the SMBFS shares are mounted on the '
-                    'compute node'),
+               help="""
+Directory where the SMBFS shares are mounted on the compute node.
+"""),
     cfg.StrOpt('smbfs_mount_options',
                default='',
-               help='Mount options passed to the SMBFS client. See '
-                    'mount.cifs man page for details. Note that the '
-                    'libvirt-qemu uid and gid must be specified.'),
+               help="""
+Mount options passed to the SMBFS client.
+
+Provide SMBFS options as a single string containing all parameters.
+See mount.cifs man page for  details. Note that the libvirt-qemu ``uid``
+and ``gid`` must be specified.
+"""),
 ]
 
 libvirt_remotefs_opts = [
