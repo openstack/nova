@@ -78,8 +78,8 @@ class TestMigrationUtilsSQLite(test_base.DbTestCase):
         column = test_table.c.id
         query_delete = sql.select([column],
                                   test_table.c.id < 5).order_by(column)
-        delete_statement = utils.DeleteFromSelect(test_table,
-                                                  query_delete, column)
+        delete_statement = db.DeleteFromSelect(test_table,
+                                               query_delete, column)
         result_delete = conn.execute(delete_statement)
         # Verify we delete 4 rows
         self.assertEqual(result_delete.rowcount, 4)

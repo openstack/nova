@@ -38,6 +38,7 @@ from six.moves import range
 import sqlalchemy as sa
 from sqlalchemy import and_
 from sqlalchemy.exc import NoSuchTableError
+from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.orm import aliased
@@ -50,6 +51,7 @@ from sqlalchemy.schema import Table
 from sqlalchemy import sql
 from sqlalchemy.sql.expression import asc
 from sqlalchemy.sql.expression import desc
+from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import false
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
@@ -415,6 +417,23 @@ class InequalityCondition(object):
     def clauses(self, field):
         return [field != value for value in self.values]
 
+
+class DeleteFromSelect(UpdateBase):
+    def __init__(self, table, select, column):
+        self.table = table
+        self.select = select
+        self.column = column
+
+
+# NOTE(guochbo): some versions of MySQL doesn't yet support subquery with
+# 'LIMIT & IN/ALL/ANY/SOME' We need work around this with nesting select .
+@compiles(DeleteFromSelect)
+def visit_delete_from_select(element, compiler, **kw):
+    return "DELETE FROM %s WHERE %s in (SELECT T1.%s FROM (%s) as T1)" % (
+        compiler.process(element.table, asfrom=True),
+        compiler.process(element.column),
+        element.column.name,
+        compiler.process(element.select))
 
 ###################
 
@@ -6284,10 +6303,6 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
     Logic is: if I have a column called instance_uuid, and that instance
     is deleted, then I can be deleted.
     """
-    # NOTE(guochbo): There is a circular import, nova.db.sqlalchemy.utils
-    # imports nova.db.sqlalchemy.api.
-    from nova.db.sqlalchemy import utils as db_utils
-
     query_insert = shadow_table.insert(inline=True).\
         from_select(
             [c.name for c in table.c],
@@ -6302,8 +6317,8 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
         and_(instances.c.deleted != instances.c.deleted.default.arg,
              instances.c.uuid == table.c.instance_uuid)).\
         order_by(table.c.id).limit(max_rows)
-    delete_statement = db_utils.DeleteFromSelect(table, query_delete,
-                                                 table.c.id)
+    delete_statement = DeleteFromSelect(table, query_delete,
+                                        table.c.id)
 
     try:
         with conn.begin():
@@ -6323,10 +6338,6 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
 
     :returns: number of rows archived
     """
-    # NOTE(guochbo): There is a circular import, nova.db.sqlalchemy.utils
-    # imports nova.db.sqlalchemy.api.
-    from nova.db.sqlalchemy import utils as db_utils
-
     engine = get_engine()
     conn = engine.connect()
     metadata = MetaData()
@@ -6396,7 +6407,7 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
                           deleted_column != deleted_column.default.arg).\
                           order_by(column).limit(max_rows)
 
-    delete_statement = db_utils.DeleteFromSelect(table, query_delete, column)
+    delete_statement = DeleteFromSelect(table, query_delete, column)
     try:
         # Group the insert and delete in a transaction.
         with conn.begin():

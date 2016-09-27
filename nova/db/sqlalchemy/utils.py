@@ -17,9 +17,7 @@ from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as oslodbutils
 from oslo_log import log as logging
 from sqlalchemy.exc import OperationalError
-from sqlalchemy.ext.compiler import compiles
 from sqlalchemy import MetaData
-from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy import Table
 from sqlalchemy.types import NullType
 
@@ -29,24 +27,6 @@ from nova.i18n import _, _LE
 
 
 LOG = logging.getLogger(__name__)
-
-
-class DeleteFromSelect(UpdateBase):
-    def __init__(self, table, select, column):
-        self.table = table
-        self.select = select
-        self.column = column
-
-
-# NOTE(guochbo): some versions of MySQL doesn't yet support subquery with
-# 'LIMIT & IN/ALL/ANY/SOME' We need work around this with nesting select .
-@compiles(DeleteFromSelect)
-def visit_delete_from_select(element, compiler, **kw):
-    return "DELETE FROM %s WHERE %s in (SELECT T1.%s FROM (%s) as T1)" % (
-        compiler.process(element.table, asfrom=True),
-        compiler.process(element.column),
-        element.column.name,
-        compiler.process(element.select))
 
 
 def check_shadow_table(migrate_engine, table_name):
