@@ -65,6 +65,7 @@ HOST_POWER_ACTION_SHUTDOWN = "shutdown"
 HOST_POWER_ACTION_REBOOT = "reboot"
 HOST_POWER_ACTION_STARTUP = "startup"
 
+FLAVOR_SPEC_SECURE_BOOT = "os:secure_boot"
 IMAGE_PROP_VM_GEN_1 = "hyperv-gen1"
 IMAGE_PROP_VM_GEN_2 = "hyperv-gen2"
 
