@@ -13,13 +13,13 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 14.0.0.0rc2.dev11\n"
+"Project-Id-Version: nova 14.0.0.0rc2.dev14\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2016-09-23 17:04+0000\n"
+"POT-Creation-Date: 2016-09-26 20:40+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2016-09-25 11:17+0000\n"
+"PO-Revision-Date: 2016-09-26 12:51+0000\n"
 "Last-Translator: Andreas Jaeger <jaegerandi@gmail.com>\n"
 "Language: de\n"
 "Language-Team: German\n"
@@ -2049,6 +2049,9 @@ msgstr "Ungültiger Konsolentyp %(console_type)s"
 msgid "Invalid content type %(content_type)s."
 msgstr "Ungültiger Inhaltstyp %(content_type)s."
 
+msgid "Invalid data supplied to HashRing.get_hosts."
+msgstr "Ungültige Daten für HashRing.get_hosts angegeben."
+
 #, python-format
 msgid "Invalid datetime string: %(reason)s"
 msgstr "Falsche Datumszeit-Zeichenkette: %(reason)s"
@@ -2083,6 +2086,9 @@ msgstr "Ungültige feste IP-Adresse %s in der Anforderung"
 #, python-format
 msgid "Invalid floating IP %s in request"
 msgstr "Ungültige dynamische IP-Adresse %s in Anforderung"
+
+msgid "Invalid hosts supplied when building HashRing."
+msgstr "Ungültige Hosts beim Erstellen von HashRing angegeben."
 
 #, python-format
 msgid "Invalid id: %(instance_id)s (expecting \"i-...\")"
@@ -2280,6 +2286,15 @@ msgid ""
 msgstr ""
 "Ironic-Knoten %(id)s konnte nicht überprüft werden. (Implementieren: "
 "%(deploy)s, Netzstrom: '%(power)s')"
+
+#, python-format
+msgid ""
+"Ironic node: %(id)s virtual to physical interface count  mismatch (Vif "
+"count: %(vif_count)d, Pif count: %(pif_count)d)"
+msgstr ""
+"Ironic-Knoten: %(id)s - Abweichung der Anzahl für virtuelle und physische "
+"Schnittstelle (Anzahl für virtuelle Schnittstelle: %(vif_count)d, Anzahl für "
+"physische Schnittstelle: %(pif_count)d)"
 
 msgid "Is the appropriate service running?"
 msgstr "Ist der entsprechende Dienst aktiv?"
@@ -4483,6 +4498,12 @@ msgid ""
 msgstr ""
 "Datenträger legt Blockgröße fest, aber der aktuelle libvirt-Hypervisor %s "
 "unterstützt keine angepassten Blockgrößen"
+
+#, python-format
+msgid "Volume sets discard option, qemu %(qemu)s or later is required."
+msgstr ""
+"Datenträger setzt Option zum Verwerfen, qemu ab Version %(qemu)s ist "
+"erforderlich."
 
 #, python-format
 msgid "WARNING: fixed IP %s allocated to missing instance"
