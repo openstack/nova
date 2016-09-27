@@ -462,6 +462,10 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             build_requests.c.id == 2020).execute().first()
         self.assertEqual('fake_BDM', fake_build_req.block_device_mappings)
 
+    def _check_026(self, engine, data):
+        self.assertColumnExists(engine, 'resource_classes', 'id')
+        self.assertColumnExists(engine, 'resource_classes', 'name')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
