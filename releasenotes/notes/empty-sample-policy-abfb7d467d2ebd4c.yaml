@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    The API policy defaults are now defined in code like configuration options.
+    Because of this, the sample policy.json file that is shipped with Nova is
+    empty and should only be necessary if you want to override the API policy
+    from the defaults in the code. To generate the policy file you can run::
+
+      oslopolicy-sample-generator --config-file=etc/nova/nova-policy-generator.conf
