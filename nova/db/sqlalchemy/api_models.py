@@ -293,6 +293,10 @@ class ResourceProvider(API_BASE):
         schema.UniqueConstraint('uuid',
             name='uniq_resource_providers0uuid'),
         Index('resource_providers_name_idx', 'name'),
+        Index('resource_providers_root_provider_id_idx',
+              'root_provider_id'),
+        Index('resource_providers_parent_provider_id_idx',
+              'parent_provider_id'),
         schema.UniqueConstraint('name',
             name='uniq_resource_providers0name')
     )
@@ -301,6 +305,13 @@ class ResourceProvider(API_BASE):
     uuid = Column(String(36), nullable=False)
     name = Column(Unicode(200), nullable=True)
     generation = Column(Integer, default=0)
+    # Represents the root of the "tree" that the provider belongs to
+    root_provider_id = Column(Integer, ForeignKey('resource_providers.id'),
+        nullable=True)
+    # The immediate parent provider of this provider, or NULL if there is no
+    # parent. If parent_provider_id == NULL then root_provider_id == id
+    parent_provider_id = Column(Integer, ForeignKey('resource_providers.id'),
+        nullable=True)
 
 
 class Inventory(API_BASE):

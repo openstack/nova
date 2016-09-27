@@ -88,6 +88,30 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertRaises(exception.ObjectActionError,
                           resource_provider.create)
 
+    def test_create_unknown_parent_provider(self):
+        """Test that if we provide a parent_provider_uuid value that points to
+        a resource provider that doesn't exist, that we get an
+        ObjectActionError.
+        """
+        rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            name='rp1',
+            uuid=uuidsentinel.rp1,
+            parent_provider_uuid=uuidsentinel.noexists)
+        exc = self.assertRaises(exception.ObjectActionError, rp.create)
+        self.assertIn('parent provider UUID does not exist', str(exc))
+
+    def test_create_with_parent_provider_uuid_same_as_uuid_fail(self):
+        """Setting a parent provider UUID to one's own UUID makes no sense, so
+        check we don't support it.
+        """
+        cn1 = rp_obj.ResourceProvider(
+            context=self.ctx, uuid=uuidsentinel.cn1, name='cn1',
+            parent_provider_uuid=uuidsentinel.cn1)
+
+        exc = self.assertRaises(exception.ObjectActionError, cn1.create)
+        self.assertIn('parent provider UUID cannot be same as UUID', str(exc))
+
     def test_create_resource_provider(self):
         created_resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
@@ -110,6 +134,97 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(0, created_resource_provider.generation)
         self.assertEqual(0, retrieved_resource_provider.generation)
 
+    def test_root_provider_population(self):
+        """Simulate an old resource provider record in the database that has no
+        root_provider_uuid set and ensure that when grabbing the resource
+        provider object, the root_provider_uuid field in the table is set to
+        the provider's UUID.
+        """
+        rp_tbl = rp_obj._RP_TBL
+        conn = self.api_db.get_engine().connect()
+
+        # First, set up a record for an "old-style" resource provider with no
+        # root provider UUID.
+        ins_stmt = rp_tbl.insert().values(
+            id=1,
+            uuid=uuidsentinel.rp1,
+            name='rp-1',
+            root_provider_id=None,
+            parent_provider_id=None,
+            generation=42,
+        )
+        conn.execute(ins_stmt)
+
+        rp = rp_obj.ResourceProvider.get_by_uuid(self.ctx, uuidsentinel.rp1)
+
+        # The ResourceProvider._from_db_object() method should have performed
+        # an online data migration, populating the root_provider_id field
+        # with the value of the id field. Let's check it happened.
+        sel_stmt = sa.select([rp_tbl.c.root_provider_id]).where(
+            rp_tbl.c.id == 1)
+        res = conn.execute(sel_stmt).fetchall()
+        self.assertEqual(1, res[0][0])
+        # Make sure the object root_provider_uuid is set on load
+        self.assertEqual(rp.root_provider_uuid, uuidsentinel.rp1)
+
+    def test_inherit_root_from_parent(self):
+        """Tests that if we update an existing provider's parent provider UUID,
+        that the root provider UUID of the updated provider is automatically
+        set to the parent provider's root provider UUID.
+        """
+        rp1 = rp_obj.ResourceProvider(
+            context=self.ctx,
+            name='rp1',
+            uuid=uuidsentinel.rp1,
+        )
+        rp1.create()
+
+        # Test the root was auto-set to the create provider's UUID
+        self.assertEqual(uuidsentinel.rp1, rp1.root_provider_uuid)
+
+        # Create a new provider that we will make the parent of rp1
+        parent_rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            name='parent',
+            uuid=uuidsentinel.parent,
+        )
+        parent_rp.create()
+        self.assertEqual(uuidsentinel.parent, parent_rp.root_provider_uuid)
+
+        # Now change rp1 to be a child of parent and check rp1's root is
+        # changed to that of the parent.
+        rp1.parent_provider_uuid = parent_rp.uuid
+        rp1.save()
+
+        self.assertEqual(uuidsentinel.parent, rp1.root_provider_uuid)
+
+    def test_save_root_provider_failed(self):
+        """Test that if we provide a root_provider_uuid value we get an
+        ObjectActionError if we save the object.
+        """
+        rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            name='rp1',
+            uuid=uuidsentinel.rp1,
+        )
+        rp.create()
+        rp.root_provider_uuid = uuidsentinel.noexists
+        self.assertRaises(exception.ObjectActionError, rp.save)
+
+    def test_save_unknown_parent_provider(self):
+        """Test that if we provide a parent_provider_uuid value that points to
+        a resource provider that doesn't exist, that we get an
+        ObjectActionError if we save the object.
+        """
+        rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            name='rp1',
+            uuid=uuidsentinel.rp1,
+        )
+        rp.create()
+        rp.parent_provider_uuid = uuidsentinel.noexists
+        self.assertRaises(exception.ObjectActionError, rp.save)
+
     def test_save_resource_provider(self):
         created_resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
@@ -124,6 +239,118 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             uuidsentinel.fake_resource_provider
         )
         self.assertEqual('new-name', retrieved_resource_provider.name)
+
+    def test_save_reparenting_fail(self):
+        """Tests that we prevent a resource provider's parent provider UUID
+        from being changed from a non-NULL value to another non-NULL value.
+        """
+        cn1 = rp_obj.ResourceProvider(
+            context=self.ctx, uuid=uuidsentinel.cn1, name='cn1')
+        cn1.create()
+
+        cn2 = rp_obj.ResourceProvider(
+            context=self.ctx, uuid=uuidsentinel.cn2, name='cn2')
+        cn2.create()
+
+        cn3 = rp_obj.ResourceProvider(
+            context=self.ctx, uuid=uuidsentinel.cn3, name='cn3')
+        cn3.create()
+
+        # First, make sure we can set the parent for a provider that does not
+        # have a parent currently
+        cn1.parent_provider_uuid = uuidsentinel.cn2
+        cn1.save()
+
+        # Now make sure we can't change the parent provider
+        cn1.parent_provider_uuid = uuidsentinel.cn3
+        exc = self.assertRaises(exception.ObjectActionError, cn1.save)
+        self.assertIn('re-parenting a provider is not currently', str(exc))
+
+        # Also ensure that we can't "un-parent" a provider
+        cn1.parent_provider_uuid = None
+        exc = self.assertRaises(exception.ObjectActionError, cn1.save)
+        self.assertIn('un-parenting a provider is not currently', str(exc))
+
+    def test_nested_providers(self):
+        """Create a hierarchy of resource providers and run through a series of
+        tests that ensure one cannot delete a resource provider that has no
+        direct allocations but its child providers do have allocations.
+        """
+        root_rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.root_rp,
+            name='root-rp',
+        )
+        root_rp.create()
+
+        child_rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.child_rp,
+            name='child-rp',
+            parent_provider_uuid=uuidsentinel.root_rp,
+        )
+        child_rp.create()
+
+        grandchild_rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.grandchild_rp,
+            name='grandchild-rp',
+            parent_provider_uuid=uuidsentinel.child_rp,
+        )
+        grandchild_rp.create()
+
+        # Verify that the root_provider_uuid of both the child and the
+        # grandchild is the UUID of the grandparent
+        self.assertEqual(root_rp.uuid, child_rp.root_provider_uuid)
+        self.assertEqual(root_rp.uuid, grandchild_rp.root_provider_uuid)
+
+        # Create some inventory in the grandchild, allocate some consumers to
+        # the grandchild and then attempt to delete the root provider and child
+        # provider, both of which should fail.
+        invs = [
+            rp_obj.Inventory(
+                resource_provider=grandchild_rp,
+                resource_class=fields.ResourceClass.VCPU,
+                total=1,
+                reserved=0,
+                allocation_ratio=1.0,
+                min_unit=1,
+                max_unit=1,
+                step_size=1,
+            ),
+        ]
+        inv_list = rp_obj.InventoryList(
+            resource_provider=grandchild_rp,
+            objects=invs
+        )
+        grandchild_rp.set_inventory(inv_list)
+
+        allocs = [
+            rp_obj.Allocation(
+                resource_provider=grandchild_rp,
+                resource_class=fields.ResourceClass.VCPU,
+                consumer_id=uuidsentinel.consumer,
+                used=1,
+            ),
+        ]
+        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
+        alloc_list.create_all()
+
+        self.assertRaises(exception.CannotDeleteParentResourceProvider,
+                          root_rp.destroy)
+        self.assertRaises(exception.CannotDeleteParentResourceProvider,
+                          child_rp.destroy)
+
+        # Cannot delete provider if it has allocations
+        self.assertRaises(exception.ResourceProviderInUse,
+                          grandchild_rp.destroy)
+
+        # Now remove the allocations against the child and check that we can
+        # now delete the child provider
+        alloc_list.delete_all()
+        grandchild_rp.destroy()
+        child_rp.destroy()
+        root_rp.destroy()
 
     def test_destroy_resource_provider(self):
         created_resource_provider = rp_obj.ResourceProvider(
