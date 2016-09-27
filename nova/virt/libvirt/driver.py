@@ -204,8 +204,8 @@ MIN_QEMU_VERSION = (1, 5, 3)
 # MIN_LIBVIRT_VERSION can be updated to match this after
 # NEXT_MIN_LIBVIRT_VERSION  has been at a higher value for
 # one cycle
-NEXT_MIN_LIBVIRT_VERSION = (1, 2, 1)
-NEXT_MIN_QEMU_VERSION = (1, 5, 3)
+NEXT_MIN_LIBVIRT_VERSION = (1, 2, 9)
+NEXT_MIN_QEMU_VERSION = (2, 1, 0)
 
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
