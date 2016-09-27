@@ -1,0 +1,7 @@
+---
+upgrade:
+  - The newton release has a lot of online migrations that must be
+    performed before you will be able to upgrade to ocata. Please take
+    extra note of this fact and budget time to run these online
+    migrations before you plan to upgrade to ocata. These migrations
+    can be run without downtime with `nova-manage db online_data_migrations`.
