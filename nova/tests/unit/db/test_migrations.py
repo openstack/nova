@@ -95,7 +95,7 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
 
         super(NovaMigrationsCheckers, self).setUp()
         # NOTE(rpodolyaka): we need to repeat the functionality of the base
-        # test case a bit here as this gets overriden by oslotest base test
+        # test case a bit here as this gets overridden by oslotest base test
         # case and nova base test case cleanup must be the last one (as it
         # deletes attributes of test case instances)
         self.useFixture(nova_fixtures.Timeout(
