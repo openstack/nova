@@ -4494,6 +4494,11 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 LOG.exception(_LE('Instance failed to spawn'),
                               instance=instance)
+                # FIXME: Umm, shouldn't we be rolling back port bindings too?
+                self._terminate_volume_connections(context, instance, bdms)
+                # The reverts_task_state decorator on unshelve_instance will
+                # eventually save these updates.
+                self._nil_out_instance_obj_host_and_node(instance)
 
         if image:
             instance.image_ref = shelved_image_ref
