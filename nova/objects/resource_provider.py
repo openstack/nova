@@ -1411,7 +1411,8 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         #      'resources': {
         #          'VCPU': 1,
         #          'MEMORY_MB': 1024
-        #      }
+        #      },
+        #      'in_tree': <uuid>,
         #  }
         if not filters:
             filters = {}
@@ -1454,6 +1455,26 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             query = query.where(rp.c.name == name)
         if uuid:
             query = query.where(rp.c.uuid == uuid)
+        if 'in_tree' in filters:
+            # The 'in_tree' parameter is the UUID of a resource provider that
+            # the caller wants to limit the returned providers to only those
+            # within its "provider tree". So, we look up the resource provider
+            # having the UUID specified by the 'in_tree' parameter and grab the
+            # root_provider_id value of that record. We can then ask for only
+            # those resource providers having a root_provider_id of that value.
+            tree_uuid = filters.pop('in_tree')
+            tree_ids = _provider_ids_from_uuid(context, tree_uuid)
+            if tree_ids is None:
+                # List operations should simply return an empty list when a
+                # non-existing resource provider UUID is given.
+                return []
+            root_id = tree_ids.root_id
+            # TODO(jaypipes): Remove this OR condition when root_provider_id
+            # is not nullable in the database and all resource provider records
+            # have populated the root provider ID.
+            where_cond = sa.or_(rp.c.id == root_id,
+                rp.c.root_provider_id == root_id)
+            query = query.where(where_cond)
 
         # If 'member_of' has values join with the PlacementAggregates to
         # get those resource providers that are associated with any of the
@@ -1561,10 +1582,12 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
 
         :param context: `nova.context.RequestContext` that may be used to grab
                         a DB connection.
-        :param filters: Can be `name`, `uuid`, `member_of` or `resources` where
-                        `member_of` is a list of aggregate uuids and
-                        `resources` is a dict of amounts keyed by resource
-                        classes.
+        :param filters: Can be `name`, `uuid`, `member_of`, `in_tree` or
+                        `resources` where `member_of` is a list of aggregate
+                        uuids, `in_tree` is a UUID of a resource provider that
+                        we can use to find the root provider ID of the tree of
+                        providers to filter results by and `resources` is a
+                        dict of amounts keyed by resource classes.
         :type filters: dict
         """
         _ensure_rc_cache(context)
