@@ -272,7 +272,8 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
             mock_instance.uuid, test.MatchType(objects.ImageMeta))
         self._migrationops._vmops.create_instance.assert_called_once_with(
             mock_instance, mock.sentinel.network_info, root_device,
-            block_device_info, get_image_vm_gen.return_value)
+            block_device_info, get_image_vm_gen.return_value,
+            mock_image.return_value)
         mock_check_attach_config_drive.assert_called_once_with(
             mock_instance, get_image_vm_gen.return_value)
         self._migrationops._vmops.power_on.assert_called_once_with(
@@ -433,7 +434,8 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
                                                  mock.sentinel.image_meta)
         self._migrationops._vmops.create_instance.assert_called_once_with(
             mock_instance, mock.sentinel.network_info, root_device,
-            block_device_info, get_image_vm_gen.return_value)
+            block_device_info, get_image_vm_gen.return_value,
+            mock.sentinel.image_meta)
         mock_check_attach_config_drive.assert_called_once_with(
             mock_instance, get_image_vm_gen.return_value)
         self._migrationops._vmops.power_on.assert_called_once_with(

@@ -184,7 +184,7 @@ class MigrationOps(object):
         self._check_ephemeral_disks(instance, ephemerals)
 
         self._vmops.create_instance(instance, network_info, root_device,
-                                    block_device_info, vm_gen)
+                                    block_device_info, vm_gen, image_meta)
 
         self._check_and_attach_config_drive(instance, vm_gen)
 
@@ -293,7 +293,7 @@ class MigrationOps(object):
         self._check_ephemeral_disks(instance, ephemerals, resize_instance)
 
         self._vmops.create_instance(instance, network_info, root_device,
-                                    block_device_info, vm_gen)
+                                    block_device_info, vm_gen, image_meta)
 
         self._check_and_attach_config_drive(instance, vm_gen)
 
