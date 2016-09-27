@@ -102,3 +102,45 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # by the archive
         self.assertIn('instance_actions', results)
         self.assertIn('instance_actions_events', results)
+
+    def test_archive_deleted_rows_with_undeleted_residue(self):
+        # Boots a server, deletes it, and then tries to archive it.
+        server = self._create_server()
+        server_id = server['id']
+        # Assert that there are instance_actions. instance_actions are
+        # interesting since we don't soft delete them but they have a foreign
+        # key back to the instances table.
+        actions = self.api.get_instance_actions(server_id)
+        self.assertTrue(len(actions),
+                        'No instance actions for server: %s' % server_id)
+        self._delete_server(server_id)
+        # Verify we have the soft deleted instance in the database.
+        admin_context = context.get_admin_context(read_deleted='yes')
+        # This will raise InstanceNotFound if it's not found.
+        instance = db.instance_get_by_uuid(admin_context, server_id)
+        # Make sure it's soft deleted.
+        self.assertNotEqual(0, instance.deleted)
+        # Undelete the instance_extra record to make sure we delete it anyway
+        extra = db.instance_extra_get_by_instance_uuid(admin_context,
+                                                       instance.uuid)
+        self.assertNotEqual(0, extra.deleted)
+        db.instance_extra_update_by_uuid(admin_context, instance.uuid,
+                                         {'deleted': 0})
+        extra = db.instance_extra_get_by_instance_uuid(admin_context,
+                                                       instance.uuid)
+        self.assertEqual(0, extra.deleted)
+        # Verify we have some system_metadata since we'll check that later.
+        self.assertTrue(len(instance.system_metadata),
+                        'No system_metadata for instance: %s' % server_id)
+        # Now try and archive the soft deleted records.
+        results = db.archive_deleted_rows(max_rows=100)
+        # verify system_metadata was dropped
+        self.assertIn('instance_system_metadata', results)
+        self.assertEqual(len(instance.system_metadata),
+                         results['instance_system_metadata'])
+        # Verify that instances rows are dropped
+        self.assertIn('instances', results)
+        # Verify that instance_actions and actions_event are dropped
+        # by the archive
+        self.assertIn('instance_actions', results)
+        self.assertIn('instance_actions_events', results)
