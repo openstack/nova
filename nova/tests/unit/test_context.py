@@ -146,6 +146,15 @@ class ContextTestCase(test.NoDBTestCase):
                                overwrite=False)
         self.assertIs(o_context.get_current(), ctx1)
 
+    def test_get_context_no_overwrite(self):
+        # If there is already a context in the cache creating another context
+        # should not overwrite it.
+        ctx1 = context.RequestContext('111',
+                                      '222',
+                                      overwrite=True)
+        context.get_context()
+        self.assertIs(ctx1, o_context.get_current())
+
     def test_admin_no_overwrite(self):
         # If there is already a context in the cache creating an admin
         # context will not overwrite it.
@@ -290,3 +299,9 @@ class ContextTestCase(test.NoDBTestCase):
         with context.target_cell(ctxt, mapping):
             self.assertEqual(ctxt.db_connection, mock.sentinel.cm)
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
+
+    def test_get_context(self):
+        ctxt = context.get_context()
+        self.assertIsNone(ctxt.user_id)
+        self.assertIsNone(ctxt.project_id)
+        self.assertFalse(ctxt.is_admin)
