@@ -877,6 +877,69 @@ class _BaseTaskTestCase(object):
         mock_service_version.assert_called_once_with(self.context,
                                                      'nova-osapi_compute')
 
+    @mock.patch.object(objects.Instance, 'refresh', new=mock.MagicMock())
+    @mock.patch.object(scheduler_client.SchedulerClient,
+                       'select_destinations')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_set_vm_state_and_notify', new=mock.MagicMock())
+    def test_build_instances_reschedule_ignores_build_request(self,
+            mock_select_dests):
+        # This test calls build_instances as if it was a reschedule. This means
+        # that the exc.BuildRequestNotFound() exception raised by
+        # conductor_manager._destroy_build_request() should not cause the
+        # build to stop.
+
+        mock_select_dests.return_value = [
+                {'host': 'host1', 'nodename': 'node1', 'limits': []}]
+
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = {'fake-data': 'should_pass_silently'}
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        @mock.patch.object(self.conductor_manager.compute_rpcapi,
+                           'build_and_run_instance')
+        @mock.patch.object(self.conductor_manager,
+                           '_populate_instance_mapping')
+        @mock.patch.object(self.conductor_manager,
+                           '_destroy_build_request',
+                           side_effect=exc.BuildRequestNotFound(uuid='fake'))
+        def do_test(mock_destroy_build_req, mock_pop_inst_map,
+                    mock_build_and_run):
+            self.conductor.build_instances(
+                context=self.context,
+                instances=[instance],
+                image=image,
+                filter_properties={'retry': {'num_attempts': 1, 'hosts': []}},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping='block_device_mapping',
+                legacy_bdm=False)
+
+            mock_build_and_run.assert_called_once_with(
+                self.context,
+                instance=mock.ANY,
+                host='host1',
+                image=image,
+                request_spec=mock.ANY,
+                filter_properties={'retry': {'num_attempts': 2,
+                                             'hosts': [['host1', 'node1']]},
+                                   'limits': []},
+                admin_password='admin_password',
+                injected_files='injected_files',
+                requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping=test.MatchType(
+                    objects.BlockDeviceMappingList),
+                node='node1', limits=[])
+            mock_pop_inst_map.assert_not_called()
+            mock_destroy_build_req.assert_not_called()
+
+        do_test()
+
     def test_unshelve_instance_on_host(self):
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED
