@@ -13,12 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from mox3 import mox
+import mock
 import six
 
 from nova import context
 from nova import test
 from nova.tests.unit.virt.xenapi import stubs
+from nova.virt.xenapi import client
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi.image import bittorrent
@@ -29,7 +30,6 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(TestBittorrentStore, self).setUp()
         self.store = bittorrent.BittorrentStore()
-        self.mox = mox.Mox()
 
         self.flags(torrent_base_url='http://foo',
                    connection_url='test_url',
@@ -48,7 +48,8 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(
                 vm_utils, 'get_sr_path', lambda *a, **kw: '/fake/sr/path')
 
-    def test_download_image(self):
+    @mock.patch.object(client.session.XenAPISession, 'call_plugin_serialized')
+    def test_download_image(self, mock_call_plugin):
 
         instance = {'uuid': '00000000-0000-0000-0000-000000007357'}
         params = {'image_id': 'fake_image_uuid',
@@ -63,22 +64,18 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
                   'torrent_url': 'http://foo/fake_image_uuid.torrent',
                   'uuid_stack': ['uuid1']}
 
-        self.stubs.Set(vm_utils, '_make_uuid_stack',
-                       lambda *a, **kw: ['uuid1'])
-
-        self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized(
-                'bittorrent.py', 'download_vhd', **params)
-        self.mox.ReplayAll()
+        self.stub_out('nova.virt.xenapi.vm_utils._make_uuid_stack',
+                      lambda *a, **kw: ['uuid1'])
 
         self.store.download_image(self.context, self.session,
                                   instance, 'fake_image_uuid')
 
-        self.mox.VerifyAll()
+        mock_call_plugin.assert_called_once_with('bittorrent.py',
+                                                 'download_vhd', **params)
 
     def test_upload_image(self):
         self.assertRaises(NotImplementedError, self.store.upload_image,
-                self.context, self.session, mox.IgnoreArg, 'fake_image_uuid',
+                self.context, self.session, mock.ANY, 'fake_image_uuid',
                 ['fake_vdi_uuid'])
 
 
