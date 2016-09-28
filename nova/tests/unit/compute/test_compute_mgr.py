@@ -2932,7 +2932,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.compute, '_set_migration_status'),
-        ) as (mock_get, mock_rebuild, mock_save, mock_set):
+            mock.patch.object(compute_utils, 'EventReporter'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_set, mock_event):
             self.compute.rebuild_instance(self.context, instance, None, None,
                                           None, None, None, None, False)
             self.assertFalse(mock_get.called)
@@ -2949,7 +2950,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
             mock.patch.object(self.compute, '_set_migration_status'),
-        ) as (mock_get, mock_rebuild, mock_save, mock_set):
+            mock.patch.object(compute_utils, 'EventReporter'),
+        ) as (mock_get, mock_rebuild, mock_save, mock_set, mock_event):
             mock_get.return_value.hypervisor_hostname = 'new-node'
             self.compute.rebuild_instance(self.context, instance, None, None,
                                           None, None, None, None, True)
@@ -4661,8 +4663,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.migration, 'save')
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.compute, '_set_instance_info')
+        @mock.patch.object(db, 'instance_fault_create')
+        @mock.patch.object(objects.BlockDeviceMappingList,
+                           'get_by_instance_uuid')
+        @mock.patch.object(compute_utils, 'EventReporter')
         @mock.patch.object(compute_utils, 'notify_about_instance_usage')
         def do_test(notify_about_instance_usage,
+                    event_reporter,
+                    get_by_instance_uuid,
+                    fault_create,
                     set_instance_info,
                     instance_save,
                     migration_save,
@@ -4672,6 +4681,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     finish_revert_migration,
                     get_resource_tracker):
 
+            fault_create.return_value = (
+                test_instance_fault.fake_faults['fake-uuid'][0])
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['host']
             self.compute.finish_revert_resize(context=self.context,
