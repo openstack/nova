@@ -24,7 +24,6 @@ import sys
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
-import six
 
 import nova.conf
 from nova import config
@@ -63,7 +62,7 @@ def main():
         except exception.PasteAppNotFound as ex:
             log.warning(
                 _LW("%s. ``enabled_apis`` includes bad values. "
-                    "Fix to remove this warning."), six.text_type(ex))
+                    "Fix to remove this warning."), ex)
 
     if started == 0:
         log.error(_LE('No APIs were started. '

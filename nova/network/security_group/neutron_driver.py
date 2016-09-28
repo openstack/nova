@@ -243,7 +243,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                                   "group %s"), name)
                 self.raise_over_quota(six.text_type(e))
             elif e.status_code == 400:
-                LOG.exception(_LE("Neutron Error: %s"), six.text_type(e))
+                LOG.exception(_LE("Neutron Error: %s"), e)
                 self.raise_invalid_property(six.text_type(e))
             else:
                 LOG.exception(_LE("Neutron Error:"))
