@@ -832,16 +832,20 @@ class DbCommands(object):
     def archive_deleted_rows(self, max_rows, verbose=False):
         """Move up to max_rows deleted rows from production tables to shadow
         tables.
+
+        Returns 0 if nothing was archived, 1 if some number of rows were
+        archived, 2 if max_rows is invalid. If automating, this should be
+        run continuously while the result is 1, stopping at 0.
         """
         if max_rows is not None:
             max_rows = int(max_rows)
             if max_rows < 0:
                 print(_("Must supply a positive value for max_rows"))
-                return(1)
+                return(2)
             if max_rows > db.MAX_INT:
                 print(_('max rows must be <= %(max_value)d') %
                       {'max_value': db.MAX_INT})
-                return(1)
+                return(2)
         table_to_rows_archived = db.archive_deleted_rows(max_rows)
         if verbose:
             if table_to_rows_archived:
@@ -849,6 +853,8 @@ class DbCommands(object):
                                  dict_value=_('Number of Rows Archived'))
             else:
                 print(_('Nothing was archived.'))
+        # NOTE(danms): Return nonzero if we archived something
+        return int(bool(table_to_rows_archived))
 
     @args('--delete', action='store_true', dest='delete',
           help='If specified, automatically delete any records found where '

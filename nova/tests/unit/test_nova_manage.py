@@ -469,16 +469,16 @@ class DBCommandsTestCase(test.NoDBTestCase):
         self.commands = manage.DbCommands()
 
     def test_archive_deleted_rows_negative(self):
-        self.assertEqual(1, self.commands.archive_deleted_rows(-1))
+        self.assertEqual(2, self.commands.archive_deleted_rows(-1))
 
     def test_archive_deleted_rows_large_number(self):
         large_number = '1' * 100
-        self.assertEqual(1, self.commands.archive_deleted_rows(large_number))
+        self.assertEqual(2, self.commands.archive_deleted_rows(large_number))
 
     @mock.patch.object(db, 'archive_deleted_rows',
                        return_value=dict(instances=10, consoles=5))
     def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
-        self.commands.archive_deleted_rows(20, verbose=verbose)
+        result = self.commands.archive_deleted_rows(20, verbose=verbose)
         mock_db_archive.assert_called_once_with(20)
         output = self.output.getvalue()
         if verbose:
@@ -493,6 +493,7 @@ class DBCommandsTestCase(test.NoDBTestCase):
             self.assertEqual(expected, output)
         else:
             self.assertEqual(0, len(output))
+        self.assertEqual(1, result)
 
     def test_archive_deleted_rows(self):
         # Tests that we don't show any table output (not verbose).
@@ -504,10 +505,11 @@ class DBCommandsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(db, 'archive_deleted_rows', return_value={})
     def test_archive_deleted_rows_verbose_no_results(self, mock_db_archive):
-        self.commands.archive_deleted_rows(20, verbose=True)
+        result = self.commands.archive_deleted_rows(20, verbose=True)
         mock_db_archive.assert_called_once_with(20)
         output = self.output.getvalue()
         self.assertIn('Nothing was archived.', output)
+        self.assertEqual(0, result)
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 0})
