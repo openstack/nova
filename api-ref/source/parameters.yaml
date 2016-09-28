@@ -3360,7 +3360,7 @@ period_ending:
 personality:
   description: |
     The file path and contents, text only, to inject into the server at launch. The
-    maximum size of the file path data is 255 bytes. The maximum limit is The number
+    maximum size of the file path data is 255 bytes. The maximum limit is the number
     of allowed bytes in the decoded, rather than encoded, data.
   in: body
   required: false
