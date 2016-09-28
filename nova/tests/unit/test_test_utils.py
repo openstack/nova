@@ -38,12 +38,6 @@ class TestUtilsTestCase(test.TestCase):
         ctxt = test_utils.get_test_admin_context()
         db.instance_get(ctxt, instance_ref['id'])
 
-    def _test_get_test_network_info(self):
-        """Does the return value match a real network_info structure."""
-        # The challenge here is to define what exactly such a structure
-        # must look like.
-        pass
-
     def test_ipv6_supported(self):
         self.assertIn(test_utils.is_ipv6_supported(), (False, True))
 
