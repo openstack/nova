@@ -131,7 +131,7 @@ Update Aggregate
 
 Updates either or both the name and availability zone for an aggregate.
 If the aggregate to be updated has host that already in the given
-availablility zone, the request will fail with 400 error.
+availability zone, the request will fail with 400 error.
 
 Normal response codes: 200
 
