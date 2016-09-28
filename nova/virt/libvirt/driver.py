@@ -6587,12 +6587,19 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  instance_disk,
                                                  CONF.libvirt.images_type)
                 if cache_name.startswith('ephemeral'):
-                    image.cache(fetch_func=self._create_ephemeral,
-                                fs_label=cache_name,
-                                os_type=instance.os_type,
-                                filename=cache_name,
-                                size=info['virt_disk_size'],
-                                ephemeral_size=instance.flavor.ephemeral_gb)
+                    # The argument 'size' is used by image.cache to
+                    # validate disk size retrieved from cache against
+                    # the instance disk size (should always return OK)
+                    # and ephemeral_size is used by _create_ephemeral
+                    # to build the image if the disk is not already
+                    # cached.
+                    image.cache(
+                        fetch_func=self._create_ephemeral,
+                        fs_label=cache_name,
+                        os_type=instance.os_type,
+                        filename=cache_name,
+                        size=info['virt_disk_size'],
+                        ephemeral_size=info['virt_disk_size'] / units.Gi)
                 elif cache_name.startswith('swap'):
                     inst_type = instance.get_flavor()
                     swap_mb = inst_type.swap
