@@ -503,6 +503,70 @@ class DBCommandsTestCase(test.NoDBTestCase):
         # Tests that we get table output.
         self._test_archive_deleted_rows(verbose=True)
 
+    @mock.patch.object(db, 'archive_deleted_rows')
+    def test_archive_deleted_rows_until_complete(self, mock_db_archive,
+                                                 verbose=False):
+        mock_db_archive.side_effect = [
+            {'instances': 10, 'instance_extra': 5},
+            {'instances': 5, 'instance_faults': 1},
+            {}]
+        result = self.commands.archive_deleted_rows(20, verbose=verbose,
+                                                    until_complete=True)
+        self.assertEqual(1, result)
+        if verbose:
+            expected = """\
+Archiving.....complete
++-----------------+-------------------------+
+| Table           | Number of Rows Archived |
++-----------------+-------------------------+
+| instance_extra  | 5                       |
+| instance_faults | 1                       |
+| instances       | 15                      |
++-----------------+-------------------------+
+"""
+        else:
+            expected = ''
+
+        self.assertEqual(expected, self.output.getvalue())
+        mock_db_archive.assert_has_calls([mock.call(20),
+                                          mock.call(20),
+                                          mock.call(20)])
+
+    def test_archive_deleted_rows_until_complete_quiet(self):
+        self.test_archive_deleted_rows_until_complete(verbose=False)
+
+    @mock.patch.object(db, 'archive_deleted_rows')
+    def test_archive_deleted_rows_until_stopped(self, mock_db_archive,
+                                                verbose=True):
+        mock_db_archive.side_effect = [
+            {'instances': 10, 'instance_extra': 5},
+            {'instances': 5, 'instance_faults': 1},
+            KeyboardInterrupt]
+        result = self.commands.archive_deleted_rows(20, verbose=verbose,
+                                                    until_complete=True)
+        self.assertEqual(1, result)
+        if verbose:
+            expected = """\
+Archiving.....stopped
++-----------------+-------------------------+
+| Table           | Number of Rows Archived |
++-----------------+-------------------------+
+| instance_extra  | 5                       |
+| instance_faults | 1                       |
+| instances       | 15                      |
++-----------------+-------------------------+
+"""
+        else:
+            expected = ''
+
+        self.assertEqual(expected, self.output.getvalue())
+        mock_db_archive.assert_has_calls([mock.call(20),
+                                          mock.call(20),
+                                          mock.call(20)])
+
+    def test_archive_deleted_rows_until_stopped_quiet(self):
+        self.test_archive_deleted_rows_until_stopped(verbose=False)
+
     @mock.patch.object(db, 'archive_deleted_rows', return_value={})
     def test_archive_deleted_rows_verbose_no_results(self, mock_db_archive):
         result = self.commands.archive_deleted_rows(20, verbose=True)

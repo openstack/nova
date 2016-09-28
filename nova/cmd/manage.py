@@ -825,28 +825,53 @@ class DbCommands(object):
         """Print the current database version."""
         print(migration.db_version())
 
-    @args('--max_rows', metavar='<number>',
+    @args('--max_rows', metavar='<number>', default=1000,
             help='Maximum number of deleted rows to archive')
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Print how many rows were archived per table.')
-    def archive_deleted_rows(self, max_rows, verbose=False):
-        """Move up to max_rows deleted rows from production tables to shadow
-        tables.
+    @args('--until-complete', action='store_true', dest='until_complete',
+          default=False,
+          help=('Run continuously until all deleted rows are archived. Use '
+                'max_rows as a batch size for each iteration.'))
+    def archive_deleted_rows(self, max_rows, verbose=False,
+                             until_complete=False):
+        """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
         archived, 2 if max_rows is invalid. If automating, this should be
         run continuously while the result is 1, stopping at 0.
         """
-        if max_rows is not None:
-            max_rows = int(max_rows)
-            if max_rows < 0:
-                print(_("Must supply a positive value for max_rows"))
-                return(2)
-            if max_rows > db.MAX_INT:
-                print(_('max rows must be <= %(max_value)d') %
-                      {'max_value': db.MAX_INT})
-                return(2)
-        table_to_rows_archived = db.archive_deleted_rows(max_rows)
+        max_rows = int(max_rows)
+        if max_rows < 0:
+            print(_("Must supply a positive value for max_rows"))
+            return(2)
+        if max_rows > db.MAX_INT:
+            print(_('max rows must be <= %(max_value)d') %
+                  {'max_value': db.MAX_INT})
+            return(2)
+
+        table_to_rows_archived = {}
+        if until_complete and verbose:
+            sys.stdout.write(_('Archiving') + '..')  # noqa
+        while True:
+            try:
+                run = db.archive_deleted_rows(max_rows)
+            except KeyboardInterrupt:
+                run = {}
+                if until_complete and verbose:
+                    print('.' + _('stopped'))  # noqa
+                    break
+            for k, v in run.items():
+                table_to_rows_archived.setdefault(k, 0)
+                table_to_rows_archived[k] += v
+            if not until_complete:
+                break
+            elif not run:
+                if verbose:
+                    print('.' + _('complete'))  # noqa
+                break
+            if verbose:
+                sys.stdout.write('.')
         if verbose:
             if table_to_rows_archived:
                 utils.print_dict(table_to_rows_archived, _('Table'),
