@@ -792,6 +792,15 @@ class NoopConductorFixture(fixtures.Fixture):
             'nova.conductor.API', _NoopConductor))
 
 
+class EventReporterStub(fixtures.Fixture):
+
+    def setUp(self):
+        super(EventReporterStub, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.compute.utils.EventReporter',
+            lambda *args, **kwargs: mock.MagicMock()))
+
+
 class CinderFixture(fixtures.Fixture):
     """A fixture to volume operations"""
 
