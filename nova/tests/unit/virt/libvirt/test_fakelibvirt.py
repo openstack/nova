@@ -386,7 +386,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
                          libvirt.VIR_CPU_COMPARE_IDENTICAL)
 
     def test_numa_topology_generation(self):
-        topology = """<topology>
+        topology = b"""<topology>
   <cells num="2">
     <cell id="0">
       <memory unit="KiB">7870000</memory>

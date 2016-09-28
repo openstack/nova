@@ -208,7 +208,7 @@ class HostInfo(object):
         for cell_count in range(cpu_nodes):
             cell = vconfig.LibvirtConfigCapsNUMACell()
             cell.id = cell_count
-            cell.memory = kb_mem / cpu_nodes
+            cell.memory = kb_mem // cpu_nodes
             for socket_count in range(cpu_sockets):
                 for cpu_num in range(cpu_cores * cpu_threads):
                     cpu = vconfig.LibvirtConfigCapsNUMACPU()
@@ -228,7 +228,7 @@ class HostInfo(object):
             else:
                 mempages = vconfig.LibvirtConfigCapsNUMAPages()
                 mempages.size = 4
-                mempages.total = cell.memory / mempages.size
+                mempages.total = cell.memory // mempages.size
                 mempages = [mempages]
             cell.mempages = mempages
             topology.cells.append(cell)

@@ -182,7 +182,8 @@ class RBDDriver(object):
         if not url.startswith(prefix):
             reason = _('Not stored in rbd')
             raise exception.ImageUnacceptable(image_id=url, reason=reason)
-        pieces = map(urllib.parse.unquote, url[len(prefix):].split('/'))
+        pieces = [urllib.parse.unquote(piece)
+                  for piece in url[len(prefix):].split('/')]
         if '' in pieces:
             reason = _('Blank components')
             raise exception.ImageUnacceptable(image_id=url, reason=reason)
