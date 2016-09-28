@@ -3565,34 +3565,38 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                           {'host': 'host'},
                           dest_check_data)
 
-    def test_check_can_live_migrate_works(self):
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    def test_check_can_live_migrate_works(self, mock_get_by_host):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_aggregate_get_by_host(context, host, key=None):
-            self.assertEqual(CONF.host, host)
-            return [dict(test_aggregate.fake_aggregate,
-                         metadetails={"host": "test_host_uuid"})]
+        metadata = {'host': 'test_host_uuid'}
+        aggregate = objects.Aggregate(metadata=metadata)
+        aggregate_list = objects.AggregateList(objects=[aggregate])
+        mock_get_by_host.return_value = aggregate_list
 
-        self.stub_out("nova.db.aggregate_get_by_host",
-                fake_aggregate_get_by_host)
-        self.conn.check_can_live_migrate_destination(self.context,
-                {'host': 'host'}, False, False)
+        instance = objects.Instance(host='host')
+        self.conn.check_can_live_migrate_destination(
+            self.context, instance, None, None)
+        mock_get_by_host.assert_called_once_with(
+            self.context, CONF.host, key='hypervisor_pool')
 
-    def test_check_can_live_migrate_fails(self):
+    @mock.patch.object(objects.AggregateList, 'get_by_host')
+    def test_check_can_live_migrate_fails(self, mock_get_by_host):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_aggregate_get_by_host(context, host, key=None):
-            self.assertEqual(CONF.host, host)
-            return [dict(test_aggregate.fake_aggregate,
-                         metadetails={"dest_other": "test_host_uuid"})]
+        metadata = {'dest_other': 'test_host_uuid'}
+        aggregate = objects.Aggregate(metadata=metadata)
+        aggregate_list = objects.AggregateList(objects=[aggregate])
+        mock_get_by_host.return_value = aggregate_list
 
-        self.stub_out("nova.db.aggregate_get_by_host",
-                      fake_aggregate_get_by_host)
+        instance = objects.Instance(host='host')
         self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_destination,
-                          self.context, {'host': 'host'}, None, None)
+                          self.context, instance, None, None)
+        mock_get_by_host.assert_called_once_with(
+            self.context, CONF.host, key='hypervisor_pool')
 
     def test_live_migration(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
