@@ -228,7 +228,7 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
     def test_get_disk_mapping_rescue(self):
         # A simple disk mapping setup, but in rescue mode
 
-        instance_ref = objects.Instance()
+        instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
@@ -240,6 +240,30 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
             'disk.rescue': {'bus': 'virtio', 'dev': 'vda',
                             'type': 'disk', 'boot_index': '1'},
             'disk': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            }
+        self.assertEqual(expect, mapping)
+
+    def test_get_disk_mapping_rescue_with_config(self):
+        # A simple disk mapping setup, but in rescue mode with a config drive
+
+        test_instance_with_config = self.test_instance
+        test_instance_with_config['config_drive'] = True
+        instance_ref = objects.Instance(**test_instance_with_config)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        mapping = blockinfo.get_disk_mapping("kvm", instance_ref,
+                                             "virtio", "ide",
+                                             image_meta,
+                                             rescue=True)
+
+        expect = {
+            'disk.rescue': {'bus': 'virtio', 'dev': 'vda',
+                            'type': 'disk', 'boot_index': '1'},
+            'disk': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
+            'disk.config.rescue': {'bus': 'ide', 'dev': 'hdd',
+                                   'type': 'cdrom'},
             'root': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'},
             }
