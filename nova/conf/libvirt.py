@@ -478,15 +478,30 @@ libvirt_imagebackend_opts = [
                default='default',
                choices=('raw', 'flat', 'qcow2', 'lvm', 'rbd', 'ploop',
                         'default'),
-               help='VM Images format. If default is specified, then'
-                    ' use_cow_images flag is used instead of this one.'),
+               help="""
+VM Images format.
+
+If default is specified, then use_cow_images flag is used instead of this
+one.
+
+Related options:
+
+* virt.use_cow_images
+* images_volume_group
+"""),
     cfg.StrOpt('images_volume_group',
-               help='LVM Volume Group that is used for VM images, when you'
-                    ' specify images_type=lvm.'),
+               help="""
+LVM Volume Group that is used for VM images, when you specify images_type=lvm
+
+Related options:
+
+* images_type
+"""),
     cfg.BoolOpt('sparse_logical_volumes',
                 default=False,
-                help='Create sparse logical volumes (with virtualsize)'
-                     ' if this flag is set to True.'),
+                help="""
+Create sparse logical volumes (with virtualsize) if this flag is set to True.
+"""),
     cfg.StrOpt('images_rbd_pool',
                default='rbd',
                help='The RADOS pool in which rbd volumes are stored'),
@@ -495,9 +510,15 @@ libvirt_imagebackend_opts = [
                help='Path to the ceph configuration file to use'),
     cfg.StrOpt('hw_disk_discard',
                choices=('ignore', 'unmap'),
-               help='Discard option for nova managed disks. Need'
-                    ' Libvirt(1.0.6) Qemu1.5 (raw format) Qemu1.6(qcow2'
-                    ' format)'),
+               help="""
+Discard option for nova managed disks.
+
+Requires:
+
+* Libvirt >= 1.0.6
+* Qemu >= 1.5 (raw format)
+* Qemu >= 1.6 (qcow2 format)
+"""),
 ]
 
 libvirt_imagecache_opts = [
