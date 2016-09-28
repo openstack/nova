@@ -1,0 +1,97 @@
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+import sqlalchemy as sa
+
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import api_models as models
+from nova.objects import fields
+
+_RC_TBL = models.ResourceClass.__table__
+
+
+@db_api.api_context_manager.reader
+def _refresh_from_db(ctx, cache):
+    """Grabs all custom resource classes from the DB table and populates the
+    supplied cache object's internal integer and string identifier dicts.
+
+    :param cache: ResourceClassCache object to refresh.
+    """
+    with ctx.session.connection() as conn:
+        sel = sa.select([_RC_TBL.c.id, _RC_TBL.c.name])
+        res = conn.execute(sel).fetchall()
+        cache.id_cache = {r[1]: r[0] for r in res}
+        cache.str_cache = {r[0]: r[1] for r in res}
+
+
+class ResourceClassCache(object):
+    """A cache of integer and string lookup values for resource classes."""
+
+    def __init__(self, ctx):
+        """Initialize the cache of resource class identifiers.
+
+        :param ctx: `nova.context.RequestContext` from which we can grab a
+                    `SQLAlchemy.Connection` object to use for any DB lookups.
+        """
+        self.ctx = ctx
+        self.id_cache = {}
+        self.str_cache = {}
+
+    def id_from_string(self, rc_str):
+        """Given a string representation of a resource class -- e.g. "DISK_GB"
+        or "IRON_SILVER" -- return the integer code for the resource class. For
+        standard resource classes, this integer code will match the list of
+        resource classes on the fields.ResourceClass field type. Other custom
+        resource classes will cause a DB lookup into the resource_classes
+        table, however the results of these DB lookups are cached since the
+        lookups are so frequent.
+
+        :param rc_str: The string representation of the resource class to look
+                       up a numeric identifier for.
+        :returns integer identifier for the resource class, or None, if no such
+                 resource class was found in the list of standard resource
+                 classes or the resource_classes database table.
+        """
+        if rc_str in self.id_cache:
+            return self.id_cache[rc_str]
+
+        # First check the standard resource classes
+        if rc_str in fields.ResourceClass.ALL:
+            return fields.ResourceClass.ALL.index(rc_str)
+        else:
+            # Otherwise, check the database table
+            _refresh_from_db(self.ctx, self)
+            return self.id_cache.get(rc_str)
+
+    def string_from_id(self, rc_id):
+        """The reverse of the id_from_string() method. Given a supplied numeric
+        identifier for a resource class, we look up the corresponding string
+        representation, either in the list of standard resource classes or via
+        a DB lookup. The results of these DB lookups are cached since the
+        lookups are so frequent.
+
+        :param rc_id: The numeric representation of the resource class to look
+                      up a string identifier for.
+        :returns string identifier for the resource class, or None, if no such
+                 resource class was found in the list of standard resource
+                 classes or the resource_classes database table.
+        """
+        if rc_id in self.str_cache:
+            return self.str_cache[rc_id]
+
+        # First check the fields.ResourceClass.ALL enum
+        try:
+            return fields.ResourceClass.ALL[rc_id]
+        except IndexError:
+            # Otherwise, check the database table
+            _refresh_from_db(self.ctx, self)
+            return self.str_cache.get(rc_id)
