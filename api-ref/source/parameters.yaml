@@ -1885,7 +1885,7 @@ flavor_ram:
   type: integer
 flavor_rxtx_factor:
   description: |
-    The receive / transimit factor (as a float) that will be set on
+    The receive / transmit factor (as a float) that will be set on
     ports if the network backend supports the QOS extension.
     Otherwise it will be ignored. It defaults to 1.0.
   in: body
@@ -1893,7 +1893,7 @@ flavor_rxtx_factor:
   type: float
 flavor_rxtx_factor_in:
   description: |
-    The receive / transimit factor (as a float) that will be set on
+    The receive / transmit factor (as a float) that will be set on
     ports if the network backend supports the QOS extension.
     Otherwise it will be ignored. It defaults to 1.0.
   in: body
