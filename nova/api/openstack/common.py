@@ -290,19 +290,6 @@ def check_img_metadata_properties_quota(context, metadata):
         expl = _("Image metadata limit exceeded")
         raise webob.exc.HTTPForbidden(explanation=expl)
 
-    #  check the key length.
-    if isinstance(metadata, dict):
-        for key, value in six.iteritems(metadata):
-            if len(key) == 0:
-                expl = _("Image metadata key cannot be blank")
-                raise webob.exc.HTTPBadRequest(explanation=expl)
-            if len(key) > 255:
-                expl = _("Image metadata key too long")
-                raise webob.exc.HTTPBadRequest(explanation=expl)
-    else:
-        expl = _("Invalid image metadata")
-        raise webob.exc.HTTPBadRequest(explanation=expl)
-
 
 def get_networks_for_instance_from_nw_info(nw_info):
     networks = collections.OrderedDict()

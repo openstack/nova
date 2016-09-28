@@ -30,7 +30,6 @@ from nova.compute import vm_states
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
-from nova.tests.unit import utils
 
 
 NS = "{http://docs.openstack.org/compute/api/v1.1}"
@@ -373,41 +372,6 @@ class MiscFunctionsTest(test.TestCase):
                 "fake_attr fake_state")
         else:
             self.fail("webob.exc.HTTPConflict was not raised")
-
-    def test_check_img_metadata_properties_quota_valid_metadata(self):
-        ctxt = utils.get_test_admin_context()
-        metadata1 = {"key": "value"}
-        actual = common.check_img_metadata_properties_quota(ctxt, metadata1)
-        self.assertIsNone(actual)
-
-        metadata2 = {"key": "v" * 260}
-        actual = common.check_img_metadata_properties_quota(ctxt, metadata2)
-        self.assertIsNone(actual)
-
-        metadata3 = {"key": ""}
-        actual = common.check_img_metadata_properties_quota(ctxt, metadata3)
-        self.assertIsNone(actual)
-
-    def test_check_img_metadata_properties_quota_inv_metadata(self):
-        ctxt = utils.get_test_admin_context()
-        metadata1 = {"a" * 260: "value"}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                common.check_img_metadata_properties_quota, ctxt, metadata1)
-
-        metadata2 = {"": "value"}
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                common.check_img_metadata_properties_quota, ctxt, metadata2)
-
-        metadata3 = "invalid metadata"
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                common.check_img_metadata_properties_quota, ctxt, metadata3)
-
-        metadata4 = None
-        self.assertIsNone(common.check_img_metadata_properties_quota(ctxt,
-                                                        metadata4))
-        metadata5 = {}
-        self.assertIsNone(common.check_img_metadata_properties_quota(ctxt,
-                                                        metadata5))
 
     def test_status_from_state(self):
         for vm_state in (vm_states.ACTIVE, vm_states.STOPPED):
