@@ -877,3 +877,19 @@ class HackingTestCase(test.NoDBTestCase):
                   (4, 0, 'N356')]
         self._assert_has_errors(code, checks.no_assert_true_false_is_not,
                                 expected_errors=errors)
+
+    def test_check_uuid4(self):
+        code = """
+                  fake_uuid = uuid.uuid4()
+               """
+        errors = [(1, 0, 'N357')]
+        self._assert_has_errors(code, checks.check_uuid4,
+                                expected_errors=errors)
+        code = """
+                  hex_uuid = uuid.uuid4().hex
+                  int_uuid = uuid.uuid4().int
+                  urn_uuid = uuid.uuid4().urn
+                  variant_uuid = uuid.uuid4().variant
+                  version_uuid = uuid.uuid4().version
+               """
+        self._assert_has_no_errors(code, checks.check_uuid4)
