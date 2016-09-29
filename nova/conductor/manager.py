@@ -14,6 +14,7 @@
 
 """Handles database requests from other nova services."""
 
+import contextlib
 import copy
 
 from oslo_config import cfg
@@ -23,6 +24,7 @@ from oslo_utils import excutils
 from oslo_utils import versionutils
 import six
 
+from nova.compute import instance_actions
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
@@ -30,12 +32,14 @@ from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
+from nova import context as nova_context
 from nova.db import base
 from nova import exception
 from nova.i18n import _, _LE, _LI, _LW
 from nova import image
 from nova import manager
 from nova import network
+from nova import notifications
 from nova import objects
 from nova.objects import base as nova_object
 from nova import rpc
@@ -148,6 +152,30 @@ class ConductorManager(manager.Manager):
         objects.Service.clear_min_version_cache()
 
 
+@contextlib.contextmanager
+def try_target_cell(context, cell):
+    """If cell is not None call func with context.target_cell.
+
+    This is a method to help during the transition period. Currently
+    various mappings may not exist if a deployment has not migrated to
+    cellsv2. If there is no mapping call the func as normal, otherwise
+    call it in a target_cell context.
+    """
+    if cell:
+        with nova_context.target_cell(context, cell) as cell_context:
+            yield cell_context
+    else:
+        yield context
+
+
+@contextlib.contextmanager
+def obj_target_cell(obj, cell):
+    """Run with object's context set to a specific cell"""
+    with try_target_cell(obj._context, cell) as target:
+        with obj.obj_alternate_context(target):
+            yield
+
+
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.
 
@@ -157,7 +185,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.15')
+    target = messaging.Target(namespace='compute_task', version='1.16')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -737,3 +765,195 @@ class ComputeTaskManager(base.Base):
                     preserve_ephemeral=preserve_ephemeral,
                     migration=migration,
                     host=host, node=node, limits=limits)
+
+    # TODO(avolkov): move method to bdm
+    @staticmethod
+    def _volume_size(instance_type, bdm):
+        size = bdm.get('volume_size')
+        # NOTE (ndipanov): inherit flavor size only for swap and ephemeral
+        if (size is None and bdm.get('source_type') == 'blank' and
+                bdm.get('destination_type') == 'local'):
+            if bdm.get('guest_format') == 'swap':
+                size = instance_type.get('swap', 0)
+            else:
+                size = instance_type.get('ephemeral_gb', 0)
+        return size
+
+    def _create_block_device_mapping(self, instance_type, instance_uuid,
+                                     block_device_mapping):
+        """Create the BlockDeviceMapping objects in the db.
+
+        This method makes a copy of the list in order to avoid using the same
+        id field in case this is called for multiple instances.
+        """
+        LOG.debug("block_device_mapping %s", list(block_device_mapping),
+                  instance_uuid=instance_uuid)
+        instance_block_device_mapping = copy.deepcopy(block_device_mapping)
+        for bdm in instance_block_device_mapping:
+            bdm.volume_size = self._volume_size(instance_type, bdm)
+            bdm.instance_uuid = instance_uuid
+            bdm.update_or_create()
+        return instance_block_device_mapping
+
+    def _bury_in_cell0(self, context, request_spec, exc,
+                       build_requests=None, instances=None):
+        """Ensure all provided build_requests and instances end up in cell0.
+
+        Cell0 is the fake cell we schedule dead instances to when we can't
+        schedule them somewhere real. Requests that don't yet have instances
+        will get a new instance, created in cell0. Instances that have not yet
+        been created will be created in cell0. All build requests are destroyed
+        after we're done. Failure to delete a build request will trigger the
+        instance deletion, just like the happy path in
+        schedule_and_build_instances() below.
+        """
+        try:
+            cell0 = objects.CellMapping.get_by_uuid(
+                context, objects.CellMapping.CELL0_UUID)
+        except exception.CellMappingNotFound:
+            # Not yet setup for cellsv2. Instances will need to be written
+            # to the configured database. This will become a deployment
+            # error in Ocata.
+            LOG.error(_LE('No cell mapping found for cell0 while '
+                          'trying to record scheduling failure. '
+                          'Setup is incomplete.'))
+            return
+
+        build_requests = build_requests or []
+        instances = instances or []
+        instances_by_uuid = {inst.uuid: inst for inst in instances}
+        for build_request in build_requests:
+            if build_request.instance_uuid not in instances_by_uuid:
+                # This is an instance object with no matching db entry.
+                instance = build_request.get_new_instance(context)
+                instances_by_uuid[instance.uuid] = instance
+
+        updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+        legacy_spec = request_spec.to_legacy_request_spec_dict()
+        for instance in instances_by_uuid.values():
+            with obj_target_cell(instance, cell0):
+                instance.create()
+                self._set_vm_state_and_notify(
+                    context, instance.uuid, 'build_instances', updates,
+                    exc, legacy_spec)
+                try:
+                    inst_mapping = \
+                        objects.InstanceMapping.get_by_instance_uuid(
+                            context, instance.uuid)
+                    inst_mapping.cell_mapping = cell0
+                    inst_mapping.save()
+                except exception.InstanceMappingNotFound:
+                    pass
+
+        for build_request in build_requests:
+            try:
+                build_request.destroy()
+            except exception.BuildRequestNotFound:
+                # Instance was deleted before we finished scheduling
+                inst = instances_by_uuid[build_request.instance_uuid]
+                with obj_target_cell(inst, cell0):
+                    inst.destroy()
+
+    def schedule_and_build_instances(self, context, build_requests,
+                                     request_specs, image,
+                                     admin_password, injected_files,
+                                     requested_networks, block_device_mapping):
+        legacy_spec = request_specs[0].to_legacy_request_spec_dict()
+        try:
+            hosts = self._schedule_instances(context, legacy_spec,
+                        request_specs[0].to_legacy_filter_properties_dict())
+        except Exception as exc:
+            LOG.exception(_LE('Failed to schedule instances'))
+            self._bury_in_cell0(context, request_specs[0], exc,
+                                build_requests=build_requests)
+            return
+
+        host_mapping_cache = {}
+
+        for (build_request, request_spec, host) in six.moves.zip(
+                build_requests, request_specs, hosts):
+            filter_props = request_spec.to_legacy_filter_properties_dict()
+            scheduler_utils.populate_filter_properties(filter_props,
+                                                       host)
+            instance = build_request.get_new_instance(context)
+
+            # Convert host from the scheduler into a cell record
+            if host['host'] not in host_mapping_cache:
+                try:
+                    host_mapping = objects.HostMapping.get_by_host(
+                        context, host['host'])
+                    host_mapping_cache[host['host']] = host_mapping
+                except exception.HostMappingNotFound as exc:
+                    LOG.error(_LE('No host-to-cell mapping found for selected '
+                                  'host %(host)s. Setup is incomplete.'),
+                              {'host': host['host']})
+                    self._bury_in_cell0(context, request_spec, exc,
+                                        build_requests=[build_request],
+                                        instances=[instance])
+                    continue
+            else:
+                host_mapping = host_mapping_cache[host['host']]
+
+            cell = host_mapping.cell_mapping
+
+            with obj_target_cell(instance, cell):
+                instance.create()
+
+            # send a state update notification for the initial create to
+            # show it going from non-existent to BUILDING
+            notifications.send_update_with_states(context, instance, None,
+                    vm_states.BUILDING, None, None, service="conductor")
+
+            objects.InstanceAction.action_start(
+                context, instance.uuid, instance_actions.CREATE,
+                want_result=False)
+
+            with obj_target_cell(instance, cell):
+                instance_bdms = self._create_block_device_mapping(
+                    instance.flavor, instance.uuid, block_device_mapping)
+
+            # Update mapping for instance. Normally this check is guarded by
+            # a try/except but if we're here we know that a newer nova-api
+            # handled the build process and would have created the mapping
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                context, instance.uuid)
+            inst_mapping.cell_mapping = cell
+            inst_mapping.save()
+
+            try:
+                build_request.destroy()
+            except exception.BuildRequestNotFound:
+                # This indicates an instance deletion request has been
+                # processed, and the build should halt here. Clean up the
+                # bdm and instance record.
+                with obj_target_cell(instance, cell):
+                    try:
+                        instance.destroy()
+                    except exception.InstanceNotFound:
+                        pass
+                for bdm in instance_bdms:
+                    with obj_target_cell(bdm, cell):
+                        try:
+                            bdm.destroy()
+                        except exception.ObjectActionError:
+                            pass
+                return
+
+            # NOTE(danms): Compute RPC expects security group names or ids
+            # not objects, so convert this to a list of names until we can
+            # pass the objects.
+            legacy_secgroups = [s.identifier
+                                for s in request_spec.security_groups]
+
+            with obj_target_cell(instance, cell):
+                self.compute_rpcapi.build_and_run_instance(
+                    context, instance=instance, image=image,
+                    request_spec=request_spec,
+                    filter_properties=filter_props,
+                    admin_password=admin_password,
+                    injected_files=injected_files,
+                    requested_networks=requested_networks,
+                    security_groups=legacy_secgroups,
+                    block_device_mapping=instance_bdms,
+                    host=host['host'], node=host['nodename'],
+                    limits=host['limits'])

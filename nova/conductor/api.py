@@ -123,6 +123,15 @@ class ComputeTaskAPI(object):
                 block_device_mapping=block_device_mapping,
                 legacy_bdm=legacy_bdm)
 
+    def schedule_and_build_instances(self, context, build_requests,
+                                     request_spec, image,
+                                     admin_password, injected_files,
+                                     requested_networks, block_device_mapping):
+        self.conductor_compute_rpcapi.schedule_and_build_instances(
+            context, build_requests, request_spec, image,
+            admin_password, injected_files, requested_networks,
+            block_device_mapping)
+
     def unshelve_instance(self, context, instance, request_spec=None):
         self.conductor_compute_rpcapi.unshelve_instance(context,
                 instance=instance, request_spec=request_spec)
